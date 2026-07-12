@@ -17,7 +17,7 @@
 ## 2. PROMPT THEME (dán vào Stitch một lần)
 
 ```
-Thiết kế một web app SaaS y khoa chuyên nghiệp tên "MedLuyện" — nền tảng học và luyện thi Y khoa trực tuyến cho sinh viên y và bác sĩ trẻ tại Việt Nam (mô hình AMBOSS/UWorld). Toàn bộ nội dung, nhãn nút, menu và dữ liệu mẫu bằng TIẾNG VIỆT.
+Thiết kế một web app SaaS y khoa chuyên nghiệp tên "MebPro" — nền tảng học và luyện thi Y khoa trực tuyến cho sinh viên y và bác sĩ trẻ tại Việt Nam (mô hình AMBOSS/UWorld). Toàn bộ nội dung, nhãn nút, menu và dữ liệu mẫu bằng TIẾNG VIỆT.
 
 Phong cách hình ảnh: hiện đại, sạch sẽ, đáng tin cậy, mật độ thông tin cao nhưng thoáng, giống các SaaS cao cấp (Linear, Notion, AMBOSS). Bo góc mềm 12px, đổ bóng nhẹ, đường kẻ mảnh màu xám nhạt, nhiều khoảng trắng.
 
@@ -31,7 +31,7 @@ Bảng màu:
 
 Typography: font "Be Vietnam Pro" (hỗ trợ tiếng Việt tốt). Tiêu đề đậm (600–700), thân chữ 400–500, cỡ nền 14–16px, có phân cấp rõ.
 
-Bố cục ứng dụng (sau đăng nhập): Sidebar trái cố định (rộng ~240px) chứa logo "MedLuyện" + menu điều hướng có icon; Header trên cùng chứa ô tìm kiếm toàn cục, chuông thông báo, huy hiệu "Nâng cấp", avatar người dùng. Vùng nội dung dạng lưới card.
+Bố cục ứng dụng (sau đăng nhập): Sidebar trái cố định (rộng ~240px) chứa logo "MebPro" + menu điều hướng có icon; Header trên cùng chứa ô tìm kiếm toàn cục, chuông thông báo, huy hiệu "Nâng cấp", avatar người dùng. Vùng nội dung dạng lưới card.
 
 Iconography: icon nét mảnh (outline) đồng nhất, phong cách Lucide/Phosphor.
 Accessibility: tương phản đạt WCAG AA, có focus ring rõ, trạng thái không chỉ dựa vào màu.

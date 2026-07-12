@@ -66,7 +66,7 @@ Tìm trong một khu vực (Library, Qbank, Notes...).
 
 ### 25.1 Kết quả tìm kiếm theo khu vực (`/library/search`, `/qbank?q=`...)
 ```
-Màn hình kết quả tìm kiếm theo ngữ cảnh trong MedLuyện (ví dụ trong Thư viện, route /library/search?q=viêm phổi), app shell.
+Màn hình kết quả tìm kiếm theo ngữ cảnh trong MebPro (ví dụ trong Thư viện, route /library/search?q=viêm phổi), app shell.
 Khối chính: ô tìm kiếm lớn có nhãn phạm vi "Tìm trong Thư viện", đang chứa "viêm phổi", dropdown gợi ý typeahead khi gõ (Viêm phổi cộng đồng, Viêm phổi bệnh viện, Viêm phổi hít); cột facet trái (Loại nội dung, Chuyên ngành, Độ khó, Chỉ nội dung miễn phí); danh sách kết quả với từ khóa được tô đậm, badge loại; sắp xếp; phân trang.
 Khi ô trống: hiện "Tìm kiếm gần đây" và "Phổ biến". Trạng thái không kết quả: "Không tìm thấy 'viêm phổi' — kiểm tra chính tả hoặc thử từ khóa khác".
 Tạo đồng thời 2 khung trong cùng màn hình — bản Desktop (bố cục đầy đủ như mô tả trên) và bản Mobile. Trên mobile: search overlay full-screen, facet bottom sheet. Màu teal #0F766E.
@@ -79,7 +79,7 @@ Tìm kiếm toàn hệ thống bằng Cmd/Ctrl+K.
 
 ### 26.1 Command palette overlay (Cmd/Ctrl+K)
 ```
-Overlay command palette tìm kiếm toàn cục của MedLuyện, xuất hiện giữa màn hình khi nhấn Cmd/Ctrl+K, nền phía sau tối mờ.
+Overlay command palette tìm kiếm toàn cục của MebPro, xuất hiện giữa màn hình khi nhấn Cmd/Ctrl+K, nền phía sau tối mờ.
 Hộp giữa màn hình bo góc, đổ bóng lớn: trên cùng là ô nhập lớn có icon kính lúp, placeholder "Tìm câu hỏi, bệnh, thuốc, hoặc gõ > để chạy lệnh...", đang gõ "nhồi máu". Bên dưới là kết quả nhóm theo loại, mỗi nhóm có tiêu đề nhỏ và icon:
 - "Bệnh học": Nhồi máu cơ tim cấp, Nhồi máu não.
 - "Câu hỏi": #1024 Đau ngực cấp ở nam 58 tuổi...

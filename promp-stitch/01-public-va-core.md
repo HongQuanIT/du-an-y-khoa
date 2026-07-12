@@ -9,8 +9,8 @@ Trang công khai giới thiệu sản phẩm, tối ưu chuyển đổi cho Gues
 
 ### 1.1 Trang chủ / Hero (`/`)
 ```
-Trang landing marketing "MedLuyện — Học & luyện thi Y khoa thông minh" cho khách chưa đăng nhập.
-Bố cục: public header (logo MedLuyện, menu Tính năng · Bảng giá · Blog · Về chúng tôi, nút "Đăng nhập" viền + "Đăng ký miễn phí" nền teal, dropdown ngôn ngữ VI/EN) sticky trong suốt chuyển sang nền trắng khi cuộn; footer nhiều cột cuối trang.
+Trang landing marketing "MebPro — Học & luyện thi Y khoa thông minh" cho khách chưa đăng nhập.
+Bố cục: public header (logo MebPro, menu Tính năng · Bảng giá · Blog · Về chúng tôi, nút "Đăng nhập" viền + "Đăng ký miễn phí" nền teal, dropdown ngôn ngữ VI/EN) sticky trong suốt chuyển sang nền trắng khi cuộn; footer nhiều cột cuối trang.
 Các khối chính từ trên xuống:
 (1) Hero 2 cột: trái là tiêu đề lớn "Học hiệu quả hơn — hiểu bản chất, nhớ lâu, luyện thi đúng trọng tâm", phụ đề, 2 nút "Bắt đầu luyện thi" (teal) và "Xem câu hỏi mẫu"; phải là ảnh minh họa giao diện làm bài.
 (2) Dải số liệu tin cậy: "12.450 câu hỏi · 38.000+ người học · 18 chuyên ngành".
@@ -28,7 +28,7 @@ Màu chủ đạo teal #0F766E, nền trắng sạch, nhiều khoảng trắng, 
 
 ### 1.2 Trang tính năng (`/features`)
 ```
-Trang "Tính năng" công khai của MedLuyện. Public header + footer.
+Trang "Tính năng" công khai của MebPro. Public header + footer.
 Nội dung: intro ngắn; lưới các nhóm tính năng có icon và mô tả tiếng Việt (Ngân hàng câu hỏi, Chế độ Study/Exam, Thư viện liên kết chéo, Flashcards spaced repetition, AI Tutor, Lộ trình học cá nhân hóa, Phân tích & Heatmap, Mô phỏng thi thật); mỗi nhóm có ảnh chụp giao diện. Dải CTA đăng ký cuối trang.
 Tạo đồng thời 2 khung trong cùng màn hình — bản Desktop (bố cục đầy đủ như mô tả trên) và bản Mobile. Trên mobile: 1 cột. Màu teal #0F766E.
 ```
@@ -59,7 +59,7 @@ Tạo đồng thời 2 khung trong cùng màn hình — bản Desktop (bố cụ
 
 ### 2.1 Đăng nhập (`/login`)
 ```
-Màn hình đăng nhập MedLuyện, bố cục 2 cột: cột trái nền teal gradient với logo, tagline "Chào mừng trở lại!" và ảnh minh họa y khoa; cột phải là form trên nền trắng.
+Màn hình đăng nhập MebPro, bố cục 2 cột: cột trái nền teal gradient với logo, tagline "Chào mừng trở lại!" và ảnh minh họa y khoa; cột phải là form trên nền trắng.
 Form: tiêu đề "Đăng nhập", input Email, input Mật khẩu (có icon hiện/ẩn), checkbox "Ghi nhớ đăng nhập" + link "Quên mật khẩu?", nút "Đăng nhập" full-width teal. Divider "hoặc tiếp tục với". 3 nút OAuth: Google, Facebook, Apple. Dòng cuối "Chưa có tài khoản? Đăng ký".
 Trạng thái lỗi: banner đỏ "Email hoặc mật khẩu không đúng"; nút loading khi gửi.
 Tạo đồng thời 2 khung trong cùng màn hình — bản Desktop (bố cục đầy đủ như mô tả trên) và bản Mobile. Trên mobile: ẩn cột trái, form full-width. Font Be Vietnam Pro, màu teal #0F766E.
@@ -67,42 +67,42 @@ Tạo đồng thời 2 khung trong cùng màn hình — bản Desktop (bố cụ
 
 ### 2.2 Đăng ký (`/register`)
 ```
-Màn hình đăng ký MedLuyện, bố cục 2 cột như trang đăng nhập.
+Màn hình đăng ký MebPro, bố cục 2 cột như trang đăng nhập.
 Form "Tạo tài khoản": input Họ và tên (mẫu "Nguyễn Văn An"), Email, Mật khẩu kèm thanh đo độ mạnh mật khẩu (yếu/trung bình/mạnh), Nhập lại mật khẩu, checkbox "Tôi đồng ý với Điều khoản & Chính sách bảo mật", nút "Đăng ký" teal. 3 nút OAuth Google/Facebook/Apple. Dòng "Đã có tài khoản? Đăng nhập".
 Tạo đồng thời 2 khung trong cùng màn hình — bản Desktop (bố cục đầy đủ như mô tả trên) và bản Mobile. Trên mobile: ẩn cột trái. Màu teal #0F766E.
 ```
 
 ### 2.3 Xác thực email (`/verify-email`)
 ```
-Màn hình trạng thái "Xác thực email" của MedLuyện, layout giữa màn hình một cột, không sidebar.
+Màn hình trạng thái "Xác thực email" của MebPro, layout giữa màn hình một cột, không sidebar.
 Nội dung: icon phong bì lớn, tiêu đề "Kiểm tra hộp thư của bạn", mô tả "Chúng tôi đã gửi liên kết xác thực đến an.nguyen@sv.vnu.edu.vn", nút "Mở ứng dụng email", link "Gửi lại email" kèm đếm ngược "Gửi lại sau 45s" khi trong cooldown. Link phụ "Dùng email khác".
 Màu teal #0F766E, nền #F8FAFC.
 ```
 
 ### 2.4 Quên mật khẩu (`/forgot-password`)
 ```
-Màn hình "Quên mật khẩu" MedLuyện, một cột giữa màn hình trên nền trắng bo góc.
+Màn hình "Quên mật khẩu" MebPro, một cột giữa màn hình trên nền trắng bo góc.
 Nội dung: tiêu đề "Đặt lại mật khẩu", mô tả "Nhập email để nhận liên kết đặt lại", input Email, nút "Gửi liên kết" teal, link "← Quay lại đăng nhập". Trạng thái thành công: alert xanh "Nếu email tồn tại, chúng tôi đã gửi hướng dẫn".
 Màu teal #0F766E.
 ```
 
 ### 2.5 Đặt lại mật khẩu (`/reset-password/{token}`)
 ```
-Màn hình "Tạo mật khẩu mới" MedLuyện, một cột giữa.
+Màn hình "Tạo mật khẩu mới" MebPro, một cột giữa.
 Form: input Mật khẩu mới kèm thanh đo độ mạnh, input Nhập lại mật khẩu, checklist yêu cầu ("ít nhất 8 ký tự", "có chữ hoa", "có số"), nút "Cập nhật mật khẩu" teal. Trạng thái token hết hạn: banner đỏ + nút "Gửi lại liên kết".
 Màu teal #0F766E.
 ```
 
 ### 2.6 Nhập mã 2FA (`/2fa/challenge`)
 ```
-Màn hình "Xác thực hai lớp" MedLuyện, một cột giữa.
+Màn hình "Xác thực hai lớp" MebPro, một cột giữa.
 Nội dung: icon khiên bảo mật, tiêu đề "Nhập mã xác thực", mô tả "Nhập mã 6 số từ ứng dụng Authenticator", 6 ô nhập OTP lớn cách đều tự động nhảy ô, nút "Xác nhận" teal, link "Dùng mã dự phòng". Bàn phím số trên mobile.
 Màu teal #0F766E.
 ```
 
 ### 2.7 Onboarding wizard (`/onboarding`)
 ```
-Wizard onboarding MedLuyện toàn màn hình cho người dùng mới, có stepper ngang "Bước 2/4" ở trên.
+Wizard onboarding MebPro toàn màn hình cho người dùng mới, có stepper ngang "Bước 2/4" ở trên.
 Hiển thị bước 2 "Mục tiêu học tập": tiêu đề "Bạn đang chuẩn bị cho kỳ thi nào?", lưới thẻ chọn có icon (Bác sĩ nội trú, Tốt nghiệp Y khoa, Chứng chỉ hành nghề, Ôn tập tổng quát); chọn ngày thi mục tiêu bằng date picker "15/06/2026"; chọn chuyên ngành quan tâm dạng chip nhiều lựa chọn (Nội khoa, Tim mạch, Nhi khoa, Dược lý...). Nút "Quay lại" viền + "Tiếp tục" teal, link "Bỏ qua".
 Tạo đồng thời 2 khung trong cùng màn hình — bản Desktop (bố cục đầy đủ như mô tả trên) và bản Mobile. Trên mobile: stepper dọc, thẻ 1 cột. Màu teal #0F766E.
 ```
@@ -143,7 +143,7 @@ Tạo đồng thời 2 khung trong cùng màn hình — bản Desktop (bố cụ
 
 ### 4.2 Wizard tạo kế hoạch (`/study-plan/create`)
 ```
-Wizard "Tạo lộ trình học" MedLuyện, app shell, stepper ngang 4 bước (Kỳ thi · Ngày thi · Phạm vi · Cường độ).
+Wizard "Tạo lộ trình học" MebPro, app shell, stepper ngang 4 bước (Kỳ thi · Ngày thi · Phạm vi · Cường độ).
 Hiển thị đồng thời tóm tắt các bước: chọn kỳ thi (thẻ Bác sĩ nội trú đang chọn), date picker ngày thi "15/06/2026", chọn phạm vi chủ đề dạng chip (Nội khoa, Tim mạch, Hô hấp, Tiêu hóa...), slider cường độ "40 câu/ngày ~ 90 phút", chọn chiến lược (Cố định / Thích ứng-Premium). Panel xem trước bên phải: "Tổng 3.360 câu · 84 ngày · 40 câu/ngày". Nút "Quay lại" + "Tạo lộ trình" teal.
 Tạo đồng thời 2 khung trong cùng màn hình — bản Desktop (bố cục đầy đủ như mô tả trên) và bản Mobile. Trên mobile: stepper dọc, xem trước xuống dưới. Màu teal #0F766E, nhãn Premium gradient vàng-cam.
 ```
@@ -212,7 +212,7 @@ Tạo đồng thời 2 khung trong cùng màn hình — bản Desktop (bố cụ
 
 ### 6.3 Modal tạm dừng & Question Navigator drawer
 ```
-Hai overlay cho màn làm bài MedLuyện.
+Hai overlay cho màn làm bài MebPro.
 (1) Modal "Tạm dừng phiên" giữa màn hình: icon tạm dừng, "Bạn muốn thoát? Tiến trình đã được lưu, có thể tiếp tục sau từ Trang chủ", nút "Lưu & thoát" teal + "Tiếp tục làm bài" viền.
 (2) Drawer "Bản đồ câu hỏi" trượt từ phải: lưới số 1–40, chú thích màu (đã trả lời, đã đánh dấu cờ, chưa làm), bộ lọc nhanh "Chỉ câu đã đánh dấu", nút "Nhảy tới câu". 
 Tạo đồng thời 2 khung trong cùng màn hình — bản Desktop (bố cục đầy đủ như mô tả trên) và bản Mobile. Trên mobile: drawer chiếm toàn màn hình từ đáy. Màu teal #0F766E.

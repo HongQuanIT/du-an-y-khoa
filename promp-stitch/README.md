@@ -1,4 +1,4 @@
-# Prompt Stitch — Giao diện SaaS Y khoa "MedLuyện"
+# Prompt Stitch — Giao diện SaaS Y khoa "MebPro"
 
 Bộ prompt để tạo **toàn bộ giao diện** nền tảng học & luyện thi Y khoa (mô hình AMBOSS/UWorld) trên [Stitch](https://stitch.withgoogle.com), thiết kế cho thị trường **Việt Nam**, dữ liệu mẫu **tiếng Việt**.
 
@@ -35,7 +35,7 @@ promp-stitch/
 
 ## Nguyên tắc chung khi tạo giao diện
 
-- Thương hiệu: **MedLuyện** · màu chủ đạo teal `#0F766E` · font **Be Vietnam Pro**.
+- Thương hiệu: **MebPro** · màu chủ đạo teal `#0F766E` · font **Be Vietnam Pro**.
 - Mọi nhãn & dữ liệu mẫu **tiếng Việt**; tiền tệ **VND**; thanh toán MoMo/VNPay/ZaloPay/thẻ.
 - Gating Premium nhất quán: preview mờ + nút "Nâng cấp".
 - Luôn có trạng thái loading/empty/error khi hợp lý; responsive mobile-first.
