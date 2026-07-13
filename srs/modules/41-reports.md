@@ -1,6 +1,8 @@
 # Module 41 — Reports
 
-**Nhóm:** Admin · **Ưu tiên:** Cao · **Phụ thuộc:** Analytics (19), Billing (29), Organization (32), Tracking (nền tảng) · **Trạng thái:** ✅
+**Nhóm:** Admin · **Ưu tiên:** Cao · **Phụ thuộc:** Analytics (19), Billing (29), Tracking (nền tảng) · **Trạng thái:** ✅
+
+> 🔵 Báo cáo/scope theo **tổ chức** (`/org/reports`, segment theo org, quyền org_admin) thuộc **Phase 2** (Module Organization 32 đã hoãn). Phạm vi hiện tại: báo cáo toàn hệ thống cho Admin/Super Admin.
 
 ## 0. Tóm tắt module
 Báo cáo & BI cho quản trị/tổ chức: người dùng, engagement, doanh thu, nội dung, học tập. Xây báo cáo, lọc, trực quan hóa, lên lịch & xuất (CSV/PDF/Excel).

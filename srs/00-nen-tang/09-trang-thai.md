@@ -1,6 +1,6 @@
 # 09 — Trạng thái tài liệu SRS
 
-Ký hiệu: ✅ hoàn chỉnh · 🟡 bản nháp chi tiết · ⬜ khung chờ bổ sung
+Ký hiệu: ✅ hoàn chỉnh · 🟡 bản nháp chi tiết · ⬜ khung chờ bổ sung · 🔵 hoãn (Phase 2)
 
 ## Nền tảng (00-nen-tang)
 | File | Trạng thái |
@@ -14,6 +14,8 @@ Ký hiệu: ✅ hoàn chỉnh · 🟡 bản nháp chi tiết · ⬜ khung chờ 
 | 07 Security & Performance | ✅ |
 | 07 Template module | ✅ |
 | 08 Glossary | ✅ |
+| 10 ERD (theo nhóm, SVG) | ✅ |
+| 11 ERD đầy đủ (SVG) | ✅ |
 
 ## Module (modules/)
 | # | Module | Trạng thái |
@@ -49,7 +51,7 @@ Ký hiệu: ✅ hoàn chỉnh · 🟡 bản nháp chi tiết · ⬜ khung chờ 
 | 29 | Billing | ✅ |
 | 30 | User Profile | ✅ |
 | 31 | User Settings | ✅ |
-| 32 | Organization | ✅ |
+| 32 | Organization | 🔵 Hoãn (Phase 2 — chưa đưa vào hệ thống) |
 | 33 | Admin Dashboard | ✅ |
 | 34 | User Management | ✅ |
 | 35 | Question Management | ✅ |

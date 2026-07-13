@@ -5,6 +5,8 @@
 ## 0. Tóm tắt module
 Quản lý gói & quyền lợi (entitlements): xem gói, nâng cấp/hạ cấp, dùng thử, hủy, gia hạn, coupon. Quyết định gating Premium toàn hệ thống.
 
+> 🔵 **Subscription theo tổ chức** (org subscription, quản lý ghế/seats, role Org Admin) thuộc **Phase 2** (Module Organization 32 đã hoãn). Phạm vi hiện tại: subscription cá nhân.
+
 | Route | Màn hình |
 |-------|----------|
 | `/pricing` | Bảng giá (public, module 01) |

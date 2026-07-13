@@ -1,6 +1,10 @@
 # Module 32 — Organization (Tổ chức/Lớp học)
 
-**Nhóm:** Account · **Ưu tiên:** Trung bình-Cao (B2B) · **Phụ thuộc:** RBAC (nền tảng), Subscription (28), Reports (41), Exams (23) · **Trạng thái:** ✅
+> 🔵 **HOÃN — PHASE 2 (chưa thuộc phạm vi hệ thống hiện tại).**
+> Module này **chưa triển khai** trong giai đoạn hiện tại. Toàn bộ thực thể, role, API, tính năng liên quan tới tổ chức/lớp học (Organization, OrganizationMember, Classroom, Assignment, org_admin, org subscription, org reports...) **không đưa vào build** cho tới khi được kích hoạt lại. Tài liệu dưới đây được **giữ nguyên để tham khảo & triển khai về sau**.
+> Khi bật lại: rà soát các module phụ thuộc (Subscription 28, Billing 29, Exams 23, Exam Management 38, Reports 41, RBAC 03) và mô hình dữ liệu (04), ERD (10, 11).
+
+**Nhóm:** Account · **Ưu tiên:** Trung bình-Cao (B2B) · **Phụ thuộc:** RBAC (nền tảng), Subscription (28), Reports (41), Exams (23) · **Trạng thái:** 🔵 Hoãn (Phase 2)
 
 ## 0. Tóm tắt module
 Quản lý tổ chức (trường/bệnh viện/trung tâm): thành viên, ghế license, lớp học/nhóm, giao bài/đề, theo dõi tiến độ, báo cáo tổ chức. Instructor & Org Admin thao tác trong phạm vi tổ chức.

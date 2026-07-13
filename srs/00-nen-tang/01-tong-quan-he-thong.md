@@ -29,15 +29,17 @@ Khẩu hiệu: *"Học hiệu quả hơn — hiểu bản chất, nhớ lâu, lu
 | **Guest** | Khách chưa đăng nhập | Xem landing, preview giới hạn, đăng ký |
 | **Student (Free)** | Người học miễn phí | Làm câu hỏi free, thư viện giới hạn, tính năng cá nhân cơ bản |
 | **Premium Student** | Người học trả phí | Toàn bộ Qbank, thư viện, AI, analytics nâng cao |
-| **Instructor** | Giảng viên/mentor | Tạo lớp, giao bài, xem tiến độ học viên |
 | **Content Editor** | Biên tập nội dung | CRUD câu hỏi, bài viết, media (theo workflow duyệt) |
-| **Organization Admin** | Quản trị tổ chức (trường/bệnh viện) | Quản lý thành viên, ghế license, báo cáo tổ chức |
 | **Admin** | Quản trị hệ thống | Quản lý user, nội dung, cấu hình |
 | **Super Admin** | Toàn quyền | Cấu hình hệ thống, phân quyền, billing, feature flag |
+| 🔵 **Instructor** *(hoãn)* | Giảng viên/mentor | Tạo lớp, giao bài, xem tiến độ — **Phase 2 (gắn Organization)** |
+| 🔵 **Organization Admin** *(hoãn)* | Quản trị tổ chức (trường/bệnh viện) | Quản lý thành viên, ghế license, báo cáo tổ chức — **Phase 2** |
 
 Chi tiết ma trận quyền: xem `03-phan-quyen-rbac.md`.
 
-## 4. Phạm vi hệ thống (Scope) — 43 module theo 8 nhóm
+> 🔵 **Ghi chú phạm vi:** Module **Organization (32)** cùng các actor **Instructor** và **Organization Admin** đã được **hoãn sang Phase 2**, chưa thuộc phạm vi build hiện tại.
+
+## 4. Phạm vi hệ thống (Scope) — 42 module hiện tại + 1 module hoãn (Phase 2)
 
 1. **Public**: Landing Page.
 2. **Core học tập**: Authentication, Dashboard, Study Plan, Question Bank, Question Session, Question Review.
@@ -45,8 +47,10 @@ Chi tiết ma trận quyền: xem `03-phan-quyen-rbac.md`.
 4. **Cá nhân hóa**: Notes, Bookmark, Highlight, Flashcards, Study Analytics, Weak Topics, Performance Dashboard, Heatmap.
 5. **Thi cử**: Exams, Self Assessment.
 6. **Khám phá**: Search, Global Search.
-7. **Tài khoản**: Notification, Subscription, Billing, User Profile, User Settings, Organization.
+7. **Tài khoản**: Notification, Subscription, Billing, User Profile, User Settings.
 8. **Quản trị & Nền tảng**: Admin Dashboard, User/Question/Library/Media/Exam Management, Role & Permission, Audit Log, Reports, CMS, API.
+
+> 🔵 **Hoãn (Phase 2 — chưa đưa vào hệ thống):** Module **Organization (32)** — quản lý tổ chức/lớp học (B2B). Sẽ bổ sung khi triển khai giai đoạn 2.
 
 ## 5. Sơ đồ ngữ cảnh (Context)
 

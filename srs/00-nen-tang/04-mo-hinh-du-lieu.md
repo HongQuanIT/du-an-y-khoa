@@ -29,7 +29,7 @@
 | avatar_media_id | FK Media null | |
 | locale | VARCHAR(5) | vi/en |
 | timezone | VARCHAR(40) | |
-| organization_id | FK Organization null | |
+| organization_id | FK Organization null | 🔵 Phase 2 (Organization hoãn) — để null, chưa dùng |
 | last_login_at | TIMESTAMP null | |
 | streak_count | INT default 0 | |
 | exam_target_date | DATE null | dùng cho Study Plan |
@@ -37,7 +37,7 @@
 | timestamps, soft delete | | |
 
 Index: `email`, `role`, `organization_id`, `status`.
-Quan hệ: hasMany Attempt/Session/Note/Bookmark/Highlight/Flashcard; belongsTo Organization; hasOne Subscription; hasMany OAuthAccount, Device.
+Quan hệ: hasMany Attempt/Session/Note/Bookmark/Highlight/Flashcard; hasOne Subscription; hasMany OAuthAccount, Device. *(🔵 Phase 2: belongsTo Organization.)*
 
 ### OAuthAccount
 `id, user_id FK, provider(google/facebook/apple), provider_user_id, access_token(enc), refresh_token(enc), expires_at, timestamps`. Unique `(provider, provider_user_id)`.
@@ -48,11 +48,13 @@ Quan hệ: hasMany Attempt/Session/Note/Bookmark/Highlight/Flashcard; belongsTo 
 ### Role / Permission / RoleUser / PermissionRole
 Chuẩn RBAC: `roles(id,name,slug)`, `permissions(id,name,slug)`, `permission_role`, `role_user` (nếu multi-role). Xem `03-phan-quyen-rbac.md`.
 
-### Organization
+### 🔵 Organization *(Phase 2 — hoãn, chưa tạo bảng ở giai đoạn hiện tại)*
 `id, uuid, name, type(university/hospital/company), seats_total, seats_used, billing_email, status, meta JSON, timestamps, soft delete`.
 
-### OrganizationMember
+### 🔵 OrganizationMember *(Phase 2 — hoãn)*
 `id, organization_id FK, user_id FK, org_role(member/instructor/org_admin), invited_by, joined_at, status(invited/active/removed), timestamps`. Unique `(organization_id, user_id)`.
+
+> 🔵 **Ghi chú:** Nhóm bảng tổ chức (`organizations`, `organization_members`, và `classes`, `assignments`, `assignment_submissions` ở Module 32) **chưa đưa vào build hiện tại**. Cột `users.organization_id` để **nullable** và tạm không dùng cho tới Phase 2.
 
 ## 3. Nhóm Nội dung câu hỏi
 
@@ -270,8 +272,8 @@ User ─┬─< QuestionSession ─< QuestionAttempt >─ Question ─< Question
       ├─< DailyStat
       ├─< ExamAttempt >─ Exam
       ├─ Subscription ─ Plan ; Subscription ─< Invoice ─< Payment
-      ├─< Notification
-      └─ belongsTo Organization ─< OrganizationMember
+      └─< Notification
+      # 🔵 (Phase 2) belongsTo Organization ─< OrganizationMember
 
 Article/Drug/Procedure/Media ─< ContentLink >─ (poly bất kỳ)
 ```

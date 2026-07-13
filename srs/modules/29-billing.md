@@ -5,6 +5,8 @@
 ## 0. Tóm tắt module
 Xử lý thanh toán qua cổng (Stripe/địa phương VN như VNPay/MoMo/ZaloPay), hóa đơn, phương thức thanh toán, lịch sử giao dịch, hoàn tiền, webhook đối soát. Không lưu số thẻ (token hóa qua cổng).
 
+> 🔵 **Billing theo tổ chức** (hóa đơn org, role Org Admin) thuộc **Phase 2** (Module Organization 32 đã hoãn). Phạm vi hiện tại: billing cá nhân.
+
 | Route | Màn hình |
 |-------|----------|
 | `/billing` | Tổng quan thanh toán |

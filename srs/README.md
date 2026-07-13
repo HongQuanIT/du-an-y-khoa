@@ -4,7 +4,8 @@
 
 ## 1. Mục đích tài liệu
 
-- Đặc tả đầy đủ **43 module** của hệ thống: từng trang, màn hình, popup, modal, drawer, wizard, tab, component, form, empty/loading/error state.
+- Đặc tả đầy đủ hệ thống theo **43 module**, trong đó **42 module thuộc phạm vi hiện tại** và **1 module hoãn (Phase 2)**: từng trang, màn hình, popup, modal, drawer, wizard, tab, component, form, empty/loading/error state.
+- 🔵 **Đã hoãn:** Module 32 — Organization (chưa đưa vào hệ thống ở giai đoạn này; tài liệu giữ lại để triển khai sau).
 - Chuẩn hóa **kiến trúc, mô hình dữ liệu, API, phân quyền, tracking, security, performance** dùng chung cho mọi module.
 - Là "single source of truth" cho Product Owner, BA, UX/UI, Backend, Frontend, QA.
 
@@ -44,15 +45,19 @@ srs/
 │   ├── 07-template-module.md
 │   ├── 08-glossary.md
 │   ├── 09-trang-thai.md
-│   └── 10-erd.md                     ← sơ đồ ERD (Mermaid, xem ở Preview)
-└── modules/                          ← 43 module đặc tả chi tiết
+│   ├── 10-erd.md                     ← ERD theo nhóm (Mermaid + ảnh SVG)
+│   ├── 11-erd-full.md                ← ERD đầy đủ toàn hệ thống (1 sơ đồ)
+│   └── erd-images/                   ← ảnh SVG dựng sẵn của ERD
+└── modules/                          ← 42 module hiện tại (+ 1 hoãn: Organization)
     ├── 01-landing-page.md
     ├── 02-authentication.md
     ├── ...
     └── 43-api.md
 ```
 
-## 5. Danh sách 43 Module
+## 5. Danh sách Module
+
+> 🔵 = hoãn (Phase 2, chưa thuộc phạm vi build hiện tại).
 
 | # | Module | Nhóm | File |
 |---|--------|------|------|
@@ -87,7 +92,7 @@ srs/
 | 29 | Billing | Account | `modules/29-billing.md` |
 | 30 | User Profile | Account | `modules/30-user-profile.md` |
 | 31 | User Settings | Account | `modules/31-user-settings.md` |
-| 32 | Organization | Account | `modules/32-organization.md` |
+| 32 | 🔵 Organization *(hoãn - Phase 2)* | Account | `modules/32-organization.md` |
 | 33 | Admin Dashboard | Admin | `modules/33-admin-dashboard.md` |
 | 34 | User Management | Admin | `modules/34-user-management.md` |
 | 35 | Question Management | Admin | `modules/35-question-management.md` |
@@ -102,7 +107,7 @@ srs/
 
 ## 6. Trạng thái tài liệu
 
-- Ký hiệu: ✅ hoàn chỉnh · 🟡 bản nháp chi tiết · ⬜ khung chờ bổ sung
+- Ký hiệu: ✅ hoàn chỉnh · 🟡 bản nháp chi tiết · ⬜ khung chờ bổ sung · 🔵 hoãn (Phase 2)
 - Xem cột trạng thái trong `00-nen-tang/09-trang-thai.md` (cập nhật liên tục).
 
 ## 7. Quy ước

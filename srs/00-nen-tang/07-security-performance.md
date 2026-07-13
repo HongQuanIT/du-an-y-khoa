@@ -7,14 +7,14 @@
 ### 1. Authentication
 - Mật khẩu băm **bcrypt/argon2**; chính sách độ mạnh; chống brute-force (lockout + rate limit + captcha khi nghi ngờ).
 - OAuth (Google/Facebook/Apple) qua Socialite; liên kết tài khoản; xác thực email cho đăng ký email.
-- **2FA** (TOTP) tùy chọn cho tài khoản nhạy cảm (admin, org_admin bắt buộc).
+- **2FA** (TOTP) tùy chọn cho tài khoản nhạy cảm (admin bắt buộc; *org_admin: 🔵 Phase 2*).
 - Session/token: Sanctum; token có thời hạn + refresh; revoke theo thiết bị.
 - "Remember me" an toàn (token xoay vòng).
 
 ### 2. Authorization
 - RBAC + Policy (xem `03-phan-quyen-rbac.md`); **deny by default**.
 - Server luôn re-check quyền và entitlement (không tin FE).
-- Data scoping theo owner/organization (global scope) chống IDOR.
+- Data scoping theo owner (global scope) chống IDOR. *(Scope theo organization: 🔵 Phase 2.)*
 
 ### 3. Chống tấn công web (OWASP)
 | Rủi ro | Biện pháp |

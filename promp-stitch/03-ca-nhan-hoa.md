@@ -18,7 +18,7 @@ Tạo đồng thời 2 khung trong cùng màn hình — bản Desktop (bố cụ
 
 ### 15.2 Popover ghi chú nhanh (inline)
 ```
-Popover "Ghi chú nhanh" nổi cạnh thanh công cụ câu hỏi/bài viết trong MebPro.
+Popover "Ghi chú nhanh" nổi cạnh thanh công cụ câu hỏi/bài viết trong MedPro.
 Nội dung: tiêu đề nhỏ "Ghi chú cho câu này", ô nhập rich text, hàng chọn màu (vàng/xanh lá/hồng/xanh dương), nút "Lưu" teal, badge "Tự động lưu". 
 Tạo đồng thời 2 khung trong cùng màn hình — bản Desktop (bố cục đầy đủ như mô tả trên) và bản Mobile. Trên mobile: thành bottom sheet trượt từ đáy. Màu teal #0F766E.
 ```
@@ -44,7 +44,7 @@ Tô sáng đoạn văn nhiều màu, tổng hợp để ôn nhanh.
 
 ### 17.1 Thanh chọn khi bôi text (selection toolbar)
 ```
-Thanh công cụ nhỏ nổi lên khi người dùng bôi chọn một đoạn văn bản trong bài viết MebPro.
+Thanh công cụ nhỏ nổi lên khi người dùng bôi chọn một đoạn văn bản trong bài viết MedPro.
 Nội dung: 4 chấm tròn chọn màu tô (vàng, xanh lá, hồng, xanh dương), nút "Ghi chú", nút "Sao chép", nút "Hỏi AI". Bo góc, đổ bóng nhẹ, xuất hiện ngay trên đoạn được chọn.
 Tạo đồng thời 2 khung trong cùng màn hình — bản Desktop (bố cục đầy đủ như mô tả trên) và bản Mobile. Trên mobile: thành thanh bottom sheet khi chạm-giữ chọn text. Màu teal #0F766E.
 ```
@@ -90,7 +90,7 @@ Tạo đồng thời 2 khung trong cùng màn hình — bản Desktop (bố cụ
 
 ### 18.4 Tạo/sửa thẻ (`/flashcards/create`)
 ```
-Modal/màn hình "Tạo thẻ ghi nhớ" (route /flashcards/create) của MebPro.
+Modal/màn hình "Tạo thẻ ghi nhớ" (route /flashcards/create) của MedPro.
 Form: trình soạn Mặt trước (rich text) và Mặt sau (rich text) cạnh nhau với xem trước lật thẻ; chọn Bộ thẻ (dropdown), Thẻ tag (chip), liên kết nguồn "Từ câu hỏi #1024" (nếu có); nút "Tạo với AI" gợi ý sinh mặt trước/sau tự động (Premium); nút "Lưu thẻ" teal + "Lưu & tạo thẻ tiếp".
 Tạo đồng thời 2 khung trong cùng màn hình — bản Desktop (bố cục đầy đủ như mô tả trên) và bản Mobile. Trên mobile: 2 mặt xếp dọc. Màu teal #0F766E, nhãn AI/Premium gradient vàng-cam.
 ```

@@ -5,6 +5,8 @@
 ## 0. Tóm tắt module
 Mô phỏng kỳ thi thật: đề cố định/ngẫu nhiên theo rule, giới hạn thời gian, giao diện giống phòng thi, chấm & xếp hạng sau nộp. Dùng lại Session engine ở "exam mode" nhưng có lớp Exam (đề mẫu, lịch, điểm chuẩn, percentile).
 
+> 🔵 Các phần gắn **tổ chức** (đề tổ chức, giám sát/proctoring theo org) thuộc **Phase 2** (Module Organization 32 đã hoãn).
+
 | Route | Màn hình |
 |-------|----------|
 | `/exams` | Danh sách đề thi |

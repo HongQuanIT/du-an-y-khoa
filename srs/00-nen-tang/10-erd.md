@@ -1,7 +1,7 @@
 # 10 — ERD (Sơ đồ quan hệ thực thể)
 
 > Sơ đồ trực quan cho mô hình dữ liệu ở `04-mo-hinh-du-lieu.md`. Có **2 dạng**:
-> 1. **Ảnh PNG dựng sẵn** trong thư mục `erd-images/` (nhúng ngay dưới mỗi mục) — xem được ngay, kể cả khi trình xem không hỗ trợ Mermaid.
+> 1. **Ảnh SVG dựng sẵn** trong thư mục `erd-images/` (nhúng ngay dưới mỗi mục) — xem được ngay, phóng to không vỡ nét, kể cả khi trình xem không hỗ trợ Mermaid.
 > 2. **Source Mermaid** (khối ```mermaid) để chỉnh sửa/version — mở file ở chế độ Preview (Cursor: `Cmd/Ctrl+Shift+V`) để render động.
 >
 > Muốn dựng lại ảnh sau khi sửa source, xem mục 11.
@@ -15,7 +15,7 @@
 
 Các thực thể trung tâm và luồng chính. Bỏ bớt cột để dễ nhìn.
 
-![ERD tổng quan](erd-images/1-00-tong-quan.png)
+![ERD tổng quan](erd-images/1-00-tong-quan.svg)
 
 ```mermaid
 erDiagram
@@ -29,7 +29,6 @@ erDiagram
     USER ||--o{ EXAM_ATTEMPT : "làm"
     USER ||--o{ NOTIFICATION : "nhận"
     USER ||--o| SUBSCRIPTION : "có"
-    USER }o--o| ORGANIZATION : "thuộc"
 
     QUESTION_SESSION ||--o{ QUESTION_ATTEMPT : "gồm"
     QUESTION ||--o{ QUESTION_OPTION : "có đáp án"
@@ -43,9 +42,6 @@ erDiagram
     SUBSCRIPTION ||--o{ INVOICE : "phát hành"
     INVOICE ||--o{ PAYMENT : "thanh toán"
 
-    ORGANIZATION ||--o{ ORGANIZATION_MEMBER : "gồm"
-    USER ||--o{ ORGANIZATION_MEMBER : "là thành viên"
-
     ARTICLE }o--o{ CONTENT_LINK : "liên kết chéo"
     DRUG }o--o{ CONTENT_LINK : "liên kết chéo"
     MEDIA }o--o{ CONTENT_LINK : "liên kết chéo"
@@ -56,7 +52,9 @@ erDiagram
 
 ## 2. Nhóm Identity & Access
 
-![ERD Identity & Access](erd-images/2-identity-access.png)
+> 🔵 Organization/OrganizationMember đã **hoãn (Phase 2)** — không còn trong sơ đồ này; xem Module 32.
+
+![ERD Identity & Access](erd-images/2-identity-access.svg)
 
 ```mermaid
 erDiagram
@@ -65,9 +63,6 @@ erDiagram
     USER ||--o| TWO_FACTOR_SECRET : "bảo mật 2FA"
     USER }o--o{ ROLE : "role_user"
     ROLE }o--o{ PERMISSION : "permission_role"
-    USER }o--o| ORGANIZATION : "thuộc"
-    ORGANIZATION ||--o{ ORGANIZATION_MEMBER : "gồm"
-    USER ||--o{ ORGANIZATION_MEMBER : "tham gia"
 
     USER {
         bigint id PK
@@ -78,7 +73,6 @@ erDiagram
         string role "enum"
         string status "enum"
         bigint avatar_media_id FK
-        bigint organization_id FK
         date exam_target_date
         int streak_count
         json meta
@@ -118,30 +112,13 @@ erDiagram
         string name
         string slug UK "resource.action"
     }
-    ORGANIZATION {
-        bigint id PK
-        char uuid
-        string name
-        string type "university/hospital/company"
-        int seats_total
-        int seats_used
-        string status
-    }
-    ORGANIZATION_MEMBER {
-        bigint id PK
-        bigint organization_id FK
-        bigint user_id FK
-        string org_role "member/instructor/org_admin"
-        string status "invited/active/removed"
-        timestamp joined_at
-    }
 ```
 
 ---
 
 ## 3. Nhóm Câu hỏi & Học tập (Question & Learning)
 
-![ERD Question & Learning](erd-images/3-question-learning.png)
+![ERD Question & Learning](erd-images/3-question-learning.svg)
 
 ```mermaid
 erDiagram
@@ -262,7 +239,7 @@ erDiagram
 
 > `NOTE`, `BOOKMARK`, `HIGHLIGHT` là **đa hình** (gắn với Question/Article/Drug/Media/Video...). Cột `*_type` + `*_id` trỏ tới bất kỳ thực thể nào.
 
-![ERD Personalization](erd-images/4-personalization.png)
+![ERD Personalization](erd-images/4-personalization.svg)
 
 ```mermaid
 erDiagram
@@ -347,7 +324,7 @@ erDiagram
 
 > `CONTENT_LINK` là bảng liên kết chéo **đa hình hai đầu** (source & target): Article ↔ Drug ↔ Media ↔ Question ↔ Procedure.
 
-![ERD Content Library](erd-images/5-content-library.png)
+![ERD Content Library](erd-images/5-content-library.svg)
 
 ```mermaid
 erDiagram
@@ -458,7 +435,7 @@ erDiagram
 
 ## 6. Nhóm Study Plan & Analytics
 
-![ERD Study Plan & Analytics](erd-images/6-study-plan-analytics.png)
+![ERD Study Plan & Analytics](erd-images/6-study-plan-analytics.svg)
 
 ```mermaid
 erDiagram
@@ -518,17 +495,15 @@ erDiagram
 
 ## 7. Nhóm Thi cử (Exam)
 
-![ERD Exam](erd-images/7-exam.png)
+> 🔵 Classroom/Assignment/AssignmentSubmission (giao bài theo lớp) đã **hoãn (Phase 2)** cùng Module Organization — không còn trong sơ đồ này.
+
+![ERD Exam](erd-images/7-exam.svg)
 
 ```mermaid
 erDiagram
     EXAM ||--o{ EXAM_ATTEMPT : "sinh ra"
     USER ||--o{ EXAM_ATTEMPT : "thực hiện"
     EXAM_ATTEMPT ||--|| QUESTION_SESSION : "dung engine"
-    CLASSROOM ||--o{ ASSIGNMENT : "giao"
-    EXAM ||--o{ ASSIGNMENT : "duoc giao"
-    ASSIGNMENT ||--o{ ASSIGNMENT_SUBMISSION : "nop"
-    USER ||--o{ ASSIGNMENT_SUBMISSION : "nop bai"
 
     EXAM {
         bigint id PK
@@ -558,40 +533,17 @@ erDiagram
         timestamp started_at
         timestamp submitted_at
     }
-    CLASSROOM {
-        bigint id PK
-        bigint org_id FK
-        string name
-        bigint instructor_id FK
-    }
-    ASSIGNMENT {
-        bigint id PK
-        bigint class_id FK
-        string type
-        bigint ref_id "exam/content"
-        timestamp due_at
-        bigint created_by FK
-    }
-    ASSIGNMENT_SUBMISSION {
-        bigint id PK
-        bigint assignment_id FK
-        bigint user_id FK
-        string status
-        int score
-        timestamp submitted_at
-    }
 ```
 
 ---
 
 ## 8. Nhóm Thương mại (Commerce)
 
-![ERD Commerce](erd-images/8-commerce.png)
+![ERD Commerce](erd-images/8-commerce.svg)
 
 ```mermaid
 erDiagram
     USER ||--o| SUBSCRIPTION : "cá nhân"
-    ORGANIZATION ||--o| SUBSCRIPTION : "tổ chức"
     SUBSCRIPTION }o--|| PLAN : "theo gói"
     SUBSCRIPTION ||--o{ INVOICE : "phát hành"
     INVOICE ||--o{ PAYMENT : "thanh toán"
@@ -612,7 +564,6 @@ erDiagram
     SUBSCRIPTION {
         bigint id PK
         bigint user_id FK
-        bigint organization_id FK
         bigint plan_id FK
         string status "trialing/active/past_due/canceled/expired"
         timestamp current_period_start
@@ -666,7 +617,7 @@ erDiagram
 
 ## 9. Nhóm Hệ thống (System)
 
-![ERD System](erd-images/9-system.png)
+![ERD System](erd-images/9-system.svg)
 
 ```mermaid
 erDiagram
@@ -788,7 +739,7 @@ Các bảng dùng cột `{name}_type` + `{name}_id` để trỏ tới nhiều lo
 | MEDIA_USAGE | usable_type/id | Question, Article, Procedure |
 | CONTENT_LINK | source & target _type/id | Article, Drug, Media, Question, Procedure |
 | AUDIT_LOG | auditable_type/id | mọi entity nghiệp vụ |
-| API_KEY | owner_type/id | User, Organization |
+| API_KEY | owner_type/id | User *(Organization: 🔵 Phase 2)* |
 
 ---
 
@@ -800,13 +751,10 @@ Các bảng dùng cột `{name}_type` + `{name}_id` để trỏ tới nhiều lo
 # Cài Mermaid CLI (một lần)
 npm install -g @mermaid-js/mermaid-cli
 
-# Dựng lại toàn bộ (mỗi khối ```mermaid → 1 ảnh erd-N.png)
+# Dựng lại toàn bộ SVG (mỗi khối ```mermaid → 1 ảnh erd-N.svg)
 cd srs/00-nen-tang
-mmdc -i 10-erd.md -o erd.png -b white
-# → tạo erd-1.png ... erd-9.png (đổi tên/di chuyển vào erd-images/ nếu muốn)
-
-# SVG (nét, phóng to không vỡ)
 mmdc -i 10-erd.md -o erd.svg -b white
+# → tạo erd-1.svg ... erd-9.svg (đổi tên/di chuyển vào erd-images/ nếu muốn)
 ```
 
 Ngoài ra có thể dán từng khối `mermaid` vào [mermaid.live](https://mermaid.live) để chỉnh và tải ảnh.

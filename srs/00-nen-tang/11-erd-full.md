@@ -1,12 +1,13 @@
 # 11 — ERD đầy đủ (toàn bộ bảng trong một sơ đồ)
 
-> Sơ đồ ERD **tổng hợp mọi bảng** của hệ thống trong một hình duy nhất — dùng để nhìn bao quát toàn bộ mô hình dữ liệu và quan hệ chéo giữa các nhóm.
+> Sơ đồ ERD **tổng hợp mọi bảng** trong phạm vi hiện tại vào một hình duy nhất — dùng để nhìn bao quát toàn bộ mô hình dữ liệu và quan hệ chéo giữa các nhóm.
 >
 > - Ảnh **SVG** dựng sẵn: `erd-images/full-erd.svg` (phóng to không vỡ nét).
 > - Bản chia theo nhóm (dễ đọc từng phần): xem `10-erd.md`.
 > - Chi tiết field/type/index: xem `04-mo-hinh-du-lieu.md`.
+> - 🔵 **Nhóm Organization** (organizations, organization_members, classrooms, assignments, assignment_submissions) đã **hoãn (Phase 2)** → không có trong sơ đồ này; xem Module 32.
 >
-> Vì có ~55 bảng, nên mở SVG và phóng to, hoặc render động ở chế độ Preview (`Cmd/Ctrl+Shift+V`).
+> Vì có nhiều bảng, nên mở SVG và phóng to, hoặc render động ở chế độ Preview (`Cmd/Ctrl+Shift+V`).
 
 ![ERD đầy đủ toàn hệ thống](erd-images/full-erd.svg)
 
@@ -18,10 +19,6 @@ erDiagram
     USER ||--o| TWO_FACTOR_SECRET : "2FA"
     USER }o--o{ ROLE : "role_user"
     ROLE }o--o{ PERMISSION : "permission_role"
-    USER }o--o| ORGANIZATION : "thuoc"
-    ORGANIZATION ||--o{ ORGANIZATION_MEMBER : "gom"
-    USER ||--o{ ORGANIZATION_MEMBER : "tham gia"
-    ORGANIZATION ||--o{ CLASSROOM : "co lop"
 
     %% ===================== QUESTION & LEARNING =====================
     QUESTION ||--o{ QUESTION_OPTION : "co dap an"
@@ -72,14 +69,9 @@ erDiagram
     EXAM ||--o{ EXAM_ATTEMPT : "sinh ra"
     USER ||--o{ EXAM_ATTEMPT : "thuc hien"
     EXAM_ATTEMPT ||--|| QUESTION_SESSION : "dung engine"
-    CLASSROOM ||--o{ ASSIGNMENT : "giao"
-    EXAM ||--o{ ASSIGNMENT : "duoc giao"
-    ASSIGNMENT ||--o{ ASSIGNMENT_SUBMISSION : "nop"
-    USER ||--o{ ASSIGNMENT_SUBMISSION : "nop bai"
 
     %% ===================== COMMERCE =====================
     USER ||--o| SUBSCRIPTION : "ca nhan"
-    ORGANIZATION ||--o| SUBSCRIPTION : "to chuc"
     SUBSCRIPTION }o--|| PLAN : "theo goi"
     SUBSCRIPTION ||--o{ INVOICE : "phat hanh"
     INVOICE ||--o{ PAYMENT : "thanh toan"
@@ -104,7 +96,6 @@ erDiagram
         string email UK
         string role "enum"
         string status "enum"
-        bigint organization_id FK
         date exam_target_date
         int streak_count
         timestamp deleted_at
@@ -136,21 +127,6 @@ erDiagram
     PERMISSION {
         bigint id PK
         string slug UK "resource.action"
-    }
-    ORGANIZATION {
-        bigint id PK
-        string name
-        string type
-        int seats_total
-        int seats_used
-        string status
-    }
-    ORGANIZATION_MEMBER {
-        bigint id PK
-        bigint organization_id FK
-        bigint user_id FK
-        string org_role
-        string status
     }
     QUESTION {
         bigint id PK
@@ -400,26 +376,6 @@ erDiagram
         float percentile
         string status
     }
-    CLASSROOM {
-        bigint id PK
-        bigint org_id FK
-        string name
-        bigint instructor_id FK
-    }
-    ASSIGNMENT {
-        bigint id PK
-        bigint class_id FK
-        string type
-        bigint ref_id
-        timestamp due_at
-    }
-    ASSIGNMENT_SUBMISSION {
-        bigint id PK
-        bigint assignment_id FK
-        bigint user_id FK
-        string status
-        int score
-    }
     PLAN {
         bigint id PK
         string name
@@ -431,7 +387,6 @@ erDiagram
     SUBSCRIPTION {
         bigint id PK
         bigint user_id FK
-        bigint organization_id FK
         bigint plan_id FK
         string status
         timestamp current_period_end

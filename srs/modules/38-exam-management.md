@@ -1,6 +1,8 @@
 # Module 38 — Exam Management (Admin/Instructor)
 
-**Nhóm:** Admin · **Ưu tiên:** Cao · **Phụ thuộc:** Exams (23), Question Mgmt (35), Organization (32), RBAC (39) · **Trạng thái:** ✅
+**Nhóm:** Admin · **Ưu tiên:** Cao · **Phụ thuộc:** Exams (23), Question Mgmt (35), RBAC (39) · **Trạng thái:** ✅
+
+> 🔵 Tính năng **giao đề cho lớp/tổ chức** (Assign panel, `/assign`, role Instructor/Org Admin, org scope) thuộc **Phase 2** (Module Organization 32 đã hoãn). Phạm vi hiện tại: tạo & quản lý đề, cấu hình, chấm, xuất kết quả toàn hệ thống.
 
 ## 0. Tóm tắt module
 Tạo & quản lý đề thi/kỳ thi: chọn câu (thủ công hoặc rule ngẫu nhiên theo tiêu chí), cấu hình thời gian/điểm chuẩn/lịch, giao cho lớp/tổ chức, theo dõi & chấm, xuất kết quả.
