@@ -41,4 +41,4 @@ promp-stitch/
 - Mọi nhãn & dữ liệu mẫu **tiếng Việt**; tiền tệ **VND**; thanh toán MoMo/VNPay/ZaloPay/thẻ.
 - Gating Premium nhất quán: preview mờ + nút "Nâng cấp".
 - Luôn có trạng thái loading/empty/error khi hợp lý; responsive mobile-first.
-- **Mỗi prompt màn hình đều tạo ĐỒNG THỜI 2 khung: bản Desktop + bản Mobile** (xem câu "Tạo đồng thời 2 khung… Trên mobile: …" ở cuối mỗi prompt).
+- **Mỗi prompt màn hình thiết kế 2 MÀN HÌNH RIÊNG BIỆT**: một màn hình Desktop + một màn hình Mobile (tách rời, không gộp chung) — xem câu "Thiết kế 2 màn hình RIÊNG BIỆT… Trên mobile: …" ở cuối mỗi prompt.
