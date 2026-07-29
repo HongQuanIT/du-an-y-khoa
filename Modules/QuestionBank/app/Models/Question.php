@@ -7,6 +7,8 @@ namespace Modules\QuestionBank\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Laravel\Scout\Searchable;
@@ -52,6 +54,18 @@ class Question extends Model
         'is_free' => 'boolean',
         'version' => 'integer',
     ];
+
+    /** @return BelongsTo<Topic, $this> */
+    public function topic(): BelongsTo
+    {
+        return $this->belongsTo(Topic::class, 'topic_id');
+    }
+
+    /** @return HasMany<QuestionOption, $this> */
+    public function options(): HasMany
+    {
+        return $this->hasMany(QuestionOption::class, 'question_id');
+    }
 
     /**
      * Meilisearch document. Only index what search/faceting needs.

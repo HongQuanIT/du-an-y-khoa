@@ -11,6 +11,9 @@ class QuestionBankDatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // $this->call([]);
+        $this->call([
+            DemoLearningSeeder::class,
+            VolumeLearningSeeder::class, // no-op unless SEED_VOLUME=true
+        ]);
     }
 }

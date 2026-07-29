@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
+use Modules\QuestionBank\Models\QuestionOption;
 
 /**
  * @extends Factory<Question>
@@ -39,5 +40,26 @@ class QuestionFactory extends Factory
     public function free(): self
     {
         return $this->state(fn () => ['is_free' => true]);
+    }
+
+    /**
+     * Attach a full set of answer options (default 4, exactly one correct).
+     */
+    public function withOptions(int $count = 4): self
+    {
+        return $this->afterCreating(function (Question $question) use ($count): void {
+            $labels = ['A', 'B', 'C', 'D', 'E'];
+            $correctIndex = random_int(0, $count - 1);
+
+            for ($i = 0; $i < $count; $i++) {
+                QuestionOption::factory()
+                    ->when($i === $correctIndex, fn ($factory) => $factory->correct())
+                    ->create([
+                        'question_id' => $question->getKey(),
+                        'label' => $labels[$i],
+                        'order' => $i,
+                    ]);
+            }
+        });
     }
 }
