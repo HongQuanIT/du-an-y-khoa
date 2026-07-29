@@ -1,0 +1,21 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: 6
+    paths:
+        - app
+        - Modules
+        - database/seeders
+    excludePaths:
+        - Modules/*/database/migrations/*
+    checkModelProperties: false
+    reportUnmatchedIgnoredErrors: false
+    ignoreErrors:
+        # Known larastan limitation: Eloquent's query()/newQuery() stubs are typed
+        # Builder<Model>, so a *generic* base repository cannot prove Builder<TModel>
+        # inside the abstract class. Concrete repositories still resolve TModel
+        # correctly (e.g. QuestionRepository::query() → Builder<Question>).
+        -
+            identifier: return.type
+            path: app/Support/Repositories/EloquentRepository.php

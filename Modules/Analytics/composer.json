@@ -1,0 +1,30 @@
+{
+    "name": "medlearn/analytics",
+    "description": "",
+    "authors": [
+        {
+            "name": "MedLearn Team",
+            "email": "dev@medlearn.local"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\Analytics\\": "app/",
+            "Modules\\Analytics\\Database\\Factories\\": "database/factories/",
+            "Modules\\Analytics\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Analytics\\Tests\\": "tests/"
+        }
+    }
+}

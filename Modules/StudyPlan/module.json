@@ -1,0 +1,11 @@
+{
+    "name": "StudyPlan",
+    "alias": "studyplan",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\StudyPlan\\Providers\\StudyPlanServiceProvider"
+    ],
+    "files": []
+}

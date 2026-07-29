@@ -1,0 +1,30 @@
+{
+    "name": "medlearn/exam",
+    "description": "",
+    "authors": [
+        {
+            "name": "MedLearn Team",
+            "email": "dev@medlearn.local"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\Exam\\": "app/",
+            "Modules\\Exam\\Database\\Factories\\": "database/factories/",
+            "Modules\\Exam\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Exam\\Tests\\": "tests/"
+        }
+    }
+}

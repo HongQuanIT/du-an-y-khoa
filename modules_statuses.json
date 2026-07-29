@@ -1,0 +1,16 @@
+{
+    "Auth": true,
+    "QuestionBank": true,
+    "StudyPlan": true,
+    "Library": true,
+    "Media": true,
+    "Personalization": true,
+    "Analytics": true,
+    "Exam": true,
+    "Search": true,
+    "Notification": true,
+    "Billing": true,
+    "Account": true,
+    "AiAssistant": true,
+    "Admin": true
+}

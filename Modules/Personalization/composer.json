@@ -1,0 +1,30 @@
+{
+    "name": "medlearn/personalization",
+    "description": "",
+    "authors": [
+        {
+            "name": "MedLearn Team",
+            "email": "dev@medlearn.local"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\Personalization\\": "app/",
+            "Modules\\Personalization\\Database\\Factories\\": "database/factories/",
+            "Modules\\Personalization\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Personalization\\Tests\\": "tests/"
+        }
+    }
+}

@@ -1,0 +1,30 @@
+{
+    "name": "medlearn/studyplan",
+    "description": "",
+    "authors": [
+        {
+            "name": "MedLearn Team",
+            "email": "dev@medlearn.local"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\StudyPlan\\": "app/",
+            "Modules\\StudyPlan\\Database\\Factories\\": "database/factories/",
+            "Modules\\StudyPlan\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\StudyPlan\\Tests\\": "tests/"
+        }
+    }
+}

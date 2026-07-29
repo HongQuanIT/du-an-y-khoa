@@ -1,0 +1,30 @@
+{
+    "name": "medlearn/aiassistant",
+    "description": "",
+    "authors": [
+        {
+            "name": "MedLearn Team",
+            "email": "dev@medlearn.local"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\AiAssistant\\": "app/",
+            "Modules\\AiAssistant\\Database\\Factories\\": "database/factories/",
+            "Modules\\AiAssistant\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\AiAssistant\\Tests\\": "tests/"
+        }
+    }
+}

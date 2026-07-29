@@ -1,0 +1,30 @@
+{
+    "name": "medlearn/library",
+    "description": "",
+    "authors": [
+        {
+            "name": "MedLearn Team",
+            "email": "dev@medlearn.local"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\Library\\": "app/",
+            "Modules\\Library\\Database\\Factories\\": "database/factories/",
+            "Modules\\Library\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Library\\Tests\\": "tests/"
+        }
+    }
+}

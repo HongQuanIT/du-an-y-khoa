@@ -1,0 +1,30 @@
+{
+    "name": "medlearn/questionbank",
+    "description": "",
+    "authors": [
+        {
+            "name": "MedLearn Team",
+            "email": "dev@medlearn.local"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\QuestionBank\\": "app/",
+            "Modules\\QuestionBank\\Database\\Factories\\": "database/factories/",
+            "Modules\\QuestionBank\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\QuestionBank\\Tests\\": "tests/"
+        }
+    }
+}

@@ -1,0 +1,30 @@
+{
+    "name": "medlearn/account",
+    "description": "",
+    "authors": [
+        {
+            "name": "MedLearn Team",
+            "email": "dev@medlearn.local"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\Account\\": "app/",
+            "Modules\\Account\\Database\\Factories\\": "database/factories/",
+            "Modules\\Account\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Account\\Tests\\": "tests/"
+        }
+    }
+}

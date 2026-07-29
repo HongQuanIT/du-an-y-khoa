@@ -1,0 +1,11 @@
+{
+    "name": "Personalization",
+    "alias": "personalization",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Personalization\\Providers\\PersonalizationServiceProvider"
+    ],
+    "files": []
+}
