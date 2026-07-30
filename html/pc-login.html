@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html class="light" lang="vi" style="">
+
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Đăng nhập | MebPro</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@100..900&amp;display=swap"
+        rel="stylesheet">
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "warning": "#D97706",
+                        "surface-tint": "#006a63",
+                        "secondary-fixed": "#dbe1ff",
+                        "outline-variant": "#bdc9c6",
+                        "inverse-primary": "#80d5cb",
+                        "surface-bright": "#faf8ff",
+                        "on-tertiary-fixed-variant": "#72361b",
+                        "on-secondary-fixed": "#00174b",
+                        "primary": "#005c55",
+                        "primary-fixed": "#9cf2e8",
+                        "premium-gradient": "linear-gradient(135deg, #F59E0B 0%, #EA580C 100%)",
+                        "surface": "#FFFFFF",
+                        "surface-container": "#eaedff",
+                        "inverse-on-surface": "#eef0ff",
+                        "success": "#16A34A",
+                        "on-primary": "#ffffff",
+                        "on-background": "#131b2e",
+                        "on-primary-container": "#a3faef",
+                        "on-surface-variant": "#3e4947",
+                        "on-secondary": "#ffffff",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary-fixed-variant": "#003ea8",
+                        "on-error": "#ffffff",
+                        "primary-container": "#0f766e",
+                        "tertiary-fixed-dim": "#ffb598",
+                        "background": "#F8FAFC",
+                        "on-primary-fixed": "#00201d",
+                        "error-container": "#ffdad6",
+                        "text-secondary": "#64748B",
+                        "on-surface": "#131b2e",
+                        "tertiary": "#7f4025",
+                        "tertiary-container": "#9c573a",
+                        "border": "#E2E8F0",
+                        "surface-container-highest": "#dae2fd",
+                        "surface-variant": "#dae2fd",
+                        "surface-container-low": "#f2f3ff",
+                        "secondary-container": "#316bf3",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-dim": "#d2d9f4",
+                        "inverse-surface": "#283044",
+                        "surface-container-high": "#e2e7ff",
+                        "on-primary-fixed-variant": "#00504a",
+                        "on-secondary-container": "#fefcff",
+                        "tertiary-fixed": "#ffdbce",
+                        "outline": "#6e7977",
+                        "on-error-container": "#93000a",
+                        "on-tertiary-fixed": "#370e00",
+                        "primary-fixed-dim": "#80d5cb",
+                        "secondary": "#0051d5",
+                        "secondary-fixed-dim": "#b4c5ff",
+                        "error": "#DC2626",
+                        "on-tertiary-container": "#ffe5db"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-mobile": "16px",
+                        "gutter": "24px",
+                        "container-max": "1280px",
+                        "base-unit": "4px",
+                        "sidebar-width": "240px"
+                    },
+                    "fontFamily": {
+                        "label-sm": ["Be Vietnam Pro"],
+                        "body-md": ["Be Vietnam Pro"],
+                        "headline-lg-mobile": ["Be Vietnam Pro"],
+                        "headline-sm": ["Be Vietnam Pro"],
+                        "code": ["JetBrains Mono"],
+                        "label-md": ["Be Vietnam Pro"],
+                        "headline-md": ["Be Vietnam Pro"],
+                        "body-lg": ["Be Vietnam Pro"],
+                        "display": ["Be Vietnam Pro"],
+                        "body-sm": ["Be Vietnam Pro"],
+                        "headline-lg": ["Be Vietnam Pro"]
+                    },
+                    "fontSize": {
+                        "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "700" }],
+                        "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "code": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "display": ["48px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700" }]
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .loading-spinner {
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 2px solid #fff;
+            width: 18px;
+            height: 18px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-background text-on-surface font-body-md min-h-screen">
+    <main class="flex flex-col min-h-screen p-gutter gap-gutter items-center justify-center">
+        <!-- DESKTOP VERSION CONTAINER (SIDE BY SIDE PREVIEW) -->
+        <div class="w-full max-w-[1440px] h-[900px] shadow-2xl rounded-xl overflow-hidden border border-border flex">
+            <!-- Left Column: Branding & Illustration -->
+            <div class="w-1/2 bg-primary-container p-12 flex flex-col justify-between relative overflow-hidden">
+                <div class="z-10">
+                    <h1 class="text-white font-headline-lg text-headline-lg font-extrabold tracking-tight">MebPro</h1>
+                    <p class="text-on-primary-container text-body-lg font-body-lg mt-2">Chào mừng trở lại!</p>
+                </div>
+                <div class="relative z-10 flex flex-col items-center">
+                    <div
+                        class="w-full rounded-xl overflow-hidden shadow-2xl transform hover:scale-[1.02] transition-transform duration-500 border border-white/20">
+                        <img alt="Giao diện học tập y khoa chuyên nghiệp" class="w-full object-cover"
+                            src="https://lh3.googleusercontent.com/aida/AP1WRLv_p2rdQZm0QQ4HvbOfjWopS8En2e5kGHO6v7tyXV3e0jRVKf5mWIcMZc5_oq8ifygyXE5b7z672n2t_r74rpWb4TDXrHyM7iKQSkSlnUJdXgJoq6OE4tprXxLOP0gxlo2YJtAemTUVE3g03K1IgJ_25DBeV9a9anSstVhbpiLRASFVWDnT9UedXkXeGddCz1blvvS5VY3Yh4NyV09frO4ywaIMeH0HGe-veAamQR8wvchErRMU7KYFjDM">
+                    </div>
+                    <div class="mt-8 text-center text-white/90">
+                        <p class="font-headline-sm text-headline-sm">Làm chủ kiến thức y khoa</p>
+                        <p class="text-body-md opacity-80 mt-2">Nền tảng ôn luyện thông minh dành cho bác sĩ tương lai
+                        </p>
+                    </div>
+                </div>
+                <!-- Abstract background shapes -->
+                <div class="absolute top-[-10%] right-[-10%] w-64 h-64 bg-primary rounded-full blur-3xl opacity-30">
+                </div>
+                <div
+                    class="absolute bottom-[-5%] left-[-5%] w-80 h-80 bg-on-primary-fixed-variant rounded-full blur-3xl opacity-20">
+                </div>
+            </div>
+            <!-- Right Column: Login Form -->
+            <div class="w-1/2 bg-surface p-16 flex flex-col justify-center">
+                <div class="max-w-md mx-auto w-full">
+                    <h2 class="font-headline-md text-headline-md text-on-surface mb-8">Đăng nhập</h2>
+                    <!-- Error State Banner -->
+                    <div
+                        class="mb-6 flex items-center gap-3 p-4 bg-error-container text-on-error-container border border-error/20 rounded-lg">
+                        <span class="material-symbols-outlined text-[20px]">error</span>
+                        <p class="text-label-md font-label-md">Email hoặc mật khẩu không đúng</p>
+                    </div>
+                    <form class="space-y-5" onsubmit="return false">
+                        <div class="space-y-1.5">
+                            <label class="text-label-md font-label-md text-on-surface-variant"
+                                for="email-desktop">Email</label>
+                            <input
+                                class="w-full px-4 py-2.5 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none"
+                                id="email-desktop" placeholder="bacsi@mebpro.vn" type="email">
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="text-label-md font-label-md text-on-surface-variant"
+                                for="password-desktop">Mật khẩu</label>
+                            <div class="relative">
+                                <input
+                                    class="w-full px-4 py-2.5 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none"
+                                    id="password-desktop" type="password" value="password123">
+                                <button
+                                    class="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary"
+                                    type="button">
+                                    <span class="material-symbols-outlined">visibility</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between py-1">
+                            <label class="flex items-center gap-2 cursor-pointer group">
+                                <input class="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                                    type="checkbox">
+                                <span
+                                    class="text-label-md font-label-md text-on-surface-variant group-hover:text-on-surface transition-colors">Ghi
+                                    nhớ đăng nhập</span>
+                            </label>
+                            <a class="text-label-md font-label-md text-primary hover:underline" href="#">Quên mật
+                                khẩu?</a>
+                        </div>
+                        <!-- Login Button with Loading State -->
+                        <button
+                            class="w-full bg-primary-container text-white py-3 rounded-xl font-label-md text-label-md flex items-center justify-center gap-3 hover:opacity-90 active:scale-[0.98] transition-all shadow-md"
+                            type="submit">
+                            <div class="loading-spinner"></div>
+                            Đang xử lý...
+                        </button>
+                    </form>
+                    <div class="relative my-8">
+                        <div class="absolute inset-0 flex items-center">
+                            <div class="w-full border-t border-border"></div>
+                        </div>
+                        <div class="relative flex justify-center text-label-sm font-label-sm"><span
+                                class="bg-surface px-4 text-on-surface-variant uppercase tracking-wider">Hoặc tiếp tục
+                                với</span></div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-4"><button
+                            class="flex justify-center items-center py-2.5 border border-border rounded-xl hover:bg-surface-container-low transition-colors active:scale-95"
+                            title="Google">
+                            <img alt="Google" class="w-5 h-5"
+                                src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png">
+                        </button>
+                        <button
+                            class="flex justify-center items-center py-2.5 border border-border rounded-xl hover:bg-surface-container-low transition-colors active:scale-95"
+                            title="Facebook">
+                            <img alt="Facebook" class="w-5 h-5"
+                                src="https://upload.wikimedia.org/wikipedia/commons/b/b8/2021_Facebook_icon.svg">
+                        </button>
+                        <button
+                            class="flex justify-center items-center py-2.5 border border-border rounded-xl hover:bg-surface-container-low transition-colors active:scale-95"
+                            title="LinkedIn">
+                            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="#0077B5">
+                                <path
+                                    d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z">
+                                </path>
+                            </svg>
+                        </button>
+                    </div>
+                    <p class="mt-8 text-center text-body-sm font-body-sm text-on-surface-variant">
+                        Chưa có tài khoản?
+                        <a class="text-primary font-label-md hover:underline" href="#">Đăng ký ngay</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+        <!-- MOBILE VERSION CONTAINER -->
+    </main>
+    <script>
+        // Simple password toggle logic for demo
+        document.querySelectorAll('button:has(.material-symbols-outlined)').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const icon = this.querySelector('.material-symbols-outlined');
+                const input = this.parentElement.querySelector('input');
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    icon.textContent = 'visibility_off';
+                } else {
+                    input.type = 'password';
+                    icon.textContent = 'visibility';
+                }
+            });
+        });
+
+        // Atmospheric micro-interaction for the illustration container (desktop)
+        const desktopIllu = document.querySelector('.xl\\:flex img');
+        if (desktopIllu) {
+            desktopIllu.parentElement.addEventListener('mousemove', (e) => {
+                const { left, top, width, height } = desktopIllu.parentElement.getBoundingClientRect();
+                const x = (e.clientX - left) / width - 0.5;
+                const y = (e.clientY - top) / height - 0.5;
+                desktopIllu.style.transform = `perspective(1000px) rotateY(${x * 10}deg) rotateX(${-y * 10}deg) scale(1.05)`;
+            });
+            desktopIllu.parentElement.addEventListener('mouseleave', () => {
+                desktopIllu.style.transform = `perspective(1000px) rotateY(0deg) rotateX(0deg) scale(1)`;
+            });
+        }
+    </script>
+
+
+</body>
+
+</html>

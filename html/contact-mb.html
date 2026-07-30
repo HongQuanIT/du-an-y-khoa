@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+
+<html lang="vi" style="">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=375, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">try {
+            tailwind.config = {
+                darkMode: "class",
+                theme: {
+                    extend: {
+                        "colors": {
+                            "premium-gradient": "linear-gradient(135deg, #F59E0B 0%, #EA580C 100%)",
+                            "border": "#E2E8F0",
+                            "surface-tint": "#006a63",
+                            "text-secondary": "#64748B",
+                            "primary-fixed": "#9cf2e8",
+                            "inverse-primary": "#80d5cb",
+                            "surface-container-low": "#f2f3ff",
+                            "on-primary-container": "#a3faef",
+                            "outline": "#6e7977",
+                            "background": "#F8FAFC",
+                            "on-tertiary-container": "#ffe5db",
+                            "inverse-surface": "#283044",
+                            "surface-container-lowest": "#ffffff",
+                            "on-primary": "#ffffff",
+                            "surface": "#FFFFFF",
+                            "on-tertiary-fixed-variant": "#72361b",
+                            "on-primary-fixed": "#00201d",
+                            "on-secondary-fixed": "#00174b",
+                            "inverse-on-surface": "#eef0ff",
+                            "on-tertiary": "#ffffff",
+                            "surface-container-highest": "#dae2fd",
+                            "warning": "#D97706",
+                            "error-container": "#ffdad6",
+                            "on-secondary-fixed-variant": "#003ea8",
+                            "on-primary-fixed-variant": "#00504a",
+                            "on-secondary-container": "#fefcff",
+                            "success": "#16A34A",
+                            "tertiary": "#7f4025",
+                            "on-secondary": "#ffffff",
+                            "primary-container": "#0f766e",
+                            "tertiary-fixed-dim": "#ffb598",
+                            "secondary-fixed-dim": "#b4c5ff",
+                            "on-tertiary-fixed": "#370e00",
+                            "outline-variant": "#bdc9c6",
+                            "error": "#DC2626",
+                            "secondary": "#0051d5",
+                            "surface-container": "#eaedff",
+                            "tertiary-container": "#9c573a",
+                            "secondary-container": "#316bf3",
+                            "surface-variant": "#dae2fd",
+                            "surface-container-high": "#e2e7ff",
+                            "on-background": "#131b2e",
+                            "on-surface": "#131b2e",
+                            "surface-dim": "#d2d9f4",
+                            "tertiary-fixed": "#ffdbce",
+                            "primary": "#005c55",
+                            "secondary-fixed": "#dbe1ff",
+                            "primary-fixed-dim": "#80d5cb",
+                            "on-error-container": "#93000a",
+                            "surface-bright": "#faf8ff",
+                            "on-error": "#ffffff",
+                            "on-surface-variant": "#3e4947"
+                        },
+                        "borderRadius": {
+                            "DEFAULT": "0.25rem",
+                            "lg": "0.5rem",
+                            "xl": "0.75rem",
+                            "full": "9999px"
+                        },
+                        "spacing": {
+                            "sidebar-width": "240px",
+                            "gutter": "24px",
+                            "base-unit": "4px",
+                            "container-max": "1280px",
+                            "margin-mobile": "16px"
+                        },
+                        "fontFamily": {
+                            "body-lg": [
+                                "Be Vietnam Pro"
+                            ],
+                            "label-md": [
+                                "Be Vietnam Pro"
+                            ],
+                            "label-sm": [
+                                "Be Vietnam Pro"
+                            ],
+                            "body-sm": [
+                                "Be Vietnam Pro"
+                            ],
+                            "headline-lg-mobile": [
+                                "Be Vietnam Pro"
+                            ],
+                            "display": [
+                                "Be Vietnam Pro"
+                            ],
+                            "body-md": [
+                                "Be Vietnam Pro"
+                            ],
+                            "code": [
+                                "JetBrains Mono"
+                            ],
+                            "headline-md": [
+                                "Be Vietnam Pro"
+                            ],
+                            "headline-lg": [
+                                "Be Vietnam Pro"
+                            ],
+                            "headline-sm": [
+                                "Be Vietnam Pro"
+                            ]
+                        },
+                        "fontSize": {
+                            "body-lg": [
+                                "18px",
+                                {
+                                    "lineHeight": "28px",
+                                    "fontWeight": "400"
+                                }
+                            ],
+                            "label-md": [
+                                "14px",
+                                {
+                                    "lineHeight": "20px",
+                                    "fontWeight": "600"
+                                }
+                            ],
+                            "label-sm": [
+                                "12px",
+                                {
+                                    "lineHeight": "16px",
+                                    "fontWeight": "500"
+                                }
+                            ],
+                            "body-sm": [
+                                "14px",
+                                {
+                                    "lineHeight": "20px",
+                                    "fontWeight": "400"
+                                }
+                            ],
+                            "headline-lg-mobile": [
+                                "24px",
+                                {
+                                    "lineHeight": "32px",
+                                    "fontWeight": "700"
+                                }
+                            ],
+                            "display": [
+                                "48px",
+                                {
+                                    "lineHeight": "1.2",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "700"
+                                }
+                            ],
+                            "body-md": [
+                                "16px",
+                                {
+                                    "lineHeight": "24px",
+                                    "fontWeight": "400"
+                                }
+                            ],
+                            "code": [
+                                "14px",
+                                {
+                                    "lineHeight": "20px",
+                                    "fontWeight": "400"
+                                }
+                            ],
+                            "headline-md": [
+                                "24px",
+                                {
+                                    "lineHeight": "32px",
+                                    "fontWeight": "600"
+                                }
+                            ],
+                            "headline-lg": [
+                                "32px",
+                                {
+                                    "lineHeight": "40px",
+                                    "letterSpacing": "-0.01em",
+                                    "fontWeight": "700"
+                                }
+                            ],
+                            "headline-sm": [
+                                "20px",
+                                {
+                                    "lineHeight": "28px",
+                                    "fontWeight": "600"
+                                }
+                            ]
+                        }
+                    },
+                },
+            }
+        } catch (_e) { }</script>
+    <meta charset="utf-8" />
+</head>
+
+<body class="bg-background text-on-surface font-body-md w-full max-w-[375px] mx-auto relative h-full flex flex-col">
+    <!-- TopNavBar (Mobile Header - Simplified since it's a contact page/form) -->
+    <header
+        class="bg-surface/80 backdrop-blur-md sticky top-0 z-50 border-b border-border h-16 flex items-center justify-between px-4">
+        <div class="flex items-center gap-2">
+            <span class="text-primary font-headline-md text-headline-md font-bold">MebPro</span>
+        </div>
+        <div class="flex items-center gap-4">
+            <button class="text-on-surface-variant p-2">
+                <span class="material-symbols-outlined">search</span>
+            </button>
+            <button class="text-on-surface-variant p-2" id="menuToggle">
+                <span class="material-symbols-outlined">menu</span>
+            </button>
+        </div>
+    </header>
+    <!-- Main Content Canvas -->
+    <main class="flex-1 overflow-y-auto px-margin-mobile py-6 pb-32">
+        <!-- Page Title & Intro -->
+        <div class="mb-8">
+            <h1 class="font-headline-lg-mobile text-headline-lg-mobile text-on-background mb-2">Liên hệ với chúng tôi
+            </h1>
+            <p class="font-body-sm text-body-sm text-text-secondary">
+                MebPro luôn sẵn sàng lắng nghe và hỗ trợ bạn. Hãy liên hệ với chúng tôi qua các kênh dưới đây hoặc điền
+                vào form bên cạnh.
+            </p>
+        </div>
+        <!-- Contact Info Cards -->
+        <div class="space-y-4 mb-8">
+            <div class="flex items-start">
+                <div
+                    class="bg-surface-container w-12 h-12 p-2 rounded-full text-primary-container shrink-0 flex items-center justify-center mr-4">
+                    <span class="material-symbols-outlined fill text-primary-container"
+                        style='font-variation-settings: "FILL" 1;'>mail</span>
+                </div>
+                <div>
+                    <h3 class="font-label-md text-label-md text-on-surface mb-1">Email</h3>
+                    <a class="font-body-sm text-body-sm text-primary-container hover:underline block"
+                        href="mailto:hotro@medpro.vn">hotro@medpro.vn</a>
+                </div>
+            </div>
+            <div class="flex items-start">
+                <div
+                    class="bg-surface-container w-12 h-12 p-2 rounded-full text-primary-container shrink-0 flex items-center justify-center mr-4">
+                    <span class="material-symbols-outlined fill text-primary-container"
+                        style='font-variation-settings: "FILL" 1;'>call</span>
+                </div>
+                <div>
+                    <h3 class="font-label-md text-label-md text-on-surface mb-1">Hotline</h3>
+                    <a class="font-body-sm text-body-sm text-text-secondary hover:text-primary-container transition-colors block"
+                        href="tel:19001234">1900 1234</a>
+                </div>
+            </div>
+            <div class="flex items-start">
+                <div
+                    class="bg-surface-container w-12 h-12 p-2 rounded-full text-primary-container shrink-0 flex items-center justify-center mr-4">
+                    <span class="material-symbols-outlined fill text-primary-container"
+                        style='font-variation-settings: "FILL" 1;'>location_on</span>
+                </div>
+                <div>
+                    <h3 class="font-label-md text-label-md text-on-surface mb-1">Địa chỉ</h3>
+                    <p class="font-body-sm text-body-sm text-text-secondary">
+                        Tầng 5, Toà nhà ABC, Hà Nội
+                    </p>
+                </div>
+            </div>
+            <div class="flex items-start">
+                <div
+                    class="bg-surface-container w-12 h-12 p-2 rounded-full text-primary-container shrink-0 flex items-center justify-center mr-4">
+                    <span class="material-symbols-outlined fill text-primary-container"
+                        style='font-variation-settings: "FILL" 1;'>schedule</span>
+                </div>
+                <div>
+                    <h3 class="font-label-md text-label-md text-on-surface mb-1">Giờ làm việc</h3>
+                    <p class="font-body-sm text-body-sm text-text-secondary">
+                        T2–T6, 8:00–17:30
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="mb-8">
+            <p class="font-label-md text-label-md text-on-surface mb-3">Kết nối với chúng tôi</p>
+            <div class="flex space-x-4"><a aria-label="Facebook"
+                    class="w-10 h-10 rounded-full bg-surface border border-border flex items-center justify-center text-primary-container hover:bg-primary-container hover:text-on-primary transition-all duration-200 shadow-sm"
+                    href="#">
+                    <svg fill="none" height="20" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                        stroke-width="2" viewbox="0 0 24 24" width="20" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
+                    </svg>
+                </a>
+                <a aria-label="Google"
+                    class="w-10 h-10 rounded-full bg-surface border border-border flex items-center justify-center text-primary-container hover:bg-primary-container hover:text-on-primary transition-all duration-200 shadow-sm"
+                    href="#">
+                    <svg fill="none" height="20" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                        stroke-width="2" viewbox="0 0 24 24" width="20" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M12 8v8"></path>
+                        <path d="M8 12h8"></path>
+                    </svg>
+                </a>
+                <a aria-label="LinkedIn"
+                    class="w-10 h-10 rounded-full bg-surface border border-border flex items-center justify-center text-primary-container hover:bg-primary-container hover:text-on-primary transition-all duration-200 shadow-sm"
+                    href="#">
+                    <svg fill="none" height="20" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                        stroke-width="2" viewbox="0 0 24 24" width="20" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path>
+                        <rect height="12" width="4" x="2" y="9"></rect>
+                        <circle cx="4" cy="4" r="2"></circle>
+                    </svg>
+                </a>
+                <a aria-label="YouTube"
+                    class="w-10 h-10 rounded-full bg-surface border border-border flex items-center justify-center text-primary-container hover:bg-primary-container hover:text-on-primary transition-all duration-200 shadow-sm"
+                    href="#">
+                    <svg fill="none" height="20" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                        stroke-width="2" viewbox="0 0 24 24" width="20" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.42a2.78 2.78 0 0 0-1.94 2C1 8.14 1 12 1 12s0 3.86.46 5.58a2.78 2.78 0 0 0 1.94 2c1.72.42 8.6.42 8.6.42s6.88 0 8.6-.42a2.78 2.78 0 0 0 1.94-2C23 15.86 23 12 23 12s0-3.86-.46-5.58z">
+                        </path>
+                        <polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02"></polygon>
+                    </svg>
+                </a>
+            </div>
+        </div>
+        <!-- Contact Form -->
+        <div class="bg-surface rounded-xl border border-border p-6 mb-8 shadow-sm">
+            <h2 class="font-headline-sm text-headline-sm text-on-surface mb-5">Gửi tin nhắn cho chúng tôi</h2>
+            <form class="space-y-4" id="contactForm">
+                <div>
+                    <label class="block font-label-sm text-label-sm text-on-surface mb-1.5" for="name">Họ tên <span
+                            class="text-error">*</span></label>
+                    <input
+                        class="w-full h-12 rounded-lg border border-border bg-surface px-3 font-body-sm text-body-sm text-on-surface placeholder:text-text-secondary focus:border-primary-container focus:ring-1 focus:ring-primary-container transition-colors outline-none"
+                        id="name" placeholder="Nhập họ và tên của bạn" required="" type="text" />
+                </div>
+                <div>
+                    <label class="block font-label-sm text-label-sm text-on-surface mb-1.5" for="email">Email <span
+                            class="text-error">*</span></label>
+                    <input
+                        class="w-full h-12 rounded-lg border border-border bg-surface px-3 font-body-sm text-body-sm text-on-surface placeholder:text-text-secondary focus:border-primary-container focus:ring-1 focus:ring-primary-container transition-colors outline-none"
+                        id="email" placeholder="example@email.com" required="" type="email" />
+                </div>
+                <div>
+                    <label class="block font-label-sm text-label-sm text-on-surface mb-1.5" for="subject">Chủ đề <span
+                            class="text-error">*</span></label>
+                    <div class="relative">
+                        <select
+                            class="w-full h-12 rounded-lg border border-border bg-surface px-3 pr-10 font-body-sm text-body-sm text-on-surface appearance-none focus:border-primary-container focus:ring-1 focus:ring-primary-container transition-colors outline-none"
+                            id="subject" required="">
+                            <option disabled="" selected="" value="">Chọn chủ đề liên hệ</option>
+                            <option value="account">Hỗ trợ tài khoản</option>
+                            <option value="payment">Thanh toán</option>
+                            <option value="partnership">Hợp tác</option>
+                            <option value="other">Khác</option>
+                        </select>
+                        <span
+                            class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary pointer-events-none">expand_more</span>
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-label-sm text-label-sm text-on-surface mb-1.5" for="message">Nội dung <span
+                            class="text-error">*</span></label>
+                    <textarea
+                        class="w-full rounded-lg border border-border bg-surface p-3 font-body-sm text-body-sm text-on-surface placeholder:text-text-secondary focus:border-primary-container focus:ring-1 focus:ring-primary-container transition-colors outline-none resize-none"
+                        id="message" placeholder="Nhập chi tiết nội dung bạn cần hỗ trợ..." required=""
+                        rows="4"></textarea>
+                </div>
+                <div class="flex items-start gap-3 pt-2">
+                    <input
+                        class="custom-checkbox mt-1 w-4 h-4 rounded border-border text-primary-container focus:ring-primary-container"
+                        id="policy" required="" type="checkbox" />
+                    <label class="font-body-sm text-body-sm text-text-secondary leading-tight" for="policy">
+                        Tôi đồng ý với <a class="text-primary-container hover:underline" href="#">chính sách bảo mật</a>
+                        của MebPro khi gửi thông tin này.
+                    </label>
+                </div>
+                <button
+                    class="w-full h-12 mt-4 bg-primary-container text-on-primary font-label-md text-label-md rounded-xl flex items-center justify-center gap-2 hover:bg-[#0d6b63] transition-colors active:scale-[0.98]"
+                    type="submit">
+                    Gửi liên hệ
+                    <span class="material-symbols-outlined text-[20px]">send</span>
+                </button>
+            </form>
+            <!-- Success Message (Hidden by default) -->
+            <div class="hidden mt-6 bg-success/10 border border-success/20 rounded-lg p-4 flex flex-col items-center text-center"
+                id="successMessage">
+                <div class="w-10 h-10 rounded-full bg-success/20 text-success flex items-center justify-center mb-2">
+                    <span class="material-symbols-outlined fill">check_circle</span>
+                </div>
+                <h4 class="font-label-md text-label-md text-on-surface mb-1">Cảm ơn bạn!</h4>
+                <p class="font-body-sm text-body-sm text-text-secondary">Chúng tôi sẽ phản hồi trong 24 giờ qua email
+                    bạn đã cung cấp.</p>
+                <button
+                    class="mt-4 font-label-sm text-label-sm text-primary-container border border-primary-container rounded-DEFAULT px-4 py-1.5"
+                    onclick="resetForm()" type="button">
+                    Gửi tin nhắn khác
+                </button>
+            </div>
+        </div>
+        <!-- Embedded Map Placeholder -->
+        <div class="w-full h-48 bg-surface-container rounded-xl overflow-hidden border border-border relative mb-4">
+            <img class="w-full h-full object-cover"
+                data-alt="A highly detailed, professional map view highlighting a modern corporate office location in Hanoi. The map features a clean, high-contrast light mode UI design aesthetic suitable for a premium SaaS platform, with subtle teal accents marking the specific 'Tầng 5, Toà nhà ABC' building. Soft, ambient lighting and crisp vector-like street lines emphasize precision and accessibility."
+                data-location="Hanoi"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuBItZ0hKQLUEejsds47JqQH3IuvKtmwXKTilR1D-Qqwz1djdkoCVKsGWLaH_F2YaD9ManNRQKLNYdULJ3GfPAjVXd6vbgUmuCI-VbHKKR5jW73y1hiYPY11p5ByC0idhXfrT0-jM5vXzEocTPYJL5m7JulRnGK_28B5DdcEgLAu7_ZJ1qqzo51BeWdJ4P5Xq05fKA_LCFpzd0RPEw-A9SMXMOp44mI7LXDrRODxaPI5m7QJlofjqcqe_lGb66nKBS4hXY85OWQZGENK" />
+            <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div class="bg-surface/80 backdrop-blur-sm px-4 py-2 rounded-lg shadow-sm border border-border/50">
+                    <span class="text-label-sm font-label-sm text-on-surface flex items-center">
+                        <span class="material-symbols-outlined text-primary-container mr-1 text-sm">map</span>
+                        Bản đồ văn phòng
+                    </span>
+                </div>
+            </div>
+        </div>
+    </main>
+    <!-- Suppressed Bottom Navigation & TopAppBar Navigation links because this is a contextual/task-focused screen (Contact Form) -->
+    <!-- Replaced with-->
+    <footer class="px-4 py-12 bg-surface border-t border-border mb-16">
+        <div class="max-w-md mx-auto space-y-10">
+            <div class="space-y-4 text-center">
+                <div class="text-headline-sm font-headline-sm font-bold text-primary">MebPro</div>
+                <p class="font-body-sm text-body-sm text-text-secondary">
+                    Nền tảng ôn thi y khoa hàng đầu Việt Nam, giúp tối ưu hóa kết quả học tập thông qua công nghệ AI và
+                    phương pháp khoa học.
+                </p>
+                <div class="flex gap-4 justify-center">
+                    <button
+                        class="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high transition-colors border border-border">
+                        <span class="material-symbols-outlined text-[20px]">share</span>
+                    </button>
+                    <button
+                        class="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high transition-colors border border-border">
+                        <span class="material-symbols-outlined text-[20px]">public</span>
+                    </button>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-8">
+                <div class="space-y-4">
+                    <h4 class="font-label-md text-label-md text-on-surface font-bold">Sản phẩm</h4>
+                    <ul class="space-y-2">
+                        <li class=""><a
+                                class="font-body-sm text-body-sm text-text-secondary hover:text-primary transition-colors"
+                                href="#">Tính năng chính</a></li>
+                        <li class=""><a
+                                class="font-body-sm text-body-sm text-text-secondary hover:text-primary transition-colors"
+                                href="#">Bảng giá linh hoạt</a></li>
+                        <li class=""><a
+                                class="font-body-sm text-body-sm text-text-secondary hover:text-primary transition-colors"
+                                href="#">Cập nhật mới</a></li>
+                        <li class=""><a
+                                class="font-body-sm text-body-sm text-text-secondary hover:text-primary transition-colors"
+                                href="#">Mobile App</a></li>
+                    </ul>
+                </div>
+                <div class="space-y-4">
+                    <h4 class="font-label-md text-label-md text-on-surface font-bold">Tài nguyên</h4>
+                    <ul class="space-y-2">
+                        <li class=""><a
+                                class="font-body-sm text-body-sm text-text-secondary hover:text-primary transition-colors"
+                                href="#">Blog Y khoa</a></li>
+                        <li class=""><a
+                                class="font-body-sm text-body-sm text-text-secondary hover:text-primary transition-colors"
+                                href="#">Tài liệu miễn phí</a></li>
+                        <li class=""><a
+                                class="font-body-sm text-body-sm text-text-secondary hover:text-primary transition-colors"
+                                href="#">Cộng đồng học tập</a></li>
+                        <li class=""><a
+                                class="font-body-sm text-body-sm text-text-secondary hover:text-primary transition-colors"
+                                href="#">Video hướng dẫn</a></li>
+                    </ul>
+                </div>
+                <div class="space-y-4">
+                    <h4 class="font-label-md text-label-md text-on-surface font-bold">Hỗ trợ</h4>
+                    <ul class="space-y-2">
+                        <li class=""><a
+                                class="font-body-sm text-body-sm text-text-secondary hover:text-primary transition-colors"
+                                href="#">Trung tâm trợ giúp</a></li>
+                        <li class=""><a
+                                class="font-body-sm text-body-sm text-text-secondary hover:text-primary transition-colors"
+                                href="#">Liên hệ hỗ trợ</a></li>
+                        <li class=""><a
+                                class="font-body-sm text-body-sm text-text-secondary hover:text-primary transition-colors"
+                                href="#">Góp ý sản phẩm</a></li>
+                        <li class=""><a
+                                class="font-body-sm text-body-sm text-text-secondary hover:text-primary transition-colors"
+                                href="#">Báo lỗi</a></li>
+                    </ul>
+                </div>
+                <div class="space-y-4">
+                    <h4 class="font-label-md text-label-md text-on-surface font-bold">Công ty</h4>
+                    <ul class="space-y-2">
+                        <li class=""><a
+                                class="font-body-sm text-body-sm text-text-secondary hover:text-primary transition-colors"
+                                href="#">Về chúng tôi</a></li>
+                        <li class=""><a
+                                class="font-body-sm text-body-sm text-text-secondary hover:text-primary transition-colors"
+                                href="#">Điều khoản sử dụng</a></li>
+                        <li class=""><a
+                                class="font-body-sm text-body-sm text-text-secondary hover:text-primary transition-colors"
+                                href="#">Chính sách bảo mật</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="pt-8 border-t border-border text-center flex flex-col items-center gap-4">
+                <p class="font-label-sm text-label-sm text-text-secondary">© 2024 MebPro. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+    <script class="">
+        // Simple form interaction
+        const form = document.getElementById('contactForm');
+        const successMsg = document.getElementById('successMessage');
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            // Simulate sending
+            const btn = form.querySelector('button[type="submit"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="material-symbols-outlined animate-spin">refresh</span> Đang gửi...';
+            btn.disabled = true;
+
+            setTimeout(() => {
+                form.style.display = 'none';
+                successMsg.classList.remove('hidden');
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }, 800);
+        });
+
+        function resetForm() {
+            form.reset();
+            successMsg.classList.add('hidden');
+            form.style.display = 'block';
+        }
+    </script>
+    <nav
+        class="fixed bottom-0 left-0 right-0 bg-surface/90 backdrop-blur-xl border-t border-border flex items-center justify-around h-16 z-50 px-2 md:hidden">
+        <a class="flex flex-col items-center gap-1 text-on-surface-variant px-3" href="#">
+            <span class="material-symbols-outlined text-[24px]">home</span>
+            <span class="font-label-sm text-[10px]">Trang chủ</span>
+        </a>
+        <a class="flex flex-col items-center gap-1 text-on-surface-variant px-3" href="#">
+            <span class="material-symbols-outlined text-[24px]">menu_book</span>
+            <span class="font-label-sm text-[10px]">Tính năng</span>
+        </a>
+        <a class="flex flex-col items-center gap-1 text-on-surface-variant px-3" href="#">
+            <span class="material-symbols-outlined text-[24px]"
+                style='font-variation-settings: "FILL" 1;'>payments</span>
+            <span class="font-label-sm text-[10px]" style='font-variation-settings: "FILL" 1;'>Bảng giá</span>
+        </a>
+        <a class="flex flex-col items-center gap-1 text-primary font-bold px-3" href="#">
+            <span class="material-symbols-outlined text-[24px]">history_edu</span>
+            <span class="font-label-sm text-[10px]">Liên hệ</span>
+        </a>
+    </nav>
+</body>
+
+</html>

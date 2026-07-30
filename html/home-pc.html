@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="vi" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="Học hiệu quả hơn — hiểu bản chất, nhớ lâu, luyện thi đúng trọng tâm với ngân hàng câu hỏi chuẩn hóa và AI Tutor.">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&amp;family=JetBrains+Mono&amp;display=swap"
+        rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block"
+        rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">try {
+            tailwind.config = {
+                darkMode: "class",
+                theme: {
+                    extend: {
+                        "colors": {
+                            "secondary": "#0051d5",
+                            "on-secondary-fixed": "#00174b",
+                            "on-tertiary-fixed": "#370e00",
+                            "on-error": "#ffffff",
+                            "surface-dim": "#d2d9f4",
+                            "surface": "#FFFFFF",
+                            "outline": "#6e7977",
+                            "on-secondary-container": "#fefcff",
+                            "on-background": "#131b2e",
+                            "inverse-surface": "#283044",
+                            "surface-container-lowest": "#ffffff",
+                            "on-secondary": "#ffffff",
+                            "primary-fixed-dim": "#80d5cb",
+                            "tertiary": "#7f4025",
+                            "on-tertiary": "#ffffff",
+                            "surface-tint": "#006a63",
+                            "text-secondary": "#64748B",
+                            "surface-container-highest": "#dae2fd",
+                            "on-surface": "#131b2e",
+                            "warning": "#D97706",
+                            "secondary-fixed": "#dbe1ff",
+                            "outline-variant": "#bdc9c6",
+                            "on-primary-fixed": "#00201d",
+                            "surface-variant": "#dae2fd",
+                            "success": "#16A34A",
+                            "error": "#DC2626",
+                            "tertiary-container": "#9c573a",
+                            "background": "#F8FAFC",
+                            "surface-bright": "#faf8ff",
+                            "secondary-container": "#316bf3",
+                            "surface-container-low": "#f2f3ff",
+                            "primary-fixed": "#9cf2e8",
+                            "on-surface-variant": "#3e4947",
+                            "primary": "#005c55",
+                            "on-secondary-fixed-variant": "#003ea8",
+                            "on-tertiary-container": "#ffe5db",
+                            "on-primary": "#ffffff",
+                            "premium-gradient": "linear-gradient(135deg, #F59E0B 0%, #EA580C 100%)",
+                            "tertiary-fixed-dim": "#ffb598",
+                            "on-tertiary-fixed-variant": "#72361b",
+                            "on-primary-fixed-variant": "#00504a",
+                            "tertiary-fixed": "#ffdbce",
+                            "primary-container": "#0f766e",
+                            "surface-container": "#eaedff",
+                            "secondary-fixed-dim": "#b4c5ff",
+                            "inverse-on-surface": "#eef0ff",
+                            "surface-container-high": "#e2e7ff",
+                            "inverse-primary": "#80d5cb",
+                            "on-error-container": "#93000a",
+                            "error-container": "#ffdad6",
+                            "on-primary-container": "#a3faef",
+                            "border": "#E2E8F0"
+                        },
+                        "borderRadius": {
+                            "DEFAULT": "0.25rem",
+                            "lg": "0.5rem",
+                            "xl": "0.75rem",
+                            "full": "9999px"
+                        },
+                        "spacing": {
+                            "sidebar-width": "240px",
+                            "container-max": "1280px",
+                            "base-unit": "4px",
+                            "gutter": "24px",
+                            "margin-mobile": "16px"
+                        },
+                        "fontFamily": {
+                            "label-md": ["Be Vietnam Pro"],
+                            "body-sm": ["Be Vietnam Pro"],
+                            "label-sm": ["Be Vietnam Pro"],
+                            "headline-lg-mobile": ["Be Vietnam Pro"],
+                            "body-md": ["Be Vietnam Pro"],
+                            "headline-sm": ["Be Vietnam Pro"],
+                            "headline-lg": ["Be Vietnam Pro"],
+                            "display": ["Be Vietnam Pro"],
+                            "headline-md": ["Be Vietnam Pro"],
+                            "code": ["JetBrains Mono"],
+                            "body-lg": ["Be Vietnam Pro"]
+                        },
+                        "fontSize": {
+                            "label-md": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+                            "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                            "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                            "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "700" }],
+                            "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                            "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                            "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+                            "display": ["48px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                            "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                            "code": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                            "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }]
+                        }
+                    },
+                },
+            }
+        } catch (_e) { }</script>
+    <meta charset="utf-8">
+</head>
+
+<body class="bg-background text-on-background selection:bg-primary-fixed selection:text-on-primary-fixed">
+    <!-- TopNavBar -->
+    <nav
+        class="bg-surface/80 dark:bg-surface/80 backdrop-blur-md border-b border-border dark:border-outline-variant docked full-width top-0 sticky z-50">
+        <div class="flex justify-between items-center w-full px-gutter max-w-container-max mx-auto h-16">
+            <div class="text-headline-md font-headline-md font-bold text-primary dark:text-primary-fixed">MebPro</div>
+            <div class="hidden md:flex items-center gap-8">
+                <a href="#"
+                    class="text-on-surface-variant dark:text-surface-variant hover:text-primary transition-colors duration-200 font-label-md text-label-md">Tính
+                    năng</a>
+                <a href="#"
+                    class="text-on-surface-variant dark:text-surface-variant hover:text-primary transition-colors duration-200 font-label-md text-label-md">Bảng
+                    giá</a>
+                <a href="#"
+                    class="text-on-surface-variant dark:text-surface-variant hover:text-primary transition-colors duration-200 font-label-md text-label-md">Blog</a>
+                <a href="#"
+                    class="text-on-surface-variant dark:text-surface-variant hover:text-primary transition-colors duration-200 font-label-md text-label-md">Về
+                    chúng tôi</a>
+            </div>
+            <div class="flex items-center gap-4">
+                <button
+                    class="material-symbols-outlined text-primary p-2 rounded-full hover:bg-primary-fixed/20 transition-colors">language</button>
+                <button
+                    class="hidden md:block font-label-md text-label-md text-on-surface-variant hover:text-primary px-4 py-2 transition-colors">Đăng
+                    nhập</button>
+                <button
+                    class="bg-primary-container text-on-primary-container px-6 py-2.5 rounded-xl font-label-md text-label-md hover:opacity-90 active:scale-95 transition-all">Đăng
+                    ký</button>
+            </div>
+        </div>
+    </nav>
+    <main>
+        <!-- Hero Section -->
+        <section class="relative pt-12 md:pt-24 pb-20 overflow-hidden">
+            <div class="max-w-container-max mx-auto px-gutter">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                    <div class="space-y-8 text-center lg:text-left">
+                        <div
+                            class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary font-label-sm text-label-sm">
+                            <span class="material-symbols-outlined text-[18px]"
+                                style="font-variation-settings: &quot;FILL&quot; 1;"
+                                data-original-icon="sparkles">circle</span>
+                            Hỗ trợ bởi AI dành riêng cho Y khoa
+                        </div>
+                        <h1 class="font-display text-display leading-tight tracking-tight">
+                            Học hiệu quả hơn — hiểu bản chất, <span class="text-primary">nhớ lâu</span>, luyện thi đúng
+                            trọng tâm
+                        </h1>
+                        <p class="font-body-lg text-body-lg text-text-secondary max-w-xl mx-auto lg:mx-0">
+                            Nền tảng ôn thi y khoa tiên tiến giúp sinh viên y khoa và bác sĩ trẻ chinh phục mọi kỳ thi
+                            từ cấp chứng chỉ hành nghề đến sau đại học.
+                        </p>
+                        <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                            <button
+                                class="bg-primary-container text-on-primary-container px-8 py-4 rounded-xl font-label-md text-label-md shadow-lg shadow-primary-container/20 hover:shadow-xl transition-all flex items-center justify-center gap-2">
+                                Bắt đầu luyện thi
+                                <span class="material-symbols-outlined">arrow_forward</span>
+                            </button>
+                            <button
+                                class="border border-border bg-surface text-on-surface px-8 py-4 rounded-xl font-label-md text-label-md hover:bg-surface-container-low transition-colors flex items-center justify-center gap-2">
+                                Xem câu hỏi mẫu
+                            </button>
+                        </div>
+                    </div>
+                    <div class="relative">
+                        <div class="absolute -top-12 -left-12 w-64 h-64 bg-primary/10 rounded-full blur-3xl -z-10">
+                        </div>
+                        <div
+                            class="absolute -bottom-12 -right-12 w-64 h-64 bg-secondary/10 rounded-full blur-3xl -z-10">
+                        </div>
+                        <div
+                            class="rounded-2xl border border-border shadow-2xl overflow-hidden bg-white/50 backdrop-blur-sm">
+                            <img class="w-full aspect-video object-cover"
+                                data-alt="A clean, high-fidelity user interface dashboard for a medical study platform called MebPro. The dashboard features a clinical teal and white color scheme with a minimalist sidebar, a central medical case study with high-quality 3D anatomical heart visualization, and an interactive question panel on the right. The lighting is soft and professional, echoing a high-end SaaS product like Linear or Notion."
+                                src="https://lh3.googleusercontent.com/aida-public/AB6AXuCKmBmH_jL81lnqycVaK7f31yR9s5DTmfe_R2ff-ghVles69zerPs9sdP-MIydPlBjOzz3xNtDX4i7Xf_G-dEmflYTVaCsjIdt2rv6lxVYQuQV3djPPfuMypgCd64GAuYtWUzndhQqEqKc8nZ7mGL1bFttR4pjQ1KxIhCUy8VST6R_epo77FoVfyej2PcVFNEzIo8NnR8BGyXeUkGvk19evM_UetyDHbHLFjTbkcll_UXpL-UBwn1IXXt6pv9fLYKftT5evadVYlZPC">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- Stats Bar -->
+        <section class="bg-surface border-y border-border py-8">
+            <div class="max-w-container-max mx-auto px-gutter">
+                <div class="flex flex-wrap justify-around items-center gap-8 text-center">
+                    <div class="space-y-1">
+                        <div class="font-headline-lg text-headline-lg text-primary">12.450</div>
+                        <div class="font-label-md text-label-md text-text-secondary uppercase tracking-wider">Câu hỏi
+                            chuẩn hóa</div>
+                    </div>
+                    <div class="w-px h-12 bg-border hidden md:block"></div>
+                    <div class="space-y-1">
+                        <div class="font-headline-lg text-headline-lg text-primary">38.000+</div>
+                        <div class="font-label-md text-label-md text-text-secondary uppercase tracking-wider">Người học
+                            tin dùng</div>
+                    </div>
+                    <div class="w-px h-12 bg-border hidden md:block"></div>
+                    <div class="space-y-1">
+                        <div class="font-headline-lg text-headline-lg text-primary">18</div>
+                        <div class="font-label-md text-label-md text-text-secondary uppercase tracking-wider">Chuyên
+                            ngành y khoa</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- Value Props -->
+        <section class="py-24">
+            <div class="max-w-container-max mx-auto px-gutter">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div class="premium-card p-8 flex flex-col items-start gap-6">
+                        <div class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
+                            <span class="material-symbols-outlined text-3xl">database</span>
+                        </div>
+                        <div class="space-y-3">
+                            <h3 class="font-headline-sm text-headline-sm">Ngân hàng câu hỏi chuẩn hóa</h3>
+                            <p class="font-body-md text-body-md text-text-secondary">Được biên soạn bởi các chuyên gia
+                                đầu ngành, bám sát cấu trúc đề thi thực tế mới nhất.</p>
+                        </div>
+                    </div>
+                    <div class="premium-card p-8 flex flex-col items-start gap-6">
+                        <div
+                            class="w-12 h-12 bg-secondary/10 rounded-xl flex items-center justify-center text-secondary">
+                            <span class="material-symbols-outlined text-3xl">bolt</span>
+                        </div>
+                        <div class="space-y-3">
+                            <h3 class="font-headline-sm text-headline-sm">Luyện đề thông minh &amp; điểm yếu</h3>
+                            <p class="font-body-md text-body-md text-text-secondary">Thuật toán Adaptive Learning giúp
+                                phát hiện và tập trung vào các lỗ hổng kiến thức của bạn.</p>
+                        </div>
+                    </div>
+                    <div class="premium-card p-8 flex flex-col items-start gap-6">
+                        <div class="w-12 h-12 bg-warning/10 rounded-xl flex items-center justify-center text-warning">
+                            <span class="material-symbols-outlined text-3xl">psychology</span>
+                        </div>
+                        <div class="space-y-3">
+                            <h3 class="font-headline-sm text-headline-sm">AI Tutor giải thích tận gốc</h3>
+                            <p class="font-body-md text-body-md text-text-secondary">Trợ lý ảo y khoa sẵn sàng giải
+                                thích từng cơ chế bệnh sinh, không chỉ đơn thuần là đưa ra đáp án.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- Features Sections -->
+        <section class="py-12 space-y-32">
+            <!-- Feature 1: QBank -->
+            <div class="max-w-container-max mx-auto px-gutter">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                    <div class="space-y-6">
+                        <div class="text-primary font-label-md text-label-md uppercase tracking-widest">Qbank Chuyên Sâu
+                        </div>
+                        <h2 class="font-headline-lg text-headline-lg">Học từ những tình huống lâm sàng thực tế</h2>
+                        <p class="font-body-lg text-body-lg text-text-secondary">Mỗi câu hỏi là một ca lâm sàng mô phỏng
+                            sát với thực tiễn bệnh viện, giúp bạn rèn luyện tư duy chẩn đoán và xử trí đúng phác đồ.</p>
+                        <ul class="space-y-4">
+                            <li class="flex items-start gap-3">
+                                <span class="material-symbols-outlined text-success">check_circle</span>
+                                <span class="font-body-md text-body-md text-on-surface">Giải thích chi tiết từng đáp án
+                                    nhiễu</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="material-symbols-outlined text-success">check_circle</span>
+                                <span class="font-body-md text-body-md text-on-surface">Cập nhật theo Guidelines mới
+                                    nhất (AHA, ESC, ADA...)</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="rounded-2xl border border-border shadow-xl overflow-hidden order-first lg:order-none">
+                        <img class="w-full"
+                            data-alt="A detailed screen capture of the MebPro Question Bank interface on a desktop monitor. The image displays a complex medical case vignette about a patient's cardiac condition, accompanied by a 3D medical illustration of a heart and a real-time ECG waveform display. The UI is clean, using a dark-mode theme with teal accents, highlighting interactive elements and answer choices in a professional clinical style."
+                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuBco-i_0cAFlAdsl6M2zaXtQz-AjP0tob5jmAwlVHZV34ooZqquhQy23_ahzFgZA6pPyYduvqwF2Z7txT5jFFmgfsKwZEPC7DlF0cCeMISnymOUebq9o-vWXNFeBb_go5v_eUXp67rUTM98wxDVzWmZRk-mhyWe-llPO2ZKCG6SNFXWB-eLHltGjrIbDGoK05U97-Fwof9VFH9AYhoKncqTT2nmUaXaeZUnted0jv3Xvc2o7_DLktjKU8S1xBPRAlVA_t8guvdx6LGH">
+                    </div>
+                </div>
+            </div>
+            <!-- Feature 2: Library -->
+            <div class="max-w-container-max mx-auto px-gutter">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                    <div class="rounded-2xl border border-border shadow-xl overflow-hidden">
+                        <img class="w-full"
+                            data-alt="A lifestyle shot of a young female doctor in a white lab coat holding a tablet device. On the tablet screen, the MedLib Connect interface is visible, showcasing a library of digital medical textbooks and recently recommended journals like JAMA and NEJM. The background is a brightly lit medical library with bookshelves and other students studying, creating a professional academic atmosphere."
+                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuBDnGjQ_o0IjKRjvJ1yKV48HHY4vxexg6Vrc9eo1KrGZHD0__BHgFrertnUrND8XwRD8ZgLNbCDaDkvEGmQkSS2AVRaeGWzNFfXrZh9qP-V4D8TPkIbvVlecqTqOsodMhO02hnvVp38Ee6Dbi08N7VAexRLrXkGraZPDie9njNzkonEgyqQgOCINd_1C4w-VviMq_28lETwm1uG18OVIwhX47_9rXfJYg0KQMqh9UmITXJSvp1QSvypuMCTCDpVFyH9WmHtZ-kt1wSw">
+                    </div>
+                    <div class="space-y-6">
+                        <div class="text-secondary font-label-md text-label-md uppercase tracking-widest">Thư viện số
+                        </div>
+                        <h2 class="font-headline-lg text-headline-lg">Mọi tài liệu bạn cần trong một tầm tay</h2>
+                        <p class="font-body-lg text-body-lg text-text-secondary">MedLib tích hợp hàng nghìn đầu sách y
+                            khoa và bài báo khoa học uy tín, được tổ chức thông minh để bạn tra cứu nhanh chóng trong
+                            lúc làm bài.</p>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="p-4 bg-surface-container-low rounded-xl border border-border">
+                                <div class="font-label-md text-label-md text-primary mb-1">Search AI</div>
+                                <div class="text-body-sm text-text-secondary">Tìm kiếm chính xác từ khóa trong nội dung
+                                    sách.</div>
+                            </div>
+                            <div class="p-4 bg-surface-container-low rounded-xl border border-border">
+                                <div class="font-label-md text-label-md text-primary mb-1">Sync All</div>
+                                <div class="text-body-sm text-text-secondary">Đồng bộ ghi chú trên mọi thiết bị di động.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Feature 3: AI Assistant -->
+            <div class="max-w-container-max mx-auto px-gutter">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                    <div class="space-y-6">
+                        <div class="text-warning font-label-md text-label-md uppercase tracking-widest">AI Assistant
+                        </div>
+                        <h2 class="font-headline-lg text-headline-lg">Hỏi bất cứ điều gì, trả lời tức thì</h2>
+                        <p class="font-body-lg text-body-lg text-text-secondary">MedAI không chỉ là một chatbot, đó là
+                            một chuyên gia y tế được huấn luyện trên hàng triệu dữ liệu lâm sàng để hỗ trợ bạn học tập
+                            và tra cứu lâm sàng.</p>
+                        <div class="bg-surface-container-high/50 p-6 rounded-2xl border border-primary/20 space-y-4">
+                            <div class="flex gap-3">
+                                <div
+                                    class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold">
+                                    U</div>
+                                <div class="bg-surface p-3 rounded-lg border border-border text-body-sm">Giải thích cơ
+                                    chế cơn đau thắt ngực không ổn định?</div>
+                            </div>
+                            <div class="flex gap-3">
+                                <div
+                                    class="w-8 h-8 rounded-full bg-warning flex items-center justify-center text-white text-xs font-bold">
+                                    AI</div>
+                                <div class="bg-warning/10 p-3 rounded-lg border border-warning/20 text-body-sm">Cơn đau
+                                    thắt ngực không ổn định thường do sự nứt vỡ mảng xơ vữa dẫn đến hình thành huyết
+                                    khối không hoàn toàn...</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="rounded-2xl border border-border shadow-xl overflow-hidden order-first lg:order-none">
+                        <img class="w-full"
+                            data-alt="A sleek medical software interface showing an AI assistant chat window alongside a 3D visualization of a heart with labeled anatomical parts and a highlighted stenosis area. The UI is high-tech and dark, featuring real-time vital monitoring data like heart rate and SpO2. It illustrates a sophisticated clinical analysis tool that provides clear, actionable medical insights."
+                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuCMZgidLBFyHnk0vrswjJRjSr-4vrn5qUOhjp-K_ae3Z0i0u0WgIANj0aQeDOr146w66qsdxvCDNmqSwFpcRzBkfZKdGCQzurFCR1kiWJ2i8G7xUFOaOtr0Z5fWErXh_pdRwRimRo9kUR_gUXk4ZVGJxOz6I05xE8oGZwA9aPAqMbZQpNFQ2PR-Ecq8zneZ9CDpzIPV2uaPGIW4L3yG8h2Clj16aQjej6puVrcjURyHpoLOC5jqkgOot7FtHFuxgLpiBrA9gJRu2eYV">
+                    </div>
+                </div>
+            </div>
+            <!-- Feature 4: Analytics -->
+            <div class="max-w-container-max mx-auto px-gutter">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                    <div class="rounded-2xl border border-border shadow-xl overflow-hidden">
+                        <img class="w-full"
+                            data-alt="A comprehensive medical study analytics dashboard showing participant enrollment, data completeness, and performance heatmaps. The dashboard uses professional charts, radial progress bars, and a clear grid layout to present complex data. The color scheme is a sophisticated dark background with bright teal and blue data visualizations, emphasizing precision and scientific rigor."
+                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuDMRt350QoWPMlsBSNXmCbfOmNEV8u97JDBrRf1gFyKu0L-xhboxI2kTFZuB9nHsezRjCwrB3q0kTshAM7Ujj5-DhmesvqpZWSGKHIxVU4r0IMSG5FaE-dSDmL13Mm_WYqlocAoc1yGbS9xCYuGYMQ6s4TDh-kuuBiOHjTskPPilYxvUHBNBNE9cjXhOVX7qfSrI66F9hDqQzahTRNBevPcIn70iNG_ph9TpzI5qJ4iRqqw6ithf_iS3t2HraKAUz43w0QPS2fuybVp">
+                    </div>
+                    <div class="space-y-6">
+                        <div class="text-primary font-label-md text-label-md uppercase tracking-widest">Phân tích học
+                            tập</div>
+                        <h2 class="font-headline-lg text-headline-lg">Theo dõi tiến độ, tối ưu hiệu suất</h2>
+                        <p class="font-body-lg text-body-lg text-text-secondary">Biểu đồ hóa kỹ năng của bạn qua từng
+                            chương học. Biết chính xác bạn đang yếu ở Nội khoa hay Ngoại khoa để điều chỉnh chiến lược
+                            ôn tập.</p>
+                        <div class="flex items-center gap-6">
+                            <div class="text-center">
+                                <div class="text-headline-sm font-bold text-success">96%</div>
+                                <div class="text-label-sm text-text-secondary">Độ chính xác</div>
+                            </div>
+                            <div class="w-px h-10 bg-border"></div>
+                            <div class="text-center">
+                                <div class="text-headline-sm font-bold text-secondary">24h</div>
+                                <div class="text-label-sm text-text-secondary">Thời gian học/tuần</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- Interactive QBank Widget -->
+        <section class="py-24 bg-surface-container-low">
+            <div class="max-w-3xl mx-auto px-gutter">
+                <div class="premium-card bg-surface overflow-hidden shadow-2xl">
+                    <div class="bg-primary-container p-6 text-on-primary-container flex justify-between items-center">
+                        <h3 class="font-headline-sm text-headline-sm">Câu hỏi mẫu</h3>
+                        <span class="font-label-sm text-label-sm px-2 py-1 rounded bg-white/20">Nội khoa · Tim
+                            mạch</span>
+                    </div>
+                    <div class="p-8 space-y-6">
+                        <div class="font-body-lg text-body-lg font-medium leading-relaxed">
+                            Bệnh nhân nam 58 tuổi tiền sử THA, ĐTĐ típ 2, vào viện vì đau ngực trái dữ dội sau xương ức
+                            kéo dài 45 phút, không đỡ khi nghỉ ngơi. Điện tâm đồ ghi nhận đoạn ST chênh lên ở V1-V4.
+                            Chẩn đoán ưu tiên nhất là:
+                        </div>
+                        <div class="space-y-3">
+                            <label
+                                class="flex items-center gap-4 p-4 rounded-xl border border-border cursor-pointer hover:bg-surface-container transition-colors group">
+                                <input class="w-5 h-5 text-primary border-outline-variant focus:ring-primary"
+                                    name="sample_q" type="radio">
+                                <span class="font-body-md text-body-md text-on-surface">A. Nhồi máu cơ tim cấp ST chênh
+                                    lên vùng trước rộng</span>
+                            </label>
+                            <label
+                                class="flex items-center gap-4 p-4 rounded-xl border border-border cursor-pointer hover:bg-surface-container transition-colors group">
+                                <input class="w-5 h-5 text-primary border-outline-variant focus:ring-primary"
+                                    name="sample_q" type="radio">
+                                <span class="font-body-md text-body-md text-on-surface">B. Đau thắt ngực ổn định</span>
+                            </label>
+                            <label
+                                class="flex items-center gap-4 p-4 rounded-xl border border-border cursor-pointer hover:bg-surface-container transition-colors group">
+                                <input class="w-5 h-5 text-primary border-outline-variant focus:ring-primary"
+                                    name="sample_q" type="radio">
+                                <span class="font-body-md text-body-md text-on-surface">C. Phình tách động mạch chủ
+                                    ngực</span>
+                            </label>
+                            <label
+                                class="flex items-center gap-4 p-4 rounded-xl border border-border cursor-pointer hover:bg-surface-container transition-colors group">
+                                <input class="w-5 h-5 text-primary border-outline-variant focus:ring-primary"
+                                    name="sample_q" type="radio">
+                                <span class="font-body-md text-body-md text-on-surface">D. Viêm màng ngoài tim
+                                    cấp</span>
+                            </label>
+                            <label
+                                class="flex items-center gap-4 p-4 rounded-xl border border-border cursor-pointer hover:bg-surface-container transition-colors group">
+                                <input class="w-5 h-5 text-primary border-outline-variant focus:ring-primary"
+                                    name="sample_q" type="radio">
+                                <span class="font-body-md text-body-md text-on-surface">E. Thuyên tắc phổi cấp</span>
+                            </label>
+                        </div>
+                        <div class="pt-4 flex justify-end">
+                            <button
+                                class="bg-primary text-white px-8 py-3 rounded-xl font-label-md text-label-md hover:opacity-90 active:scale-95 transition-all">Kiểm
+                                tra</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- Testimonials -->
+        <section class="py-24">
+            <div class="max-w-container-max mx-auto px-gutter text-center space-y-16">
+                <div class="space-y-4">
+                    <h2 class="font-headline-lg text-headline-lg">Học viên nói gì về MebPro?</h2>
+                    <p class="font-body-lg text-body-lg text-text-secondary max-w-2xl mx-auto">Hàng ngàn bác sĩ tương
+                        lai đã bứt phá điểm số nhờ lộ trình ôn tập khoa học.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div class="premium-card p-8 text-left space-y-6">
+                        <div class="flex gap-1 text-warning">
+                            <span class="material-symbols-outlined"
+                                style="font-variation-settings: &quot;FILL&quot; 1;">star</span>
+                            <span class="material-symbols-outlined"
+                                style="font-variation-settings: &quot;FILL&quot; 1;">star</span>
+                            <span class="material-symbols-outlined"
+                                style="font-variation-settings: &quot;FILL&quot; 1;">star</span>
+                            <span class="material-symbols-outlined"
+                                style="font-variation-settings: &quot;FILL&quot; 1;">star</span>
+                            <span class="material-symbols-outlined"
+                                style="font-variation-settings: &quot;FILL&quot; 1;">star</span>
+                        </div>
+                        <p class="font-body-md text-body-md text-on-surface italic">"Ngân hàng câu hỏi cực kỳ sát đề thi
+                            thực tế. Mình đã đậu CCHN ngay lần thi đầu tiên nhờ MebPro."</p>
+                        <div class="flex items-center gap-4">
+                            <img class="w-12 h-12 rounded-full object-cover"
+                                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDfJg-HhjBan8vIVWivC-GW2WvRhJjoAB3kkPut6VHyMAFXlCeR7wuFKc6Olip5imqRDGySZOjwLxRSV5GJD9SUdePEQg3FEZI5QnYg9c8vIsNKeJStAEz4m8cX4WP7KjKEdI57wKhqo9tt0--NpJZ-4BXTm-FcWHWBRDjl28231rHEuSIN4gQjKm-l3Yv8Fm9VPw9VTb1TqTu13WKzKbUqcOUj0v2dm_zOfDVQ0_vWdG8JVEL_RR2cvDsK17pKR_nupL2iocS9U6Tj">
+                            <div>
+                                <div class="font-label-md text-label-md">Nguyễn Văn An</div>
+                                <div class="text-label-sm text-text-secondary">Sinh viên Y6 - ĐH Y Hà Nội</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="premium-card p-8 text-left space-y-6">
+                        <div class="flex gap-1 text-warning">
+                            <span class="material-symbols-outlined"
+                                style="font-variation-settings: &quot;FILL&quot; 1;">star</span>
+                            <span class="material-symbols-outlined"
+                                style="font-variation-settings: &quot;FILL&quot; 1;">star</span>
+                            <span class="material-symbols-outlined"
+                                style="font-variation-settings: &quot;FILL&quot; 1;">star</span>
+                            <span class="material-symbols-outlined"
+                                style="font-variation-settings: &quot;FILL&quot; 1;">star</span>
+                            <span class="material-symbols-outlined"
+                                style="font-variation-settings: &quot;FILL&quot; 1;">star</span>
+                        </div>
+                        <p class="font-body-md text-body-md text-on-surface italic">"Phần AI giải thích rất dễ hiểu,
+                            giúp mình nắm chắc bản chất thay vì chỉ học thuộc lòng đáp án."</p>
+                        <div class="flex items-center gap-4">
+                            <img class="w-12 h-12 rounded-full object-cover"
+                                src="https://lh3.googleusercontent.com/aida-public/AB6AXuBgsqfba9CocTxf8S17nTmdHvgMW_D4nNi6GhaPw3TeVaHo0tYEfgPFEZ8tJycKMX2ohBriXUW_urq6Ev9igFK9YCAmMs0i9cX2qPkLPjbwWnnBg3PM9Pn1zTarygbh8M9AmgudA2LY847vJrPhiSVERpzuPt1zQ8As2P_bnlf-ZiEYVj52rKJ6eIKmJnfuJ1zdwJdp-TutHlAwaBIv1jjR02-BzL1R9MK_HV3-LiEf274xXsb_cqrTBxq4fEzxx_LrBTn6E6FA4cGz">
+                            <div>
+                                <div class="font-label-md text-label-md">Trần Thị Mai</div>
+                                <div class="text-label-sm text-text-secondary">Bác sĩ nội trú Nhi khoa</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="premium-card p-8 text-left space-y-6">
+                        <div class="flex gap-1 text-warning">
+                            <span class="material-symbols-outlined"
+                                style="font-variation-settings: &quot;FILL&quot; 1;">star</span>
+                            <span class="material-symbols-outlined"
+                                style="font-variation-settings: &quot;FILL&quot; 1;">star</span>
+                            <span class="material-symbols-outlined"
+                                style="font-variation-settings: &quot;FILL&quot; 1;">star</span>
+                            <span class="material-symbols-outlined"
+                                style="font-variation-settings: &quot;FILL&quot; 1;">star</span>
+                            <span class="material-symbols-outlined"
+                                style="font-variation-settings: &quot;FILL&quot; 1;">star</span>
+                        </div>
+                        <p class="font-body-md text-body-md text-on-surface italic">"Giao diện đẹp, mượt mà trên cả điện
+                            thoại. Mình có thể tranh thủ ôn bài mọi lúc mọi nơi."</p>
+                        <div class="flex items-center gap-4">
+                            <img class="w-12 h-12 rounded-full object-cover"
+                                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDh0oAVpsp-78XhhSIT9Tq81R3zdNwGRPFrh8ee8yBAmQT_I6mmFXAA2o4odu0F8G7Bsz8Ogaxj9Y6IaSYo4lS2cbw4kZv7Z6ReRckRYmZTVikPfwxcUac2H1ywvC0cA_ixxUntjBLXsYQVPBC4iRX4DFD4kUZgiv04NMYbeeVvAAKdxpaRVOojAkscY7YkdmrMbRO46Nsb8m4fhbQlPRnwanjaDbAJWKMtSevjSOMgxComsIthL6xmgivq_90bfPr0Wfw-4IvXHYtD">
+                            <div>
+                                <div class="font-label-md text-label-md">Lê Minh Đức</div>
+                                <div class="text-label-sm text-text-secondary">Bác sĩ đa khoa</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- Pricing -->
+        <section class="py-24 bg-surface-container-lowest">
+            <div class="max-w-container-max mx-auto px-gutter">
+                <div class="text-center space-y-4 mb-16">
+                    <h2 class="font-headline-lg text-headline-lg">Lựa chọn gói phù hợp</h2>
+                    <p class="font-body-lg text-body-lg text-text-secondary">Đầu tư vào kiến thức là khoản đầu tư có lãi
+                        nhất.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
+                    <!-- Basic -->
+                    <div class="premium-card p-8 flex flex-col justify-between">
+                        <div class="space-y-6">
+                            <div>
+                                <h3 class="font-headline-sm text-headline-sm">Miễn phí</h3>
+                                <p class="text-label-sm text-text-secondary mt-1">Dành cho người mới bắt đầu</p>
+                            </div>
+                            <div class="font-headline-lg text-headline-lg">0đ <span
+                                    class="text-body-md font-normal text-text-secondary">/tháng</span></div>
+                            <ul class="space-y-3">
+                                <li class="flex items-center gap-2 font-body-sm text-body-sm">
+                                    <span class="material-symbols-outlined text-success text-[20px]">check</span>
+                                    100 câu hỏi mỗi ngày
+                                </li>
+                                <li class="flex items-center gap-2 font-body-sm text-body-sm text-text-secondary">
+                                    <span class="material-symbols-outlined text-[20px]">close</span>
+                                    AI Tutor cơ bản
+                                </li>
+                                <li class="flex items-center gap-2 font-body-sm text-body-sm text-text-secondary">
+                                    <span class="material-symbols-outlined text-[20px]">close</span>
+                                    Phân tích chuyên sâu
+                                </li>
+                            </ul>
+                        </div>
+                        <button
+                            class="w-full mt-8 py-3 rounded-xl border border-border font-label-md text-label-md hover:bg-surface-container-low transition-colors">Đăng
+                            ký ngay</button>
+                    </div>
+                    <!-- Premium -->
+                    <div class="premium-card p-8 flex flex-col justify-between border-2 border-primary relative">
+                        <div
+                            class="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-white px-4 py-1 rounded-full text-label-sm font-bold">
+                            PHỔ BIẾN NHẤT</div>
+                        <div class="space-y-6">
+                            <div>
+                                <h3 class="font-headline-sm text-headline-sm text-primary">Premium</h3>
+                                <p class="text-label-sm text-text-secondary mt-1">Full tính năng cho kỳ thi quan trọng
+                                </p>
+                            </div>
+                            <div class="font-headline-lg text-headline-lg">199.000đ <span
+                                    class="text-body-md font-normal text-text-secondary">/tháng</span></div>
+                            <ul class="space-y-3">
+                                <li class="flex items-center gap-2 font-body-sm text-body-sm">
+                                    <span class="material-symbols-outlined text-success text-[20px]">check</span>
+                                    Không giới hạn câu hỏi
+                                </li>
+                                <li class="flex items-center gap-2 font-body-sm text-body-sm">
+                                    <span class="material-symbols-outlined text-success text-[20px]">check</span>
+                                    Full AI Tutor &amp; MedLib
+                                </li>
+                                <li class="flex items-center gap-2 font-body-sm text-body-sm">
+                                    <span class="material-symbols-outlined text-success text-[20px]">check</span>
+                                    Phân tích học tập AI
+                                </li>
+                                <li class="flex items-center gap-2 font-body-sm text-body-sm">
+                                    <span class="material-symbols-outlined text-success text-[20px]">check</span>
+                                    Ưu tiên cập nhật đề mới
+                                </li>
+                            </ul>
+                        </div>
+                        <button
+                            class="w-full mt-8 py-3 rounded-xl bg-primary text-white font-label-md text-label-md hover:opacity-90 transition-opacity">Chọn
+                            Premium</button>
+                    </div>
+                    <!-- Organization -->
+                    <div class="premium-card p-8 flex flex-col justify-between">
+                        <div class="space-y-6">
+                            <div>
+                                <h3 class="font-headline-sm text-headline-sm">Tổ chức</h3>
+                                <p class="text-label-sm text-text-secondary mt-1">Dành cho bệnh viện/trường đại học</p>
+                            </div>
+                            <div class="font-headline-lg text-headline-lg">Liên hệ</div>
+                            <ul class="space-y-3">
+                                <li class="flex items-center gap-2 font-body-sm text-body-sm">
+                                    <span class="material-symbols-outlined text-success text-[20px]">check</span>
+                                    Quản lý học viên theo nhóm
+                                </li>
+                                <li class="flex items-center gap-2 font-body-sm text-body-sm">
+                                    <span class="material-symbols-outlined text-success text-[20px]">check</span>
+                                    Hệ thống thi tập trung
+                                </li>
+                                <li class="flex items-center gap-2 font-body-sm text-body-sm">
+                                    <span class="material-symbols-outlined text-success text-[20px]">check</span>
+                                    Hỗ trợ kỹ thuật 24/7
+                                </li>
+                            </ul>
+                        </div>
+                        <button
+                            class="w-full mt-8 py-3 rounded-xl border border-border font-label-md text-label-md hover:bg-surface-container-low transition-colors">Gửi
+                            yêu cầu</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- FAQ Accordion -->
+        <section class="py-24">
+            <div class="max-w-3xl mx-auto px-gutter space-y-8">
+                <h2 class="font-headline-lg text-headline-lg text-center">Câu hỏi thường gặp</h2>
+                <div class="space-y-4">
+                    <details class="group bg-surface rounded-xl border border-border overflow-hidden">
+                        <summary
+                            class="flex justify-between items-center p-6 cursor-pointer list-none font-label-md text-label-md text-on-surface">
+                            MebPro có hỗ trợ ôn thi Nội trú không?
+                            <span
+                                class="material-symbols-outlined group-open:rotate-180 transition-transform">expand_more</span>
+                        </summary>
+                        <div class="px-6 pb-6 text-body-md text-text-secondary border-t border-border/50 pt-4">
+                            Có, MebPro có ngân hàng đề thi dành riêng cho kỳ thi Sau đại học bao gồm Nội trú, Cao học và
+                            Chuyên khoa 1 với mức độ khó và phân hóa cao.
+                        </div>
+                    </details>
+                    <details class="group bg-surface rounded-xl border border-border overflow-hidden">
+                        <summary
+                            class="flex justify-between items-center p-6 cursor-pointer list-none font-label-md text-label-md text-on-surface">
+                            Dữ liệu câu hỏi được lấy từ đâu?
+                        </summary>
+                        <div class="px-6 pb-6 text-body-md text-text-secondary border-t border-border/50 pt-4">
+                            Hệ thống câu hỏi được đội ngũ bác sĩ nội trú và giảng viên y khoa biên soạn dựa trên các
+                            textbook chuẩn như Harrison's, Gray's Anatomy, Sabiston... và các đề thi thật qua các năm.
+                        </div>
+                    </details>
+                    <details class="group bg-surface rounded-xl border border-border overflow-hidden">
+                        <summary
+                            class="flex justify-between items-center p-6 cursor-pointer list-none font-label-md text-label-md text-on-surface">
+                            Tôi có thể học trên điện thoại không?
+                        </summary>
+                        <div class="px-6 pb-6 text-body-md text-text-secondary border-t border-border/50 pt-4">
+                            Hoàn toàn có thể. MebPro có phiên bản website mobile mượt mà và ứng dụng trên App
+                            Store/Google Play giúp bạn ôn tập mọi lúc mọi nơi.
+                        </div>
+                    </details>
+                    <details class="group bg-surface rounded-xl border border-border overflow-hidden">
+                        <summary
+                            class="flex justify-between items-center p-6 cursor-pointer list-none font-label-md text-label-md text-on-surface">
+                            Chính sách hoàn tiền như thế nào?
+                        </summary>
+                        <div class="px-6 pb-6 text-body-md text-text-secondary border-t border-border/50 pt-4">
+                            Chúng tôi cam kết hoàn tiền 100% trong vòng 7 ngày nếu bạn không hài lòng với chất lượng
+                            dịch vụ mà không cần lý do.
+                        </div>
+                    </details>
+                    <details class="group bg-surface rounded-xl border border-border overflow-hidden">
+                        <summary
+                            class="flex justify-between items-center p-6 cursor-pointer list-none font-label-md text-label-md text-on-surface">
+                            Hệ thống AI có thể giải đáp các thắc mắc khó không?
+                        </summary>
+                        <div class="px-6 pb-6 text-body-md text-text-secondary border-t border-border/50 pt-4">
+                            MedAI được tối ưu cho các câu hỏi về cơ chế bệnh sinh, chẩn đoán phân biệt và xử trí lâm
+                            sàng theo hướng dẫn (guidelines). Tuy nhiên, bạn nên luôn đối chiếu với y văn chính thống.
+                        </div>
+                    </details>
+                </div>
+            </div>
+        </section>
+        <!-- Bottom CTA -->
+        <section class="py-20 px-gutter">
+            <div
+                class="max-w-container-max mx-auto bg-primary-container rounded-3xl p-12 md:p-20 text-center space-y-8 relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+                    <svg fill="none" height="100%" preserveAspectRatio="none" viewBox="0 0 100 100" width="100%">
+                        <path d="M0 100 Q 25 0 50 100 T 100 0" fill="none" stroke="white" stroke-width="0.5"></path>
+                        <path d="M0 0 Q 50 100 100 0" fill="none" stroke="white" stroke-width="0.5"></path>
+                    </svg>
+                </div>
+                <h2 class="font-headline-lg text-headline-lg text-on-primary-container">Sẵn sàng chinh phục kỳ thi?</h2>
+                <p class="font-body-lg text-body-lg text-on-primary-container/80 max-w-2xl mx-auto">Gia nhập cộng đồng
+                    hơn 38.000 y bác sĩ đang sử dụng MebPro để nâng tầm kiến thức mỗi ngày.</p>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                    <button
+                        class="bg-white text-primary px-8 py-4 rounded-xl font-label-md text-label-md shadow-lg hover:bg-primary-fixed transition-all">Đăng
+                        ký miễn phí</button>
+                    <button
+                        class="bg-white/10 text-white border border-white/20 px-8 py-4 rounded-xl font-label-md text-label-md hover:bg-white/20 transition-all">Liên
+                        hệ hỗ trợ</button>
+                </div>
+            </div>
+        </section>
+    </main>
+    <!-- Footer -->
+    <footer class="bg-surface border-t border-border py-20">
+        <div class="max-w-container-max mx-auto px-gutter">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-12 mb-16">
+                <div class="md:col-span-4">
+                    <span class="text-headline-md font-bold text-primary mb-6 block tracking-tight">MebPro</span>
+                    <p class="text-body-md text-text-secondary mb-8 leading-relaxed max-w-sm">
+                        Nền tảng ôn thi y khoa hàng đầu Việt Nam, giúp tối ưu hóa kết quả học tập thông qua công nghệ AI
+                        và phương pháp khoa học.
+                    </p>
+                    <div class="flex gap-4">
+                        <div
+                            class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors cursor-pointer border border-border">
+                            <span class="material-symbols-outlined text-[20px]">share</span>
+                        </div>
+                        <div
+                            class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors cursor-pointer border border-border">
+                            <span class="material-symbols-outlined text-[20px]">public</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="md:col-span-2">
+                    <h4 class="font-bold mb-6 text-on-surface">Sản phẩm</h4>
+                    <ul class="space-y-4 text-body-sm text-text-secondary">
+                        <li class=""><a class="hover:text-primary transition-colors" href="#">Tính năng chính</a></li>
+                        <li class=""><a class="hover:text-primary transition-colors" href="#">Bảng giá linh hoạt</a>
+                        </li>
+                        <li class=""><a class="hover:text-primary transition-colors" href="#">Cập nhật mới</a></li>
+                        <li class=""><a class="hover:text-primary transition-colors" href="#">Mobile App</a></li>
+                    </ul>
+                </div>
+
+                <div class="md:col-span-2">
+                    <h4 class="font-bold mb-6 text-on-surface">Tài nguyên</h4>
+                    <ul class="space-y-4 text-body-sm text-text-secondary">
+                        <li class=""><a class="hover:text-primary transition-colors" href="#">Blog Y khoa</a></li>
+                        <li class=""><a class="hover:text-primary transition-colors" href="#">Tài liệu miễn phí</a></li>
+                        <li class=""><a class="hover:text-primary transition-colors" href="#">Cộng đồng học tập</a></li>
+                        <li class=""><a class="hover:text-primary transition-colors" href="#">Video hướng dẫn</a></li>
+                    </ul>
+                </div>
+
+                <div class="md:col-span-2">
+                    <h4 class="font-bold mb-6 text-on-surface">Hỗ trợ</h4>
+                    <ul class="space-y-4 text-body-sm text-text-secondary">
+                        <li class=""><a class="hover:text-primary transition-colors" href="#">Trung tâm trợ giúp</a>
+                        </li>
+                        <li class=""><a class="hover:text-primary transition-colors" href="#">Liên hệ hỗ trợ</a></li>
+                        <li class=""><a class="hover:text-primary transition-colors" href="#">Góp ý sản phẩm</a></li>
+                        <li class=""><a class="hover:text-primary transition-colors" href="#">Báo lỗi</a></li>
+                    </ul>
+                </div>
+
+                <div class="md:col-span-2">
+                    <h4 class="font-bold mb-6 text-on-surface">Công ty</h4>
+                    <ul class="space-y-4 text-body-sm text-text-secondary">
+                        <li class=""><a class="hover:text-primary transition-colors" href="#">Về chúng tôi</a></li>
+                        <li class=""><a class="hover:text-primary transition-colors" href="#">Điều khoản sử dụng</a>
+                        </li>
+                        <li class=""><a class="hover:text-primary transition-colors" href="#">Chính sách bảo mật</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="pt-10 border-t border-border flex flex-col md:flex-row justify-between items-center gap-6">
+                <p class="text-label-sm text-text-secondary">© 2024 MebPro. Mọi quyền được bảo lưu. Phát triển bởi đội
+                    ngũ bác sĩ &amp; kỹ sư công nghệ.</p>
+                <div class="flex items-center gap-8 text-label-sm text-text-secondary">
+                    <a href="#" class="hover:text-primary transition-colors">Cookie Settings</a>
+                    <a href="#" class="hover:text-primary transition-colors">Sitemap</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+    <!-- Cookie Banner -->
+    <div class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-32px)] max-w-xl glass p-6 rounded-2xl border border-border shadow-2xl z-[100] flex flex-col md:flex-row items-center gap-6 animate-in fade-in slide-in-from-bottom-10 duration-700"
+        id="cookie-banner">
+        <div class="flex-1 space-y-1">
+            <div class="font-label-md text-label-md text-on-surface">Chúng tôi sử dụng Cookies 🍪</div>
+            <p class="font-body-sm text-body-sm text-text-secondary">Để mang lại trải nghiệm học tập tốt nhất, MebPro sử
+                dụng cookie để phân tích lưu lượng và cá nhân hóa nội dung.</p>
+        </div>
+        <div class="flex gap-3 w-full md:w-auto">
+            <button
+                class="flex-1 md:flex-none px-6 py-2 rounded-xl bg-primary text-white font-label-md text-label-md hover:opacity-90 transition-opacity"
+                onclick="document.getElementById('cookie-banner').remove()">Chấp nhận</button>
+            <button
+                class="flex-1 md:flex-none px-6 py-2 rounded-xl border border-border font-label-md text-label-md hover:bg-surface-container-low transition-colors"
+                onclick="document.getElementById('cookie-banner').remove()">Từ chối</button>
+        </div>
+    </div>
+    <!-- Micro-interactions Script -->
+    <script>
+        // Simple scroll behavior for navigation
+        let lastScrollTop = 0;
+        const nav = document.querySelector('nav');
+        window.addEventListener('scroll', function () {
+            let scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            if (scrollTop > lastScrollTop && scrollTop > 100) {
+                nav.style.transform = 'translateY(-100%)';
+            } else {
+                nav.style.transform = 'translateY(0)';
+            }
+            lastScrollTop = scrollTop;
+            nav.style.transition = 'transform 0.3s ease-in-out';
+        });
+
+        // Question widget logic simulation
+        const checkBtn = document.querySelector('section.bg-surface-container-low button');
+        checkBtn.addEventListener('click', function () {
+            const selected = document.querySelector('input[name="sample_q"]:checked');
+            if (!selected) {
+                alert('Vui lòng chọn một đáp án!');
+                return;
+            }
+            const parent = selected.closest('label');
+            // Assuming A is the correct answer
+            if (selected.nextElementSibling.innerText.startsWith('A')) {
+                parent.classList.remove('border-border');
+                parent.classList.add('border-success', 'bg-success/10');
+                this.innerText = 'Chính xác! Xem giải thích';
+                this.classList.replace('bg-primary', 'bg-success');
+            } else {
+                parent.classList.remove('border-border');
+                parent.classList.add('border-error', 'bg-error/10');
+                this.innerText = 'Thử lại';
+                this.classList.replace('bg-primary', 'bg-error');
+            }
+        });
+    </script>
+
+</body>
+
+</html>

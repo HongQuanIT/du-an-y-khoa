@@ -2,6 +2,11 @@
 
 ## 2026-07-30
 
+### Mockup HTML landing/marketing (PC + Mobile)
+- Thêm trang giới thiệu (about-us), liên hệ (contact), tính năng (feature), bảng giá (pricing), câu hỏi thường gặp (questions) cho cả bản PC và mobile.
+- Thêm màn đăng nhập/đăng ký (login, register) cho PC và mobile.
+- Thêm trang chủ (home) bản PC.
+
 ### Mockup HTML PC (Stitch)
 - Thêm 20 trang HTML desktop prototype MedQuest Pro: dashboard, ngân hàng câu hỏi, review câu hỏi, phiên tùy chỉnh.
 - Bổ sung màn thi (exam session, pause map), flashcards (dashboard, tạo thẻ, chi tiết bộ, ôn thẻ).

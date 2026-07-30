@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html class="light" lang="vi" style="">
+
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=JetBrains+Mono&amp;display=swap"
+        rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block"
+        rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">try {
+            tailwind.config = {
+                darkMode: "class",
+                theme: {
+                    extend: {
+                        "colors": {
+                            "success": "#16A34A",
+                            "on-tertiary-fixed": "#370e00",
+                            "on-secondary-container": "#fefcff",
+                            "on-tertiary-fixed-variant": "#72361b",
+                            "surface-container-highest": "#dae2fd",
+                            "tertiary-fixed-dim": "#ffb598",
+                            "inverse-primary": "#80d5cb",
+                            "inverse-surface": "#283044",
+                            "text-secondary": "#64748B",
+                            "surface-variant": "#dae2fd",
+                            "surface-bright": "#faf8ff",
+                            "border": "#E2E8F0",
+                            "primary-fixed": "#9cf2e8",
+                            "surface-container-lowest": "#ffffff",
+                            "on-secondary-fixed": "#00174b",
+                            "on-secondary": "#ffffff",
+                            "secondary-container": "#316bf3",
+                            "primary-container": "#0f766e",
+                            "premium-gradient": "linear-gradient(135deg, #F59E0B 0%, #EA580C 100%)",
+                            "surface": "#FFFFFF",
+                            "outline": "#6e7977",
+                            "tertiary-fixed": "#ffdbce",
+                            "on-secondary-fixed-variant": "#003ea8",
+                            "surface-dim": "#d2d9f4",
+                            "surface-container": "#eaedff",
+                            "secondary-fixed-dim": "#b4c5ff",
+                            "on-error": "#ffffff",
+                            "secondary-fixed": "#dbe1ff",
+                            "warning": "#D97706",
+                            "on-primary-fixed": "#00201d",
+                            "on-tertiary": "#ffffff",
+                            "surface-container-low": "#f2f3ff",
+                            "background": "#F8FAFC",
+                            "surface-tint": "#006a63",
+                            "on-tertiary-container": "#ffe5db",
+                            "on-primary-fixed-variant": "#00504a",
+                            "primary": "#005c55",
+                            "tertiary-container": "#9c573a",
+                            "on-background": "#131b2e",
+                            "on-primary-container": "#a3faef",
+                            "error-container": "#ffdad6",
+                            "inverse-on-surface": "#eef0ff",
+                            "primary-fixed-dim": "#80d5cb",
+                            "on-primary": "#ffffff",
+                            "on-surface-variant": "#3e4947",
+                            "on-error-container": "#93000a",
+                            "secondary": "#0051d5",
+                            "on-surface": "#131b2e",
+                            "outline-variant": "#bdc9c6",
+                            "error": "#DC2626",
+                            "surface-container-high": "#e2e7ff",
+                            "tertiary": "#7f4025"
+                        },
+                        "borderRadius": {
+                            "DEFAULT": "0.25rem",
+                            "lg": "0.5rem",
+                            "xl": "0.75rem",
+                            "full": "9999px"
+                        },
+                        "spacing": {
+                            "container-max": "1280px",
+                            "margin-mobile": "16px",
+                            "gutter": "24px",
+                            "sidebar-width": "240px",
+                            "base-unit": "4px"
+                        },
+                        "fontFamily": {
+                            "body-lg": ["Be Vietnam Pro"],
+                            "headline-sm": ["Be Vietnam Pro"],
+                            "display": ["Be Vietnam Pro"],
+                            "headline-lg": ["Be Vietnam Pro"],
+                            "label-sm": ["Be Vietnam Pro"],
+                            "headline-lg-mobile": ["Be Vietnam Pro"],
+                            "code": ["JetBrains Mono"],
+                            "body-sm": ["Be Vietnam Pro"],
+                            "headline-md": ["Be Vietnam Pro"],
+                            "label-md": ["Be Vietnam Pro"],
+                            "body-md": ["Be Vietnam Pro"]
+                        },
+                        "fontSize": {
+                            "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                            "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                            "display": ["48px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                            "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+                            "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                            "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "700" }],
+                            "code": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                            "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                            "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                            "label-md": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+                            "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }]
+                        }
+                    },
+                },
+            }
+        } catch (_e) { }</script>
+</head>
+
+<body class="pb-24">
+    <!-- Top Navigation (Mobile Header) -->
+    <header
+        class="bg-surface/80 backdrop-blur-md sticky top-0 z-50 border-b border-border h-16 flex items-center justify-between px-4">
+        <div class="flex items-center gap-2">
+            <span class="text-primary font-headline-md text-headline-md font-bold">MebPro</span>
+        </div>
+        <div class="flex items-center gap-4">
+            <button class="text-on-surface-variant p-2">
+                <span class="material-symbols-outlined">search</span>
+            </button>
+            <button class="text-on-surface-variant p-2" id="menuToggle">
+                <span class="material-symbols-outlined">menu</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="px-4 py-8 max-w-md mx-auto">
+        <header class="text-center mb-10">
+            <h1 class="font-headline-lg-mobile text-headline-lg-mobile text-on-background mb-3">Chọn gói phù hợp với bạn
+            </h1>
+            <p class="font-body-md text-body-md text-text-secondary px-4">Tăng tốc hành trình y khoa của bạn với các
+                công cụ ôn thi chuyên sâu và AI hỗ trợ thông minh.</p>
+        </header>
+
+        <!-- Pricing Cards Container -->
+        <div class="space-y-8">
+            <!-- Basic Plan -->
+            <div class="bg-surface border border-border rounded-xl p-6 transition-all active:scale-[0.98]">
+                <div class="mb-4">
+                    <h3 class="font-headline-sm text-headline-sm text-on-background">Miễn phí</h3>
+                    <p class="font-body-sm text-body-sm text-text-secondary">Cơ bản cho người mới bắt đầu</p>
+                </div>
+                <div class="mb-6">
+                    <span class="font-display text-[32px] text-on-background">0đ</span>
+                    <span class="font-body-md text-body-md text-text-secondary">/tháng</span>
+                </div>
+                <ul class="space-y-3 mb-8">
+                    <li class="flex items-center gap-3 font-body-sm text-body-sm text-on-surface-variant">
+                        <span class="material-symbols-outlined text-success text-[20px]">check_circle</span>
+                        20 câu hỏi/ngày
+                    </li>
+                    <li class="flex items-center gap-3 font-body-sm text-body-sm text-on-surface-variant">
+                        <span class="material-symbols-outlined text-success text-[20px]">check_circle</span>
+                        Thư viện giới hạn
+                    </li>
+                    <li class="flex items-center gap-3 font-body-sm text-body-sm text-text-secondary opacity-50">
+                        <span class="material-symbols-outlined text-[20px]">cancel</span>
+                        AI không giới hạn
+                    </li>
+                    <li class="flex items-center gap-3 font-body-sm text-body-sm text-text-secondary opacity-50">
+                        <span class="material-symbols-outlined text-[20px]">cancel</span>
+                        Toàn bộ QBank
+                    </li>
+                </ul>
+                <button
+                    class="w-full py-3 border border-border text-on-surface font-label-md text-label-md rounded-xl hover:bg-surface-container-low transition-colors">
+                    Bắt đầu ngay
+                </button>
+            </div>
+
+            <!-- Premium 6 Months (Featured) -->
+            <div
+                class="bg-surface premium-border rounded-xl p-6 relative shadow-lg scale-[1.02] z-10 transition-all active:scale-100">
+                <div
+                    class="absolute -top-3 left-1/2 -translate-x-1/2 bg-premium-gradient px-4 py-1 rounded-full flex items-center gap-1 shadow-sm">
+                    <span class="material-symbols-outlined text-white text-[14px]"
+                        style="font-variation-settings: &quot;FILL&quot; 1;">auto_awesome</span>
+                    <span class="text-[10px] font-bold text-white uppercase tracking-wider">Tiết kiệm nhất</span>
+                </div>
+                <div class="mb-4">
+                    <h3 class="font-headline-sm text-headline-sm text-primary">Premium 6 tháng</h3>
+                    <p class="font-body-sm text-body-sm text-text-secondary">Giải pháp ôn thi toàn diện</p>
+                </div>
+                <div class="mb-3">
+                    <span class="font-display text-[32px] text-on-background">990.000đ</span>
+                    <span class="font-body-md text-body-md text-text-secondary">/6 tháng</span>
+                </div>
+                <div class="mb-6 p-2 bg-primary-fixed/20 rounded-lg">
+                    <p class="text-primary font-label-sm text-label-sm">Chỉ ~165.000đ/tháng · tiết kiệm 17%</p>
+                </div>
+                <ul class="space-y-3 mb-8">
+                    <li class="flex items-center gap-3 font-body-sm text-body-sm text-on-surface-variant font-medium">
+                        <span class="material-symbols-outlined text-success text-[20px]"
+                            style="font-variation-settings: &quot;FILL&quot; 1;">check_circle</span>
+                        Toàn bộ tính năng Premium
+                    </li>
+                    <li class="flex items-center gap-3 font-body-sm text-body-sm text-on-surface-variant">
+                        <span class="material-symbols-outlined text-success text-[20px]">check_circle</span>
+                        Mô phỏng thi thật
+                    </li>
+                    <li class="flex items-center gap-3 font-body-sm text-body-sm text-on-surface-variant">
+                        <span class="material-symbols-outlined text-success text-[20px]">check_circle</span>
+                        Ưu tiên hỗ trợ 24/7
+                    </li>
+                    <li class="flex items-center gap-3 font-body-sm text-body-sm text-on-surface-variant">
+                        <span class="material-symbols-outlined text-success text-[20px]">check_circle</span>
+                        Toàn bộ QBank &amp; Thư viện
+                    </li>
+                    <li class="flex items-center gap-3 font-body-sm text-body-sm text-on-surface-variant">
+                        <span class="material-symbols-outlined text-success text-[20px]">check_circle</span>
+                        AI Mentor thông minh
+                    </li>
+                </ul>
+                <button
+                    class="w-full py-4 bg-primary text-on-primary font-label-md text-label-md rounded-xl shadow-md hover:opacity-90 active:scale-95 transition-all">
+                    Mua gói 6 tháng
+                </button>
+            </div>
+
+            <!-- Monthly Plan -->
+            <div class="bg-surface border border-border rounded-xl p-6 transition-all active:scale-[0.98]">
+                <div class="mb-4">
+                    <h3 class="font-headline-sm text-headline-sm text-on-background">Premium 1 tháng</h3>
+                    <p class="font-body-sm text-body-sm text-text-secondary">Linh hoạt theo từng giai đoạn</p>
+                </div>
+                <div class="mb-6">
+                    <span class="font-display text-[32px] text-on-background">199.000đ</span>
+                    <span class="font-body-md text-body-md text-text-secondary">/tháng</span>
+                </div>
+                <ul class="space-y-3 mb-8">
+                    <li class="flex items-center gap-3 font-body-sm text-body-sm text-on-surface-variant">
+                        <span class="material-symbols-outlined text-success text-[20px]">check_circle</span>
+                        Toàn bộ QBank
+                    </li>
+                    <li class="flex items-center gap-3 font-body-sm text-body-sm text-on-surface-variant">
+                        <span class="material-symbols-outlined text-success text-[20px]">check_circle</span>
+                        Thư viện đầy đủ
+                    </li>
+                    <li class="flex items-center gap-3 font-body-sm text-body-sm text-on-surface-variant">
+                        <span class="material-symbols-outlined text-success text-[20px]">check_circle</span>
+                        AI không giới hạn
+                    </li>
+                    <li class="flex items-center gap-3 font-body-sm text-body-sm text-on-surface-variant">
+                        <span class="material-symbols-outlined text-success text-[20px]">check_circle</span>
+                        Phân tích nâng cao
+                    </li>
+                </ul>
+                <button
+                    class="w-full py-3 bg-primary-container text-on-primary-container font-label-md text-label-md rounded-xl hover:opacity-90 transition-colors">
+                    Nâng cấp ngay
+                </button>
+            </div>
+        </div>
+
+        <!-- Comparison Section -->
+        <section class="mt-16 overflow-hidden">
+            <h2 class="font-headline-md text-headline-md text-center mb-8">So sánh chi tiết</h2>
+            <div class="bg-surface border border-border rounded-xl overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-surface-container-low">
+                            <th
+                                class="p-4 font-label-md text-label-md text-on-surface-variant border-b-2 border-primary">
+                                Tính năng</th>
+                            <th class="p-4 font-label-md text-label-md text-center border-b-2 border-primary">Free</th>
+                            <th
+                                class="p-4 font-label-md text-label-md text-center text-primary border-b-2 border-primary">
+                                Premium</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-border">
+                        <tr>
+                            <td class="p-4 font-body-sm text-body-sm text-on-surface-variant">Số lượng câu hỏi (QBank)
+                            </td>
+                            <td class="p-4 text-center text-text-secondary font-body-sm">20 câu/ngày</td>
+                            <td class="p-4 text-center text-on-background font-body-sm font-bold">Không giới hạn</td>
+                        </tr>
+                        <tr>
+                            <td class="p-4 font-body-sm text-body-sm text-on-surface-variant">Truy cập thư viện y khoa
+                            </td>
+                            <td class="p-4 text-center font-body-sm">Cơ bản</td>
+                            <td class="p-4 text-center text-on-background font-body-sm font-bold">Đầy đủ 100%</td>
+                        </tr>
+                        <tr>
+                            <td class="p-4 font-body-sm text-body-sm text-on-surface-variant">Phân tích lỗ hổng kiến
+                                thức</td>
+                            <td class="p-4 text-center font-body-sm text-text-secondary">Không hỗ trợ</td>
+                            <td class="p-4 text-center text-primary font-body-sm font-bold">Nâng cao (AI)</td>
+                        </tr>
+                        <tr>
+                            <td class="p-4 font-body-sm text-body-sm text-on-surface-variant">Mô phỏng kỳ thi thật</td>
+                            <td class="p-4 text-center font-body-sm text-text-secondary">Giới hạn</td>
+                            <td class="p-4 text-center text-on-background font-body-sm font-bold">Không giới hạn</td>
+                        </tr>
+                        <tr>
+                            <td class="p-4 font-body-sm text-body-sm text-on-surface-variant">Hỗ trợ từ chuyên gia</td>
+                            <td class="p-4 text-center font-body-sm text-text-secondary">Community</td>
+                            <td class="p-4 text-center text-on-background font-body-sm font-bold">24/7 Ưu tiên</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- FAQ Section -->
+        <section class="mt-16">
+            <h2 class="font-headline-md text-headline-md text-center mb-8">Câu hỏi thường gặp</h2>
+            <div class="space-y-4">
+                <div class="faq-item border border-border rounded-xl bg-surface overflow-hidden">
+                    <button class="w-full p-4 flex justify-between items-center text-left"
+                        onclick="toggleAccordion(this)">
+                        <span class="font-label-md text-label-md text-on-surface">Tôi có thể hủy gói Premium bất cứ lúc
+                            nào không?</span>
+                        <span class="material-symbols-outlined transition-transform duration-300">expand_more</span>
+                    </button>
+                    <div class="content hidden p-4 pt-0 text-body-sm text-text-secondary border-t border-border/50">
+                        Đúng vậy, bạn có thể hủy gia hạn tự động bất cứ lúc nào trong phần cài đặt tài khoản. Sau khi
+                        hủy, bạn vẫn giữ quyền lợi Premium cho đến hết thời hạn đã thanh toán.
+                    </div>
+                </div>
+                <div class="faq-item border border-border rounded-xl bg-surface overflow-hidden">
+                    <button class="w-full p-4 flex justify-between items-center text-left"
+                        onclick="toggleAccordion(this)">
+                        <span class="font-label-md text-label-md text-on-surface">MebPro hỗ trợ các phương thức thanh
+                            toán nào?</span>
+                        <span class="material-symbols-outlined transition-transform duration-300">expand_more</span>
+                    </button>
+                    <div class="content hidden p-4 pt-0 text-body-sm text-text-secondary border-t border-border/50">
+                        Chúng tôi hỗ trợ đa dạng phương thức: Chuyển khoản ngân hàng, Ví điện tử MoMo, ZaloPay và thẻ
+                        tín dụng Visa/Mastercard thông qua cổng thanh toán bảo mật.
+                    </div>
+                </div>
+                <div class="faq-item border border-border rounded-xl bg-surface overflow-hidden">
+                    <button class="w-full p-4 flex justify-between items-center text-left"
+                        onclick="toggleAccordion(this)">
+                        <span class="font-label-md text-label-md text-on-surface">Gói 6 tháng có ưu đãi gì đặc biệt
+                            không?</span>
+                        <span class="material-symbols-outlined transition-transform duration-300">expand_more</span>
+                    </button>
+                    <div class="content hidden p-4 pt-0 text-body-sm text-text-secondary border-t border-border/50">
+                        Ngoài mức giá tiết kiệm 17% so với gia hạn lẻ hàng tháng, bạn còn nhận được quyền ưu tiên hỗ trợ
+                        24/7 và bộ tài liệu mô phỏng kỳ thi thật độc quyền chỉ dành cho gói dài hạn.
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="px-4 py-12 bg-surface border-t border-border">
+        <div class="max-w-md mx-auto space-y-10">
+            <div class="space-y-4 text-center">
+                <div class="text-headline-sm font-headline-sm font-bold text-primary">MebPro</div>
+                <p class="font-body-sm text-body-sm text-text-secondary">
+                    Nền tảng ôn thi y khoa hàng đầu Việt Nam, giúp tối ưu hóa kết quả học tập thông qua công nghệ AI và
+                    phương pháp khoa học.
+                </p>
+                <div class="flex gap-4 justify-center">
+                    <button
+                        class="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high transition-colors">
+                        <span class="material-symbols-outlined text-[20px]">share</span>
+                    </button>
+                    <button
+                        class="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high transition-colors">
+                        <span class="material-symbols-outlined text-[20px]">language</span>
+                    </button>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-8">
+                <div class="space-y-4">
+                    <h4 class="font-label-md text-label-md text-on-surface">Sản phẩm</h4>
+                    <ul class="space-y-2">
+                        <li class=""><a href="#"
+                                class="font-body-sm text-body-sm text-text-secondary hover:text-primary transition-colors">Tính
+                                năng chính</a></li>
+                        <li class=""><a href="#"
+                                class="font-body-sm text-body-sm text-text-secondary hover:text-primary transition-colors">Bảng
+                                giá linh hoạt</a></li>
+                        <li class=""><a href="#"
+                                class="font-body-sm text-body-sm text-text-secondary hover:text-primary transition-colors">Cập
+                                nhật mới</a></li>
+                        <li class=""><a href="#"
+                                class="font-body-sm text-body-sm text-text-secondary hover:text-primary transition-colors">Mobile
+                                App</a></li>
+                    </ul>
+                </div>
+                <div class="space-y-4">
+                    <h4 class="font-label-md text-label-md text-on-surface">Tài nguyên</h4>
+                    <ul class="space-y-2">
+                        <li class=""><a href="#"
+                                class="font-body-sm text-body-sm text-text-secondary hover:text-primary transition-colors">Blog
+                                Y khoa</a></li>
+                        <li class=""><a href="#"
+                                class="font-body-sm text-body-sm text-text-secondary hover:text-primary transition-colors">Tài
+                                liệu miễn phí</a></li>
+                        <li class=""><a href="#"
+                                class="font-body-sm text-body-sm text-text-secondary hover:text-primary transition-colors">Cộng
+                                đồng học tập</a></li>
+                        <li class=""><a href="#"
+                                class="font-body-sm text-body-sm text-text-secondary hover:text-primary transition-colors">Video
+                                hướng dẫn</a></li>
+                    </ul>
+                </div>
+                <div class="space-y-4">
+                    <h4 class="font-label-md text-label-md text-on-surface">Hỗ trợ</h4>
+                    <ul class="space-y-2">
+                        <li class=""><a href="#"
+                                class="font-body-sm text-body-sm text-text-secondary hover:text-primary transition-colors">Trung
+                                tâm trợ giúp</a></li>
+                        <li class=""><a href="#"
+                                class="font-body-sm text-body-sm text-text-secondary hover:text-primary transition-colors">Liên
+                                hệ hỗ trợ</a></li>
+                        <li class=""><a href="#"
+                                class="font-body-sm text-body-sm text-text-secondary hover:text-primary transition-colors">Góp
+                                ý sản phẩm</a></li>
+                        <li class=""><a href="#"
+                                class="font-body-sm text-body-sm text-text-secondary hover:text-primary transition-colors">Báo
+                                lỗi</a></li>
+                    </ul>
+                </div>
+                <div class="space-y-4">
+                    <h4 class="font-label-md text-label-md text-on-surface">Công ty</h4>
+                    <ul class="space-y-2">
+                        <li class=""><a href="#"
+                                class="font-body-sm text-body-sm text-text-secondary hover:text-primary transition-colors">Về
+                                chúng tôi</a></li>
+                        <li class=""><a href="#"
+                                class="font-body-sm text-body-sm text-text-secondary hover:text-primary transition-colors">Điều
+                                khoản sử dụng</a></li>
+                        <li class=""><a href="#"
+                                class="font-body-sm text-body-sm text-text-secondary hover:text-primary transition-colors">Chính
+                                sách bảo mật</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="pt-8 border-t border-border text-center">
+                <p class="font-label-sm text-label-sm text-text-secondary">© 2024 MebPro. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bottom Navigation -->
+    <nav
+        class="fixed bottom-0 left-0 right-0 bg-surface/90 backdrop-blur-xl border-t border-border flex items-center justify-around h-16 z-50 px-2 md:hidden">
+        <a class="flex flex-col items-center gap-1 text-on-surface-variant px-3" href="#">
+            <span class="material-symbols-outlined text-[24px]">home</span>
+            <span class="font-label-sm text-[10px]">Trang chủ</span>
+        </a>
+        <a class="flex flex-col items-center gap-1 text-on-surface-variant px-3" href="#">
+            <span class="material-symbols-outlined text-[24px]">menu_book</span>
+            <span class="font-label-sm text-[10px]">Tính năng</span>
+        </a>
+        <a class="flex flex-col items-center gap-1 text-primary font-bold px-3" href="#">
+            <span class="material-symbols-outlined text-[24px]"
+                style="font-variation-settings: &quot;FILL&quot; 1;">payments</span>
+            <span class="font-label-sm text-[10px]">Bảng giá</span>
+        </a>
+        <a class="flex flex-col items-center gap-1 text-on-surface-variant px-3" href="#">
+            <span class="material-symbols-outlined text-[24px]">history_edu</span>
+            <span class="font-label-sm text-[10px]">Blog</span>
+        </a>
+    </nav>
+</body>
+
+</html>

@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html class="light" lang="vi">
+
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>MedPro - Câu hỏi thường gặp</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap"
+        rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet">
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-fixed": "#ffdbce",
+                        "on-primary-fixed": "#00201d",
+                        "text-secondary": "#64748B",
+                        "on-secondary-container": "#fefcff",
+                        "on-primary": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-low": "#f2f3ff",
+                        "primary-fixed-dim": "#80d5cb",
+                        "secondary": "#0051d5",
+                        "on-surface": "#131b2e",
+                        "surface-tint": "#006a63",
+                        "tertiary-container": "#9c573a",
+                        "secondary-container": "#316bf3",
+                        "surface": "#FFFFFF",
+                        "border": "#E2E8F0",
+                        "on-secondary-fixed-variant": "#003ea8",
+                        "background": "#F8FAFC",
+                        "on-surface-variant": "#3e4947",
+                        "surface-variant": "#dae2fd",
+                        "on-secondary-fixed": "#00174b",
+                        "on-error": "#ffffff",
+                        "surface-container-high": "#e2e7ff",
+                        "outline-variant": "#bdc9c6",
+                        "surface-container-highest": "#dae2fd",
+                        "primary": "#005c55",
+                        "premium-gradient": "linear-gradient(135deg, #F59E0B 0%, #EA580C 100%)",
+                        "surface-bright": "#faf8ff",
+                        "on-error-container": "#93000a",
+                        "on-primary-container": "#a3faef",
+                        "outline": "#6e7977",
+                        "inverse-primary": "#80d5cb",
+                        "on-tertiary-container": "#ffe5db",
+                        "on-secondary": "#ffffff",
+                        "secondary-fixed": "#dbe1ff",
+                        "error-container": "#ffdad6",
+                        "secondary-fixed-dim": "#b4c5ff",
+                        "tertiary-fixed-dim": "#ffb598",
+                        "inverse-on-surface": "#eef0ff",
+                        "inverse-surface": "#283044",
+                        "error": "#DC2626",
+                        "primary-container": "#0f766e",
+                        "on-tertiary": "#ffffff",
+                        "primary-fixed": "#9cf2e8",
+                        "on-tertiary-fixed": "#370e00",
+                        "on-primary-fixed-variant": "#00504a",
+                        "tertiary": "#7f4025",
+                        "success": "#16A34A",
+                        "surface-container": "#eaedff",
+                        "on-tertiary-fixed-variant": "#72361b",
+                        "warning": "#D97706",
+                        "surface-dim": "#d2d9f4",
+                        "on-background": "#131b2e"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-mobile": "16px",
+                        "sidebar-width": "240px",
+                        "gutter": "24px",
+                        "container-max": "1280px",
+                        "base-unit": "4px"
+                    },
+                    "fontFamily": {
+                        "headline-md": [
+                            "Be Vietnam Pro"
+                        ],
+                        "body-sm": [
+                            "Be Vietnam Pro"
+                        ],
+                        "headline-lg-mobile": [
+                            "Be Vietnam Pro"
+                        ],
+                        "body-lg": [
+                            "Be Vietnam Pro"
+                        ],
+                        "headline-lg": [
+                            "Be Vietnam Pro"
+                        ],
+                        "code": [
+                            "JetBrains Mono"
+                        ],
+                        "body-md": [
+                            "Be Vietnam Pro"
+                        ],
+                        "label-md": [
+                            "Be Vietnam Pro"
+                        ],
+                        "display": [
+                            "Be Vietnam Pro"
+                        ],
+                        "headline-sm": [
+                            "Be Vietnam Pro"
+                        ],
+                        "label-sm": [
+                            "Be Vietnam Pro"
+                        ]
+                    },
+                    "fontSize": {
+                        "headline-md": [
+                            "24px",
+                            {
+                                "lineHeight": "32px",
+                                "fontWeight": "600"
+                            }
+                        ],
+                        "body-sm": [
+                            "14px",
+                            {
+                                "lineHeight": "20px",
+                                "fontWeight": "400"
+                            }
+                        ],
+                        "headline-lg-mobile": [
+                            "24px",
+                            {
+                                "lineHeight": "32px",
+                                "fontWeight": "700"
+                            }
+                        ],
+                        "body-lg": [
+                            "18px",
+                            {
+                                "lineHeight": "28px",
+                                "fontWeight": "400"
+                            }
+                        ],
+                        "headline-lg": [
+                            "32px",
+                            {
+                                "lineHeight": "40px",
+                                "letterSpacing": "-0.01em",
+                                "fontWeight": "700"
+                            }
+                        ],
+                        "code": [
+                            "14px",
+                            {
+                                "lineHeight": "20px",
+                                "fontWeight": "400"
+                            }
+                        ],
+                        "body-md": [
+                            "16px",
+                            {
+                                "lineHeight": "24px",
+                                "fontWeight": "400"
+                            }
+                        ],
+                        "label-md": [
+                            "14px",
+                            {
+                                "lineHeight": "20px",
+                                "fontWeight": "600"
+                            }
+                        ],
+                        "display": [
+                            "48px",
+                            {
+                                "lineHeight": "1.2",
+                                "letterSpacing": "-0.02em",
+                                "fontWeight": "700"
+                            }
+                        ],
+                        "headline-sm": [
+                            "20px",
+                            {
+                                "lineHeight": "28px",
+                                "fontWeight": "600"
+                            }
+                        ],
+                        "label-sm": [
+                            "12px",
+                            {
+                                "lineHeight": "16px",
+                                "fontWeight": "500"
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #F8FAFC;
+        }
+
+        .accordion-content {
+            transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out, padding 0.3s ease-in-out;
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+
+        .accordion-content.active {
+            max-height: 500px;
+            opacity: 1;
+            padding-top: 16px;
+            padding-bottom: 16px;
+        }
+
+        .accordion-icon {
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .accordion-icon.active {
+            transform: rotate(180deg);
+        }
+    </style>
+</head>
+
+<body class="min-h-screen text-on-surface bg-background">
+    <!-- Top Navigation Bar -->
+    <nav
+        class="bg-surface dark:bg-on-primary-fixed border-b border-border dark:border-outline-variant docked full-width top-0 z-50 sticky">
+        <div class="flex justify-between items-center h-16 px-gutter max-w-container-max mx-auto w-full">
+            <!-- Brand Logo -->
+            <a class="font-headline-md text-headline-md font-bold text-primary-container dark:text-primary-fixed"
+                href="#">
+                MebPro
+            </a>
+            <!-- Navigation Links (Desktop) -->
+            <div class="hidden md:flex space-x-8">
+                <a class="text-text-secondary dark:text-on-surface-variant hover:text-primary dark:hover:text-primary-fixed-dim transition-colors font-label-md text-label-md"
+                    href="#">
+                    Khóa học
+                </a>
+                <a class="text-text-secondary dark:text-on-surface-variant hover:text-primary dark:hover:text-primary-fixed-dim transition-colors font-label-md text-label-md"
+                    href="#">
+                    Luyện thi
+                </a>
+                <a class="text-text-secondary dark:text-on-surface-variant hover:text-primary dark:hover:text-primary-fixed-dim transition-colors font-label-md text-label-md"
+                    href="#">
+                    Tài liệu
+                </a>
+                <a class="text-text-secondary dark:text-on-surface-variant hover:text-primary dark:hover:text-primary-fixed-dim transition-colors font-label-md text-label-md"
+                    href="#">
+                    Bảng giá
+                </a>
+            </div>
+            <!-- Actions -->
+            <div class="flex items-center space-x-4">
+                <a class="hidden md:inline-block font-label-md text-label-md text-on-surface hover:text-primary transition-colors"
+                    href="#">
+                    Đăng nhập
+                </a>
+                <a class="bg-primary-container text-on-primary px-4 py-2 rounded-lg font-label-md text-label-md hover:bg-primary transition-colors"
+                    href="#">
+                    Đăng ký
+                </a>
+            </div>
+        </div>
+    </nav>
+    <!-- Header Section -->
+    <header class="py-16 md:py-24 text-center px-gutter">
+        <div class="max-w-3xl mx-auto">
+            <h1 class="font-headline-lg text-headline-lg text-on-surface mb-4">Câu hỏi thường gặp</h1>
+            <p class="font-body-lg text-body-lg text-text-secondary mb-8">Chúng tôi có thể giúp gì cho bạn? Tìm kiếm câu
+                trả lời nhanh chóng cho các vấn đề thường gặp.</p>
+            <!-- Search Bar -->
+            <div class="relative max-w-2xl mx-auto">
+                <span
+                    class="material-symbols-outlined absolute left-4 top-1/2 transform -translate-y-1/2 text-text-secondary"
+                    data-icon="search">search</span>
+                <input
+                    class="w-full pl-12 pr-4 py-4 h-12 bg-surface border border-border rounded-xl font-body-md text-body-md text-on-surface focus:outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container transition-all shadow-sm"
+                    placeholder="Nhập câu hỏi hoặc từ khóa..." type="text">
+            </div>
+        </div>
+    </header>
+    <!-- Main Content Grid -->
+    <main class="max-w-container-max mx-auto px-gutter pb-24">
+        <div class="flex flex-col md:flex-row gap-8">
+            <!-- Left Sidebar (Categories) -->
+            <aside class="w-full md:w-1/4 flex-shrink-0">
+                <div class="bg-surface rounded-xl border border-border p-4 sticky top-24">
+                    <h2 class="font-label-md text-label-md text-text-secondary uppercase tracking-wider mb-4 px-3">Danh
+                        mục hỗ trợ</h2>
+                    <nav class="space-y-1">
+                        <a class="flex items-center px-3 py-2 rounded-lg bg-[#F1F5F9] border-l-2 border-primary-container text-primary-container font-label-md text-label-md transition-colors"
+                            href="#">
+                            <span class="material-symbols-outlined mr-3 text-primary-container"
+                                data-icon="person">person</span>
+                            Tài khoản &amp; đăng ký
+                        </a>
+                        <a class="flex items-center px-3 py-2 rounded-lg text-text-secondary hover:bg-background hover:text-on-surface font-body-md text-body-md transition-colors"
+                            href="#">
+                            <span class="material-symbols-outlined mr-3 text-text-secondary"
+                                data-icon="payments">payments</span>
+                            Gói &amp; thanh toán
+                        </a>
+                        <a class="flex items-center px-3 py-2 rounded-lg text-text-secondary hover:bg-background hover:text-on-surface font-body-md text-body-md transition-colors"
+                            href="#">
+                            <span class="material-symbols-outlined mr-3 text-text-secondary"
+                                data-icon="school">school</span>
+                            Tính năng học tập
+                        </a>
+                        <a class="flex items-center px-3 py-2 rounded-lg text-text-secondary hover:bg-background hover:text-on-surface font-body-md text-body-md transition-colors"
+                            href="#">
+                            <span class="material-symbols-outlined mr-3 text-text-secondary"
+                                data-icon="medical_services">medical_services</span>
+                            Nội dung y khoa
+                        </a>
+                        <a class="flex items-center px-3 py-2 rounded-lg text-text-secondary hover:bg-background hover:text-on-surface font-body-md text-body-md transition-colors"
+                            href="#">
+                            <span class="material-symbols-outlined mr-3 text-text-secondary"
+                                data-icon="security">security</span>
+                            Kỹ thuật &amp; bảo mật
+                        </a>
+                    </nav>
+                </div>
+            </aside>
+            <!-- Right Content (Accordions) -->
+            <section class="w-full md:w-3/4">
+                <h2 class="font-headline-md text-headline-md text-on-surface mb-6">Tài khoản &amp; đăng ký</h2>
+                <div class="space-y-4">
+                    <!-- Accordion Item 1 -->
+                    <div class="bg-surface border border-border rounded-xl overflow-hidden">
+                        <button class="w-full flex justify-between items-center p-6 text-left focus:outline-none"
+                            onclick="toggleAccordion(this)">
+                            <span class="font-headline-sm text-headline-sm text-on-surface">Làm sao để đăng ký tài
+                                khoản?</span>
+                            <span class="material-symbols-outlined text-text-secondary accordion-icon"
+                                data-icon="expand_more">expand_more</span>
+                        </button>
+                        <div
+                            class="accordion-content px-6 text-text-secondary font-body-md text-body-md border-t border-border border-opacity-0">
+                            Để đăng ký tài khoản, bạn vui lòng nhấp vào nút "Đăng ký" ở góc trên cùng bên phải của trang
+                            web. Sau đó, điền đầy đủ thông tin cá nhân bao gồm họ tên, địa chỉ email, và mật khẩu. Bạn
+                            cũng có thể đăng ký nhanh bằng tài khoản Google hoặc Facebook. Sau khi hoàn tất, hệ thống sẽ
+                            gửi một email xác nhận đến địa chỉ email bạn đã cung cấp. Vui lòng kiểm tra hộp thư đến
+                            (hoặc thư rác) và làm theo hướng dẫn để kích hoạt tài khoản.
+                        </div>
+                    </div>
+                    <!-- Accordion Item 2 -->
+                    <div class="bg-surface border border-border rounded-xl overflow-hidden">
+                        <button class="w-full flex justify-between items-center p-6 text-left focus:outline-none"
+                            onclick="toggleAccordion(this)">
+                            <span class="font-headline-sm text-headline-sm text-on-surface">Tôi quên mật khẩu thì phải
+                                làm thế nào?</span>
+                            <span class="material-symbols-outlined text-text-secondary accordion-icon"
+                                data-icon="expand_more">expand_more</span>
+                        </button>
+                        <div
+                            class="accordion-content px-6 text-text-secondary font-body-md text-body-md border-t border-border border-opacity-0">
+                            Nếu bạn quên mật khẩu, hãy nhấp vào liên kết "Quên mật khẩu?" tại trang Đăng nhập. Nhập địa
+                            chỉ email mà bạn đã dùng để đăng ký tài khoản. Hệ thống sẽ gửi cho bạn một email chứa liên
+                            kết để đặt lại mật khẩu mới. Vui lòng làm theo hướng dẫn trong email để tạo mật khẩu mới an
+                            toàn. Nếu bạn không nhận được email sau vài phút, hãy kiểm tra thư mục spam/thư rác hoặc
+                            liên hệ với bộ phận hỗ trợ kỹ thuật của chúng tôi.
+                        </div>
+                    </div>
+                    <!-- Accordion Item 3 -->
+                    <div class="bg-surface border border-border rounded-xl overflow-hidden">
+                        <button class="w-full flex justify-between items-center p-6 text-left focus:outline-none"
+                            onclick="toggleAccordion(this)">
+                            <span class="font-headline-sm text-headline-sm text-on-surface">MedPro có hỗ trợ thanh toán
+                                qua chuyển khoản không?</span>
+                            <span class="material-symbols-outlined text-text-secondary accordion-icon"
+                                data-icon="expand_more">expand_more</span>
+                        </button>
+                        <div
+                            class="accordion-content px-6 text-text-secondary font-body-md text-body-md border-t border-border border-opacity-0">
+                            Có, MedPro hiện đang hỗ trợ thanh toán qua hình thức chuyển khoản ngân hàng. Khi bạn tiến
+                            hành thanh toán cho một khóa học hoặc gói dịch vụ, hãy chọn phương thức "Chuyển khoản ngân
+                            hàng". Hệ thống sẽ cung cấp thông tin tài khoản ngân hàng của chúng tôi cùng với nội dung
+                            chuyển khoản chi tiết. Sau khi bạn thực hiện chuyển khoản thành công, tài khoản của bạn sẽ
+                            được kích hoạt dịch vụ tương ứng trong vòng 1-2 giờ làm việc (trong giờ hành chính). Bạn
+                            cũng có thể gửi biên lai chuyển khoản vào email hỗ trợ để quá trình xác nhận diễn ra nhanh
+                            chóng hơn.
+                        </div>
+                    </div>
+                    <!-- Accordion Item 4 -->
+                    <div class="bg-surface border border-border rounded-xl overflow-hidden">
+                        <button class="w-full flex justify-between items-center p-6 text-left focus:outline-none"
+                            onclick="toggleAccordion(this)">
+                            <span class="font-headline-sm text-headline-sm text-on-surface">Tôi có thể thay đổi địa chỉ
+                                email đăng nhập không?</span>
+                            <span class="material-symbols-outlined text-text-secondary accordion-icon"
+                                data-icon="expand_more">expand_more</span>
+                        </button>
+                        <div
+                            class="accordion-content px-6 text-text-secondary font-body-md text-body-md border-t border-border border-opacity-0">
+                            Hiện tại, vì lý do bảo mật, bạn không thể tự ý thay đổi địa chỉ email đã đăng ký. Địa chỉ
+                            email này gắn liền với hồ sơ học tập và lịch sử thanh toán của bạn. Nếu bạn thực sự cần thay
+                            đổi email do lý do đặc biệt (ví dụ: email cũ không còn truy cập được), vui lòng liên hệ trực
+                            tiếp với bộ phận Chăm sóc khách hàng qua email hoặc hotline và cung cấp các thông tin xác
+                            minh cần thiết.
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+    <!-- CTA Section -->
+    <section class="max-w-container-max mx-auto px-gutter pb-24">
+        <div class="bg-surface-container-low border border-border rounded-2xl p-12 text-center">
+            <div
+                class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white border border-border mb-6">
+                <span class="material-symbols-outlined text-primary-container text-3xl"
+                    data-icon="support_agent">support_agent</span>
+            </div>
+            <h3 class="font-headline-md text-headline-md text-on-surface mb-3">Vẫn cần trợ giúp?</h3>
+            <p class="font-body-md text-body-md text-text-secondary mb-8 max-w-lg mx-auto">Nếu bạn không tìm thấy câu
+                trả lời ở đây, đừng ngần ngại liên hệ với đội ngũ hỗ trợ của chúng tôi. Chúng tôi luôn sẵn sàng hỗ trợ
+                bạn 24/7.</p>
+            <a class="inline-flex items-center justify-center bg-primary-container text-on-primary px-6 py-3 rounded-xl font-label-md text-label-md hover:bg-primary transition-colors shadow-sm"
+                href="#">
+                Liên hệ hỗ trợ
+                <span class="material-symbols-outlined ml-2 text-sm" data-icon="arrow_forward">arrow_forward</span>
+            </a>
+        </div>
+    </section>
+    <!-- Footer -->
+    <footer class="bg-white border-t border-border py-16 px-gutter">
+        <div class="max-w-container-max mx-auto">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-12 mb-12">
+                <!-- Brand & Social -->
+                <div class="md:col-span-4">
+                    <div class="font-headline-sm text-headline-sm font-bold text-primary-container mb-4">MebPro</div>
+                    <p class="text-text-secondary font-body-sm mb-6 max-w-xs">
+                        Nền tảng ôn thi y khoa hàng đầu Việt Nam, giúp tối ưu hóa kết quả học tập thông qua công nghệ AI
+                        và phương pháp khoa học.
+                    </p>
+                    <div class="flex space-x-4">
+                        <a href="#"
+                            class="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center text-text-secondary hover:text-primary transition-colors">
+                            <span class="material-symbols-outlined" data-icon="share">share</span>
+                        </a>
+                        <a href="#"
+                            class="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center text-text-secondary hover:text-primary transition-colors">
+                            <span class="material-symbols-outlined" data-icon="language">language</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Links Columns -->
+                <div class="md:col-span-2">
+                    <h4 class="font-label-md text-label-md text-on-surface mb-6">Sản phẩm</h4>
+                    <ul class="space-y-4">
+                        <li class=""><a href="#"
+                                class="text-text-secondary font-body-sm hover:text-primary transition-colors">Tính năng
+                                chính</a></li>
+                        <li class=""><a href="#"
+                                class="text-text-secondary font-body-sm hover:text-primary transition-colors">Bảng giá
+                                linh hoạt</a></li>
+                        <li class=""><a href="#"
+                                class="text-text-secondary font-body-sm hover:text-primary transition-colors">Cập nhật
+                                mới</a></li>
+                        <li class=""><a href="#"
+                                class="text-text-secondary font-body-sm hover:text-primary transition-colors">Mobile
+                                App</a></li>
+                    </ul>
+                </div>
+
+                <div class="md:col-span-2">
+                    <h4 class="font-label-md text-label-md text-on-surface mb-6">Tài nguyên</h4>
+                    <ul class="space-y-4">
+                        <li class=""><a href="#"
+                                class="text-text-secondary font-body-sm hover:text-primary transition-colors">Blog Y
+                                khoa</a></li>
+                        <li class=""><a href="#"
+                                class="text-text-secondary font-body-sm hover:text-primary transition-colors">Tài liệu
+                                miễn phí</a></li>
+                        <li class=""><a href="#"
+                                class="text-text-secondary font-body-sm hover:text-primary transition-colors">Cộng đồng
+                                học tập</a></li>
+                        <li class=""><a href="#"
+                                class="text-text-secondary font-body-sm hover:text-primary transition-colors">Video
+                                hướng dẫn</a></li>
+                    </ul>
+                </div>
+
+                <div class="md:col-span-2">
+                    <h4 class="font-label-md text-label-md text-on-surface mb-6">Hỗ trợ</h4>
+                    <ul class="space-y-4">
+                        <li class=""><a href="#"
+                                class="text-text-secondary font-body-sm hover:text-primary transition-colors">Trung tâm
+                                trợ giúp</a></li>
+                        <li class=""><a href="#"
+                                class="text-text-secondary font-body-sm hover:text-primary transition-colors">Liên hệ hỗ
+                                trợ</a></li>
+                        <li class=""><a href="#"
+                                class="text-text-secondary font-body-sm hover:text-primary transition-colors">Góp ý sản
+                                phẩm</a></li>
+                        <li class=""><a href="#"
+                                class="text-text-secondary font-body-sm hover:text-primary transition-colors">Báo
+                                lỗi</a></li>
+                    </ul>
+                </div>
+
+                <div class="md:col-span-2">
+                    <h4 class="font-label-md text-label-md text-on-surface mb-6">Công ty</h4>
+                    <ul class="space-y-4">
+                        <li class=""><a href="#"
+                                class="text-text-secondary font-body-sm hover:text-primary transition-colors">Về chúng
+                                tôi</a></li>
+                        <li class=""><a href="#"
+                                class="text-text-secondary font-body-sm hover:text-primary transition-colors">Điều khoản
+                                sử dụng</a></li>
+                        <li class=""><a href="#"
+                                class="text-text-secondary font-body-sm hover:text-primary transition-colors">Chính sách
+                                bảo mật</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Bottom Bar -->
+            <div class="pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4">
+                <p class="text-text-secondary font-body-sm text-center md:text-left">
+                    © 2024 MebPro. Mọi quyền được bảo lưu. Phát triển bởi đội ngũ bác sĩ &amp; kỹ sư công nghệ.
+                </p>
+                <div class="flex space-x-6">
+                    <a href="#" class="text-text-secondary font-body-sm hover:text-primary transition-colors">Cookie
+                        Settings</a>
+                    <a href="#"
+                        class="text-text-secondary font-body-sm hover:text-primary transition-colors">Sitemap</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+    <script>
+        function toggleAccordion(button) {
+            const content = button.nextElementSibling;
+            const icon = button.querySelector('.accordion-icon');
+
+            // Toggle active classes
+            content.classList.toggle('active');
+            icon.classList.toggle('active');
+
+            // Optionally close other accordions
+            // const allContents = document.querySelectorAll('.accordion-content');
+            // allContents.forEach(c => {
+            //     if (c !== content && c.classList.contains('active')) {
+            //         c.classList.remove('active');
+            //         c.previousElementSibling.querySelector('.accordion-icon').classList.remove('active');
+            //     }
+            // });
+        }
+    </script>
+
+
+</body>
+
+</html>

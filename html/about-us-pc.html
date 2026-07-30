@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html class="light" lang="vi">
+
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Về chúng tôi | MedPro - Nền tảng ôn thi Y khoa</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&amp;family=JetBrains+Mono&amp;display=swap"
+        rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet">
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-dim": "#d2d9f4",
+                        "on-primary-fixed": "#00201d",
+                        "primary-fixed-dim": "#80d5cb",
+                        "on-primary": "#ffffff",
+                        "error": "#DC2626",
+                        "surface": "#FFFFFF",
+                        "on-secondary-container": "#fefcff",
+                        "surface-container-lowest": "#ffffff",
+                        "outline-variant": "#bdc9c6",
+                        "inverse-surface": "#283044",
+                        "surface-tint": "#006a63",
+                        "on-tertiary": "#ffffff",
+                        "primary-container": "#0f766e",
+                        "surface-container-highest": "#dae2fd",
+                        "primary-fixed": "#9cf2e8",
+                        "error-container": "#ffdad6",
+                        "on-primary-fixed-variant": "#00504a",
+                        "secondary": "#0051d5",
+                        "on-tertiary-container": "#ffe5db",
+                        "on-background": "#131b2e",
+                        "surface-bright": "#faf8ff",
+                        "inverse-on-surface": "#eef0ff",
+                        "text-secondary": "#64748B",
+                        "on-surface-variant": "#3e4947",
+                        "tertiary-fixed-dim": "#ffb598",
+                        "secondary-fixed": "#dbe1ff",
+                        "tertiary-container": "#9c573a",
+                        "on-secondary-fixed-variant": "#003ea8",
+                        "outline": "#6e7977",
+                        "secondary-fixed-dim": "#b4c5ff",
+                        "surface-container-low": "#f2f3ff",
+                        "on-tertiary-fixed-variant": "#72361b",
+                        "secondary-container": "#316bf3",
+                        "on-tertiary-fixed": "#370e00",
+                        "warning": "#D97706",
+                        "tertiary-fixed": "#ffdbce",
+                        "tertiary": "#7f4025",
+                        "on-error": "#ffffff",
+                        "premium-gradient": "linear-gradient(135deg, #F59E0B 0%, #EA580C 100%)",
+                        "border": "#E2E8F0",
+                        "primary": "#005c55",
+                        "on-secondary": "#ffffff",
+                        "background": "#F8FAFC",
+                        "surface-container": "#eaedff",
+                        "on-secondary-fixed": "#00174b",
+                        "success": "#16A34A",
+                        "on-primary-container": "#a3faef",
+                        "on-error-container": "#93000a",
+                        "surface-variant": "#dae2fd",
+                        "surface-container-high": "#e2e7ff",
+                        "on-surface": "#131b2e",
+                        "inverse-primary": "#80d5cb"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "base-unit": "4px",
+                        "sidebar-width": "240px",
+                        "margin-mobile": "16px",
+                        "container-max": "1280px",
+                        "gutter": "24px"
+                    },
+                    "fontFamily": {
+                        "headline-sm": ["Be Vietnam Pro"],
+                        "headline-lg": ["Be Vietnam Pro"],
+                        "headline-lg-mobile": ["Be Vietnam Pro"],
+                        "body-md": ["Be Vietnam Pro"],
+                        "code": ["JetBrains Mono"],
+                        "label-md": ["Be Vietnam Pro"],
+                        "body-sm": ["Be Vietnam Pro"],
+                        "headline-md": ["Be Vietnam Pro"],
+                        "display": ["Be Vietnam Pro"],
+                        "label-sm": ["Be Vietnam Pro"],
+                        "body-lg": ["Be Vietnam Pro"]
+                    },
+                    "fontSize": {
+                        "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "code": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "display": ["48px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }]
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+            background-color: #F8FAFC;
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .premium-text {
+            background: linear-gradient(135deg, #F59E0B 0%, #EA580C 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+</head>
+
+<body class="flex flex-col min-h-screen">
+    <!-- TopNavBar -->
+    <header
+        class="sticky top-0 z-50 flex justify-between items-center w-full px-6 py-4 max-w-container-max mx-auto bg-surface dark:bg-on-background border-b border-outline-variant dark:border-outline">
+        <div class="flex items-center gap-8">
+            <a class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed"
+                href="/">MedPro</a>
+            <nav class="hidden md:flex items-center gap-6">
+                <a class="font-body-md text-body-md text-text-secondary dark:text-on-surface-variant hover:text-primary dark:hover:text-primary-fixed transition-colors"
+                    href="#">Courses</a>
+                <a class="font-body-md text-body-md text-text-secondary dark:text-on-surface-variant hover:text-primary dark:hover:text-primary-fixed transition-colors"
+                    href="#">Exams</a>
+                <a class="font-body-md text-body-md text-text-secondary dark:text-on-surface-variant hover:text-primary dark:hover:text-primary-fixed transition-colors"
+                    href="#">Resources</a>
+                <a class="font-body-md text-body-md text-text-secondary dark:text-on-surface-variant hover:text-primary dark:hover:text-primary-fixed transition-colors"
+                    href="#">Pricing</a>
+                <a class="font-body-md text-body-md text-primary dark:text-primary-fixed font-bold border-b-2 border-primary dark:border-primary-fixed pb-1"
+                    href="#">About Us</a>
+            </nav>
+        </div>
+        <div class="flex items-center gap-4">
+            <button
+                class="px-4 py-2 font-body-md text-body-md text-primary dark:text-primary-fixed hover:bg-surface-container transition-colors">Đăng
+                nhập</button>
+            <button
+                class="px-6 py-2 bg-primary-container text-on-primary rounded-xl font-body-md text-body-md hover:opacity-80 transition-opacity">Đăng
+                ký</button>
+        </div>
+    </header>
+    <main class="flex-grow">
+        <!-- 1. Hero Section -->
+        <section class="bg-[#F0FDFA] py-24 px-6">
+            <div class="max-w-4xl mx-auto text-center">
+                <h1 class="font-display text-display text-primary mb-6">Sứ mệnh của MedPro</h1>
+                <p class="font-body-lg text-body-lg text-text-secondary max-w-2xl mx-auto">Giúp mọi sinh viên &amp; bác
+                    sĩ Y khoa Việt Nam học hiệu quả, thi tự tin với nền tảng công nghệ giáo dục hiện đại nhất.</p>
+            </div>
+        </section>
+        <!-- 2. Câu chuyện của chúng tôi -->
+        <section class="py-24 px-6 max-w-container-max mx-auto">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
+                <div class="space-y-6">
+                    <h2 class="font-headline-lg text-headline-lg text-on-background">Câu chuyện ra đời</h2>
+                    <p class="font-body-md text-body-md text-text-secondary leading-relaxed">
+                        MedPro được khởi xướng bởi một nhóm các bác sĩ trẻ và chuyên gia công nghệ với một trăn trở
+                        chung: Làm thế nào để việc học Y khoa tại Việt Nam trở nên bớt áp lực và hiệu quả hơn? Chúng tôi
+                        hiểu rằng khối lượng kiến thức khổng lồ và áp lực từ các kỳ thi nội trú, CCHN luôn là rào cản
+                        lớn.
+                    </p>
+                    <p class="font-body-md text-body-md text-text-secondary leading-relaxed">
+                        Sứ mệnh của chúng tôi là nâng tầm giáo dục y khoa thông qua việc chuẩn hóa nội dung theo hướng
+                        cập nhật quốc tế (UpToDate, Harrison) nhưng vẫn sát với thực tế lâm sàng tại Việt Nam. MedPro
+                        không chỉ là một ngân hàng câu hỏi, mà là người bạn đồng hành thông minh trên con đường sự
+                        nghiệp của mỗi nhân viên y tế.
+                    </p>
+                    <div class="flex items-center gap-4 pt-4">
+                        <div class="w-12 h-1 bg-primary rounded-full"></div>
+                        <span class="font-label-md text-label-md text-primary uppercase tracking-wider">Học tập không
+                            ngừng - Tận tâm cống hiến</span>
+                    </div>
+                </div>
+                <div class="relative group">
+                    <div
+                        class="absolute -inset-4 bg-primary/10 rounded-2xl -z-10 transition-transform group-hover:scale-105">
+                    </div>
+                    <div class="w-full aspect-[4/3] rounded-xl overflow-hidden shadow-xl">
+                        <img class="w-full h-full object-cover"
+                            data-alt="A professional group of diverse Vietnamese doctors and medical educators in a modern bright clinical office setting. They are engaged in a collaborative discussion around a digital tablet, wearing clean white coats and stethoscopes. The atmosphere is professional, warm, and highly focused, reflecting a high-end medical education corporate culture with soft natural lighting and medical-grade teal accents."
+                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuBradTgp2EYCoME1EiNEBjd7QdQ83DyDhBvMX1WKZ-BkYHohu6DwOX13sP8EQwEN4Wre-gOAev0jBO8f4CYqT6XG06iHQofiWg1zdQlcZgzk595ojV08v3jP7OXkKxYsPhy0ICsiLS8UZA5O1BC-gm-dHlsiEi6HpRCn-7w2hMXpDME982f0M9cIyBa0Cs2VUpic76Rw9dW206ickH6rqcOWPB6GyTRsSmK3p5FaCKGjvNhDseTbmncDA_uVTNF4iRyNNtilMc3ajCw">
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- 3. Giá trị cốt lõi -->
+        <section class="py-20 bg-surface-container-low px-6">
+            <div class="max-w-container-max mx-auto text-center mb-16">
+                <h2 class="font-headline-lg text-headline-lg text-on-background mb-4">Giá trị cốt lõi</h2>
+                <div class="w-16 h-1 bg-primary mx-auto rounded-full"></div>
+            </div>
+            <div class="max-w-container-max mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
+                <!-- Card 1 -->
+                <div class="bg-surface p-8 rounded-xl border border-border hover:shadow-lg transition-all text-center">
+                    <div
+                        class="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-6">
+                        <span class="material-symbols-outlined text-3xl">verified</span>
+                    </div>
+                    <h3 class="font-headline-sm text-headline-sm text-on-background mb-3">Chuẩn hóa nội dung</h3>
+                    <p class="font-body-sm text-body-sm text-text-secondary">Nội dung được thẩm định bởi hội đồng chuyên
+                        môn là các Tiến sĩ, Bác sĩ uy tín.</p>
+                </div>
+                <!-- Card 2 -->
+                <div class="bg-surface p-8 rounded-xl border border-border hover:shadow-lg transition-all text-center">
+                    <div
+                        class="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-6">
+                        <span class="material-symbols-outlined text-3xl">psychology</span>
+                    </div>
+                    <h3 class="font-headline-sm text-headline-sm text-on-background mb-3">Cá nhân hóa</h3>
+                    <p class="font-body-sm text-body-sm text-text-secondary">Thuật toán AI phân tích điểm mạnh yếu để
+                        gợi ý lộ trình học tập tối ưu.</p>
+                </div>
+                <!-- Card 3 -->
+                <div class="bg-surface p-8 rounded-xl border border-border hover:shadow-lg transition-all text-center">
+                    <div
+                        class="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-6">
+                        <span class="material-symbols-outlined text-3xl">groups</span>
+                    </div>
+                    <h3 class="font-headline-sm text-headline-sm text-on-background mb-3">Đồng hành</h3>
+                    <p class="font-body-sm text-body-sm text-text-secondary">Cộng đồng học tập sôi nổi cùng sự hỗ trợ
+                        24/7 từ đội ngũ học thuật.</p>
+                </div>
+                <!-- Card 4 -->
+                <div class="bg-surface p-8 rounded-xl border border-border hover:shadow-lg transition-all text-center">
+                    <div
+                        class="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-6">
+                        <span class="material-symbols-outlined text-3xl">shield_lock</span>
+                    </div>
+                    <h3 class="font-headline-sm text-headline-sm text-on-background mb-3">Minh bạch &amp; Tin cậy</h3>
+                    <p class="font-body-sm text-body-sm text-text-secondary">Dữ liệu kết quả chính xác, cam kết bảo mật
+                        và hỗ trợ người dùng tối đa.</p>
+                </div>
+            </div>
+        </section>
+        <!-- 4. Thành tựu -->
+        <section class="py-16 bg-white border-y border-border">
+            <div class="max-w-container-max mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-8">
+                <div class="text-center">
+                    <p class="font-display text-[40px] leading-tight text-primary font-bold">12.450</p>
+                    <p class="font-label-md text-label-md text-text-secondary">Câu hỏi bản quyền</p>
+                </div>
+                <div class="text-center">
+                    <p class="font-display text-[40px] leading-tight text-primary font-bold">38.000+</p>
+                    <p class="font-label-md text-label-md text-text-secondary">Người học tin dùng</p>
+                </div>
+                <div class="text-center">
+                    <p class="font-display text-[40px] leading-tight text-primary font-bold">18</p>
+                    <p class="font-label-md text-label-md text-text-secondary">Chuyên ngành Y khoa</p>
+                </div>
+                <div class="text-center">
+                    <p class="font-display text-[40px] leading-tight text-primary font-bold">96%</p>
+                    <p class="font-label-md text-label-md text-text-secondary">Tỉ lệ hài lòng</p>
+                </div>
+            </div>
+        </section>
+        <!-- 5. Đội ngũ chuyên gia -->
+        <section class="py-24 px-6 max-w-container-max mx-auto">
+            <div class="text-center mb-16">
+                <h2 class="font-headline-lg text-headline-lg text-on-background mb-4">Đội ngũ chuyên gia</h2>
+                <p class="font-body-md text-body-md text-text-secondary">Hội tụ những chuyên gia đầu ngành trong lĩnh
+                    vực giáo dục Y khoa.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
+                <!-- Expert 1 -->
+                <div class="text-center group">
+                    <div
+                        class="w-32 h-32 mx-auto mb-6 rounded-full overflow-hidden border-4 border-white shadow-md group-hover:scale-105 transition-transform">
+                        <img alt="Expert" class="w-full h-full object-cover"
+                            src="https://lh3.googleusercontent.com/aida/AP1WRLvDkCD578cYSin-_kyksoOYCeWLfQxoh0ZTWBZy5-_zt-SbD2tW9eoMaq_M6YUbfNlnow98krzw39xUwDoSEqzuuGWFyKqA11h-zFcHi4jWoqXPj-lOGj_aN04Fn-6_sXQO29_VVSkgWMZjidwzDkxnxyY89YwqIkGdvnlFoTiwCFh3oYGh5DlIOKGcNeEWdOKEfatN8nRFv7MCM3ZzEUTN2uFLmmnayHgpnZ6BfkW50mM9uu6QUiPMJBTg">
+                    </div>
+                    <h4 class="font-headline-sm text-headline-sm text-on-background">TS.BS. Trần Văn Minh</h4>
+                    <p class="font-body-sm text-body-sm text-primary font-medium">Cố vấn chuyên môn Nội khoa</p>
+                </div>
+                <!-- Expert 2 -->
+                <div class="text-center group">
+                    <div
+                        class="w-32 h-32 mx-auto mb-6 rounded-full overflow-hidden border-4 border-white shadow-md group-hover:scale-105 transition-transform">
+                        <img alt="Expert" class="w-full h-full object-cover"
+                            src="https://lh3.googleusercontent.com/aida/AP1WRLuRxdaTKCUbtSR1qPPV5uACq8CGIzKijXHk6wE5sBFApFbN_-6hb5MS7DYkIKvBjAz0UngBX6FO3KMnbGHdnxeodWzYbzaB3nV5MawYvq3XEnSEr5vvm3j3pJ_-fNPelD_sgG5o7T0lg_ocm8OpUHyaMJ3Mi2Swz4bGLYNaI65fFRUnRV6sS1ss4KvVH_TnFbQc5r_wo9X7qSzOjOJM8fq4nxYMSGcX-FRJqNdY2VAKeM7wRfBlgC_iw9o">
+                    </div>
+                    <h4 class="font-headline-sm text-headline-sm text-on-background">ThS.BS. Nguyễn Anh Tuấn</h4>
+                    <p class="font-body-sm text-body-sm text-primary font-medium">Trưởng ban Nội dung Ngoại khoa</p>
+                </div>
+                <!-- Expert 3 -->
+                <div class="text-center group">
+                    <div
+                        class="w-32 h-32 mx-auto mb-6 rounded-full overflow-hidden border-4 border-white shadow-md group-hover:scale-105 transition-transform">
+                        <img alt="Expert" class="w-full h-full object-cover"
+                            src="https://lh3.googleusercontent.com/aida/AP1WRLtwYR3tTWOwSsruwTUSvSu9mwiYyaBzQQ-j2nNplJLV1M7jqlHf4RVl_P1_1d0AtDr_4dk049zwABVX9p2zAbA6thOd19fQ8cKI-sHw6gFgVicUIO2Gjz9XjWbdkTLiHOipK23p7z4ouSNNoNavmQbpP2avgZ9d_VRvPuX5d2VjJv6KXQsdS04ExugM4JcD9v8ONCi1LfBJGpnW-ht2d2djdgwc-20QDKw2_KhjmhMiVQc8oiqgrUnep7Y">
+                    </div>
+                    <h4 class="font-headline-sm text-headline-sm text-on-background">BSCKII. Lê Thị Hồng</h4>
+                    <p class="font-body-sm text-body-sm text-primary font-medium">Cố vấn Sản Nhi khoa</p>
+                </div>
+                <!-- Expert 4 (Repeat or Mock) -->
+                <div class="text-center group">
+                    <div
+                        class="w-32 h-32 mx-auto mb-6 rounded-full overflow-hidden border-4 border-white shadow-md group-hover:scale-105 transition-transform">
+                        <img class="w-full h-full object-cover"
+                            data-alt="Portrait of a middle-aged Vietnamese male doctor, professional expression, glasses, clinical attire, studio lighting, high resolution."
+                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuCw_DbNNSAw_zy8LSm11WqN43b-ZYHxpfo5m2pbBl3NPhiS4GGndTBFKpvhpMsuVlsn11GxahSI7WrDIxs0pMxJBqJcKilh_N_TzrOKld7ZX8s_ElKiz5FN4PnC_dj51e_SBb6W9DCOU0GyTxEWArhD3n-ogSbi407oUPzf4P9Tu9PRCf_ucpklPrSS6XLaAwS8ZAcLrh3FS2IcagNalWlEW2J8-HLNn8K2fH8HXSaPiVXUEAmSKjDnJeSSaJ3yE8KfK_ZABxwi4_PD">
+                    </div>
+                    <h4 class="font-headline-sm text-headline-sm text-on-background">PGS.TS. Phạm Hoàn</h4>
+                    <p class="font-body-sm text-body-sm text-primary font-medium">Cố vấn Giải phẫu - Mô phôi</p>
+                </div>
+                <!-- Expert 5 -->
+                <div class="text-center group">
+                    <div
+                        class="w-32 h-32 mx-auto mb-6 rounded-full overflow-hidden border-4 border-white shadow-md group-hover:scale-105 transition-transform">
+                        <img class="w-full h-full object-cover"
+                            data-alt="Portrait of a young professional Vietnamese female doctor, smiling confidently, stethosope around neck, white coat, clean neutral clinical backdrop."
+                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuDzS3YyBkfMlTWkikdcWNZxS9Dxk-mFUXU7XdALcZCCxAP7SoPxlM-bKf2Bwamqt8vlT8OcWU_A9IGpNtFfxFqGP5qBSh3aazsa1oCFLPJYnt746a8NY7H9jTMRHZymPCQCFWn3qQFxWef34-25K_zNk9zGVm2w7VEaG-BIgvCES8c_x9Bn_cq2TzOGIZNJ0eUFDMNVYn3gYRShrkFhUft-pTqcxqFIJuVLckZ_5Hb1prBm0RB9UYn4eipEZNaxmESj9j5_AxJyWAQU">
+                    </div>
+                    <h4 class="font-headline-sm text-headline-sm text-on-background">ThS.BS. Mai Phương</h4>
+                    <p class="font-body-sm text-body-sm text-primary font-medium">Giảng viên Anh văn Y khoa</p>
+                </div>
+                <!-- Expert 6 -->
+                <div class="text-center group">
+                    <div
+                        class="w-32 h-32 mx-auto mb-6 rounded-full overflow-hidden border-4 border-white shadow-md group-hover:scale-105 transition-transform">
+                        <img class="w-full h-full object-cover"
+                            data-alt="Portrait of an experienced Vietnamese male surgeon, graying hair, kind eyes, professional scrubs, surgical headwear pushed back, soft lighting."
+                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuCU8u8aTDrRlZdatPcmDdLf_7WdbB0gxjCHm2nSka8mNqMRvawnV2QFaTnP9HfFWC4E5ndA49K6e7JSjnW_zIBhiO187MROFnGY2aC78SnRwv5Jms23buI0yDv76mainelos6eOxHvRKpOZL_EKwd2i3a4Lt7u34iXJfTv1sS__uQo3kqZ8rtd6h2m6YtxUSPQGcAR0JIRXV6Ss-qNjptyHDoYM65rU2nLvkl_4dLAH2X1R71Tje6gpNmo0Ja_ZodfYSP_BD2NPPzL_">
+                    </div>
+                    <h4 class="font-headline-sm text-headline-sm text-on-background">BS. Đặng Quốc Huy</h4>
+                    <p class="font-body-sm text-body-sm text-primary font-medium">Trưởng bộ phận Ngân hàng câu hỏi</p>
+                </div>
+            </div>
+        </section>
+        <!-- 6. Đối tác -->
+        <section class="py-16 bg-white border-t border-border overflow-hidden">
+            <div class="max-w-container-max mx-auto px-6">
+                <p class="text-center font-label-md text-label-md text-text-secondary uppercase tracking-[0.2em] mb-12">
+                    Đối tác đồng hành</p>
+                <div
+                    class="flex flex-wrap justify-center items-center gap-12 md:gap-24 opacity-50 grayscale hover:grayscale-0 transition-all">
+                    <div class="h-12 flex items-center">
+                        <span class="font-bold text-xl text-on-surface">ĐH Y HÀ NỘI</span>
+                    </div>
+                    <div class="h-12 flex items-center">
+                        <span class="font-bold text-xl text-on-surface">ĐH Y DƯỢC TP.HCM</span>
+                    </div>
+                    <div class="h-12 flex items-center">
+                        <span class="font-bold text-xl text-on-surface">BV BẠCH MAI</span>
+                    </div>
+                    <div class="h-12 flex items-center">
+                        <span class="font-bold text-xl text-on-surface">BV CHỢ RẪY</span>
+                    </div>
+                    <div class="h-12 flex items-center">
+                        <span class="font-bold text-xl text-on-surface">ĐH Y DƯỢC HUẾ</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- 7. CTA Section -->
+        <section class="py-24 px-6">
+            <div
+                class="max-w-container-max mx-auto bg-primary rounded-[2rem] p-12 md:p-20 text-center relative overflow-hidden shadow-2xl">
+                <div class="absolute inset-0 opacity-10">
+
+                </div>
+                <div class="relative z-10">
+                    <h2 class="font-display text-[32px] md:text-[48px] text-on-primary mb-8">Cùng MedPro chinh phục kỳ
+                        thi</h2>
+                    <p class="font-body-lg text-body-lg text-on-primary-container max-w-2xl mx-auto mb-10">Hàng ngàn
+                        sinh viên đã cải thiện điểm số chỉ sau 30 ngày luyện tập. Bắt đầu ngay hôm nay!</p>
+                    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                        <button
+                            class="px-10 py-4 bg-white text-primary font-bold rounded-xl shadow-lg hover:bg-on-primary-container transition-all flex items-center justify-center gap-2">
+                            Đăng ký miễn phí
+                            <span class="material-symbols-outlined">arrow_forward</span>
+                        </button>
+                        <button
+                            class="px-10 py-4 border border-white/30 text-white font-bold rounded-xl hover:bg-white/10 transition-all">
+                            Tìm hiểu thêm
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+    <!-- Footer -->
+    <footer class="bg-surface border-t border-border py-20">
+        <div class="max-w-container-max mx-auto px-gutter">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-12 mb-16">
+                <div class="md:col-span-4">
+                    <span class="text-headline-md font-bold text-primary mb-6 block tracking-tight">MebPro</span>
+                    <p class="text-body-md text-text-secondary mb-8 leading-relaxed max-w-sm">
+                        Nền tảng ôn thi y khoa hàng đầu Việt Nam, giúp tối ưu hóa kết quả học tập thông qua công nghệ AI
+                        và phương pháp khoa học.
+                    </p>
+                    <div class="flex gap-4">
+                        <div
+                            class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors cursor-pointer border border-border">
+                            <span class="material-symbols-outlined text-[20px]">share</span>
+                        </div>
+                        <div
+                            class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors cursor-pointer border border-border">
+                            <span class="material-symbols-outlined text-[20px]">public</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="md:col-span-2">
+                    <h4 class="font-bold mb-6 text-on-surface">Sản phẩm</h4>
+                    <ul class="space-y-4 text-body-sm text-text-secondary">
+                        <li class=""><a class="hover:text-primary transition-colors" href="#">Tính năng chính</a></li>
+                        <li class=""><a class="hover:text-primary transition-colors" href="#">Bảng giá linh hoạt</a>
+                        </li>
+                        <li class=""><a class="hover:text-primary transition-colors" href="#">Cập nhật mới</a></li>
+                        <li class=""><a class="hover:text-primary transition-colors" href="#">Mobile App</a></li>
+                    </ul>
+                </div>
+
+                <div class="md:col-span-2">
+                    <h4 class="font-bold mb-6 text-on-surface">Tài nguyên</h4>
+                    <ul class="space-y-4 text-body-sm text-text-secondary">
+                        <li class=""><a class="hover:text-primary transition-colors" href="#">Blog Y khoa</a></li>
+                        <li class=""><a class="hover:text-primary transition-colors" href="#">Tài liệu miễn phí</a></li>
+                        <li class=""><a class="hover:text-primary transition-colors" href="#">Cộng đồng học tập</a></li>
+                        <li class=""><a class="hover:text-primary transition-colors" href="#">Video hướng dẫn</a></li>
+                    </ul>
+                </div>
+
+                <div class="md:col-span-2">
+                    <h4 class="font-bold mb-6 text-on-surface">Hỗ trợ</h4>
+                    <ul class="space-y-4 text-body-sm text-text-secondary">
+                        <li class=""><a class="hover:text-primary transition-colors" href="#">Trung tâm trợ giúp</a>
+                        </li>
+                        <li class=""><a class="hover:text-primary transition-colors" href="#">Liên hệ hỗ trợ</a></li>
+                        <li class=""><a class="hover:text-primary transition-colors" href="#">Góp ý sản phẩm</a></li>
+                        <li class=""><a class="hover:text-primary transition-colors" href="#">Báo lỗi</a></li>
+                    </ul>
+                </div>
+
+                <div class="md:col-span-2">
+                    <h4 class="font-bold mb-6 text-on-surface">Công ty</h4>
+                    <ul class="space-y-4 text-body-sm text-text-secondary">
+                        <li class=""><a class="hover:text-primary transition-colors" href="#">Về chúng tôi</a></li>
+                        <li class=""><a class="hover:text-primary transition-colors" href="#">Điều khoản sử dụng</a>
+                        </li>
+                        <li class=""><a class="hover:text-primary transition-colors" href="#">Chính sách bảo mật</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="pt-10 border-t border-border flex flex-col md:flex-row justify-between items-center gap-6">
+                <p class="text-label-sm text-text-secondary">© 2024 MebPro. Mọi quyền được bảo lưu. Phát triển bởi đội
+                    ngũ bác sĩ &amp; kỹ sư công nghệ.</p>
+                <div class="flex items-center gap-8 text-label-sm text-text-secondary">
+                    <a href="#" class="hover:text-primary transition-colors">Cookie Settings</a>
+                    <a href="#" class="hover:text-primary transition-colors">Sitemap</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+    <script>
+        // Micro-interaction for expert cards
+        document.querySelectorAll('.group').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                card.style.transform = 'translateY(-4px)';
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'translateY(0)';
+            });
+        });
+    </script>
+
+
+</body>
+
+</html>

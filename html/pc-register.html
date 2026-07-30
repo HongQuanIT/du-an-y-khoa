@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+
+<html class="light" lang="vi" style="">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Đăng ký MebPro - Nền tảng ôn thi Y khoa</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=JetBrains+Mono&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-tint": "#006a63",
+                        "on-surface-variant": "#3e4947",
+                        "on-background": "#131b2e",
+                        "on-secondary-fixed": "#00174b",
+                        "tertiary-container": "#9c573a",
+                        "on-surface": "#131b2e",
+                        "error": "#DC2626",
+                        "secondary-fixed": "#dbe1ff",
+                        "secondary-container": "#316bf3",
+                        "on-secondary": "#ffffff",
+                        "on-primary-fixed": "#00201d",
+                        "on-tertiary-fixed-variant": "#72361b",
+                        "border": "#E2E8F0",
+                        "surface-container-highest": "#dae2fd",
+                        "inverse-primary": "#80d5cb",
+                        "on-tertiary-fixed": "#370e00",
+                        "on-secondary-container": "#fefcff",
+                        "inverse-surface": "#283044",
+                        "surface-bright": "#faf8ff",
+                        "tertiary": "#7f4025",
+                        "surface-dim": "#d2d9f4",
+                        "primary": "#005c55",
+                        "on-primary-container": "#a3faef",
+                        "surface-container-high": "#e2e7ff",
+                        "surface-container": "#eaedff",
+                        "on-secondary-fixed-variant": "#003ea8",
+                        "outline": "#6e7977",
+                        "tertiary-fixed": "#ffdbce",
+                        "surface-container-lowest": "#ffffff",
+                        "text-secondary": "#64748B",
+                        "tertiary-fixed-dim": "#ffb598",
+                        "secondary": "#0051d5",
+                        "on-error-container": "#93000a",
+                        "premium-gradient": "linear-gradient(135deg, #F59E0B 0%, #EA580C 100%)",
+                        "on-error": "#ffffff",
+                        "on-tertiary": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "background": "#F8FAFC",
+                        "surface-variant": "#dae2fd",
+                        "inverse-on-surface": "#eef0ff",
+                        "warning": "#D97706",
+                        "on-tertiary-container": "#ffe5db",
+                        "on-primary": "#ffffff",
+                        "surface": "#FFFFFF",
+                        "surface-container-low": "#f2f3ff",
+                        "outline-variant": "#bdc9c6",
+                        "primary-fixed-dim": "#80d5cb",
+                        "primary-fixed": "#9cf2e8",
+                        "primary-container": "#0f766e",
+                        "secondary-fixed-dim": "#b4c5ff",
+                        "success": "#16A34A",
+                        "on-primary-fixed-variant": "#00504a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-mobile": "16px",
+                        "base-unit": "4px",
+                        "container-max": "1280px",
+                        "sidebar-width": "240px",
+                        "gutter": "24px"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Be Vietnam Pro"],
+                        "headline-lg-mobile": ["Be Vietnam Pro"],
+                        "headline-sm": ["Be Vietnam Pro"],
+                        "code": ["JetBrains Mono"],
+                        "body-lg": ["Be Vietnam Pro"],
+                        "label-sm": ["Be Vietnam Pro"],
+                        "label-md": ["Be Vietnam Pro"],
+                        "headline-lg": ["Be Vietnam Pro"],
+                        "display": ["Be Vietnam Pro"],
+                        "body-sm": ["Be Vietnam Pro"],
+                        "body-md": ["Be Vietnam Pro"]
+                    },
+                    "fontSize": {
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "700" }],
+                        "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "code": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+                        "display": ["48px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }]
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+            background-color: #F8FAFC;
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .teal-gradient {
+            background: linear-gradient(135deg, #0F766E 0%, #064E4B 100%);
+        }
+
+        .custom-shadow {
+            box-shadow: 0px 10px 15px -3px rgba(15, 23, 42, 0.08);
+        }
+
+        .password-strength-bar {
+            transition: width 0.3s ease, background-color 0.3s ease;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen">
+    <div class="flex min-h-screen justify-center items-center bg-background">
+        <!-- DESKTOP PREVIEW BOX (As requested: Side-by-side) -->
+        <div class="w-full max-w-[1440px] h-[900px] shadow-2xl rounded-xl overflow-hidden border border-border flex">
+            <!-- Left Column: Branding -->
+            <div class="w-1/2 bg-primary-container p-12 flex flex-col justify-between relative overflow-hidden">
+                <div class="z-10">
+                    <h1 class="text-white font-headline-lg text-headline-lg font-extrabold tracking-tight">MebPro</h1>
+                    <p class="text-on-primary-container text-body-lg font-body-lg mt-2">Chào mừng trở lại!</p>
+                </div>
+                <div class="relative z-10 flex flex-col items-center">
+                    <div
+                        class="w-full rounded-xl overflow-hidden shadow-2xl transform hover:scale-[1.02] transition-transform duration-500 border border-white/20">
+                        <img alt="Giao diện học tập y khoa chuyên nghiệp" class="w-full object-cover"
+                            src="https://lh3.googleusercontent.com/aida/AP1WRLv_p2rdQZm0QQ4HvbOfjWopS8En2e5kGHO6v7tyXV3e0jRVKf5mWIcMZc5_oq8ifygyXE5b7z672n2t_r74rpWb4TDXrHyM7iKQSkSlnUJdXgJoq6OE4tprXxLOP0gxlo2YJtAemTUVE3g03K1IgJ_25DBeV9a9anSstVhbpiLRASFVWDnT9UedXkXeGddCz1blvvS5VY3Yh4NyV09frO4ywaIMeH0HGe-veAamQR8wvchErRMU7KYFjDM" />
+                    </div>
+                    <div class="mt-8 text-center text-white/90">
+                        <p class="font-headline-sm text-headline-sm">Làm chủ kiến thức y khoa</p>
+                        <p class="text-body-md opacity-80 mt-2">Nền tảng ôn luyện thông minh dành cho bác sĩ tương lai
+                        </p>
+                    </div>
+                </div>
+                <!-- Abstract background shapes -->
+                <div class="absolute top-[-10%] right-[-10%] w-64 h-64 bg-primary rounded-full blur-3xl opacity-30">
+                </div>
+                <div
+                    class="absolute bottom-[-5%] left-[-5%] w-80 h-80 bg-on-primary-fixed-variant rounded-full blur-3xl opacity-20">
+                </div>
+            </div>
+            <!-- Right Column: Registration Form -->
+            <div class="w-1/2 bg-surface p-16 flex flex-col justify-center">
+                <div class="max-w-md mx-auto">
+                    <div class="mb-8">
+                        <h3 class="font-headline-md text-headline-md text-on-background mb-2">Tạo tài khoản</h3>
+                        <p class="font-body-sm text-body-sm text-text-secondary">Khởi đầu sự nghiệp y tế chuyên nghiệp
+                            của bạn ngay hôm nay.</p>
+                    </div>
+                    <form class="space-y-5">
+                        <div class="space-y-1.5">
+                            <label class="font-label-md text-label-md text-on-surface-variant">Họ và tên</label>
+                            <input
+                                class="w-full px-4 py-3 rounded-lg border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-body-sm"
+                                placeholder="Nguyễn Văn An" type="text" />
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="font-label-md text-label-md text-on-surface-variant">Email</label>
+                            <input
+                                class="w-full px-4 py-3 rounded-lg border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-body-sm"
+                                placeholder="bacsi@mebpro.vn" type="email" />
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="font-label-md text-label-md text-on-surface-variant">Mật khẩu</label>
+                            <div class="relative">
+                                <input
+                                    class="w-full px-4 py-3 rounded-lg border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-body-sm pr-12"
+                                    type="password" value="StrongPassword123!" />
+                                <button class="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary"
+                                    type="button">
+                                    <span class="material-symbols-outlined text-xl">visibility</span>
+                                </button>
+                            </div>
+                            <!-- Strength Indicator -->
+                            <div class="mt-2 space-y-1.5">
+                                <div class="flex gap-1 h-1.5">
+                                    <div class="w-1/4 rounded-full bg-success"></div>
+                                    <div class="w-1/4 rounded-full bg-success"></div>
+                                    <div class="w-1/4 rounded-full bg-success"></div>
+                                    <div class="w-1/4 rounded-full bg-success"></div>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="font-label-sm text-label-sm text-success flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-[14px]"
+                                            style='font-variation-settings: "FILL" 1;'>check_circle</span>
+                                        Mạnh
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="font-label-md text-label-md text-on-surface-variant">Nhập lại mật khẩu</label>
+                            <input
+                                class="w-full px-4 py-3 rounded-lg border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-body-sm"
+                                placeholder="••••••••" type="password" />
+                        </div>
+                        <div class="flex items-start gap-3 py-2">
+                            <input class="mt-1 w-4 h-4 text-primary border-border rounded focus:ring-primary"
+                                id="terms-desktop" type="checkbox" />
+                            <label class="font-body-sm text-body-sm text-on-surface-variant leading-tight"
+                                for="terms-desktop">
+                                Tôi đồng ý với <a class="text-primary font-medium hover:underline" href="#">Điều
+                                    khoản</a> &amp; <a class="text-primary font-medium hover:underline" href="#">Chính
+                                    sách bảo mật</a> của MebPro.
+                            </label>
+                        </div>
+                        <button
+                            class="w-full bg-primary-container text-white py-3 rounded-xl font-label-md text-label-md flex items-center justify-center gap-3 hover:opacity-90 active:scale-[0.98] transition-all shadow-md"
+                            type="submit">
+                            Đăng ký
+                        </button>
+                    </form>
+                    <div class="relative my-8">
+                        <div class="absolute inset-0 flex items-center">
+                            <div class="w-full border-t border-border"></div>
+                        </div>
+                        <div class="relative flex justify-center text-label-sm font-label-sm"><span
+                                class="bg-surface px-4 text-on-surface-variant uppercase tracking-wider">Hoặc tiếp tục
+                                với</span></div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-3"><button
+                            class="flex justify-center items-center py-2.5 border border-border rounded-xl hover:bg-surface-container-low transition-colors active:scale-95"
+                            title="Google"><img alt="Google" class="w-5 h-5"
+                                src="https://lh3.googleusercontent.com/aida-public/AB6AXuD6hry-i-6-8MtGG9MeNuDX4aRz-Fzj5L4D0qC1jw7HLko51jz0Z_UlmXK622E5W0WyXtCLm6vanOotTYgtbHyWzQKGBjaCMXbNyCsSjEmr5dlNtc7RjZYo_ygjNAMDIouAsryWbWxf5adrM24Zx0R8pt_gBmzg2QKS-eKKS7GAHjE-ByXWjkpQvmMXB74OTluyp4Qs3dEwHTWPH4l-JWzwFq29f747ogFJuLmboa8_8_rZ2Ey0NCvSvOSlxPFbCuiAbOp9Vxt_zB2D" /></button><button
+                            class="flex justify-center items-center py-2.5 border border-border rounded-xl hover:bg-surface-container-low transition-colors active:scale-95"
+                            title="Facebook"><img alt="Facebook" class="w-5 h-5"
+                                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDFU6dNwcNnj5bF_hoEyG1Bb3mwSLOlCUOHS6D0vWmVTcVt9FCl7yyIwbiVpc7hH_3X2-nz4ICGCpklD12lPETH5ewoePzGVgX1vID7B4BiPs93kODWrPp2VzGcF4nJBR3A8iE0-ylYQeYINR3gqfc1lPO9tAUeB2dsve9X3MfhEDKogsxVj6MUIC6uEYFZp262Ofoinv8hOjbB2BCxIZYaoMoXcqd6zG3bqGJOGz0Htt0HZZM7UH9hKnje7AQyiDiD8Av90z6sJHAz" /></button><button
+                            class="flex justify-center items-center py-2.5 border border-border rounded-xl hover:bg-surface-container-low transition-colors active:scale-95"
+                            title="LinkedIn"><svg class="w-5 h-5" fill="#0077B5" viewbox="0 0 24 24">
+                                <path
+                                    d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z">
+                                </path>
+                            </svg></button></div>
+                    <p class="mt-8 text-center text-body-sm font-body-sm text-on-surface-variant">
+                        Đã có tài khoản? <a class="text-primary font-bold hover:underline" href="#">Đăng nhập</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+        <!-- MOBILE PREVIEW BOX (As requested: Responsive view) -->
+    </div>
+    <!-- Background Decorative Gradients -->
+    <div class="fixed top-0 left-0 w-full h-full -z-10 pointer-events-none opacity-40">
+        <div class="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary/10 rounded-full blur-[120px]"></div>
+        <div class="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-secondary/10 rounded-full blur-[120px]">
+        </div>
+    </div>
+    <script>
+        // Simple micro-interaction for password strength
+        document.querySelectorAll('input[type="password"]').forEach(input => {
+            input.addEventListener('focus', () => {
+                // Focus interaction handled by Tailwind classes
+            });
+        });
+
+        // Form submission ripple simulation
+        document.querySelectorAll('button[type="submit"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                if (btn.closest('form').checkValidity()) {
+                    // Logic for submission could go here
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
