@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Validation\Rules\Password;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -21,6 +22,16 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureModels();
         $this->configureRateLimiters();
+        $this->configurePasswordPolicy();
+    }
+
+    /**
+     * Single password policy for every flow that accepts a new password
+     * (registration, reset, profile change).
+     */
+    private function configurePasswordPolicy(): void
+    {
+        Password::defaults(fn () => Password::min(8)->letters()->numbers());
     }
 
     /**

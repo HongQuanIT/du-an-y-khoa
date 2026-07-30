@@ -4,6 +4,7 @@ use App\Http\Middleware\AssignRequestId;
 use App\Http\Middleware\EnsureSubscriptionActive;
 use App\Http\Middleware\ForceJsonResponse;
 use App\Http\Middleware\SetLocale;
+use App\Support\Auth\HomePath;
 use App\Support\Http\Responses\ApiResponse;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -47,6 +48,11 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Default API rate limit (per-user/IP) — see AppServiceProvider limiters.
         $middleware->throttleApi('api');
+
+        // Session guards: guests land on the login screen, authenticated users
+        // on their role-specific home.
+        $middleware->redirectGuestsTo(fn () => route('login'));
+        $middleware->redirectUsersTo(fn (Request $request) => HomePath::for($request->user()));
 
         // Route middleware aliases.
         $middleware->alias([
