@@ -1,0 +1,177 @@
+<!DOCTYPE html><html lang="vi" style=""><head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Lộ trình học - MedPro</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+    <script id="tailwind-config">
+            tailwind.config = {
+                darkMode: "class",
+                theme: {
+                    extend: {
+                        "colors": {
+                            "primary-fixed-dim": "#80d5cb",
+                            "surface-container": "#ebefed",
+                            "tertiary": "#7f4025",
+                            "surface-dim": "#d7dbd9",
+                            "tertiary-fixed": "#ffdbce",
+                            "on-primary-container": "#a3faef",
+                            "on-background": "#181c1c",
+                            "surface-tint": "#006a63",
+                            "on-tertiary-fixed": "#370e00",
+                            "inverse-surface": "#2d3130",
+                            "on-tertiary-fixed-variant": "#72361b",
+                            "on-error-container": "#93000a",
+                            "primary-container": "#0f766e",
+                            "tertiary-container": "#9c573a",
+                            "secondary-fixed": "#dbe1ff",
+                            "surface-container-low": "#f1f4f3",
+                            "secondary-fixed-dim": "#b4c5ff",
+                            "on-secondary-container": "#fefcff",
+                            "surface": "#f7faf8",
+                            "outline-variant": "#bdc9c6",
+                            "inverse-on-surface": "#eef1f0",
+                            "on-primary-fixed-variant": "#00504a",
+                            "tertiary-fixed-dim": "#ffb598",
+                            "background": "#f7faf8",
+                            "surface-container-lowest": "#ffffff",
+                            "on-secondary-fixed-variant": "#003ea8",
+                            "surface-container-high": "#e5e9e7",
+                            "on-surface": "#181c1c",
+                            "on-secondary": "#ffffff",
+                            "inverse-primary": "#80d5cb",
+                            "surface-variant": "#e0e3e1",
+                            "primary": "#005c55",
+                            "surface-bright": "#f7faf8",
+                            "on-primary": "#ffffff",
+                            "secondary-container": "#316bf3",
+                            "secondary": "#0051d5",
+                            "primary-fixed": "#9cf2e8",
+                            "on-surface-variant": "#3e4947",
+                            "error": "#ba1a1a",
+                            "on-tertiary-container": "#ffe5db",
+                            "outline": "#6e7977",
+                            "surface-container-highest": "#e0e3e1",
+                            "on-primary-fixed": "#00201d",
+                            "on-tertiary": "#ffffff",
+                            "on-error": "#ffffff",
+                            "error-container": "#ffdad6",
+                            "on-secondary-fixed": "#00174b"
+                        },
+                        "borderRadius": {
+                            "DEFAULT": "0.25rem",
+                            "lg": "0.5rem",
+                            "xl": "0.75rem",
+                            "full": "9999px"
+                        },
+                        "spacing": {
+                            "header_height": "64px",
+                            "margin_mobile": "16px",
+                            "sidebar_width": "240px",
+                            "gutter": "24px",
+                            "unit": "4px",
+                            "container_max_width": "1440px",
+                            "margin_desktop": "32px"
+                        },
+                        "fontFamily": {
+                            "headline-lg-mobile": ["Be Vietnam Pro"],
+                            "headline-md": ["Be Vietnam Pro"],
+                            "label-md": ["Be Vietnam Pro"],
+                            "body-md": ["Be Vietnam Pro"],
+                            "display-lg": ["Be Vietnam Pro"],
+                            "label-sm": ["Be Vietnam Pro"],
+                            "headline-sm": ["Be Vietnam Pro"],
+                            "headline-lg": ["Be Vietnam Pro"],
+                            "body-lg": ["Be Vietnam Pro"],
+                            "body-sm": ["Be Vietnam Pro"]
+                        },
+                        "fontSize": {
+                            "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                            "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                            "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                            "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                            "display-lg": ["48px", {"lineHeight": "60px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                            "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "600"}],
+                            "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                            "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                            "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                            "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+                        }
+                    },
+                },
+            }
+        </script>
+    <style>
+            body {
+                font-family: 'Be Vietnam Pro', sans-serif;
+                background-color: #f7faf8;
+            }
+            .material-symbols-outlined {
+                font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            }
+            .circular-progress {
+                background: conic-gradient(#0f766e 151.2deg, #ebefed 0deg);
+            }
+            .sidebar-active {
+                background-color: rgba(128, 213, 203, 0.2);
+                color: #005c55;
+                font-weight: 700;
+            }
+            .custom-scrollbar::-webkit-scrollbar {
+                width: 4px;
+            }
+            .custom-scrollbar::-webkit-scrollbar-track {
+                background: transparent;
+            }
+            .custom-scrollbar::-webkit-scrollbar-thumb {
+                background: #bdc9c6;
+                border-radius: 10px;
+            }
+        </style>
+    </head>
+    <body class="text-on-surface">
+    <!-- TopNavBar -->
+    <header class="fixed top-0 right-0 h-header_height w-[calc(100%-240px)] ml-[240px] bg-surface border-b border-outline-variant z-40 flex items-center justify-between px-margin_desktop">
+    <div class="flex items-center gap-4 flex-1"><div class="relative w-full max-w-md"><span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span><input class="w-full bg-surface-container-low border-none rounded-lg pl-10 pr-4 py-2 focus:ring-2 focus:ring-primary text-sm" placeholder="Tìm kiếm bài học, câu hỏi..." type="text"></div></div>
+    <div class="flex items-center"><div class="flex items-center gap-6"><div class="flex items-center gap-3"><div class="relative p-2 rounded-full hover:bg-surface-container transition-colors cursor-pointer group"><span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">mail</span></div><div class="relative p-2 rounded-full hover:bg-surface-container transition-colors cursor-pointer group"><span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">notifications</span><span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border-2 border-surface"></span></div></div><div class="h-8 w-[1px] bg-outline-variant"></div><div class="flex items-center gap-3 cursor-pointer group"><div class="text-right"><p class="font-label-md text-on-surface">Nguyễn Văn An</p><p class="text-xs text-on-surface-variant">Sinh viên Y4</p></div><img class="w-10 h-10 rounded-full border border-outline-variant object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDjs14YgZidlPvd__vAVlqvNdOurQoEuhpzLjx6GWcL9KL7a3gndodC2yzkK9XzBwLcw8BMWmYfR_hRLZiexmiVpO-jhjEzQpLjqFJew-KRX0UCViEIrJcYnbYm2pJcF-oeDP7tjGvDMf4SXNuyyZH54jeE_F1Vhz48PHDRxm05eEfM48alXxkohIc6BwKi5BFrj7P1eI2hY_dK4DqyL5dw28-MQ33oWlEq6xifc2oihUgkUiFUa2L6"></div></div></div>
+    </header>
+    <!-- SideNavBar -->
+    <aside class="w-[240px] h-screen fixed left-0 top-0 border-r border-outline-variant bg-surface flex flex-col p-4 z-50">
+    <div class="mb-8 flex items-center gap-3 px-2"><span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings: &quot;FILL&quot; 1;">medical_services</span><div class="flex flex-col"><span class="font-headline-md text-primary font-bold leading-tight">MedQuest Pro</span><span class="text-label-sm text-on-surface-variant">Học thuật Y khoa</span></div></div>
+    <nav class="flex-1 space-y-1"><a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg group" href="#"><span class="material-symbols-outlined group-hover:text-primary">dashboard</span><span class="font-body-md">Trang chủ</span></a><a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg group" href="#"><span class="material-symbols-outlined group-hover:text-primary">quiz</span><span class="font-body-md">Ngân hàng câu hỏi</span></a><a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg group" href="#"><span class="material-symbols-outlined group-hover:text-primary">library_books</span><span class="font-body-md">Thư viện</span></a><a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg group" href="#"><span class="material-symbols-outlined group-hover:text-primary">style</span><span class="font-body-md">Flashcards</span></a><a class="flex items-center gap-3 px-3 py-2 text-primary bg-primary/10 font-semibold font-label-md text-label-md rounded-lg" href="#"><span class="material-symbols-outlined" style="font-variation-settings: &quot;FILL&quot; 1;">event_note</span><span class="font-body-md">Lộ trình học</span></a><a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg group" href="#"><span class="material-symbols-outlined group-hover:text-primary">analytics</span><span class="font-body-md">Phân tích</span></a><a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg group" href="#"><span class="material-symbols-outlined group-hover:text-primary">assignment</span><span class="font-body-md">Kỳ thi</span></a></nav>
+    <div class="pt-4 border-t border-outline-variant space-y-1"><button class="w-full premium-gradient text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center gap-2 text-sm shadow-md hover:opacity-90 transition-opacity"><span class="material-symbols-outlined text-sm">stars</span>Nâng cấp tài khoản</button><a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg" href="#"><span class="material-symbols-outlined">settings</span><span class="font-body-md">Cài đặt</span></a><a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg" href="#"><span class="material-symbols-outlined">logout</span><span class="font-body-md">Đăng xuất</span></a></div>
+    </aside>
+    <!-- Main Content Canvas -->
+    <main class="ml-[240px] pt-[64px] min-h-screen bg-white"><div class="max-w-[1200px] mx-auto p-8 space-y-8"><div class="flex justify-between items-center"><div class="space-y-1"><h1 class="font-headline-lg text-headline-lg text-on-surface">Ôn thi Bác sĩ nội trú 2026</h1><div class="flex items-center gap-3"><span class="px-2 py-0.5 bg-error-container/10 text-error border border-error-container/20 rounded text-label-sm font-semibold">Còn 84 ngày</span><span class="text-on-surface-variant text-body-sm">Cập nhật lần cuối: 2 giờ trước</span></div></div><div class="flex items-center gap-3"><button class="flex items-center gap-2 px-4 py-2 bg-white border border-outline-variant text-primary font-label-md rounded-lg hover:bg-surface-container-low transition-all"><span class="material-symbols-outlined text-[20px]">calendar_month</span>Lịch trình</button><button class="flex items-center gap-2 px-4 py-2 text-white font-label-md rounded-lg hover:opacity-90 transition-all shadow-sm bg-primary-container"><span class="material-symbols-outlined text-[20px]">add</span>Tạo kế hoạch mới</button></div></div><div class="grid grid-cols-3 gap-6 bg-surface-container-lowest p-6 rounded-xl border border-outline-variant"><div class="flex flex-col items-center justify-center border-r border-outline-variant"><div class="relative w-16 h-16 mb-2"><div class="circular-progress absolute inset-0 rounded-full flex items-center justify-center" style="background: conic-gradient(rgb(15, 118, 110) 151.2deg, rgb(235, 239, 237) 0deg);"><div class="w-[80%] h-[80%] bg-white rounded-full flex items-center justify-center"><span class="font-bold text-primary">42%</span></div></div></div><span class="text-label-sm text-on-surface-variant uppercase tracking-tight">Hoàn thành</span></div><div class="flex flex-col items-center justify-center border-r border-outline-variant"><span class="text-headline-sm font-bold text-on-surface">450 / 1200</span><span class="text-label-sm text-on-surface-variant uppercase tracking-tight">Câu hỏi</span></div><div class="flex flex-col items-center justify-center"><span class="text-headline-sm font-bold text-on-surface">85%</span><span class="text-label-sm text-on-surface-variant uppercase tracking-tight">Độ bám lịch</span></div></div><div class="bg-[#F0FDFA] border border-primary-fixed-dim/30 rounded-lg p-4 flex items-center gap-4"><span class="material-symbols-outlined text-primary-container">info</span><p class="text-body-md text-primary-container flex-1"><span class="font-bold">Gợi ý:</span> Tăng cường ôn tập phần Dược lý để cải thiện tỷ lệ chính xác.</p><button class="font-label-md hover:underline text-primary-container">Chi tiết</button></div><div class="space-y-6"><div><h2 class="font-headline-sm text-headline-sm text-on-surface mb-1">Công việc hôm nay</h2><p class="text-on-surface-variant text-body-sm">Thứ Hai, 23 tháng 10</p></div><div class="grid grid-cols-1 md:grid-cols-3 gap-6"><div class="bg-white border border-outline-variant rounded-xl p-6 hover:shadow-md transition-shadow flex flex-col h-full"><div class="flex justify-between items-start mb-4"><div class="p-2 bg-primary/10 rounded-lg text-primary"><span class="material-symbols-outlined">quiz</span></div><span class="text-label-sm text-on-surface-variant">0/30 câu</span></div><h3 class="font-bold text-on-surface mb-1">Làm 30 câu Tim mạch</h3><p class="text-on-surface-variant text-body-sm mb-6 flex-1">Suy tim, Tăng huyết áp</p><button class="w-full py-2 border border-primary text-primary font-label-md rounded-lg hover:bg-primary/5 transition-colors">Bắt đầu</button></div><div class="bg-white border border-outline-variant rounded-xl p-6 hover:shadow-md transition-shadow flex flex-col h-full"><div class="flex justify-between items-start mb-4"><div class="p-2 bg-secondary/10 rounded-lg text-secondary"><span class="material-symbols-outlined">menu_book</span></div><span class="text-label-sm text-on-surface-variant">15 phút</span></div><h3 class="font-bold text-on-surface mb-1">Đọc bài 'Suy tim'</h3><p class="text-on-surface-variant text-body-sm mb-6 flex-1">Phác đồ ESC 2023</p><button class="w-full py-2 border border-primary text-primary font-label-md rounded-lg hover:bg-primary/5 transition-colors">Bắt đầu</button></div><div class="bg-white border border-outline-variant rounded-xl p-6 hover:shadow-md transition-shadow flex flex-col h-full"><div class="flex justify-between items-start mb-4"><div class="p-2 bg-tertiary/10 rounded-lg text-tertiary"><span class="material-symbols-outlined">style</span></div><span class="text-label-sm text-on-surface-variant">15 thẻ</span></div><h3 class="font-bold text-on-surface mb-1">Ôn 15 flashcard</h3><p class="text-on-surface-variant text-body-sm mb-6 flex-1">Dược lý tim mạch</p><button class="w-full py-2 border border-primary text-primary font-label-md rounded-lg hover:bg-primary/5 transition-colors">Bắt đầu</button></div></div></div></div></main>
+    <script>
+            // Simple micro-interaction for circular progress
+            const circle = document.querySelector('.circular-progress');
+            let progress = 0;
+            const targetProgress = 42;
+            
+            const interval = setInterval(() => {
+                if (progress >= targetProgress) {
+                    clearInterval(interval);
+                } else {
+                    progress++;
+                    const degrees = (progress / 100) * 360;
+                    circle.style.background = `conic-gradient(#0f766e ${degrees}deg, #ebefed 0deg)`;
+                }
+            }, 20);
+    
+            // Hover effect for side menu active state
+            const sideLinks = document.querySelectorAll('aside nav a');
+            sideLinks.forEach(link => {
+                link.addEventListener('click', () => {
+                    sideLinks.forEach(l => l.classList.remove('sidebar-active'));
+                    sideLinks.forEach(l => l.classList.add('text-on-surface-variant'));
+                    link.classList.remove('text-on-surface-variant');
+                    link.classList.add('sidebar-active');
+                });
+            });
+        </script>
+    
+    
+    </body></html>

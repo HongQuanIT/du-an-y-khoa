@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-07-30
+
+### Mockup HTML PC (Stitch)
+- Thêm 20 trang HTML desktop prototype MedQuest Pro: dashboard, ngân hàng câu hỏi, review câu hỏi, phiên tùy chỉnh.
+- Bổ sung màn thi (exam session, pause map), flashcards (dashboard, tạo thẻ, chi tiết bộ, ôn thẻ).
+- Bổ sung lộ trình học (danh sách, tạo, chi tiết, lịch) và phiên học (session, highlight, navigator, ghi chú, thêm flashcard) cùng trang thống kê.
+
 ## 2026-07-29
 
 ### Lát cắt học tập QuestionBank

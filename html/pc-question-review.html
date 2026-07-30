@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html class="light" lang="vi" style="">
+
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@100;200;300;400;500;600;700;800;900&amp;display=swap"
+        rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block"
+        rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">try {
+            tailwind.config = {
+                darkMode: "class",
+                theme: {
+                    extend: {
+                        "colors": {
+                            "surface-container-highest": "#e0e3e1",
+                            "outline": "#6e7977",
+                            "on-primary": "#ffffff",
+                            "inverse-surface": "#2d3130",
+                            "surface": "#f7faf8",
+                            "secondary-fixed": "#dbe1ff",
+                            "tertiary": "#7f4025",
+                            "on-secondary-fixed": "#00174b",
+                            "on-tertiary": "#ffffff",
+                            "on-primary-container": "#a3faef",
+                            "surface-dim": "#d7dbd9",
+                            "on-secondary": "#ffffff",
+                            "error": "#ba1a1a",
+                            "on-error": "#ffffff",
+                            "on-tertiary-fixed-variant": "#72361b",
+                            "on-tertiary-container": "#ffe5db",
+                            "on-error-container": "#93000a",
+                            "surface-variant": "#e0e3e1",
+                            "tertiary-fixed-dim": "#ffb598",
+                            "surface-container": "#ebefed",
+                            "on-primary-fixed": "#00201d",
+                            "tertiary-container": "#9c573a",
+                            "primary-fixed": "#9cf2e8",
+                            "tertiary-fixed": "#ffdbce",
+                            "surface-container-high": "#e5e9e7",
+                            "surface-container-low": "#f1f4f3",
+                            "secondary-container": "#316bf3",
+                            "on-background": "#181c1c",
+                            "on-surface-variant": "#3e4947",
+                            "secondary-fixed-dim": "#b4c5ff",
+                            "error-container": "#ffdad6",
+                            "surface-container-lowest": "#ffffff",
+                            "primary-fixed-dim": "#80d5cb",
+                            "primary": "#005c55",
+                            "on-surface": "#181c1c",
+                            "background": "#f7faf8",
+                            "surface-bright": "#f7faf8",
+                            "secondary": "#0051d5",
+                            "outline-variant": "#bdc9c6",
+                            "on-primary-fixed-variant": "#00504a",
+                            "inverse-primary": "#80d5cb",
+                            "on-secondary-fixed-variant": "#003ea8",
+                            "on-tertiary-fixed": "#370e00",
+                            "primary-container": "#0f766e",
+                            "on-secondary-container": "#fefcff",
+                            "surface-tint": "#006a63",
+                            "inverse-on-surface": "#eef1f0"
+                        },
+                        "borderRadius": {
+                            "DEFAULT": "0.25rem",
+                            "lg": "0.5rem",
+                            "xl": "0.75rem",
+                            "full": "9999px"
+                        },
+                        "spacing": {
+                            "sidebar_width": "240px",
+                            "unit": "4px",
+                            "margin_mobile": "16px",
+                            "container_max_width": "1440px",
+                            "gutter": "24px",
+                            "margin_desktop": "32px",
+                            "header_height": "64px"
+                        },
+                        "fontFamily": {
+                            "label-sm": ["Be Vietnam Pro"],
+                            "headline-md": ["Be Vietnam Pro"],
+                            "label-md": ["Be Vietnam Pro"],
+                            "body-sm": ["Be Vietnam Pro"],
+                            "body-lg": ["Be Vietnam Pro"],
+                            "body-md": ["Be Vietnam Pro"],
+                            "headline-sm": ["Be Vietnam Pro"],
+                            "headline-lg-mobile": ["Be Vietnam Pro"],
+                            "headline-lg": ["Be Vietnam Pro"],
+                            "display-lg": ["Be Vietnam Pro"]
+                        },
+                        "fontSize": {
+                            "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "600" }],
+                            "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                            "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500" }],
+                            "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                            "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                            "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                            "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                            "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "700" }],
+                            "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+                            "display-lg": ["48px", { "lineHeight": "60px", "letterSpacing": "-0.02em", "fontWeight": "700" }]
+                        }
+                    },
+                },
+            }
+        } catch (_e) { }</script>
+    <style>
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .premium-gradient {
+            background: linear-gradient(135deg, #FF9966, #FF5E62);
+        }
+
+        .glass-ai {
+            background: linear-gradient(135deg, rgba(15, 118, 110, 0.08), rgba(0, 81, 213, 0.08));
+            border: 1px solid rgba(15, 118, 110, 0.15);
+            backdrop-filter: blur(8px);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #bdc9c6;
+            border-radius: 10px;
+        }
+
+        @media (max-width: 767px) {
+            #question-detail-main.mobile-hidden {
+                display: none;
+            }
+
+            #question-list-sidebar.mobile-hidden {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-background text-on-surface">
+
+    <!-- Sidebar (Shared Component) -->
+    <aside
+        class="w-[240px] h-screen fixed left-0 top-0 border-r border-outline-variant bg-surface flex flex-col p-4 z-50">
+        <div class="mb-8 flex items-center gap-3 px-2">
+            <span class="material-symbols-outlined text-primary text-3xl"
+                style="font-variation-settings: &quot;FILL&quot; 1;">medical_services</span>
+            <div class="flex flex-col">
+                <span class="font-headline-md text-primary font-bold leading-tight">MedQuest Pro</span>
+                <span class="text-label-sm text-on-surface-variant">Học thuật Y khoa</span>
+            </div>
+        </div>
+        <nav class="flex-1 space-y-1"><a
+                class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg group"
+                href="#"><span class="material-symbols-outlined group-hover:text-primary">dashboard</span><span
+                    class="font-body-md">Dashboard</span></a><a
+                class="flex items-center gap-3 px-3 py-2 text-primary bg-primary/10 font-semibold font-label-md text-label-md rounded-lg"
+                href="#"><span class="material-symbols-outlined"
+                    style="font-variation-settings: &quot;FILL&quot; 1;">quiz</span><span class="font-body-md">Ngân hàng
+                    câu hỏi</span></a><a
+                class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg group"
+                href="#"><span class="material-symbols-outlined group-hover:text-primary">library_books</span><span
+                    class="font-body-md">Thư viện</span></a><a
+                class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg group"
+                href="#"><span class="material-symbols-outlined group-hover:text-primary">style</span><span
+                    class="font-body-md">Flashcards</span></a><a
+                class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg group"
+                href="#"><span class="material-symbols-outlined group-hover:text-primary">event_note</span><span
+                    class="font-body-md">Kế hoạch học tập</span></a><a
+                class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg group"
+                href="#"><span class="material-symbols-outlined group-hover:text-primary">analytics</span><span
+                    class="font-body-md">Phân tích</span></a><a
+                class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg group"
+                href="#"><span class="material-symbols-outlined group-hover:text-primary">assignment</span><span
+                    class="font-body-md">Kỳ thi</span></a></nav>
+        <div class="pt-4 border-t border-outline-variant space-y-1">
+            <button
+                class="w-full premium-gradient text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center gap-2 text-sm shadow-md hover:opacity-90 transition-opacity">
+                <span class="material-symbols-outlined text-sm">stars</span>
+                Nâng cấp tài khoản
+            </button>
+            <a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg"
+                href="#">
+                <span class="material-symbols-outlined">settings</span>
+                <span class="font-body-md">Cài đặt</span>
+            </a>
+            <a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg"
+                href="#">
+                <span class="material-symbols-outlined">logout</span>
+                <span class="font-body-md">Đăng xuất</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- TopAppBar (Shared Component) -->
+    <header
+        class="bg-surface dark:bg-surface-dim font-body-md text-body-md fixed top-0 left-0 md:left-[240px] right-0 h-[64px] z-40 border-b border-outline-variant dark:border-outline">
+        <div class="flex justify-between items-center px-4 md:px-margin_desktop w-full h-full">
+            <h1 class="font-headline-sm text-headline-sm font-bold text-primary md:hidden">MedQuest Pro</h1>
+            <div
+                class="hidden md:flex flex-1 items-center max-w-md bg-surface-container-low rounded-lg px-3 py-2 border border-outline-variant focus-within:border-primary transition-colors">
+                <span class="material-symbols-outlined text-outline">search</span>
+                <input type="text" placeholder="Tìm kiếm..."
+                    class="bg-transparent border-none outline-none focus:ring-0 text-body-sm text-on-surface w-full ml-2">
+            </div>
+            <div class="flex items-center gap-2">
+
+                <button
+                    class="p-2 text-on-surface-variant dark:text-outline-variant hover:bg-surface-container-low dark:hover:bg-surface-container-high rounded-full transition-all">
+                    <span class="material-symbols-outlined">notifications</span>
+                </button>
+                <button
+                    class="p-2 text-on-surface-variant dark:text-outline-variant hover:bg-surface-container-low dark:hover:bg-surface-container-high rounded-full transition-all hidden md:block">
+                    <span class="material-symbols-outlined">help</span>
+                </button>
+                <div class="flex items-center gap-2 ml-2 pl-2 border-l border-outline-variant">
+                    <div class="hidden md:flex flex-col items-end mr-1">
+                        <span class="font-label-md text-on-surface leading-none">Nguyễn Văn An</span>
+                        <span class="text-[10px] text-outline font-medium">Hệ nội khoa</span>
+                    </div>
+                    <div
+                        class="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-sm">
+                        A</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <div class="md:ml-[240px] pt-[64px] min-h-screen flex flex-col">
+        <!-- Question Review Dashboard -->
+        <main class="flex-1 flex flex-col md:flex-row h-[calc(100vh-64px)] overflow-hidden">
+            <!-- Left Column: Question List -->
+            <section
+                class="w-full md:w-[400px] border-r border-outline-variant flex flex-col bg-white z-20 transition-transform duration-300"
+                id="question-list-sidebar">
+                <div class="p-4 border-b border-outline-variant bg-surface-container-lowest">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="font-headline-sm text-headline-sm">Danh sách câu hỏi</h2>
+                        <span
+                            class="bg-primary-container text-on-primary-container text-[10px] px-2 py-0.5 rounded-full font-bold">40/50
+                            Hoàn thành</span>
+                    </div>
+                    <!-- Filter Chips -->
+                    <div class="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
+                        <button
+                            class="whitespace-nowrap px-4 py-1.5 rounded-full bg-primary text-white font-label-sm text-label-sm shadow-sm">Tất
+                            cả</button>
+                        <button
+                            class="whitespace-nowrap px-4 py-1.5 rounded-full bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm hover:bg-outline-variant transition-colors">Đúng</button>
+                        <button
+                            class="whitespace-nowrap px-4 py-1.5 rounded-full bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm hover:bg-outline-variant transition-colors">Sai</button>
+                        <button
+                            class="whitespace-nowrap px-4 py-1.5 rounded-full bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm hover:bg-outline-variant transition-colors">Bỏ
+                            qua</button>
+                        <button
+                            class="whitespace-nowrap px-4 py-1.5 rounded-full bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm hover:bg-outline-variant transition-colors">Đã
+                            đánh dấu</button>
+                    </div>
+                </div>
+                <div class="flex-1 overflow-y-auto custom-scrollbar">
+                    <!-- Question Items -->
+                    <div class="p-4 border-b border-outline-variant hover:bg-surface-container-low cursor-pointer transition-colors bg-surface-container-highest/30 border-l-4 border-primary"
+                        onclick="toggleMobileDetail(true)">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-primary">Q12</span>
+                                <span class="material-symbols-outlined text-green-600 text-lg"
+                                    style="font-variation-settings: &quot;FILL&quot; 1;">check_circle</span>
+                            </div>
+                            <span
+                                class="text-[10px] px-2 py-0.5 bg-secondary-fixed text-on-secondary-fixed rounded font-semibold uppercase">Nội
+                                khoa</span>
+                        </div>
+                        <p class="text-body-sm font-body-sm line-clamp-2 text-on-surface mb-2">Bệnh nhân nam 45 tuổi
+                            nhập viện vì đau ngực trái dữ dội sau xương ức, kéo dài 30 phút...</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-[11px] text-outline font-medium">Bạn chọn <strong
+                                    class="text-primary">B</strong> • Đúng <strong
+                                    class="text-green-600">B</strong></span>
+                            <span class="material-symbols-outlined text-outline text-sm">flag</span>
+                        </div>
+                    </div>
+                    <div
+                        class="p-4 border-b border-outline-variant hover:bg-surface-container-low cursor-pointer transition-colors">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-on-surface">Q13</span>
+                                <span class="material-symbols-outlined text-error text-lg"
+                                    style="font-variation-settings: &quot;FILL&quot; 1;">cancel</span>
+                            </div>
+                            <span
+                                class="text-[10px] px-2 py-0.5 bg-surface-container-highest text-on-surface-variant rounded font-semibold uppercase">Ngoại
+                                khoa</span>
+                        </div>
+                        <p class="text-body-sm font-body-sm line-clamp-2 text-on-surface-variant mb-2">Các biến chứng
+                            muộn sau phẫu thuật cắt dạ dày bao gồm tất cả các trường hợp sau ngoại trừ...</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-[11px] text-outline font-medium">Bạn chọn <strong
+                                    class="text-error">C</strong> • Đúng <strong
+                                    class="text-green-600">A</strong></span>
+                            <span class="material-symbols-outlined text-orange-400 text-sm"
+                                style="font-variation-settings: &quot;FILL&quot; 1;">flag</span>
+                        </div>
+                    </div>
+                    <div
+                        class="p-4 border-b border-outline-variant hover:bg-surface-container-low cursor-pointer transition-colors">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-on-surface">Q14</span>
+                                <span class="material-symbols-outlined text-outline text-lg">horizontal_rule</span>
+                            </div>
+                            <span
+                                class="text-[10px] px-2 py-0.5 bg-surface-container-highest text-on-surface-variant rounded font-semibold uppercase">Sản
+                                khoa</span>
+                        </div>
+                        <p class="text-body-sm font-body-sm line-clamp-2 text-on-surface-variant mb-2">Triệu chứng lâm
+                            sàng quan trọng nhất để chẩn đoán thai ngoài tử cung chưa vỡ là...</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-[11px] text-outline font-medium">Chưa trả lời • Đúng <strong
+                                    class="text-green-600">D</strong></span>
+                        </div>
+                    </div>
+                    <!-- Repeated items for scroll -->
+                    <div
+                        class="p-4 border-b border-outline-variant hover:bg-surface-container-low cursor-pointer transition-colors opacity-70">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-on-surface">Q15</span>
+                                <span class="material-symbols-outlined text-green-600 text-lg"
+                                    style="font-variation-settings: &quot;FILL&quot; 1;">check_circle</span>
+                            </div>
+                            <span
+                                class="text-[10px] px-2 py-0.5 bg-surface-container-highest text-on-surface-variant rounded font-semibold uppercase">Nhi
+                                khoa</span>
+                        </div>
+                        <p class="text-body-sm font-body-sm line-clamp-2 text-on-surface-variant mb-2">Phác đồ bù dịch
+                            trong tiêu chảy cấp mất nước nặng ở trẻ 10 tháng tuổi là...</p>
+                    </div>
+                </div>
+            </section>
+            <!-- Right Column: Question Detail -->
+            <section class="flex-1 bg-white overflow-y-auto custom-scrollbar relative" id="question-detail-main">
+                <!-- Mobile Header for Detail (Hidden on desktop) -->
+                <div
+                    class="md:hidden flex items-center justify-between p-4 bg-surface border-b border-outline-variant sticky top-0 z-30">
+                    <button class="flex items-center gap-2 text-primary font-semibold"
+                        onclick="toggleMobileDetail(false)">
+                        <span class="material-symbols-outlined">arrow_back</span>
+                        <span class="">Quay lại</span>
+                    </button>
+                    <div class="flex gap-4">
+                        <span class="material-symbols-outlined">flag</span>
+                        <span class="material-symbols-outlined">share</span>
+                    </div>
+                </div>
+                <div class="max-w-4xl mx-auto p-6 md:p-10 space-y-8">
+                    <!-- Question Header & Text -->
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-3">
+                            <span
+                                class="px-3 py-1 bg-primary text-white rounded text-xs font-bold uppercase tracking-widest bg-primary-container">Câu
+                                12</span>
+                            <span class="text-outline text-sm">•</span>
+                            <span class="text-outline text-sm font-medium">ID: #MS-99210</span>
+                        </div>
+                        <h3 class="font-body-lg text-body-lg text-on-surface leading-relaxed font-semibold">
+                            Bệnh nhân nam 45 tuổi nhập viện vì đau ngực trái dữ dội sau xương ức, kéo dài 30 phút, lan
+                            lên vai trái và hàm dưới. Khám lâm sàng: HA 140/90 mmHg, nhịp tim 100 lần/phút. Điện tâm đồ
+                            ghi nhận ST chênh lên ở các chuyển đạo V1-V4. Men tim Troponin I tăng cao. Chẩn đoán xác
+                            định phù hợp nhất là gì?
+                        </h3>
+                    </div>
+                    <!-- Multiple Choice Options -->
+                    <div class="space-y-3">
+                        <!-- Option A -->
+                        <div
+                            class="group flex items-center p-4 border border-outline-variant rounded-xl bg-surface-container-low transition-all">
+                            <div
+                                class="flex-shrink-0 w-8 h-8 rounded-full border-2 border-outline-variant flex items-center justify-center mr-4 group-hover:border-primary">
+                                <span class="font-bold text-sm">A</span>
+                            </div>
+                            <p class="flex-1 text-body-md">Đau thắt ngực không ổn định</p>
+                        </div>
+                        <!-- Option B (Correct & Selected) -->
+                        <div
+                            class="flex items-center p-4 border-2 border-primary rounded-xl bg-primary-container/10 transition-all shadow-sm">
+                            <div
+                                class="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center mr-4">
+                                <span class="material-symbols-outlined text-sm">check</span>
+                            </div>
+                            <p class="flex-1 text-body-md font-semibold text-primary">Nhồi máu cơ tim cấp vùng trước
+                                rộng</p>
+                            <span
+                                class="bg-primary text-white text-[10px] px-2 py-0.5 rounded font-bold uppercase bg-primary-container">Lựa
+                                chọn của bạn</span>
+                        </div>
+                        <!-- Option C -->
+                        <div
+                            class="flex items-center p-4 border border-outline-variant rounded-xl bg-surface-container-low opacity-60">
+                            <div
+                                class="flex-shrink-0 w-8 h-8 rounded-full border-2 border-outline-variant flex items-center justify-center mr-4">
+                                <span class="font-bold text-sm">C</span>
+                            </div>
+                            <p class="flex-1 text-body-md">Viêm màng ngoài tim cấp</p>
+                        </div>
+                        <!-- Option D -->
+                        <div
+                            class="flex items-center p-4 border border-outline-variant rounded-xl bg-surface-container-low opacity-60">
+                            <div
+                                class="flex-shrink-0 w-8 h-8 rounded-full border-2 border-outline-variant flex items-center justify-center mr-4">
+                                <span class="font-bold text-sm">D</span>
+                            </div>
+                            <p class="flex-1 text-body-md">Bóc tách động mạch chủ ngực</p>
+                        </div>
+                    </div>
+                    <!-- Action Bar -->
+                    <div class="flex flex-wrap gap-3 py-4 border-y border-outline-variant">
+                        <button
+                            class="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-container-high text-on-surface-variant hover:bg-outline-variant transition-colors">
+                            <span class="material-symbols-outlined text-orange-500"
+                                style="font-variation-settings: &quot;FILL&quot; 1;">flag</span>
+                            <span class="font-label-md text-label-md">Đã đánh dấu</span>
+                        </button>
+                        <button
+                            class="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-container-high text-on-surface-variant hover:bg-outline-variant transition-colors">
+                            <span class="material-symbols-outlined">edit_note</span>
+                            <span class="font-label-md text-label-md">Ghi chú</span>
+                        </button>
+                        <button
+                            class="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-container-high text-on-surface-variant hover:bg-outline-variant transition-colors">
+                            <span class="material-symbols-outlined">forum</span>
+                            <span class="font-label-md text-label-md">Thảo luận (24)</span>
+                        </button>
+                    </div>
+                    <!-- Explanation Section -->
+                    <div class="space-y-6">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-primary">lightbulb</span>
+                            <h4 class="font-headline-sm text-headline-sm">Giải thích chi tiết</h4>
+                        </div>
+                        <div class="prose prose-teal max-w-none text-on-surface-variant space-y-4">
+                            <p class="text-body-md leading-relaxed">
+                                Dựa trên các triệu chứng lâm sàng và cận lâm sàng, bệnh nhân có đầy đủ tiêu chuẩn chẩn
+                                đoán <strong>Nhồi máu cơ tim cấp có ST chênh lên (STEMI)</strong>.
+                            </p>
+                            <ul class="list-disc pl-5 space-y-2 text-body-md">
+                                <li class=""><strong>Lâm sàng:</strong> Đau thắt ngực điển hình kéo dài trên 20 phút (30
+                                    phút trong trường hợp này), không đáp ứng với nghỉ ngơi.</li>
+                                <li class=""><strong>Điện tâm đồ:</strong> ST chênh lên ở các chuyển đạo từ V1 đến V4
+                                    tương ứng với vùng cấp máu của động mạch liên thất trước (LAD), đây là vùng thành
+                                    trước rộng của thất trái.</li>
+                                <li class=""><strong>Men tim:</strong> Troponin I tăng cao khẳng định có sự hoại tử tế
+                                    bào cơ tim.</li>
+                            </ul>
+                            <p
+                                class="bg-surface-container p-4 rounded-lg border-l-4 border-primary text-body-sm italic">
+                                "Lưu ý: STEMI là một cấp cứu nội khoa cần can thiệp tái thông mạch vành càng sớm càng
+                                tốt trong 'giờ vàng' để hạn chế tối đa diện hoại tử cơ tim."
+                            </p>
+                        </div>
+                    </div>
+                    <!-- AI MedAssist Section (Bento Grid Style Card) -->
+                    <div class="glass-ai rounded-2xl p-6 shadow-sm">
+                        <div class="flex items-center justify-between mb-6">
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="w-10 h-10 rounded-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center">
+                                    <span class="material-symbols-outlined text-white"
+                                        style="font-variation-settings: &quot;FILL&quot; 1;">auto_awesome</span>
+                                </div>
+                                <div>
+                                    <h4 class="font-label-md text-label-md text-primary font-bold">AI MedAssist Analysis
+                                    </h4>
+                                    <p class="text-[11px] text-outline">Gợi ý thông minh cho kỳ thi</p>
+                                </div>
+                            </div>
+                            <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-[10px] font-bold">SMART
+                                TIPS</span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="bg-white/50 p-4 rounded-xl border border-white/80">
+                                <h5
+                                    class="text-xs font-bold text-on-surface mb-2 flex items-center gap-2 uppercase tracking-tight">
+                                    <span class="material-symbols-outlined text-primary text-sm">psychology</span> Key
+                                    Concepts
+                                </h5>
+                                <p class="text-xs text-on-surface-variant leading-relaxed">Luôn nhớ quy luật "vùng soi
+                                    gương" (reciprocal changes) trên EKG. Nếu thấy ST chênh ở V1-V4, hãy tìm ST chênh
+                                    xuống ở các chuyển đạo vùng dưới (II, III, aVF).</p>
+                            </div>
+                            <div class="bg-white/50 p-4 rounded-xl border border-white/80">
+                                <h5
+                                    class="text-xs font-bold text-on-surface mb-2 flex items-center gap-2 uppercase tracking-tight">
+                                    <span class="material-symbols-outlined text-primary text-sm">trending_up</span>
+                                    Thống kê
+                                </h5>
+                                <p class="text-xs text-on-surface-variant leading-relaxed">85% học viên MedPro chọn đúng
+                                    câu này. Các lỗi sai thường gặp là nhầm lẫn với <strong>Viêm màng ngoài tim</strong>
+                                    do cũng có ST chênh (nhưng chênh lan tỏa toàn bộ chuyển đạo).</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Footer Navigation -->
+                    <div class="flex justify-between items-center pt-10 pb-20 md:pb-10 border-t border-outline-variant">
+                        <button class="flex items-center gap-2 text-outline hover:text-primary transition-colors">
+                            <span class="material-symbols-outlined">chevron_left</span>
+                            <span class="font-label-md text-label-md">Câu trước (Q11)</span>
+                        </button>
+                        <button
+                            class="px-8 py-2.5 bg-primary text-white font-bold rounded-full shadow-md hover:shadow-lg hover:scale-[1.02] transition-all">
+                            Câu tiếp theo
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </main>
+        <!-- BottomNavBar (Mobile Only) -->
+        <nav
+            class="fixed bottom-0 left-0 w-full flex justify-around items-center h-[64px] bg-surface border-t border-outline-variant shadow-lg z-50 md:hidden">
+            <a class="flex flex-col items-center justify-center text-primary font-bold" href="#">
+                <span class="material-symbols-outlined" style="font-variation-settings: &quot;FILL&quot; 1;">home</span>
+                <span class="font-label-sm text-label-sm">Home</span>
+            </a>
+            <a class="flex flex-col items-center justify-center text-on-surface-variant" href="#">
+                <span class="material-symbols-outlined">quiz</span>
+                <span class="font-label-sm text-label-sm">Q-Bank</span>
+            </a>
+            <div class="relative -top-4">
+                <button
+                    class="w-14 h-14 bg-primary text-white rounded-full flex items-center justify-center shadow-xl border-4 border-surface">
+                    <span class="material-symbols-outlined text-3xl">add</span>
+                </button>
+            </div>
+            <a class="flex flex-col items-center justify-center text-on-surface-variant" href="#">
+                <span class="material-symbols-outlined">style</span>
+                <span class="font-label-sm text-label-sm">Cards</span>
+            </a>
+            <a class="flex flex-col items-center justify-center text-on-surface-variant" href="#">
+                <span class="material-symbols-outlined">assignment</span>
+                <span class="font-label-sm text-label-sm">Exams</span>
+            </a>
+        </nav>
+    </div>
+    <script>
+        function toggleMobileDetail(show) {
+            const list = document.getElementById('question-list-sidebar');
+            const detail = document.getElementById('question-detail-main');
+
+            if (window.innerWidth < 768) {
+                if (show) {
+                    list.classList.add('mobile-hidden');
+                    detail.classList.remove('mobile-hidden');
+                } else {
+                    list.classList.remove('mobile-hidden');
+                    detail.classList.add('mobile-hidden');
+                }
+            }
+        }
+
+        function syncMobileLayout() {
+            const list = document.getElementById('question-list-sidebar');
+            const detail = document.getElementById('question-detail-main');
+
+            if (window.innerWidth < 768) {
+                if (!list.classList.contains('mobile-hidden') && !detail.classList.contains('mobile-hidden')) {
+                    detail.classList.add('mobile-hidden');
+                }
+            } else {
+                list.classList.remove('mobile-hidden');
+                detail.classList.remove('mobile-hidden');
+            }
+        }
+
+        window.addEventListener('resize', syncMobileLayout);
+        syncMobileLayout();
+    </script>
+</body>
+
+</html>

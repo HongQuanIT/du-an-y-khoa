@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+
+<html class="light" lang="vi">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>MedQuest Pro - Study Plan</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-container": "#0f766e",
+                        "on-error-container": "#93000a",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "surface-container": "#ebefed",
+                        "surface-container-high": "#e5e9e7",
+                        "surface-variant": "#e0e3e1",
+                        "tertiary": "#7f4025",
+                        "surface-bright": "#f7faf8",
+                        "secondary-container": "#316bf3",
+                        "on-tertiary": "#ffffff",
+                        "inverse-primary": "#80d5cb",
+                        "on-surface-variant": "#3e4947",
+                        "on-primary-fixed-variant": "#00504a",
+                        "on-background": "#181c1c",
+                        "secondary-fixed": "#dbe1ff",
+                        "inverse-surface": "#2d3130",
+                        "error-container": "#ffdad6",
+                        "secondary-fixed-dim": "#b4c5ff",
+                        "on-tertiary-fixed-variant": "#72361b",
+                        "on-surface": "#181c1c",
+                        "tertiary-container": "#9c573a",
+                        "surface-tint": "#006a63",
+                        "primary-fixed-dim": "#80d5cb",
+                        "surface-container-low": "#f1f4f3",
+                        "surface": "#f7faf8",
+                        "tertiary-fixed": "#ffdbce",
+                        "surface-container-highest": "#e0e3e1",
+                        "error": "#ba1a1a",
+                        "on-primary-container": "#a3faef",
+                        "surface-dim": "#d7dbd9",
+                        "inverse-on-surface": "#eef1f0",
+                        "on-secondary-container": "#fefcff",
+                        "on-secondary-fixed-variant": "#003ea8",
+                        "on-secondary-fixed": "#00174b",
+                        "tertiary-fixed-dim": "#ffb598",
+                        "primary-fixed": "#9cf2e8",
+                        "on-primary": "#ffffff",
+                        "outline-variant": "#bdc9c6",
+                        "background": "#f7faf8",
+                        "on-primary-fixed": "#00201d",
+                        "secondary": "#0051d5",
+                        "on-tertiary-container": "#ffe5db",
+                        "outline": "#6e7977",
+                        "on-tertiary-fixed": "#370e00",
+                        "on-error": "#ffffff",
+                        "primary": "#005c55"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin_desktop": "32px",
+                        "unit": "4px",
+                        "header_height": "64px",
+                        "gutter": "24px",
+                        "container_max_width": "1440px",
+                        "sidebar_width": "240px",
+                        "margin_mobile": "16px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Be Vietnam Pro"],
+                        "label-md": ["Be Vietnam Pro"],
+                        "display-lg": ["Be Vietnam Pro"],
+                        "headline-lg-mobile": ["Be Vietnam Pro"],
+                        "body-md": ["Be Vietnam Pro"],
+                        "headline-md": ["Be Vietnam Pro"],
+                        "body-sm": ["Be Vietnam Pro"],
+                        "headline-lg": ["Be Vietnam Pro"],
+                        "label-sm": ["Be Vietnam Pro"],
+                        "headline-sm": ["Be Vietnam Pro"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500" }],
+                        "display-lg": ["48px", { "lineHeight": "60px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "600" }],
+                        "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "600" }]
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .timeline-line::before {
+            content: '';
+            position: absolute;
+            left: 20px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background-color: #E2E8F0;
+            z-index: 0;
+        }
+
+        .premium-gradient {
+            background: linear-gradient(135deg, #FF9966, #FF5E62);
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+
+<body class="bg-surface text-on-surface">
+    <!-- SideNavBar (from SCREEN_339) -->
+    <aside
+        class="w-[240px] h-screen fixed left-0 top-0 border-r border-outline-variant bg-surface flex flex-col p-4 z-50">
+        <div class="mb-8 flex items-center gap-3 px-2">
+            <span class="material-symbols-outlined text-primary text-3xl"
+                style="font-variation-settings: 'FILL' 1;">medical_services</span>
+            <div class="flex flex-col">
+                <span class="font-headline-md text-primary font-bold leading-tight">MedQuest Pro</span>
+                <span class="text-label-sm text-on-surface-variant">Học thuật Y khoa</span>
+            </div>
+        </div>
+        <nav class="flex-1 space-y-1">
+            <a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg group"
+                href="#">
+                <span class="material-symbols-outlined group-hover:text-primary">dashboard</span>
+                <span class="font-body-md">Dashboard</span>
+            </a>
+            <a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg group"
+                href="#">
+                <span class="material-symbols-outlined group-hover:text-primary">quiz</span>
+                <span class="font-body-md">Ngân hàng câu hỏi</span>
+            </a>
+            <a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg group"
+                href="#">
+                <span class="material-symbols-outlined group-hover:text-primary">library_books</span>
+                <span class="font-body-md">Thư viện</span>
+            </a>
+            <a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg group"
+                href="#">
+                <span class="material-symbols-outlined group-hover:text-primary">style</span>
+                <span class="font-body-md">Flashcards</span>
+            </a>
+            <a class="flex items-center gap-3 px-3 py-2 text-primary bg-primary/10 font-semibold font-label-md text-label-md rounded-lg"
+                href="#">
+                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">event_note</span>
+                <span class="font-body-md">Lộ trình học</span>
+            </a>
+            <a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg group"
+                href="#">
+                <span class="material-symbols-outlined group-hover:text-primary">analytics</span>
+                <span class="font-body-md">Phân tích</span>
+            </a>
+            <a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg group"
+                href="#">
+                <span class="material-symbols-outlined group-hover:text-primary">assignment</span>
+                <span class="font-body-md">Kỳ thi</span>
+            </a>
+        </nav>
+        <div class="pt-4 border-t border-outline-variant space-y-1">
+            <button
+                class="w-full premium-gradient text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center gap-2 text-sm shadow-md hover:opacity-90 transition-opacity">
+                <span class="material-symbols-outlined text-sm">stars</span>
+                Nâng cấp tài khoản
+            </button>
+            <a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg"
+                href="#">
+                <span class="material-symbols-outlined">settings</span>
+                <span class="font-body-md">Cài đặt</span>
+            </a>
+            <a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg"
+                href="#">
+                <span class="material-symbols-outlined">logout</span>
+                <span class="font-body-md">Đăng xuất</span>
+            </a>
+        </div>
+    </aside>
+    <!-- TopAppBar (from SCREEN_339) -->
+    <header
+        class="fixed top-0 right-0 h-header_height w-[calc(100%-240px)] ml-[240px] bg-surface border-b border-outline-variant z-40 flex items-center justify-between px-margin_desktop">
+        <div class="flex items-center gap-4 flex-1">
+            <div class="relative w-full max-w-md">
+                <span
+                    class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+                <input
+                    class="w-full bg-surface-container-low border-none rounded-lg pl-10 pr-4 py-2 focus:ring-2 focus:ring-primary text-sm"
+                    placeholder="Tìm kiếm bài học, câu hỏi..." type="text" />
+            </div>
+        </div>
+        <div class="flex items-center gap-6">
+            <div class="flex items-center gap-3">
+                <div
+                    class="relative p-2 rounded-full hover:bg-surface-container transition-colors cursor-pointer group">
+                    <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">mail</span>
+                </div>
+                <div
+                    class="relative p-2 rounded-full hover:bg-surface-container transition-colors cursor-pointer group">
+                    <span
+                        class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">notifications</span>
+                    <span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border-2 border-surface"></span>
+                </div>
+            </div>
+            <div class="h-8 w-[1px] bg-outline-variant"></div>
+            <div class="flex items-center gap-3 cursor-pointer group">
+                <div class="text-right">
+                    <p class="font-label-md text-on-surface">Nguyễn Văn An</p>
+                    <p class="text-xs text-on-surface-variant">Sinh viên Y4</p>
+                </div>
+                <img class="w-10 h-10 rounded-full border border-outline-variant object-cover"
+                    data-alt="Professional headshot of a young Vietnamese male medical student wearing a white lab coat"
+                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuDjs14YgZidlPvd__vAVlqvNdOurQoEuhpzLjx6GWcL9KL7a3gndodC2yzkK9XzBwLcw8BMWmYfR_hRLZiexmiVpO-jhjEzQpLjqFJew-KRX0UCViEIrJcYnbYm2pJcF-oeDP7tjGvDMf4SXNuyyZH54jeE_F1Vhz48PHDRxm05eEfM48alXxkohIc6BwKi5BFrj7P1eI2hY_dK4DqyL5dw28-MQ33oWlEq6xifc2oihUgkUiFUa2L6" />
+            </div>
+        </div>
+    </header>
+    <!-- Main Content Canvas -->
+    <main class="ml-[240px] pt-[64px] min-h-screen">
+        <div class="max-w-container_max_width mx-auto px-margin_desktop py-8">
+            <!-- Content Header -->
+            <div class="mb-8">
+                <nav class="flex items-center gap-2 text-primary font-bold text-label-sm uppercase tracking-wider mb-2">
+                    <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+                    <span class="">Lộ trình học</span>
+                </nav>
+                <h2 class="font-headline-lg text-headline-lg text-on-surface">Lộ trình học USMLE Step 2 CK của Charles
+                </h2>
+            </div>
+            <!-- Two-Column Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+                <!-- Left Column: Timeline -->
+                <div class="lg:col-span-8 space-y-6 relative timeline-line">
+                    <div class="space-y-4 relative z-10">
+                        <div
+                            class="bg-surface-container-lowest border border-outline-variant rounded-lg p-5 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
+                            <div class="flex items-center gap-5">
+                                <div
+                                    class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center border border-outline-variant">
+                                    <span class="material-symbols-outlined text-primary">calendar_today</span>
+                                </div>
+                                <div>
+                                    <h3 class="font-headline-sm text-headline-sm text-on-surface">Tuần 1</h3>
+                                    <p class="text-label-sm text-on-surface-variant uppercase tracking-tighter">0/4 HOÀN
+                                        THÀNH</p>
+                                </div>
+                            </div>
+                            <span
+                                class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">expand_more</span>
+                        </div>
+                        <div
+                            class="bg-surface-container-lowest border border-outline-variant rounded-lg p-5 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
+                            <div class="flex items-center gap-5">
+                                <div
+                                    class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center border border-outline-variant">
+                                    <span class="material-symbols-outlined text-primary">calendar_today</span>
+                                </div>
+                                <div>
+                                    <h3 class="font-headline-sm text-headline-sm text-on-surface">Tuần 2</h3>
+                                    <p class="text-label-sm text-on-surface-variant uppercase tracking-tighter">0/4 HOÀN
+                                        THÀNH</p>
+                                </div>
+                            </div>
+                            <span
+                                class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">expand_more</span>
+                        </div>
+                        <div
+                            class="bg-surface-container-lowest border border-outline-variant rounded-lg p-5 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
+                            <div class="flex items-center gap-5">
+                                <div
+                                    class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center border border-outline-variant">
+                                    <span class="material-symbols-outlined text-primary">calendar_today</span>
+                                </div>
+                                <div>
+                                    <h3 class="font-headline-sm text-headline-sm text-on-surface">Tuần 3</h3>
+                                    <p class="text-label-sm text-on-surface-variant uppercase tracking-tighter">0/4 HOÀN
+                                        THÀNH</p>
+                                </div>
+                            </div>
+                            <span
+                                class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">expand_more</span>
+                        </div>
+                        <div
+                            class="bg-surface-container-lowest border border-outline-variant rounded-lg p-5 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
+                            <div class="flex items-center gap-5">
+                                <div
+                                    class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center border border-outline-variant">
+                                    <span class="material-symbols-outlined text-primary">calendar_today</span>
+                                </div>
+                                <div>
+                                    <h3 class="font-headline-sm text-headline-sm text-on-surface">Tuần 4</h3>
+                                    <p class="text-label-sm text-on-surface-variant uppercase tracking-tighter">0/4 HOÀN
+                                        THÀNH</p>
+                                </div>
+                            </div>
+                            <span
+                                class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">expand_more</span>
+                        </div>
+                        <div
+                            class="bg-surface-container-lowest border border-outline-variant rounded-lg p-5 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
+                            <div class="flex items-center gap-5">
+                                <div
+                                    class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center border border-outline-variant">
+                                    <span class="material-symbols-outlined text-primary">calendar_today</span>
+                                </div>
+                                <div>
+                                    <h3 class="font-headline-sm text-headline-sm text-on-surface">Tuần 5</h3>
+                                    <p class="text-label-sm text-on-surface-variant uppercase tracking-tighter">0/4 HOÀN
+                                        THÀNH</p>
+                                </div>
+                            </div>
+                            <span
+                                class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">expand_more</span>
+                        </div>
+                        <div
+                            class="bg-surface-container-lowest border border-outline-variant rounded-lg p-5 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
+                            <div class="flex items-center gap-5">
+                                <div
+                                    class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center border border-outline-variant">
+                                    <span class="material-symbols-outlined text-primary">calendar_today</span>
+                                </div>
+                                <div>
+                                    <h3 class="font-headline-sm text-headline-sm text-on-surface">Tuần 6</h3>
+                                    <p class="text-label-sm text-on-surface-variant uppercase tracking-tighter">0/4 HOÀN
+                                        THÀNH</p>
+                                </div>
+                            </div>
+                            <span
+                                class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">expand_more</span>
+                        </div>
+                        <div
+                            class="bg-surface-container-lowest border border-outline-variant rounded-lg p-5 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
+                            <div class="flex items-center gap-5">
+                                <div
+                                    class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center border border-outline-variant">
+                                    <span class="material-symbols-outlined text-primary">calendar_today</span>
+                                </div>
+                                <div>
+                                    <h3 class="font-headline-sm text-headline-sm text-on-surface">Tuần 7</h3>
+                                    <p class="text-label-sm text-on-surface-variant uppercase tracking-tighter">0/4 HOÀN
+                                        THÀNH</p>
+                                </div>
+                            </div>
+                            <span
+                                class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">expand_more</span>
+                        </div>
+                        <div
+                            class="bg-surface-container-lowest border border-outline-variant rounded-lg p-5 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
+                            <div class="flex items-center gap-5">
+                                <div
+                                    class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center border border-outline-variant">
+                                    <span class="material-symbols-outlined text-primary">calendar_today</span>
+                                </div>
+                                <div>
+                                    <h3 class="font-headline-sm text-headline-sm text-on-surface">Tuần 8</h3>
+                                    <p class="text-label-sm text-on-surface-variant uppercase tracking-tighter">0/4 HOÀN
+                                        THÀNH</p>
+                                </div>
+                            </div>
+                            <span
+                                class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">expand_more</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Right Column: Summary Stats -->
+                <div class="lg:col-span-4 space-y-gutter">
+                    <!-- Day Progress Circle -->
+                    <div
+                        class="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 flex flex-col items-center text-center">
+                        <h4 class="font-headline-sm text-headline-sm mb-6">Ngày 2/68</h4>
+                        <div class="relative w-32 h-32 mb-6">
+                            <svg class="w-full h-full transform -rotate-90">
+                                <circle class="text-surface-container" cx="64" cy="64" fill="transparent" r="58"
+                                    stroke="currentColor" stroke-width="8"></circle>
+                                <circle class="text-primary transition-all duration-1000" cx="64" cy="64"
+                                    fill="transparent" r="58" stroke="currentColor" stroke-dasharray="364.4"
+                                    stroke-dashoffset="364.4" stroke-width="8"></circle>
+                            </svg>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                <span class="text-[20px] font-bold text-primary">0%</span>
+                                <span class="text-[10px] text-on-surface-variant font-bold uppercase">HOÀN THÀNH</span>
+                            </div>
+                        </div>
+                        <div class="w-full border-t border-outline-variant pt-6 mt-2">
+                            <div class="flex flex-col items-center gap-2">
+                                <span class="font-bold text-headline-md">0m 0s</span>
+                                <div class="flex items-center gap-2 text-on-surface-variant">
+                                    <span class="material-symbols-outlined text-[18px]">timer</span>
+                                    <span class="text-label-sm font-bold uppercase tracking-tight">THỜI GIAN MỖI
+                                        CÂU</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Organ System Progress -->
+                    <div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden">
+                        <div class="p-5 border-b border-outline-variant bg-surface-container-low">
+                            <h4 class="font-bold text-label-md uppercase tracking-wider text-on-surface-variant">TIẾN ĐỘ
+                                LỘ TRÌNH HỌC</h4>
+                        </div>
+                        <div class="p-5 space-y-6">
+                            <!-- Cardiovascular -->
+                            <div>
+                                <div class="flex justify-between mb-2">
+                                    <span class="text-label-md font-medium">Hệ tim mạch</span>
+                                </div>
+                                <div class="w-full h-1.5 bg-surface-container rounded-full overflow-hidden">
+                                    <div class="h-full bg-primary w-[5%] rounded-full"></div>
+                                </div>
+                            </div>
+                            <!-- Blood -->
+                            <div>
+                                <div class="flex justify-between mb-2">
+                                    <span class="text-label-md font-medium">Hệ máu &amp; Bạch huyết</span>
+                                </div>
+                                <div class="w-full h-1.5 bg-surface-container rounded-full overflow-hidden">
+                                    <div class="h-full bg-primary w-[0%] rounded-full"></div>
+                                </div>
+                            </div>
+                            <!-- Nervous -->
+                            <div>
+                                <div class="flex justify-between mb-2">
+                                    <span class="text-label-md font-medium">Hệ thần kinh &amp; Giác quan</span>
+                                </div>
+                                <div class="w-full h-1.5 bg-surface-container rounded-full overflow-hidden">
+                                    <div class="h-full bg-primary w-[2%] rounded-full"></div>
+                                </div>
+                            </div>
+                            <!-- Respiratory -->
+                            <div>
+                                <div class="flex justify-between mb-2">
+                                    <span class="text-label-md font-medium">Hệ hô hấp</span>
+                                </div>
+                                <div class="w-full h-1.5 bg-surface-container rounded-full overflow-hidden">
+                                    <div class="h-full bg-primary w-[0%] rounded-full"></div>
+                                </div>
+                            </div>
+                            <!-- Pregnancy -->
+                            <div>
+                                <div class="flex justify-between mb-2">
+                                    <span class="text-label-md font-medium">Sản khoa &amp; Thai kỳ</span>
+                                </div>
+                                <div class="w-full h-1.5 bg-surface-container rounded-full overflow-hidden">
+                                    <div class="h-full bg-primary w-[0%] rounded-full"></div>
+                                </div>
+                            </div>
+                            <!-- Musculoskeletal -->
+                            <div>
+                                <div class="flex justify-between mb-2">
+                                    <span class="text-label-md font-medium">Hệ cơ xương khớp</span>
+                                </div>
+                                <div class="w-full h-1.5 bg-surface-container rounded-full overflow-hidden">
+                                    <div class="h-full bg-primary w-[0%] rounded-full"></div>
+                                </div>
+                            </div>
+                            <!-- Skin -->
+                            <div>
+                                <div class="flex justify-between mb-2">
+                                    <span class="text-label-md font-medium">Da &amp; Mô dưới da</span>
+                                </div>
+                                <div class="w-full h-1.5 bg-surface-container rounded-full overflow-hidden">
+                                    <div class="h-full bg-primary w-[0%] rounded-full"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <script>
+        // Micro-interactions and simple effects
+        document.querySelectorAll('button, a').forEach(btn => {
+            btn.addEventListener('mousedown', () => {
+                btn.style.transform = 'scale(0.98)';
+            });
+            btn.addEventListener('mouseup', () => {
+                btn.style.transform = 'scale(1)';
+            });
+            btn.addEventListener('mouseleave', () => {
+                btn.style.transform = 'scale(1)';
+            });
+        });
+    </script>
+</body>
+
+</html>

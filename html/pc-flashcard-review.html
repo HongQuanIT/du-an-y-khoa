@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html class="light" lang="vi">
+
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>MedQuest Pro - Flashcard Review</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@100;300;400;500;600;700;800;900&amp;display=swap"
+        rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet">
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#e0e3e1",
+                        "on-primary-fixed-variant": "#00504a",
+                        "error-container": "#ffdad6",
+                        "outline-variant": "#bdc9c6",
+                        "surface-bright": "#f7faf8",
+                        "tertiary-container": "#9c573a",
+                        "on-secondary": "#ffffff",
+                        "surface-container-high": "#e5e9e7",
+                        "tertiary-fixed": "#ffdbce",
+                        "secondary-fixed": "#dbe1ff",
+                        "tertiary-fixed-dim": "#ffb598",
+                        "on-background": "#181c1c",
+                        "inverse-surface": "#2d3130",
+                        "on-tertiary-fixed-variant": "#72361b",
+                        "on-secondary-container": "#fefcff",
+                        "on-secondary-fixed": "#00174b",
+                        "inverse-on-surface": "#eef1f0",
+                        "primary-container": "#0f766e",
+                        "secondary-fixed-dim": "#b4c5ff",
+                        "on-primary": "#ffffff",
+                        "surface-container": "#ebefed",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-low": "#f1f4f3",
+                        "tertiary": "#7f4025",
+                        "on-primary-container": "#a3faef",
+                        "inverse-primary": "#80d5cb",
+                        "on-error-container": "#93000a",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-fixed": "#9cf2e8",
+                        "secondary": "#0051d5",
+                        "on-surface-variant": "#3e4947",
+                        "on-primary-fixed": "#00201d",
+                        "surface-dim": "#d7dbd9",
+                        "on-surface": "#181c1c",
+                        "outline": "#6e7977",
+                        "surface": "#f7faf8",
+                        "secondary-container": "#316bf3",
+                        "on-tertiary-fixed": "#370e00",
+                        "on-tertiary-container": "#ffe5db",
+                        "surface-container-highest": "#e0e3e1",
+                        "primary": "#005c55",
+                        "surface-tint": "#006a63",
+                        "primary-fixed-dim": "#80d5cb",
+                        "background": "#f7faf8",
+                        "error": "#ba1a1a",
+                        "on-secondary-fixed-variant": "#003ea8",
+                        "on-error": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin_mobile": "16px",
+                        "container_max_width": "1440px",
+                        "margin_desktop": "32px",
+                        "gutter": "24px",
+                        "unit": "4px",
+                        "header_height": "64px",
+                        "sidebar_width": "240px"
+                    },
+                    "fontFamily": {
+                        "body-sm": ["Be Vietnam Pro"],
+                        "label-md": ["Be Vietnam Pro"],
+                        "display-lg": ["Be Vietnam Pro"],
+                        "headline-lg": ["Be Vietnam Pro"],
+                        "headline-lg-mobile": ["Be Vietnam Pro"],
+                        "label-sm": ["Be Vietnam Pro"],
+                        "body-lg": ["Be Vietnam Pro"],
+                        "headline-md": ["Be Vietnam Pro"],
+                        "body-md": ["Be Vietnam Pro"],
+                        "headline-sm": ["Be Vietnam Pro"]
+                    },
+                    "fontSize": {
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500" }],
+                        "display-lg": ["48px", { "lineHeight": "60px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "700" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "600" }]
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            background-color: #F8FAFC;
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .flashcard-container {
+            perspective: 1000px;
+        }
+
+        .flashcard {
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+
+        .flashcard.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .flashcard-front,
+        .flashcard-back {
+            backface-visibility: hidden;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .flashcard-back {
+            transform: rotateY(180deg);
+        }
+
+        .btn-hover-scale {
+            transition: transform 0.2s, opacity 0.2s;
+        }
+
+        .btn-hover-scale:active {
+            transform: scale(0.98);
+            opacity: 0.9;
+        }
+
+        .linear-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #E2E8F0, transparent);
+        }
+    </style>
+</head>
+
+<body class="overflow-hidden">
+    <!-- Top Progress Shell -->
+    <header class="fixed top-0 left-0 right-0 h-16 bg-surface flex flex-col justify-center px-margin_desktop z-50">
+        <div class="flex justify-between items-center mb-2">
+            <button
+                class="flex items-center gap-2 text-on-surface-variant hover:text-primary transition-colors font-label-md text-label-md"
+                onclick="window.history.back()">
+                <span class="material-symbols-outlined text-[20px]">close</span>
+                <span>Kết thúc phiên</span>
+            </button>
+            <div class="flex flex-col items-center">
+                <span class="font-label-sm text-label-sm text-primary tracking-widest">TIẾN TRÌNH</span>
+                <span class="font-headline-sm text-headline-sm text-on-surface">12 / 20</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <button class="material-symbols-outlined text-on-surface-variant hover:text-primary">settings</button>
+                <div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant">
+                    <img class="w-full h-full object-cover"
+                        data-alt="A professional close-up studio portrait of a young Vietnamese male doctor in a clean white medical coat with a stethoscope around his neck. The lighting is soft and clinical, set against a minimalist light blue background to represent trust and expertise in medical education."
+                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuDZauRtmmChnHNPbKHcEp4AFrQBazM0NwLGLinMMg2Z5fwya5yfJvooKBbnUWdviEAtGvpB93w63PS6FcKkKKXxC67CevgVRH4X8Gi16DeBm1qEckuDLTZCOe4012IyfjNqIfAWUHhnJza3k4r3ICrVeoXUujC1X1olmKQO7t6uTFLfQYDgkhoFFE7opyFx1d9Lf_QRG2PXyVbzL_mNz6MzejzHaJXKk9rmBvePZkhkhpVPzGdJ9RyZZw">
+                </div>
+            </div>
+        </div>
+        <div class="w-full bg-surface-container-low h-1 rounded-full overflow-hidden">
+            <div class="bg-primary h-full transition-all duration-500 ease-out" style="width: 60%;"></div>
+        </div>
+    </header>
+    <!-- Main Learning Canvas -->
+    <main class="h-screen w-full flex items-center justify-center pt-24 pb-12 px-6">
+        <div class="w-full max-w-3xl h-full flex flex-col items-center justify-center gap-8 flashcard-container">
+            <!-- The Card -->
+            <div class="flashcard w-full aspect-[4/3] max-h-[500px] relative" id="flashcard">
+                <!-- Front Side -->
+                <div
+                    class="flashcard-front bg-white border border-outline-variant rounded-xl shadow-sm flex flex-col p-12 text-center justify-center">
+                    <div class="mb-4">
+                        <span
+                            class="px-3 py-1 bg-primary-container text-on-primary-container rounded-full font-label-sm text-label-sm uppercase tracking-wider">Dược
+                            lý học</span>
+                    </div>
+                    <h2 class="font-headline-lg text-headline-lg text-on-surface leading-tight">
+                        Cơ chế tác dụng của Metformin?
+                    </h2>
+                    <div class="absolute bottom-6 left-6 right-6 flex justify-between items-center">
+                        <span class="text-on-surface-variant font-label-sm text-label-sm">Thẻ ID: #MED-4021</span>
+                        <div class="flex gap-2">
+                            <span class="material-symbols-outlined text-outline-variant">edit</span>
+                            <span class="material-symbols-outlined text-outline-variant">visibility_off</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Back Side -->
+                <div
+                    class="flashcard-back bg-white border border-outline-variant rounded-xl shadow-sm flex flex-col p-10 overflow-y-auto">
+                    <div class="flex justify-between items-start mb-6">
+                        <span
+                            class="px-3 py-1 bg-primary-container text-on-primary-container rounded-full font-label-sm text-label-sm">ĐÁP
+                            ÁN CHI TIẾT</span>
+                        <div class="flex gap-4">
+                            <button
+                                class="flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm hover:text-primary">
+                                <span class="material-symbols-outlined text-[18px]">edit</span> Sửa
+                            </button>
+                            <button
+                                class="flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm hover:text-error">
+                                <span class="material-symbols-outlined text-[18px]">visibility_off</span> Ẩn
+                            </button>
+                        </div>
+                    </div>
+                    <div class="space-y-6">
+                        <section>
+                            <h3 class="font-headline-sm text-headline-sm text-primary mb-2">Cơ chế chính</h3>
+                            <p class="font-body-md text-body-md text-on-surface leading-relaxed">
+                                Metformin hoạt động chủ yếu bằng cách kích hoạt enzyme <strong class="text-primary">AMPK
+                                    (AMP-activated protein kinase)</strong>, dẫn đến:
+                            </p>
+                            <ul
+                                class="mt-3 space-y-2 list-disc list-inside font-body-md text-body-md text-on-surface-variant">
+                                <li>Ức chế quá trình tân tạo glucose tại gan (Gluconeogenesis).</li>
+                                <li>Tăng nhạy cảm với insulin ở các mô ngoại vi (cơ vân).</li>
+                                <li>Giảm hấp thu glucose tại ruột.</li>
+                            </ul>
+                        </section>
+                        <div class="linear-divider"></div>
+                        <section>
+                            <h3 class="font-headline-sm text-headline-sm text-on-surface mb-2">Lưu ý lâm sàng</h3>
+                            <div class="bg-surface-container-low p-4 rounded-lg border-l-4 border-tertiary">
+                                <p class="font-body-sm text-body-sm text-on-surface-variant">
+                                    Không gây hạ đường huyết khi dùng đơn trị liệu vì không kích thích bài tiết insulin
+                                    từ tế bào beta đảo tụy. Thận trọng với nguy cơ nhiễm toan lactic.
+                                </p>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+            <!-- Interaction Area -->
+            <div class="w-full flex justify-center h-20" id="interaction-layer">
+                <!-- Toggle Button (Front Only) -->
+                <button
+                    class="group flex items-center gap-3 bg-primary text-on-primary px-10 py-4 rounded-lg font-headline-sm text-headline-sm btn-hover-scale shadow-md"
+                    id="show-answer-btn" onclick="flipCard()">
+                    <span>Hiện đáp án</span>
+                    <span
+                        class="material-symbols-outlined group-hover:translate-y-1 transition-transform">keyboard_double_arrow_down</span>
+                </button>
+                <!-- Rating Buttons (Back Only - Hidden by Default) -->
+                <div class="hidden w-full max-w-2xl grid grid-cols-4 gap-4" id="rating-controls">
+                    <button
+                        class="flex flex-col items-center justify-center p-3 rounded-lg border border-red-100 bg-red-50 hover:bg-red-100 transition-colors btn-hover-scale"
+                        onclick="nextCard()">
+                        <span class="font-headline-sm text-headline-sm text-[#DC2626]">Lại</span>
+                        <span class="font-label-sm text-label-sm text-[#DC2626]/70">&lt; 1 phút</span>
+                    </button>
+                    <button
+                        class="flex flex-col items-center justify-center p-3 rounded-lg border border-orange-100 bg-orange-50 hover:bg-orange-100 transition-colors btn-hover-scale"
+                        onclick="nextCard()">
+                        <span class="font-headline-sm text-headline-sm text-[#D97706]">Khó</span>
+                        <span class="font-label-sm text-label-sm text-[#D97706]/70">6 phút</span>
+                    </button>
+                    <button
+                        class="flex flex-col items-center justify-center p-3 rounded-lg border border-teal-100 bg-teal-50 hover:bg-teal-100 transition-colors btn-hover-scale"
+                        onclick="nextCard()">
+                        <span class="font-headline-sm text-headline-sm text-[#0F766E]">Tốt</span>
+                        <span class="font-label-sm text-label-sm text-[#0F766E]/70">1 ngày</span>
+                    </button>
+                    <button
+                        class="flex flex-col items-center justify-center p-3 rounded-lg border border-green-100 bg-green-50 hover:bg-green-100 transition-colors btn-hover-scale"
+                        onclick="nextCard()">
+                        <span class="font-headline-sm text-headline-sm text-[#16A34A]">Dễ</span>
+                        <span class="font-label-sm text-label-sm text-[#16A34A]/70">4 ngày</span>
+                    </button>
+                </div>
+            </div>
+            <!-- Keyboard Hints -->
+            <div class="flex gap-6 font-label-sm text-label-sm text-outline">
+                <div class="flex items-center gap-1.5">
+                    <kbd
+                        class="px-2 py-1 bg-white border border-outline-variant rounded shadow-sm text-on-surface">Space</kbd>
+                    <span>Lật thẻ</span>
+                </div>
+
+            </div>
+        </div>
+    </main>
+    <!-- Footer Identity Shell -->
+    <footer
+        class="fixed bottom-0 left-0 right-0 h-12 px-margin_desktop flex items-center justify-between pointer-events-none">
+        <div class="flex items-center gap-2 opacity-40">
+            <div class="w-6 h-6 bg-primary rounded-md flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-[16px]"
+                    style="font-variation-settings: &quot;FILL&quot; 1;">medical_services</span>
+            </div>
+            <span class="font-bold text-on-surface-variant tracking-tight">MedQuest Pro</span>
+        </div>
+        <div class="text-on-surface-variant text-label-sm font-label-sm opacity-40 italic">
+            Chế độ học tập trung: Đang bật
+        </div>
+    </footer>
+    <script>
+        function flipCard() {
+            const card = document.getElementById('flashcard');
+            const showBtn = document.getElementById('show-answer-btn');
+            const ratingControls = document.getElementById('rating-controls');
+
+            card.classList.add('flipped');
+            showBtn.classList.add('hidden');
+            ratingControls.classList.remove('hidden');
+            ratingControls.classList.add('flex');
+        }
+
+        function nextCard() {
+            // Simplified logic for simulation: Reset the card state
+            const card = document.getElementById('flashcard');
+            const showBtn = document.getElementById('show-answer-btn');
+            const ratingControls = document.getElementById('rating-controls');
+
+            // Animation for transition
+            card.style.transform = 'translateY(-100vh) rotate(-10deg)';
+            card.style.opacity = '0';
+
+            setTimeout(() => {
+                card.classList.remove('flipped');
+                card.style.transition = 'none';
+                card.style.transform = 'translateY(100vh)';
+
+                setTimeout(() => {
+                    card.style.transition = 'transform 0.6s, opacity 0.6s';
+                    card.style.transform = 'translateY(0)';
+                    card.style.opacity = '1';
+
+                    showBtn.classList.remove('hidden');
+                    ratingControls.classList.add('hidden');
+                    ratingControls.classList.remove('flex');
+                }, 50);
+            }, 400);
+        }
+
+        // Keyboard Support
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                const isFlipped = document.getElementById('flashcard').classList.contains('flipped');
+                if (!isFlipped) flipCard();
+            }
+            if (['1', '2', '3', '4'].includes(e.key)) {
+                const isFlipped = document.getElementById('flashcard').classList.contains('flipped');
+                if (isFlipped) nextCard();
+            }
+        });
+    </script>
+
+
+</body>
+
+</html>

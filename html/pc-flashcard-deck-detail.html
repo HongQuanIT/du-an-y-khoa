@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html class="light" lang="vi" style="">
+
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>MedPro - Dược lý tim mạch</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap"
+        rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet">
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary-fixed": "#370e00",
+                        "on-tertiary-container": "#ffe5db",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-fixed": "#00201d",
+                        "outline-variant": "#bdc9c6",
+                        "background": "#f7faf8",
+                        "on-primary-container": "#a3faef",
+                        "tertiary": "#7f4025",
+                        "surface-bright": "#f7faf8",
+                        "primary-container": "#0f766e",
+                        "on-background": "#181c1c",
+                        "surface-dim": "#d7dbd9",
+                        "secondary-fixed-dim": "#b4c5ff",
+                        "surface-variant": "#e0e3e1",
+                        "on-primary-fixed-variant": "#00504a",
+                        "surface-tint": "#006a63",
+                        "on-surface-variant": "#3e4947",
+                        "error-container": "#ffdad6",
+                        "on-secondary": "#ffffff",
+                        "tertiary-container": "#9c573a",
+                        "surface-container": "#ebefed",
+                        "primary-fixed-dim": "#80d5cb",
+                        "on-surface": "#181c1c",
+                        "on-secondary-container": "#fefcff",
+                        "surface-container-low": "#f1f4f3",
+                        "primary-fixed": "#9cf2e8",
+                        "primary": "#005c55",
+                        "secondary-container": "#316bf3",
+                        "surface-container-highest": "#e0e3e1",
+                        "surface": "#f7faf8",
+                        "outline": "#6e7977",
+                        "error": "#ba1a1a",
+                        "on-error-container": "#93000a",
+                        "secondary": "#0051d5",
+                        "inverse-primary": "#80d5cb",
+                        "on-error": "#ffffff",
+                        "secondary-fixed": "#dbe1ff",
+                        "tertiary-fixed": "#ffdbce",
+                        "on-secondary-fixed-variant": "#003ea8",
+                        "on-secondary-fixed": "#00174b",
+                        "on-tertiary-fixed-variant": "#72361b",
+                        "on-primary": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "inverse-on-surface": "#eef1f0",
+                        "inverse-surface": "#2d3130",
+                        "tertiary-fixed-dim": "#ffb598",
+                        "surface-container-high": "#e5e9e7"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "24px",
+                        "sidebar_width": "240px",
+                        "margin_mobile": "16px",
+                        "unit": "4px",
+                        "margin_desktop": "32px",
+                        "header_height": "64px",
+                        "container_max_width": "1440px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Be Vietnam Pro"],
+                        "display-lg": ["Be Vietnam Pro"],
+                        "headline-sm": ["Be Vietnam Pro"],
+                        "label-sm": ["Be Vietnam Pro"],
+                        "headline-md": ["Be Vietnam Pro"],
+                        "body-sm": ["Be Vietnam Pro"],
+                        "body-lg": ["Be Vietnam Pro"],
+                        "label-md": ["Be Vietnam Pro"],
+                        "headline-lg-mobile": ["Be Vietnam Pro"],
+                        "body-md": ["Be Vietnam Pro"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+                        "display-lg": ["48px", { "lineHeight": "60px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "600" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .sidebar-item-active {
+            background-color: rgba(15, 118, 110, 0.1);
+            color: #005c55;
+            font-weight: 600;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #bdc9c6;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6e7977;
+        }
+    </style>
+</head>
+
+<body class="bg-surface">
+    <!-- SideNavBar -->
+    <aside
+        class="w-[240px] h-screen fixed left-0 top-0 border-r border-outline-variant bg-surface flex flex-col p-4 z-50">
+        <div class="mb-8 flex items-center gap-3 px-2">
+            <span class="material-symbols-outlined text-primary text-3xl"
+                style="font-variation-settings: &quot;FILL&quot; 1;">medical_services</span>
+            <div class="flex flex-col">
+                <span class="font-headline-md text-primary font-bold leading-tight">MedQuest Pro</span>
+                <span class="text-label-sm text-on-surface-variant">Học thuật Y khoa</span>
+            </div>
+        </div>
+        <nav class="flex-1 space-y-1"><a
+                class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg group"
+                href="#"><span class="material-symbols-outlined group-hover:text-primary">dashboard</span><span
+                    class="font-body-md">Dashboard</span></a><a
+                class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg group"
+                href="#"><span class="material-symbols-outlined group-hover:text-primary">quiz</span><span
+                    class="font-body-md">Ngân hàng câu hỏi</span></a><a
+                class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg group"
+                href="#"><span class="material-symbols-outlined group-hover:text-primary">library_books</span><span
+                    class="font-body-md">Thư viện</span></a><a
+                class="flex items-center gap-3 px-3 py-2 text-primary bg-primary/10 font-semibold font-label-md text-label-md rounded-lg"
+                href="#"><span class="material-symbols-outlined"
+                    style="font-variation-settings: &quot;FILL&quot; 1;">style</span><span
+                    class="font-body-md">Flashcards</span></a><a
+                class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg group"
+                href="#"><span class="material-symbols-outlined group-hover:text-primary">event_note</span><span
+                    class="font-body-md">Kế hoạch học tập</span></a><a
+                class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg group"
+                href="#"><span class="material-symbols-outlined group-hover:text-primary">analytics</span><span
+                    class="font-body-md">Phân tích</span></a><a
+                class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg group"
+                href="#"><span class="material-symbols-outlined group-hover:text-primary">assignment</span><span
+                    class="font-body-md">Kỳ thi</span></a></nav>
+        <div class="pt-4 border-t border-outline-variant space-y-1">
+            <button
+                class="w-full premium-gradient text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center gap-2 text-sm shadow-md hover:opacity-90 transition-opacity">
+                <span class="material-symbols-outlined text-sm">stars</span>
+                Nâng cấp tài khoản
+            </button>
+            <a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg"
+                href="#">
+                <span class="material-symbols-outlined">settings</span>
+                <span class="font-body-md">Cài đặt</span>
+            </a>
+            <a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg"
+                href="#">
+                <span class="material-symbols-outlined">logout</span>
+                <span class="font-body-md">Đăng xuất</span>
+            </a>
+        </div>
+    </aside>
+    <!-- Main Content Wrapper -->
+    <div class="ml-[240px] flex flex-col min-h-screen relative">
+        <!-- TopNavBar -->
+        <header
+            class="fixed top-0 right-0 h-header_height w-[calc(100%-240px)] ml-[240px] bg-surface border-b border-outline-variant z-40 flex items-center justify-between px-margin_desktop">
+            <div class="flex items-center gap-4 flex-1">
+                <div class="relative w-full max-w-md">
+                    <span
+                        class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+                    <input
+                        class="w-full bg-surface-container-low border-none rounded-lg pl-10 pr-4 py-2 focus:ring-2 focus:ring-primary text-sm"
+                        placeholder="Tìm kiếm bài học, câu hỏi..." type="text">
+                </div>
+            </div>
+            <div class="flex items-center gap-6">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="relative p-2 rounded-full hover:bg-surface-container transition-colors cursor-pointer group">
+                        <span
+                            class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">mail</span>
+                    </div>
+                    <div
+                        class="relative p-2 rounded-full hover:bg-surface-container transition-colors cursor-pointer group">
+                        <span
+                            class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">notifications</span>
+                        <span
+                            class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border-2 border-surface"></span>
+                    </div>
+                </div>
+                <div class="h-8 w-[1px] bg-outline-variant"></div>
+                <div class="flex items-center gap-3 cursor-pointer group">
+                    <div class="text-right">
+                        <p class="font-label-md text-on-surface">Nguyễn Văn An</p>
+                        <p class="text-xs text-on-surface-variant">Sinh viên Y4</p>
+                    </div>
+                    <img class="w-10 h-10 rounded-full border border-outline-variant object-cover"
+                        data-alt="Professional headshot of a young Vietnamese male medical student wearing a white lab coat, clean minimalist studio background with soft natural lighting, high-end commercial photography style."
+                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuDjs14YgZidlPvd__vAVlqvNdOurQoEuhpzLjx6GWcL9KL7a3gndodC2yzkK9XzBwLcw8BMWmYfR_hRLZiexmiVpO-jhjEzQpLjqFJew-KRX0UCViEIrJcYnbYm2pJcF-oeDP7tjGvDMf4SXNuyyZH54jeE_F1Vhz48PHDRxm05eEfM48alXxkohIc6BwKi5BFrj7P1eI2hY_dK4DqyL5dw28-MQ33oWlEq6xifc2oihUgkUiFUa2L6">
+                </div>
+            </div>
+        </header>
+        <!-- Page Canvas -->
+        <main class="flex-1 p-gutter max-w-[1440px] mx-auto w-full">
+            <!-- Breadcrumbs -->
+            <nav class="flex items-center gap-2 text-on-surface-variant font-label-md text-label-md mb-4">
+                <a class="hover:text-primary" href="#">Thẻ học</a>
+                <span class="material-symbols-outlined text-sm">chevron_right</span>
+                <a class="hover:text-primary" href="#">Bộ thẻ</a>
+                <span class="material-symbols-outlined text-sm">chevron_right</span>
+                <span class="text-on-surface">Dược lý tim mạch</span>
+            </nav>
+            <!-- Header Deck -->
+            <div
+                class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 bg-white p-6 rounded-xl border border-outline-variant">
+                <div class="space-y-3">
+                    <div class="flex items-center gap-3">
+                        <h2 class="font-headline-lg text-headline-lg text-on-surface">Dược lý tim mạch</h2>
+                        <div class="flex gap-2">
+                            <span
+                                class="px-3 py-1 bg-surface-container text-on-surface-variant font-label-sm text-label-sm rounded-full">250
+                                thẻ</span>
+                            <span
+                                class="px-3 py-1 bg-tertiary-fixed text-on-tertiary-fixed-variant font-label-sm text-label-sm rounded-full">20
+                                đến hạn</span>
+                        </div>
+                    </div>
+                    <p class="font-body-md text-body-md text-on-surface-variant max-w-2xl">
+                        Tập hợp các thẻ về nhóm thuốc hạ áp, chống đông và thuốc vận mạch. Phân loại theo cơ chế, chỉ
+                        định và tác dụng phụ điển hình.
+                    </p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button
+                        class="flex items-center gap-2 px-6 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-container transition-all shadow-sm">
+                        <span class="material-symbols-outlined"
+                            style="font-variation-settings: &quot;FILL&quot; 1;">play_arrow</span>
+                        Ôn deck này
+                    </button>
+                    <button
+                        class="flex items-center gap-2 px-6 py-3 border border-outline-variant text-primary font-semibold rounded-lg hover:bg-surface-variant transition-all">
+                        <span class="material-symbols-outlined">add</span>
+                        Thêm thẻ
+                    </button>
+                </div>
+            </div>
+            <!-- Toolbar -->
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-6 sticky top-[64px] bg-surface py-2 z-30">
+                <div class="flex flex-wrap items-center gap-3 flex-1">
+                    <div class="relative min-w-[300px]">
+                        <span
+                            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-xl">search</span>
+                        <input
+                            class="w-full bg-white border border-outline-variant focus:ring-primary focus:border-primary rounded-lg pl-10 pr-4 py-2.5 text-sm"
+                            placeholder="Tìm thẻ..." type="text">
+                    </div>
+                    <select
+                        class="bg-white border border-outline-variant rounded-lg px-4 py-2.5 text-sm focus:ring-primary focus:border-primary">
+                        <option>Trạng thái: Tất cả</option>
+                        <option>Mới</option>
+                        <option>Đang học</option>
+                        <option>Đã thuộc</option>
+                    </select>
+                    <select
+                        class="bg-white border border-outline-variant rounded-lg px-4 py-2.5 text-sm focus:ring-primary focus:border-primary">
+                        <option>Tag: Tất cả</option>
+                        <option>Dược lý</option>
+                        <option>Tim mạch</option>
+                        <option>Huyết áp</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button class="p-2.5 border border-outline-variant rounded-lg hover:bg-white transition-colors">
+                        <span class="material-symbols-outlined">sort</span>
+                    </button>
+                    <button class="p-2.5 border border-outline-variant rounded-lg hover:bg-white transition-colors">
+                        <span class="material-symbols-outlined">view_list</span>
+                    </button>
+                </div>
+            </div>
+            <!-- Bulk Actions (Float) - Hidden by default, toggled by JS -->
+            <div class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-on-surface text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-6 z-[60] transition-transform translate-y-24 opacity-0"
+                id="bulkActions">
+                <span class="text-sm font-medium"><span id="selectedCount">0</span> đã chọn</span>
+                <div class="w-px h-6 bg-white/20"></div>
+                <div class="flex items-center gap-4">
+                    <button class="flex items-center gap-2 hover:text-primary-fixed transition-colors text-sm">
+                        <span class="material-symbols-outlined text-lg">visibility_off</span> Tạm ẩn
+                    </button>
+                    <button class="flex items-center gap-2 hover:text-primary-fixed transition-colors text-sm">
+                        <span class="material-symbols-outlined text-lg">move_to_inbox</span> Đổi deck
+                    </button>
+                    <button class="flex items-center gap-2 hover:text-error transition-colors text-sm text-red-400">
+                        <span class="material-symbols-outlined text-lg">delete</span> Xóa
+                    </button>
+                </div>
+                <button class="p-1 hover:bg-white/10 rounded-full" onclick="deselectAll()">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <!-- Flashcards Table -->
+            <div class="bg-white rounded-xl border border-outline-variant overflow-hidden">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-surface-container-low border-b border-outline-variant">
+                        <tr>
+                            <th class="px-6 py-4 w-10">
+                                <input class="rounded border-outline-variant text-primary focus:ring-primary"
+                                    id="selectAll" type="checkbox">
+                            </th>
+                            <th class="px-4 py-4 font-label-md text-label-md text-on-surface-variant w-1/3">Mặt trước
+                                (Câu hỏi)</th>
+                            <th class="px-4 py-4 font-label-md text-label-md text-on-surface-variant w-1/3">Mặt sau (Đáp
+                                án)</th>
+                            <th class="px-4 py-4 font-label-md text-label-md text-on-surface-variant">Tag</th>
+                            <th class="px-4 py-4 font-label-md text-label-md text-on-surface-variant">Trạng thái</th>
+                            <th class="px-4 py-4 font-label-md text-label-md text-on-surface-variant">Ôn kế</th>
+                            <th class="px-6 py-4 w-12"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-outline-variant">
+                        <!-- Sample Row 1 -->
+                        <tr class="hover:bg-surface-container-low/50 transition-colors group">
+                            <td class="px-6 py-4">
+                                <input
+                                    class="row-checkbox rounded border-outline-variant text-primary focus:ring-primary"
+                                    type="checkbox">
+                            </td>
+                            <td class="px-4 py-4">
+                                <div class="flex flex-col gap-1">
+                                    <span class="font-body-md text-body-md text-on-surface line-clamp-2">Cơ chế tác dụng
+                                        của Metformin?</span>
+                                    <span
+                                        class="px-2 py-0.5 bg-red-100 text-red-700 text-[10px] font-bold rounded w-fit uppercase tracking-wider">Hay
+                                        sai (leech)</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-4 font-body-sm text-body-sm text-on-surface-variant">
+                                <p class="line-clamp-2">Giảm sản xuất glucose ở gan, tăng nhạy cảm insulin ngoại vi.</p>
+                            </td>
+                            <td class="px-4 py-4">
+                                <div class="flex flex-wrap gap-1">
+                                    <span
+                                        class="px-2 py-0.5 bg-primary-fixed/30 text-on-primary-fixed-variant text-[11px] font-medium rounded">#Dược_lý</span>
+                                    <span
+                                        class="px-2 py-0.5 bg-primary-fixed/30 text-on-primary-fixed-variant text-[11px] font-medium rounded">#Tiểu_đường</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-4">
+                                <span
+                                    class="px-3 py-1 bg-orange-100 text-orange-700 font-label-sm text-label-sm rounded-full">Đang
+                                    học</span>
+                            </td>
+                            <td class="px-4 py-4 font-body-sm text-body-sm text-on-surface-variant">
+                                còn 2 ngày
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                                <button
+                                    class="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-on-surface-variant">
+                                    <span class="material-symbols-outlined text-xl">edit</span>
+                                </button>
+                            </td>
+                        </tr>
+                        <!-- Sample Row 2 -->
+                        <tr class="hover:bg-surface-container-low/50 transition-colors group">
+                            <td class="px-6 py-4">
+                                <input
+                                    class="row-checkbox rounded border-outline-variant text-primary focus:ring-primary"
+                                    type="checkbox">
+                            </td>
+                            <td class="px-4 py-4">
+                                <span class="font-body-md text-body-md text-on-surface line-clamp-2">Cơ chế của thuốc ức
+                                    chế men chuyển (ACE inhibitors)?</span>
+                            </td>
+                            <td class="px-4 py-4 font-body-sm text-body-sm text-on-surface-variant">
+                                <p class="line-clamp-2">Ngăn Angiotensin I chuyển thành Angiotensin II, gây giãn mạch.
+                                </p>
+                            </td>
+                            <td class="px-4 py-4">
+                                <div class="flex flex-wrap gap-1">
+                                    <span
+                                        class="px-2 py-0.5 bg-primary-fixed/30 text-on-primary-fixed-variant text-[11px] font-medium rounded">#Huyết_áp</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-4">
+                                <span
+                                    class="px-3 py-1 bg-green-100 text-green-700 font-label-sm text-label-sm rounded-full">Đã
+                                    thuộc</span>
+                            </td>
+                            <td class="px-4 py-4 font-body-sm text-body-sm text-on-surface-variant">
+                                2 tháng
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                                <button
+                                    class="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-on-surface-variant">
+                                    <span class="material-symbols-outlined text-xl">edit</span>
+                                </button>
+                            </td>
+                        </tr>
+                        <!-- Sample Row 3 -->
+                        <tr class="hover:bg-surface-container-low/50 transition-colors group">
+                            <td class="px-6 py-4">
+                                <input
+                                    class="row-checkbox rounded border-outline-variant text-primary focus:ring-primary"
+                                    type="checkbox">
+                            </td>
+                            <td class="px-4 py-4">
+                                <span class="font-body-md text-body-md text-on-surface line-clamp-2">Liều dùng Heparin
+                                    trong rung nhĩ?</span>
+                            </td>
+                            <td class="px-4 py-4 font-body-sm text-body-sm text-on-surface-variant">
+                                <p class="line-clamp-2">Duy trì aPTT gấp 1.5 - 2.5 lần giá trị chứng.</p>
+                            </td>
+                            <td class="px-4 py-4">
+                                <div class="flex flex-wrap gap-1">
+                                    <span
+                                        class="px-2 py-0.5 bg-primary-fixed/30 text-on-primary-fixed-variant text-[11px] font-medium rounded">#Chống_đông</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-4">
+                                <span
+                                    class="px-3 py-1 bg-blue-100 text-blue-700 font-label-sm text-label-sm rounded-full">Mới</span>
+                            </td>
+                            <td class="px-4 py-4 font-body-sm text-body-sm text-on-surface-variant">
+                                -
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                                <button
+                                    class="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-on-surface-variant">
+                                    <span class="material-symbols-outlined text-xl">edit</span>
+                                </button>
+                            </td>
+                        </tr>
+                        <!-- Sample Row 4 -->
+                        <tr class="hover:bg-surface-container-low/50 transition-colors group border-b-0">
+                            <td class="px-6 py-4">
+                                <input
+                                    class="row-checkbox rounded border-outline-variant text-primary focus:ring-primary"
+                                    type="checkbox">
+                            </td>
+                            <td class="px-4 py-4">
+                                <div class="flex flex-col gap-1">
+                                    <span class="font-body-md text-body-md text-on-surface line-clamp-2">Chống chỉ định
+                                        tuyệt đối của Digoxin?</span>
+                                    <span
+                                        class="px-2 py-0.5 bg-red-100 text-red-700 text-[10px] font-bold rounded w-fit uppercase tracking-wider">Hay
+                                        sai (leech)</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-4 font-body-sm text-body-sm text-on-surface-variant">
+                                <p class="line-clamp-2">Block AV độ II, III; Hội chứng WPW; Nhịp nhanh thất.</p>
+                            </td>
+                            <td class="px-4 py-4">
+                                <div class="flex flex-wrap gap-1">
+                                    <span
+                                        class="px-2 py-0.5 bg-primary-fixed/30 text-on-primary-fixed-variant text-[11px] font-medium rounded">#Suy_tim</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-4">
+                                <span
+                                    class="px-3 py-1 bg-orange-100 text-orange-700 font-label-sm text-label-sm rounded-full">Đang
+                                    học</span>
+                            </td>
+                            <td class="px-4 py-4 font-body-sm text-body-sm text-on-surface-variant">
+                                3 ngày
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                                <button
+                                    class="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-on-surface-variant">
+                                    <span class="material-symbols-outlined text-xl">edit</span>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <!-- Pagination -->
+            <div class="flex items-center justify-between mt-6 px-2">
+                <p class="text-sm text-on-surface-variant">Hiển thị 1-25 của 250 thẻ</p>
+                <div class="flex items-center gap-1">
+                    <button
+                        class="p-2 border border-outline-variant rounded-lg hover:bg-white disabled:opacity-50 transition-colors">
+                        <span class="material-symbols-outlined">chevron_left</span>
+                    </button>
+                    <button class="px-4 py-2 bg-primary text-white font-medium rounded-lg">1</button>
+                    <button class="px-4 py-2 hover:bg-white transition-colors rounded-lg">2</button>
+                    <button class="px-4 py-2 hover:bg-white transition-colors rounded-lg">3</button>
+                    <span class="px-2">...</span>
+                    <button class="px-4 py-2 hover:bg-white transition-colors rounded-lg">10</button>
+                    <button class="p-2 border border-outline-variant rounded-lg hover:bg-white transition-colors">
+                        <span class="material-symbols-outlined">chevron_right</span>
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script>
+        const selectAll = document.getElementById('selectAll');
+        const checkboxes = document.querySelectorAll('.row-checkbox');
+        const bulkActions = document.getElementById('bulkActions');
+        const selectedCount = document.getElementById('selectedCount');
+
+        function updateBulkActions() {
+            const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+            selectedCount.textContent = checkedCount;
+
+            if (checkedCount > 0) {
+                bulkActions.classList.remove('translate-y-24', 'opacity-0');
+                bulkActions.classList.add('translate-y-0', 'opacity-100');
+            } else {
+                bulkActions.classList.add('translate-y-24', 'opacity-0');
+                bulkActions.classList.remove('translate-y-0', 'opacity-100');
+            }
+        }
+
+        selectAll.addEventListener('change', () => {
+            checkboxes.forEach(cb => cb.checked = selectAll.checked);
+            updateBulkActions();
+        });
+
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', () => {
+                updateBulkActions();
+                // Check if all are selected manually
+                selectAll.checked = Array.from(checkboxes).every(c => c.checked);
+            });
+        });
+
+        function deselectAll() {
+            checkboxes.forEach(cb => cb.checked = false);
+            selectAll.checked = false;
+            updateBulkActions();
+        }
+
+        // Micro-interactions for table rows
+        const rows = document.querySelectorAll('tbody tr');
+        rows.forEach(row => {
+            row.addEventListener('click', (e) => {
+                if (e.target.type !== 'checkbox' && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'SPAN') {
+                    const cb = row.querySelector('.row-checkbox');
+                    cb.checked = !cb.checked;
+                    updateBulkActions();
+                }
+            });
+        });
+    </script>
+
+
+</body>
+
+</html>
