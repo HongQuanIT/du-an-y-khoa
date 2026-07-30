@@ -1,0 +1,434 @@
+<!DOCTYPE html><html lang="vi" class="light" style=""><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block" rel="stylesheet"><script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script><meta charset="utf-8"><script id="tailwind-config">try{try{
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+                  "primary-container": "#0f766e",
+                  "surface-container-high": "#e5e9e7",
+                  "error": "#ba1a1a",
+                  "secondary-fixed-dim": "#b4c5ff",
+                  "background": "#f7faf8",
+                  "on-tertiary": "#ffffff",
+                  "on-secondary-fixed-variant": "#003ea8",
+                  "tertiary-fixed-dim": "#ffb598",
+                  "surface-container-low": "#f1f4f3",
+                  "surface-bright": "#f7faf8",
+                  "primary": "#005c55",
+                  "on-surface": "#181c1c",
+                  "surface-dim": "#d7dbd9",
+                  "on-secondary-container": "#fefcff",
+                  "secondary": "#0051d5",
+                  "surface": "#f7faf8",
+                  "inverse-primary": "#80d5cb",
+                  "outline": "#6e7977",
+                  "surface-variant": "#e0e3e1",
+                  "on-surface-variant": "#3e4947",
+                  "on-primary-fixed": "#00201d",
+                  "on-tertiary-fixed": "#370e00",
+                  "on-primary-container": "#a3faef",
+                  "on-error-container": "#93000a",
+                  "primary-fixed": "#9cf2e8",
+                  "tertiary-container": "#9c573a",
+                  "tertiary-fixed": "#ffdbce",
+                  "surface-tint": "#006a63",
+                  "on-background": "#181c1c",
+                  "primary-fixed-dim": "#80d5cb",
+                  "inverse-surface": "#2d3130",
+                  "on-primary": "#ffffff",
+                  "on-error": "#ffffff",
+                  "surface-container": "#ebefed",
+                  "outline-variant": "#bdc9c6",
+                  "on-primary-fixed-variant": "#00504a",
+                  "tertiary": "#7f4025",
+                  "inverse-on-surface": "#eef1f0",
+                  "error-container": "#ffdad6",
+                  "on-secondary": "#ffffff",
+                  "secondary-container": "#316bf3",
+                  "on-tertiary-container": "#ffe5db",
+                  "on-secondary-fixed": "#00174b",
+                  "surface-container-lowest": "#ffffff",
+                  "secondary-fixed": "#dbe1ff",
+                  "on-tertiary-fixed-variant": "#72361b",
+                  "surface-container-highest": "#e0e3e1"
+          },
+          "borderRadius": {
+                  "DEFAULT": "0.25rem",
+                  "lg": "0.5rem",
+                  "xl": "0.75rem",
+                  "full": "9999px"
+          },
+          "spacing": {
+                  "sidebar_width": "240px",
+                  "margin_desktop": "32px",
+                  "container_max_width": "1440px",
+                  "unit": "4px",
+                  "gutter": "24px",
+                  "header_height": "64px",
+                  "margin_mobile": "16px"
+          },
+          "fontFamily": {
+                  "body-lg": ["Be Vietnam Pro", "sans-serif"],
+                  "headline-sm": ["Be Vietnam Pro", "sans-serif"],
+                  "label-md": ["Be Vietnam Pro", "sans-serif"],
+                  "body-md": ["Be Vietnam Pro", "sans-serif"],
+                  "headline-lg-mobile": ["Be Vietnam Pro", "sans-serif"],
+                  "label-sm": ["Be Vietnam Pro", "sans-serif"],
+                  "body-sm": ["Be Vietnam Pro", "sans-serif"],
+                  "headline-md": ["Be Vietnam Pro", "sans-serif"],
+                  "headline-lg": ["Be Vietnam Pro", "sans-serif"],
+                  "display-lg": ["Be Vietnam Pro", "sans-serif"]
+          },
+          "fontSize": {
+                  "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                  "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                  "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                  "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                  "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                  "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "600"}],
+                  "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                  "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                  "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                  "display-lg": ["48px", {"lineHeight": "60px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+          }
+        }
+      }
+    }
+  }catch(_e){}}catch(_e){}</script></head><body class="flex min-h-screen text-on-surface bg-background">
+<!-- SideNavBar -->
+<aside class="w-[240px] h-screen fixed left-0 top-0 border-r border-outline-variant bg-surface flex flex-col p-4 z-50 hidden md:flex"><div class="mb-8 flex items-center gap-3 px-2">
+<span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings: 'FILL' 1;">medical_services</span>
+<div class="flex flex-col">
+<span class="font-headline-md text-primary font-bold leading-tight">MedQuest Pro</span>
+<span class="text-label-sm text-on-surface-variant">Học thuật Y khoa</span>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary">dashboard</span>
+<span class="font-body-md">Trang chủ</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary">quiz</span>
+<span class="font-body-md">Ngân hàng câu hỏi</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary">library_books</span>
+<span class="font-body-md">Thư viện</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary">style</span>
+<span class="font-body-md">Flashcards</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-primary bg-primary/10 font-semibold font-label-md text-label-md rounded-lg" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">event_note</span>
+<span class="font-body-md">Lộ trình học</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary">analytics</span>
+<span class="font-body-md">Phân tích</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary">assignment</span>
+<span class="font-body-md">Kỳ thi</span>
+</a>
+</nav>
+<div class="pt-4 border-t border-outline-variant space-y-1">
+<button class="w-full premium-gradient text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center gap-2 text-sm shadow-md hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined text-sm">stars</span>
+              Nâng cấp tài khoản
+          </button>
+<a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-body-md">Cài đặt</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="font-body-md">Đăng xuất</span>
+</a>
+</div></aside>
+<!-- Main Content Area -->
+<main class="ml-[240px] pt-[64px] min-h-screen bg-surface-container-lowest">
+<!-- TopNavBar -->
+<header class="fixed top-0 right-0 h-header_height bg-surface border-b border-outline-variant z-40 flex items-center justify-between px-margin_desktop left-[240px]"><div class="flex items-center gap-4 flex-1">
+<div class="relative w-full max-w-md">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full bg-surface-container-low border-none rounded-lg pl-10 pr-4 py-2 focus:ring-2 focus:ring-primary text-sm" placeholder="Tìm kiếm bài học, câu hỏi..." type="text">
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-3">
+<div class="relative p-2 rounded-full hover:bg-surface-container transition-colors cursor-pointer group">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">mail</span>
+</div>
+<div class="relative p-2 rounded-full hover:bg-surface-container transition-colors cursor-pointer group">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border-2 border-surface"></span>
+</div>
+</div>
+<div class="h-8 w-[1px] bg-outline-variant"></div>
+<div class="flex items-center gap-3 cursor-pointer group">
+<div class="text-right">
+<p class="font-label-md text-on-surface">Nguyễn Văn An</p>
+<p class="text-xs text-on-surface-variant">Sinh viên Y4</p>
+</div>
+<img class="w-10 h-10 rounded-full border border-outline-variant object-cover" data-alt="Professional headshot of a young Vietnamese male medical student wearing a white lab coat, clean minimalist studio background with soft natural lighting, high-end commercial photography style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDjs14YgZidlPvd__vAVlqvNdOurQoEuhpzLjx6GWcL9KL7a3gndodC2yzkK9XzBwLcw8BMWmYfR_hRLZiexmiVpO-jhjEzQpLjqFJew-KRX0UCViEIrJcYnbYm2pJcF-oeDP7tjGvDMf4SXNuyyZH54jeE_F1Vhz48PHDRxm05eEfM48alXxkohIc6BwKi5BFrj7P1eI2hY_dK4DqyL5dw28-MQ33oWlEq6xifc2oihUgkUiFUa2L6">
+</div>
+</div></header>
+<!-- Page Content -->
+<div class="p-4 md:p-8 flex-1 max-w-container_max_width mx-auto w-full">
+<!-- Header Section -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 bg-white p-6 rounded-xl border border-outline-variant shadow-sm">
+<div class="flex-1">
+<div class="flex items-center gap-3 mb-2">
+<span class="px-3 py-1 bg-primary/10 text-primary font-label-sm text-label-sm rounded-full">Kế hoạch cá nhân</span>
+<span class="flex items-center gap-1 text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]">timer</span>
+                          Còn 245 ngày
+                      </span>
+</div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-4">Ôn thi Bác sĩ nội trú 2026</h2>
+<div class="max-w-xl">
+<div class="flex justify-between font-label-sm text-label-sm text-on-surface-variant mb-2">
+<span class="">Tiến độ tổng thể</span>
+<span class="font-bold text-primary">42%</span>
+</div>
+<div class="w-full h-2 bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full transition-all duration-500" style="width: 42%;"></div>
+</div>
+</div>
+</div>
+<button class="flex items-center justify-center gap-2 px-6 py-2.5 bg-white border border-outline-variant text-primary font-label-md text-label-md rounded-lg hover:bg-surface-container-low transition-colors h-fit">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+                  Chỉnh sửa kế hoạch
+              </button>
+</div>
+<!-- Main Layout: Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+<!-- Left Column: Calendar (70% ~ 8 cols) -->
+<div class="lg:col-span-8 bg-white rounded-xl border border-outline-variant overflow-hidden flex flex-col">
+<!-- Calendar Header -->
+<div class="flex items-center justify-between p-4 md:p-6 border-b border-outline-variant bg-surface-container-lowest">
+<div class="flex items-center gap-4">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Tháng 10, 2023</h3>
+<div class="flex gap-1">
+<button class="p-1 rounded hover:bg-surface-container-low text-on-surface-variant"><span class="material-symbols-outlined">chevron_left</span></button>
+<button class="p-1 rounded hover:bg-surface-container-low text-on-surface-variant"><span class="material-symbols-outlined">chevron_right</span></button>
+</div>
+</div>
+<button class="px-4 py-2 border border-outline-variant rounded-lg font-label-sm text-label-sm hover:bg-surface-container-low">Hôm nay</button>
+</div>
+<!-- Calendar Grid -->
+<div class="flex-1 p-4 md:p-6 bg-surface-container-lowest">
+<div class="grid grid-cols-7 gap-px bg-outline-variant border border-outline-variant rounded-lg overflow-hidden">
+<!-- Day Headers -->
+<div class="bg-surface-container-low py-3 text-center font-label-sm text-label-sm text-on-surface-variant">T2</div>
+<div class="bg-surface-container-low py-3 text-center font-label-sm text-label-sm text-on-surface-variant">T3</div>
+<div class="bg-surface-container-low py-3 text-center font-label-sm text-label-sm text-on-surface-variant">T4</div>
+<div class="bg-surface-container-low py-3 text-center font-label-sm text-label-sm text-on-surface-variant">T5</div>
+<div class="bg-surface-container-low py-3 text-center font-label-sm text-label-sm text-on-surface-variant">T6</div>
+<div class="bg-surface-container-low py-3 text-center font-label-sm text-label-sm text-on-surface-variant">T7</div>
+<div class="bg-surface-container-low py-3 text-center font-label-sm text-label-sm text-error">CN</div>
+<!-- Calendar Cells (Simulated month) -->
+<!-- Previous month padding -->
+<div class="bg-white min-h-[100px] p-2 text-surface-dim font-body-sm text-body-sm">25</div>
+<div class="bg-white min-h-[100px] p-2 text-surface-dim font-body-sm text-body-sm">26</div>
+<div class="bg-white min-h-[100px] p-2 text-surface-dim font-body-sm text-body-sm">27</div>
+<div class="bg-white min-h-[100px] p-2 text-surface-dim font-body-sm text-body-sm">28</div>
+<div class="bg-white min-h-[100px] p-2 text-surface-dim font-body-sm text-body-sm">29</div>
+<div class="bg-white min-h-[100px] p-2 text-surface-dim font-body-sm text-body-sm">30</div>
+<div class="bg-white min-h-[100px] p-2 text-on-surface font-body-sm text-body-sm">1</div>
+<!-- Regular days -->
+<div class="bg-white min-h-[100px] p-2 text-on-surface font-body-sm text-body-sm">2</div>
+<div class="bg-white min-h-[100px] p-2 text-on-surface font-body-sm text-body-sm">3</div>
+<div class="bg-white min-h-[100px] p-2 text-on-surface font-body-sm text-body-sm">4</div>
+<div class="bg-white min-h-[100px] p-2 text-on-surface font-body-sm text-body-sm">5</div>
+<div class="bg-white min-h-[100px] p-2 text-on-surface font-body-sm text-body-sm">6</div>
+<div class="bg-white min-h-[100px] p-2 text-on-surface font-body-sm text-body-sm">7</div>
+<div class="bg-white min-h-[100px] p-2 text-on-surface font-body-sm text-body-sm">8</div>
+<!-- Continuing... -->
+<div class="bg-white min-h-[100px] p-2 text-on-surface font-body-sm text-body-sm flex flex-col gap-1">9</div>
+<div class="bg-white min-h-[100px] p-2 text-on-surface font-body-sm text-body-sm flex flex-col gap-1">10</div>
+<div class="bg-white min-h-[100px] p-2 text-on-surface font-body-sm text-body-sm flex flex-col gap-1">11</div>
+<div class="bg-white min-h-[100px] p-2 text-on-surface font-body-sm text-body-sm flex flex-col gap-1">12</div>
+<div class="bg-white min-h-[100px] p-2 text-on-surface font-body-sm text-body-sm flex flex-col gap-1">13</div>
+<div class="bg-white min-h-[100px] p-2 text-on-surface font-body-sm text-body-sm flex flex-col gap-1">14</div>
+<div class="bg-white min-h-[100px] p-2 text-on-surface font-body-sm text-body-sm flex flex-col gap-1">15</div>
+<!-- Target week -->
+<div class="bg-white min-h-[100px] p-2 text-on-surface font-body-sm text-body-sm flex flex-col gap-1">
+<span class="">16</span>
+</div>
+<div class="bg-white min-h-[100px] p-2 text-on-surface font-body-sm text-body-sm flex flex-col gap-1">
+<span class="">17</span>
+</div>
+<div class="bg-white min-h-[100px] p-2 text-on-surface font-body-sm text-body-sm flex flex-col gap-1">
+<span class="">18</span>
+</div>
+<div class="bg-white min-h-[100px] p-2 text-on-surface font-body-sm text-body-sm flex flex-col gap-1">
+<span class="">19</span>
+</div>
+<!-- Missed Day -->
+<div class="bg-error-container/20 min-h-[100px] p-2 text-on-surface font-body-sm text-body-sm flex flex-col gap-1 relative group cursor-pointer" onclick="document.getElementById('reschedule-modal').classList.remove('hidden')">
+<span class="text-error font-bold">20</span>
+<div class="bg-error/10 text-error px-1.5 py-0.5 rounded text-[10px] font-medium leading-tight truncate">Missed: Suy tim</div>
+<div class="bg-error/10 text-error px-1.5 py-0.5 rounded text-[10px] font-medium leading-tight truncate">20 Flashcards</div>
+<div class="absolute inset-0 border border-error opacity-0 group-hover:opacity-100 transition-opacity rounded"></div>
+</div>
+<!-- Regular -->
+<div class="bg-white min-h-[100px] p-2 text-on-surface font-body-sm text-body-sm flex flex-col gap-1">
+<span class="">21</span>
+</div>
+<div class="bg-white min-h-[100px] p-2 text-on-surface font-body-sm text-body-sm flex flex-col gap-1">
+<span class="">22</span>
+</div>
+<!-- Completed Day -->
+<div class="bg-[#e6f4ea] min-h-[100px] p-2 text-on-surface font-body-sm text-body-sm flex flex-col gap-1">
+<span class="text-[#137333] font-bold">23</span>
+<div class="flex items-center gap-1 text-[#137333] text-[11px] font-medium">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+                                  Hoàn thành
+                              </div>
+</div>
+<!-- Today (Selected) -->
+<div class="bg-primary-container/5 min-h-[100px] p-2 text-on-surface font-body-sm text-body-sm flex flex-col gap-1 border-2 border-primary relative">
+<span class="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs mb-1 shadow-sm">24</span>
+<div class="bg-primary/10 text-primary px-1.5 py-0.5 rounded text-[10px] font-medium leading-tight truncate">30 câu Tim mạch</div>
+<div class="bg-primary/10 text-primary px-1.5 py-0.5 rounded text-[10px] font-medium leading-tight truncate">Đọc bài Suy tim</div>
+<div class="bg-primary/10 text-primary px-1.5 py-0.5 rounded text-[10px] font-medium leading-tight truncate">20 Thẻ Dược lý</div>
+</div>
+<div class="bg-white min-h-[100px] p-2 text-on-surface font-body-sm text-body-sm flex flex-col gap-1">
+<span class="">25</span>
+<div class="bg-surface-variant/50 text-on-surface-variant px-1.5 py-0.5 rounded text-[10px] font-medium leading-tight truncate">Đề thi thử #1</div>
+</div>
+<!-- Fill rest of grid -->
+<div class="bg-white min-h-[100px] p-2 text-on-surface font-body-sm text-body-sm">26</div>
+<div class="bg-white min-h-[100px] p-2 text-on-surface font-body-sm text-body-sm">27</div>
+<div class="bg-white min-h-[100px] p-2 text-on-surface font-body-sm text-body-sm">28</div>
+<div class="bg-white min-h-[100px] p-2 text-on-surface font-body-sm text-body-sm">29</div>
+<div class="bg-white min-h-[100px] p-2 text-on-surface font-body-sm text-body-sm">30</div>
+<div class="bg-white min-h-[100px] p-2 text-on-surface font-body-sm text-body-sm">31</div>
+<div class="bg-white min-h-[100px] p-2 text-surface-dim font-body-sm text-body-sm">1</div>
+<div class="bg-white min-h-[100px] p-2 text-surface-dim font-body-sm text-body-sm">2</div>
+<div class="bg-white min-h-[100px] p-2 text-surface-dim font-body-sm text-body-sm">3</div>
+<div class="bg-white min-h-[100px] p-2 text-surface-dim font-body-sm text-body-sm">4</div>
+<div class="bg-white min-h-[100px] p-2 text-surface-dim font-body-sm text-body-sm">5</div>
+</div>
+<!-- Legend -->
+<div class="mt-6 flex flex-wrap gap-4 items-center justify-center font-label-sm text-label-sm text-on-surface-variant">
+<div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-[#e6f4ea] border border-[#137333]"></span> Hoàn thành</div>
+<div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-error-container/20 border border-error"></span> Bỏ lỡ</div>
+<div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-primary-container/5 border-2 border-primary"></span> Hôm nay</div>
+<div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-white border border-outline-variant"></span> Tương lai</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Task Detail Panel (30% ~ 4 cols) -->
+<div class="lg:col-span-4 flex flex-col gap-6">
+<div class="bg-white rounded-xl border border-outline-variant shadow-sm overflow-hidden flex flex-col h-full sticky top-[88px]">
+<div class="p-5 border-b border-outline-variant bg-surface-container-lowest">
+<h3 class="font-headline-sm text-headline-sm text-primary mb-1">Nhiệm vụ: Thứ Ba, 24/10</h3>
+<p class="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">pie_chart</span>
+                              Tiến độ ngày: 0/3 hoàn thành
+                          </p>
+</div>
+<div class="p-5 flex-1 overflow-y-auto space-y-4 bg-surface-bright">
+<!-- Task 1 -->
+<div class="bg-white p-4 rounded-lg border border-outline-variant hover:shadow-md transition-shadow group">
+<div class="flex items-start gap-3">
+<input class="mt-1 w-5 h-5 rounded border-outline text-primary focus:ring-primary cursor-pointer" type="checkbox">
+<div class="flex-1">
+<div class="flex items-center justify-between mb-1">
+<span class="text-xs font-semibold px-2 py-0.5 bg-secondary-container/10 text-secondary-container rounded">Luyện đề</span>
+<span class="text-xs text-on-surface-variant flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">schedule</span> 45p</span>
+</div>
+<h4 class="font-label-md text-label-md text-on-surface mb-2">Làm 30 câu Tim mạch</h4>
+<button class="w-full py-2 bg-primary text-white font-label-md text-label-md rounded-lg hover:bg-primary/90 transition-colors">
+                                          Bắt đầu
+                                      </button>
+</div>
+</div>
+</div>
+<!-- Task 2 -->
+<div class="bg-white p-4 rounded-lg border border-outline-variant hover:shadow-md transition-shadow group">
+<div class="flex items-start gap-3">
+<input class="mt-1 w-5 h-5 rounded border-outline text-primary focus:ring-primary cursor-pointer" type="checkbox">
+<div class="flex-1">
+<div class="flex items-center justify-between mb-1">
+<span class="text-xs font-semibold px-2 py-0.5 bg-[#8b5cf6]/10 text-[#8b5cf6] rounded">Lý thuyết</span>
+<span class="text-xs text-on-surface-variant flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">schedule</span> 60p</span>
+</div>
+<h4 class="font-label-md text-label-md text-on-surface mb-2">Đọc bài Suy tim</h4>
+<button class="w-full py-2 bg-white border border-primary text-primary font-label-md text-label-md rounded-lg hover:bg-primary-container/10 transition-colors">
+                                          Mở tài liệu
+                                      </button>
+</div>
+</div>
+</div>
+<!-- Task 3 -->
+<div class="bg-white p-4 rounded-lg border border-outline-variant hover:shadow-md transition-shadow group">
+<div class="flex items-start gap-3">
+<input class="mt-1 w-5 h-5 rounded border-outline text-primary focus:ring-primary cursor-pointer" type="checkbox">
+<div class="flex-1">
+<div class="flex items-center justify-between mb-1">
+<span class="text-xs font-semibold px-2 py-0.5 bg-[#f59e0b]/10 text-[#d97706] rounded">Ghi nhớ</span>
+<span class="text-xs text-on-surface-variant flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">schedule</span> 15p</span>
+</div>
+<h4 class="font-label-md text-label-md text-on-surface mb-2">Ôn 20 Flashcard Dược lý</h4>
+<button class="w-full py-2 bg-primary text-white font-label-md text-label-md rounded-lg hover:bg-primary/90 transition-colors">
+                                          Bắt đầu ôn
+                                      </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Modal: Dời lịch (Overlay) -->
+<div class="fixed inset-0 z-50 bg-on-surface/40 backdrop-blur-sm hidden flex items-center justify-center p-4" id="reschedule-modal">
+<div class="bg-white w-full max-w-md rounded-xl shadow-2xl border border-outline-variant overflow-hidden flex flex-col transform transition-all">
+<div class="p-5 border-b border-outline-variant flex justify-between items-center bg-surface-container-lowest">
+<h3 class="font-headline-sm text-headline-sm text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">calendar_month</span>
+                  Dời lịch học
+              </h3>
+<button class="text-on-surface-variant hover:text-on-surface p-1 rounded-full hover:bg-surface-container-low transition-colors" onclick="document.getElementById('reschedule-modal').classList.add('hidden')">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="p-6">
+<div class="bg-error-container/20 border border-error/30 rounded-lg p-4 mb-6 flex items-start gap-3">
+<span class="material-symbols-outlined text-error mt-0.5">error</span>
+<p class="font-body-sm text-body-sm text-on-surface">Bạn đã lỡ nhiệm vụ ngày <strong class="text-error">20/10</strong>. Chọn ngày mới để dời lịch hoặc để hệ thống tự động phân bổ lại.</p>
+</div>
+<label class="block font-label-md text-label-md text-on-surface mb-2">Chọn ngày mới</label>
+<div class="relative w-full mb-6">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">calendar_today</span>
+<input class="w-full h-11 pl-10 pr-4 rounded-lg bg-surface border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-body-md font-body-md text-on-surface transition-all cursor-pointer" readonly="" type="text" value="25/10/2023">
+</div>
+<!-- Mini visual calendar snippet for illustration -->
+<div class="grid grid-cols-7 gap-1 mb-2 text-center text-xs text-on-surface-variant">
+<div class="">T2</div><div class="">T3</div><div class="">T4</div><div class="">T5</div><div class="">T6</div><div class="">T7</div><div class="">CN</div>
+</div>
+<div class="grid grid-cols-7 gap-1 text-center text-sm font-medium mb-6">
+<div class="py-1.5 text-surface-dim">23</div>
+<div class="py-1.5 bg-primary/10 text-primary rounded-full ring-1 ring-primary/30">24</div>
+<div class="py-1.5 bg-primary text-white rounded-full shadow-sm cursor-pointer hover:bg-primary/90">25</div>
+<div class="py-1.5 hover:bg-surface-container-low rounded-full cursor-pointer">26</div>
+<div class="py-1.5 hover:bg-surface-container-low rounded-full cursor-pointer">27</div>
+<div class="py-1.5 hover:bg-surface-container-low rounded-full cursor-pointer">28</div>
+<div class="py-1.5 hover:bg-surface-container-low rounded-full cursor-pointer">29</div>
+</div>
+</div>
+<div class="p-5 border-t border-outline-variant bg-surface-container-lowest flex justify-end gap-3">
+<button class="px-5 py-2.5 rounded-lg border border-outline-variant bg-white text-on-surface font-label-md text-label-md hover:bg-surface-container-low transition-colors" onclick="document.getElementById('reschedule-modal').classList.add('hidden')">
+                  Hủy
+              </button>
+</div></div></div>
+
+
+
+</body></html>

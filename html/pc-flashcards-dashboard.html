@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html class="light" lang="vi" style="">
+
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>MedScholar - Flashcards</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap"
+        rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet">
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-container": "#0f766e",
+                        "on-tertiary-fixed": "#370e00",
+                        "surface-variant": "#e0e3e1",
+                        "surface-bright": "#f7faf8",
+                        "on-surface": "#181c1c",
+                        "on-secondary-container": "#fefcff",
+                        "inverse-primary": "#80d5cb",
+                        "surface": "#f7faf8",
+                        "surface-container": "#ebefed",
+                        "surface-dim": "#d7dbd9",
+                        "on-secondary": "#ffffff",
+                        "on-tertiary": "#ffffff",
+                        "on-surface-variant": "#3e4947",
+                        "surface-container-low": "#f1f4f3",
+                        "surface-container-lowest": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "surface-container-highest": "#e0e3e1",
+                        "outline": "#6e7977",
+                        "on-tertiary-fixed-variant": "#72361b",
+                        "error": "#ba1a1a",
+                        "outline-variant": "#bdc9c6",
+                        "on-primary": "#ffffff",
+                        "secondary-fixed-dim": "#b4c5ff",
+                        "primary-fixed-dim": "#80d5cb",
+                        "inverse-on-surface": "#eef1f0",
+                        "surface-container-high": "#e5e9e7",
+                        "on-primary-container": "#a3faef",
+                        "tertiary-container": "#9c573a",
+                        "on-tertiary-container": "#ffe5db",
+                        "background": "#f7faf8",
+                        "on-error": "#ffffff",
+                        "secondary-fixed": "#dbe1ff",
+                        "tertiary-fixed-dim": "#ffb598",
+                        "on-background": "#181c1c",
+                        "on-secondary-fixed-variant": "#003ea8",
+                        "secondary": "#0051d5",
+                        "on-primary-fixed": "#00201d",
+                        "primary": "#005c55",
+                        "on-primary-fixed-variant": "#00504a",
+                        "tertiary-fixed": "#ffdbce",
+                        "inverse-surface": "#2d3130",
+                        "error-container": "#ffdad6",
+                        "primary-fixed": "#9cf2e8",
+                        "secondary-container": "#316bf3",
+                        "on-secondary-fixed": "#00174b",
+                        "tertiary": "#7f4025",
+                        "surface-tint": "#006a63"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "container_max_width": "1440px",
+                        "header_height": "64px",
+                        "margin_desktop": "32px",
+                        "unit": "4px",
+                        "sidebar_width": "240px",
+                        "margin_mobile": "16px",
+                        "gutter": "24px"
+                    },
+                    "fontFamily": {
+                        "headline-sm": ["Be Vietnam Pro"],
+                        "body-sm": ["Be Vietnam Pro"],
+                        "headline-lg-mobile": ["Be Vietnam Pro"],
+                        "label-md": ["Be Vietnam Pro"],
+                        "body-md": ["Be Vietnam Pro"],
+                        "headline-lg": ["Be Vietnam Pro"],
+                        "label-sm": ["Be Vietnam Pro"],
+                        "headline-md": ["Be Vietnam Pro"],
+                        "body-lg": ["Be Vietnam Pro"],
+                        "display-lg": ["Be Vietnam Pro"]
+                    },
+                    "fontSize": {
+                        "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "700" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "600" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "display-lg": ["48px", { "lineHeight": "60px", "letterSpacing": "-0.02em", "fontWeight": "700" }]
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid #E2E8F0;
+        }
+
+        .premium-gradient {
+            background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+        }
+    </style>
+</head>
+
+<body class="bg-surface text-on-surface">
+    <!-- Sidebar -->
+    <aside
+        class="w-[240px] h-screen fixed left-0 top-0 border-r border-outline-variant bg-surface flex flex-col p-4 z-50">
+        <div class="mb-8 flex items-center gap-3 px-2">
+            <span class="material-symbols-outlined text-primary text-3xl"
+                style="font-variation-settings: &quot;FILL&quot; 1;">medical_services</span>
+            <div class="flex flex-col">
+                <span class="font-headline-md text-primary font-bold leading-tight">MedQuest Pro</span>
+                <span class="text-label-sm text-on-surface-variant">Học thuật Y khoa</span>
+            </div>
+        </div>
+        <nav class="flex-1 space-y-1">
+            <a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg group"
+                href="#">
+                <span class="material-symbols-outlined group-hover:text-primary">dashboard</span>
+                <span class="font-body-md">Dashboard</span>
+            </a>
+            <a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg group"
+                href="#">
+                <span class="material-symbols-outlined group-hover:text-primary">quiz</span>
+                <span class="font-body-md">Ngân hàng câu hỏi</span>
+            </a>
+            <a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg group"
+                href="#">
+                <span class="material-symbols-outlined group-hover:text-primary">library_books</span>
+                <span class="font-body-md">Thư viện</span>
+            </a>
+            <a class="flex items-center gap-3 px-3 py-2 text-primary bg-primary/10 font-semibold font-label-md text-label-md rounded-lg"
+                href="#">
+                <span class="material-symbols-outlined"
+                    style="font-variation-settings: &quot;FILL&quot; 1;">style</span>
+                <span class="font-body-md">Flashcards</span>
+            </a>
+            <a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg group"
+                href="#">
+                <span class="material-symbols-outlined group-hover:text-primary">event_note</span>
+                <span class="font-body-md">Kế hoạch học tập</span>
+            </a>
+            <a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg group"
+                href="#">
+                <span class="material-symbols-outlined group-hover:text-primary">analytics</span>
+                <span class="font-body-md">Phân tích</span>
+            </a>
+            <a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg group"
+                href="#">
+                <span class="material-symbols-outlined group-hover:text-primary">assignment</span>
+                <span class="font-body-md">Kỳ thi</span>
+            </a>
+        </nav>
+        <div class="pt-4 border-t border-outline-variant space-y-1">
+            <button
+                class="w-full premium-gradient text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center gap-2 text-sm shadow-md hover:opacity-90 transition-opacity">
+                <span class="material-symbols-outlined text-sm">stars</span>
+                Nâng cấp tài khoản
+            </button>
+            <a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg"
+                href="#">
+                <span class="material-symbols-outlined">settings</span>
+                <span class="font-body-md">Cài đặt</span>
+            </a>
+            <a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-lg"
+                href="#">
+                <span class="material-symbols-outlined">logout</span>
+                <span class="font-body-md">Đăng xuất</span>
+            </a>
+        </div>
+    </aside>
+    <!-- Header -->
+    <header
+        class="fixed top-0 right-0 h-header_height w-[calc(100%-240px)] ml-[240px] bg-surface border-b border-outline-variant z-40 flex items-center justify-between px-margin_desktop">
+        <div class="flex items-center gap-4 flex-1">
+            <div class="relative w-full max-w-md">
+                <span
+                    class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+                <input
+                    class="w-full bg-surface-container-low border-none rounded-lg pl-10 pr-4 py-2 focus:ring-2 focus:ring-primary text-sm"
+                    placeholder="Tìm kiếm bài học, câu hỏi..." type="text">
+            </div>
+        </div>
+        <div class="flex items-center gap-6">
+            <div class="flex items-center gap-3">
+                <div
+                    class="relative p-2 rounded-full hover:bg-surface-container transition-colors cursor-pointer group">
+                    <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">mail</span>
+                </div>
+                <div class="relative p-2 rounded-full hover:bg-surface-container transition-colors cursor-pointer group"
+                    style="transform: scale(1);">
+                    <span
+                        class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">notifications</span>
+                    <span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border-2 border-surface"></span>
+                </div>
+            </div>
+            <div class="h-8 w-[1px] bg-outline-variant"></div>
+            <div class="flex items-center gap-3 cursor-pointer group" style="transform: scale(1);">
+                <div class="text-right">
+                    <p class="font-label-md text-on-surface">Nguyễn Văn An</p>
+                    <p class="text-xs text-on-surface-variant">Sinh viên Y4</p>
+                </div>
+                <img class="w-10 h-10 rounded-full border border-outline-variant object-cover"
+                    data-alt="Professional headshot of a young Vietnamese male medical student wearing a white lab coat, clean minimalist studio background with soft natural lighting, high-end commercial photography style."
+                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuDjs14YgZidlPvd__vAVlqvNdOurQoEuhpzLjx6GWcL9KL7a3gndodC2yzkK9XzBwLcw8BMWmYfR_hRLZiexmiVpO-jhjEzQpLjqFJew-KRX0UCViEIrJcYnbYm2pJcF-oeDP7tjGvDMf4SXNuyyZH54jeE_F1Vhz48PHDRxm05eEfM48alXxkohIc6BwKi5BFrj7P1eI2hY_dK4DqyL5dw28-MQ33oWlEq6xifc2oihUgkUiFUa2L6">
+            </div>
+        </div>
+    </header>
+    <!-- Main Content -->
+    <main class="ml-[240px] p-8 min-h-screen pt-24"><!-- Page Header -->
+        <div class="flex justify-between items-end mb-8">
+            <div>
+                <h2 class="font-headline-lg text-on-surface">Flashcards</h2>
+                <p class="text-on-surface-variant font-body-md mt-6">Hệ thống lặp lại ngắt quãng (SRS) giúp bạn ghi nhớ
+                    kiến thức bền vững.</p>
+            </div>
+            <button
+                class="flex items-center gap-2 px-6 py-3 bg-primary text-white font-bold rounded-xl hover:opacity-90 transition-all active:scale-95 shadow-lg">
+                <span class="material-symbols-outlined">add</span>
+                <span class="">Tạo bộ thẻ mới</span>
+            </button>
+        </div>
+
+        <!-- Review Banner -->
+        <div
+            class="relative overflow-hidden rounded-2xl bg-primary-container text-white p-8 mb-10 shadow-xl flex items-center justify-between">
+            <div class="relative z-10 flex items-center gap-6">
+                <div
+                    class="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20">
+                    <span class="material-symbols-outlined text-4xl"
+                        style="font-variation-settings: &quot;FILL&quot; 1;">notifications_active</span>
+                </div>
+                <div>
+                    <h3 class="font-headline-md mb-1">Đã đến lúc ôn tập!</h3>
+                    <p class="text-primary-fixed opacity-90 font-body-sm">Bạn có <span class="font-bold text-white">20
+                            thẻ đến hạn</span> và <span class="font-bold text-white">5 thẻ mới</span> hôm nay.</p>
+                </div>
+            </div>
+            <button
+                class="relative z-10 bg-white text-primary px-8 py-3.5 rounded-xl font-bold text-lg hover:bg-surface-bright transition-all shadow-lg active:scale-95 flex items-center gap-2">
+                <span class="material-symbols-outlined">play_arrow</span>
+                Bắt đầu ôn
+            </button>
+        </div>
+
+        <div class="grid grid-cols-12 gap-8">
+            <!-- Left Column: Deck Grid -->
+            <div class="col-span-12 xl:col-span-8">
+                <div class="flex items-center justify-between mb-6">
+                    <h4 class="font-headline-sm text-on-surface">Bộ thẻ của tôi</h4>
+                    <div class="flex gap-2 bg-surface-container p-1 rounded-lg">
+                        <button class="p-1.5 bg-white shadow-sm rounded-md text-primary"><span
+                                class="material-symbols-outlined">grid_view</span></button>
+                        <button class="p-1.5 text-on-surface-variant hover:text-on-surface"><span
+                                class="material-symbols-outlined">list</span></button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Deck Card 1 -->
+                    <div class="bg-surface-container-lowest border border-outline-variant p-6 rounded-2xl hover:shadow-xl transition-all group cursor-pointer relative overflow-hidden"
+                        style="transform: scale(1);">
+                        <div class="flex justify-between items-start mb-6">
+                            <div class="relative w-16 h-16">
+                                <svg class="w-full h-full -rotate-90">
+                                    <circle class="text-surface-container" cx="32" cy="32" fill="transparent" r="28"
+                                        stroke="currentColor" stroke-width="4"></circle>
+                                    <circle class="text-primary" cx="32" cy="32" fill="transparent" r="28"
+                                        stroke="currentColor" stroke-dasharray="176" stroke-dashoffset="35"
+                                        stroke-width="4" stroke-linecap="round"></circle>
+                                </svg>
+                                <span
+                                    class="absolute inset-0 flex items-center justify-center font-bold text-sm">80%</span>
+                            </div>
+                            <button
+                                class="text-on-surface-variant hover:bg-surface-container p-2 rounded-full transition-colors">
+                                <span class="material-symbols-outlined">more_vert</span>
+                            </button>
+                        </div>
+                        <h5 class="font-headline-sm mb-1 group-hover:text-primary transition-colors">Dược lý tim mạch
+                        </h5>
+                        <p class="text-on-surface-variant text-sm mb-6">450 thẻ kiến thức</p>
+                        <div class="flex gap-3">
+                            <div
+                                class="flex items-center gap-1.5 px-3 py-1.5 bg-tertiary-fixed text-on-tertiary-fixed rounded-lg font-bold text-[11px]">
+                                <span class="material-symbols-outlined text-sm">event_repeat</span> 12 đến hạn
+                            </div>
+                            <div
+                                class="flex items-center gap-1.5 px-3 py-1.5 bg-primary-fixed text-on-primary-fixed rounded-lg font-bold text-[11px]">
+                                <span class="material-symbols-outlined text-sm">new_releases</span> 5 mới
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Deck Card 2 -->
+                    <div
+                        class="bg-surface-container-lowest border border-outline-variant p-6 rounded-2xl hover:shadow-xl transition-all group cursor-pointer relative overflow-hidden">
+                        <div class="flex justify-between items-start mb-6">
+                            <div class="relative w-16 h-16">
+                                <svg class="w-full h-full -rotate-90">
+                                    <circle class="text-surface-container" cx="32" cy="32" fill="transparent" r="28"
+                                        stroke="currentColor" stroke-width="4"></circle>
+                                    <circle class="text-primary" cx="32" cy="32" fill="transparent" r="28"
+                                        stroke="currentColor" stroke-dasharray="176" stroke-dashoffset="118"
+                                        stroke-width="4" stroke-linecap="round"></circle>
+                                </svg>
+                                <span
+                                    class="absolute inset-0 flex items-center justify-center font-bold text-sm">33%</span>
+                            </div>
+                            <button
+                                class="text-on-surface-variant hover:bg-surface-container p-2 rounded-full transition-colors">
+                                <span class="material-symbols-outlined">more_vert</span>
+                            </button>
+                        </div>
+                        <h5 class="font-headline-sm mb-1 group-hover:text-primary transition-colors">Chẩn đoán phân biệt
+                        </h5>
+                        <p class="text-on-surface-variant text-sm mb-6">820 thẻ kiến thức</p>
+                        <div class="flex gap-3">
+                            <div
+                                class="flex items-center gap-1.5 px-3 py-1.5 bg-tertiary-fixed text-on-tertiary-fixed rounded-lg font-bold text-[11px]">
+                                <span class="material-symbols-outlined text-sm">event_repeat</span> 45 đến hạn
+                            </div>
+                            <div
+                                class="flex items-center gap-1.5 px-3 py-1.5 bg-primary-fixed text-on-primary-fixed rounded-lg font-bold text-[11px]">
+                                <span class="material-symbols-outlined text-sm">new_releases</span> 15 mới
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Deck Card 3 -->
+                    <div class="bg-surface-container-lowest border border-outline-variant p-6 rounded-2xl hover:shadow-xl transition-all group cursor-pointer relative overflow-hidden"
+                        style="transform: scale(1);">
+                        <div class="flex justify-between items-start mb-6">
+                            <div class="relative w-16 h-16">
+                                <svg class="w-full h-full -rotate-90">
+                                    <circle class="text-surface-container" cx="32" cy="32" fill="transparent" r="28"
+                                        stroke="currentColor" stroke-width="4"></circle>
+                                    <circle class="text-error" cx="32" cy="32" fill="transparent" r="28"
+                                        stroke="currentColor" stroke-dasharray="176" stroke-dashoffset="14"
+                                        stroke-width="4" stroke-linecap="round"></circle>
+                                </svg>
+                                <span
+                                    class="absolute inset-0 flex items-center justify-center font-bold text-sm">92%</span>
+                            </div>
+                            <button
+                                class="text-on-surface-variant hover:bg-surface-container p-2 rounded-full transition-colors">
+                                <span class="material-symbols-outlined">more_vert</span>
+                            </button>
+                        </div>
+                        <h5 class="font-headline-sm mb-1 group-hover:text-primary transition-colors">Câu sai của tôi
+                        </h5>
+                        <p class="text-on-surface-variant text-sm mb-6">128 thẻ cần xem lại</p>
+                        <div class="flex gap-3">
+                            <div
+                                class="flex items-center gap-1.5 px-3 py-1.5 bg-tertiary-fixed text-on-tertiary-fixed rounded-lg font-bold text-[11px]">
+                                <span class="material-symbols-outlined text-sm">event_repeat</span> 8 đến hạn
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Add New Deck -->
+                    <div
+                        class="border-2 border-dashed border-outline-variant p-6 rounded-2xl flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-low hover:border-primary transition-all group cursor-pointer">
+                        <div
+                            class="w-14 h-14 bg-surface-container rounded-full flex items-center justify-center mb-4 group-hover:bg-primary-fixed group-hover:text-primary transition-colors">
+                            <span class="material-symbols-outlined text-3xl">add</span>
+                        </div>
+                        <p class="font-bold">Tạo bộ thẻ mới</p>
+                        <p class="text-xs mt-1 opacity-70">Bắt đầu hành trình ghi nhớ</p>
+                    </div>
+                </div>
+                <div class="mt-10">
+                    <div class="flex items-center justify-between mb-6">
+                        <h4 class="font-headline-sm text-on-surface">Bộ thẻ đề xuất</h4>
+                        <a href="#" class="text-sm font-bold text-primary hover:underline">Xem tất cả</a>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Recommended Deck 1 -->
+                        <div
+                            class="bg-surface-container-lowest border border-outline-variant p-6 rounded-2xl hover:shadow-xl transition-all group relative overflow-hidden">
+                            <div class="absolute top-4 right-4">
+                                <span
+                                    class="bg-primary/10 text-primary text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">Đề
+                                    xuất</span>
+                            </div>
+                            <div class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4">
+                                <span class="material-symbols-outlined text-primary">auto_stories</span>
+                            </div>
+                            <h5 class="font-headline-sm mb-1 group-hover:text-primary transition-colors">Giải phẫu cơ
+                                bản</h5>
+                            <p class="text-on-surface-variant text-sm mb-6">1,200 thẻ kiến thức • 4.8 ★</p>
+                            <button
+                                class="w-full py-2.5 border border-primary text-primary font-bold rounded-lg hover:bg-primary hover:text-white transition-all flex items-center justify-center gap-2 text-sm">
+                                <span class="material-symbols-outlined text-sm">add_circle</span>
+                                Thêm vào thư viện
+                            </button>
+                        </div>
+
+                        <!-- Recommended Deck 2 -->
+                        <div
+                            class="bg-surface-container-lowest border border-outline-variant p-6 rounded-2xl hover:shadow-xl transition-all group relative overflow-hidden">
+                            <div class="absolute top-4 right-4">
+                                <span
+                                    class="bg-primary/10 text-primary text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">Mới</span>
+                            </div>
+                            <div class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4">
+                                <span class="material-symbols-outlined text-primary">biotech</span>
+                            </div>
+                            <h5 class="font-headline-sm mb-1 group-hover:text-primary transition-colors">Dược lý lâm
+                                sàng 2024</h5>
+                            <p class="text-on-surface-variant text-sm mb-6">650 thẻ kiến thức • 4.9 ★</p>
+                            <button
+                                class="w-full py-2.5 border border-primary text-primary font-bold rounded-lg hover:bg-primary hover:text-white transition-all flex items-center justify-center gap-2 text-sm">
+                                <span class="material-symbols-outlined text-sm">add_circle</span>
+                                Thêm vào thư viện
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: SRS Analytics -->
+            <div class="col-span-12 xl:col-span-4 space-y-6">
+                <div class="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-sm">
+                    <div class="flex items-center justify-between mb-8">
+                        <h4 class="font-bold text-lg flex items-center gap-2">
+                            <span class="material-symbols-outlined text-primary">analytics</span>
+                            Thống kê SRS
+                        </h4>
+                        <span
+                            class="text-[10px] font-bold text-on-surface-variant bg-surface-container px-2 py-1 rounded uppercase tracking-wider">7
+                            ngày qua</span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 mb-8">
+                        <div class="bg-surface-container-low p-4 rounded-xl border border-outline-variant/50">
+                            <p class="text-[11px] text-on-surface-variant uppercase font-bold tracking-wider mb-1">Ghi
+                                nhớ</p>
+                            <div class="flex items-end gap-2">
+                                <p class="text-3xl font-bold text-primary">89%</p>
+                                <div class="mb-1 flex items-center text-[10px] text-primary font-bold">
+                                    <span class="material-symbols-outlined text-xs">trending_up</span> +2.4%
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-surface-container-low p-4 rounded-xl border border-outline-variant/50">
+                            <p class="text-[11px] text-on-surface-variant uppercase font-bold tracking-wider mb-1">Chuỗi
+                                ngày</p>
+                            <div class="flex items-end gap-2">
+                                <p class="text-3xl font-bold text-tertiary">12</p>
+                                <div class="mb-1 flex items-center text-[10px] text-tertiary font-bold">
+                                    <span class="material-symbols-outlined text-xs">local_fire_department</span> Hot!
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p class="text-sm font-bold mb-6">Dự báo thẻ đến hạn</p>
+                    <div class="flex items-end justify-between h-32 gap-2.5 mb-4 px-1">
+                        <div class="flex-1 bg-primary/20 rounded-t-md hover:bg-primary transition-all relative group"
+                            style="height: 40%">
+                            <div
+                                class="absolute -top-8 left-1/2 -translate-x-1/2 bg-on-surface text-white text-[10px] px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                12 thẻ</div>
+                        </div>
+                        <div class="flex-1 bg-primary/40 rounded-t-md hover:bg-primary transition-all relative group"
+                            style="height: 60%">
+                            <div
+                                class="absolute -top-8 left-1/2 -translate-x-1/2 bg-on-surface text-white text-[10px] px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                18 thẻ</div>
+                        </div>
+                        <div class="flex-1 bg-primary/30 rounded-t-md hover:bg-primary transition-all relative group"
+                            style="height: 50%">
+                            <div
+                                class="absolute -top-8 left-1/2 -translate-x-1/2 bg-on-surface text-white text-[10px] px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                15 thẻ</div>
+                        </div>
+                        <div class="flex-1 bg-primary/80 rounded-t-md hover:bg-primary transition-all relative group"
+                            style="height: 90%">
+                            <div
+                                class="absolute -top-8 left-1/2 -translate-x-1/2 bg-on-surface text-white text-[10px] px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                27 thẻ</div>
+                        </div>
+                        <div class="flex-1 bg-primary/50 rounded-t-md hover:bg-primary transition-all relative group"
+                            style="height: 70%">
+                            <div
+                                class="absolute -top-8 left-1/2 -translate-x-1/2 bg-on-surface text-white text-[10px] px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                21 thẻ</div>
+                        </div>
+                        <div class="flex-1 bg-primary/60 rounded-t-md hover:bg-primary transition-all relative group"
+                            style="height: 80%">
+                            <div
+                                class="absolute -top-8 left-1/2 -translate-x-1/2 bg-on-surface text-white text-[10px] px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                24 thẻ</div>
+                        </div>
+                        <div class="flex-1 bg-primary/40 rounded-t-md hover:bg-primary transition-all relative group"
+                            style="height: 65%">
+                            <div
+                                class="absolute -top-8 left-1/2 -translate-x-1/2 bg-on-surface text-white text-[10px] px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                19 thẻ</div>
+                        </div>
+                    </div>
+                    <div class="flex justify-between text-[10px] text-on-surface-variant font-bold px-1">
+                        <span class="">T2</span><span class="">T3</span><span class="">T4</span><span
+                            class="">T5</span><span class="">T6</span><span class="">T7</span><span class="">CN</span>
+                    </div>
+                </div>
+
+                <div
+                    class="bg-surface-container-high p-6 rounded-2xl border border-outline-variant relative overflow-hidden">
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="material-symbols-outlined text-primary">lightbulb</span>
+                            <p class="text-primary font-bold text-sm">Mẹo học tập</p>
+                        </div>
+                        <p class="text-on-surface font-medium text-sm leading-relaxed mb-4">
+                            Sử dụng phương pháp <span class="text-primary font-bold">"Active Recall"</span> trước khi
+                            lật flashcard để tăng hiệu quả ghi nhớ lên 300%.
+                        </p>
+                        <a class="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline"
+                            href="#">
+                            Tìm hiểu thêm
+                            <span class="material-symbols-outlined text-xs">arrow_forward</span>
+                        </a>
+                    </div>
+                    <span
+                        class="material-symbols-outlined absolute -right-6 -bottom-6 text-primary/5 text-[140px] rotate-12">psychology</span>
+                </div>
+            </div>
+        </div>
+    </main>
+    <script>
+        // Micro-interactions for deck cards
+        document.querySelectorAll('.cursor-pointer').forEach(card => {
+            card.addEventListener('mousedown', () => {
+                card.style.transform = 'scale(0.98)';
+            });
+            card.addEventListener('mouseup', () => {
+                card.style.transform = 'scale(1)';
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'scale(1)';
+            });
+        });
+
+        // Search bar focus effect
+        const searchInput = document.querySelector('input[type="text"]');
+        searchInput.addEventListener('focus', () => {
+            searchInput.parentElement.classList.add('scale-[1.02]');
+        });
+        searchInput.addEventListener('blur', () => {
+            searchInput.parentElement.classList.remove('scale-[1.02]');
+        });
+    </script>
+
+
+
+
+
+
+
+
+</body>
+
+</html>
