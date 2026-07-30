@@ -2,6 +2,13 @@
 
 ## 2026-07-30
 
+### Dựng UI thật từ mockup (Landing + Auth)
+- Thêm module `Landing` (controller, provider, routes) phục vụ trang chủ, tính năng, bảng giá, giới thiệu, liên hệ, FAQ bằng Blade responsive; bật module trong `modules_statuses.json`.
+- Thêm layout dùng chung `layouts/public`, `layouts/auth` và component `public/header`, `footer`, `cookie-banner`.
+- Thêm view đăng nhập/đăng ký cho module `Auth` và route `guest` (mới chỉ UI).
+- Chuyển `/` sang module Landing, `/billing/plans` redirect sang `/pricing`.
+- Thêm design tokens (màu, typography, spacing) và component CSS; đổi font sang `Be Vietnam Pro` (Vite + Tailwind), nạp Material Symbols.
+
 ### Mockup HTML landing/marketing (PC + Mobile)
 - Thêm trang giới thiệu (about-us), liên hệ (contact), tính năng (feature), bảng giá (pricing), câu hỏi thường gặp (questions) cho cả bản PC và mobile.
 - Thêm màn đăng nhập/đăng ký (login, register) cho PC và mobile.

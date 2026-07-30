@@ -12,5 +12,6 @@
     "Billing": true,
     "Account": true,
     "AiAssistant": true,
-    "Admin": true
+    "Admin": true,
+    "Landing": true
 }

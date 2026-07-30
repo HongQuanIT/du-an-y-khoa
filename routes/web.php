@@ -5,7 +5,10 @@ declare(strict_types=1);
 use App\Http\Controllers\HealthController;
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'welcome');
+/*
+| The public home page ("/") and other marketing routes are registered by
+| the Landing module (Modules/Landing/routes/web.php).
+*/
 
 /*
 |--------------------------------------------------------------------------
@@ -22,4 +25,4 @@ Route::get('/health/ready', [HealthController::class, 'ready'])->name('health.re
 | middleware resolvable before those modules ship.
 |--------------------------------------------------------------------------
 */
-Route::view('/billing/plans', 'welcome')->name('billing.plans');
+Route::redirect('/billing/plans', '/pricing')->name('billing.plans');
