@@ -2,6 +2,12 @@
 
 ## 2026-07-30
 
+### Hoàn thiện Auth + Dashboard
+- Wire đăng nhập/đăng ký thật: FormRequest, DTO, Action, controller session; redirect guest/user theo `HomePath`.
+- Tách component Blade auth dùng chung (shell, input, password, errors, submit, social).
+- Thêm dashboard (Analytics) và layout app có sidebar/header/mobile drawer sau khi đăng nhập.
+- Tách `UserSeeder`, policy mật khẩu mặc định, validation tiếng Việt; tắt Scout trong phpunit.
+
 ### Dựng UI thật từ mockup (Landing + Auth)
 - Thêm module `Landing` (controller, provider, routes) phục vụ trang chủ, tính năng, bảng giá, giới thiệu, liên hệ, FAQ bằng Blade responsive; bật module trong `modules_statuses.json`.
 - Thêm layout dùng chung `layouts/public`, `layouts/auth` và component `public/header`, `footer`, `cookie-banner`.

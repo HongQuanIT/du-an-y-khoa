@@ -61,6 +61,8 @@
     /* Spacing tokens (p-gutter, px-margin-mobile...) */
     --spacing-gutter: 24px;
     --spacing-margin-mobile: 16px;
+    --spacing-margin-desktop: 32px;
+    --spacing-header-height: 64px;
     --spacing-sidebar-width: 240px;
 
     /* Max-width tokens (max-w-container-max) */
@@ -144,6 +146,19 @@
 
     .premium-badge {
         background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
+    }
+
+    .premium-gradient {
+        background: linear-gradient(135deg, #ff9966 0%, #ff5e62 100%);
+    }
+
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
     }
 
     .premium-border {
