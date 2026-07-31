@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
-import { bunny } from 'laravel-vite-plugin/fonts';
+import { bunny, google } from 'laravel-vite-plugin/fonts';
 import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
@@ -11,6 +11,13 @@ export default defineConfig({
             fonts: [
                 bunny('Be Vietnam Pro', {
                     weights: [400, 500, 600, 700, 800],
+                }),
+                google('Material Symbols Outlined', {
+                    weights: [100, 200, 300, 400, 500, 600, 700],
+                    display: 'block',
+                    preload: false,
+                    subsets: ['fallback'],
+                    optimizedFallbacks: false,
                 }),
             ],
         }),

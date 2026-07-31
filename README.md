@@ -16,7 +16,7 @@ mã nguồn **chuẩn PSR-12**, chia theo **module** tái sử dụng, môi trư
 | Cache / Queue / Session | Redis · Horizon |
 | Search | Meilisearch (Laravel Scout) |
 | Realtime | Laravel Reverb (WebSocket) |
-| Storage | S3-compatible (MinIO local · R2/S3 prod) |
+| Storage | Local disk (`storage/app`, `php artisan storage:link`) |
 | RBAC | spatie/laravel-permission |
 | Module | nwidart/laravel-modules |
 | Frontend | Blade · Tailwind 4 · Alpine · Livewire · Vite |
@@ -39,7 +39,6 @@ docker compose exec app php artisan migrate --seed
 | Vite dev server | http://localhost:5173 |
 | Reverb (WS) | ws://localhost:8080 |
 | Meilisearch | http://localhost:7700 |
-| MinIO Console | http://localhost:9001 |
 | Mailpit | http://localhost:8025 |
 | Horizon | http://localhost/horizon |
 
