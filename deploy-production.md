@@ -2,7 +2,7 @@
 
 Tài liệu này mô tả quy trình **deploy thủ công** MedLearn lên server production (VPS / bare metal), **không** dùng Docker Compose (Compose chỉ dành cho local — xem `README.md`).
 
-> Stack: Laravel 13 · PHP 8.4 · MySQL 8 · Redis 7 · Meilisearch · Horizon · Reverb · S3/R2 · Nginx · Vite.
+> Stack: Laravel 13 · PHP 8.4 · MySQL 8 · Redis 7 · Meilisearch · Horizon · Reverb · Local storage · Nginx · Vite.
 
 ---
 
@@ -41,7 +41,7 @@ Tài liệu này mô tả quy trình **deploy thủ công** MedLearn lên server
 | DB | MySQL **8.0+** | MySQL 8.4 |
 | Cache/Queue | Redis **7** | Redis 7 + AOF |
 | Search | Meilisearch **1.10+** | bản ổn định gần nhất |
-| Object storage | S3-compatible | Cloudflare R2 / AWS S3 |
+| Storage | Local disk (`storage/`) | SSD đủ dung lượng + backup |
 | Node (build) | Node **20** | Node 20 LTS |
 | Composer | 2.x | 2.x mới nhất |
 
@@ -259,13 +259,14 @@ sudo systemctl enable --now meilisearch
 curl -s http://127.0.0.1:7700/health
 ```
 
-### 5.4 Object storage (R2 / S3)
+### 5.4 File storage (local disk)
 
-Trên production dùng **Cloudflare R2** hoặc **AWS S3** (không dùng MinIO public). Chuẩn bị:
+Self-host dùng **local disk** Laravel (`FILESYSTEM_DISK=local`):
 
-- Bucket riêng (vd. `medlearn-prod`)
-- Access Key / Secret
-- CDN / public URL (nếu media public) hoặc signed URL (premium)
+- File nằm trong `storage/app` (private) và `storage/app/public` (media public).
+- Chạy `php artisan storage:link` để phục vụ file public qua `/storage/...`.
+- Đảm bảo quyền ghi cho user PHP-FPM; backup thư mục `storage/` cùng MySQL.
+- Nên dùng `shared/storage` giữa các release (xem cấu trúc thư mục bên dưới).
 
 ---
 
@@ -361,14 +362,7 @@ VITE_REVERB_HOST=medlearn.example.com
 VITE_REVERB_PORT=443
 VITE_REVERB_SCHEME=https
 
-FILESYSTEM_DISK=s3
-AWS_ACCESS_KEY_ID=...
-AWS_SECRET_ACCESS_KEY=...
-AWS_DEFAULT_REGION=auto
-AWS_BUCKET=medlearn-prod
-AWS_ENDPOINT=https://xxxxx.r2.cloudflarestorage.com
-AWS_URL=https://cdn.medlearn.example.com
-AWS_USE_PATH_STYLE_ENDPOINT=false
+FILESYSTEM_DISK=local
 
 MAIL_MAILER=smtp
 MAIL_HOST=smtp.provider.com
@@ -641,7 +635,7 @@ File `public/check.php` kiểm tra:
 - `vendor/`, Vite `public/build/manifest.json`, `.env`
 - Document root
 - Biến môi trường quan trọng
-- Kết nối MySQL · Redis · Meilisearch · S3 endpoint
+- Kết nối MySQL · Redis · Meilisearch · local storage writable
 
 ### Cách dùng
 
@@ -693,7 +687,7 @@ Checklist tay:
 
 - [ ] Trang landing load CSS/JS (không 404 `/build/...`)
 - [ ] Đăng nhập / session Redis hoạt động
-- [ ] Upload media lên S3/R2 thành công
+- [ ] Upload media vào `storage/` (local) thành công; `/storage/...` serve được
 - [ ] Job queue được Horizon xử lý
 - [ ] WebSocket (notification / presence) qua WSS
 - [ ] Search Meilisearch trả kết quả
@@ -784,7 +778,7 @@ https://medlearn.example.com/ops-bypass-token
 |---------|----------|---------|
 | MySQL dump | Daily | Giữ ≥ 7–30 ngày |
 | `.env` / secrets | Khi đổi | Lưu vault, không trong git |
-| S3/R2 | Versioning / replication | Bật trên bucket |
+| `storage/` (uploads) | Daily / cùng dump | Rsync hoặc snapshot disk |
 | Meilisearch | Có thể rebuild từ DB | `scout:import` |
 
 ---
@@ -820,7 +814,7 @@ php -v \
 | Hạng mục | Local (`docker compose`) | Production (manual) |
 |----------|--------------------------|---------------------|
 | App runtime | Container `app` + `web` | PHP-FPM + Nginx trên host |
-| Storage | MinIO | R2 / S3 thật |
+| Storage | Local disk (`storage/`) | Local disk (`storage/`, shared giữa releases) |
 | Mail | Mailpit | SMTP provider |
 | Meili env | `development` | `production` + master key mạnh |
 | Assets | Vite HMR (`npm run dev`) | `npm run build` → `public/build` |

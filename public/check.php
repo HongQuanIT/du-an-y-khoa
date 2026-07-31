@@ -329,7 +329,8 @@ if ($meiliHost) {
 }
 
 $awsEndpoint = env_val('AWS_ENDPOINT');
-if ($awsEndpoint && function_exists('curl_init')) {
+$filesystemDisk = env_val('FILESYSTEM_DISK', 'local');
+if ($filesystemDisk === 's3' && $awsEndpoint && function_exists('curl_init')) {
     $ch = curl_init(rtrim($awsEndpoint, '/'));
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
@@ -341,9 +342,12 @@ if ($awsEndpoint && function_exists('curl_init')) {
     $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $err = curl_error($ch);
     curl_close($ch);
-    // S3/MinIO có thể trả 403/400 khi HEAD root — quan trọng là TCP/HTTP phản hồi.
-    $ok = $code > 0 || $err === '';
-    check('Connectivity', 'S3/MinIO endpoint reachable', $code > 0, $code > 0 ? "HTTP {$code} @ {$awsEndpoint}" : ($err ?: 'no response'), false);
+    // S3 có thể trả 403/400 khi HEAD root — quan trọng là TCP/HTTP phản hồi.
+    check('Connectivity', 'S3 endpoint reachable', $code > 0, $code > 0 ? "HTTP {$code} @ {$awsEndpoint}" : ($err ?: 'no response'), false);
+} else {
+    $storageRoot = dirname(__DIR__).'/storage/app';
+    $writable = is_dir($storageRoot) && is_writable($storageRoot);
+    check('Connectivity', 'Local storage writable', $writable, $writable ? $storageRoot : "not writable: {$storageRoot}", true);
 }
 
 // ---------------------------------------------------------------------------
