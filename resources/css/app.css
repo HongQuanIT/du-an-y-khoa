@@ -161,8 +161,155 @@
         display: none;
     }
 
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #bdc9c6;
+        border-radius: 10px;
+    }
+
     .premium-border {
         @apply border-2 border-primary;
+    }
+
+    .timeline-line::before {
+        content: '';
+        position: absolute;
+        left: 20px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background-color: #e2e8f0;
+        z-index: 0;
+    }
+
+    .card-flip-container {
+        perspective: 1000px;
+    }
+
+    .card-flip-inner {
+        transition: transform 0.6s;
+        transform-style: preserve-3d;
+    }
+
+    .card-flip-container.flipped .card-flip-inner {
+        transform: rotateY(180deg);
+    }
+
+    .card-front,
+    .card-back {
+        backface-visibility: hidden;
+    }
+
+    .card-back {
+        transform: rotateY(180deg);
+    }
+
+    .flashcard-container {
+        perspective: 1000px;
+    }
+
+    .flashcard {
+        transition: transform 0.6s;
+        transform-style: preserve-3d;
+    }
+
+    .flashcard.flipped {
+        transform: rotateY(180deg);
+    }
+
+    .flashcard-front,
+    .flashcard-back {
+        backface-visibility: hidden;
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+    }
+
+    .flashcard-back {
+        transform: rotateY(180deg);
+    }
+
+    .btn-hover-scale {
+        transition: transform 0.2s, opacity 0.2s;
+    }
+
+    .btn-hover-scale:active {
+        transform: scale(0.98);
+        opacity: 0.9;
+    }
+
+    .linear-divider {
+        height: 1px;
+        background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
+    }
+
+    .donut-chart {
+        background: conic-gradient(#0f766e 0% 75%, #dc2626 75% 95%, #bdc9c6 95% 100%);
+        border-radius: 50%;
+        position: relative;
+    }
+
+    .donut-inner {
+        background: white;
+        position: absolute;
+        top: 15%;
+        left: 15%;
+        right: 15%;
+        bottom: 15%;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .blur-overlay {
+        backdrop-filter: blur(4px);
+        background: rgba(255, 255, 255, 0.4);
+    }
+
+    .glass-ai {
+        background: linear-gradient(135deg, rgba(15, 118, 110, 0.08), rgba(0, 81, 213, 0.08));
+        border: 1px solid rgba(15, 118, 110, 0.15);
+        backdrop-filter: blur(8px);
+    }
+
+    .flag-corner {
+        clip-path: polygon(100% 0, 0 0, 100% 100%);
+    }
+
+    .option-button:hover {
+        background-color: #f1f4f3;
+        border-color: #005c55;
+    }
+
+    .option-button.selected {
+        background-color: #e6f1f0;
+        border-color: #005c55;
+        box-shadow: 0 0 0 1px #005c55;
+    }
+
+    @keyframes slideInUp {
+        from {
+            transform: translateY(20px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .animate-toast {
+        animation: slideInUp 0.3s ease-out forwards;
     }
 
     .feature-card {

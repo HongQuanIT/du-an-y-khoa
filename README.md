@@ -40,6 +40,7 @@ docker compose exec app php artisan migrate --seed
 | Reverb (WS) | ws://localhost:8080 |
 | Meilisearch | http://localhost:7700 |
 | Mailpit | http://localhost:8025 |
+| Adminer (MySQL) | http://localhost:8081 |
 | Horizon | http://localhost/horizon |
 
 Health checks: `GET /health` (liveness) · `GET /health/ready` (DB/Redis/Meili).

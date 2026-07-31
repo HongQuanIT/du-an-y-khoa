@@ -9,6 +9,15 @@
 ### Nạp Material Symbols qua Vite fonts
 - Thay link CDN Google Fonts bằng `@fonts` trong layout `app`, `auth`, `public`.
 - Cấu hình `google('Material Symbols Outlined')` trong `vite.config.js` (weights, display block, không preload).
+### Port UI học viên (Q-Bank, Study Plan, Flashcards)
+- Wire shell Q-Bank từ mockup: danh sách phiên, tạo phiên, study/exam session, tổng kết, xem lại câu hỏi; điều hướng theo chế độ học/thi.
+- Wire Study Plan: danh sách, lịch, tạo kế hoạch, chi tiết lộ trình (accordion tuần), phiên học riêng (`/study-plan/session`) thoát về detail.
+- Wire Flashcards: dashboard, tạo thẻ, chi tiết bộ thẻ, ôn thẻ; gắn điều hướng giữa các màn.
+- Bổ sung CSS (donut, flip card, exam UI…); bỏ icon mở menu trên landing và layout dashboard.
+
+### Thêm Adminer cho Docker local
+- Thêm service Adminer (cổng `FORWARD_ADMINER_PORT`, mặc định 8081) vào `docker-compose`.
+- Ghi chú cổng trong `.env.example` và README.
 
 ## 2026-07-30
 
