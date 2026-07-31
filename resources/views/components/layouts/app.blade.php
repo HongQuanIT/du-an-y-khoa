@@ -1,13 +1,13 @@
 @props(['title' => null])
 
 @php
-    // Only Dashboard is wired so far; the rest land here as their modules ship.
+    // Dashboard, Q-Bank, StudyPlan, Flashcards are wired; the rest land as modules ship.
     $navItems = [
         ['label' => 'Dashboard', 'icon' => 'dashboard', 'route' => 'dashboard'],
-        ['label' => 'Ngân hàng câu hỏi', 'icon' => 'quiz', 'route' => null],
+        ['label' => 'Ngân hàng câu hỏi', 'icon' => 'quiz', 'route' => 'qbank.index', 'match' => 'qbank.*'],
         ['label' => 'Thư viện', 'icon' => 'library_books', 'route' => null],
-        ['label' => 'Flashcards', 'icon' => 'style', 'route' => null],
-        ['label' => 'Kế hoạch học tập', 'icon' => 'event_note', 'route' => null],
+        ['label' => 'Flashcards', 'icon' => 'style', 'route' => 'flashcards.index', 'match' => 'flashcards.*'],
+        ['label' => 'Kế hoạch học tập', 'icon' => 'event_note', 'route' => 'study-plan.index', 'match' => 'study-plan.*'],
         ['label' => 'Phân tích', 'icon' => 'analytics', 'route' => null],
         ['label' => 'Kỳ thi', 'icon' => 'assignment', 'route' => null],
     ];
@@ -27,7 +27,7 @@
     @livewireStyles
 </head>
 
-<body class="bg-surface text-on-surface font-body-md" x-data="{ menu: false }">
+<body class="bg-surface text-on-surface font-body-md">
     <!-- SideNavBar -->
     <aside
         class="fixed left-0 top-0 z-50 hidden h-screen w-sidebar-width flex-col border-r border-outline-variant bg-surface p-4 md:flex">
@@ -44,7 +44,10 @@
 
         <nav class="flex-1 space-y-1">
             @foreach ($navItems as $item)
-                @php $active = $item['route'] && request()->routeIs($item['route']); @endphp
+                @php
+                    $match = $item['match'] ?? $item['route'];
+                    $active = $match && request()->routeIs($match);
+                @endphp
                 <a href="{{ $item['route'] ? route($item['route']) : '#' }}"
                     @class([
                         'group flex items-center gap-3 rounded-lg px-3 transition-colors',
@@ -84,10 +87,6 @@
     <header
         class="fixed top-0 right-0 left-0 z-40 flex h-header-height items-center justify-between border-b border-outline-variant bg-surface px-margin-mobile md:left-sidebar-width md:px-margin-desktop">
         <div class="flex flex-1 items-center gap-4">
-            <button type="button" @click="menu = !menu"
-                class="material-symbols-outlined rounded-lg p-2 text-on-surface transition-colors hover:bg-surface-container-low md:hidden"
-                :aria-expanded="menu" aria-label="Mở menu">menu</button>
-
             <div class="relative w-full max-w-md">
                 <span
                     class="material-symbols-outlined absolute top-1/2 left-3 -translate-y-1/2 text-on-surface-variant">search</span>
@@ -128,31 +127,6 @@
             </div>
         </div>
     </header>
-
-    <!-- Mobile drawer -->
-    <div x-show="menu" x-cloak @click="menu = false" class="fixed inset-0 z-40 bg-black/40 md:hidden"></div>
-    <nav x-show="menu" x-cloak x-transition.origin.left
-        class="fixed top-header-height bottom-0 left-0 z-50 w-64 space-y-1 overflow-y-auto border-r border-outline-variant bg-surface p-4 md:hidden">
-        @foreach ($navItems as $item)
-            <a href="{{ $item['route'] ? route($item['route']) : '#' }}"
-                @class([
-                    'flex items-center gap-3 rounded-lg px-3 py-2.5 font-body-md text-body-md',
-                    'bg-primary/10 font-semibold text-primary' => $item['route'] && request()->routeIs($item['route']),
-                    'text-on-surface-variant' => !($item['route'] && request()->routeIs($item['route'])),
-                ])>
-                <span class="material-symbols-outlined">{{ $item['icon'] }}</span>
-                {{ $item['label'] }}
-            </a>
-        @endforeach
-        <form action="{{ route('logout') }}" method="post" class="border-t border-outline-variant pt-3">
-            @csrf
-            <button type="submit"
-                class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 font-body-md text-body-md text-on-surface-variant">
-                <span class="material-symbols-outlined">logout</span>
-                Đăng xuất
-            </button>
-        </form>
-    </nav>
 
     <!-- Content Canvas -->
     <main class="min-h-screen bg-surface-container-lowest pt-header-height md:ml-sidebar-width">
