@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-07-31
+
+### Nạp Material Symbols qua Vite fonts
+- Thay link CDN Google Fonts bằng `@fonts` trong layout `app`, `auth`, `public`.
+- Cấu hình `google('Material Symbols Outlined')` trong `vite.config.js` (weights, display block, không preload).
+
 ## 2026-07-30
 
 ### Hoàn thiện Auth + Dashboard
