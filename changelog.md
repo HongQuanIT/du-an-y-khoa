@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-08-02
+
+### Bảng giá theo năm (1 / 2 / 3 năm)
+- Thay gói 6 tháng bằng gói Premium theo năm (1–3 năm) có tab chọn thời hạn, giá động Alpine trên trang chủ và `/pricing`.
+- Cập nhật quyền lợi, FAQ và copy CTA cho đúng mô hình năm / tháng.
+
+### Menu mobile header public
+- Thêm drawer menu Alpine cho viewport `< lg`; nav và nút đăng nhập/đăng ký hiện từ `lg` trở lên.
+
 ## 2026-07-31
 
 ### Bỏ MinIO — dùng local storage

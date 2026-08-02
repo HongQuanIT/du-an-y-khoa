@@ -306,89 +306,173 @@
     </section>
 
     <!-- Pricing -->
-    <section class="py-16 md:py-24 bg-surface-container-lowest">
+    @php
+        $homePremiumFeatures = [
+            'Toàn bộ QBank & Thư viện',
+            'AI Mentor không giới hạn',
+            'Mô phỏng thi thật',
+            'Phân tích lỗ hổng kiến thức',
+            'Ưu tiên hỗ trợ 24/7',
+        ];
+    @endphp
+    <section class="py-16 md:py-24 bg-surface-container-lowest"
+        x-data="{
+            years: 1,
+            plans: {
+                1: { label: '1 năm', total: 1790000, perMonth: 149000, save: 25, months: 12 },
+                2: { label: '2 năm', total: 2990000, perMonth: 124000, save: 37, months: 24 },
+                3: { label: '3 năm', total: 3990000, perMonth: 110000, save: 44, months: 36 },
+            },
+            monthlyPrice: 199000,
+            format(n) {
+                return new Intl.NumberFormat('vi-VN').format(n) + '₫';
+            },
+            get plan() {
+                return this.plans[this.years];
+            },
+            listPrice() {
+                return this.monthlyPrice * this.plan.months;
+            },
+        }">
         <div class="max-w-container-max mx-auto px-margin-mobile md:px-gutter">
-            <div class="text-center space-y-4 mb-16">
+            <div class="text-center space-y-4 mb-10">
                 <h2 class="font-headline-lg text-headline-lg">Lựa chọn gói phù hợp</h2>
                 <p class="font-body-lg text-body-lg text-text-secondary">Đầu tư vào kiến thức là khoản đầu tư có lãi nhất.
                 </p>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
-                <!-- Basic -->
-                <div class="premium-card p-8 flex flex-col justify-between">
-                    <div class="space-y-6">
-                        <div>
-                            <h3 class="font-headline-sm text-headline-sm">Miễn phí</h3>
-                            <p class="text-label-sm text-text-secondary mt-1">Dành cho người mới bắt đầu</p>
-                        </div>
-                        <div class="font-headline-lg text-headline-lg">0đ <span
-                                class="text-body-md font-normal text-text-secondary">/tháng</span></div>
-                        <ul class="space-y-3">
-                            <li class="flex items-center gap-2 font-body-sm text-body-sm">
-                                <span class="material-symbols-outlined text-success text-[20px]">check</span>
-                                100 câu hỏi mỗi ngày
-                            </li>
-                            <li class="flex items-center gap-2 font-body-sm text-body-sm text-text-secondary">
-                                <span class="material-symbols-outlined text-[20px]">close</span>
-                                AI Tutor cơ bản
-                            </li>
-                            <li class="flex items-center gap-2 font-body-sm text-body-sm text-text-secondary">
-                                <span class="material-symbols-outlined text-[20px]">close</span>
-                                Phân tích chuyên sâu
-                            </li>
-                        </ul>
-                    </div>
-                    <a href="{{ route('register') }}"
-                        class="w-full mt-8 py-3 rounded-xl border border-border font-label-md text-label-md hover:bg-surface-container-low transition-colors text-center">Đăng
-                        ký ngay</a>
-                </div>
-                <!-- Premium -->
-                <div class="premium-card p-8 flex flex-col justify-between border-2 border-primary relative">
-                    <div
-                        class="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-white px-4 py-1 rounded-full text-label-sm font-bold whitespace-nowrap">
-                        PHỔ BIẾN NHẤT</div>
-                    <div class="space-y-6">
-                        <div>
-                            <h3 class="font-headline-sm text-headline-sm text-primary">Premium</h3>
-                            <p class="text-label-sm text-text-secondary mt-1">Full tính năng cho kỳ thi quan trọng</p>
-                        </div>
-                        <div class="font-headline-lg text-headline-lg">199.000đ <span
-                                class="text-body-md font-normal text-text-secondary">/tháng</span></div>
-                        <ul class="space-y-3">
-                            @foreach (['Không giới hạn câu hỏi', 'Full AI Tutor & MedLib', 'Phân tích học tập AI', 'Ưu tiên cập nhật đề mới'] as $feature)
-                                <li class="flex items-center gap-2 font-body-sm text-body-sm">
-                                    <span class="material-symbols-outlined text-success text-[20px]">check</span>
-                                    {{ $feature }}
-                                </li>
-                            @endforeach
-                        </ul>
-                    </div>
-                    <a href="{{ route('register') }}"
-                        class="w-full mt-8 py-3 rounded-xl bg-primary text-white font-label-md text-label-md hover:opacity-90 transition-opacity text-center">Chọn
-                        Premium</a>
-                </div>
-                <!-- Organization -->
-                <div class="premium-card p-8 flex flex-col justify-between">
-                    <div class="space-y-6">
-                        <div>
-                            <h3 class="font-headline-sm text-headline-sm">Tổ chức</h3>
-                            <p class="text-label-sm text-text-secondary mt-1">Dành cho bệnh viện/trường đại học</p>
-                        </div>
-                        <div class="font-headline-lg text-headline-lg">Liên hệ</div>
-                        <ul class="space-y-3">
-                            @foreach (['Quản lý học viên theo nhóm', 'Hệ thống thi tập trung', 'Hỗ trợ kỹ thuật 24/7'] as $feature)
-                                <li class="flex items-center gap-2 font-body-sm text-body-sm">
-                                    <span class="material-symbols-outlined text-success text-[20px]">check</span>
-                                    {{ $feature }}
-                                </li>
-                            @endforeach
-                        </ul>
-                    </div>
-                    <a href="{{ route('landing.contact') }}"
-                        class="w-full mt-8 py-3 rounded-xl border border-border font-label-md text-label-md hover:bg-surface-container-low transition-colors text-center">Gửi
-                        yêu cầu</a>
+
+            <div class="flex flex-col items-center gap-3 mb-12">
+                <p class="font-label-sm text-label-sm text-on-surface-variant">Xem bảng giá theo năm</p>
+                <div class="relative inline-flex p-1 pt-3 rounded-2xl bg-surface-container-low border border-border"
+                    role="tablist" aria-label="Chọn thời hạn gói năm">
+                    <template x-for="y in [1, 2, 3]" :key="y">
+                        <button type="button" role="tab" @click="years = y" :aria-selected="years === y"
+                            :class="years === y
+                                ? 'bg-surface text-primary shadow-sm border border-border'
+                                : 'text-on-surface-variant hover:text-on-surface border border-transparent'"
+                            class="relative min-w-[5.5rem] sm:min-w-[6.5rem] px-4 py-2.5 rounded-xl font-label-md text-label-md transition-all">
+                            <span x-text="plans[y].label"></span>
+                            <span x-show="y === 3"
+                                class="absolute -top-3.5 left-1/2 -translate-x-1/2 premium-badge px-2 py-0.5 rounded-full text-white text-[10px] font-bold whitespace-nowrap leading-none pointer-events-none">
+                                Tiết kiệm nhất
+                            </span>
+                        </button>
+                    </template>
                 </div>
             </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-start relative">
+                <!-- Free -->
+                <div class="bg-surface border border-border p-8 rounded-xl flex flex-col hover:shadow-lg transition-shadow">
+                    <div class="mb-8">
+                        <h3 class="font-headline-sm text-headline-sm text-on-surface mb-2">Miễn phí</h3>
+                        <p class="text-text-secondary font-body-sm text-body-sm">Cơ bản cho người mới bắt đầu</p>
+                    </div>
+                    <div class="mb-8">
+                        <span class="text-headline-lg font-bold">0₫</span>
+                        <span class="text-text-secondary">/tháng</span>
+                    </div>
+                    <ul class="space-y-4 mb-12 flex-grow">
+                        <li class="flex items-center gap-3 font-body-sm text-body-sm">
+                            <span class="material-symbols-outlined text-success text-[20px]">check_circle</span>
+                            20 câu hỏi/ngày
+                        </li>
+                        <li class="flex items-center gap-3 font-body-sm text-body-sm">
+                            <span class="material-symbols-outlined text-success text-[20px]">check_circle</span>
+                            Thư viện giới hạn
+                        </li>
+                        <li class="flex items-center gap-3 font-body-sm text-body-sm opacity-50">
+                            <span class="material-symbols-outlined text-[20px]">cancel</span>
+                            AI không giới hạn
+                        </li>
+                        <li class="flex items-center gap-3 font-body-sm text-body-sm opacity-50">
+                            <span class="material-symbols-outlined text-[20px]">cancel</span>
+                            Toàn bộ QBank
+                        </li>
+                    </ul>
+                    <a href="{{ route('register') }}"
+                        class="w-full py-3 px-4 border border-border text-on-surface font-label-md text-label-md rounded-xl hover:bg-surface-container-low transition-colors text-center">Bắt
+                        đầu ngay</a>
+                </div>
+
+                <!-- Premium yearly -->
+                <div class="bg-surface premium-border p-8 rounded-xl flex flex-col relative shadow-2xl md:scale-105 z-10">
+                    <div
+                        class="absolute -top-4 left-1/2 -translate-x-1/2 premium-badge px-4 py-1 rounded-full text-white text-label-sm font-bold flex items-center gap-1 whitespace-nowrap">
+                        <span class="material-symbols-outlined text-[14px]"
+                            style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+                        <span x-text="years === 3 ? 'Tiết kiệm nhất' : 'Giá theo năm'"></span>
+                    </div>
+                    <div class="mb-8">
+                        <h3 class="font-headline-sm text-headline-sm text-primary mb-2">
+                            Premium <span x-text="plan.label"></span>
+                        </h3>
+                        <p class="text-text-secondary font-body-sm text-body-sm">Giải pháp ôn thi toàn diện · thanh toán một lần</p>
+                    </div>
+                    <div class="mb-2">
+                        <span class="text-headline-lg font-bold" x-text="format(plan.total)"></span>
+                        <span class="text-text-secondary">/<span x-text="plan.label"></span></span>
+                    </div>
+                    <p class="mb-4 font-body-sm text-body-sm text-on-surface-variant line-through"
+                        x-text="'Giá lẻ: ' + format(listPrice())"></p>
+                    <div class="mb-8 p-3 bg-primary-fixed/20 rounded-lg">
+                        <p class="text-primary font-label-md text-label-md">
+                            Chỉ ~<span x-text="format(plan.perMonth)"></span>/tháng · tiết kiệm <span x-text="plan.save"></span>%
+                        </p>
+                    </div>
+                    <ul class="space-y-4 mb-12 flex-grow">
+                        <li class="flex items-center gap-3 font-body-sm text-body-sm font-medium">
+                            <span class="material-symbols-outlined text-success text-[20px]"
+                                style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                            Toàn bộ tính năng Premium
+                        </li>
+                        @foreach ($homePremiumFeatures as $feature)
+                            <li class="flex items-center gap-3 font-body-sm text-body-sm">
+                                <span class="material-symbols-outlined text-success text-[20px]">check_circle</span>
+                                {{ $feature }}
+                            </li>
+                        @endforeach
+                    </ul>
+                    <a href="{{ route('register') }}"
+                        class="w-full py-3 px-4 bg-primary text-on-primary font-label-md text-label-md rounded-xl hover:opacity-90 transition-opacity text-center">
+                        Mua gói <span x-text="plan.label"></span>
+                    </a>
+                </div>
+
+                <!-- Premium monthly -->
+                <div class="bg-surface border border-border p-8 rounded-xl flex flex-col hover:shadow-lg transition-shadow">
+                    <div class="mb-8">
+                        <h3 class="font-headline-sm text-headline-sm text-on-surface mb-2">Premium 1 tháng</h3>
+                        <p class="text-text-secondary font-body-sm text-body-sm">Linh hoạt theo từng giai đoạn</p>
+                    </div>
+                    <div class="mb-8">
+                        <span class="text-headline-lg font-bold">199.000₫</span>
+                        <span class="text-text-secondary">/tháng</span>
+                    </div>
+                    <div class="mb-8 p-3 bg-surface-container-low rounded-lg">
+                        <p class="text-on-surface-variant font-label-md text-label-md">Không cam kết dài hạn · có thể nâng cấp sang gói năm bất cứ lúc nào</p>
+                    </div>
+                    <ul class="space-y-4 mb-12 flex-grow">
+                        @foreach (['Toàn bộ QBank', 'Thư viện đầy đủ', 'AI không giới hạn', 'Phân tích nâng cao'] as $feature)
+                            <li class="flex items-center gap-3 font-body-sm text-body-sm">
+                                <span class="material-symbols-outlined text-success text-[20px]">check_circle</span>
+                                {{ $feature }}
+                            </li>
+                        @endforeach
+                    </ul>
+                    <a href="{{ route('register') }}"
+                        class="w-full py-3 px-4 bg-primary-container text-on-primary-container font-label-md text-label-md rounded-xl hover:opacity-90 transition-opacity text-center">Nâng
+                        cấp theo tháng</a>
+                </div>
+            </div>
+
+            <p class="text-center mt-10">
+                <a href="{{ route('landing.pricing') }}"
+                    class="font-label-md text-label-md text-primary hover:underline inline-flex items-center gap-1">
+                    Xem bảng giá chi tiết
+                    <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+                </a>
+            </p>
         </div>
     </section>
 
