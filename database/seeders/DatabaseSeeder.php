@@ -6,6 +6,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Modules\QuestionBank\Database\Seeders\QuestionBankDatabaseSeeder;
+use Modules\StudyPlan\Database\Seeders\StudyPlanDatabaseSeeder;
 
 class DatabaseSeeder extends Seeder
 {
@@ -18,6 +19,9 @@ class DatabaseSeeder extends Seeder
 
         // Learning slice: topics, questions/options, sessions/attempts/status.
         $this->call(QuestionBankDatabaseSeeder::class);
+
+        // Study plan on top of that slice: an active plan with history + schedule.
+        $this->call(StudyPlanDatabaseSeeder::class);
 
         $this->command->info('Đăng nhập dev: student@medlearn.local / password (admin@medlearn.local cho khu vực admin).');
     }

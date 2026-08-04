@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Support\Enums\Role;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Hash;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionStatus;
@@ -20,6 +21,7 @@ use Modules\QuestionBank\Models\QuestionOption;
 use Modules\QuestionBank\Models\QuestionSession;
 use Modules\QuestionBank\Models\QuestionStatus as UserQuestionStatusModel;
 use Modules\QuestionBank\Models\Topic;
+use Spatie\Permission\Models\Role as RoleModel;
 
 /**
  * Fixed, human-readable demo dataset for the learning slice:
@@ -33,51 +35,17 @@ class DemoLearningSeeder extends Seeder
     public function run(): void
     {
         Question::withoutSyncingToSearch(function (): void {
-            $topics = $this->seedTopics();
+            $this->call(TopicTaxonomySeeder::class);
+            $topics = Topic::query()->get()->keyBy('slug')->all();
             $this->seedQuestions($topics);
-            $this->seedProgress($this->resolveDemoStudent());
+            $student = $this->resolveDemoStudent();
+            $this->seedProgress($student);
+            $this->seedHintUsage($student);
         });
     }
 
     /**
-     * Seed a small specialty -> system hierarchy.
-     *
-     * @return array<string, Topic> keyed by slug
-     */
-    private function seedTopics(): array
-    {
-        $tree = [
-            'noi-khoa' => ['Nội khoa', 'specialty', ['tim-mach' => 'Tim mạch', 'ho-hap' => 'Hô hấp', 'noi-tiet' => 'Nội tiết']],
-            'ngoai-khoa' => ['Ngoại khoa', 'specialty', ['tieu-hoa' => 'Tiêu hóa', 'chan-thuong' => 'Chấn thương']],
-            'nhi-khoa' => ['Nhi khoa', 'specialty', ['so-sinh' => 'Sơ sinh']],
-            'san-phu-khoa' => ['Sản phụ khoa', 'specialty', []],
-            'duoc-ly' => ['Dược lý', 'specialty', ['khang-sinh' => 'Kháng sinh']],
-        ];
-
-        $topics = [];
-        $order = 0;
-
-        foreach ($tree as $slug => [$name, $type, $children]) {
-            $parent = Topic::firstOrCreate(
-                ['slug' => $slug],
-                ['name' => $name, 'type' => $type, 'order' => $order++, 'parent_id' => null],
-            );
-            $topics[$slug] = $parent;
-
-            $childOrder = 0;
-            foreach ($children as $childSlug => $childName) {
-                $topics[$childSlug] = Topic::firstOrCreate(
-                    ['slug' => $childSlug],
-                    ['name' => $childName, 'type' => 'system', 'order' => $childOrder++, 'parent_id' => $parent->id],
-                );
-            }
-        }
-
-        return $topics;
-    }
-
-    /**
-     * Seed curated questions (with options) and top up to ~30 deterministically.
+     * Seed curated questions (with options) and top up to ~500 Amboss-style MCQs.
      *
      * @param  array<string, Topic>  $topics
      */
@@ -102,21 +70,40 @@ class DemoLearningSeeder extends Seeder
             }
         }
 
-        // Top up to ~30 questions so filters/pagination have data.
-        $systemSlugs = ['tim-mach', 'ho-hap', 'noi-tiet', 'tieu-hoa', 'chan-thuong', 'so-sinh', 'khang-sinh'];
-        $target = 30;
+        // Top up so a multi-week study plan can draw a fresh Amboss-style batch every day.
+        $systemSlugs = Topic::query()
+            ->where('type', 'system')
+            ->orderBy('order')
+            ->pluck('slug')
+            ->all();
+
+        if ($systemSlugs === []) {
+            $systemSlugs = ['tim-mach', 'ho-hap', 'noi-tiet', 'tieu-hoa', 'chan-thuong', 'so-sinh', 'khang-sinh'];
+        }
+
+        $target = 500;
         $existing = Question::count();
+        $bank = $this->ambossStyleBank();
 
         for ($i = $existing; $i < $target; $i++) {
             $slug = $systemSlugs[$i % count($systemSlugs)];
             $topic = $topics[$slug] ?? null;
+            $template = $bank[$i % count($bank)];
             $difficulty = [Difficulty::Easy, Difficulty::Medium, Difficulty::Hard][$i % 3];
-            $stem = sprintf('Câu hỏi lâm sàng mẫu #%02d — chủ đề %s?', $i + 1, $topic?->name ?? 'tổng hợp');
+            $caseNo = $i + 1;
+            $topicName = $topic?->name ?? 'Tổng hợp';
+
+            $stem = sprintf(
+                '[Amboss] Ca lâm sàng #%03d — %s. %s',
+                $caseNo,
+                $topicName,
+                $template['stem'],
+            );
 
             $question = Question::firstOrCreate(
                 ['stem' => $stem],
                 [
-                    'explanation' => 'Giải thích mẫu cho câu hỏi demo số '.($i + 1).'.',
+                    'explanation' => $template['explanation'].' (Chủ đề: '.$topicName.'; ca #'.$caseNo.'.)',
                     'difficulty' => $difficulty,
                     'status' => QuestionStatus::Published,
                     'topic_id' => $topic?->id,
@@ -125,15 +112,197 @@ class DemoLearningSeeder extends Seeder
             );
 
             if ($question->wasRecentlyCreated) {
-                $correct = $i % 4; // deterministic correct index
-                $this->seedOptions($question, [
-                    ['content' => 'Phương án A', 'is_correct' => $correct === 0],
-                    ['content' => 'Phương án B', 'is_correct' => $correct === 1],
-                    ['content' => 'Phương án C', 'is_correct' => $correct === 2],
-                    ['content' => 'Phương án D', 'is_correct' => $correct === 3],
-                ]);
+                $correctIndex = $i % 4;
+                $right = $template['options'][0];
+                $wrongs = array_values(array_slice($template['options'], 1));
+                $options = [];
+                $wrongCursor = 0;
+
+                foreach (['A', 'B', 'C', 'D'] as $idx => $label) {
+                    $isCorrect = $idx === $correctIndex;
+                    $content = $isCorrect ? $right : $wrongs[$wrongCursor++];
+                    $options[] = [
+                        'content' => $content,
+                        'is_correct' => $isCorrect,
+                        'explanation' => $isCorrect
+                            ? "Đáp án {$label} khớp cơ chế/lâm sàng Amboss cho tình huống này."
+                            : "Đáp án {$label} không phù hợp với diễn tiến hoặc hướng xử trí ưu tiên.",
+                    ];
+                }
+                $this->seedOptions($question, $options);
             }
         }
+    }
+
+    /**
+     * Rotating Amboss-style Vietnamese clinical stems + 4 option texts.
+     *
+     * @return list<array{stem: string, explanation: string, options: list<string>}>
+     */
+    private function ambossStyleBank(): array
+    {
+        return [
+            [
+                'stem' => 'Bệnh nhân 58 tuổi đau ngực trái lan tay trái 40 phút, vã mồ hôi. Bước xử trí ưu tiên tiếp theo là gì?',
+                'explanation' => 'Nghi STEMI: ECG sớm, aspirin, đánh giá tái tưới máu theo cửa sổ thời gian.',
+                'options' => [
+                    'Điện tâm đồ 12 chuyển đạo trong 10 phút',
+                    'Chụp CT ngực có cản quang ngay',
+                    'Đo D-dimer thường quy',
+                    'Cho về theo dõi ngoại trú',
+                ],
+            ],
+            [
+                'stem' => 'Bệnh nhân hen đang dùng ICS+LABA vẫn khò khè ban đêm. Bổ sung nào hợp lý theo bậc điều trị?',
+                'explanation' => 'Tăng bậc điều trị hoặc thêm kiểm soát viêm khi triệu chứng về đêm còn tồn tại.',
+                'options' => [
+                    'Thêm/tối ưu kháng leukotriene hoặc tăng ICS',
+                    'Ngừng toàn bộ ICS',
+                    'Chỉ dùng kháng histamine',
+                    'Kháng sinh macrolide kéo dài mặc định',
+                ],
+            ],
+            [
+                'stem' => 'Người 45 tuổi HbA1c 7,8%, BMI 31, chưa biến chứng. Lựa chọn khởi trị nào phù hợp nhất?',
+                'explanation' => 'Metformin vẫn là nền tảng khởi trị T2DM khi không chống chỉ định.',
+                'options' => [
+                    'Metformin + thay đổi lối sống',
+                    'Insulin bolus ngay từ đầu',
+                    'Chỉ chế độ ăn không thuốc',
+                    'Sulfonylurea liều cao đơn trị',
+                ],
+            ],
+            [
+                'stem' => 'Đau bụng quanh rốn 12 giờ, sau khu trú hố chậu phải, sốt nhẹ, bạch cầu tăng. Chẩn đoán ưu tiên?',
+                'explanation' => 'Diễn tiến điển hình của viêm ruột thừa cấp.',
+                'options' => [
+                    'Viêm ruột thừa cấp',
+                    'Loét dạ dày thủng',
+                    'Sỏi mật không biến chứng',
+                    'Viêm tụy mạn',
+                ],
+            ],
+            [
+                'stem' => 'Thai 34 tuần, HA 170/110 mmHg, protein niệu (++), đau đầu. Hướng xử trí cấp nào đúng?',
+                'explanation' => 'Tiền sản giật nặng: ổn định mẹ, magie sulfate phòng co giật, cân nhắc kết thúc thai kỳ.',
+                'options' => [
+                    'Magie sulfate + hạ áp + hội chẩn sản',
+                    'Chỉ theo dõi ngoại trú',
+                    'Lợi tiểu quai liều cao đơn độc',
+                    'Ngừng theo dõi thai ngay tại nhà',
+                ],
+            ],
+            [
+                'stem' => 'Trẻ sơ sinh đủ tháng vàng da giờ thứ 18. Nhận định nào đúng nhất?',
+                'explanation' => 'Vàng da <24h là bệnh lý, cần đánh giá tán huyết/nhiễm trùng.',
+                'options' => [
+                    'Vàng da bệnh lý — cần xét nghiệm ngay',
+                    'Vàng da sinh lý bình thường',
+                    'Chỉ theo dõi sau 1 tuần',
+                    'Bổ sung sắt đường uống là đủ',
+                ],
+            ],
+            [
+                'stem' => 'Viêm phổi cộng đồng nhẹ, không bệnh nền. Kháng sinh ngoại trú phù hợp?',
+                'explanation' => 'Amoxicillin hoặc macrolide theo hướng dẫn địa phương cho CAP nhẹ.',
+                'options' => [
+                    'Amoxicillin hoặc macrolide theo guideline',
+                    'Vancomycin IV mặc định',
+                    'Carbapenem phổ rộng',
+                    'Không kháng sinh dù sốt cao',
+                ],
+            ],
+            [
+                'stem' => 'Đa chấn thương sau TNGT, chưa thông đường thở. Ưu tiên ABCDE bước đầu?',
+                'explanation' => 'Airway kèm bảo vệ cột sống cổ là bước đầu tiên.',
+                'options' => [
+                    'Đảm bảo đường thở + bảo vệ cột sống cổ',
+                    'Truyền máu khối lượng lớn trước tiên',
+                    'Chụp MRI toàn thân ngay',
+                    'Gây mê sâu không đánh giá đường thở',
+                ],
+            ],
+            [
+                'stem' => 'Bệnh nhân COPD đợt cấp, SpO2 84%, thở nhanh, lơ mơ. Biến chứng cấp cần nghĩ đến?',
+                'explanation' => 'Suy hô hấp tăng CO2/giảm O2 là biến chứng nguy hiểm của đợt cấp nặng.',
+                'options' => [
+                    'Suy hô hấp cấp (tăng CO2/giảm O2)',
+                    'Hạ đường huyết đơn thuần',
+                    'Cơn gout cấp',
+                    'Viêm tai giữa',
+                ],
+            ],
+            [
+                'stem' => 'Sốc phản vệ sau tiêm kháng sinh: mày đay, tụt HA, khó thở. Thuốc ưu tiên?',
+                'explanation' => 'Adrenaline tiêm bắp là xử trí đầu tay trong sốc phản vệ.',
+                'options' => [
+                    'Adrenaline tiêm bắp đùi',
+                    'Chỉ kháng histamine uống',
+                    'Corticoid uống đơn độc',
+                    'Truyền dịch chậm không thuốc',
+                ],
+            ],
+            [
+                'stem' => 'Tăng HA + đái tháo đường có albumin niệu. Nhóm thuốc hạ áp ưu tiên?',
+                'explanation' => 'ACEi/ARB bảo vệ thận và là lựa chọn đầu tay khi có protein/albumin niệu.',
+                'options' => [
+                    'ACEi hoặc ARB',
+                    'Chẹn beta không chọn lọc đơn độc',
+                    'Lợi tiểu thẩm thấu',
+                    'Nitrate kéo dài',
+                ],
+            ],
+            [
+                'stem' => 'Đau nửa đầu Pulsatile kèm buồn nôn, sợ ánh sáng, không dấu thần kinh khu trú. Chẩn đoán gần nhất?',
+                'explanation' => 'Triệu chứng điển hình của migraine không kèm aura phức tạp.',
+                'options' => [
+                    'Đau nửa đầu (migraine)',
+                    'Đột quỵ xuất huyết não',
+                    'Viêm màng não mủ',
+                    'Glôcôm góc đóng cấp',
+                ],
+            ],
+            [
+                'stem' => 'Thiếu máu hồng cầu nhỏ, ferritin thấp, MCV giảm. Nguyên nhân thường gặp nhất?',
+                'explanation' => 'Thiếu sắt là nguyên nhân phổ biến của microcytic anemia.',
+                'options' => [
+                    'Thiếu sắt',
+                    'Thiếu B12',
+                    'Thiếu folate đơn thuần',
+                    'Tăng hồng cầu nguyên phát',
+                ],
+            ],
+            [
+                'stem' => 'Sỏi niệu quản gây đau quặn thận, không sốt, CT không biến chứng. Xử trí ban đầu?',
+                'explanation' => 'Giảm đau, dịch, lọc sỏi theo kích thước; không kháng sinh nếu không nhiễm khuẩn.',
+                'options' => [
+                    'Giảm đau + bù dịch + theo dõi/chỉ định lấy sỏi',
+                    'Cắt thận cấp cứu mặc định',
+                    'Kháng sinh phổ rộng kéo dài',
+                    'Xạ trị ổ bụng',
+                ],
+            ],
+            [
+                'stem' => 'Trầm cảm nặng có ý tưởng tự sát rõ. Bước quản lý ưu tiên?',
+                'explanation' => 'An toàn bệnh nhân và đánh giá nguy cơ tự sát là ưu tiên hàng đầu.',
+                'options' => [
+                    'Đảm bảo an toàn + đánh giá nguy cơ tự sát',
+                    'Chỉ kê SSRI và cho về nhà ngay',
+                    'Bắt buộc điện giật không đánh giá',
+                    'Không cần theo dõi sát',
+                ],
+            ],
+            [
+                'stem' => 'Viêm khớp gối nóng đỏ, dịch đục, sốt. Xét nghiệm dịch khớp ưu tiên để loại trừ?',
+                'explanation' => 'Viêm khớp nhiễm khuẩn cần chọc hút, nhuộm Gram/cấy dịch khớp khẩn.',
+                'options' => [
+                    'Chọc hút dịch khớp (Gram/cấy)',
+                    'Chỉ CRP ngoại trú',
+                    'MRI sau 1 tháng',
+                    'Tiêm corticoid nội khớp ngay',
+                ],
+            ],
+        ];
     }
 
     /**
@@ -166,6 +335,7 @@ class DemoLearningSeeder extends Seeder
         );
 
         if (! $student->hasRole(Role::Student->value)) {
+            RoleModel::findOrCreate(Role::Student->value, 'web');
             $student->assignRole(Role::Student->value);
         }
 
@@ -182,7 +352,7 @@ class DemoLearningSeeder extends Seeder
             return;
         }
 
-        /** @var \Illuminate\Support\Collection<int, Question> $questions */
+        /** @var Collection<int, Question> $questions */
         $questions = Question::with('options')
             ->where('status', QuestionStatus::Published)
             ->orderBy('created_at')
@@ -223,11 +393,11 @@ class DemoLearningSeeder extends Seeder
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<int, Question>  $questions
+     * @param  Collection<int, Question>  $questions
      */
     private function buildSession(
         User $student,
-        \Illuminate\Support\Collection $questions,
+        Collection $questions,
         int $correctTarget,
         SessionStatus $status,
         int $daysAgo,
@@ -309,6 +479,27 @@ class DemoLearningSeeder extends Seeder
                 'last_correct_at' => $isCorrect ? $when : null,
             ],
         );
+    }
+
+    /**
+     * Keep the "answered correctly using hints" filter usable in demo data.
+     *
+     * This also upgrades older seeded databases where all attempts originally
+     * had used_hint=false.
+     */
+    private function seedHintUsage(User $student): void
+    {
+        $attemptIds = QuestionAttempt::query()
+            ->where('user_id', $student->id)
+            ->where('is_correct', true)
+            ->orderByDesc('answered_at')
+            ->orderByDesc('id')
+            ->limit(8)
+            ->pluck('id');
+
+        QuestionAttempt::query()
+            ->whereIn('id', $attemptIds)
+            ->update(['used_hint' => true]);
     }
 
     /**

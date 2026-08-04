@@ -8,15 +8,33 @@ use Modules\StudyPlan\Http\Controllers\StudyPlanDetailController;
 use Modules\StudyPlan\Http\Controllers\StudyPlanPageController;
 use Modules\StudyPlan\Http\Controllers\StudyPlanScheduleController;
 use Modules\StudyPlan\Http\Controllers\StudyPlanSessionController;
+use Modules\StudyPlan\Http\Controllers\StudyPlanTaskController;
 
 /*
-| StudyPlan — web routes. Add study-plan pages here.
+| StudyPlan — web routes. Tasks are scoped to their plan so a task id from
+| another plan cannot be addressed (srs/modules/04 §13).
 */
 
-Route::middleware('auth')->group(function (): void {
-    Route::get('/study-plan', StudyPlanPageController::class)->name('study-plan.index');
-    Route::get('/study-plan/create', StudyPlanCreateController::class)->name('study-plan.create');
-    Route::get('/study-plan/detail', StudyPlanDetailController::class)->name('study-plan.detail');
-    Route::get('/study-plan/schedule', StudyPlanScheduleController::class)->name('study-plan.schedule');
-    Route::get('/study-plan/session', StudyPlanSessionController::class)->name('study-plan.session');
-});
+Route::middleware('auth')
+    ->prefix('study-plan')
+    ->name('study-plan.')
+    ->scopeBindings()
+    ->group(function (): void {
+        Route::get('/', StudyPlanPageController::class)->name('index');
+
+        Route::get('/create', [StudyPlanCreateController::class, 'create'])->name('create');
+        Route::post('/', [StudyPlanCreateController::class, 'store'])->name('store');
+
+        Route::get('/{plan}', StudyPlanDetailController::class)->name('detail');
+        Route::get('/{plan}/schedule', StudyPlanScheduleController::class)->name('schedule');
+
+        Route::post('/{plan}/tasks/{task}/start', [StudyPlanTaskController::class, 'start'])->name('tasks.start');
+        Route::post('/{plan}/tasks/{task}/skip', [StudyPlanTaskController::class, 'skip'])->name('tasks.skip');
+        Route::post('/{plan}/tasks/{task}/reschedule', [StudyPlanTaskController::class, 'reschedule'])->name('tasks.reschedule');
+
+        Route::get('/{plan}/tasks/{task}/session', [StudyPlanSessionController::class, 'show'])->name('session');
+        Route::post('/{plan}/tasks/{task}/session', [StudyPlanSessionController::class, 'answer'])->name('session.answer');
+        Route::post('/{plan}/tasks/{task}/session/annotations', [StudyPlanSessionController::class, 'annotate'])->name('session.annotate');
+        Route::get('/{plan}/tasks/{task}/summary', [StudyPlanSessionController::class, 'summary'])->name('session.summary');
+        Route::get('/{plan}/tasks/{task}/review', [StudyPlanSessionController::class, 'review'])->name('session.review');
+    });

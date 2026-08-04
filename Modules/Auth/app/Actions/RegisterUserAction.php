@@ -10,6 +10,7 @@ use App\Support\Enums\Role;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\DB;
 use Modules\Auth\Data\RegisterData;
+use Spatie\Permission\Models\Role as RoleModel;
 
 /**
  * Use case: create a self-service learner account.
@@ -31,6 +32,7 @@ final class RegisterUserAction
                 'locale' => app()->getLocale(),
             ]);
 
+            RoleModel::findOrCreate(Role::Student->value, 'web');
             $user->assignRole(Role::Student->value);
 
             return $user;

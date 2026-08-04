@@ -1,10 +1,24 @@
 @php
-    // Study-plan session port of html/pc-study-session.html (separate from qbank).
+    /**
+     * @var \Modules\StudyPlan\Models\StudyPlan $plan
+     * @var \Modules\StudyPlan\Models\StudyPlanTask $task
+     * @var \Modules\QuestionBank\Models\QuestionSession $session
+     * @var \Modules\QuestionBank\Models\Question $question
+     * @var \Modules\QuestionBank\Models\QuestionAttempt|null $attempt
+     */
+    $exitUrl = route('study-plan.detail', $plan);
+    $summaryUrl = route('study-plan.session.summary', [$plan, $task]);
+    $reviewUrl = route('study-plan.session.review', [$plan, $task]);
+    $progress = $total > 0 ? (int) round(($index + 1) / $total * 100) : 0;
+    $selectedOptionIds = $attempt?->selected_option_ids ?? [];
+    $isAnswered = $attempt !== null;
+    $nextIndex = $index + 1 < $total ? $index + 1 : null;
+    $prevIndex = $index > 0 ? $index - 1 : null;
+
     $tools = [
         ['icon' => 'bookmark', 'label' => 'Lưu câu hỏi'],
-        ['icon' => 'flag', 'label' => 'Gắn cờ'],
+        ['icon' => 'flag', 'label' => 'Gắn cờ', 'action' => 'flag'],
         ['icon' => 'description', 'label' => 'Ghi chú', 'action' => 'notes'],
-        ['icon' => 'science', 'label' => 'Tra cứu Labs'],
         ['icon' => 'drive_file_rename_outline', 'label' => 'Tô màu văn bản', 'action' => 'highlight'],
     ];
 
@@ -13,581 +27,530 @@
         ['hex' => '#F59E0B', 'title' => 'Vàng'],
         ['hex' => '#10B981', 'title' => 'Xanh lá'],
     ];
-
-    $aiTools = [
-        ['icon' => 'psychology', 'label' => 'Hỏi Med-AI'],
-        ['icon' => 'style', 'label' => 'Tạo thẻ học', 'action' => 'flashcard'],
-    ];
-
-    $flashcardDecks = [
-        'Dược lý tim mạch',
-        'Chẩn đoán phân biệt',
-        'Câu sai của tôi',
-    ];
-
-    $options = [
-        [
-            'key' => 'A',
-            'text' => 'Viêm màng ngoài tim',
-            'state' => 'neutral',
-        ],
-        [
-            'key' => 'B',
-            'text' => 'Nhồi máu cơ tim cấp thành trước',
-            'state' => 'correct',
-        ],
-        [
-            'key' => 'C',
-            'text' => 'Bóc tách động mạch chủ',
-            'state' => 'neutral',
-        ],
-        [
-            'key' => 'D',
-            'text' => 'Thuyên tắc phổi',
-            'state' => 'wrong_detail',
-            'feedback' => 'Thuyên tắc phổi thường gây ra đau ngực màng phổi cấp tính và khó thở, tuy nhiên điện tâm đồ điển hình thường là S1Q3T3 hoặc nhịp nhanh xoang, không phải ST chênh lên khu trú từ V1–V4.',
-        ],
-        [
-            'key' => 'E',
-            'text' => 'Trào ngược dạ dày thực quản',
-            'state' => 'wrong',
-        ],
-    ];
-
-    $current = 12;
-    $total = 40;
-    $progress = (int) round(($current / $total) * 100);
-
-    $completed = [1];
-    $flagged = [5];
-    $navigatorQuestions = collect(range(1, $total))->map(function (int $n) use ($current, $completed, $flagged) {
-        return [
-            'n' => $n,
-            'state' => match (true) {
-                $n === $current => 'active',
-                in_array($n, $completed, true) => 'completed',
-                in_array($n, $flagged, true) => 'flagged',
-                default => 'unanswered',
-            },
-        ];
-    })->all();
-
-    $exitUrl ??= route('study-plan.detail');
+    $note = $note ?? '';
+    $stemHtml = $stemHtml ?? e((string) $question->stem);
+    $flagged = (bool) ($flagged ?? false);
+    $flaggedIds = $flaggedIds ?? [];
+    $sessionIncomplete = count($answeredIds) < $total;
 @endphp
 
 <x-layouts.auth title="Phiên học kế hoạch">
     <div x-data="{
-            notesOpen: false,
-            flashcardOpen: false,
-            navigatorOpen: false,
-            highlightMode: false,
-            selectionBar: { show: false, x: 0, y: 0 },
-            toggleHighlight() {
-                this.highlightMode = !this.highlightMode;
-                if (!this.highlightMode) this.selectionBar.show = false;
-            },
-            onTextSelect() {
-                if (!this.highlightMode) {
+        notesOpen: false,
+        navigatorOpen: false,
+        exitOpen: false,
+        highlightMode: false,
+        flagged: @js($flagged),
+        sessionIncomplete: @js($sessionIncomplete),
+        exitUrl: @js($exitUrl),
+        selectionBar: { show: false, x: 0, y: 0 },
+        noteText: @js($note),
+        noteSaving: false,
+        noteSaved: false,
+        stemHtml: @js($stemHtml),
+        annotateUrl: @js(route('study-plan.session.annotate', [$plan, $task])),
+        csrf: @js(csrf_token()),
+        questionId: @js($question->id),
+        requestExit() {
+            if (this.sessionIncomplete) {
+                this.exitOpen = true;
+                return;
+            }
+            window.location.href = this.exitUrl;
+        },
+        toggleHighlight() {
+            this.highlightMode = !this.highlightMode;
+            if (!this.highlightMode) this.selectionBar.show = false;
+            const stem = document.getElementById('session-stem');
+            if (stem) stem.classList.toggle('cursor-text', this.highlightMode);
+        },
+        async toggleFlag() {
+            this.flagged = !this.flagged;
+            await this.persistAnnotation({ flagged: this.flagged });
+        },
+        onTextSelect() {
+            if (!this.highlightMode) { this.selectionBar.show = false; return; }
+            setTimeout(() => {
+                const sel = window.getSelection();
+                if (!sel || sel.rangeCount === 0 || sel.isCollapsed || !sel.toString().trim()) {
                     this.selectionBar.show = false;
                     return;
                 }
-                // Đợi selection ổn định sau mouseup
-                setTimeout(() => {
-                    const sel = window.getSelection();
-                    if (!sel || sel.rangeCount === 0 || sel.isCollapsed || !sel.toString().trim()) {
-                        this.selectionBar.show = false;
-                        return;
-                    }
-                    const range = sel.getRangeAt(0);
-                    const root = this.$refs.vignette;
-                    if (root && !root.contains(range.commonAncestorContainer) && range.commonAncestorContainer !== root) {
-                        // Cho phép nếu selection nằm trong vignette (text node parent)
-                        const node = range.commonAncestorContainer.nodeType === 3
-                            ? range.commonAncestorContainer.parentElement
-                            : range.commonAncestorContainer;
-                        if (!root.contains(node)) {
-                            this.selectionBar.show = false;
-                            return;
-                        }
-                    }
-                    const rect = range.getBoundingClientRect();
-                    if (rect.width === 0 && rect.height === 0) {
-                        this.selectionBar.show = false;
-                        return;
-                    }
-                    this.selectionBar = {
-                        show: true,
-                        x: Math.max(80, Math.min(window.innerWidth - 80, rect.left + rect.width / 2)),
-                        y: Math.max(48, rect.top - 8),
-                    };
-                }, 10);
-            },
-            applyColor(hex) {
-                const sel = window.getSelection();
-                if (!sel || sel.isCollapsed || !sel.rangeCount) return;
-                const range = sel.getRangeAt(0);
-                if (!range.toString().trim()) return;
-                const mark = document.createElement('mark');
-                mark.className = 'rounded-sm';
-                mark.style.backgroundColor = hex + '4D';
-                try {
-                    range.surroundContents(mark);
-                } catch (e) {
-                    const fragment = range.extractContents();
-                    mark.appendChild(fragment);
-                    range.insertNode(mark);
-                }
-                sel.removeAllRanges();
-                this.selectionBar.show = false;
-            },
-            clearHighlight() {
-                const root = this.$refs.vignette;
-                if (!root) return;
-                root.querySelectorAll('mark').forEach((mark) => {
-                    const parent = mark.parentNode;
-                    while (mark.firstChild) parent.insertBefore(mark.firstChild, mark);
-                    parent.removeChild(mark);
-                    parent.normalize();
+                const rect = sel.getRangeAt(0).getBoundingClientRect();
+                if (rect.width === 0 && rect.height === 0) { this.selectionBar.show = false; return; }
+                this.selectionBar = {
+                    show: true,
+                    x: Math.max(80, Math.min(window.innerWidth - 80, rect.left + rect.width / 2)),
+                    y: Math.max(48, rect.top - 8),
+                };
+            }, 10);
+        },
+        applyColor(hex) {
+            const sel = window.getSelection();
+            if (!sel || sel.isCollapsed || !sel.rangeCount) return;
+            const range = sel.getRangeAt(0);
+            if (!range.toString().trim()) return;
+            const stemEl = document.getElementById('session-stem');
+            if (!stemEl || !stemEl.contains(range.commonAncestorContainer)) return;
+            const mark = document.createElement('mark');
+            mark.className = 'rounded-sm';
+            mark.setAttribute('data-hl', hex);
+            mark.setAttribute('style', 'background-color: ' + hex + '4D');
+            try {
+                range.surroundContents(mark);
+            } catch (e) {
+                const fragment = range.extractContents();
+                mark.appendChild(fragment);
+                range.insertNode(mark);
+            }
+            sel.removeAllRanges();
+            this.selectionBar.show = false;
+            this.stemHtml = stemEl.innerHTML;
+            this.persistAnnotation({ stem_html: this.stemHtml });
+        },
+        async persistAnnotation(payload) {
+            try {
+                await fetch(this.annotateUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': this.csrf,
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: JSON.stringify({ question_id: this.questionId, ...payload }),
                 });
-                this.selectionBar.show = false;
-            },
-        }"
-        @keydown.escape.window="notesOpen = false; flashcardOpen = false; navigatorOpen = false; selectionBar.show = false"
+            } catch (e) {
+                // Không chặn làm bài nếu lưu ghi chú/highlight lỗi tạm thời.
+            }
+        },
+        async saveNote() {
+            if (this.noteSaving) return;
+            this.noteSaving = true;
+            this.noteSaved = false;
+            await this.persistAnnotation({ note: this.noteText });
+            this.noteSaving = false;
+            this.noteSaved = true;
+            this.notesOpen = false;
+        },
+    }" @keydown.escape.window="notesOpen = false; navigatorOpen = false; exitOpen = false; selectionBar.show = false"
         @mouseup.window="onTextSelect()">
-    {{-- Desktop --}}
-    <div class="hidden min-h-screen flex-col bg-white lg:flex">
-        <header
-            class="fixed top-0 z-50 flex h-header-height w-full items-center border-b border-outline-variant bg-white px-margin-desktop">
-            <div class="flex flex-1 items-center gap-4">
-                <a href="{{ $exitUrl }}"
-                    class="flex size-10 items-center justify-center rounded-full transition-colors hover:bg-surface-container-high">
-                    <span class="material-symbols-outlined text-outline">close</span>
-                </a>
-                <div class="flex flex-col">
-                    <span class="font-label-md text-label-md font-bold text-primary">{{ config('app.name') }}</span>
-                    <span class="text-[10px] font-bold tracking-wider text-outline uppercase">Chế độ Study</span>
-                </div>
-            </div>
-            <div class="flex flex-1 flex-col items-center gap-1">
-                <span class="font-label-md text-label-md text-on-surface-variant">Question {{ $current }} of
-                    {{ $total }}</span>
-                <div class="h-1.5 w-64 overflow-hidden rounded-full bg-surface-container-highest">
-                    <div class="h-full bg-primary transition-all duration-500" style="width: {{ $progress }}%"></div>
-                </div>
-            </div>
-            <div class="flex flex-1 items-center justify-end gap-3">
-                <div class="flex items-center gap-1 text-primary">
-                    <span class="material-symbols-outlined text-[18px]"
-                        style="font-variation-settings: 'FILL' 1;">cloud_done</span>
-                    <span class="font-label-sm text-label-sm">Đã lưu</span>
-                </div>
-                <button type="button" @click="navigatorOpen = true"
-                    class="flex items-center gap-2 rounded-lg border border-outline-variant px-3 py-1.5 transition-colors hover:bg-surface-container-high">
-                    <span class="material-symbols-outlined text-[20px]">grid_view</span>
-                    <span class="font-label-md text-label-md">Navigator</span>
-                </button>
-            </div>
-        </header>
 
-        <main class="flex flex-1 bg-white pt-header-height pb-24">
-            <aside
-                class="group sticky top-header-height h-[calc(100vh-var(--spacing-header-height))] w-16 shrink-0 overflow-y-auto border-r border-outline-variant bg-white transition-all duration-300 hover:w-56">
-                <nav class="space-y-2 p-4">
-                    @foreach ($tools as $tool)
-                        <button type="button"
-                            @if (($tool['action'] ?? null) === 'notes') @click="notesOpen = true"
-                            @elseif (($tool['action'] ?? null) === 'highlight') @click="toggleHighlight()" @endif
-                            @if (($tool['action'] ?? null) === 'highlight')
-                                class="flex w-full items-center justify-center gap-3 rounded-lg px-0 py-2.5 transition-colors group-hover:justify-start group-hover:px-3"
-                                :class="highlightMode ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-high hover:text-primary'"
-                            @else
-                                class="flex w-full items-center justify-center gap-3 rounded-lg px-0 py-2.5 text-on-surface-variant transition-colors group-hover:justify-start group-hover:px-3 hover:bg-surface-container-high hover:text-primary"
-                            @endif>
-                            <span class="material-symbols-outlined text-[20px]">{{ $tool['icon'] }}</span>
-                            <span
-                                class="overflow-hidden text-label-md font-medium whitespace-nowrap opacity-0 transition-opacity duration-300 group-hover:opacity-100">{{ $tool['label'] }}</span>
-                        </button>
-                    @endforeach
-                    <div class="mx-3 my-4 border-t border-outline-variant"></div>
-                    @foreach ($aiTools as $tool)
-                        <button type="button"
-                            @if (($tool['action'] ?? null) === 'flashcard') @click="flashcardOpen = true" @endif
-                            class="flex w-full items-center justify-center gap-3 rounded-lg px-0 py-2.5 text-on-surface-variant transition-colors group-hover:justify-start group-hover:px-3 hover:bg-surface-container-high hover:text-primary">
-                            <span class="material-symbols-outlined text-[20px]">{{ $tool['icon'] }}</span>
-                            <span
-                                class="overflow-hidden text-label-md font-medium whitespace-nowrap opacity-0 transition-opacity duration-300 group-hover:opacity-100">{{ $tool['label'] }}</span>
-                        </button>
-                    @endforeach
-                    <div class="mt-8">
-                        <button type="button"
-                            class="flex w-full items-center justify-center gap-3 rounded-lg px-0 py-2.5 text-error transition-colors group-hover:justify-start group-hover:px-3 hover:bg-error/5">
-                            <span class="material-symbols-outlined text-[20px]">report</span>
-                            <span
-                                class="overflow-hidden text-label-md font-medium whitespace-nowrap opacity-0 transition-opacity duration-300 group-hover:opacity-100">Báo
-                                lỗi câu hỏi</span>
-                        </button>
+        <div class="flex min-h-screen flex-col bg-white">
+            <header
+                class="sticky top-0 z-50 flex h-header-height w-full items-center border-b border-outline-variant bg-white px-4 md:px-margin-desktop">
+                <div class="flex flex-1 items-center gap-4">
+                    <button type="button" @click="requestExit()"
+                        class="flex size-10 items-center justify-center rounded-full transition-colors hover:bg-surface-container-high"
+                        aria-label="Thoát phiên làm bài">
+                        <span class="material-symbols-outlined text-outline">close</span>
+                    </button>
+                    <div class="hidden flex-col sm:flex">
+                        <span class="font-label-md text-label-md font-bold text-primary">{{ $task->title() }}</span>
+                        <span class="text-[10px] font-bold tracking-wider text-outline uppercase">
+                            {{ $plan->name }} · {{ $task->date->format('d/m/Y') }}
+                        </span>
                     </div>
-                </nav>
-            </aside>
-
-            <div class="w-full overflow-y-auto transition-all duration-300">
-                <div class="mx-auto max-w-4xl space-y-6 px-12 py-8">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-2 rounded-full bg-surface-container-highest px-3 py-1">
-                            <span class="size-2 rounded-full bg-primary"></span>
-                            <span
-                                class="font-label-sm text-label-sm font-bold text-on-surface-variant uppercase">Câu hỏi
-                                {{ $current }}</span>
-                        </div>
-                        <button type="button" class="text-outline hover:text-on-surface">
-                            <span class="material-symbols-outlined">more_horiz</span>
-                        </button>
+                </div>
+                <div class="flex flex-1 flex-col items-center gap-1">
+                    <span class="font-label-md text-label-md text-on-surface-variant">Câu {{ $index + 1 }} /
+                        {{ $total }}</span>
+                    <div class="h-1.5 w-40 overflow-hidden rounded-full bg-surface-container-highest md:w-64">
+                        <div class="h-full bg-primary transition-all duration-500" style="width: {{ $progress }}%"></div>
                     </div>
+                </div>
+                <div class="flex flex-1 items-center justify-end gap-3">
+                    <span class="hidden items-center gap-1 text-primary sm:flex">
+                        <span class="material-symbols-outlined text-[18px]"
+                            style="font-variation-settings: 'FILL' 1;">cloud_done</span>
+                        <span class="font-label-sm text-label-sm">{{ $task->done }}/{{ $task->target }} đã lưu</span>
+                    </span>
+                    <button type="button" @click="navigatorOpen = true"
+                        class="flex items-center gap-2 rounded-lg border border-outline-variant px-3 py-1.5 transition-colors hover:bg-surface-container-high">
+                        <span class="material-symbols-outlined text-[20px]">grid_view</span>
+                        <span class="hidden font-label-md text-label-md md:inline">Navigator</span>
+                    </button>
+                </div>
+            </header>
 
-                    <article class="space-y-6">
-                        <p x-ref="vignette"
-                            class="font-body-lg text-body-lg leading-relaxed text-on-surface select-text"
-                            :class="highlightMode && 'cursor-text'"
-                            @mouseup="onTextSelect()">
-                            Bệnh nhân nam 58 tuổi, tiền sử tăng huyết áp và đái tháo đường type 2, nhập viện vì đau ngực
-                            sau xương ức lan vai trái 40 phút. Khám lâm sàng ghi nhận vã mồ hôi, nhịp tim 105 lần/phút,
-                            huyết áp 145/90 mmHg. ECG ghi nhận nhịp xoang, đoạn ST chênh lên từ V1–V4.
-                        </p>
-                        <div class="rounded-r-lg border-l-4 border-primary bg-primary/5 py-3 pr-4 pl-4">
-                            <p class="font-headline-sm text-headline-sm font-bold text-on-surface">
-                                Chẩn đoán phù hợp nhất là gì?
-                            </p>
+            <main class="flex flex-1 bg-white pb-28">
+                <aside
+                    class="group sticky top-header-height hidden h-[calc(100vh-var(--spacing-header-height))] w-16 shrink-0 overflow-y-auto border-r border-outline-variant bg-white transition-all duration-300 hover:w-56 lg:block">
+                    <nav class="space-y-2 p-4">
+                        @foreach ($tools as $tool)
+                            <button type="button"
+                                @if (($tool['action'] ?? null) === 'notes') @click="notesOpen = true"
+                                @elseif (($tool['action'] ?? null) === 'highlight') @click="toggleHighlight()"
+                                @elseif (($tool['action'] ?? null) === 'flag') @click="toggleFlag()" @endif
+                                @if (($tool['action'] ?? null) === 'highlight')
+                                    class="flex w-full items-center justify-center gap-3 rounded-lg px-0 py-2.5 transition-colors group-hover:justify-start group-hover:px-3"
+                                    :class="highlightMode ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-high hover:text-primary'"
+                                @elseif (($tool['action'] ?? null) === 'flag')
+                                    class="flex w-full items-center justify-center gap-3 rounded-lg px-0 py-2.5 transition-colors group-hover:justify-start group-hover:px-3"
+                                    :class="flagged ? 'bg-amber-50 text-amber-600' : 'text-on-surface-variant hover:bg-surface-container-high hover:text-primary'"
+                                @else
+                                    class="flex w-full items-center justify-center gap-3 rounded-lg px-0 py-2.5 text-on-surface-variant transition-colors group-hover:justify-start group-hover:px-3 hover:bg-surface-container-high hover:text-primary"
+                                @endif>
+                                <span class="material-symbols-outlined text-[20px]"
+                                    @if (($tool['action'] ?? null) === 'flag')
+                                        :style="flagged ? \"font-variation-settings: 'FILL' 1\" : null"
+                                    @endif>{{ $tool['icon'] }}</span>
+                                <span
+                                    class="overflow-hidden text-label-md font-medium whitespace-nowrap opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                                    @if (($tool['action'] ?? null) === 'flag')
+                                        x-text="flagged ? 'Bỏ gắn cờ' : 'Gắn cờ'"
+                                    @endif>{{ $tool['label'] }}</span>
+                            </button>
+                        @endforeach
+                    </nav>
+                </aside>
+
+                @php
+                    $optionPayload = $question->options->map(fn ($option) => [
+                        'id' => (int) $option->id,
+                        'label' => $option->label,
+                        'content' => $option->content,
+                        'correct' => (bool) $option->is_correct,
+                        'explanation' => $option->explanation,
+                    ])->values();
+                @endphp
+
+                <div class="w-full overflow-y-auto"
+                    x-data="{
+                        options: @js($optionPayload),
+                        selected: @js(isset($selectedOptionIds[0]) ? (int) $selectedOptionIds[0] : null),
+                        revealed: @js($isAnswered),
+                        saving: false,
+                        startedAt: Date.now(),
+                        elapsed: @js($isAnswered ? (int) ($attempt?->time_spent_seconds ?? 0) : 0),
+                        running: @js(! $isAnswered),
+                        _timer: null,
+                        questionExplanation: @js($question->explanation),
+                        saveUrl: @js(route('study-plan.session.answer', [$plan, $task])),
+                        csrf: @js(csrf_token()),
+                        questionId: @js($question->id),
+                        index: @js($index),
+                        init() {
+                            if (!this.running) return;
+                            this.startedAt = Date.now();
+                            this.elapsed = 0;
+                            this._timer = setInterval(() => {
+                                if (!this.running) return;
+                                this.elapsed = Math.floor((Date.now() - this.startedAt) / 1000);
+                            }, 200);
+                        },
+                        stopTimer() {
+                            if (!this.running && this._timer === null) return;
+                            this.running = false;
+                            this.elapsed = Math.max(0, Math.round((Date.now() - this.startedAt) / 1000));
+                            if (this._timer) {
+                                clearInterval(this._timer);
+                                this._timer = null;
+                            }
+                        },
+                        formatTime() {
+                            const total = Math.max(0, this.elapsed | 0);
+                            const m = Math.floor(total / 60);
+                            const s = total % 60;
+                            return m + ':' + String(s).padStart(2, '0');
+                        },
+                        choose(id) {
+                            if (this.revealed) return;
+                            this.selected = id;
+                            this.stopTimer();
+                            this.revealed = true;
+                            this.persist(id);
+                        },
+                        isCorrect() {
+                            const picked = this.options.find((o) => o.id === this.selected);
+                            return picked ? picked.correct : false;
+                        },
+                        wrapClass(option) {
+                            if (!this.revealed) {
+                                return 'border-outline-variant bg-white hover:border-primary/50 hover:bg-primary/5 cursor-pointer';
+                            }
+                            if (option.correct) return 'border-[#16A34A] bg-[#16A34A]/5';
+                            return 'border-error bg-error/5';
+                        },
+                        badgeClass(option) {
+                            if (!this.revealed) return 'border border-outline-variant text-on-surface-variant';
+                            if (option.correct) return 'bg-[#16A34A] text-white';
+                            return 'bg-error text-white';
+                        },
+                        showDetail(option) {
+                            return this.revealed;
+                        },
+                        detailText(option) {
+                            if (option.explanation) return option.explanation;
+                            if (option.correct) return 'Đây là đáp án đúng.';
+                            return 'Đây không phải đáp án đúng.';
+                        },
+                        async persist(optionId) {
+                            if (this.saving) return;
+                            this.saving = true;
+                            try {
+                                await fetch(this.saveUrl, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Accept': 'application/json',
+                                        'X-CSRF-TOKEN': this.csrf,
+                                        'X-Requested-With': 'XMLHttpRequest',
+                                    },
+                                    body: JSON.stringify({
+                                        question_id: this.questionId,
+                                        option_ids: [optionId],
+                                        time_spent_seconds: this.elapsed,
+                                        index: this.index,
+                                    }),
+                                });
+                            } catch (e) {
+                                // UI đã hiện giải thích; lưu lại không chặn học.
+                            } finally {
+                                this.saving = false;
+                            }
+                        },
+                    }">
+                    <div class="mx-auto max-w-4xl space-y-6 px-4 py-8 md:px-12">
+                        <div class="flex items-center justify-between gap-3">
+                            <div class="flex items-center gap-2 rounded-full bg-surface-container-highest px-3 py-1">
+                                <span class="size-2 rounded-full bg-primary"></span>
+                                <span class="font-label-sm text-label-sm font-bold text-on-surface-variant uppercase">
+                                    {{ $question->topic?->name ?? 'Tổng hợp' }} · {{ $question->difficulty->value }}
+                                </span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="flex items-center gap-1.5 rounded-full px-3 py-1 tabular-nums"
+                                    :class="running
+                                        ? 'bg-primary/10 text-primary'
+                                        : 'bg-surface-container-highest text-on-surface-variant'">
+                                    <span class="material-symbols-outlined text-[18px]"
+                                        :style="running ? \"font-variation-settings: 'FILL' 1\" : null">timer</span>
+                                    <span class="font-label-sm text-label-sm font-bold" x-text="formatTime()"></span>
+                                </div>
+                                <span x-cloak x-show="revealed"
+                                    class="rounded-full px-3 py-1 text-label-sm font-bold"
+                                    :class="isCorrect() ? 'bg-[#16A34A]/10 text-[#16A34A]' : 'bg-error/10 text-error'"
+                                    x-text="isCorrect() ? 'Đúng' : 'Sai'"></span>
+                            </div>
                         </div>
-                    </article>
 
-                    <section class="space-y-3">
-                        @foreach ($options as $option)
-                            @if ($option['state'] === 'wrong_detail')
-                                <div
-                                    class="flex w-full flex-col overflow-hidden rounded-xl border border-error bg-error/5 text-left">
+                        <article class="space-y-6">
+                            <p id="session-stem" class="font-body-lg text-body-lg leading-relaxed text-on-surface select-text">{!! $stemHtml !!}</p>
+                        </article>
+
+                        <section class="space-y-3">
+                            <template x-for="option in options" :key="option.id">
+                                <div class="flex w-full flex-col overflow-hidden rounded-xl border text-left transition-all"
+                                    :class="wrapClass(option)"
+                                    @click="choose(option.id)"
+                                    role="button"
+                                    :tabindex="revealed ? -1 : 0">
                                     <div class="flex items-start gap-4 p-4">
-                                        <span
-                                            class="flex size-8 shrink-0 items-center justify-center rounded-full bg-error font-bold text-white">{{ $option['key'] }}</span>
-                                        <span
-                                            class="pt-1 font-body-md text-body-md text-on-surface">{{ $option['text'] }}</span>
-                                        <span class="material-symbols-outlined ml-auto text-error">remove</span>
+                                        <span class="flex size-8 shrink-0 items-center justify-center rounded-full font-bold"
+                                            :class="badgeClass(option)" x-text="option.label"></span>
+                                        <div class="min-w-0 flex-1 space-y-1 pt-1">
+                                            <span class="block font-body-md text-body-md text-on-surface"
+                                                x-text="option.content"></span>
+                                            <template x-if="revealed && option.id === selected">
+                                                <span class="inline-block rounded px-2 py-0.5 text-[10px] font-bold uppercase"
+                                                    :class="option.correct ? 'bg-[#16A34A] text-white' : 'bg-error text-white'"
+                                                    x-text="option.correct ? 'Lựa chọn của bạn · Đúng' : 'Lựa chọn của bạn'"></span>
+                                            </template>
+                                        </div>
+                                        <template x-if="revealed && option.correct">
+                                            <span class="material-symbols-outlined text-[#16A34A]"
+                                                style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                                        </template>
+                                        <template x-if="revealed && !option.correct">
+                                            <span class="material-symbols-outlined text-error"
+                                                style="font-variation-settings: 'FILL' 1;">cancel</span>
+                                        </template>
                                     </div>
-                                    <div class="px-4 pb-4 pl-16">
-                                        <p class="text-body-sm leading-relaxed text-on-surface-variant">
-                                            {{ $option['feedback'] }}
-                                        </p>
-                                        <button type="button"
-                                            class="mt-2 flex items-center gap-1 text-[11px] font-bold text-primary uppercase">
-                                            <span class="material-symbols-outlined text-[16px]">chat_bubble</span>
-                                            Phản hồi
-                                        </button>
+                                    <div x-show="showDetail(option)" x-cloak
+                                        class="space-y-2 border-t border-outline-variant/40 px-4 pb-4 pl-16">
+                                        <p class="text-label-sm font-bold tracking-wide uppercase"
+                                            :class="option.correct ? 'text-[#16A34A]' : 'text-error'"
+                                            x-text="option.correct ? 'Đáp án đúng' : 'Vì sao sai'"></p>
+                                        <p class="text-body-sm leading-relaxed text-on-surface-variant"
+                                            x-text="detailText(option)"></p>
                                     </div>
                                 </div>
+                            </template>
+                        </section>
+
+                        <div x-show="revealed && questionExplanation" x-cloak
+                            class="rounded-r-lg border-l-4 border-primary bg-primary/5 py-3 pr-4 pl-4">
+                            <p class="mb-1 text-label-sm font-bold tracking-wider text-primary uppercase">Giải thích</p>
+                            <p class="text-body-md leading-relaxed text-on-surface" x-text="questionExplanation"></p>
+                        </div>
+                    </div>
+
+                    <footer
+                        class="fixed bottom-0 left-0 z-50 flex w-full items-center justify-between border-t border-outline-variant bg-white px-4 py-4 shadow-lg md:px-margin-desktop">
+                        @if ($prevIndex !== null)
+                            <a href="{{ route('study-plan.session', [$plan, $task, 'index' => $prevIndex]) }}"
+                                class="flex items-center gap-2 px-4 py-2 text-on-surface-variant transition-colors hover:text-on-surface">
+                                <span class="material-symbols-outlined">chevron_left</span>
+                                <span class="font-bold">Câu trước</span>
+                            </a>
+                        @else
+                            <span></span>
+                        @endif
+
+                        <div x-show="!revealed" class="text-body-sm text-on-surface-variant">
+                            Chọn một đáp án để xem giải thích
+                        </div>
+
+                        <div x-cloak x-show="revealed">
+                            @if ($nextIndex !== null)
+                                <a href="{{ route('study-plan.session', [$plan, $task, 'index' => $nextIndex]) }}"
+                                    class="flex items-center gap-3 rounded-lg bg-primary px-8 py-3 font-bold text-on-primary transition-all hover:opacity-90 active:scale-95">
+                                    <span>Câu tiếp theo</span>
+                                    <span class="material-symbols-outlined">arrow_forward</span>
+                                </a>
                             @else
-                                @php
-                                    $wrap = match ($option['state']) {
-                                        'correct' => 'border-[#16A34A] bg-[#16A34A]/5',
-                                        'wrong' => 'border-error bg-error/5',
-                                        default => 'border-outline-variant bg-white',
-                                    };
-                                    $badge = match ($option['state']) {
-                                        'correct' => 'bg-[#16A34A] text-white',
-                                        'wrong' => 'bg-error text-white',
-                                        default => 'border border-outline-variant text-on-surface-variant',
-                                    };
-                                    $icon = match ($option['state']) {
-                                        'correct' => ['check', 'text-[#16A34A]', ''],
-                                        'wrong' => ['close', 'text-error', ''],
-                                        default => ['close', 'text-outline-variant', 'opacity-0'],
-                                    };
-                                @endphp
-                                <button type="button"
-                                    class="flex w-full items-start gap-4 rounded-xl border p-4 text-left transition-all {{ $wrap }}">
-                                    <span
-                                        class="flex size-8 shrink-0 items-center justify-center rounded-full font-bold {{ $badge }}">{{ $option['key'] }}</span>
-                                    <span
-                                        class="pt-1 font-body-md text-body-md text-on-surface">{{ $option['text'] }}</span>
-                                    <span
-                                        class="material-symbols-outlined ml-auto {{ $icon[1] }} {{ $icon[2] }}">{{ $icon[0] }}</span>
-                                </button>
+                                <a href="{{ $summaryUrl }}"
+                                    class="flex items-center gap-3 rounded-lg bg-primary px-8 py-3 font-bold text-on-primary transition-all hover:opacity-90">
+                                    <span>Hoàn thành</span>
+                                    <span class="material-symbols-outlined">check_circle</span>
+                                </a>
                             @endif
-                        @endforeach
-                    </section>
+                        </div>
+                    </footer>
                 </div>
-            </div>
-        </main>
+            </main>
+        </div>
 
-        <footer
-            class="fixed bottom-0 left-0 z-50 flex w-full items-center justify-between border-t border-outline-variant bg-white px-margin-desktop py-4 shadow-lg">
-            <button type="button"
-                class="flex items-center gap-2 px-4 py-2 text-on-surface-variant transition-colors hover:text-on-surface">
-                <span class="material-symbols-outlined">chevron_left</span>
-                <span class="font-bold">Câu trước</span>
-            </button>
-            <button type="button"
-                class="flex items-center gap-3 rounded-lg bg-primary px-8 py-3 font-bold text-on-primary transition-all hover:opacity-90 active:scale-95">
-                <span>Câu tiếp theo</span>
-                <span class="material-symbols-outlined">arrow_forward</span>
-            </button>
-        </footer>
-    </div>
-
-    {{-- Mobile --}}
-    <div class="flex min-h-screen flex-col bg-white lg:hidden">
-        <header
-            class="sticky top-0 z-50 flex w-full items-center justify-between border-b border-outline-variant bg-white px-4 py-3">
-            <a href="{{ $exitUrl }}" class="material-symbols-outlined text-outline">close</a>
-            <div class="flex flex-col items-center">
-                <span class="text-[10px] font-bold tracking-wider text-primary uppercase">Chế độ Study</span>
-                <span class="font-label-md text-label-md font-bold">{{ $current }} / {{ $total }}</span>
-            </div>
-            <button type="button" @click="navigatorOpen = true" class="material-symbols-outlined text-outline"
-                aria-label="Navigator">grid_view</button>
-        </header>
-        <main class="flex-1 space-y-6 p-4 pb-24">
-            <div class="h-1 w-full overflow-hidden rounded-full bg-surface-container-highest">
-                <div class="h-full bg-primary" style="width: {{ $progress }}%"></div>
-            </div>
-            <div class="space-y-4">
-                <p class="text-body-md text-on-surface">
-                    Bệnh nhân nam 58 tuổi, tiền sử THA, ĐTĐ 2, đau ngực 40p. ECG ST chênh lên V1–V4.
-                </p>
-                <div class="border-l-4 border-primary bg-primary/5 py-2 pl-3">
-                    <p class="font-bold">Chẩn đoán phù hợp nhất?</p>
+        <!-- Notes -->
+        <div x-show="notesOpen" x-cloak x-transition.opacity class="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <div class="absolute inset-0 bg-on-background/40 backdrop-blur-sm" @click="notesOpen = false"></div>
+            <div class="relative flex w-full max-w-lg flex-col overflow-hidden rounded-xl bg-white shadow-lg"
+                @click.outside="notesOpen = false">
+                <div class="flex items-center justify-between border-b border-outline-variant px-6 py-4">
+                    <h3 class="font-headline-sm text-headline-sm text-on-surface">Ghi chú cá nhân</h3>
+                    <button type="button" @click="notesOpen = false"
+                        class="flex size-8 items-center justify-center rounded-full transition-colors hover:bg-surface-container-high">
+                        <span class="material-symbols-outlined text-outline">close</span>
+                    </button>
                 </div>
-            </div>
-            <div class="space-y-2">
-                <div class="flex items-center gap-3 rounded-lg border border-[#16A34A] bg-[#16A34A]/5 p-3">
-                    <span
-                        class="flex size-6 items-center justify-center rounded-full bg-[#16A34A] text-xs font-bold text-white">B</span>
-                    <span class="text-sm font-medium">Nhồi máu cơ tim cấp</span>
-                </div>
-                <div class="flex items-center gap-3 rounded-lg border border-error bg-error/5 p-3">
-                    <span
-                        class="flex size-6 items-center justify-center rounded-full bg-error text-xs font-bold text-white">E</span>
-                    <span class="text-sm">Trào ngược dạ dày</span>
-                </div>
-            </div>
-        </main>
-        <footer
-            class="fixed bottom-0 left-0 z-50 flex w-full items-center justify-between border-t border-outline-variant bg-white px-4 py-4">
-            <span class="material-symbols-outlined text-outline">bookmark</span>
-            <button type="button" @click="notesOpen = true" class="material-symbols-outlined text-outline"
-                aria-label="Ghi chú">description</button>
-            <button type="button"
-                class="flex items-center gap-2 rounded-lg bg-primary px-6 py-3 font-bold text-on-primary">
-                <span>Tiếp theo</span>
-                <span class="material-symbols-outlined">arrow_forward</span>
-            </button>
-        </footer>
-    </div>
-
-    <!-- Notes Modal (pc-study-session-note.html) -->
-    <div x-show="notesOpen" x-cloak x-transition.opacity
-        class="fixed inset-0 z-[100] flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-on-background/40 backdrop-blur-sm" @click="notesOpen = false"></div>
-        <div class="relative flex w-full max-w-lg flex-col overflow-hidden rounded-xl bg-white shadow-lg"
-            @click.outside="notesOpen = false">
-            <div class="flex items-center justify-between border-b border-outline-variant px-6 py-4">
-                <h3 class="font-headline-sm text-headline-sm text-on-surface">Ghi chú cá nhân</h3>
-                <button type="button" @click="notesOpen = false"
-                    class="flex size-8 items-center justify-center rounded-full transition-colors hover:bg-surface-container-high">
-                    <span class="material-symbols-outlined text-outline">close</span>
-                </button>
-            </div>
-            <div class="space-y-4 p-6">
-                <div class="space-y-2">
-                    <label class="text-label-sm font-bold tracking-wider text-outline uppercase">Nội dung</label>
-                    <textarea
+                <div class="space-y-4 p-6">
+                    <textarea x-model="noteText"
                         class="min-h-[160px] w-full resize-none rounded-lg border border-outline-variant p-4 text-body-md outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                         placeholder="Nhập nội dung ghi chú của bạn tại đây..."></textarea>
-                </div>
-                <div class="space-y-2">
-                    <label class="text-label-sm font-bold tracking-wider text-outline uppercase">Tags</label>
-                    <div class="flex flex-wrap gap-2">
-                        <span
-                            class="rounded-full bg-primary/5 px-3 py-1 text-label-md font-medium text-primary">#TimMach</span>
-                        <span
-                            class="rounded-full bg-primary/5 px-3 py-1 text-label-md font-medium text-primary">#DuocLy</span>
-                        <button type="button"
-                            class="rounded-full border border-dashed border-outline-variant px-3 py-1 text-label-md text-outline transition-colors hover:bg-surface-container-low">+
-                            Thêm tag</button>
+                    <div class="flex items-center justify-between gap-3">
+                        <p class="text-label-sm text-outline-variant italic">
+                            Ghi chú gắn với câu hỏi này và hiện lại khi xem kết quả.
+                        </p>
+                        <button type="button" @click="saveNote()" :disabled="noteSaving"
+                            class="shrink-0 rounded-lg bg-primary-container px-4 py-2 font-label-md text-white transition-opacity hover:opacity-90 disabled:opacity-60">
+                            <span x-text="noteSaving ? 'Đang lưu…' : 'Lưu ghi chú'"></span>
+                        </button>
                     </div>
                 </div>
-                <div class="pt-2">
-                    <p class="text-label-sm text-outline-variant italic">Nguồn: Câu hỏi {{ $current }} - Nội khoa</p>
-                </div>
-            </div>
-            <div class="flex justify-end gap-3 bg-surface-container-low px-6 py-4">
-                <button type="button" @click="notesOpen = false"
-                    class="rounded-lg px-6 py-2 font-bold text-on-surface-variant transition-colors hover:bg-surface-container-high">
-                    Hủy
-                </button>
-                <button type="button" @click="notesOpen = false"
-                    class="rounded-lg bg-primary-container px-6 py-2 font-bold text-on-primary transition-opacity hover:opacity-90">
-                    Lưu ghi chú
-                </button>
             </div>
         </div>
-    </div>
 
-    <!-- Flashcard Modal (pc-study-session-add-flashcard.html) -->
-    <div x-show="flashcardOpen" x-cloak x-transition.opacity
-        class="fixed inset-0 z-[100] flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-on-background/40 backdrop-blur-sm" @click="flashcardOpen = false"></div>
-        <div class="relative w-full max-w-xl overflow-hidden rounded-xl bg-white shadow-2xl"
-            @click.outside="flashcardOpen = false">
-            <div class="flex items-center justify-between px-6 pt-6 pb-2">
-                <h2 class="text-xl font-bold text-on-surface">Flashcards</h2>
-                <button type="button" @click="flashcardOpen = false"
-                    class="text-on-surface-variant transition-colors hover:text-on-surface">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
+        <!-- Navigator -->
+        <div x-show="navigatorOpen" x-cloak x-transition.opacity
+            class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+            <div class="absolute inset-0" @click="navigatorOpen = false"></div>
+            <div class="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-lg"
+                @click.outside="navigatorOpen = false">
+                <div class="flex items-center justify-between border-b border-outline-variant px-6 py-4">
+                    <h2 class="text-headline-sm font-bold text-on-surface">Bản đồ câu hỏi</h2>
+                    <button type="button" @click="navigatorOpen = false"
+                        class="flex size-10 items-center justify-center rounded-full transition-colors hover:bg-surface-container-high">
+                        <span class="material-symbols-outlined text-outline">close</span>
+                    </button>
+                </div>
+                    <div class="flex flex-wrap gap-6 border-b border-outline-variant bg-surface-container-low px-6 py-4">
+                    <div class="flex items-center gap-2">
+                        <div class="size-3 rounded-full bg-[#0F766E]"></div>
+                        <span class="text-label-md text-on-surface-variant">Đã làm:
+                            <span class="font-bold text-on-surface">{{ count($answeredIds) }}/{{ $total }}</span></span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="size-3 rounded-full border border-outline-variant bg-white"></div>
+                        <span class="text-label-md text-on-surface-variant">Chưa làm:
+                            <span class="font-bold text-on-surface">{{ $total - count($answeredIds) }}/{{ $total }}</span></span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[16px] text-amber-600"
+                            style="font-variation-settings: 'FILL' 1;">flag</span>
+                        <span class="text-label-md text-on-surface-variant">Gắn cờ:
+                            <span class="font-bold text-on-surface">{{ count($flaggedIds) }}</span></span>
+                    </div>
+                </div>
+                <div class="overflow-y-auto p-6">
+                    <div class="grid grid-cols-4 gap-3 sm:grid-cols-6 md:grid-cols-8">
+                        @foreach ($questionIds as $position => $questionId)
+                            @php
+                                $isFlaggedCell = in_array($questionId, $flaggedIds, true);
+                                $state = match (true) {
+                                    $position === $index => 'active',
+                                    in_array($questionId, $answeredIds, true) => 'answered',
+                                    default => 'unanswered',
+                                };
+                                $classes = match ($state) {
+                                    'active' => 'border-2 border-primary bg-primary/5 font-bold text-primary',
+                                    'answered' => 'bg-[#0F766E] text-white',
+                                    default => 'border border-outline-variant text-on-surface-variant hover:bg-surface-container-high',
+                                };
+                            @endphp
+                            <a href="{{ route('study-plan.session', [$plan, $task, 'index' => $position]) }}"
+                                class="relative flex aspect-square items-center justify-center rounded-lg {{ $classes }}">
+                                {{ $position + 1 }}
+                                @if ($isFlaggedCell)
+                                    <span class="absolute top-0.5 right-0.5 material-symbols-outlined text-[12px] {{ $state === 'answered' ? 'text-amber-200' : 'text-amber-600' }}"
+                                        style="font-variation-settings: 'FILL' 1;">flag</span>
+                                @endif
+                            </a>
+                        @endforeach
+                    </div>
+                </div>
             </div>
-            <div class="px-6 pb-6">
-                <div class="mb-6">
-                    <label
-                        class="mb-2 block text-label-sm font-bold tracking-widest text-on-surface-variant uppercase">Chọn
-                        bộ thẻ</label>
-                    <div class="relative">
-                        <select
-                            class="w-full appearance-none rounded-lg border border-outline-variant bg-surface-container-low px-4 py-2.5 text-body-md ring-2 ring-primary focus:ring-2 focus:ring-primary">
-                            @foreach ($flashcardDecks as $deck)
-                                <option>{{ $deck }}</option>
-                            @endforeach
-                        </select>
-                        <span
-                            class="material-symbols-outlined pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-on-surface-variant">expand_more</span>
-                    </div>
-                </div>
+        </div>
 
-                <div class="mb-6 space-y-3">
-                    <div class="flex items-start gap-4 rounded-xl border border-primary bg-primary/5 p-4 transition-all">
-                        <div class="flex-1">
-                            <div class="mb-2 flex items-start justify-between">
-                                <span
-                                    class="block text-[10px] font-bold tracking-widest text-primary uppercase">Mặt
-                                    trước</span>
-                            </div>
-                            <p class="text-body-md font-medium text-on-surface">câu hỏi {{ $current }}</p>
-                        </div>
-                    </div>
-                    <div class="flex items-start gap-4 rounded-xl border border-primary bg-primary/5 p-4 transition-all">
-                        <div class="flex-1 space-y-3">
-                            <div>
-                                <div class="mb-1 flex items-start justify-between">
-                                    <span
-                                        class="block text-[10px] font-bold tracking-widest text-primary uppercase">Mặt
-                                        Sau</span>
-                                </div>
-                                <p class="text-body-md font-medium text-on-surface">Nhồi máu cơ tim cấp thành trước</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        <!-- Highlight toolbar -->
+        <div x-show="selectionBar.show" x-cloak
+            class="pointer-events-auto fixed z-[90] flex -translate-x-1/2 -translate-y-full items-center gap-2 rounded-lg border border-outline-variant bg-white p-1.5 shadow-lg"
+            :style="{ left: selectionBar.x + 'px', top: selectionBar.y + 'px' }">
+            @foreach ($highlightColors as $color)
+                <button type="button" title="{{ $color['title'] }}" @mousedown.prevent
+                    @click="applyColor('{{ $color['hex'] }}')"
+                    class="size-5 rounded-full shadow-sm transition-transform hover:scale-110"
+                    style="background-color: {{ $color['hex'] }}"></button>
+            @endforeach
+        </div>
 
-                <div class="mt-6">
-                    <button type="button" @click="flashcardOpen = false"
-                        class="w-full rounded-lg bg-primary py-3 font-bold text-on-primary transition-colors hover:bg-primary-container">
-                        Thêm vào thẻ
+        <!-- Exit confirm (chưa làm xong) -->
+        <div x-show="exitOpen" x-cloak x-transition.opacity
+            class="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+            <div class="absolute inset-0" @click="exitOpen = false"></div>
+            <div class="relative flex w-full max-w-md flex-col items-center rounded-[24px] border border-outline-variant bg-surface-container-lowest p-8 text-center shadow-2xl"
+                @click.outside="exitOpen = false">
+                <div class="mb-6 flex size-16 items-center justify-center rounded-2xl bg-primary-container/10">
+                    <span class="material-symbols-outlined text-4xl text-primary"
+                        style="font-variation-settings: 'FILL' 1;">pause</span>
+                </div>
+                <h3 class="mb-3 font-headline-md text-headline-md text-on-surface">Bạn muốn thoát?</h3>
+                <p class="mb-10 font-body-md text-body-md leading-relaxed text-on-surface-variant">
+                    Bạn chưa hoàn thành nhiệm vụ hôm nay
+                    ({{ count($answeredIds) }}/{{ $total }} câu).
+                    Tiến trình đã được lưu — có thể tiếp tục sau từ kế hoạch học tập.
+                </p>
+                <div class="flex w-full flex-col gap-3">
+                    <a href="{{ $exitUrl }}"
+                        class="w-full rounded-xl bg-gradient-to-br from-primary-container to-primary py-3.5 font-label-md text-label-md font-bold text-white shadow-lg transition-all hover:opacity-90 active:scale-[0.98]">
+                        Lưu &amp; thoát
+                    </a>
+                    <button type="button" @click="exitOpen = false"
+                        class="w-full rounded-xl border border-outline py-3.5 font-label-md text-label-md font-bold text-primary transition-colors hover:bg-surface-container-high">
+                        Tiếp tục làm bài
                     </button>
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- Navigator Modal (pc-study-session-navigator.html) -->
-    <div x-show="navigatorOpen" x-cloak x-transition.opacity
-        class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-        <div class="absolute inset-0" @click="navigatorOpen = false"></div>
-        <div class="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-lg"
-            @click.outside="navigatorOpen = false">
-            <div class="flex items-center justify-between border-b border-outline-variant px-6 py-4">
-                <h2 class="text-headline-sm font-bold text-on-surface">Bản đồ câu hỏi</h2>
-                <button type="button" @click="navigatorOpen = false"
-                    class="flex size-10 items-center justify-center rounded-full transition-colors hover:bg-surface-container-high">
-                    <span class="material-symbols-outlined text-outline">close</span>
-                </button>
-            </div>
-
-            <div
-                class="flex flex-wrap gap-6 border-b border-outline-variant bg-surface-container-low px-6 py-4">
-                <div class="flex items-center gap-2">
-                    <div class="size-3 rounded-full bg-[#0F766E]"></div>
-                    <span class="text-label-md text-on-surface-variant">Đã làm:
-                        <span class="font-bold text-on-surface">{{ count($completed) }}/{{ $total }}</span></span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <div class="size-3 rounded-full border border-outline-variant bg-white"></div>
-                    <span class="text-label-md text-on-surface-variant">Chưa làm:
-                        <span
-                            class="font-bold text-on-surface">{{ $total - count($completed) }}/{{ $total }}</span></span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <span class="material-symbols-outlined text-[18px] text-[#F59E0B]"
-                        style="font-variation-settings: 'FILL' 1;">flag</span>
-                    <span class="text-label-md text-on-surface-variant">Đã gắn cờ:
-                        <span class="font-bold text-on-surface">{{ count($flagged) }}</span></span>
-                </div>
-            </div>
-
-            <div class="overflow-y-auto p-6">
-                <div class="grid grid-cols-4 gap-3 sm:grid-cols-6 md:grid-cols-8">
-                    @foreach ($navigatorQuestions as $q)
-                        @if ($q['state'] === 'completed')
-                            <button type="button" @click="navigatorOpen = false"
-                                class="relative flex aspect-square flex-col items-center justify-center rounded-lg bg-[#0F766E] text-white">
-                                <span class="text-label-md font-bold">{{ $q['n'] }}</span>
-                                <span
-                                    class="material-symbols-outlined absolute bottom-1 text-[12px]">check</span>
-                            </button>
-                        @elseif ($q['state'] === 'flagged')
-                            <button type="button" @click="navigatorOpen = false"
-                                class="relative flex aspect-square items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container-high">
-                                <span class="text-label-md">{{ $q['n'] }}</span>
-                                <span
-                                    class="material-symbols-outlined absolute top-0.5 right-0.5 text-[14px] text-[#F59E0B]"
-                                    style="font-variation-settings: 'FILL' 1;">flag</span>
-                            </button>
-                        @elseif ($q['state'] === 'active')
-                            <button type="button" @click="navigatorOpen = false"
-                                class="flex aspect-square items-center justify-center rounded-lg border-2 border-primary bg-primary/5 font-bold text-primary">
-                                {{ $q['n'] }}
-                            </button>
-                        @else
-                            <button type="button" @click="navigatorOpen = false"
-                                class="flex aspect-square items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container-high">
-                                {{ $q['n'] }}
-                            </button>
-                        @endif
-                    @endforeach
-                </div>
-            </div>
-
-            <div class="flex justify-end border-t border-outline-variant px-6 py-4">
-                <button type="button" @click="navigatorOpen = false"
-                    class="rounded-lg bg-primary px-6 py-2 font-bold text-on-primary transition-opacity hover:opacity-90">
-                    Đóng
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Selection highlight toolbar — chỉ hiện khi bôi đen text -->
-    <div x-show="selectionBar.show" x-cloak
-        class="pointer-events-auto fixed z-[90] flex -translate-x-1/2 -translate-y-full items-center gap-2 rounded-lg border border-outline-variant bg-white p-1.5 shadow-lg"
-        :style="{ left: selectionBar.x + 'px', top: selectionBar.y + 'px' }">
-        @foreach ($highlightColors as $color)
-            <button type="button" title="{{ $color['title'] }}"
-                @mousedown.prevent
-                @click="applyColor('{{ $color['hex'] }}')"
-                class="size-5 rounded-full shadow-sm transition-transform hover:scale-110"
-                style="background-color: {{ $color['hex'] }}"></button>
-        @endforeach
-        <div class="mx-0.5 h-3 w-px bg-outline-variant"></div>
-        <button type="button" @mousedown.prevent @click="clearHighlight()"
-            class="material-symbols-outlined text-[16px] text-outline transition-colors hover:text-error"
-            title="Xóa tô màu">delete</button>
-    </div>
     </div>
 </x-layouts.auth>

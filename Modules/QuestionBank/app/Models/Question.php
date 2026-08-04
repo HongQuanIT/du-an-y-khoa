@@ -68,6 +68,36 @@ class Question extends Model
     }
 
     /**
+     * Options in a stable random order for one study session.
+     *
+     * Labels are reassigned A/B/C… for display; grading still uses option ids.
+     *
+     * @return \Illuminate\Support\Collection<int, QuestionOption>
+     */
+    public function optionsForSession(string $sessionKey): \Illuminate\Support\Collection
+    {
+        $options = ($this->relationLoaded('options')
+            ? $this->options
+            : $this->options()->orderBy('order')->get()
+        )->values()->all();
+
+        $seed = hexdec(substr(hash('sha256', $sessionKey.'|'.$this->getKey()), 0, 8));
+        for ($i = count($options) - 1; $i > 0; $i--) {
+            $seed = ($seed * 1103515245 + 12345) & 0x7fffffff;
+            $j = $seed % ($i + 1);
+            [$options[$i], $options[$j]] = [$options[$j], $options[$i]];
+        }
+
+        $labels = range('A', 'Z');
+
+        return collect($options)->values()->map(function (QuestionOption $option, int $index) use ($labels) {
+            $option->setAttribute('label', $labels[$index] ?? (string) ($index + 1));
+
+            return $option;
+        });
+    }
+
+    /**
      * Meilisearch document. Only index what search/faceting needs.
      *
      * @return array<string, mixed>

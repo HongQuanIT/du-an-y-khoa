@@ -4,13 +4,6 @@
 
         <x-auth.errors />
 
-        @if (app()->environment('local'))
-            <div class="mb-6 p-4 rounded-xl bg-surface-container-low text-on-surface-variant text-body-sm font-body-sm">
-                Tài khoản dev (sau <code>db:seed</code>):
-                <strong>student@medlearn.local</strong> / <strong>password</strong>
-            </div>
-        @endif
-
         <form class="space-y-5" action="{{ route('login') }}" method="post">
             @csrf
 
