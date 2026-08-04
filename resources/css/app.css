@@ -321,11 +321,29 @@
     display: none !important;
 }
 
+/* Highlight colours used in study sessions (đỏ / vàng / xanh) */
+mark[data-hl='#EF4444'],
+mark[data-hl='#ef4444'] {
+    background-color: #ef44444d !important;
+    color: inherit;
+}
+mark[data-hl='#F59E0B'],
+mark[data-hl='#f59e0b'] {
+    background-color: #f59e0b4d !important;
+    color: inherit;
+}
+mark[data-hl='#10B981'],
+mark[data-hl='#10b981'] {
+    background-color: #10b9814d !important;
+    color: inherit;
+}
+
 /* Icon font Material Symbols (nạp qua @fonts / Vite fonts plugin) */
 .material-symbols-outlined {
     font-family: 'Material Symbols Outlined';
     font-weight: normal;
     font-style: normal;
+    font-size: 24px;
     line-height: 1;
     letter-spacing: normal;
     text-transform: none;

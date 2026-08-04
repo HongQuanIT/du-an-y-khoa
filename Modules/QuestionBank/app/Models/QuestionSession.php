@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Modules\QuestionBank\Database\Factories\QuestionSessionFactory;
 use Modules\QuestionBank\Enums\SessionMode;
+use Modules\QuestionBank\Enums\SessionSource;
 use Modules\QuestionBank\Enums\SessionStatus;
 
 /**
@@ -23,6 +24,7 @@ use Modules\QuestionBank\Enums\SessionStatus;
  * @property int $user_id
  * @property SessionMode $mode
  * @property SessionStatus $status
+ * @property SessionSource $source
  * @property array<string, mixed>|null $filters
  * @property array<int, string>|null $question_ids
  * @property int $total
@@ -30,6 +32,7 @@ use Modules\QuestionBank\Enums\SessionStatus;
  * @property int $correct_count
  * @property int|null $time_limit_seconds
  * @property array<string, mixed>|null $paused_state
+ * @property array<string, array{note?: string, stem_html?: string}>|null $annotations
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -45,6 +48,7 @@ class QuestionSession extends Model
         'user_id',
         'mode',
         'status',
+        'source',
         'filters',
         'question_ids',
         'total',
@@ -52,14 +56,17 @@ class QuestionSession extends Model
         'correct_count',
         'time_limit_seconds',
         'paused_state',
+        'annotations',
     ];
 
     protected $casts = [
         'mode' => SessionMode::class,
         'status' => SessionStatus::class,
+        'source' => SessionSource::class,
         'filters' => 'array',
         'question_ids' => 'array',
         'paused_state' => 'array',
+        'annotations' => 'array',
         'total' => 'integer',
         'answered_count' => 'integer',
         'correct_count' => 'integer',

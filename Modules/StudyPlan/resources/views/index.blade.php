@@ -1,129 +1,165 @@
 @php
-    // Static port of html/pc-study-path.html. Placeholders until StudyPlan tasks land.
-    $progressPercent = 42;
-    $progressDegrees = ($progressPercent / 100) * 360;
-
-    $tasks = [
-        [
-            'icon' => 'route',
-            'iconWrap' => 'bg-primary/10 text-primary',
-            'meta' => 'Ngày 2/68',
-            'title' => 'Lộ trình học USMLE Step 2 CK của Charles',
-            'hint' => 'Tiếp tục tuần 1 — Tim mạch & Nội khoa',
-            'href' => 'study-plan.detail',
-            'actionLabel' => 'Tiếp tục lộ trình',
-        ],
-        [
-            'icon' => 'menu_book',
-            'iconWrap' => 'bg-secondary/10 text-secondary',
-            'meta' => 'Ngày 2/68',
-            'title' => 'Lộ trình học USMLE Step 2 CK của Charles',
-            'hint' => "Đọc bài 'Suy tim' — Phác đồ ESC 2023",
-            'href' => 'study-plan.detail',
-            'actionLabel' => 'Tiếp tục lộ trình',
-        ],
-        [
-            'icon' => 'style',
-            'iconWrap' => 'bg-tertiary/10 text-tertiary',
-            'meta' => '15 thẻ',
-            'title' => 'Ôn 15 flashcard',
-            'hint' => 'Dược lý tim mạch',
-            'actionLabel' => 'Bắt đầu',
-        ],
-    ];
+    /**
+     * @var \Illuminate\Contracts\Pagination\LengthAwarePaginator<int, \Modules\StudyPlan\Models\StudyPlan> $plans
+     * @var \Modules\StudyPlan\Models\StudyPlan|null $plan  active / most recent
+     */
 @endphp
 
 <x-layouts.app title="Kế hoạch học tập">
     <div class="mx-auto max-w-[1200px] space-y-8 p-8">
-        <!-- Plan header -->
+        @if (session('status'))
+            <div class="rounded-lg border border-primary-fixed-dim/30 bg-[#F0FDFA] p-4 text-body-md text-primary-container">
+                {{ session('status') }}
+            </div>
+        @endif
+
         <div class="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
             <div class="space-y-1">
-                <h1 class="font-headline-lg text-headline-lg text-on-surface">Ôn thi Bác sĩ nội trú 2026</h1>
-                <div class="flex flex-wrap items-center gap-3">
-                    <span
-                        class="rounded border border-error-container/20 bg-error-container/10 px-2 py-0.5 text-label-sm font-semibold text-error">Còn
-                        84 ngày</span>
-                    <span class="text-body-sm text-on-surface-variant">Cập nhật lần cuối: 2 giờ trước</span>
-                </div>
+                <h1 class="font-headline-lg text-headline-lg text-on-surface">Kế hoạch học tập</h1>
+                <p class="text-body-sm text-on-surface-variant">
+                    @if ($plans->isEmpty())
+                        Chưa có kế hoạch nào — tạo lộ trình theo kỳ thi mục tiêu của bạn.
+                    @else
+                        Bạn đang có {{ $plans->total() }} kế hoạch.
+                    @endif
+                </p>
             </div>
-            <div class="flex flex-wrap items-center gap-3">
-                <a href="{{ route('study-plan.schedule') }}"
-                    class="flex items-center gap-2 rounded-lg border border-outline-variant bg-white px-4 py-2 font-label-md text-primary transition-all hover:bg-surface-container-low">
-                    <span class="material-symbols-outlined text-[20px]">calendar_month</span>
-                    Lịch trình
-                </a>
+            <a href="{{ route('study-plan.create') }}"
+                class="flex items-center gap-2 rounded-lg bg-primary-container px-4 py-2 font-label-md text-white shadow-sm transition-all hover:opacity-90">
+                <span class="material-symbols-outlined text-[20px]">add</span>
+                Tạo kế hoạch mới
+            </a>
+        </div>
+
+        @if ($plans->isEmpty())
+            <div
+                class="flex flex-col items-center gap-4 rounded-xl border border-dashed border-outline-variant bg-surface-container-lowest p-12 text-center">
+                <span class="material-symbols-outlined text-[48px] text-primary">route</span>
+                <h2 class="font-headline-sm text-headline-sm text-on-surface">Bạn chưa có kế hoạch học tập</h2>
+                <p class="max-w-md text-body-md text-on-surface-variant">
+                    Chọn kỳ thi mục tiêu, phạm vi ôn tập và cường độ — hệ thống sẽ chia khối lượng thành nhiệm vụ mỗi
+                    ngày cho bạn.
+                </p>
                 <a href="{{ route('study-plan.create') }}"
-                    class="flex items-center gap-2 rounded-lg bg-primary-container px-4 py-2 font-label-md text-white shadow-sm transition-all hover:opacity-90">
+                    class="mt-2 flex items-center gap-2 rounded-lg bg-primary-container px-6 py-3 font-label-md text-white shadow-sm transition-all hover:opacity-90">
                     <span class="material-symbols-outlined text-[20px]">add</span>
-                    Tạo kế hoạch mới
+                    Tạo kế hoạch đầu tiên
                 </a>
             </div>
-        </div>
-
-        <!-- Progress summary -->
-        <div class="grid grid-cols-1 gap-6 rounded-xl border border-outline-variant bg-surface-container-lowest p-6 sm:grid-cols-3">
-            <div class="flex flex-col items-center justify-center border-outline-variant sm:border-r">
-                <div class="relative mb-2 size-16">
-                    <div class="absolute inset-0 flex items-center justify-center rounded-full"
-                        style="background: conic-gradient(rgb(15, 118, 110) {{ $progressDegrees }}deg, rgb(235, 239, 237) 0deg);">
-                        <div class="flex size-[80%] items-center justify-center rounded-full bg-white">
-                            <span class="font-bold text-primary">{{ $progressPercent }}%</span>
-                        </div>
-                    </div>
-                </div>
-                <span class="text-label-sm tracking-tight text-on-surface-variant uppercase">Hoàn thành</span>
-            </div>
-            <div class="flex flex-col items-center justify-center border-outline-variant sm:border-r">
-                <span class="font-headline-sm text-headline-sm font-bold text-on-surface">450 / 1200</span>
-                <span class="text-label-sm tracking-tight text-on-surface-variant uppercase">Câu hỏi</span>
-            </div>
-            <div class="flex flex-col items-center justify-center">
-                <span class="font-headline-sm text-headline-sm font-bold text-on-surface">85%</span>
-                <span class="text-label-sm tracking-tight text-on-surface-variant uppercase">Độ bám lịch</span>
-            </div>
-        </div>
-
-        <!-- Adaptive suggestion -->
-        <div class="flex flex-col items-start gap-4 rounded-lg border border-primary-fixed-dim/30 bg-[#F0FDFA] p-4 sm:flex-row sm:items-center">
-            <span class="material-symbols-outlined text-primary-container">info</span>
-            <p class="flex-1 text-body-md text-primary-container">
-                <span class="font-bold">Gợi ý:</span> Tăng cường ôn tập phần Dược lý để cải thiện tỷ lệ chính xác.
-            </p>
-            <button type="button" class="font-label-md text-primary-container hover:underline">Chi tiết</button>
-        </div>
-
-        <!-- Today's tasks -->
-        <div class="space-y-6">
-            <div>
-                <h2 class="mb-1 font-headline-sm text-headline-sm text-on-surface">Công việc hôm nay</h2>
-                <p class="text-body-sm text-on-surface-variant">Thứ Hai, 23 tháng 10</p>
-            </div>
-            <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
-                @foreach ($tasks as $task)
-                    <div
-                        class="flex h-full flex-col rounded-xl border border-outline-variant bg-white p-6 transition-shadow hover:shadow-md">
-                        <div class="mb-4 flex items-start justify-between">
-                            <div class="rounded-lg p-2 {{ $task['iconWrap'] }}">
-                                <span class="material-symbols-outlined">{{ $task['icon'] }}</span>
+        @else
+            <!-- All plans -->
+            <div class="space-y-4">
+                <h2 class="font-headline-sm text-headline-sm text-on-surface">Các lộ trình của bạn</h2>
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    @foreach ($plans as $listed)
+                        @php
+                            $percent = $listed->progressPercent();
+                            $statusClass = match ($listed->status->value) {
+                                'active' => 'bg-primary/10 text-primary',
+                                'paused' => 'bg-amber-50 text-amber-700',
+                                'completed' => 'bg-[#e6f4ea] text-[#137333]',
+                                default => 'bg-surface-container text-on-surface-variant',
+                            };
+                        @endphp
+                        <div
+                            class="flex flex-col rounded-xl border bg-white p-5 transition-shadow hover:shadow-md {{ $listed->isActive() ? 'border-primary' : 'border-outline-variant' }}">
+                            <div class="mb-3 flex items-start justify-between gap-3">
+                                <div class="min-w-0 space-y-1">
+                                    <h3 class="truncate font-bold text-on-surface">{{ $listed->name }}</h3>
+                                    <p class="text-body-sm text-on-surface-variant">
+                                        Thi {{ $listed->exam_target_date->format('d/m/Y') }} ·
+                                        Còn {{ $listed->daysUntilExam() }} ngày ·
+                                        {{ $listed->daily_goal_questions }} câu/ngày
+                                    </p>
+                                </div>
+                                <span
+                                    class="shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-bold tracking-wide uppercase {{ $statusClass }}">
+                                    {{ $listed->status->label() }}
+                                </span>
                             </div>
-                            <span class="text-label-sm text-on-surface-variant">{{ $task['meta'] }}</span>
+
+                            <div class="mb-4">
+                                <div class="mb-1 flex justify-between text-label-sm text-on-surface-variant">
+                                    <span>Tiến độ</span>
+                                    <span class="font-semibold text-primary">{{ $percent }}%</span>
+                                </div>
+                                <div class="h-1.5 w-full overflow-hidden rounded-full bg-surface-container">
+                                    <div class="h-full rounded-full bg-primary" style="width: {{ $percent }}%"></div>
+                                </div>
+                                <p class="mt-1 text-label-sm text-on-surface-variant">
+                                    {{ number_format($listed->questionsDone()) }} /
+                                    {{ number_format($listed->questionsTarget()) }} câu
+                                </p>
+                            </div>
+
+                            <div class="mt-auto flex flex-wrap gap-2">
+                                <a href="{{ route('study-plan.detail', $listed) }}"
+                                    class="flex flex-1 items-center justify-center gap-1 rounded-lg border border-primary px-3 py-2 text-center font-label-md text-primary transition-colors hover:bg-primary/5">
+                                    {{ $listed->isActive() ? 'Tiếp tục' : 'Xem chi tiết' }}
+                                </a>
+                                <a href="{{ route('study-plan.schedule', $listed) }}"
+                                    class="flex size-10 items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant transition-colors hover:bg-surface-container-low"
+                                    title="Lịch trình">
+                                    <span class="material-symbols-outlined text-[20px]">calendar_month</span>
+                                </a>
+                            </div>
                         </div>
-                        <h3 class="mb-1 font-bold text-on-surface">{{ $task['title'] }}</h3>
-                        <p class="mb-6 flex-1 text-body-sm text-on-surface-variant">{{ $task['hint'] }}</p>
-                        @if (!empty($task['href']))
-                            <a href="{{ route($task['href']) }}"
-                                class="block w-full rounded-lg border border-primary py-2 text-center font-label-md text-primary transition-colors hover:bg-primary/5">
-                                {{ $task['actionLabel'] }}
-                            </a>
-                        @else
-                            <button type="button"
-                                class="w-full rounded-lg border border-primary py-2 font-label-md text-primary transition-colors hover:bg-primary/5">
-                                {{ $task['actionLabel'] }}
-                            </button>
-                        @endif
+                    @endforeach
+                </div>
+
+                @if ($plans->hasPages())
+                    <div class="border-t border-outline-variant pt-4">
+                        {{ $plans->onEachSide(1)->links('studyplan::pagination') }}
                     </div>
-                @endforeach
+                @endif
+
             </div>
-        </div>
+
+            @if ($plan !== null && $plan->isActive())
+                @if ($plan->wasRecentlyReplanned())
+                    <div
+                        class="flex flex-col items-start gap-4 rounded-lg border border-primary-fixed-dim/30 bg-[#F0FDFA] p-4 sm:flex-row sm:items-center">
+                        <span class="material-symbols-outlined text-primary-container">info</span>
+                        <p class="flex-1 text-body-md text-primary-container">
+                            <span class="font-bold">Đã điều chỉnh:</span> hệ thống vừa phân bổ lại các ngày bạn lỡ và ưu
+                            tiên chủ đề đang yếu trên kế hoạch đang học.
+                        </p>
+                        <a href="{{ route('study-plan.detail', $plan) }}"
+                            class="font-label-md text-primary-container hover:underline">Chi tiết</a>
+                    </div>
+                @endif
+
+                <div class="space-y-6">
+                    <div class="flex flex-wrap items-end justify-between gap-3">
+                        <div>
+                            <h2 class="mb-1 font-headline-sm text-headline-sm text-on-surface">Công việc hôm nay</h2>
+                            <p class="text-body-sm text-on-surface-variant">
+                                {{ now()->translatedFormat('l, j \t\h\á\n\g n') }} · {{ $plan->name }}
+                            </p>
+                        </div>
+                        <a href="{{ route('study-plan.detail', $plan) }}"
+                            class="flex items-center gap-1 font-label-md text-primary hover:underline">
+                            Xem toàn bộ lộ trình
+                            <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+                        </a>
+                    </div>
+
+                    @if ($todayTasks->isEmpty())
+                        <p
+                            class="rounded-xl border border-outline-variant bg-white p-6 text-body-md text-on-surface-variant">
+                            Hôm nay là ngày nghỉ theo lịch của bạn. Có thể ôn thêm ở
+                            <a href="{{ route('qbank.index') }}" class="text-primary hover:underline">Ngân hàng câu
+                                hỏi</a>.
+                        </p>
+                    @else
+                        <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
+                            @foreach ($todayTasks as $task)
+                                @include('studyplan::partials.task-card', ['plan' => $plan, 'task' => $task])
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+            @endif
+        @endif
     </div>
 </x-layouts.app>

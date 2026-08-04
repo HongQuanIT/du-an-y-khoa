@@ -1,6 +1,7 @@
 @php
-    // Static port of html/pc-dashboard.html. Figures are placeholders until the
-    // learning modules (QuestionBank, StudyPlan, Library) feed real data in.
+    // Continue learning, today's tasks and weak topics come from the controller.
+    // The streak, chart, recommendations and activity feed are still placeholders
+    // from html/pc-dashboard.html until Analytics ships its rollups.
     $hour = now()->hour;
     $greeting = match (true) {
         $hour < 11 => 'Chào buổi sáng',
@@ -19,18 +20,6 @@
     ];
 
     $chartHeights = [40, 55, 35, 60, 80, 45, 90, 50, 30, 65, 40, 85, 55, 100];
-
-    $weakTopics = [
-        ['name' => 'Dược lý lâm sàng', 'accuracy' => 48, 'text' => 'text-error', 'bar' => 'bg-error'],
-        ['name' => 'Thần kinh học', 'accuracy' => 55, 'text' => 'text-tertiary', 'bar' => 'bg-tertiary'],
-        ['name' => 'Nội tiết học', 'accuracy' => 61, 'text' => 'text-orange-500', 'bar' => 'bg-orange-500'],
-    ];
-
-    $tasks = [
-        ['title' => 'Làm 30 câu Tim mạch', 'hint' => 'Mục tiêu hàng ngày', 'done' => true],
-        ['title' => 'Ôn 15 flashcards', 'hint' => 'Kỹ thuật Spaced Repetition', 'done' => false],
-        ['title' => 'Đọc bài "Sốc nhiễm khuẩn"', 'hint' => 'Tài liệu tham khảo UpToDate', 'done' => false],
-    ];
 
     $recommendations = [
         ['topic' => 'Nội khoa', 'title' => 'Phân tích ECG nâng cao trong suy tim', 'duration' => '45m', 'rating' => '4.9', 'icon' => 'cardiology', 'pro' => true],
@@ -55,7 +44,11 @@
                     {{ $greeting }}, {{ $firstName }} 👋
                 </h1>
                 <p class="text-body-md font-body-md text-on-surface-variant">
-                    Hôm nay bạn có 3 mục tiêu cần hoàn thành.
+                    @if ($planTasks->isEmpty())
+                        Hôm nay bạn chưa có nhiệm vụ nào trong kế hoạch.
+                    @else
+                        Hôm nay bạn có {{ $planTasks->count() }} mục tiêu cần hoàn thành.
+                    @endif
                 </p>
             </div>
             <div
@@ -73,25 +66,33 @@
                 class="group relative col-span-12 flex flex-col justify-between overflow-hidden rounded-xl border border-outline-variant bg-surface p-6 transition-colors hover:border-primary lg:col-span-8">
                 <div class="relative z-10 flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
                     <div class="flex-1 space-y-2">
-                        <span class="text-label-sm font-bold tracking-wider text-primary uppercase">Đang học dở</span>
-                        <h2 class="font-headline-sm text-headline-sm text-on-surface">Hệ Tim mạch: Bệnh lý van tim</h2>
+                        <span class="text-label-sm font-bold tracking-wider text-primary uppercase">
+                            {{ $continueCard['label'] ?? 'Bắt đầu học' }}
+                        </span>
+                        <h2 class="font-headline-sm text-headline-sm text-on-surface">
+                            {{ $continueCard['title'] ?? 'Chưa có phiên học nào đang dở' }}
+                        </h2>
                         <p class="text-body-sm font-body-sm text-on-surface-variant">
-                            Câu 12/40 · Chế độ Study · Cần 15 phút nữa
+                            {{ $continueCard['hint'] ?? 'Tạo kế hoạch học tập hoặc mở một phiên luyện để bắt đầu.' }}
                         </p>
-                        <div class="max-w-sm pt-4">
-                            <div class="mb-1 flex items-end justify-between">
-                                <span class="text-label-sm font-semibold text-primary">Tiến độ: 30%</span>
+                        @if ($continueCard)
+                            <div class="max-w-sm pt-4">
+                                <div class="mb-1 flex items-end justify-between">
+                                    <span class="text-label-sm font-semibold text-primary">Tiến độ:
+                                        {{ $continueCard['progress'] }}%</span>
+                                </div>
+                                <div class="h-2 w-full overflow-hidden rounded-full bg-surface-container-high">
+                                    <div class="h-full bg-primary transition-all duration-500"
+                                        style="width: {{ $continueCard['progress'] }}%"></div>
+                                </div>
                             </div>
-                            <div class="h-2 w-full overflow-hidden rounded-full bg-surface-container-high">
-                                <div class="h-full w-[30%] bg-primary transition-all duration-500"></div>
-                            </div>
-                        </div>
+                        @endif
                     </div>
-                    <button type="button"
+                    <a href="{{ $continueCard['url'] ?? route('study-plan.index') }}"
                         class="flex items-center gap-2 rounded-lg bg-primary px-8 py-3 font-semibold text-white shadow-md transition-all hover:bg-primary-container active:scale-95">
-                        Tiếp tục học
+                        {{ $continueCard ? 'Tiếp tục học' : 'Tới kế hoạch học tập' }}
                         <span class="material-symbols-outlined">arrow_forward</span>
-                    </button>
+                    </a>
                 </div>
                 <div
                     class="pointer-events-none absolute -right-12 -bottom-12 opacity-[0.03] transition-opacity group-hover:opacity-[0.07]">
@@ -173,50 +174,79 @@
                     <span class="material-symbols-outlined text-on-surface-variant">warning</span>
                 </div>
                 <div class="space-y-5">
-                    @foreach ($weakTopics as $topic)
+                    @forelse ($weakTopics as $topic)
+                        @php
+                            $tone = match (true) {
+                                $topic['accuracy'] < 50 => ['text-error', 'bg-error'],
+                                $topic['accuracy'] < 60 => ['text-tertiary', 'bg-tertiary'],
+                                default => ['text-orange-500', 'bg-orange-500'],
+                            };
+                        @endphp
                         <div class="space-y-2">
                             <div class="flex justify-between text-body-sm font-body-sm">
                                 <span class="font-medium">{{ $topic['name'] }}</span>
-                                <span class="font-bold {{ $topic['text'] }}">{{ $topic['accuracy'] }}%</span>
+                                <span class="font-bold {{ $tone[0] }}">{{ $topic['accuracy'] }}%</span>
                             </div>
                             <div class="h-2 w-full rounded-full bg-surface-container-low">
-                                <div class="h-full rounded-full {{ $topic['bar'] }}"
-                                    style="width: {{ $topic['accuracy'] }}%"></div>
+                                <div class="h-full rounded-full {{ $tone[1] }}" style="width: {{ $topic['accuracy'] }}%">
+                                </div>
                             </div>
                         </div>
-                    @endforeach
+                    @empty
+                        <p class="text-body-sm text-on-surface-variant">
+                            Làm thêm vài phiên luyện để hệ thống chỉ ra chủ đề bạn còn yếu.
+                        </p>
+                    @endforelse
                 </div>
-                <button type="button"
-                    class="mt-8 w-full rounded-lg bg-surface-container py-2.5 font-semibold text-on-surface transition-all hover:bg-outline-variant/20">
+                <a href="{{ route('qbank.create') }}"
+                    class="mt-8 block w-full rounded-lg bg-surface-container py-2.5 text-center font-semibold text-on-surface transition-all hover:bg-outline-variant/20">
                     Luyện tập ngay
-                </button>
+                </a>
             </div>
 
             <!-- Today's Tasks -->
             <div class="col-span-12 rounded-xl border border-outline-variant bg-surface p-6 md:col-span-6">
                 <div class="mb-6 flex items-center justify-between">
                     <h3 class="font-headline-sm text-headline-sm text-on-surface">Nhiệm vụ hôm nay</h3>
-                    <span class="text-label-sm font-bold text-primary">1/3 Hoàn thành</span>
+                    <span class="text-label-sm font-bold text-primary">
+                        {{ $planTasks->filter(fn($task) => $task->isDone())->count() }}/{{ $planTasks->count() }} Hoàn thành
+                    </span>
                 </div>
                 <div class="space-y-4">
-                    @foreach ($tasks as $task)
-                        <label
-                            class="group flex cursor-pointer items-center gap-4 rounded-lg border border-outline-variant p-3 transition-colors hover:bg-surface-container-low">
-                            <input type="checkbox" @checked($task['done'])
-                                class="size-5 rounded border-outline-variant text-primary focus:ring-primary">
+                    @forelse ($planTasks as $task)
+                        <div
+                            class="group flex items-center gap-4 rounded-lg border border-outline-variant p-3 transition-colors hover:bg-surface-container-low">
+                            <span
+                                class="material-symbols-outlined {{ $task->isDone() ? 'text-primary' : 'text-on-surface-variant' }}">{{ $task->type->icon() }}</span>
                             <div class="flex-1">
                                 <p @class([
                                     'text-body-sm font-semibold text-on-surface',
-                                    'line-through opacity-50' => $task['done'],
-                                    'transition-colors group-hover:text-primary' => !$task['done'],
-                                ])>{{ $task['title'] }}</p>
-                                <p class="text-label-sm font-label-sm text-on-surface-variant">{{ $task['hint'] }}</p>
+                                    'line-through opacity-50' => $task->isDone(),
+                                ])>{{ $task->title() }}</p>
+                                <p class="text-label-sm font-label-sm text-on-surface-variant">
+                                    {{ $task->type->label() }} · {{ $task->done }}/{{ $task->target }}
+                                </p>
                             </div>
-                            @if ($task['done'])
+                            @if ($task->isDone())
                                 <span class="material-symbols-outlined text-primary">check_circle</span>
+                            @elseif ($task->type->isSupported())
+                                <form method="POST" action="{{ route('study-plan.tasks.start', [$task->study_plan_id, $task]) }}">
+                                    @csrf
+                                    <button type="submit"
+                                        class="rounded-lg border border-primary px-4 py-1.5 text-label-sm font-semibold text-primary transition-colors hover:bg-primary/5">
+                                        {{ $task->isStarted() ? 'Tiếp tục' : 'Bắt đầu' }}
+                                    </button>
+                                </form>
                             @endif
-                        </label>
-                    @endforeach
+                        </div>
+                    @empty
+                        <p class="text-body-sm text-on-surface-variant">
+                            Chưa có nhiệm vụ nào cho hôm nay.
+                            <a href="{{ route('study-plan.index') }}" class="text-primary hover:underline">Tạo kế hoạch
+                                học tập</a>
+                            để nhận mục tiêu mỗi ngày.
+                        </p>
+                    @endforelse
                 </div>
             </div>
 

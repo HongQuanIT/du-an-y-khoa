@@ -6,17 +6,38 @@ namespace Modules\Analytics\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\Request;
+use Modules\Analytics\Actions\ListWeakTopicsAction;
+use Modules\Analytics\Actions\ResolveContinueLearningAction;
+use Modules\StudyPlan\Actions\ListTodayTasksAction;
+use Modules\StudyPlan\Repositories\StudyPlanRepository;
 
 /**
  * Student dashboard — the landing page after login (srs/modules/03).
  *
- * Static shell for now: the widgets show placeholder figures until Analytics
- * ships the daily rollups. Only the signed-in user is real.
+ * Study-plan tasks, weak topics and "continue learning" are live; the streak,
+ * chart and recommendation widgets still show placeholders until Analytics
+ * ships its daily rollups.
  */
 final class DashboardController extends Controller
 {
-    public function __invoke(): View
+    public function __construct(
+        private readonly StudyPlanRepository $plans,
+        private readonly ListTodayTasksAction $todayTasks,
+        private readonly ListWeakTopicsAction $weakTopics,
+        private readonly ResolveContinueLearningAction $continueLearning,
+    ) {}
+
+    public function __invoke(Request $request): View
     {
-        return view('analytics::dashboard');
+        $user = $request->user();
+        $plan = $this->plans->currentFor($user);
+
+        return view('analytics::dashboard', [
+            'plan' => $plan,
+            'planTasks' => $plan !== null ? $this->todayTasks->handle($plan, 3) : collect(),
+            'weakTopics' => $this->weakTopics->handle($user),
+            'continueCard' => $this->continueLearning->handle($user),
+        ]);
     }
 }

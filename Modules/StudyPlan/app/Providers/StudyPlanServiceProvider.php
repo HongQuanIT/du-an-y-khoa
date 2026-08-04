@@ -3,6 +3,11 @@
 namespace Modules\StudyPlan\Providers;
 
 use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Support\Facades\Gate;
+use Modules\StudyPlan\Console\ReplanStudyPlansCommand;
+use Modules\StudyPlan\Jobs\ReplanActivePlansJob;
+use Modules\StudyPlan\Models\StudyPlan;
+use Modules\StudyPlan\Policies\StudyPlanPolicy;
 use Nwidart\Modules\Support\ModuleServiceProvider;
 
 class StudyPlanServiceProvider extends ModuleServiceProvider
@@ -11,6 +16,13 @@ class StudyPlanServiceProvider extends ModuleServiceProvider
      * The name of the module.
      */
     protected string $name = 'StudyPlan';
+
+    public function boot(): void
+    {
+        parent::boot();
+
+        Gate::policy(StudyPlan::class, StudyPlanPolicy::class);
+    }
 
     /**
      * The lowercase version of the module name.
@@ -22,7 +34,9 @@ class StudyPlanServiceProvider extends ModuleServiceProvider
      *
      * @var string[]
      */
-    // protected array $commands = [];
+    protected array $commands = [
+        ReplanStudyPlansCommand::class,
+    ];
 
     /**
      * Provider classes to register.
@@ -37,10 +51,12 @@ class StudyPlanServiceProvider extends ModuleServiceProvider
     /**
      * Define module schedules.
      *
-     * @param  $schedule
+     * Runs after midnight so a day that was missed is already in the past.
      */
-    // protected function configureSchedules(Schedule $schedule): void
-    // {
-    //     $schedule->command('inspire')->hourly();
-    // }
+    protected function configureSchedules(Schedule $schedule): void
+    {
+        $schedule->job(new ReplanActivePlansJob)
+            ->dailyAt('01:00')
+            ->withoutOverlapping();
+    }
 }
