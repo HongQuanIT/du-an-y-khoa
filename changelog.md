@@ -1,6 +1,18 @@
 # Changelog
 
-<<<<<<< HEAD
+## 2026-08-05
+
+### Seed demo Question Bank từ VM14K
+- `TopicTaxonomySeeder` và `DemoLearningSeeder` đọc taxonomy/câu hỏi từ dataset VM14K (JSONL).
+- Thêm `Modules/QuestionBank/database/seeders/data/vm14k/` (3 file JSONL + README); giới hạn seed qua `QUESTIONBANK_VM14K_LIMIT`.
+
+## 2026-08-04
+
+### Study Plan MVP + phiên học Amboss-style
+- Hoàn thiện tạo/xem kế hoạch, lịch, nhiệm vụ ngày; tự đánh dấu bỏ qua khi quá hạn.
+- Phiên làm bài: đồng hồ từng câu, highlight đỏ/vàng/xanh, ghi chú/gắn cờ, bản đồ câu hỏi, phân tích + xem lại (lọc cần ôn).
+- Topic mastery trên dashboard; seed taxonomy + ~500 câu Amboss; bỏ độ bám lịch và banner login dev.
+
 ## 2026-08-02
 
 ### Bảng giá theo năm (1 / 2 / 3 năm)
@@ -9,14 +21,6 @@
 
 ### Menu mobile header public
 - Thêm drawer menu Alpine cho viewport `< lg`; nav và nút đăng nhập/đăng ký hiện từ `lg` trở lên.
-=======
-## 2026-08-04
-
-### Study Plan MVP + phiên học Amboss-style
-- Hoàn thiện tạo/xem kế hoạch, lịch, nhiệm vụ ngày; tự đánh dấu bỏ qua khi quá hạn.
-- Phiên làm bài: đồng hồ từng câu, highlight đỏ/vàng/xanh, ghi chú/gắn cờ, bản đồ câu hỏi, phân tích + xem lại (lọc cần ôn).
-- Topic mastery trên dashboard; seed taxonomy + ~500 câu Amboss; bỏ độ bám lịch và banner login dev.
->>>>>>> 7dbfb0c (feat(study-plan): hoàn thiện MVP kế hoạch học và phiên Amboss)
 
 ## 2026-07-31
 

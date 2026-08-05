@@ -5,105 +5,109 @@ declare(strict_types=1);
 namespace Modules\QuestionBank\Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 use Modules\QuestionBank\Models\Topic;
+use RuntimeException;
 
 /**
- * Amboss-style topic taxonomy: specialties (Chuyên khoa) + organ systems
- * (Hệ cơ quan). Idempotent via slug.
+ * Build topic taxonomy from the downloaded VM14K dataset.
  */
 final class TopicTaxonomySeeder extends Seeder
 {
     public function run(): void
     {
-        $specialties = $this->seedSpecialties();
-        $this->seedOrganSystems($specialties);
+        $files = $this->datasetFiles();
+        $this->seedFromVm14k($files);
     }
 
     /**
-     * @return array<string, Topic>
+     * @return list<string>
      */
-    private function seedSpecialties(): array
+    private function datasetFiles(): array
     {
-        $items = [
-            'noi-khoa' => 'Nội khoa',
-            'ngoai-khoa' => 'Ngoại khoa',
-            'nhi-khoa' => 'Nhi khoa',
-            'san-phu-khoa' => 'Sản phụ khoa',
-            'duoc-ly' => 'Dược lý',
-            'tam-than' => 'Tâm thần',
-            'da-lieu' => 'Da liễu',
-            'than-kinh' => 'Thần kinh',
-            'chan-doan-hinh-anh' => 'Chẩn đoán hình ảnh',
-            'hoi-suc-cap-cuu' => 'Hồi sức cấp cứu',
-        ];
+        $dir = base_path('Modules/QuestionBank/database/seeders/data/vm14k');
+        $files = glob($dir.'/data-processed-shuffled*.jsonl') ?: [];
 
-        $topics = [];
-        $order = 0;
-
-        foreach ($items as $slug => $name) {
-            $topics[$slug] = Topic::updateOrCreate(
-                ['slug' => $slug],
-                [
-                    'name' => $name,
-                    'type' => 'specialty',
-                    'order' => $order++,
-                    'parent_id' => null,
-                ],
+        if ($files === []) {
+            throw new RuntimeException(
+                'VM14K dataset files not found. Download them into Modules/QuestionBank/database/seeders/data/vm14k first.'
             );
         }
 
-        return $topics;
+        sort($files);
+
+        return array_values($files);
     }
 
-    /**
-     * @param  array<string, Topic>  $specialties
-     */
-    private function seedOrganSystems(array $specialties): void
+    /** @param list<string> $files */
+    private function seedFromVm14k(array $files): void
     {
-        // Amboss USMLE-style systems + Vietnamese clinical systems used by demo questions.
-        $systems = [
-            // Amboss catalog
-            'behavioral-health' => ['Behavioral Health', 'tam-than'],
-            'biostatistics-epidemiology' => ['Biostatistics & Epidemiology', 'noi-khoa'],
-            'blood-lymphoreticular' => ['Blood & Lymphoreticular Systems', 'noi-khoa'],
-            'cardiovascular-system' => ['Cardiovascular System', 'noi-khoa'],
-            'endocrine-system' => ['Endocrine System', 'noi-khoa'],
-            'female-reproductive' => ['Female Reproductive System & Breast', 'san-phu-khoa'],
-            'gastrointestinal-system' => ['Gastrointestinal System', 'noi-khoa'],
-            'human-development' => ['Human Development', 'nhi-khoa'],
-            'immune-system' => ['Immune System', 'noi-khoa'],
-            'multisystem' => ['Multisystem Processes & Disorders', 'noi-khoa'],
-            'musculoskeletal-system' => ['Musculoskeletal System', 'ngoai-khoa'],
-            'nervous-system' => ['Nervous System & Special Senses', 'than-kinh'],
-            'pregnancy-childbirth' => ['Pregnancy, Childbirth & the Puerperium', 'san-phu-khoa'],
-            'renal-urinary' => ['Renal & Urinary System', 'noi-khoa'],
-            'respiratory-system' => ['Respiratory System', 'noi-khoa'],
-            'skin-subcutaneous' => ['Skin & Subcutaneous Tissue', 'da-lieu'],
-            'male-reproductive' => ['Male Reproductive System', 'ngoai-khoa'],
-            // Vietnamese clinical systems (demo / study plan)
-            'tim-mach' => ['Tim mạch', 'noi-khoa'],
-            'ho-hap' => ['Hô hấp', 'noi-khoa'],
-            'noi-tiet' => ['Nội tiết', 'noi-khoa'],
-            'tieu-hoa' => ['Tiêu hóa', 'ngoai-khoa'],
-            'chan-thuong' => ['Chấn thương', 'ngoai-khoa'],
-            'so-sinh' => ['Sơ sinh', 'nhi-khoa'],
-            'khang-sinh' => ['Kháng sinh', 'duoc-ly'],
-        ];
+        $specialtyOrder = 0;
+        $systemOrder = 0;
+        $specialties = [];
+        $systems = [];
 
-        $order = 0;
+        foreach ($files as $file) {
+            $handle = fopen($file, 'rb');
+            if ($handle === false) {
+                continue;
+            }
 
-        foreach ($systems as $slug => [$name, $specialtySlug]) {
-            $parent = $specialties[$specialtySlug] ?? null;
+            while (($line = fgets($handle)) !== false) {
+                $row = json_decode(trim($line), true);
+                if (! is_array($row)) {
+                    continue;
+                }
 
-            Topic::updateOrCreate(
-                ['slug' => $slug],
-                [
-                    'name' => $name,
-                    'type' => 'system',
-                    'order' => $order++,
-                    'parent_id' => $parent?->id,
-                ],
-            );
+                $medicalTopic = $row['medical_topic'] ?? null;
+                if (! is_array($medicalTopic) || ($medicalTopic[0] ?? null) === null) {
+                    continue;
+                }
+
+                $specialtyName = trim((string) $medicalTopic[0]);
+                $specialtySlug = $this->topicSlug($specialtyName);
+                if ($specialtyName === '' || $specialtySlug === '') {
+                    continue;
+                }
+
+                if (! isset($specialties[$specialtySlug])) {
+                    $specialties[$specialtySlug] = Topic::updateOrCreate(
+                        ['slug' => $specialtySlug],
+                        [
+                            'name' => $specialtyName,
+                            'type' => 'specialty',
+                            'order' => $specialtyOrder++,
+                            'parent_id' => null,
+                        ],
+                    );
+                }
+
+                $systemName = trim((string) ($medicalTopic[1] ?? ''));
+                $systemSlug = $this->topicSlug($systemName);
+                if ($systemName === '' || $systemSlug === '') {
+                    continue;
+                }
+
+                $systemKey = $specialtySlug.'|'.$systemSlug;
+                if (! isset($systems[$systemKey])) {
+                    $systems[$systemKey] = Topic::updateOrCreate(
+                        ['slug' => $systemSlug],
+                        [
+                            'name' => $systemName,
+                            'type' => 'system',
+                            'order' => $systemOrder++,
+                            'parent_id' => $specialties[$specialtySlug]->id,
+                        ],
+                    );
+                }
+            }
+
+            fclose($handle);
         }
+    }
+
+    private function topicSlug(string $name): string
+    {
+        return Str::limit((string) Str::slug($name), 191, '');
     }
 }
