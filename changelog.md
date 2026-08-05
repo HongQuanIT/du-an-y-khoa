@@ -10,6 +10,10 @@
 - Cấu hình Vite `host`/`port`/`hmr`/`cors` theo `VITE_PORT` và `APP_PORT`; truyền `APP_PORT` vào service vite trong Compose.
 - Nạp Be Vietnam Pro qua Google Fonts (subset tiếng Việt) và set font-family trên `html`/`body`.
 
+### Tài liệu và script deploy
+- Thêm `deploy-dev.md` hướng dẫn dựng stack Docker local (env, migrate, seed, Vite).
+- Thêm `scripts/deploy.sh` cho webhook aaPanel (pull, build assets, migrate, restart services).
+
 ## 2026-08-04
 
 ### Study Plan MVP + phiên học Amboss-style
