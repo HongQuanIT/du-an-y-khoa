@@ -6,6 +6,10 @@
 - `TopicTaxonomySeeder` và `DemoLearningSeeder` đọc taxonomy/câu hỏi từ dataset VM14K (JSONL).
 - Thêm `Modules/QuestionBank/database/seeders/data/vm14k/` (3 file JSONL + README); giới hạn seed qua `QUESTIONBANK_VM14K_LIMIT`.
 
+### Vite HMR trong Docker + font Be Vietnam Pro
+- Cấu hình Vite `host`/`port`/`hmr`/`cors` theo `VITE_PORT` và `APP_PORT`; truyền `APP_PORT` vào service vite trong Compose.
+- Nạp Be Vietnam Pro qua Google Fonts (subset tiếng Việt) và set font-family trên `html`/`body`.
+
 ## 2026-08-04
 
 ### Study Plan MVP + phiên học Amboss-style
