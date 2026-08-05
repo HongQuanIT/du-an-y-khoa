@@ -321,6 +321,14 @@
     display: none !important;
 }
 
+html,
+body {
+    font-family: 'Be Vietnam Pro', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
 /* Highlight colours used in study sessions (đỏ / vàng / xanh) */
 mark[data-hl='#EF4444'],
 mark[data-hl='#ef4444'] {
