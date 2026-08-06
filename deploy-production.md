@@ -26,6 +26,9 @@ Tài liệu này mô tả quy trình **deploy thủ công** MedLearn lên server
 16. [Rollback](#16-rollback)
 17. [Checklist vận hành](#17-checklist-vận-hành)
 18. [Bảo mật sau deploy](#18-bảo-mật-sau-deploy)
+19. [Deploy qua aaPanel / Git webhook](#19-deploy-qua-aapanel--git-webhook)
+20. [Seeding lần đầu trên production](#20-seeding-lần-đầu-trên-production)
+21. [Troubleshooting thường gặp](#21-troubleshooting-thường-gặp)
 
 ---
 
@@ -795,6 +798,143 @@ https://medlearn.example.com/ops-bypass-token
 8. Fail2ban / rate limit ở Nginx hoặc Cloudflare
 9. Không chạy seed volume (`SEED_VOLUME`) trên production
 10. Theo dõi `srs/00-nen-tang/07-security-performance.md`
+
+---
+
+## 19. Deploy qua aaPanel / Git webhook
+
+Repo có sẵn script tự động hóa: [`scripts/deploy.sh`](scripts/deploy.sh) — phù hợp khi host dùng **aaPanel** (PHP-FPM + Nginx + Supervisor có sẵn trên panel).
+
+### 19.1 Chuẩn bị trên aaPanel
+
+1. Tạo site PHP, **Run Directory = `/public`** (bắt buộc).
+2. Cài PHP **8.4** (hoặc 8.3+) và bật extension ở mục 3 tài liệu này.
+3. Clone repo vào thư mục site (ví dụ `/www/wwwroot/medlearn.example.com`).
+4. Tạo `.env` production **trong thư mục site** (không commit git).
+5. Cấu hình Supervisor cho Horizon / Reverb / Scheduler (mục 11), đặt tên program khớp biến trong script.
+
+### 19.2 Cấu hình script
+
+Chỉnh các biến đầu file `scripts/deploy.sh` (hoặc export trước khi chạy):
+
+```bash
+export SITE_PATH=/www/wwwroot/medlearn.example.com
+export BRANCH=main
+export APP_USER=www                    # user PHP-FPM trên aaPanel
+export PHP_BIN=/www/server/php/84/bin/php
+export PHP_FPM_SERVICE=php-fpm-84
+export HORIZON_PROGRAM=medlearn-horizon
+export REVERB_PROGRAM=medlearn-reverb
+export BUILD_ASSETS=true               # npm ci && npm run build trên server
+export RUN_MIGRATE=true
+```
+
+### 19.3 Gắn Git webhook (aaPanel Git Manager)
+
+1. **Website → site → Git Manager → Script** — tạo script alias `Deploy_Script`.
+2. Nội dung script:
+
+```bash
+bash /www/wwwroot/medlearn.example.com/scripts/deploy.sh
+```
+
+3. **Repository** — gắn script, copy Webhook URL → thêm vào GitHub/GitLab (push event).
+4. Thêm **Deploy Key** (SSH) của aaPanel vào repo (read-only).
+
+Script sẽ tự:
+
+- Bật maintenance mode (`artisan down --secret=...`)
+- `git fetch` + `reset --hard origin/<branch>` (giữ `.env`, `storage/`, `vendor/`, `public/build`)
+- `composer install --no-dev --optimize-autoloader`
+- `npm ci && npm run build` (nếu `BUILD_ASSETS=true`)
+- `migrate --force`, cache config/route/view/event
+- `horizon:terminate`, restart Supervisor, reload PHP-FPM
+- `artisan up`
+
+Bypass maintenance khi deploy:
+
+```
+https://medlearn.example.com/ops-bypass-token
+```
+
+### 19.4 Chạy tay (không webhook)
+
+```bash
+cd /www/wwwroot/medlearn.example.com
+chmod +x scripts/deploy.sh
+SITE_PATH=$(pwd) bash scripts/deploy.sh
+```
+
+---
+
+## 20. Seeding lần đầu trên production
+
+**Chỉ chạy trên môi trường mới**, sau `migrate --force`, khi DB còn trống.
+
+### 20.1 Tài khoản & RBAC (bắt buộc lần đầu)
+
+```bash
+php artisan db:seed --class=RolePermissionSeeder --force
+php artisan db:seed --class=UserSeeder --force
+```
+
+Tạo các tài khoản cố định (mật khẩu mặc định `password` — **đổi ngay sau deploy**):
+
+| Vai trò | Email |
+|---------|-------|
+| Super Admin | `admin@medlearn.local` |
+| Content Editor | `editor@medlearn.local` |
+| Student (demo) | `student@medlearn.local` |
+
+### 20.2 Dữ liệu ngân hàng câu hỏi (tuỳ chọn)
+
+```bash
+# Demo ~30 câu + topics + session mẫu (không cần file ngoài)
+php artisan db:seed --class=Modules\\QuestionBank\\Database\\Seeders\\DemoLearningSeeder --force
+
+# Hoặc seed toàn bộ module QuestionBank (demo + volume nếu bật SEED_VOLUME)
+php artisan db:seed --class=Modules\\QuestionBank\\Database\\Seeders\\QuestionBankDatabaseSeeder --force
+```
+
+> **Không** đặt `SEED_VOLUME=true` trên production — biến này sinh hàng nghìn bản ghi test hiệu năng.
+
+Dataset VM14K (~14k câu): copy file JSONL vào `Modules/QuestionBank/database/seeders/data/vm14k/` rồi chạy seeder tương ứng (xem README trong thư mục đó). Chỉ dùng khi đã có đủ disk/RAM và thời gian import Meilisearch.
+
+### 20.3 Index Meilisearch sau seed
+
+```bash
+php artisan scout:import "Modules\\QuestionBank\\Models\\Question"
+```
+
+Theo dõi queue Horizon nếu `SCOUT_QUEUE=true`.
+
+---
+
+## 21. Troubleshooting thường gặp
+
+| Triệu chứng | Nguyên nhân thường gặp | Cách xử lý |
+|-------------|------------------------|------------|
+| Trang trắng / 500 | Thiếu extension, sai quyền `storage/` | Chạy `php public/check.php`; xem `storage/logs/laravel.log` |
+| CSS/JS 404 (`/build/...`) | Chưa build Vite | `npm ci && npm run build`; kiểm tra `public/build/manifest.json` |
+| `Route [login] not defined` trên API | Client không gửi JSON | API đã ép JSON qua middleware — client gọi với `Accept: application/json` |
+| Queue không chạy | Horizon chưa start | `supervisorctl status`; `php artisan horizon:status` |
+| WebSocket không kết nối | Reverb down / sai proxy Nginx | Kiểm tra `location /app` proxy tới `127.0.0.1:8080`; `VITE_REVERB_*` khớp domain HTTPS |
+| Search không trả kết quả | Meili chưa index | `curl http://127.0.0.1:7700/health`; chạy `scout:import` |
+| Upload media lỗi | Thiếu quyền `storage/app` | `chown www-data storage -R`; `php artisan storage:link` |
+| OPcache code cũ sau deploy | FPM chưa reload | `sudo systemctl reload php8.4-fpm`; `php artisan horizon:terminate` |
+| MySQL `Access denied` | Sai user/host | User nên là `'medlearn'@'127.0.0.1'` khớp `.env` |
+| Redis `NOAUTH` | Thiếu/sai `REDIS_PASSWORD` | Khớp password trong `redis.conf` và `.env` |
+| `502 Bad Gateway` | PHP-FPM socket sai | Nginx `fastcgi_pass` khớp socket thực (`/run/php/php8.4-fpm.sock`) |
+| Maintenance kẹt | Deploy fail giữa chừng | `php artisan up` hoặc xóa `storage/framework/down` |
+
+### Log cần xem
+
+```bash
+tail -f storage/logs/laravel.log
+tail -f storage/logs/horizon.log      # nếu cấu hình Supervisor
+tail -f /var/log/nginx/error.log
+journalctl -u meilisearch -f
+```
 
 ---
 

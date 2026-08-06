@@ -2,10 +2,17 @@
 
 ## 2026-08-06
 
+<<<<<<< HEAD
 ### Ổn định phiên thi và môi trường phát triển
 - Tự tính thời gian thi theo 90 giây mỗi câu và giới hạn số câu theo đúng tập câu khớp bộ lọc.
 - Cảnh báo thời gian tại các mốc 5, 4, 3 phút, 30 và 15 giây; đổi nút ba chấm thành biểu tượng ghi chú.
 - Sửa biểu thức Alpine ở phiên Study Plan; chỉ khởi tạo Reverb khi bật cấu hình và xử lý kết nối khi dùng BFCache.
+=======
+### Deploy production — aaPanel, seed và troubleshooting
+- Bổ sung mục lục và hướng dẫn deploy qua aaPanel / Git webhook (`scripts/deploy.sh`).
+- Thêm seeding lần đầu trên production và bảng troubleshooting thường gặp.
+
+>>>>>>> e0cc6d9 (docs(deploy): bổ sung aaPanel, seed và troubleshooting)
 ### SRS Module 44 — Classroom / Live Review
 - Thêm đặc tả lớp chữa đề livestream LiveKit (B2C), phân biệt Organization (32) B2B Phase 2.
 - Cập nhật nền tảng: tổng quan, kiến trúc, RBAC, mô hình dữ liệu, tracking, glossary, trạng thái.
