@@ -629,33 +629,40 @@ add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; prelo
 
 ## 13. Kiểm tra môi trường (`check.php`)
 
-File `public/check.php` kiểm tra:
+File [`public/check.php`](public/check.php) kiểm tra **không cần bootstrap Laravel** (chạy độc lập, nhanh):
 
-- Phiên bản PHP & ini quan trọng
-- Extension bắt buộc / khuyến nghị
-- OPcache
-- Quyền `storage/`, `bootstrap/cache/`
-- `vendor/`, Vite `public/build/manifest.json`, `.env`
-- Document root
-- Biến môi trường quan trọng
-- Kết nối MySQL · Redis · Meilisearch · local storage writable
+| Nhóm | Nội dung |
+|------|----------|
+| PHP | Phiên bản ≥ 8.3 (khuyến nghị 8.4), memory/upload limits, expose_php |
+| Extension | pdo_mysql, redis, gd, intl, bcmath, zip, exif, pcntl, opcache, mbstring, curl… |
+| OPcache | enable, validate_timestamps=0 trên production |
+| Filesystem | storage/*, bootstrap/cache, vendor/, Vite manifest, disk trống |
+| App config | APP_ENV/DEBUG/KEY/URL, DB/Redis/Meili/Queue/Session, Reverb |
+| Security | CHECK_TOKEN không dùng giá trị mặc định, .env permissions |
+| Connectivity | MySQL (version), Redis PING, Meilisearch /health, local storage |
 
 ### Cách dùng
 
-1. Đặt `CHECK_TOKEN` mạnh trong `.env`.
-2. Mở trình duyệt:
+1. Đặt `CHECK_TOKEN` mạnh trong `.env` (đổi giá trị mặc định `medlearn-check-change-me`).
+
+**Trình duyệt (HTML):**
 
 ```
 https://medlearn.example.com/check.php?token=YOUR_CHECK_TOKEN
 ```
 
-Hoặc CLI trên server:
+**JSON (CI / monitoring):**
+
+```
+https://medlearn.example.com/check.php?token=YOUR_CHECK_TOKEN&format=json
+```
+
+**CLI trên server:**
 
 ```bash
 cd /var/www/medlearn
-CHECK_TOKEN=... php public/check.php
-# hoặc nếu .env đã có CHECK_TOKEN:
-php public/check.php
+php public/check.php              # bảng text, exit 0 = PASS
+php public/check.php --json       # JSON, dùng cho script giám sát
 ```
 
 3. **Xóa ngay sau khi đạt PASS:**
