@@ -26,16 +26,17 @@ Kiến trúc **monolith modular** trên Laravel 12, tách rõ tầng, sẵn sàn
 │  └─────┬──────┘  └────────────┘  └──────────┘  └────────────┘ │
 └────────┼───────────────────────────────────────────────────── ┘
          │
-┌────────▼────────┐ ┌─────────┐ ┌──────────┐ ┌────────┐ ┌───────────┐
-│    MySQL 8      │ │  Redis  │ │Meilisearch│ │ Reverb │ │ S3 / R2   │
-│ (primary+read  │ │ cache / │ │  index    │ │  WS    │ │ + CDN     │
-│  replica)      │ │ queue / │ │           │ │        │ │           │
-│                │ │ session │ │           │ │        │ │           │
-└────────────────┘ └─────────┘ └───────────┘ └────────┘ └───────────┘
+┌────────▼────────┐ ┌─────────┐ ┌──────────┐ ┌────────┐ ┌───────────┐ ┌──────────┐
+│    MySQL 8      │ │  Redis  │ │Meilisearch│ │ Reverb │ │ S3 / R2   │ │ LiveKit  │
+│ (primary+read  │ │ cache / │ │  index    │ │  WS    │ │ + CDN     │ │ WebRTC   │
+│  replica)      │ │ queue / │ │           │ │        │ │           │ │ SFU      │
+│                │ │ session │ │           │ │        │ │           │ │          │
+└────────────────┘ └─────────┘ └───────────┘ └────────┘ └───────────┘ └──────────┘
          │
 ┌────────▼────────────────────────────────────────────┐
 │  Async workers: Queue (default/high/low), Scheduler   │
-│  Jobs: analytics, email, media transcode, AI, export  │
+│  Jobs: analytics, email, media, AI, export, LiveKit   │
+│        egress finalize / recording notify             │
 └───────────────────────────────────────────────────────┘
 ```
 
@@ -72,16 +73,23 @@ Kiến trúc **monolith modular** trên Laravel 12, tách rõ tầng, sẵn sàn
 - Đồng bộ qua queue khi CRUD nội dung (`SyncToSearchJob`).
 
 ### 3.4 Laravel Reverb (WebSocket)
-- Realtime notification, cập nhật tiến độ live (exam đang diễn ra), presence trong lớp học.
-- Kênh: `private-user.{id}`, `presence-exam.{id}`, `private-org.{id}`.
+- Realtime notification, cập nhật tiến độ live (exam đang diễn ra), presence trong lớp chữa đề (Classroom).
+- Kênh: `private-user.{id}`, `presence-exam.{id}`, `presence-classroom.{id}`, `private-live-session.{id}`.
+- *(🔵 Phase 2)* `private-org.{id}` khi bật Organization.
 
-### 3.5 Storage S3 / Cloudflare R2 + CDN
-- Media: ảnh y khoa, video bài giảng, file import, export báo cáo.
-- Signed URL cho nội dung Premium. Ảnh biến thể (thumbnail/webp) sinh qua job.
+### 3.5 LiveKit (WebRTC SFU) — Module 44 Classroom
+- Livestream chữa đề: video/audio WebRTC; app Laravel chỉ **cấp join token (JWT)**, quản lý room lifecycle & quyền publish.
+- **Egress recording** → file → R2/S3 + HLS (VOD); webhook LiveKit → queue cập nhật `live_recordings`.
+- Self-host (Docker) hoặc LiveKit Cloud; **không** tự viết SFU.
+- Chat/Q&A nguồn thật ở MySQL + broadcast Reverb (không dùng data channel LiveKit làm nguồn bền).
 
-### 3.6 Queue & Scheduler
-- **Scheduler (cron)**: cập nhật analytics hằng ngày, gửi reminder streak, dọn session hết hạn, tính lại Weak Topics, đồng bộ billing.
-- **Queue workers**: email/notification, transcode media, gọi AI, export CSV/PDF, đồng bộ search.
+### 3.6 Storage S3 / Cloudflare R2 + CDN
+- Media: ảnh y khoa, video bài giảng, **recording buổi live**, file import, export báo cáo.
+- Signed URL cho nội dung Premium / VOD lớp. Ảnh biến thể (thumbnail/webp) sinh qua job.
+
+### 3.7 Queue & Scheduler
+- **Scheduler (cron)**: cập nhật analytics hằng ngày, gửi reminder streak / nhắc live sắp bắt đầu, dọn session hết hạn, tính lại Weak Topics, đồng bộ billing.
+- **Queue workers**: email/notification, transcode media, finalize LiveKit egress, gọi AI, export CSV/PDF, đồng bộ search.
 
 ## 4. Môi trường & cấu hình
 

@@ -28,18 +28,18 @@ Khẩu hiệu: *"Học hiệu quả hơn — hiểu bản chất, nhớ lâu, lu
 |-------|-------|-------------|
 | **Guest** | Khách chưa đăng nhập | Xem landing, preview giới hạn, đăng ký |
 | **Student (Free)** | Người học miễn phí | Làm câu hỏi free, thư viện giới hạn, tính năng cá nhân cơ bản |
-| **Premium Student** | Người học trả phí | Toàn bộ Qbank, thư viện, AI, analytics nâng cao |
+| **Premium Student** | Người học trả phí | Toàn bộ Qbank, thư viện, AI, analytics nâng cao; **host lớp chữa đề** (Module 44) |
 | **Content Editor** | Biên tập nội dung | CRUD câu hỏi, bài viết, media (theo workflow duyệt) |
 | **Admin** | Quản trị hệ thống | Quản lý user, nội dung, cấu hình |
 | **Super Admin** | Toàn quyền | Cấu hình hệ thống, phân quyền, billing, feature flag |
-| 🔵 **Instructor** *(hoãn)* | Giảng viên/mentor | Tạo lớp, giao bài, xem tiến độ — **Phase 2 (gắn Organization)** |
+| 🔵 **Instructor** *(hoãn ngữ cảnh Org)* | Giảng viên/mentor tổ chức | Tạo lớp org, giao bài, xem tiến độ — **Phase 2 (gắn Organization)**. Role `instructor` vẫn có thể host Classroom cộng đồng (44) khi được gán. |
 | 🔵 **Organization Admin** *(hoãn)* | Quản trị tổ chức (trường/bệnh viện) | Quản lý thành viên, ghế license, báo cáo tổ chức — **Phase 2** |
 
 Chi tiết ma trận quyền: xem `03-phan-quyen-rbac.md`.
 
-> 🔵 **Ghi chú phạm vi:** Module **Organization (32)** cùng các actor **Instructor** và **Organization Admin** đã được **hoãn sang Phase 2**, chưa thuộc phạm vi build hiện tại.
+> 🔵 **Ghi chú phạm vi:** Module **Organization (32)** cùng actor **Organization Admin** (và quyền lớp B2B của Instructor) đã **hoãn sang Phase 2**. **Classroom / Live Review (44)** thuộc phạm vi hiện tại (B2C, Premium host) — **không** thay thế Organization.
 
-## 4. Phạm vi hệ thống (Scope) — 42 module hiện tại + 1 module hoãn (Phase 2)
+## 4. Phạm vi hệ thống (Scope) — 43 module hiện tại + 1 module hoãn (Phase 2)
 
 1. **Public**: Landing Page.
 2. **Core học tập**: Authentication, Dashboard, Study Plan, Question Bank, Question Session, Question Review.
@@ -48,9 +48,10 @@ Chi tiết ma trận quyền: xem `03-phan-quyen-rbac.md`.
 5. **Thi cử**: Exams, Self Assessment.
 6. **Khám phá**: Search, Global Search.
 7. **Tài khoản**: Notification, Subscription, Billing, User Profile, User Settings.
-8. **Quản trị & Nền tảng**: Admin Dashboard, User/Question/Library/Media/Exam Management, Role & Permission, Audit Log, Reports, CMS, API.
+8. **Cộng đồng**: Classroom / Live Review (livestream chữa đề — LiveKit).
+9. **Quản trị & Nền tảng**: Admin Dashboard, User/Question/Library/Media/Exam Management, Role & Permission, Audit Log, Reports, CMS, API.
 
-> 🔵 **Hoãn (Phase 2 — chưa đưa vào hệ thống):** Module **Organization (32)** — quản lý tổ chức/lớp học (B2B). Sẽ bổ sung khi triển khai giai đoạn 2.
+> 🔵 **Hoãn (Phase 2 — chưa đưa vào hệ thống):** Module **Organization (32)** — quản lý tổ chức/lớp học **B2B** (ghế license). Khác với Classroom (44) là lớp cộng đồng B2C.
 
 ## 5. Sơ đồ ngữ cảnh (Context)
 
@@ -59,7 +60,7 @@ Chi tiết ma trận quyền: xem `03-phan-quyen-rbac.md`.
         Guest/Student ──▶│      Web App (Blade/SPA-ish) │
                          │  Tailwind + Alpine + Livewire│
                          └───────────────┬─────────────┘
-                                         │ HTTPS / JSON API / WebSocket
+                                         │ HTTPS / JSON API / WebSocket / WebRTC
                          ┌───────────────▼─────────────┐
                          │     Laravel 12 (PHP 8.4)     │
                          │  Controllers / Actions / API │
@@ -69,12 +70,12 @@ Chi tiết ma trận quyền: xem `03-phan-quyen-rbac.md`.
                │   MySQL 8    │ │ Redis  │ │Meili │ │ Reverb   │
                │ (nguồn thật) │ │(cache/ │ │search│ │(realtime)│
                │              │ │ queue) │ │      │ │          │
-               └──────────────┘ └────────┘ └──────┘ └──────────┘
-                             │
-               ┌─────────────▼───────────────┐   ┌──────────────┐
-               │  S3 / Cloudflare R2 + CDN    │   │  AI Provider │
-               │  (media: ảnh, video, file)   │   │  (LLM API)   │
-               └──────────────────────────────┘  └──────────────┘
+               └──────────────┘ └────────┘ └──────┘ └────┬─────┘
+                             │                           │ presence/chat tín hiệu
+               ┌─────────────▼───────────────┐   ┌───────▼──────┐  ┌──────────────┐
+               │  S3 / Cloudflare R2 + CDN    │   │   LiveKit    │  │  AI Provider │
+               │  (media + recording HLS)     │   │ (WebRTC SFU) │  │  (LLM API)   │
+               └──────────────────────────────┘   └──────────────┘  └──────────────┘
 ```
 
 ## 6. Nguyên tắc thiết kế xuyên suốt
@@ -96,6 +97,8 @@ Chi tiết ma trận quyền: xem `03-phan-quyen-rbac.md`.
 - **Library Article**: bài viết y khoa liên kết chéo với câu hỏi, thuốc, hình ảnh.
 - **Flashcard**: thẻ ghi nhớ (spaced repetition).
 - **Study Plan**: lộ trình học cá nhân hóa theo ngày thi mục tiêu.
+- **Classroom**: lớp chữa đề cộng đồng (B2C); host Premium; khác lớp tổ chức B2B (Module 32, Phase 2).
+- **Live Session**: một buổi livestream trong Classroom (LiveKit); sau khi kết thúc còn VOD + chat read-only.
 
 ## 8. Ràng buộc phi chức năng (NFR) tóm tắt
 

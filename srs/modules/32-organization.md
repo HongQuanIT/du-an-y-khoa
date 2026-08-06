@@ -1,8 +1,10 @@
 # Module 32 — Organization (Tổ chức/Lớp học)
 
 > 🔵 **HOÃN — PHASE 2 (chưa thuộc phạm vi hệ thống hiện tại).**
-> Module này **chưa triển khai** trong giai đoạn hiện tại. Toàn bộ thực thể, role, API, tính năng liên quan tới tổ chức/lớp học (Organization, OrganizationMember, Classroom, Assignment, org_admin, org subscription, org reports...) **không đưa vào build** cho tới khi được kích hoạt lại. Tài liệu dưới đây được **giữ nguyên để tham khảo & triển khai về sau**.
+> Module này **chưa triển khai** trong giai đoạn hiện tại. Toàn bộ thực thể, role, API, tính năng liên quan tới tổ chức/lớp học (Organization, OrganizationMember, Classroom org / `classes`, Assignment, org_admin, org subscription, org reports...) **không đưa vào build** cho tới khi được kích hoạt lại. Tài liệu dưới đây được **giữ nguyên để tham khảo & triển khai về sau**.
 > Khi bật lại: rà soát các module phụ thuộc (Subscription 28, Billing 29, Exams 23, Exam Management 38, Reports 41, RBAC 03) và mô hình dữ liệu (04), ERD (10, 11).
+>
+> **Khác Module 44 — Classroom / Live Review:** Module 44 là lớp **cộng đồng B2C** (Premium host + LiveKit), dùng bảng `classrooms` / `live_sessions`, **đã thuộc phạm vi hiện tại**. Organization (32) là **B2B** (ghế license, assignment trong org) với bảng `classes` — không trùng và không thay thế nhau. Phase 2 có thể liên kết lớp org ↔ classroom cộng đồng.
 
 **Nhóm:** Account · **Ưu tiên:** Trung bình-Cao (B2B) · **Phụ thuộc:** RBAC (nền tảng), Subscription (28), Reports (41), Exams (23) · **Trạng thái:** 🔵 Hoãn (Phase 2)
 

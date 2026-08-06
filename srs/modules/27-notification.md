@@ -2,8 +2,10 @@
 
 **Nhóm:** System · **Ưu tiên:** Cao · **Phụ thuộc:** mọi module (nguồn sự kiện), Settings (31), Realtime · **Trạng thái:** ✅
 
+> **Liên quan Module 44:** phát thông báo `live_upcoming` (nhắc buổi sắp bắt đầu), `live_started` (lớp đang live), `recording_ready` (VOD sẵn sàng), `classroom_invite` — theo `notification_preferences` + deep link `/classes/{id}/live/{session}`.
+
 ## 0. Tóm tắt module
-Hệ thống thông báo đa kênh (in-app, email, push) cho nhắc học, streak, kết quả, hệ thống, tổ chức. Trung tâm thông báo + realtime + tùy chọn kênh.
+Hệ thống thông báo đa kênh (in-app, email, push) cho nhắc học, streak, kết quả, hệ thống, tổ chức, **lớp chữa đề (live)**. Trung tâm thông báo + realtime + tùy chọn kênh.
 
 | Route | Màn hình |
 |-------|----------|
@@ -38,7 +40,7 @@ Kết quả exam chấm xong → notification → mở result
 ```
 
 ## 5. Business Logic
-- **Loại thông báo:** reminder (streak, study plan), result (exam graded), content (bài mới), social/org (giao bài), system (bảo trì, billing).
+- **Loại thông báo:** reminder (streak, study plan), result (exam graded), content (bài mới), social/org (giao bài), **classroom** (invite, live sắp bắt đầu / đã bắt đầu, recording sẵn sàng — Module 44), system (bảo trì, billing).
 - **Đa kênh** theo `notification_preferences` (per type × channel).
 - **Realtime** in-app qua Reverb (`private-user.{id}`); email/push qua queue.
 - **Digest** (gộp) để tránh spam (vd tổng hợp hằng ngày).

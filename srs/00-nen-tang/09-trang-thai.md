@@ -63,5 +63,6 @@ Ký hiệu: ✅ hoàn chỉnh · 🟡 bản nháp chi tiết · ⬜ khung chờ 
 | 41 | Reports | ✅ |
 | 42 | CMS | ✅ |
 | 43 | API | ✅ |
+| 44 | Classroom / Live Review | 🟡 |
 
 > Ghi chú: Các module lõi (01–07) được viết ở độ sâu tối đa. Các module còn lại đầy đủ 15 mục, tham chiếu nền tảng để tránh lặp; có thể mở rộng thêm chi tiết cấp component/edge-case khi bước vào giai đoạn thiết kế chi tiết từng màn hình.

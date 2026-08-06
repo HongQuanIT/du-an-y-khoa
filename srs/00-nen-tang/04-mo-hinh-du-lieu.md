@@ -55,6 +55,8 @@ Chuẩn RBAC: `roles(id,name,slug)`, `permissions(id,name,slug)`, `permission_ro
 `id, organization_id FK, user_id FK, org_role(member/instructor/org_admin), invited_by, joined_at, status(invited/active/removed), timestamps`. Unique `(organization_id, user_id)`.
 
 > 🔵 **Ghi chú:** Nhóm bảng tổ chức (`organizations`, `organization_members`, và `classes`, `assignments`, `assignment_submissions` ở Module 32) **chưa đưa vào build hiện tại**. Cột `users.organization_id` để **nullable** và tạm không dùng cho tới Phase 2.
+>
+> **Classroom cộng đồng (Module 44)** dùng bảng `classrooms` / `classroom_members` / `live_sessions`… — **không** đụng tên `classes` của Organization. Xem mục 7b bên dưới.
 
 ## 3. Nhóm Nội dung câu hỏi
 
@@ -217,7 +219,40 @@ Có thể dùng `Article(type=procedure)` + field mở rộng: `steps JSON, indi
 ### DailyStat (analytics rollup)
 `id, user_id, date, questions_answered, correct, minutes, sessions, avg_time, streak_flag, timestamps`. Unique `(user_id, date)`.
 
-## 8. Nhóm Thi cử
+## 8. Nhóm Classroom / Live Review (Module 44)
+
+> B2C cộng đồng — **không** dùng tên `classes` (dành Module 32 Organization Phase 2).
+
+### Classroom
+| Field | Type | Ghi chú |
+|-------|------|---------|
+| id, uuid | | |
+| title | VARCHAR(200) | |
+| description | TEXT null | |
+| host_user_id | FK User | người tạo / host chính |
+| visibility | VARCHAR(20) | enum: public / unlisted / invite_only |
+| join_code | VARCHAR(16) null | mã tham gia; unique khi có |
+| status | VARCHAR(20) | enum: draft / active / archived |
+| max_members | INT null | |
+| cover_media_id | FK Media null | |
+| meta | JSON | |
+| timestamps, soft delete | | |
+
+Index: `host_user_id`, `visibility`, `status`, `join_code`.
+
+### ClassroomMember
+`id, classroom_id FK, user_id FK, role_in_class(host/cohost/member), status(invited/active/left/banned), joined_at, timestamps`. Unique `(classroom_id, user_id)`.
+
+### LiveSession
+`id, uuid, classroom_id FK, title, scheduled_at, started_at null, ended_at null, status(scheduled/live/ended/cancelled), livekit_room_name, linked_exam_id FK null, question_set JSON null, timestamps, soft delete`. Index `(classroom_id, status)`, `scheduled_at`.
+
+### LiveSessionMessage
+`id, live_session_id FK, user_id FK, body TEXT, type(chat/question/system), is_hidden BOOL default false, created_at`. Index `(live_session_id, created_at)`. Insert-heavy; không soft-delete nghiệp vụ (ẩn bằng `is_hidden`).
+
+### LiveRecording
+`id, live_session_id FK, media_id FK null, duration_seconds INT null, status(processing/ready/failed), egress_id VARCHAR null, timestamps`. Quan hệ 1–n với session (retry egress).
+
+## 9. Nhóm Thi cử
 
 ### Exam (đề mẫu/kỳ thi)
 `id, uuid, title, type(mock/self_assessment/org_exam), description, question_ids JSON hoặc rule JSON, duration_minutes, pass_score, available_from/to, is_premium, status, created_by, timestamps, soft delete`.
@@ -225,7 +260,7 @@ Có thể dùng `Article(type=procedure)` + field mở rộng: `steps JSON, indi
 ### ExamAttempt
 `id, uuid, exam_id, user_id, session_id FK, score, percentile, status(scheduled/in_progress/submitted/graded), started_at, submitted_at, timestamps`.
 
-## 9. Nhóm Thương mại
+## 10. Nhóm Thương mại
 
 ### Plan (gói)
 `id, name, slug, price_cents, currency, interval(month/year/lifetime), features JSON, is_active, trial_days, timestamps`.
@@ -240,7 +275,7 @@ Có thể dùng `Article(type=procedure)` + field mở rộng: `steps JSON, indi
 ### Coupon
 `id, code, type(percent/fixed), value, max_redemptions, redeemed_count, valid_from/to, active`.
 
-## 10. Nhóm Hệ thống
+## 11. Nhóm Hệ thống
 
 ### Notification
 `id, user_id, type, title, body, data JSON, channel(in_app/email/push), read_at null, action_url, timestamps`. Index `(user_id, read_at)`.
@@ -257,7 +292,7 @@ Có thể dùng `Article(type=procedure)` + field mở rộng: `steps JSON, indi
 ### Setting
 `id, group, key, value JSON, is_public, timestamps` — cấu hình hệ thống.
 
-## 11. Sơ đồ quan hệ (ERD rút gọn)
+## 12. Sơ đồ quan hệ (ERD rút gọn)
 
 ```
 User ─┬─< QuestionSession ─< QuestionAttempt >─ Question ─< QuestionOption
@@ -272,17 +307,21 @@ User ─┬─< QuestionSession ─< QuestionAttempt >─ Question ─< Question
       ├─< DailyStat
       ├─< ExamAttempt >─ Exam
       ├─ Subscription ─ Plan ; Subscription ─< Invoice ─< Payment
-      └─< Notification
+      ├─< Notification
+      ├─ host Classroom ─< ClassroomMember >─ User
+      │         └─< LiveSession ─< LiveSessionMessage
+      │                      └─< LiveRecording >─ Media (HLS)
       # 🔵 (Phase 2) belongsTo Organization ─< OrganizationMember
 
 Article/Drug/Procedure/Media ─< ContentLink >─ (poly bất kỳ)
 ```
 
-## 12. Chỉ mục & hiệu năng dữ liệu (điểm nóng)
+## 13. Chỉ mục & hiệu năng dữ liệu (điểm nóng)
 
 | Bảng | Vấn đề | Giải pháp |
 |------|--------|-----------|
 | question_attempts | ghi rất nhiều, query analytics | index `(user_id, question_id)`, partition theo tháng, rollup sang DailyStat/TopicMastery qua job |
 | tracking_events | ghi cực lớn | insert-only, partition, batch insert qua queue, TTL/archival |
+| live_session_messages | chat đồng thời cao khi live | index `(live_session_id, created_at)`, rate-limit, paginate |
 | questions/articles | tìm kiếm full-text | đồng bộ sang Meilisearch |
 | dashboard stats | đọc nặng lặp lại | cache Redis + rollup định kỳ |

@@ -6,6 +6,11 @@
 - Tự tính thời gian thi theo 90 giây mỗi câu và giới hạn số câu theo đúng tập câu khớp bộ lọc.
 - Cảnh báo thời gian tại các mốc 5, 4, 3 phút, 30 và 15 giây; đổi nút ba chấm thành biểu tượng ghi chú.
 - Sửa biểu thức Alpine ở phiên Study Plan; chỉ khởi tạo Reverb khi bật cấu hình và xử lý kết nối khi dùng BFCache.
+### SRS Module 44 — Classroom / Live Review
+- Thêm đặc tả lớp chữa đề livestream LiveKit (B2C), phân biệt Organization (32) B2B Phase 2.
+- Cập nhật nền tảng: tổng quan, kiến trúc, RBAC, mô hình dữ liệu, tracking, glossary, trạng thái.
+- Liên kết Videos (14), Notification (27); ghi chú phân biệt trong Organization (32).
+
 ### Header public — breakpoint menu về md
 - Nav và nút đăng nhập hiện từ `md`; drawer mobile dưới `md` (trước dùng `lg`).
 - Đơn giản hóa nút menu Material Symbols; bỏ `@resize.window` đóng drawer.

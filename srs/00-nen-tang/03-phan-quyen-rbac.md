@@ -41,8 +41,10 @@ Chú thích: ✅ full · 🔓 giới hạn/preview · ➖ không có · 🔒 c�
 | Analytics nâng cao | ➖ | 🔓 | ✅ | ✅ | ➖ | 🔓 | ✅ | ✅ |
 | Flashcards/Notes/Highlight | ➖ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Exams/Self Assessment | ➖ | 🔒 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| 🔵 Tạo lớp, giao bài *(Phase 2)* | ➖ | ➖ | ➖ | ✅ | ➖ | ✅ | ✅ | ✅ |
-| 🔵 Xem tiến độ học viên *(Phase 2)* | ➖ | ➖ | ➖ | ✅ | ➖ | ✅ | ✅ | ✅ |
+| **Host lớp chữa đề (Classroom 44)** | ➖ | 🔒 | ✅ | ✅ | ➖ | ➖ | ✅ | ✅ |
+| **Tham gia lớp / xem live & VOD (44)** | ➖ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| 🔵 Tạo lớp org, giao bài *(Phase 2)* | ➖ | ➖ | ➖ | ✅ | ➖ | ✅ | ✅ | ✅ |
+| 🔵 Xem tiến độ học viên org *(Phase 2)* | ➖ | ➖ | ➖ | ✅ | ➖ | ✅ | ✅ | ✅ |
 | CRUD nội dung câu hỏi | ➖ | ➖ | ➖ | ➖ | ✅ | ➖ | ✅ | ✅ |
 | Duyệt/publish nội dung | ➖ | ➖ | ➖ | ➖ | 🔓 | ➖ | ✅ | ✅ |
 | 🔵 Quản lý thành viên tổ chức *(Phase 2)* | ➖ | ➖ | ➖ | ➖ | ➖ | ✅ | ✅ | ✅ |
@@ -64,6 +66,7 @@ library.view, library.edit, library.publish
 user.view, user.manage, user.impersonate
 role.manage, permission.manage
 audit.view, report.export, cms.manage, feature_flag.manage
+classroom.create, classroom.manage, classroom.join, classroom.moderate, live.start, live.join
 # 🔵 Phase 2 (Organization, chưa dùng): org.manage_members, org.manage_billing, org.view_reports
 ai.use, analytics.advanced, exam.take, exam.manage
 ```
@@ -78,6 +81,7 @@ ai.use, analytics.advanced, exam.take, exam.manage
 | `analytics.advanced` | Heatmap, dự báo, so sánh peer |
 | `exam.simulation` | Mô phỏng thi đầy đủ |
 | `offline.download` | Tải nội dung offline (nếu có) |
+| `classroom.host` | Tạo lớp chữa đề + start livestream (Module 44); Free vẫn join được |
 
 Free tier có quota giới hạn (vd: N câu/ngày, N lượt AI/ngày).
 
@@ -100,5 +104,5 @@ Free tier có quota giới hạn (vd: N câu/ngày, N lượt AI/ngày).
 ## 8. Trường hợp đặc biệt
 
 - **Impersonate**: chỉ Super Admin; ghi audit; banner cảnh báo; không thao tác billing khi impersonate.
-- **Hết hạn subscription**: role giữ nguyên, entitlement Premium bị thu hồi ngay; dữ liệu cá nhân (notes, flashcards) vẫn giữ (read-only nếu vượt quota free).
+- **Hết hạn subscription**: role giữ nguyên, entitlement Premium (gồm `classroom.host`) bị thu hồi ngay; dữ liệu cá nhân (notes, flashcards) vẫn giữ (read-only nếu vượt quota free). Lớp đã tạo: vẫn xem VOD/chat read-only; **không** start live mới.
 - 🔵 *(Phase 2)* **Role kép** (Instructor + Org Admin) và **Downgrade tổ chức** (org hết license → thành viên về Free) — áp dụng khi bật Module Organization.

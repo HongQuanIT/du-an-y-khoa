@@ -34,4 +34,9 @@
 | **Feature Flag** | Cờ bật/tắt tính năng |
 | **Signed URL** | URL có chữ ký, thời hạn để truy cập media bảo mật |
 | **Reverb** | Server WebSocket của Laravel (realtime) |
+| **LiveKit** | SFU WebRTC cho livestream lớp chữa đề (Module 44); app cấp JWT join token |
+| **Egress** | Pipeline ghi hình phòng LiveKit → file/HLS (VOD sau buổi live) |
+| **Classroom** | Lớp chữa đề cộng đồng (B2C); khác lớp tổ chức B2B (Module 32 Phase 2) |
+| **Live Session** | Một buổi livestream trong Classroom (`scheduled` → `live` → `ended`) |
+| **Cohost** | Thành viên lớp được host ủy quyền publish/moderate |
 | **Meilisearch** | Công cụ full-text search |
