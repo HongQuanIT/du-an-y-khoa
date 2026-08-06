@@ -17,6 +17,7 @@
 - Thêm đặc tả lớp chữa đề livestream LiveKit (B2C), phân biệt Organization (32) B2B Phase 2.
 - Cập nhật nền tảng: tổng quan, kiến trúc, RBAC, mô hình dữ liệu, tracking, glossary, trạng thái.
 - Liên kết Videos (14), Notification (27); ghi chú phân biệt trong Organization (32).
+- Bổ sung quan hệ User ↔ Classroom trên mô hình dữ liệu; sửa tham chiếu mục 8.
 
 ### Header public — breakpoint menu về md
 - Nav và nút đăng nhập hiện từ `md`; drawer mobile dưới `md` (trước dùng `lg`).

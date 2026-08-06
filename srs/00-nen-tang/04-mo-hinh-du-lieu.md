@@ -37,7 +37,7 @@
 | timestamps, soft delete | | |
 
 Index: `email`, `role`, `organization_id`, `status`.
-Quan hệ: hasMany Attempt/Session/Note/Bookmark/Highlight/Flashcard; hasOne Subscription; hasMany OAuthAccount, Device. *(🔵 Phase 2: belongsTo Organization.)*
+Quan hệ: hasMany Attempt/Session/Note/Bookmark/Highlight/Flashcard; hasOne Subscription; hasMany OAuthAccount, Device; hasMany Classroom (as host) / ClassroomMember (Module 44). *(🔵 Phase 2: belongsTo Organization.)*
 
 ### OAuthAccount
 `id, user_id FK, provider(google/facebook/apple), provider_user_id, access_token(enc), refresh_token(enc), expires_at, timestamps`. Unique `(provider, provider_user_id)`.
@@ -56,7 +56,7 @@ Chuẩn RBAC: `roles(id,name,slug)`, `permissions(id,name,slug)`, `permission_ro
 
 > 🔵 **Ghi chú:** Nhóm bảng tổ chức (`organizations`, `organization_members`, và `classes`, `assignments`, `assignment_submissions` ở Module 32) **chưa đưa vào build hiện tại**. Cột `users.organization_id` để **nullable** và tạm không dùng cho tới Phase 2.
 >
-> **Classroom cộng đồng (Module 44)** dùng bảng `classrooms` / `classroom_members` / `live_sessions`… — **không** đụng tên `classes` của Organization. Xem mục 7b bên dưới.
+> **Classroom cộng đồng (Module 44)** dùng bảng `classrooms` / `classroom_members` / `live_sessions`… — **không** đụng tên `classes` của Organization. Xem mục 8 bên dưới.
 
 ## 3. Nhóm Nội dung câu hỏi
 
