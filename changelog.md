@@ -6,6 +6,9 @@
 - Tự tính thời gian thi theo 90 giây mỗi câu và giới hạn số câu theo đúng tập câu khớp bộ lọc.
 - Cảnh báo thời gian tại các mốc 5, 4, 3 phút, 30 và 15 giây; đổi nút ba chấm thành biểu tượng ghi chú.
 - Sửa biểu thức Alpine ở phiên Study Plan; chỉ khởi tạo Reverb khi bật cấu hình và xử lý kết nối khi dùng BFCache.
+### Header public — breakpoint menu về md
+- Nav và nút đăng nhập hiện từ `md`; drawer mobile dưới `md` (trước dùng `lg`).
+- Đơn giản hóa nút menu Material Symbols; bỏ `@resize.window` đóng drawer.
 
 ### Hoàn thiện Question Bank và đồng bộ phiên học
 - Làm thật bộ lọc kỳ thi, bài viết, triệu chứng, chủ đề, trạng thái và năm mức độ khó; bổ sung dữ liệu seed 200 câu hỏi.
