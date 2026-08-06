@@ -68,13 +68,6 @@ final class CreateQuestionSessionRequest extends FormRequest
             'articles.*' => ['string', 'distinct', Rule::in(array_column(ScopeFilters::articles(), 'id'))],
             'symptoms' => ['nullable', 'array'],
             'symptoms.*' => ['string', 'distinct', Rule::in(array_column(ScopeFilters::symptoms(), 'id'))],
-            'time_limit_minutes' => [
-                Rule::requiredIf(fn (): bool => $this->input('mode') === SessionMode::Exam->value),
-                'nullable',
-                'integer',
-                'min:1',
-                'max:300',
-            ],
         ];
     }
 
@@ -83,14 +76,11 @@ final class CreateQuestionSessionRequest extends FormRequest
     {
         return [
             'count.max' => 'Tài khoản hiện tại được tạo tối đa :max câu mỗi phiên.',
-            'time_limit_minutes.required' => 'Hãy chọn thời gian cho phiên thi.',
         ];
     }
 
     public function toData(): CreateSessionData
     {
-        $minutes = $this->input('time_limit_minutes');
-
         return new CreateSessionData(
             mode: SessionMode::from((string) $this->input('mode')),
             source: SessionSource::from((string) $this->input('source', SessionSource::Custom->value)),
@@ -100,7 +90,6 @@ final class CreateQuestionSessionRequest extends FormRequest
             questionStatuses: array_values(array_unique(array_map('strval', $this->input('question_statuses', [])))),
             questionStatusMode: (string) $this->input('question_status_mode', 'latest'),
             savedOnly: $this->boolean('saved_only'),
-            timeLimitSeconds: is_numeric($minutes) ? (int) $minutes * 60 : null,
             examKey: $this->filled('exam_key') ? (string) $this->input('exam_key') : null,
             articles: array_values(array_unique(array_map('strval', $this->input('articles', [])))),
             symptoms: array_values(array_unique(array_map('strval', $this->input('symptoms', [])))),

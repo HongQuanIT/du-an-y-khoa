@@ -34,7 +34,6 @@ final class CreateSessionData
         public readonly array $questionStatuses = [],
         public readonly string $questionStatusMode = 'latest',
         public readonly bool $savedOnly = false,
-        public readonly ?int $timeLimitSeconds = null,
         public readonly ?string $examKey = null,
         public readonly array $articles = [],
         public readonly array $symptoms = [],
