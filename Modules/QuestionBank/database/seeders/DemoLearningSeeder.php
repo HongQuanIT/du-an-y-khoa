@@ -6,11 +6,15 @@ namespace Modules\QuestionBank\Database\Seeders;
 
 use App\Models\User;
 use App\Support\Enums\Role;
+use App\Support\ScopeFilters;
+use App\Support\TargetExams;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Modules\QuestionBank\Enums\Difficulty;
+use Modules\QuestionBank\Enums\QuestionScopeType;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Enums\SessionMode;
 use Modules\QuestionBank\Enums\SessionStatus;
@@ -21,6 +25,7 @@ use Modules\QuestionBank\Models\QuestionOption;
 use Modules\QuestionBank\Models\QuestionSession;
 use Modules\QuestionBank\Models\QuestionStatus as UserQuestionStatusModel;
 use Modules\QuestionBank\Models\Topic;
+use Modules\QuestionBank\Services\QuestionSessionSnapshots;
 use Spatie\Permission\Models\Role as RoleModel;
 
 /**
@@ -32,6 +37,8 @@ use Spatie\Permission\Models\Role as RoleModel;
  */
 class DemoLearningSeeder extends Seeder
 {
+    private const QUESTION_TARGET = 200;
+
     public function run(): void
     {
         Question::withoutSyncingToSearch(function (): void {
@@ -45,6 +52,7 @@ class DemoLearningSeeder extends Seeder
 
     /**
      * Seed questions from the downloaded VM14K Vietnamese MCQ dataset (JSONL).
+     * Seed curated questions (with options) and top up to 200 Amboss-style MCQs.
      *
      * Files are expected at:
      *   Modules/QuestionBank/database/seeders/data/vm14k/data-processed-shuffled*.jsonl
@@ -80,11 +88,177 @@ class DemoLearningSeeder extends Seeder
                 continue;
             }
 
-            while (($line = fgets($handle)) !== false) {
-                $line = trim($line);
-                if ($line === '') {
-                    continue;
+        // Top up so a multi-week study plan can draw a fresh Amboss-style batch every day.
+        $systemSlugs = Topic::query()
+            ->where('type', 'system')
+            ->orderBy('order')
+            ->pluck('slug')
+            ->all();
+
+        if ($systemSlugs === []) {
+            $systemSlugs = ['tim-mach', 'ho-hap', 'noi-tiet', 'tieu-hoa', 'chan-thuong', 'so-sinh', 'khang-sinh'];
+        }
+
+        $target = self::QUESTION_TARGET;
+        $existing = Question::count();
+        $bank = $this->ambossStyleBank();
+        $difficulties = Difficulty::cases();
+
+        for ($i = $existing; $i < $target; $i++) {
+            $slug = $systemSlugs[$i % count($systemSlugs)];
+            $topic = $topics[$slug] ?? null;
+            $template = $bank[$i % count($bank)];
+            $difficulty = $difficulties[$i % count($difficulties)];
+            $caseNo = $i + 1;
+            $topicName = $topic instanceof Topic ? $topic->name : 'Tổng hợp';
+
+            $stem = sprintf(
+                '[Amboss] Ca lâm sàng #%03d — %s. %s',
+                $caseNo,
+                $topicName,
+                $template['stem'],
+            );
+
+            $question = Question::firstOrCreate(
+                ['stem' => $stem],
+                [
+                    'explanation' => $template['explanation'].' (Chủ đề: '.$topicName.'; ca #'.$caseNo.'.)',
+                    'difficulty' => $difficulty,
+                    'status' => QuestionStatus::Published,
+                    'topic_id' => $topic?->id,
+                    'is_free' => $i % 3 === 0,
+                ],
+            );
+
+            if ($question->wasRecentlyCreated) {
+                $correctIndex = $i % 4;
+                $right = $template['options'][0];
+                $wrongs = array_slice($template['options'], 1);
+                $options = [];
+                $wrongCursor = 0;
+
+                foreach (['A', 'B', 'C', 'D'] as $idx => $label) {
+                    $isCorrect = $idx === $correctIndex;
+                    $content = $isCorrect ? $right : $wrongs[$wrongCursor++];
+                    $options[] = [
+                        'content' => $content,
+                        'is_correct' => $isCorrect,
+                        'explanation' => $isCorrect
+                            ? "Đáp án {$label} khớp cơ chế/lâm sàng Amboss cho tình huống này."
+                            : "Đáp án {$label} không phù hợp với diễn tiến hoặc hướng xử trí ưu tiên.",
+                    ];
                 }
+                $this->seedOptions($question, $options);
+            }
+        }
+
+        $this->seedLongFormLayoutQuestion($topics);
+        $this->rebalanceGeneratedDifficulties();
+        $this->seedQuestionScopes();
+    }
+
+    /**
+     * Assign indexed, deterministic facets to every demo question.
+     *
+     * Two values per catalog keep combined demo filters useful while still
+     * proving that an unassigned value excludes a question. Production content
+     * can manage the same rows explicitly through its authoring workflow.
+     */
+    private function seedQuestionScopes(): void
+    {
+        $examKeys = array_keys(TargetExams::selectable());
+        $articleKeys = array_column(ScopeFilters::articles(), 'id');
+        $symptomKeys = array_column(ScopeFilters::symptoms(), 'id');
+        $now = now()->toDateTimeString();
+        $rows = [];
+
+        $questions = Question::query()
+            ->where('status', QuestionStatus::Published)
+            ->orderBy('id')
+            ->get(['id', 'stem'])
+            ->values();
+
+        DB::table('question_scopes')
+            ->whereIn('question_id', $questions->pluck('id'))
+            ->delete();
+
+        $questions->each(function (Question $question, int $index) use (
+            &$rows,
+            $examKeys,
+            $articleKeys,
+            $symptomKeys,
+            $now,
+        ): void {
+            $assignments = [
+                QuestionScopeType::Exam->value => $this->rotatingKeys($examKeys, intdiv($index, 36), 1),
+                QuestionScopeType::Article->value => $this->rotatingKeys($articleKeys, intdiv($index, 6), 2),
+                QuestionScopeType::Symptom->value => $this->rotatingKeys($symptomKeys, $index, 3),
+            ];
+
+            if (str_starts_with((string) $question->stem, 'A 24-year-old man comes to the emergency department')) {
+                $assignments[QuestionScopeType::Exam->value][] = 'usmle-step-2-ck';
+                $assignments[QuestionScopeType::Exam->value][] = 'nbme';
+                $assignments[QuestionScopeType::Article->value][] = 'pneumonia';
+                $assignments[QuestionScopeType::Article->value][] = 'sepsis';
+                $assignments[QuestionScopeType::Symptom->value][] = 'dyspnea';
+            }
+
+            foreach ($assignments as $type => $keys) {
+                foreach (array_values(array_unique($keys)) as $key) {
+                    $rows[] = [
+                        'question_id' => $question->getKey(),
+                        'scope_type' => $type,
+                        'scope_key' => $key,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+                }
+            }
+        });
+
+        if ($rows !== []) {
+            DB::table('question_scopes')->upsert(
+                $rows,
+                ['question_id', 'scope_type', 'scope_key'],
+                ['updated_at'],
+            );
+        }
+    }
+
+    /**
+     * @param  list<string>  $keys
+     * @return list<string>
+     */
+    private function rotatingKeys(array $keys, int $index, int $offset): array
+    {
+        if ($keys === []) {
+            return [];
+        }
+
+        return array_values(array_unique([
+            $keys[$index % count($keys)],
+            $keys[($index + $offset) % count($keys)],
+        ]));
+    }
+
+    /** Keep the 200-question demo bank represented across all difficulty levels. */
+    private function rebalanceGeneratedDifficulties(): void
+    {
+        $difficulties = Difficulty::cases();
+
+        Question::query()
+            ->where('stem', 'like', '[Amboss] Ca lâm sàng #%')
+            ->orderBy('stem')
+            ->get()
+            ->values()
+            ->each(function (Question $question, int $index) use ($difficulties): void {
+                $difficulty = $difficulties[$index % count($difficulties)];
+
+                if ($question->difficulty !== $difficulty) {
+                    $question->forceFill(['difficulty' => $difficulty])->saveQuietly();
+                }
+            });
+    }
 
                 $row = json_decode($line, true);
                 if (! is_array($row)) {
@@ -167,9 +341,9 @@ class DemoLearningSeeder extends Seeder
      */
     private function seedOptions(Question $question, array $options): void
     {
-        $labels = ['A', 'B', 'C', 'D', 'E'];
+        $labels = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
 
-        foreach (array_values($options) as $index => $option) {
+        foreach ($options as $index => $option) {
             QuestionOption::create([
                 'question_id' => $question->getKey(),
                 'label' => $labels[$index] ?? (string) ($index + 1),
@@ -178,6 +352,75 @@ class DemoLearningSeeder extends Seeder
                 'explanation' => $option['explanation'] ?? null,
                 'order' => $index,
             ]);
+        }
+    }
+
+    /**
+     * Seed a deliberately long English vignette to exercise Study/Exam layouts.
+     *
+     * An unused generated placeholder is repurposed so re-running the demo seed
+     * against an existing 200-question database does not increase the total.
+     *
+     * @param  array<string, Topic>  $topics
+     */
+    private function seedLongFormLayoutQuestion(array $topics): void
+    {
+        $stem = <<<'TEXT'
+A 24-year-old man comes to the emergency department because of progressive shortness of breath and intermittent cough with blood-tinged sputum for the past 10 days. During this time, he had three episodes of blood in his urine. Six years ago, he was diagnosed with latent tuberculosis after a positive routine tuberculin skin test, and he was treated accordingly. His maternal aunt has systemic lupus erythematosus. The patient does not take any medications. His temperature is 37.0°C (98.6°F), pulse is 92/min, respirations are 28/min, and blood pressure is 152/90 mm Hg. Diffuse crackles are heard at both lung bases. Laboratory studies show:
+
+Serum
+Urea nitrogen    32 mg/dL
+Creatinine       3.5 mg/dL
+
+Urine
+Protein          2+
+Blood            3+
+RBC casts        numerous
+WBC casts        negative
+
+A chest x-ray shows patchy pulmonary infiltrates bilaterally. A renal biopsy shows linear deposits of IgG along the glomerular basement membrane. Which of the following is the most likely diagnosis?
+TEXT;
+        $options = [
+            [
+                'content' => 'Goodpasture syndrome',
+                'is_correct' => true,
+                'explanation' => 'Anti-GBM disease causes pulmonary hemorrhage and rapidly progressive glomerulonephritis with linear IgG deposition.',
+            ],
+            ['content' => 'Eosinophilic granulomatosis with polyangiitis', 'is_correct' => false],
+            ['content' => 'IgA nephropathy', 'is_correct' => false],
+            ['content' => 'Granulomatosis with polyangiitis', 'is_correct' => false],
+            ['content' => 'Reactivated tuberculosis', 'is_correct' => false],
+            ['content' => 'Microscopic polyangiitis', 'is_correct' => false],
+            ['content' => 'Lupus nephritis', 'is_correct' => false],
+        ];
+        $question = Question::query()->where('stem', $stem)->first();
+
+        if (! $question instanceof Question) {
+            $question = Question::query()
+                ->where('stem', 'like', '[Amboss] Ca lâm sàng #%')
+                ->whereNotIn('id', QuestionAttempt::query()->select('question_id'))
+                ->orderByDesc('stem')
+                ->first() ?? new Question;
+        }
+
+        $question->forceFill([
+            'stem' => $stem,
+            'explanation' => 'Goodpasture syndrome (anti-GBM disease) presents with pulmonary hemorrhage and rapidly progressive glomerulonephritis. Linear IgG along the glomerular basement membrane is the classic biopsy finding.',
+            'difficulty' => Difficulty::VeryHard,
+            'status' => QuestionStatus::Published,
+            'topic_id' => ($topics['renal-urinary'] ?? $topics['ho-hap'] ?? null)?->id,
+            'is_free' => true,
+        ])->save();
+
+        $hasExpectedOptions = $question->options()->count() === count($options)
+            && $question->options()
+                ->where('content', 'Goodpasture syndrome')
+                ->where('is_correct', true)
+                ->exists();
+
+        if (! $hasExpectedOptions) {
+            $question->options()->delete();
+            $this->seedOptions($question, $options);
         }
     }
 
@@ -278,6 +521,7 @@ class DemoLearningSeeder extends Seeder
             'created_at' => $when,
             'updated_at' => $when,
         ]);
+        app(QuestionSessionSnapshots::class)->capture($session);
 
         $correctCount = 0;
 
@@ -288,7 +532,7 @@ class DemoLearningSeeder extends Seeder
 
             $shouldBeCorrect = $index < $correctTarget;
             $option = $this->pickOption($question, $shouldBeCorrect);
-            $isCorrect = $option?->is_correct ?? false;
+            $isCorrect = $option instanceof QuestionOption && $option->is_correct;
             $correctCount += $isCorrect ? 1 : 0;
 
             QuestionAttempt::create([

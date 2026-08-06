@@ -69,7 +69,7 @@ final class ResolveContinueLearningAction
                 : 0,
             'url' => $task !== null
                 ? route('study-plan.session', [$task->study_plan_id, $task])
-                : route('qbank.session'),
+                : route('qbank.session', $session),
         ];
     }
 

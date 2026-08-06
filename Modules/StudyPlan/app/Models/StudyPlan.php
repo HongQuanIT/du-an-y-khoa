@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
+use Modules\QuestionBank\Enums\Difficulty;
 use Modules\StudyPlan\Database\Factories\StudyPlanFactory;
 use Modules\StudyPlan\Enums\PlanStatus;
 use Modules\StudyPlan\Enums\PlanStrategy;
@@ -156,7 +157,7 @@ class StudyPlan extends Model
             return [];
         }
 
-        return array_values(array_map('intval', $scope));
+        return array_map('intval', $scope);
     }
 
     /**
@@ -168,6 +169,7 @@ class StudyPlan extends Model
      *     articles: array<int, string>,
      *     symptoms: array<int, string>,
      *     saved_only: bool,
+     *     difficulties: array<int, string>,
      *     difficulty: string|null,
      *     question_statuses: array<int, string>,
      *     question_status_mode: string
@@ -182,6 +184,7 @@ class StudyPlan extends Model
             'articles' => [],
             'symptoms' => [],
             'saved_only' => false,
+            'difficulties' => [],
             'difficulty' => null,
             'question_statuses' => [],
             'question_status_mode' => 'latest',
@@ -197,6 +200,15 @@ class StudyPlan extends Model
             if ($filters['question_statuses'] === [] && is_string($scope['question_status'] ?? null)) {
                 $filters['question_statuses'] = [$scope['question_status']];
             }
+
+            if ($filters['difficulties'] === [] && is_string($scope['difficulty'] ?? null)) {
+                $filters['difficulties'] = [$scope['difficulty']];
+            }
+
+            $filters['difficulties'] = array_values(array_intersect(
+                array_map('strval', (array) $filters['difficulties']),
+                Difficulty::values(),
+            ));
 
             return $filters;
         }

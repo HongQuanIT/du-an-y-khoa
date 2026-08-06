@@ -15,6 +15,7 @@ use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionOption;
 use Modules\QuestionBank\Models\QuestionSession;
 use Modules\QuestionBank\Models\Topic;
+use Modules\StudyPlan\Actions\CompletePlanTaskAction;
 use Modules\StudyPlan\Enums\PlanStatus;
 use Modules\StudyPlan\Enums\TaskStatus;
 use Modules\StudyPlan\Enums\TaskType;
@@ -67,6 +68,41 @@ final class StudyPlanFlowTest extends TestCase
         $this->assertSame([$this->topic->id], $plan->scopeTopicIds());
         $this->assertTrue($plan->tasks()->where('type', TaskType::Questions)->exists());
         $this->assertTrue($plan->tasks()->whereDate('date', Carbon::today())->exists());
+    }
+
+    public function test_plan_session_combines_multiple_difficulty_levels(): void
+    {
+        $questions = Question::query()->orderBy('id')->limit(2)->get();
+        $questions[0]->update(['difficulty' => 'very_easy']);
+        $questions[1]->update(['difficulty' => 'very_hard']);
+        $payload = array_merge($this->wizardPayload(), [
+            'difficulties' => ['very_easy', 'very_hard'],
+        ]);
+
+        $this->actingAs($this->user)
+            ->post(route('study-plan.store'), $payload)
+            ->assertRedirect();
+
+        $plan = StudyPlan::firstOrFail();
+        $this->assertSame(['very_easy', 'very_hard'], $plan->scopeFilters()['difficulties']);
+        $task = $this->todayTask($plan);
+
+        $this->actingAs($this->user)
+            ->post(route('study-plan.tasks.start', [$plan, $task]))
+            ->assertRedirect(route('study-plan.session', [$plan, $task]));
+
+        $session = QuestionSession::firstOrFail();
+        $selectedDifficulties = Question::query()
+            ->whereIn('id', $session->question_ids)
+            ->get()
+            ->pluck('difficulty')
+            ->map(fn ($difficulty): string => $difficulty->value)
+            ->unique()
+            ->values()
+            ->all();
+
+        $this->assertEqualsCanonicalizing(['very_easy', 'very_hard'], $selectedDifficulties);
+        $this->assertCount(2, $session->question_ids);
     }
 
     public function test_wizard_rejects_a_past_exam_date(): void
@@ -150,6 +186,7 @@ final class StudyPlanFlowTest extends TestCase
         $this->assertSame(SessionSource::StudyPlan, $session->source);
         $this->assertSame($session->getKey(), $task->refresh()->sessionId());
         $this->assertCount(5, $session->question_ids);
+        $this->assertSame(5, $session->snapshots()->count());
     }
 
     public function test_answering_every_question_completes_the_task(): void
@@ -182,7 +219,8 @@ final class StudyPlanFlowTest extends TestCase
             ->assertOk()
             ->assertSee('Phân tích kết quả')
             ->assertSee('Xem lại từng câu')
-            ->assertSee('Tỷ lệ đúng theo chủ đề');
+            ->assertSee('Tỷ lệ đúng theo chủ đề')
+            ->assertSee('data-testid="topic-accuracy-chart-scroll"', false);
 
         $this->actingAs($this->user)
             ->get(route('study-plan.session.review', [$plan, $task]))
@@ -363,8 +401,8 @@ final class StudyPlanFlowTest extends TestCase
         $task = $this->todayTask($plan);
         $task->forceFill(['done' => $task->target])->save();
 
-        \Modules\StudyPlan\Actions\CompletePlanTaskAction::run($task);
-        \Modules\StudyPlan\Actions\CompletePlanTaskAction::run($task->refresh());
+        CompletePlanTaskAction::run($task);
+        CompletePlanTaskAction::run($task->refresh());
 
         $this->assertSame(5, $task->refresh()->done);
         $this->assertSame(1, $plan->refresh()->progress_cache['tasks_done']);
@@ -375,7 +413,7 @@ final class StudyPlanFlowTest extends TestCase
         $plan = $this->createPlan();
         $task = $this->todayTask($plan);
 
-        \Modules\StudyPlan\Actions\CompletePlanTaskAction::run($task);
+        CompletePlanTaskAction::run($task);
 
         $this->assertSame(TaskStatus::Pending, $task->refresh()->status);
         $this->assertSame(0, $task->done);

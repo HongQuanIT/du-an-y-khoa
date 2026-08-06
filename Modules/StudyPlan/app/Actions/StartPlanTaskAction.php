@@ -10,6 +10,7 @@ use Modules\QuestionBank\Enums\SessionMode;
 use Modules\QuestionBank\Enums\SessionSource;
 use Modules\QuestionBank\Enums\SessionStatus;
 use Modules\QuestionBank\Models\QuestionSession;
+use Modules\QuestionBank\Services\QuestionSessionSnapshots;
 use Modules\StudyPlan\Events\StudyPlanActivity;
 use Modules\StudyPlan\Models\StudyPlanTask;
 use Modules\StudyPlan\Services\PlanQuestionSelector;
@@ -25,7 +26,10 @@ final class StartPlanTaskAction
 {
     use AsAction;
 
-    public function __construct(private readonly PlanQuestionSelector $selector) {}
+    public function __construct(
+        private readonly PlanQuestionSelector $selector,
+        private readonly QuestionSessionSnapshots $snapshots,
+    ) {}
 
     public function handle(StudyPlanTask $task): QuestionSession
     {
@@ -59,6 +63,7 @@ final class StartPlanTaskAction
                 'question_ids' => $questionIds,
                 'total' => count($questionIds),
             ]);
+            $this->snapshots->capture($session);
 
             $task->forceFill([
                 'ref' => array_merge($task->ref ?? [], ['session_id' => $session->getKey()]),

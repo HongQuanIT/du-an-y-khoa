@@ -7,6 +7,7 @@ namespace Modules\QuestionBank\Policies;
 use App\Models\User;
 use App\Support\Enums\Entitlement;
 use App\Support\Enums\Permission;
+use App\Support\Enums\Role;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
 
@@ -19,15 +20,23 @@ final class QuestionPolicy
 {
     public function view(User $user, Question $question): bool
     {
-        if ($user->can(Permission::QuestionView->value)) {
+        if ($question->status !== QuestionStatus::Published) {
+            return $user->hasAnyRole([
+                Role::SuperAdmin->value,
+                Role::Admin->value,
+                Role::ContentEditor->value,
+            ]) && $user->can(Permission::QuestionView->value);
+        }
+
+        if ($question->is_free || $user->hasEntitlement(Entitlement::QbankFull->value)) {
             return true;
         }
 
-        if ($question->status !== QuestionStatus::Published) {
-            return false;
-        }
-
-        return $question->is_free || $user->hasEntitlement(Entitlement::QbankFull->value);
+        return $user->hasAnyRole([
+            Role::SuperAdmin->value,
+            Role::Admin->value,
+            Role::ContentEditor->value,
+        ]);
     }
 
     public function create(User $user): bool

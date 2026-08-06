@@ -37,18 +37,19 @@ final class PlanQuestionSelector
         $topicIds = $this->expandTopics($task->topicIds());
         $planTopicIds = $this->expandTopics($task->plan->scopeTopicIds());
         $filters = $task->plan->scopeFilters();
-        $statuses = $filters['question_statuses'] ?? [];
+        $statuses = $filters['question_statuses'];
+        $difficulties = $filters['difficulties'];
         $eligible = $statuses === []
             ? null
-            : $this->eligibleQuestionIds($userId, $statuses, $filters['question_status_mode'] ?? 'latest');
+            : $this->eligibleQuestionIds($userId, $statuses, $filters['question_status_mode']);
         $seen = $eligible === null ? $this->answeredQuestionIds($userId) : [];
 
-        $picked = $this->pick($limit, $topicIds, $seen, $eligible);
-        $picked = $this->topUp($picked, $limit, $planTopicIds, $seen, $eligible);
-        $picked = $this->topUp($picked, $limit, [], $seen, $eligible);
+        $picked = $this->pick($limit, $topicIds, $seen, $eligible, $difficulties);
+        $picked = $this->topUp($picked, $limit, $planTopicIds, $seen, $eligible, $difficulties);
+        $picked = $this->topUp($picked, $limit, [], $seen, $eligible, $difficulties);
 
         // Everything in scope is already answered — fall back to a re-run.
-        return $this->topUp($picked, $limit, $planTopicIds, [], $eligible)
+        return $this->topUp($picked, $limit, $planTopicIds, [], $eligible, $difficulties)
             ->shuffle()
             ->values()
             ->all();
@@ -59,9 +60,17 @@ final class PlanQuestionSelector
      */
     private function reviewQuestions(int $userId, StudyPlanTask $task, int $limit): array
     {
+        $difficulties = $task->plan->scopeFilters()['difficulties'];
         $incorrect = UserQuestionStatusModel::query()
             ->where('user_id', $userId)
             ->where('status', UserQuestionStatus::Incorrect)
+            ->when(
+                $difficulties !== [],
+                fn ($query) => $query->whereHas(
+                    'question',
+                    fn ($questionQuery) => $questionQuery->whereIn('difficulty', $difficulties),
+                ),
+            )
             ->inRandomOrder()
             ->limit($limit)
             ->pluck('question_id');
@@ -75,6 +84,8 @@ final class PlanQuestionSelector
             $limit,
             $this->expandTopics($task->plan->scopeTopicIds()),
             $this->answeredQuestionIds($userId),
+            null,
+            $difficulties,
         );
 
         return $topUp->shuffle()->values()->all();
@@ -84,6 +95,8 @@ final class PlanQuestionSelector
      * @param  Collection<int, string>  $picked
      * @param  array<int, int>  $topicIds
      * @param  array<int, string>  $exclude
+     * @param  array<int, string>|null  $eligible
+     * @param  array<int, string>  $difficulties
      * @return Collection<int, string>
      */
     private function topUp(
@@ -92,6 +105,7 @@ final class PlanQuestionSelector
         array $topicIds,
         array $exclude,
         ?array $eligible = null,
+        array $difficulties = [],
     ): Collection {
         $missing = $limit - $picked->count();
 
@@ -99,7 +113,13 @@ final class PlanQuestionSelector
             return $picked;
         }
 
-        $more = $this->pick($missing, $topicIds, array_merge($exclude, $picked->all()), $eligible);
+        $more = $this->pick(
+            $missing,
+            $topicIds,
+            array_merge($exclude, $picked->all()),
+            $eligible,
+            $difficulties,
+        );
 
         return $picked->concat($more)->unique()->values();
     }
@@ -107,10 +127,17 @@ final class PlanQuestionSelector
     /**
      * @param  array<int, int>  $topicIds
      * @param  array<int, string>  $exclude
+     * @param  array<int, string>|null  $eligible
+     * @param  array<int, string>  $difficulties
      * @return Collection<int, string>
      */
-    private function pick(int $limit, array $topicIds, array $exclude, ?array $eligible = null): Collection
-    {
+    private function pick(
+        int $limit,
+        array $topicIds,
+        array $exclude,
+        ?array $eligible = null,
+        array $difficulties = [],
+    ): Collection {
         if ($limit <= 0) {
             return collect();
         }
@@ -120,6 +147,7 @@ final class PlanQuestionSelector
             ->when($topicIds !== [], fn ($query) => $query->whereIn('topic_id', $topicIds))
             ->when($exclude !== [], fn ($query) => $query->whereNotIn('id', $exclude))
             ->when($eligible !== null, fn ($query) => $query->whereIn('id', $eligible))
+            ->when($difficulties !== [], fn ($query) => $query->whereIn('difficulty', $difficulties))
             ->inRandomOrder()
             ->limit($limit)
             ->pluck('id');

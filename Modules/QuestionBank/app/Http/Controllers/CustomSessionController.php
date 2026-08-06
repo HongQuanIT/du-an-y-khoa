@@ -5,17 +5,58 @@ declare(strict_types=1);
 namespace Modules\QuestionBank\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Support\Enums\Entitlement;
+use App\Support\Http\Responses\ApiResponse;
+use App\Support\ScopeFilters;
+use App\Support\TargetExams;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
+use Modules\QuestionBank\Actions\CreateQuestionSessionAction;
+use Modules\QuestionBank\Http\Requests\CreateQuestionSessionRequest;
+use Modules\QuestionBank\Models\Topic;
+use Modules\QuestionBank\Services\SessionQuestionSelector;
+use RuntimeException;
 
-/**
- * Custom session builder shell (srs/modules/05).
- *
- * Static port of html/pc-custom-session.html until filter builder lands.
- */
+/** Custom Q-Bank session builder and create endpoint. */
 final class CustomSessionController extends Controller
 {
-    public function __invoke(): View
+    public function __construct(
+        private readonly CreateQuestionSessionAction $createSession,
+        private readonly SessionQuestionSelector $selector,
+    ) {}
+
+    public function create(Request $request): View
     {
-        return view('questionbank::custom-session');
+        return view('questionbank::custom-session', [
+            'specialties' => Topic::query()->where('type', 'specialty')->orderBy('order')->get(),
+            'systems' => Topic::query()->where('type', 'system')->orderBy('name')->get(),
+            'exams' => TargetExams::selectable(),
+            'articles' => ScopeFilters::articles(),
+            'symptoms' => ScopeFilters::symptoms(),
+            'maxQuestions' => $request->user()?->hasEntitlement(Entitlement::QbankFull->value) ? 100 : 20,
+        ]);
+    }
+
+    public function store(CreateQuestionSessionRequest $request): RedirectResponse
+    {
+        try {
+            $session = $this->createSession->handle($request->user(), $request->toData());
+        } catch (RuntimeException $exception) {
+            throw ValidationException::withMessages(['filters' => $exception->getMessage()]);
+        }
+
+        return redirect()
+            ->route('qbank.session', $session)
+            ->with('status', 'Đã tạo phiên luyện tập.');
+    }
+
+    public function count(CreateQuestionSessionRequest $request): JsonResponse
+    {
+        $count = $this->selector->countForSession($request->user(), $request->toData());
+
+        return ApiResponse::item(['count' => $count]);
     }
 }

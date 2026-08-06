@@ -15,6 +15,7 @@
         'articles' => [],
         'symptoms' => [],
         'saved_only' => false,
+        'difficulties' => [],
         'difficulty' => null,
         'question_statuses' => [],
         'question_status_mode' => 'latest',
@@ -36,7 +37,12 @@
         'articles' => array_values(old('articles', $filters['articles'])),
         'symptoms' => array_values(old('symptoms', $filters['symptoms'])),
         'savedOnly' => (bool) old('saved_only', $filters['saved_only']),
-        'difficulty' => old('difficulty', $filters['difficulty']),
+        'difficulties' => array_values((array) old(
+            'difficulties',
+            $filters['difficulties'] !== []
+                ? $filters['difficulties']
+                : (is_string($filters['difficulty']) ? [$filters['difficulty']] : []),
+        )),
         'questionStatuses' => array_values(old('question_statuses', $filters['question_statuses'])),
         'questionStatusMode' => old('question_status_mode', $filters['question_status_mode']),
         'intensity' => (int) old('daily_goal_questions', $plan?->daily_goal_questions ?? 40),
@@ -71,7 +77,7 @@
         articles: @js($initial['articles']),
         symptoms: @js($initial['symptoms']),
         savedOnly: @js($initial['savedOnly']),
-        difficulty: @js($initial['difficulty']),
+        difficulties: @js($initial['difficulties']),
         questionStatuses: @js($initial['questionStatuses']),
         questionStatusMode: @js($initial['questionStatusMode']),
         intensity: @js($initial['intensity']),
@@ -95,7 +101,7 @@
             articles: { title: 'Bài viết', search: 'Tìm bài viết...', multi: true, source: 'articleOptions', target: 'articles' },
             symptoms: { title: 'Triệu chứng', search: 'Tìm triệu chứng...', multi: true, source: 'symptomOptions', target: 'symptoms' },
             saved: { title: 'Câu hỏi đã lưu', search: null, multi: false, source: null, target: 'savedOnly' },
-            difficulty: { title: 'Độ khó', search: null, multi: false, source: 'difficultyOptions', target: 'difficulty' },
+            difficulty: { title: 'Độ khó', search: null, multi: true, source: 'difficultyOptions', target: 'difficulties' },
             status: { title: 'Trạng thái', search: null, multi: true, source: 'statusOptions', target: 'questionStatuses' },
         },
         selectExam(key) {
@@ -207,7 +213,9 @@
     <input type="hidden" name="daily_goal_questions" :value="intensity">
     <input type="hidden" name="strategy" :value="strategy">
     <input type="hidden" name="saved_only" :value="savedOnly ? 1 : 0">
-    <input type="hidden" name="difficulty" :value="difficulty || ''">
+    <template x-for="difficulty in difficulties" :key="'difficulty-' + difficulty">
+        <input type="hidden" name="difficulties[]" :value="difficulty">
+    </template>
     <input type="hidden" name="question_status_mode" :value="questionStatusMode">
     <template x-for="id in topicIds()" :key="'topic-' + id">
         <input type="hidden" name="topic_ids[]" :value="id">
@@ -506,12 +514,17 @@
                                 <span class="font-medium">Độ khó</span>
                             </div>
                             <div class="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2 pl-3">
-                                <template x-if="!difficulty">
+                                <template x-if="difficulties.length === 0 || difficulties.length === difficultyOptions.length">
                                     <span class="text-sm text-on-surface-variant">Tất cả</span>
                                 </template>
-                                <template x-if="difficulty">
-                                    <span class="rounded bg-error-container px-3 py-1 text-[12px] font-medium text-on-error-container"
-                                        x-text="labelFor(difficulty, difficultyOptions)"></span>
+                                <template x-if="difficulties.length > 0 && difficulties.length < difficultyOptions.length">
+                                    <div class="flex flex-wrap justify-end gap-2">
+                                        <template x-for="chip in chips(difficulties, difficultyOptions)"
+                                            :key="'difficulty-chip-' + chip">
+                                            <span class="rounded bg-error-container px-3 py-1 text-[12px] font-medium text-on-error-container"
+                                                x-text="chip"></span>
+                                        </template>
+                                    </div>
                                 </template>
                             </div>
                         </button>
@@ -636,6 +649,15 @@
                             </label>
                         </div>
                     </div>
+                </template>
+
+                <template x-if="modal === 'difficulty'">
+                    <label class="mb-1 flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-surface-container-low">
+                        <input type="checkbox" :checked="draft.length === 0"
+                            @change="if ($event.target.checked) draft = []"
+                            class="size-5 rounded border-outline-variant text-primary focus:ring-primary">
+                        <span class="text-sm">Tất cả độ khó</span>
+                    </label>
                 </template>
 
                 <template x-if="modal !== 'saved' && modal !== 'status' && modalMeta[modal]?.multi">
