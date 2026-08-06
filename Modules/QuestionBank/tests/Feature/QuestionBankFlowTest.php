@@ -279,7 +279,9 @@ final class QuestionBankFlowTest extends TestCase
         $session = QuestionSession::firstOrFail();
         $snapshot = QuestionSessionSnapshot::where('session_id', $session->getKey())->firstOrFail();
         $this->assertSame('Nội dung nguyên bản của phiên', $snapshot->payload['stem']);
-        $this->assertSame('Đáp án đúng Nội dung nguyên bản của phiên', $snapshot->payload['options'][0]['content']);
+        $snapshotCorrectOption = collect($snapshot->payload['options'])
+            ->firstWhere('is_correct', true);
+        $this->assertSame('Đáp án đúng Nội dung nguyên bản của phiên', $snapshotCorrectOption['content']);
 
         $question->forceFill([
             'stem' => 'Nội dung đã bị sửa sau khi tạo phiên',
@@ -797,7 +799,7 @@ final class QuestionBankFlowTest extends TestCase
         $options = $question->options->sortBy('order')->values();
 
         $this->assertSame(Difficulty::VeryHard, $question->difficulty);
-        $this->assertSame('renal-urinary', $question->topic?->slug);
+        $this->assertSame('urology', $question->topic?->slug);
         $this->assertSame(['A', 'B', 'C', 'D', 'E', 'F', 'G'], $options->pluck('label')->all());
         $this->assertSame('Goodpasture syndrome', $options->first()?->content);
         $this->assertTrue((bool) $options->first()?->is_correct);

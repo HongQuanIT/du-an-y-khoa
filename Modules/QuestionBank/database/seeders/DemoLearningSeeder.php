@@ -13,6 +13,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionScopeType;
 use Modules\QuestionBank\Enums\QuestionStatus;
@@ -50,110 +51,91 @@ class DemoLearningSeeder extends Seeder
         });
     }
 
-    /**
-     * Seed questions from the downloaded VM14K Vietnamese MCQ dataset (JSONL).
-     * Seed curated questions (with options) and top up to 200 Amboss-style MCQs.
-     *
-     * Files are expected at:
-     *   Modules/QuestionBank/database/seeders/data/vm14k/data-processed-shuffled*.jsonl
-     *
-     * To avoid re-parsing on every run, we drop a flag file in storage after success.
-     */
+    /** Seed at most 200 questions from the downloaded VM14K JSONL dataset. */
     private function seedVm14kQuestions(): void
     {
         $flag = storage_path('app/questionbank_seed/vm14k.flag');
-        if (is_file($flag)) {
-            return;
-        }
-
-        $dir = base_path('Modules/QuestionBank/database/seeders/data/vm14k');
-        $files = glob($dir.'/data-processed-shuffled*.jsonl') ?: [];
-
-        if ($files === []) {
-            return;
-        }
-
-        @mkdir(dirname($flag), 0775, true);
-
-        $limit = (int) env('QUESTIONBANK_VM14K_LIMIT', 1500);
-        $limit = $limit > 0 ? $limit : 1500;
-
-        $processed = 0;
-        $idx = 0;
         $topics = Topic::query()->get()->keyBy('slug');
 
-        foreach ($files as $file) {
-            $handle = fopen($file, 'rb');
-            if ($handle === false) {
-                continue;
-            }
-
-        // Top up so a multi-week study plan can draw a fresh Amboss-style batch every day.
-        $systemSlugs = Topic::query()
-            ->where('type', 'system')
-            ->orderBy('order')
-            ->pluck('slug')
-            ->all();
-
-        if ($systemSlugs === []) {
-            $systemSlugs = ['tim-mach', 'ho-hap', 'noi-tiet', 'tieu-hoa', 'chan-thuong', 'so-sinh', 'khang-sinh'];
-        }
-
-        $target = self::QUESTION_TARGET;
-        $existing = Question::count();
-        $bank = $this->ambossStyleBank();
-        $difficulties = Difficulty::cases();
-
-        for ($i = $existing; $i < $target; $i++) {
-            $slug = $systemSlugs[$i % count($systemSlugs)];
-            $topic = $topics[$slug] ?? null;
-            $template = $bank[$i % count($bank)];
-            $difficulty = $difficulties[$i % count($difficulties)];
-            $caseNo = $i + 1;
-            $topicName = $topic instanceof Topic ? $topic->name : 'Tổng hợp';
-
-            $stem = sprintf(
-                '[Amboss] Ca lâm sàng #%03d — %s. %s',
-                $caseNo,
-                $topicName,
-                $template['stem'],
+        if (app()->environment('testing') || ! is_file($flag)) {
+            $dir = base_path('Modules/QuestionBank/database/seeders/data/vm14k');
+            $files = glob($dir.'/data-processed-shuffled*.jsonl') ?: [];
+            $configuredLimit = (int) env('QUESTIONBANK_VM14K_LIMIT', self::QUESTION_TARGET);
+            $initialCount = Question::count();
+            $targetCount = min(
+                self::QUESTION_TARGET,
+                $initialCount + ($configuredLimit > 0 ? $configuredLimit : self::QUESTION_TARGET),
             );
+            $idx = $initialCount;
 
-            $question = Question::firstOrCreate(
-                ['stem' => $stem],
-                [
-                    'explanation' => $template['explanation'].' (Chủ đề: '.$topicName.'; ca #'.$caseNo.'.)',
-                    'difficulty' => $difficulty,
-                    'status' => QuestionStatus::Published,
-                    'topic_id' => $topic?->id,
-                    'is_free' => $i % 3 === 0,
-                ],
-            );
-
-            if ($question->wasRecentlyCreated) {
-                $correctIndex = $i % 4;
-                $right = $template['options'][0];
-                $wrongs = array_slice($template['options'], 1);
-                $options = [];
-                $wrongCursor = 0;
-
-                foreach (['A', 'B', 'C', 'D'] as $idx => $label) {
-                    $isCorrect = $idx === $correctIndex;
-                    $content = $isCorrect ? $right : $wrongs[$wrongCursor++];
-                    $options[] = [
-                        'content' => $content,
-                        'is_correct' => $isCorrect,
-                        'explanation' => $isCorrect
-                            ? "Đáp án {$label} khớp cơ chế/lâm sàng Amboss cho tình huống này."
-                            : "Đáp án {$label} không phù hợp với diễn tiến hoặc hướng xử trí ưu tiên.",
-                    ];
+            foreach ($files as $file) {
+                $handle = fopen($file, 'rb');
+                if ($handle === false) {
+                    continue;
                 }
-                $this->seedOptions($question, $options);
+
+                while (($line = fgets($handle)) !== false && $idx < $targetCount) {
+                    $row = json_decode(trim($line), true);
+                    if (! is_array($row) || ! is_string($row['question'] ?? null) || $row['question'] === '') {
+                        continue;
+                    }
+
+                    $difficulty = match (strtolower((string) ($row['difficulty_level'] ?? 'medium'))) {
+                        'easy' => Difficulty::Easy,
+                        'hard' => Difficulty::Hard,
+                        default => Difficulty::Medium,
+                    };
+                    $medicalTopic = $row['medical_topic'] ?? [];
+                    $topic = is_array($medicalTopic)
+                        ? $topics->get($this->topicSlug((string) ($medicalTopic[1] ?? '')))
+                            ?? $topics->get($this->topicSlug((string) ($medicalTopic[0] ?? '')))
+                        : null;
+                    $correctIndex = (int) ($row['answer_index'] ?? 0);
+                    $rawOptions = is_array($row['options'] ?? null) ? array_values($row['options']) : [];
+
+                    if (count($rawOptions) !== 4) {
+                        continue;
+                    }
+
+                    $question = Question::firstOrCreate(
+                        ['stem' => $row['question']],
+                        [
+                            'explanation' => null,
+                            'difficulty' => $difficulty,
+                            'status' => QuestionStatus::Published,
+                            'topic_id' => $topic?->id,
+                            'is_free' => $idx % 3 === 0,
+                        ],
+                    );
+
+                    if ($question->wasRecentlyCreated) {
+                        $this->seedOptions($question, array_map(
+                            fn (mixed $content, int $optionIndex): array => [
+                                'content' => (string) $content,
+                                'is_correct' => $optionIndex === $correctIndex,
+                                'explanation' => null,
+                            ],
+                            $rawOptions,
+                            array_keys($rawOptions),
+                        ));
+                        $idx++;
+                    }
+                }
+
+                fclose($handle);
+                if ($idx >= $targetCount) {
+                    break;
+                }
+            }
+
+            if ($files !== [] && ! app()->environment('testing')) {
+                @mkdir(dirname($flag), 0775, true);
+                file_put_contents($flag, 'ok');
             }
         }
 
-        $this->seedLongFormLayoutQuestion($topics);
         $this->rebalanceGeneratedDifficulties();
+        $this->seedLongFormLayoutQuestion($topics);
         $this->seedQuestionScopes();
     }
 
@@ -241,14 +223,14 @@ class DemoLearningSeeder extends Seeder
         ]));
     }
 
-    /** Keep the 200-question demo bank represented across all difficulty levels. */
+    /** Keep the VM14K demo bank represented across all five difficulty levels. */
     private function rebalanceGeneratedDifficulties(): void
     {
         $difficulties = Difficulty::cases();
 
         Question::query()
-            ->where('stem', 'like', '[Amboss] Ca lâm sàng #%')
-            ->orderBy('stem')
+            ->where('status', QuestionStatus::Published)
+            ->orderBy('id')
             ->get()
             ->values()
             ->each(function (Question $question, int $index) use ($difficulties): void {
@@ -258,82 +240,6 @@ class DemoLearningSeeder extends Seeder
                     $question->forceFill(['difficulty' => $difficulty])->saveQuietly();
                 }
             });
-    }
-
-                $row = json_decode($line, true);
-                if (! is_array($row)) {
-                    continue;
-                }
-
-                $stem = (string) ($row['question'] ?? '');
-                if ($stem === '') {
-                    continue;
-                }
-
-                $difficultyLevel = strtolower((string) ($row['difficulty_level'] ?? 'medium'));
-                $difficulty = match ($difficultyLevel) {
-                    'easy' => Difficulty::Easy,
-                    'hard' => Difficulty::Hard,
-                    default => Difficulty::Medium,
-                };
-
-                $topicId = null;
-                $medicalTopic = $row['medical_topic'] ?? [];
-                if (is_array($medicalTopic) && ($medicalTopic[0] ?? null) !== null) {
-                    $systemSlug = $this->topicSlug((string) ($medicalTopic[1] ?? ''));
-                    $specialtySlug = $this->topicSlug((string) $medicalTopic[0]);
-                    $topic = $topics->get($systemSlug) ?? $topics->get($specialtySlug);
-                    $topicId = $topic?->id;
-                }
-
-                $correctIndex = (int) ($row['answer_index'] ?? 0);
-                $optionsRaw = $row['options'] ?? [];
-                $options = [];
-
-                if (is_array($optionsRaw)) {
-                    foreach (array_values($optionsRaw) as $optIdx => $content) {
-                        $options[] = [
-                            'content' => (string) $content,
-                            'is_correct' => (int) $optIdx === $correctIndex,
-                            'explanation' => null,
-                        ];
-                    }
-                }
-
-                if (count($options) !== 4) {
-                    continue; // keep demo clean: VM14K should always be 4 options
-                }
-
-                $question = Question::firstOrCreate(
-                    ['stem' => $stem],
-                    [
-                        'explanation' => null,
-                        'difficulty' => $difficulty,
-                        'status' => QuestionStatus::Published,
-                        'topic_id' => $topicId,
-                        'is_free' => $idx % 3 === 0,
-                    ],
-                );
-
-                if ($question->wasRecentlyCreated) {
-                    $this->seedOptions($question, $options);
-                }
-
-                $processed++;
-                $idx++;
-
-                if ($processed >= $limit) {
-                    fclose($handle);
-                    file_put_contents($flag, 'ok');
-
-                    return;
-                }
-            }
-
-            fclose($handle);
-        }
-
-        file_put_contents($flag, 'ok');
     }
 
     /**
@@ -361,9 +267,9 @@ class DemoLearningSeeder extends Seeder
      * An unused generated placeholder is repurposed so re-running the demo seed
      * against an existing 200-question database does not increase the total.
      *
-     * @param  array<string, Topic>  $topics
+     * @param  Collection<string, Topic>  $topics
      */
-    private function seedLongFormLayoutQuestion(array $topics): void
+    private function seedLongFormLayoutQuestion(Collection $topics): void
     {
         $stem = <<<'TEXT'
 A 24-year-old man comes to the emergency department because of progressive shortness of breath and intermittent cough with blood-tinged sputum for the past 10 days. During this time, he had three episodes of blood in his urine. Six years ago, he was diagnosed with latent tuberculosis after a positive routine tuberculin skin test, and he was treated accordingly. His maternal aunt has systemic lupus erythematosus. The patient does not take any medications. His temperature is 37.0°C (98.6°F), pulse is 92/min, respirations are 28/min, and blood pressure is 152/90 mm Hg. Diffuse crackles are heard at both lung bases. Laboratory studies show:
@@ -397,9 +303,9 @@ TEXT;
 
         if (! $question instanceof Question) {
             $question = Question::query()
-                ->where('stem', 'like', '[Amboss] Ca lâm sàng #%')
+                ->where('status', QuestionStatus::Published)
                 ->whereNotIn('id', QuestionAttempt::query()->select('question_id'))
-                ->orderByDesc('stem')
+                ->orderByDesc('id')
                 ->first() ?? new Question;
         }
 
@@ -408,7 +314,7 @@ TEXT;
             'explanation' => 'Goodpasture syndrome (anti-GBM disease) presents with pulmonary hemorrhage and rapidly progressive glomerulonephritis. Linear IgG along the glomerular basement membrane is the classic biopsy finding.',
             'difficulty' => Difficulty::VeryHard,
             'status' => QuestionStatus::Published,
-            'topic_id' => ($topics['renal-urinary'] ?? $topics['ho-hap'] ?? null)?->id,
+            'topic_id' => ($topics['urology'] ?? $topics['nephrology'] ?? null)?->id,
             'is_free' => true,
         ])->save();
 
@@ -605,6 +511,6 @@ TEXT;
 
     private function topicSlug(string $name): string
     {
-        return \Illuminate\Support\Str::limit((string) \Illuminate\Support\Str::slug($name), 191, '');
+        return Str::limit((string) Str::slug($name), 191, '');
     }
 }
