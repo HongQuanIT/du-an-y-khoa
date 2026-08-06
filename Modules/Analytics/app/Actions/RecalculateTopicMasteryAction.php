@@ -27,6 +27,7 @@ final class RecalculateTopicMasteryAction
         $rows = DB::table('question_attempts')
             ->join('questions', 'questions.id', '=', 'question_attempts.question_id')
             ->where('question_attempts.user_id', $userId)
+            ->whereNotNull('question_attempts.is_correct')
             ->whereNotNull('questions.topic_id')
             ->groupBy('questions.topic_id')
             ->get([

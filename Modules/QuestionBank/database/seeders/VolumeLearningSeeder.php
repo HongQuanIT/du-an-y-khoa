@@ -6,10 +6,13 @@ namespace Modules\QuestionBank\Database\Seeders;
 
 use App\Models\User;
 use App\Support\Enums\Role;
+use App\Support\ScopeFilters;
+use App\Support\TargetExams;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Modules\QuestionBank\Enums\Difficulty;
+use Modules\QuestionBank\Enums\QuestionScopeType;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\Topic;
@@ -44,6 +47,7 @@ class VolumeLearningSeeder extends Seeder
 
             $topicIds = $this->ensureTopics(30);
             $questionIds = $this->generateQuestions($questionCount, $topicIds);
+            $this->generateQuestionScopes($questionIds);
             $studentIds = $this->generateStudents($studentCount);
             $this->generateActivity($studentIds, $questionIds, $attemptsPerStudent);
 
@@ -126,6 +130,62 @@ class VolumeLearningSeeder extends Seeder
         }
 
         return $ids;
+    }
+
+    /** @param list<string> $questionIds */
+    private function generateQuestionScopes(array $questionIds): void
+    {
+        $catalogs = [
+            QuestionScopeType::Exam->value => array_keys(TargetExams::selectable()),
+            QuestionScopeType::Article->value => array_column(ScopeFilters::articles(), 'id'),
+            QuestionScopeType::Symptom->value => array_column(ScopeFilters::symptoms(), 'id'),
+        ];
+        $now = now()->toDateTimeString();
+        $rows = [];
+
+        foreach ($questionIds as $index => $questionId) {
+            foreach ($catalogs as $type => $keys) {
+                if ($keys === []) {
+                    continue;
+                }
+
+                $catalogIndex = match ($type) {
+                    QuestionScopeType::Exam->value => intdiv($index, 36),
+                    QuestionScopeType::Article->value => intdiv($index, 6),
+                    default => $index,
+                };
+
+                foreach (array_unique([
+                    $keys[$catalogIndex % count($keys)],
+                    $keys[($catalogIndex + 2) % count($keys)],
+                ]) as $key) {
+                    $rows[] = [
+                        'question_id' => $questionId,
+                        'scope_type' => $type,
+                        'scope_key' => $key,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+                }
+
+                if (count($rows) >= self::CHUNK) {
+                    DB::table('question_scopes')->upsert(
+                        $rows,
+                        ['question_id', 'scope_type', 'scope_key'],
+                        ['updated_at'],
+                    );
+                    $rows = [];
+                }
+            }
+        }
+
+        if ($rows !== []) {
+            DB::table('question_scopes')->upsert(
+                $rows,
+                ['question_id', 'scope_type', 'scope_key'],
+                ['updated_at'],
+            );
+        }
     }
 
     /**

@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Laravel\Scout\Searchable;
 use Modules\QuestionBank\Database\Factories\QuestionFactory;
 use Modules\QuestionBank\Enums\Difficulty;
@@ -67,14 +68,20 @@ class Question extends Model
         return $this->hasMany(QuestionOption::class, 'question_id');
     }
 
+    /** @return HasMany<QuestionScope, $this> */
+    public function scopes(): HasMany
+    {
+        return $this->hasMany(QuestionScope::class, 'question_id');
+    }
+
     /**
      * Options in a stable random order for one study session.
      *
      * Labels are reassigned A/B/C… for display; grading still uses option ids.
      *
-     * @return \Illuminate\Support\Collection<int, QuestionOption>
+     * @return Collection<int, QuestionOption>
      */
-    public function optionsForSession(string $sessionKey): \Illuminate\Support\Collection
+    public function optionsForSession(string $sessionKey): Collection
     {
         $options = ($this->relationLoaded('options')
             ? $this->options
@@ -83,7 +90,7 @@ class Question extends Model
 
         $seed = hexdec(substr(hash('sha256', $sessionKey.'|'.$this->getKey()), 0, 8));
         for ($i = count($options) - 1; $i > 0; $i--) {
-            $seed = ($seed * 1103515245 + 12345) & 0x7fffffff;
+            $seed = ($seed * 1103515245 + 12345) & 0x7FFFFFFF;
             $j = $seed % ($i + 1);
             [$options[$i], $options[$j]] = [$options[$j], $options[$i]];
         }

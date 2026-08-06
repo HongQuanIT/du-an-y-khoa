@@ -10,23 +10,45 @@
     $timeLabel = $minutes > 0
         ? sprintf('%d phút %02d giây', $minutes, $seconds)
         : sprintf('%d giây', $seconds);
-    $reviewUrl = route('study-plan.session.review', [$plan, $task]);
-    $detailUrl = route('study-plan.detail', $plan);
+    $summaryConfig = $summaryConfig ?? [
+        'page_title' => 'Phân tích kết quả',
+        'heading' => 'Phân tích kết quả',
+        'subtitle' => $task->title() . ' · hoàn thành ' . $total . ' câu hỏi trong phiên này.',
+        'breadcrumbs' => [
+            ['label' => 'Kế hoạch học tập', 'url' => route('study-plan.index')],
+            ['label' => $plan->name, 'url' => route('study-plan.detail', $plan)],
+            ['label' => 'Phân tích', 'url' => null],
+        ],
+        'review_url' => route('study-plan.session.review', [$plan, $task]),
+        'back_url' => route('study-plan.detail', $plan),
+        'back_label' => 'Quay lại kế hoạch',
+        'back_icon' => 'route',
+        'progress_label' => $task->done . '/' . $task->target . ' mục tiêu nhiệm vụ',
+        'context_message' => 'Tiến độ kế hoạch đã được cập nhật sau nhiệm vụ này.',
+    ];
+    $reviewUrl = $summaryConfig['review_url'];
+    $detailUrl = $summaryConfig['back_url'];
+    $chartMinWidth = max(280, count($chartBars) * 104);
 @endphp
 
-<x-layouts.app title="Phân tích kết quả">
+<x-layouts.app :title="$summaryConfig['page_title']">
     <div class="mx-auto max-w-6xl space-y-8 p-4 md:p-8">
         <div>
             <nav class="mb-2 flex flex-wrap gap-2 text-xs text-on-surface-variant">
-                <a href="{{ route('study-plan.index') }}" class="hover:text-primary">Kế hoạch học tập</a>
-                <span>/</span>
-                <a href="{{ $detailUrl }}" class="hover:text-primary">{{ $plan->name }}</a>
-                <span>/</span>
-                <span class="font-medium text-primary">Phân tích</span>
+                @foreach ($summaryConfig['breadcrumbs'] as $breadcrumb)
+                    @if (! $loop->first)
+                        <span>/</span>
+                    @endif
+                    @if ($breadcrumb['url'])
+                        <a href="{{ $breadcrumb['url'] }}" class="hover:text-primary">{{ $breadcrumb['label'] }}</a>
+                    @else
+                        <span class="font-medium text-primary">{{ $breadcrumb['label'] }}</span>
+                    @endif
+                @endforeach
             </nav>
-            <h1 class="font-headline-lg text-headline-lg text-on-surface">Phân tích kết quả</h1>
+            <h1 class="font-headline-lg text-headline-lg text-on-surface">{{ $summaryConfig['heading'] }}</h1>
             <p class="mt-1 font-body-md text-on-surface-variant">
-                {{ $task->title() }} · hoàn thành {{ $total }} câu hỏi trong phiên này.
+                {{ $summaryConfig['subtitle'] }}
             </p>
         </div>
 
@@ -71,7 +93,7 @@
                         <div class="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary-container/10 px-3 py-1.5">
                             <span class="material-symbols-outlined text-sm text-primary">task_alt</span>
                             <span class="text-sm font-bold text-primary">
-                                {{ $task->done }}/{{ $task->target }} mục tiêu nhiệm vụ
+                                {{ $summaryConfig['progress_label'] }}
                             </span>
                         </div>
                     </div>
@@ -102,34 +124,42 @@
                     </li>
                     <li class="flex items-start gap-3">
                         <span class="material-symbols-outlined text-on-surface-variant">route</span>
-                        <span>Tiến độ kế hoạch đã được cập nhật sau nhiệm vụ này.</span>
+                        <span>{{ $summaryConfig['context_message'] }}</span>
                     </li>
                 </ul>
             </div>
 
             @if ($chartBars !== [])
-                <div class="rounded-2xl border border-outline-variant bg-white p-6 shadow-sm lg:col-span-12">
-                    <div class="mb-8 flex items-center justify-between">
+                <div class="rounded-2xl border border-outline-variant bg-white p-4 shadow-sm sm:p-6 lg:col-span-12">
+                    <div class="mb-6 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
                         <h2 class="font-headline-sm text-headline-sm">Tỷ lệ đúng theo chủ đề</h2>
                         <div class="flex items-center gap-2">
                             <div class="size-3 rounded bg-primary"></div>
                             <span class="text-xs text-on-surface-variant">Tỷ lệ đúng (%)</span>
                         </div>
                     </div>
-                    <div class="flex h-64 items-end justify-between gap-4 border-b border-outline-variant px-2 md:px-4">
-                        @foreach ($chartBars as $bar)
-                            <div class="group flex h-full flex-1 flex-col items-center justify-end gap-2">
-                                <span class="text-[10px] font-bold text-primary opacity-0 transition-opacity group-hover:opacity-100">
-                                    {{ $bar['rate'] }}%
-                                </span>
-                                <div class="w-full max-w-[64px] rounded-t-lg bg-primary transition-all duration-500 hover:brightness-110"
-                                    style="height: {{ $bar['height'] }}%"></div>
-                                <span
-                                    class="w-full truncate text-center text-[10px] font-medium text-on-surface-variant md:text-xs">
-                                    {{ $bar['label'] }}
-                                </span>
+
+                    <div class="overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest">
+                        <div class="overflow-x-auto overscroll-x-contain" data-testid="topic-accuracy-chart-scroll">
+                            <div class="grid h-72 w-full gap-4 px-4 pt-4"
+                                style="min-width: {{ $chartMinWidth }}px; grid-template-columns: repeat({{ count($chartBars) }}, minmax(80px, 1fr));">
+                                @foreach ($chartBars as $bar)
+                                    <div class="flex min-w-0 flex-col items-center">
+                                        <span class="flex h-7 items-start text-xs font-bold text-primary">
+                                            {{ $bar['rate'] }}%
+                                        </span>
+                                        <div class="flex min-h-0 w-full flex-1 items-end justify-center border-b border-outline-variant">
+                                            <div class="w-full max-w-[64px] rounded-t-lg bg-primary transition-all duration-500 hover:brightness-110"
+                                                style="height: {{ $bar['height'] }}%"></div>
+                                        </div>
+                                        <span class="flex h-12 w-full items-start justify-center overflow-hidden px-1 pt-2 text-center text-[10px] leading-tight font-medium break-words text-on-surface-variant md:text-xs"
+                                            title="{{ $bar['label'] }}">
+                                            {{ $bar['label'] }}
+                                        </span>
+                                    </div>
+                                @endforeach
                             </div>
-                        @endforeach
+                        </div>
                     </div>
                 </div>
             @endif
@@ -238,8 +268,8 @@
                 </a>
                 <a href="{{ $detailUrl }}"
                     class="flex items-center justify-center gap-2 rounded-xl border border-outline-variant bg-white px-6 py-3 font-bold text-on-surface-variant transition-all hover:bg-surface-container-low active:scale-95">
-                    <span class="material-symbols-outlined">route</span>
-                    Quay lại kế hoạch
+                    <span class="material-symbols-outlined">{{ $summaryConfig['back_icon'] }}</span>
+                    {{ $summaryConfig['back_label'] }}
                 </a>
             </div>
         </div>

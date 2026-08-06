@@ -4,7 +4,9 @@ namespace Modules\QuestionBank\Providers;
 
 use Illuminate\Support\Facades\Gate;
 use Modules\QuestionBank\Models\Question;
+use Modules\QuestionBank\Models\QuestionSession;
 use Modules\QuestionBank\Policies\QuestionPolicy;
+use Modules\QuestionBank\Policies\QuestionSessionPolicy;
 use Nwidart\Modules\Support\ModuleServiceProvider;
 
 class QuestionBankServiceProvider extends ModuleServiceProvider
@@ -19,6 +21,7 @@ class QuestionBankServiceProvider extends ModuleServiceProvider
         parent::boot();
 
         Gate::policy(Question::class, QuestionPolicy::class);
+        Gate::policy(QuestionSession::class, QuestionSessionPolicy::class);
     }
 
     /**

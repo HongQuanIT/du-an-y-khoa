@@ -6,9 +6,30 @@
      * @var \Modules\QuestionBank\Models\Question $question
      * @var \Modules\QuestionBank\Models\QuestionAttempt|null $attempt
      */
-    $exitUrl = route('study-plan.detail', $plan);
-    $summaryUrl = route('study-plan.session.summary', [$plan, $task]);
-    $reviewUrl = route('study-plan.session.review', [$plan, $task]);
+    $playerConfig = $playerConfig ?? [
+        'page_title' => 'Phiên học kế hoạch',
+        'header_title' => $task->title(),
+        'header_subtitle' => $plan->name . ' · ' . $task->date->format('d/m/Y'),
+        'saved_label' => $task->done . '/' . $task->target . ' đã lưu',
+        'exit_url' => route('study-plan.detail', $plan),
+        'pause_url' => null,
+        'finish_url' => null,
+        'summary_url' => route('study-plan.session.summary', [$plan, $task]),
+        'annotate_url' => route('study-plan.session.annotate', [$plan, $task]),
+        'answer_url' => route('study-plan.session.answer', [$plan, $task]),
+        'question_route' => 'study-plan.session',
+        'question_route_parameters' => ['plan' => $plan, 'task' => $task],
+        'incomplete_label' => 'Bạn chưa hoàn thành nhiệm vụ hôm nay',
+        'exit_message' => 'Tiến trình đã được lưu — có thể tiếp tục sau từ kế hoạch học tập.',
+    ];
+    $exitUrl = $playerConfig['exit_url'];
+    $summaryUrl = $playerConfig['summary_url'];
+    $pauseUrl = $playerConfig['pause_url'];
+    $finishUrl = $playerConfig['finish_url'];
+    $questionUrl = fn (int $position): string => route(
+        $playerConfig['question_route'],
+        [...$playerConfig['question_route_parameters'], 'index' => $position],
+    );
     $progress = $total > 0 ? (int) round(($index + 1) / $total * 100) : 0;
     $selectedOptionIds = $attempt?->selected_option_ids ?? [];
     $isAnswered = $attempt !== null;
@@ -34,7 +55,7 @@
     $sessionIncomplete = count($answeredIds) < $total;
 @endphp
 
-<x-layouts.auth title="Phiên học kế hoạch">
+<x-layouts.auth :title="$playerConfig['page_title']">
     <div x-data="{
         notesOpen: false,
         navigatorOpen: false,
@@ -48,7 +69,7 @@
         noteSaving: false,
         noteSaved: false,
         stemHtml: @js($stemHtml),
-        annotateUrl: @js(route('study-plan.session.annotate', [$plan, $task])),
+        annotateUrl: @js($playerConfig['annotate_url']),
         csrf: @js(csrf_token()),
         questionId: @js($question->id),
         requestExit() {
@@ -146,9 +167,9 @@
                         <span class="material-symbols-outlined text-outline">close</span>
                     </button>
                     <div class="hidden flex-col sm:flex">
-                        <span class="font-label-md text-label-md font-bold text-primary">{{ $task->title() }}</span>
+                        <span class="font-label-md text-label-md font-bold text-primary">{{ $playerConfig['header_title'] }}</span>
                         <span class="text-[10px] font-bold tracking-wider text-outline uppercase">
-                            {{ $plan->name }} · {{ $task->date->format('d/m/Y') }}
+                            {{ $playerConfig['header_subtitle'] }}
                         </span>
                     </div>
                 </div>
@@ -163,7 +184,7 @@
                     <span class="hidden items-center gap-1 text-primary sm:flex">
                         <span class="material-symbols-outlined text-[18px]"
                             style="font-variation-settings: 'FILL' 1;">cloud_done</span>
-                        <span class="font-label-sm text-label-sm">{{ $task->done }}/{{ $task->target }} đã lưu</span>
+                        <span class="font-label-sm text-label-sm">{{ $playerConfig['saved_label'] }}</span>
                     </span>
                     <button type="button" @click="navigatorOpen = true"
                         class="flex items-center gap-2 rounded-lg border border-outline-variant px-3 py-1.5 transition-colors hover:bg-surface-container-high">
@@ -226,7 +247,7 @@
                         running: @js(! $isAnswered),
                         _timer: null,
                         questionExplanation: @js($question->explanation),
-                        saveUrl: @js(route('study-plan.session.answer', [$plan, $task])),
+                        saveUrl: @js($playerConfig['answer_url']),
                         csrf: @js(csrf_token()),
                         questionId: @js($question->id),
                         index: @js($index),
@@ -316,7 +337,7 @@
                             <div class="flex items-center gap-2 rounded-full bg-surface-container-highest px-3 py-1">
                                 <span class="size-2 rounded-full bg-primary"></span>
                                 <span class="font-label-sm text-label-sm font-bold text-on-surface-variant uppercase">
-                                    {{ $question->topic?->name ?? 'Tổng hợp' }} · {{ $question->difficulty->value }}
+                                    {{ $question->topic?->name ?? 'Tổng hợp' }} · {{ $question->difficulty->label() }}
                                 </span>
                             </div>
                             <div class="flex items-center gap-2">
@@ -389,7 +410,7 @@
                     <footer
                         class="fixed bottom-0 left-0 z-50 flex w-full items-center justify-between border-t border-outline-variant bg-white px-4 py-4 shadow-lg md:px-margin-desktop">
                         @if ($prevIndex !== null)
-                            <a href="{{ route('study-plan.session', [$plan, $task, 'index' => $prevIndex]) }}"
+                            <a href="{{ $questionUrl($prevIndex) }}"
                                 class="flex items-center gap-2 px-4 py-2 text-on-surface-variant transition-colors hover:text-on-surface">
                                 <span class="material-symbols-outlined">chevron_left</span>
                                 <span class="font-bold">Câu trước</span>
@@ -404,17 +425,28 @@
 
                         <div x-cloak x-show="revealed">
                             @if ($nextIndex !== null)
-                                <a href="{{ route('study-plan.session', [$plan, $task, 'index' => $nextIndex]) }}"
+                                <a href="{{ $questionUrl($nextIndex) }}"
                                     class="flex items-center gap-3 rounded-lg bg-primary px-8 py-3 font-bold text-on-primary transition-all hover:opacity-90 active:scale-95">
                                     <span>Câu tiếp theo</span>
                                     <span class="material-symbols-outlined">arrow_forward</span>
                                 </a>
                             @else
-                                <a href="{{ $summaryUrl }}"
-                                    class="flex items-center gap-3 rounded-lg bg-primary px-8 py-3 font-bold text-on-primary transition-all hover:opacity-90">
-                                    <span>Hoàn thành</span>
-                                    <span class="material-symbols-outlined">check_circle</span>
-                                </a>
+                                @if ($finishUrl)
+                                    <form method="POST" action="{{ $finishUrl }}">
+                                        @csrf
+                                        <button type="submit"
+                                            class="flex items-center gap-3 rounded-lg bg-primary px-8 py-3 font-bold text-on-primary transition-all hover:opacity-90">
+                                            <span>Hoàn thành</span>
+                                            <span class="material-symbols-outlined">check_circle</span>
+                                        </button>
+                                    </form>
+                                @else
+                                    <a href="{{ $summaryUrl }}"
+                                        class="flex items-center gap-3 rounded-lg bg-primary px-8 py-3 font-bold text-on-primary transition-all hover:opacity-90">
+                                        <span>Hoàn thành</span>
+                                        <span class="material-symbols-outlined">check_circle</span>
+                                    </a>
+                                @endif
                             @endif
                         </div>
                     </footer>
@@ -498,7 +530,7 @@
                                     default => 'border border-outline-variant text-on-surface-variant hover:bg-surface-container-high',
                                 };
                             @endphp
-                            <a href="{{ route('study-plan.session', [$plan, $task, 'index' => $position]) }}"
+                            <a href="{{ $questionUrl($position) }}"
                                 class="relative flex aspect-square items-center justify-center rounded-lg {{ $classes }}">
                                 {{ $position + 1 }}
                                 @if ($isFlaggedCell)
@@ -536,15 +568,26 @@
                 </div>
                 <h3 class="mb-3 font-headline-md text-headline-md text-on-surface">Bạn muốn thoát?</h3>
                 <p class="mb-10 font-body-md text-body-md leading-relaxed text-on-surface-variant">
-                    Bạn chưa hoàn thành nhiệm vụ hôm nay
+                    {{ $playerConfig['incomplete_label'] }}
                     ({{ count($answeredIds) }}/{{ $total }} câu).
-                    Tiến trình đã được lưu — có thể tiếp tục sau từ kế hoạch học tập.
+                    {{ $playerConfig['exit_message'] }}
                 </p>
                 <div class="flex w-full flex-col gap-3">
-                    <a href="{{ $exitUrl }}"
-                        class="w-full rounded-xl bg-gradient-to-br from-primary-container to-primary py-3.5 font-label-md text-label-md font-bold text-white shadow-lg transition-all hover:opacity-90 active:scale-[0.98]">
-                        Lưu &amp; thoát
-                    </a>
+                    @if ($pauseUrl)
+                        <form method="POST" action="{{ $pauseUrl }}" class="w-full">
+                            @csrf
+                            <input type="hidden" name="current_index" value="{{ $index }}">
+                            <button type="submit"
+                                class="w-full rounded-xl bg-gradient-to-br from-primary-container to-primary py-3.5 font-label-md text-label-md font-bold text-white shadow-lg transition-all hover:opacity-90 active:scale-[0.98]">
+                                Lưu &amp; thoát
+                            </button>
+                        </form>
+                    @else
+                        <a href="{{ $exitUrl }}"
+                            class="w-full rounded-xl bg-gradient-to-br from-primary-container to-primary py-3.5 font-label-md text-label-md font-bold text-white shadow-lg transition-all hover:opacity-90 active:scale-[0.98]">
+                            Lưu &amp; thoát
+                        </a>
+                    @endif
                     <button type="button" @click="exitOpen = false"
                         class="w-full rounded-xl border border-outline py-3.5 font-label-md text-label-md font-bold text-primary transition-colors hover:bg-surface-container-high">
                         Tiếp tục làm bài

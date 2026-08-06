@@ -14,6 +14,7 @@ use App\Support\Data\DataTransferObject;
  * @property-read array<int, string> $examTags
  * @property-read array<int, string> $articles
  * @property-read array<int, string> $symptoms
+ * @property-read array<int, string> $difficulties
  * @property-read array<int, string> $questionStatuses
  */
 final class StudyPlanData extends DataTransferObject
@@ -24,6 +25,7 @@ final class StudyPlanData extends DataTransferObject
      * @param  array<int, string>  $examTags
      * @param  array<int, string>  $articles
      * @param  array<int, string>  $symptoms
+     * @param  array<int, string>  $difficulties
      * @param  array<int, string>  $questionStatuses
      */
     public function __construct(
@@ -38,7 +40,7 @@ final class StudyPlanData extends DataTransferObject
         public readonly array $articles = [],
         public readonly array $symptoms = [],
         public readonly bool $savedOnly = false,
-        public readonly ?string $difficulty = null,
+        public readonly array $difficulties = [],
         public readonly array $questionStatuses = [],
         public readonly string $questionStatusMode = 'latest',
     ) {}
@@ -62,7 +64,8 @@ final class StudyPlanData extends DataTransferObject
             'articles' => array_values($this->articles),
             'symptoms' => array_values($this->symptoms),
             'saved_only' => $this->savedOnly,
-            'difficulty' => $this->difficulty,
+            'difficulties' => array_values($this->difficulties),
+            'difficulty' => count($this->difficulties) === 1 ? $this->difficulties[0] : null,
             'question_statuses' => array_values($this->questionStatuses),
             'question_status_mode' => $this->questionStatusMode,
         ];

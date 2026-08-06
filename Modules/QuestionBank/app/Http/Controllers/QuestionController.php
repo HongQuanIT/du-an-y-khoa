@@ -19,7 +19,7 @@ final class QuestionController extends Controller
 {
     public function index(ListQuestionsRequest $request, ListQuestionsAction $action): JsonResponse
     {
-        $paginator = $action->handle($request->toData());
+        $paginator = $action->handle($request->toData(), $request->user());
 
         return ApiResponse::paginated(
             $paginator,

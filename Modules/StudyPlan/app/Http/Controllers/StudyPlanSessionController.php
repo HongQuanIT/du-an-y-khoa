@@ -11,9 +11,10 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Modules\QuestionBank\Models\Question;
+use Illuminate\Support\Str;
 use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionSession;
+use Modules\QuestionBank\Services\QuestionSessionSnapshots;
 use Modules\StudyPlan\Actions\AnswerPlanQuestionAction;
 use Modules\StudyPlan\Actions\SavePlanSessionAnnotationAction;
 use Modules\StudyPlan\Actions\StartPlanTaskAction;
@@ -32,6 +33,7 @@ final class StudyPlanSessionController extends Controller
         private readonly StartPlanTaskAction $startTask,
         private readonly AnswerPlanQuestionAction $answerQuestion,
         private readonly SavePlanSessionAnnotationAction $saveAnnotation,
+        private readonly QuestionSessionSnapshots $snapshots,
     ) {}
 
     public function show(Request $request, StudyPlan $plan, StudyPlanTask $task): View|RedirectResponse
@@ -59,11 +61,8 @@ final class StudyPlanSessionController extends Controller
             return redirect()->route('study-plan.session.summary', [$plan, $task]);
         }
 
-        $question = Question::with(['options', 'topic'])->findOrFail($questionIds[$index]);
-        $question->setRelation(
-            'options',
-            $question->optionsForSession((string) $session->getKey()),
-        );
+        $question = $this->snapshots->question($session, (string) $questionIds[$index]);
+        abort_if($question === null, 410, 'Nội dung câu hỏi của phiên này không còn khả dụng.');
 
         $annotation = ($session->annotations ?? [])[(string) $question->getKey()] ?? [];
         $flagged = (bool) ($annotation['flagged'] ?? $attempts->get($question->getKey())?->flagged ?? false);
@@ -99,7 +98,7 @@ final class StudyPlanSessionController extends Controller
         $this->authorize('update', $plan);
 
         $validated = $request->validate([
-            'question_id' => ['required', 'string', 'exists:questions,id'],
+            'question_id' => ['required', 'string'],
             'note' => ['nullable', 'string', 'max:5000'],
             'stem_html' => ['nullable', 'string', 'max:20000'],
             'flagged' => ['nullable', 'boolean'],
@@ -111,7 +110,8 @@ final class StudyPlanSessionController extends Controller
         $questionIds = $session->question_ids ?? [];
         abort_unless(in_array($validated['question_id'], $questionIds, true), 422, 'Câu hỏi không thuộc phiên này.');
 
-        $question = Question::query()->findOrFail($validated['question_id']);
+        $question = $this->snapshots->question($session, $validated['question_id']);
+        abort_if($question === null, 410, 'Nội dung câu hỏi của phiên này không còn khả dụng.');
 
         $annotation = $this->saveAnnotation->handle(
             $session,
@@ -129,21 +129,34 @@ final class StudyPlanSessionController extends Controller
         $this->authorize('update', $plan);
 
         $validated = $request->validate([
-            'question_id' => ['required', 'string', 'exists:questions,id'],
+            'question_id' => ['required', 'string'],
             'option_ids' => ['required', 'array', 'min:1'],
-            'option_ids.*' => ['integer', 'exists:question_options,id'],
+            'option_ids.*' => ['integer', 'distinct'],
             'time_spent_seconds' => ['nullable', 'integer', 'min:0', 'max:7200'],
             'index' => ['nullable', 'integer', 'min:0'],
         ]);
 
         $session = $this->startTask->handle($task);
-        $question = Question::with('options')->findOrFail($validated['question_id']);
+        abort_unless(
+            in_array($validated['question_id'], $session->question_ids ?? [], true),
+            422,
+            'Câu hỏi không thuộc phiên này.',
+        );
+        $question = $this->snapshots->question($session, $validated['question_id']);
+        abort_if($question === null, 410, 'Nội dung câu hỏi của phiên này không còn khả dụng.');
+        $optionIds = array_map('intval', $validated['option_ids']);
+        $validOptionIds = $question->options->pluck('id')->map(fn ($id): int => (int) $id)->all();
+        abort_unless(
+            collect($optionIds)->every(fn (int $id): bool => in_array($id, $validOptionIds, true)),
+            422,
+            'Đáp án không thuộc câu hỏi này.',
+        );
 
         $attempt = $this->answerQuestion->handle(
             $task,
             $session,
             $question,
-            array_map('intval', $validated['option_ids']),
+            $optionIds,
             (int) ($validated['time_spent_seconds'] ?? 0),
         );
 
@@ -196,11 +209,11 @@ final class StudyPlanSessionController extends Controller
         }
 
         $attempts = $this->attempts($session);
-        $questions = Question::query()
-            ->with('topic')
-            ->whereIn('id', $questionIds)
-            ->get()
-            ->keyBy('id');
+        $questions = $this->snapshots->questionMap($session);
+        $questionIds = array_values(array_filter(
+            $questionIds,
+            fn (string $questionId): bool => isset($questions[$questionId]),
+        ));
 
         $total = count($questionIds);
         $correctCount = 0;
@@ -212,7 +225,7 @@ final class StudyPlanSessionController extends Controller
         $byTopic = [];
 
         foreach ($questionIds as $questionId) {
-            $question = $questions->get($questionId);
+            $question = $questions[$questionId] ?? null;
             $attempt = $attempts->get($questionId);
             $topicName = $question?->topic?->name ?? 'Tổng hợp';
             $byTopic[$topicName] ??= [
@@ -352,23 +365,19 @@ final class StudyPlanSessionController extends Controller
         }
 
         $attempts = $this->attempts($session);
-        $questions = Question::query()
-            ->with(['options', 'topic'])
-            ->whereIn('id', $questionIds)
-            ->get()
-            ->keyBy('id');
+        $questions = $this->snapshots->questionMap($session);
 
         $items = [];
 
         foreach ($questionIds as $position => $questionId) {
-            $question = $questions->get($questionId);
+            $question = $questions[$questionId] ?? null;
 
             if ($question === null) {
                 continue;
             }
 
             $attempt = $attempts->get($questionId);
-            $options = $question->optionsForSession((string) $session->getKey());
+            $options = $question->getRelation('options');
             $selectedIds = array_map('intval', $attempt?->selected_option_ids ?? []);
             $correctOption = $options->firstWhere('is_correct', true);
             $selectedOption = $options->first(fn ($option) => in_array((int) $option->id, $selectedIds, true));
@@ -426,7 +435,7 @@ final class StudyPlanSessionController extends Controller
                     default => 'text-outline',
                 },
                 'topic' => $question->topic?->name ?? 'Tổng hợp',
-                'excerpt' => \Illuminate\Support\Str::limit(strip_tags($question->stem), 140),
+                'excerpt' => Str::limit(strip_tags($question->stem), 140),
                 'stem' => $question->stem,
                 'stemHtml' => $stemHtml,
                 'note' => $note,

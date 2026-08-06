@@ -6,6 +6,7 @@ namespace Modules\StudyPlan\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Carbon;
+use Modules\QuestionBank\Enums\Difficulty;
 use Modules\StudyPlan\Data\StudyPlanData;
 use Modules\StudyPlan\Enums\PlanStrategy;
 use Modules\StudyPlan\Support\TargetExams;
@@ -22,8 +23,16 @@ final class StudyPlanRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        $difficulties = $this->input('difficulties');
+        if ($difficulties === null && $this->filled('difficulty')) {
+            $difficulties = [$this->input('difficulty')];
+        }
+
         $this->merge([
-            'difficulty' => $this->filled('difficulty') ? $this->input('difficulty') : null,
+            'difficulties' => array_values(array_filter(
+                (array) $difficulties,
+                static fn (mixed $value): bool => is_string($value) && $value !== '',
+            )),
             'saved_only' => $this->boolean('saved_only'),
         ]);
     }
@@ -46,7 +55,8 @@ final class StudyPlanRequest extends FormRequest
             'symptoms' => ['nullable', 'array'],
             'symptoms.*' => ['string', 'max:120'],
             'saved_only' => ['nullable', 'boolean'],
-            'difficulty' => ['nullable', 'string', 'in:easy,medium,hard'],
+            'difficulties' => ['nullable', 'array', 'max:'.count(Difficulty::cases())],
+            'difficulties.*' => ['string', 'distinct', 'in:'.implode(',', Difficulty::values())],
             'question_statuses' => ['nullable', 'array'],
             'question_statuses.*' => ['string', 'in:unanswered,correct_with_hints,incorrect,correct'],
             'question_status_mode' => ['nullable', 'string', 'in:all,latest'],
@@ -84,7 +94,7 @@ final class StudyPlanRequest extends FormRequest
             articles: array_values(array_map('strval', $this->input('articles', []))),
             symptoms: array_values(array_map('strval', $this->input('symptoms', []))),
             savedOnly: $this->boolean('saved_only'),
-            difficulty: filled($this->input('difficulty')) ? (string) $this->input('difficulty') : null,
+            difficulties: array_values(array_unique(array_map('strval', $this->input('difficulties', [])))),
             questionStatuses: array_values(array_unique(array_map('strval', $this->input('question_statuses', [])))),
             questionStatusMode: (string) $this->input('question_status_mode', 'latest'),
         );

@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-08-06
+
+### Hoàn thiện Question Bank và đồng bộ phiên học
+- Làm thật bộ lọc kỳ thi, bài viết, triệu chứng, chủ đề, trạng thái và năm mức độ khó; bổ sung dữ liệu seed 200 câu hỏi.
+- Đồng bộ giao diện tạo phiên, học tập, thi, tổng kết và xem lại với Study Plan; thêm máy tính thi, tạm dừng đúng đồng hồ và thao tác lịch sử phiên.
+- Thêm chấm điểm tập trung, thống kê chủ đề responsive, làm lại theo nhóm kết quả và snapshot bất biến cho nội dung câu hỏi từng phiên.
+- Đồng bộ tiến độ Topic Mastery giữa Question Bank, Study Plan và Dashboard; tăng kiểm thử cho toàn bộ luồng.
+
 ## 2026-08-05
 
 ### Seed demo Question Bank từ VM14K
@@ -14,13 +22,6 @@
 - Thêm `deploy-dev.md` hướng dẫn dựng stack Docker local (env, migrate, seed, Vite).
 - Thêm `scripts/deploy.sh` cho webhook aaPanel (pull, build assets, migrate, restart services).
 
-## 2026-08-04
-
-### Study Plan MVP + phiên học Amboss-style
-- Hoàn thiện tạo/xem kế hoạch, lịch, nhiệm vụ ngày; tự đánh dấu bỏ qua khi quá hạn.
-- Phiên làm bài: đồng hồ từng câu, highlight đỏ/vàng/xanh, ghi chú/gắn cờ, bản đồ câu hỏi, phân tích + xem lại (lọc cần ôn).
-- Topic mastery trên dashboard; seed taxonomy + ~500 câu Amboss; bỏ độ bám lịch và banner login dev.
-
 ## 2026-08-02
 
 ### Bảng giá theo năm (1 / 2 / 3 năm)
@@ -29,6 +30,13 @@
 
 ### Menu mobile header public
 - Thêm drawer menu Alpine cho viewport `< lg`; nav và nút đăng nhập/đăng ký hiện từ `lg` trở lên.
+
+## 2026-08-04
+
+### Study Plan MVP + phiên học Amboss-style
+- Hoàn thiện tạo/xem kế hoạch, lịch, nhiệm vụ ngày; tự đánh dấu bỏ qua khi quá hạn.
+- Phiên làm bài: đồng hồ từng câu, highlight đỏ/vàng/xanh, ghi chú/gắn cờ, bản đồ câu hỏi, phân tích + xem lại (lọc cần ôn).
+- Topic mastery trên dashboard; seed taxonomy + ~500 câu Amboss; bỏ độ bám lịch và banner login dev.
 
 ## 2026-07-31
 
