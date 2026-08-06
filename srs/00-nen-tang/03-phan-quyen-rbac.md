@@ -7,7 +7,7 @@
 - **Subscription** là lớp gating độc lập với role: xác định quyền truy cập nội dung Premium.
 - Kết hợp: `access = role_permissions ∩ subscription_entitlements ∩ feature_flags`.
 
-> 🔵 **Phạm vi hiện tại:** Các role **Instructor** và **Organization Admin** cùng mọi quyền liên quan tổ chức/lớp học (`org.*`, "tạo lớp/giao bài", "quản lý thành viên/ghế", "xem tiến độ học viên") **đã hoãn sang Phase 2** (theo Module Organization 32). Các dòng/cột tương ứng bên dưới giữ lại để tham khảo, đánh dấu 🔵.
+> 🔵 **Phạm vi hiện tại:** Quyền **tổ chức B2B** của Instructor/Org Admin (`org.*`, giao bài org, ghế license…) **hoãn Phase 2** (Module 32). **Classroom / Live Review (44)** thuộc phạm vi hiện tại: Premium (+ `instructor`/admin) host lớp cộng đồng qua entitlement `classroom.host`. Cột Org Admin và dòng org.* bên dưới vẫn đánh dấu 🔵.
 
 ## 2. Danh sách Role
 
@@ -19,10 +19,10 @@
 | Content Editor | `content_editor` | Nội dung |
 | Admin | `admin` | Toàn hệ thống (giới hạn cấu hình) |
 | Super Admin | `super_admin` | Toàn quyền |
-| 🔵 Instructor *(hoãn)* | `instructor` | Phase 2 — gắn Organization |
+| Instructor | `instructor` | Host Classroom cộng đồng (44) khi được gán; quyền lớp **org B2B** vẫn 🔵 Phase 2 |
 | 🔵 Organization Admin *(hoãn)* | `org_admin` | Phase 2 — phạm vi tổ chức |
 
-> Premium là **entitlement** gắn với subscription, không phải role riêng — người dùng vẫn là `student` nhưng có `entitlement: premium`.
+> Premium là **entitlement** gắn với subscription, không phải role riêng — người dùng vẫn là `student` nhưng có `entitlement: premium` (gồm `classroom.host`). Role `instructor` có `classroom.host` mặc định kể cả khi ngữ cảnh Organization còn hoãn.
 
 ## 3. Ma trận quyền (Permission Matrix)
 

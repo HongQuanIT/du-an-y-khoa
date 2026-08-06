@@ -143,8 +143,8 @@ Tham chiếu nhóm Classroom trong `04-mo-hinh-du-lieu.md`.
 | **Classroom** | `id, uuid, title, description, host_user_id, visibility(public/unlisted/invite_only), join_code, status(draft/active/archived), max_members, cover_media_id, meta JSON` |
 | **ClassroomMember** | `classroom_id, user_id, role_in_class(host/cohost/member), status(invited/active/left/banned), joined_at` — unique `(classroom_id, user_id)` |
 | **LiveSession** | `classroom_id, title, scheduled_at, started_at, ended_at, status(scheduled/live/ended/cancelled), livekit_room_name, linked_exam_id null, question_set JSON null` |
-| **LiveSessionMessage** | `session_id, user_id, body, type(chat/question/system), is_hidden, created_at` |
-| **LiveRecording** | `session_id, media_id, duration, status(processing/ready/failed), egress_id` |
+| **LiveSessionMessage** | `live_session_id, user_id, body, type(chat/question/system), is_hidden, created_at` |
+| **LiveRecording** | `live_session_id, media_id, duration_seconds, status(processing/ready/failed), egress_id` |
 
 > Không dùng tên `classes` (dành Phase 2 Organization).
 

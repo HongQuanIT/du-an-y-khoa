@@ -10,7 +10,7 @@ Kiến trúc **monolith modular** trên Laravel 12, tách rõ tầng, sẵn sàn
 │  Blade views · TailwindCSS · AlpineJS · Livewire · Chart.js    │
 │  Service Worker (offline session cache)                        │
 └───────────────┬──────────────────────────┬───────────────────┘
-                │ HTTP (web + api)           │ WebSocket (Reverb)
+                │ HTTP (web + api)           │ WebSocket (Reverb) + WebRTC (LiveKit)
 ┌───────────────▼──────────────────────────▼───────────────────┐
 │                     Laravel 12 Application                      │
 │  ┌───────────┐  ┌────────────┐  ┌───────────┐  ┌───────────┐  │

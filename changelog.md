@@ -3,11 +3,18 @@
 ## 2026-08-06
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 ### Ổn định phiên thi và môi trường phát triển
 - Tự tính thời gian thi theo 90 giây mỗi câu và giới hạn số câu theo đúng tập câu khớp bộ lọc.
 - Cảnh báo thời gian tại các mốc 5, 4, 3 phút, 30 và 15 giây; đổi nút ba chấm thành biểu tượng ghi chú.
 - Sửa biểu thức Alpine ở phiên Study Plan; chỉ khởi tạo Reverb khi bật cấu hình và xử lý kết nối khi dùng BFCache.
 =======
+=======
+### check.php — JSON output và kiểm tra chặt hơn
+- Hỗ trợ `?format=json` / `--json`; load `.env` thống nhất cho CLI và web.
+- Bổ sung kiểm tra PHP 8.4 khuyến nghị, mask secret, security token; cập nhật mục `deploy-production.md`.
+
+>>>>>>> a1fbc58 (docs(srs): làm rõ RBAC và kiến trúc Classroom 44)
 ### Deploy production — aaPanel, seed và troubleshooting
 - Bổ sung mục lục và hướng dẫn deploy qua aaPanel / Git webhook (`scripts/deploy.sh`).
 - Thêm seeding lần đầu trên production và bảng troubleshooting thường gặp.
@@ -18,6 +25,7 @@
 - Cập nhật nền tảng: tổng quan, kiến trúc, RBAC, mô hình dữ liệu, tracking, glossary, trạng thái.
 - Liên kết Videos (14), Notification (27); ghi chú phân biệt trong Organization (32).
 - Bổ sung quan hệ User ↔ Classroom trên mô hình dữ liệu; sửa tham chiếu mục 8.
+- Làm rõ Instructor/`classroom.host` trong RBAC; WebRTC trên sơ đồ kiến trúc; đồng bộ tên cột module 44.
 
 ### Header public — breakpoint menu về md
 - Nav và nút đăng nhập hiện từ `md`; drawer mobile dưới `md` (trước dùng `lg`).
