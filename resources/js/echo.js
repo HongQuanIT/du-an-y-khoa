@@ -13,3 +13,12 @@ window.Echo = new Echo({
     forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
     enabledTransports: ['ws', 'wss'],
 });
+
+// A page may be frozen in the browser's back-forward cache. Close Reverb
+// before it is frozen and reconnect when that page is restored.
+window.addEventListener('pagehide', () => window.Echo?.disconnect());
+window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+        window.Echo?.connect();
+    }
+});

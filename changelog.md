@@ -2,6 +2,11 @@
 
 ## 2026-08-06
 
+### Ổn định phiên thi và môi trường phát triển
+- Tự tính thời gian thi theo 90 giây mỗi câu và giới hạn số câu theo đúng tập câu khớp bộ lọc.
+- Cảnh báo thời gian tại các mốc 5, 4, 3 phút, 30 và 15 giây; đổi nút ba chấm thành biểu tượng ghi chú.
+- Sửa biểu thức Alpine ở phiên Study Plan; chỉ khởi tạo Reverb khi bật cấu hình và xử lý kết nối khi dùng BFCache.
+
 ### Hoàn thiện Question Bank và đồng bộ phiên học
 - Làm thật bộ lọc kỳ thi, bài viết, triệu chứng, chủ đề, trạng thái và năm mức độ khó; bổ sung dữ liệu seed 200 câu hỏi.
 - Đồng bộ giao diện tạo phiên, học tập, thi, tổng kết và xem lại với Study Plan; thêm máy tính thi, tạm dừng đúng đồng hồ và thao tác lịch sử phiên.

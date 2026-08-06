@@ -19,7 +19,6 @@
     $initialTopics = array_map('intval', (array) old('topic_ids', request('topic_ids', [])));
     $initialStatusMode = old('question_status_mode', request('question_status_mode', 'latest'));
     $initialSavedOnly = (bool) old('saved_only', request()->boolean('saved_only'));
-    $initialTimeLimit = (int) old('time_limit_minutes', request('time_limit_minutes', 60));
     $initialExam = (string) old('exam_key', request('exam_key', ''));
     $initialArticles = array_values((array) old('articles', request('articles', [])));
     $initialSymptoms = array_values((array) old('symptoms', request('symptoms', [])));
@@ -50,7 +49,7 @@
             mode: {{ Illuminate\Support\Js::from($initialMode)->toHtml() }},
             source: {{ Illuminate\Support\Js::from($initialSource)->toHtml() }},
             count: {{ Illuminate\Support\Js::from($initialCount)->toHtml() }},
-            timeLimit: {{ Illuminate\Support\Js::from($initialTimeLimit)->toHtml() }},
+            maxQuestions: {{ Illuminate\Support\Js::from($maxQuestions)->toHtml() }},
             difficulties: {{ Illuminate\Support\Js::from($initialDifficulties)->toHtml() }},
             difficultyLabels: {{ Illuminate\Support\Js::from(collect($difficultyOptions)->pluck('name', 'id')->all())->toHtml() }},
             difficultyOptionCount: {{ count($difficultyOptions) }},
@@ -100,6 +99,7 @@
                         throw new Error(details[0] || payload?.error?.message || 'Không thể đếm câu hỏi.');
                     }
                     this.matching = Number(payload?.data?.count ?? 0);
+                    this.clampQuestionCount();
                 } catch (error) {
                     if (requestId !== this.countRequest) return;
                     this.matching = null;
@@ -114,6 +114,24 @@
             },
             selectedCount(ids) {
                 return this.selectedTopics.filter((id) => ids.includes(String(id))).length;
+            },
+            questionLimit() {
+                if (this.matching === null) return this.maxQuestions;
+                return Math.min(this.maxQuestions, Math.max(0, Number(this.matching)));
+            },
+            clampQuestionCount() {
+                const limit = this.questionLimit();
+                if (limit < 1) {
+                    this.count = 1;
+                    return;
+                }
+                this.count = Math.min(limit, Math.max(1, Number(this.count) || 1));
+            },
+            examDurationLabel() {
+                const seconds = Math.max(1, Number(this.count) || 1) * 90;
+                const minutes = Math.floor(seconds / 60);
+                const remainingSeconds = seconds % 60;
+                return remainingSeconds ? `${minutes} phút ${remainingSeconds} giây` : `${minutes} phút`;
             },
             clearTopics(ids) {
                 this.selectedTopics = this.selectedTopics.filter((id) => !ids.includes(String(id)));
@@ -142,7 +160,6 @@
                 this.mode = 'study';
                 this.source = 'custom';
                 this.count = Math.min(10, {{ Illuminate\Support\Js::from($maxQuestions)->toHtml() }});
-                this.timeLimit = 60;
                 this.difficulties = [];
                 this.statuses = [];
                 this.selectedTopics = [];
@@ -370,16 +387,12 @@
                                     :class="showAdvanced && 'rotate-180'">expand_more</span>
                             </button>
 
-                            <div x-show="mode === 'exam' || showAdvanced" x-cloak>
-                                <label for="time-limit" class="mb-3 block text-[11px] font-bold tracking-widest text-on-surface-variant uppercase">
-                                    Thời gian làm bài
-                                </label>
-                                <div class="relative max-w-48">
-                                    <input id="time-limit" type="number" name="time_limit_minutes" min="1" max="300"
-                                        x-model.number="timeLimit" :required="mode === 'exam'"
-                                        class="w-full rounded-lg border border-outline-variant py-2.5 pr-14 pl-4 font-bold focus:ring-2 focus:ring-primary">
-                                    <span class="absolute top-1/2 right-4 -translate-y-1/2 text-xs text-on-surface-variant">phút</span>
-                                </div>
+                            <div x-show="mode === 'exam'" x-cloak
+                                class="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                                <p class="text-[11px] font-bold tracking-widest text-primary uppercase">Thời gian thi tự động</p>
+                                <p class="mt-1 text-sm font-medium text-on-surface">
+                                    1 phút 30 giây mỗi câu · Tổng <strong x-text="examDurationLabel()"></strong>
+                                </p>
                             </div>
 
                             <div>
@@ -387,8 +400,9 @@
                                     Số lượng câu hỏi
                                 </label>
                                 <div class="flex items-center gap-3">
-                                    <input id="question-count" type="number" name="count" min="1" max="{{ $maxQuestions }}"
-                                        x-model.number="count" required
+                                    <input id="question-count" type="number" name="count" min="1"
+                                        :max="Math.max(1, questionLimit())" x-model.number="count"
+                                        @blur="clampQuestionCount()" required
                                         class="w-20 rounded-lg border border-outline-variant py-2.5 text-center text-lg font-bold focus:ring-2 focus:ring-primary">
                                     <span class="text-lg font-medium text-on-surface-variant">
                                         / <span x-text="counting ? '…' : (matching ?? 0)"></span>
@@ -418,9 +432,10 @@
                     </label>
                 </div>
             </div>
-            <button type="submit" :disabled="matching === null || matching === 0 || counting || submitting || count < 1"
+            <button type="submit"
+                :disabled="matching === null || matching === 0 || counting || submitting || count < 1 || count > questionLimit()"
                 class="rounded-lg px-6 py-2.5 font-bold text-white transition-all md:px-12"
-                :class="matching === null || matching === 0 || counting || submitting || count < 1
+                :class="matching === null || matching === 0 || counting || submitting || count < 1 || count > questionLimit()
                     ? 'cursor-not-allowed bg-primary/30 opacity-70'
                     : 'bg-primary shadow-md hover:bg-primary/90'">
                 <span x-text="submitting ? 'Đang tạo…' : 'Bắt đầu'"></span>

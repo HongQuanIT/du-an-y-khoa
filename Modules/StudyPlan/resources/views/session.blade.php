@@ -214,7 +214,7 @@
                                 @endif>
                                 <span class="material-symbols-outlined text-[20px]"
                                     @if (($tool['action'] ?? null) === 'flag')
-                                        :style="flagged ? \"font-variation-settings: 'FILL' 1\" : null"
+                                        :class="flagged && 'fill-1'"
                                     @endif>{{ $tool['icon'] }}</span>
                                 <span
                                     class="overflow-hidden text-label-md font-medium whitespace-nowrap opacity-0 transition-opacity duration-300 group-hover:opacity-100"
@@ -346,7 +346,7 @@
                                         ? 'bg-primary/10 text-primary'
                                         : 'bg-surface-container-highest text-on-surface-variant'">
                                     <span class="material-symbols-outlined text-[18px]"
-                                        :style="running ? \"font-variation-settings: 'FILL' 1\" : null">timer</span>
+                                        :class="running && 'fill-1'">timer</span>
                                     <span class="font-label-sm text-label-sm font-bold" x-text="formatTime()"></span>
                                 </div>
                                 <span x-cloak x-show="revealed"

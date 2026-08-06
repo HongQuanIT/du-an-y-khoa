@@ -41,7 +41,6 @@ final class CreateQuestionSessionAction
             questionStatuses: $data->questionStatuses,
             questionStatusMode: $data->questionStatusMode,
             savedOnly: $data->savedOnly,
-            timeLimitSeconds: $data->timeLimitSeconds,
             examKey: $data->examKey,
             articles: $data->articles,
             symptoms: $data->symptoms,
@@ -53,11 +52,21 @@ final class CreateQuestionSessionAction
             throw new RuntimeException('Không còn câu hỏi phù hợp với bộ lọc đã chọn.');
         }
 
-        $timeLimit = $data->timeLimitSeconds;
-        if ($data->mode === SessionMode::Exam && ($timeLimit === null || $timeLimit <= 0)) {
-            // ~90s / câu cho mock exam mặc định.
-            $timeLimit = count($questionIds) * 90;
-        }
+        $actualCount = count($questionIds);
+        $data = new CreateSessionData(
+            mode: $data->mode,
+            source: $data->source,
+            count: $actualCount,
+            topicIds: $data->topicIds,
+            difficulties: $data->difficulties,
+            questionStatuses: $data->questionStatuses,
+            questionStatusMode: $data->questionStatusMode,
+            savedOnly: $data->savedOnly,
+            examKey: $data->examKey,
+            articles: $data->articles,
+            symptoms: $data->symptoms,
+        );
+        $timeLimit = $data->mode === SessionMode::Exam ? $actualCount * 90 : null;
 
         return DB::transaction(function () use ($user, $data, $questionIds, $timeLimit): QuestionSession {
             $session = QuestionSession::create([

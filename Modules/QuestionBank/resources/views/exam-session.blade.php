@@ -34,7 +34,8 @@
         notesOpen: false,
         calculatorOpen: false,
         mobileNav: false,
-        toastDismissed: false,
+        warningVisible: false,
+        warningLabel: '',
         flagged: @js((bool) $flagged),
         noteText: @js($note),
         annotationSaving: false,
@@ -53,16 +54,59 @@
         calculatorWaiting: false,
         calculatorError: false,
         _clock: null,
+        _warningTimeout: null,
         init() {
+            this.maybeShowTimeWarning();
             this._clock = setInterval(() => {
                 this.elapsed++;
                 if (this.remaining === null) return;
                 this.remaining = Math.max(0, this.remaining - 1);
+                this.maybeShowTimeWarning();
                 if (this.remaining === 0) {
                     clearInterval(this._clock);
+                    this.warningVisible = false;
                     this.saveCurrent().finally(() => this.$refs.finishForm?.submit());
                 }
             }, 1000);
+        },
+        destroy() {
+            clearInterval(this._clock);
+            clearTimeout(this._warningTimeout);
+        },
+        maybeShowTimeWarning() {
+            if (this.remaining === null || this.remaining <= 0) return;
+
+            const warnings = {
+                300: 'Còn 5 phút!',
+                240: 'Còn 4 phút!',
+                180: 'Còn 3 phút!',
+                30: 'Còn 30 giây!',
+                15: 'Còn 15 giây!',
+            };
+            const threshold = Object.keys(warnings)
+                .map(Number)
+                .find((seconds) => this.remaining <= seconds && this.remaining > seconds - 10);
+
+            if (threshold === undefined) return;
+
+            const storageKey = `qbank-exam-warning-{{ $session->getKey() }}-${threshold}`;
+            try {
+                if (sessionStorage.getItem(storageKey)) return;
+                sessionStorage.setItem(storageKey, 'shown');
+            } catch (error) {
+                // The warning still works when browser storage is unavailable.
+            }
+
+            this.warningLabel = warnings[threshold];
+            this.warningVisible = true;
+            clearTimeout(this._warningTimeout);
+            this._warningTimeout = setTimeout(() => {
+                this.warningVisible = false;
+            }, 10000);
+        },
+        dismissTimeWarning() {
+            this.warningVisible = false;
+            clearTimeout(this._warningTimeout);
         },
         formatTime(seconds) {
             const value = Math.max(0, Number(seconds || 0));
@@ -284,9 +328,9 @@
                     class="rounded-full p-2 text-on-surface-variant transition-colors hover:bg-surface-variant hover:text-primary">
                     <span class="material-symbols-outlined">calculate</span>
                 </button>
-                <button type="button" @click="notesOpen = true" title="Ghi chú"
+                <button type="button" @click="notesOpen = true" title="Ghi chú" aria-label="Mở ghi chú"
                     class="rounded-full p-2 text-on-surface-variant transition-colors hover:bg-surface-variant">
-                    <span class="material-symbols-outlined">more_vert</span>
+                    <span class="material-symbols-outlined">description</span>
                 </button>
                 <button type="button" @click="requestExit()"
                     class="ml-1 rounded-lg bg-error px-3 py-2 font-label-md text-white transition-colors hover:bg-red-700 sm:ml-2 sm:px-5">
@@ -509,15 +553,15 @@
             </section>
         </div>
 
-        <div x-show="remaining !== null && remaining > 0 && remaining <= 300 && !toastDismissed" x-cloak
+        <div x-show="warningVisible" x-cloak x-transition.opacity
             class="animate-toast fixed bottom-20 left-4 z-[60] md:right-80 md:left-auto md:mr-8">
             <div class="flex items-center gap-3 rounded-xl border border-tertiary/20 bg-tertiary-container px-5 py-3 text-on-tertiary-container shadow-lg">
                 <span class="material-symbols-outlined text-tertiary">warning</span>
                 <div>
-                    <p class="font-label-md font-bold">Còn 5 phút!</p>
+                    <p class="font-label-md font-bold" x-text="warningLabel"></p>
                     <p class="text-xs opacity-90">Vui lòng kiểm tra lại các câu chưa trả lời.</p>
                 </div>
-                <button type="button" class="ml-2 hover:opacity-70" @click="toastDismissed = true">
+                <button type="button" class="ml-2 hover:opacity-70" @click="dismissTimeWarning()">
                     <span class="material-symbols-outlined text-sm">close</span>
                 </button>
             </div>

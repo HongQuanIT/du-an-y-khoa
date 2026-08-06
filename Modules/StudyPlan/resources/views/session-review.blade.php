@@ -137,8 +137,8 @@
                                 <span class="font-bold"
                                     :class="active === item.index ? 'text-primary' : 'text-on-surface'"
                                     x-text="item.id"></span>
-                                <span class="material-symbols-outlined text-lg" :class="item.iconClass"
-                                    x-bind:style="item.result !== 'skipped' ? \"font-variation-settings: 'FILL' 1\" : null"
+                                <span class="material-symbols-outlined text-lg"
+                                    :class="[item.iconClass, item.result !== 'skipped' && 'fill-1']"
                                     x-text="item.icon"></span>
                                 <span x-show="item.hasNote" x-cloak
                                     class="material-symbols-outlined text-[16px] text-primary"

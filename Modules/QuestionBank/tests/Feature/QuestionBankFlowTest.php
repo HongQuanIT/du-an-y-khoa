@@ -79,6 +79,9 @@ final class QuestionBankFlowTest extends TestCase
             ->assertSee('Rất dễ')
             ->assertSee('Rất khó')
             ->assertSee('name="difficulties[]"', false)
+            ->assertSee('1 phút 30 giây mỗi câu')
+            ->assertSee(':max="Math.max(1, questionLimit())"', false)
+            ->assertDontSee('name="time_limit_minutes"', false)
             ->assertDontSeeText('const difficulty = form.querySelector');
 
         $this->assertStringContainsString(
@@ -141,6 +144,7 @@ final class QuestionBankFlowTest extends TestCase
         $this->assertSame(['abcde-approach', 'sepsis'], $session->filters['articles']);
         $this->assertSame(['chest-pain', 'dyspnea'], $session->filters['symptoms']);
         $this->assertSame(2, $session->total);
+        $this->assertSame(2, $session->filters['count']);
     }
 
     public function test_builder_combines_multiple_difficulty_levels(): void
@@ -341,10 +345,10 @@ final class QuestionBankFlowTest extends TestCase
 
         $payload = $this->sessionPayload(count: 2, difficulty: Difficulty::Hard);
         $payload['mode'] = SessionMode::Exam->value;
-        $payload['time_limit_minutes'] = 30;
 
         $this->actingAs($this->user)->post(route('qbank.store'), $payload)->assertRedirect();
         $session = QuestionSession::firstOrFail();
+        $this->assertSame(180, $session->time_limit_seconds);
         $firstSessionQuestion = Question::findOrFail($session->question_ids[0]);
 
         $this->actingAs($this->user)
@@ -360,7 +364,14 @@ final class QuestionBankFlowTest extends TestCase
             ])
             ->assertSee('data-testid="exam-calculator-trigger"', false)
             ->assertSee('data-testid="exam-calculator"', false)
+            ->assertSee('aria-label="Mở ghi chú"', false)
             ->assertSee('Có thể sử dụng bàn phím số')
+            ->assertSee("300: 'Còn 5 phút!'", false)
+            ->assertSee("240: 'Còn 4 phút!'", false)
+            ->assertSee("180: 'Còn 3 phút!'", false)
+            ->assertSee("30: 'Còn 30 giây!'", false)
+            ->assertSee("15: 'Còn 15 giây!'", false)
+            ->assertSee('}, 10000);', false)
             ->assertSee($firstSessionQuestion->stem);
 
         $this->actingAs($this->user)
