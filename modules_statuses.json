@@ -13,5 +13,6 @@
     "Account": true,
     "AiAssistant": true,
     "Admin": true,
-    "Landing": true
+    "Landing": true,
+    "Classroom": true
 }

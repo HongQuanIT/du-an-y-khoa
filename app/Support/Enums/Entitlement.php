@@ -20,4 +20,5 @@ enum Entitlement: string
     case AnalyticsAdvanced = 'analytics.advanced';
     case ExamSimulation = 'exam.simulation';
     case OfflineDownload = 'offline.download';
+    case ClassroomHost = 'classroom.host';
 }

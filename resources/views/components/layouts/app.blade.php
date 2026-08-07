@@ -8,6 +8,7 @@
         ['label' => 'Thư viện', 'icon' => 'library_books', 'route' => null],
         ['label' => 'Flashcards', 'icon' => 'style', 'route' => 'flashcards.index', 'match' => 'flashcards.*'],
         ['label' => 'Kế hoạch học tập', 'icon' => 'event_note', 'route' => 'study-plan.index', 'match' => 'study-plan.*'],
+        ['label' => 'Classroom', 'icon' => 'cast_for_education', 'route' => 'classroom.index', 'match' => 'classroom.*'],
         ['label' => 'Phân tích', 'icon' => 'analytics', 'route' => null],
         ['label' => 'Kỳ thi', 'icon' => 'assignment', 'route' => null],
     ];

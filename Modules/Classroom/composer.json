@@ -1,0 +1,28 @@
+{
+    "name": "medlearn/classroom",
+    "description": "Classroom / Live Review module",
+    "authors": [
+        {
+            "name": "MedLearn Team",
+            "email": "dev@medlearn.local"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {}
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\Classroom\\": "app/",
+            "Modules\\Classroom\\Database\\Factories\\": "database/factories/",
+            "Modules\\Classroom\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Classroom\\Tests\\": "tests/"
+        }
+    }
+}

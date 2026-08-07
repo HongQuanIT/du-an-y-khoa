@@ -52,7 +52,14 @@ class User extends Authenticatable
         }
 
         // Billing module resolves these from the active subscription/plan.
-        return [];
+        $entitlements = [];
+
+        // Dev/local: allow hosting classrooms before Billing plans grant Premium.
+        if (config('classroom.open_hosting')) {
+            $entitlements[] = Entitlement::ClassroomHost->value;
+        }
+
+        return array_values(array_unique($entitlements));
     }
 
     public function hasEntitlement(string $entitlement): bool

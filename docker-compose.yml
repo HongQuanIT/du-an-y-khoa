@@ -163,6 +163,23 @@ services:
     networks:
       - medlearn
 
+  # --------------------- LiveKit SFU (Classroom livestream) ----------------
+  # Self-host WebRTC — no LiveKit Cloud. Browser → ws://localhost:7880
+  # node_ip in livekit.yaml must be reachable from the browser (127.0.0.1 for local).
+  # Keys in docker/livekit/livekit.yaml MUST match LIVEKIT_API_KEY/SECRET in .env
+  livekit:
+    image: livekit/livekit-server:v1.8.4
+    command: --config /etc/livekit.yaml --bind 0.0.0.0
+    ports:
+      - "${FORWARD_LIVEKIT_PORT:-7880}:7880"
+      - "${FORWARD_LIVEKIT_RTC_TCP_PORT:-7881}:7881"
+      - "${FORWARD_LIVEKIT_RTC_UDP_PORT:-7882}:7882/udp"
+    volumes:
+      - ./docker/livekit/livekit.yaml:/etc/livekit.yaml:ro
+    networks:
+      - medlearn
+    restart: unless-stopped
+
 networks:
   medlearn:
     driver: bridge
