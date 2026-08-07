@@ -1,5 +1,6 @@
 import { Livewire, Alpine } from '../../vendor/livewire/livewire/dist/livewire.esm';
-<<<<<<< HEAD
+import { bootLivekitRooms } from './classroom/livekit-room';
+import { bootLiveRooms } from './classroom/live-room';
 
 // Reverb is optional. Do not open an idle WebSocket on every page when no
 // realtime feature is enabled; this also avoids stale sockets during BFCache
@@ -9,17 +10,15 @@ if (import.meta.env.VITE_REVERB_ENABLED === 'true') {
 }
 
 // Single Alpine instance, bundled with Livewire (avoids double-registration).
-// Register Alpine plugins/components here before starting Livewire.
-// e.g. Alpine.plugin(somePlugin)
-=======
-import './echo';
-import { bootLivekitRooms } from './classroom/livekit-room';
-import { bootLiveRooms } from './classroom/live-room';
->>>>>>> 8baca02 (feat(classroom): phòng live chữa đề với LiveKit và tương tác realtime)
-
-window.Alpine = Alpine;
-
-Livewire.start();
+// Guard against Vite HMR / double-eval re-running Livewire.start(), which
+// throws: Cannot redefine property: $persist
+if (! window.__medlearnLivewireStarted) {
+    window.__medlearnLivewireStarted = true;
+    window.Alpine = Alpine;
+    Livewire.start();
+} else if (! window.Alpine) {
+    window.Alpine = Alpine;
+}
 
 const bootClassroom = () => {
     bootLivekitRooms();

@@ -2,6 +2,11 @@
 
 ## 2026-08-07
 
+### Sửa lỗi frontend phòng live sau rebase
+- Gỡ conflict marker còn sót trong `app.js` / `changelog.md` (lỗi `Unexpected token '<<'`).
+- Chỉ gọi `Livewire.start()` một lần để tránh `Cannot redefine property: $persist`.
+- Bổ sung `@livewireStyles` / `@livewireScriptConfig` cho layout live.
+
 ### Module Classroom — Live chữa đề (LiveKit)
 - Thêm module Classroom: tạo/tham gia lớp, lịch buổi live, phòng full-bleed với LiveKit (cam/mic/share).
 - Chat realtime (Reverb), lọc “Chỉ hỏi”, tắt/bật chat, giơ tay có hàng đợi + âm thanh, reaction tim/like bay kiểu Meet.
@@ -18,8 +23,7 @@
 - Tự tính thời gian thi theo 90 giây mỗi câu và giới hạn số câu theo đúng tập câu khớp bộ lọc.
 - Cảnh báo thời gian tại các mốc 5, 4, 3 phút, 30 và 15 giây; đổi nút ba chấm thành biểu tượng ghi chú.
 - Sửa biểu thức Alpine ở phiên Study Plan; chỉ khởi tạo Reverb khi bật cấu hình và xử lý kết nối khi dùng BFCache.
-=======
-=======
+
 ### check.php — JSON output và kiểm tra chặt hơn
 - Hỗ trợ `?format=json` / `--json`; load `.env` thống nhất cho CLI và web.
 - Bổ sung kiểm tra PHP 8.4 khuyến nghị, mask secret, security token; cập nhật mục `deploy-production.md`.

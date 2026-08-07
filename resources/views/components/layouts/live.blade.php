@@ -11,6 +11,7 @@
 
     @fonts
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @livewireStyles
 </head>
 
 <body class="flex h-[100dvh] flex-col overflow-hidden bg-on-surface text-white">
@@ -49,6 +50,8 @@
     <main class="flex min-h-0 flex-1 flex-col overflow-hidden">
         {{ $slot }}
     </main>
+
+    @livewireScriptConfig
 </body>
 
 </html>
