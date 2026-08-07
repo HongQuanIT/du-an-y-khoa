@@ -896,6 +896,34 @@ final class QuestionBankFlowTest extends TestCase
         return $question;
     }
 
+    public function test_empty_active_session_does_not_redirect_loop_with_summary(): void
+    {
+        $session = QuestionSession::create([
+            'user_id' => $this->user->id,
+            'mode' => SessionMode::Study,
+            'status' => SessionStatus::Active,
+            'source' => 'custom',
+            'filters' => ['status' => 'unseen'],
+            'question_ids' => [],
+            'total' => 0,
+            'answered_count' => 3,
+            'correct_count' => 0,
+            'paused_state' => ['current_index' => 3],
+        ]);
+
+        $this->actingAs($this->user)
+            ->get(route('qbank.session', $session))
+            ->assertRedirect(route('qbank.index'));
+
+        $this->actingAs($this->user)
+            ->get(route('qbank.summary', $session))
+            ->assertRedirect(route('qbank.index'));
+
+        $this->actingAs($this->user)
+            ->get(route('qbank.review', $session))
+            ->assertRedirect(route('qbank.index'));
+    }
+
     /**
      * @param  list<string>  $examKeys
      * @param  list<string>  $articleKeys

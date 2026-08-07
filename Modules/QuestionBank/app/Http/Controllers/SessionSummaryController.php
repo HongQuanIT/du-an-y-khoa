@@ -21,6 +21,13 @@ final class SessionSummaryController extends Controller
         $this->authorize('view', $session);
 
         if ($session->status !== SessionStatus::Completed) {
+            // Avoid bouncing with StudySessionController when question_ids is empty.
+            if (($session->question_ids ?? []) === []) {
+                return redirect()
+                    ->route('qbank.index')
+                    ->with('status', 'Phiên này không còn câu hỏi để phân tích. Hãy tạo phiên mới.');
+            }
+
             return redirect()->route('qbank.session', $session);
         }
 
