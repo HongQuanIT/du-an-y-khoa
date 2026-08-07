@@ -3,11 +3,13 @@
 /**
  * MedLearn — Production environment checker.
  *
- * Truy cập: https://domain/check.php?token=YOUR_SECRET
- * Hoặc CLI: php public/check.php
+ * Web:  https://domain/check.php?token=YOUR_SECRET
+ *       https://domain/check.php?token=YOUR_SECRET&format=json
+ * CLI:  php public/check.php
+ *       php public/check.php --json
  *
- * Bảo vệ: đặt CHECK_TOKEN trong môi trường / .env (hoặc truyền ?token=).
- * XÓA hoặc đổi tên file này sau khi kiểm tra xong trên production.
+ * Bảo vệ: đặt CHECK_TOKEN mạnh trong .env (đổi giá trị mặc định trước khi deploy).
+ * XÓA file này ngay sau khi kiểm tra xong trên production.
  */
 
 declare(strict_types=1);
@@ -17,28 +19,43 @@ declare(strict_types=1);
 // ---------------------------------------------------------------------------
 
 $isCli = PHP_SAPI === 'cli';
+$wantJson = $isCli
+    ? in_array('--json', $argv ?? [], true)
+    : isset($_GET['format']) && strtolower((string) $_GET['format']) === 'json';
+
+$root = dirname(__DIR__);
 $envToken = getenv('CHECK_TOKEN') ?: ($_ENV['CHECK_TOKEN'] ?? null);
 
-if (! $isCli) {
-    // Load .env nhẹ nếu có (không bootstrap Laravel).
-    $envFile = dirname(__DIR__).'/.env';
-    if (is_readable($envFile) && $envToken === null) {
-        foreach (file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
-            if (str_starts_with(trim($line), '#') || ! str_contains($line, '=')) {
-                continue;
-            }
-            [$k, $v] = explode('=', $line, 2);
-            $k = trim($k);
-            $v = trim($v, " \t\"'");
-            if ($k === 'CHECK_TOKEN') {
-                $envToken = $v;
-            }
-            if (! array_key_exists($k, $_ENV)) {
-                $_ENV[$k] = $v;
-            }
-        }
+/**
+ * Load .env lightly (no Laravel bootstrap).
+ */
+function load_dotenv(string $path): void
+{
+    if (! is_readable($path)) {
+        return;
     }
 
+    foreach (file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+        $line = trim($line);
+        if ($line === '' || str_starts_with($line, '#') || ! str_contains($line, '=')) {
+            continue;
+        }
+        [$k, $v] = explode('=', $line, 2);
+        $k = trim($k);
+        $v = trim($v, " \t\"'");
+        if (! array_key_exists($k, $_ENV)) {
+            $_ENV[$k] = $v;
+        }
+        if (getenv($k) === false) {
+            putenv("{$k}={$v}");
+        }
+    }
+}
+
+load_dotenv($root.'/.env');
+$envToken = $envToken ?: ($_ENV['CHECK_TOKEN'] ?? null);
+
+if (! $isCli) {
     $provided = $_GET['token'] ?? $_SERVER['HTTP_X_CHECK_TOKEN'] ?? '';
     $expected = $envToken ?: 'medlearn-check-change-me';
 
@@ -74,27 +91,15 @@ function env_val(string $key, ?string $default = null): ?string
     return (string) $v;
 }
 
-function bytes_to_human(int $bytes): string
-{
-    $u = ['B', 'KB', 'MB', 'GB'];
-    $i = 0;
-    $n = (float) $bytes;
-    while ($n >= 1024 && $i < count($u) - 1) {
-        $n /= 1024;
-        $i++;
-    }
-
-    return round($n, 1).' '.$u[$i];
-}
-
 function parse_size(string $val): int
 {
     $val = trim($val);
-    if ($val === '') {
-        return 0;
+    if ($val === '' || $val === '-1') {
+        return PHP_INT_MAX;
     }
     $unit = strtolower(substr($val, -1));
     $num = (float) $val;
+
     return (int) match ($unit) {
         'g' => $num * 1024 * 1024 * 1024,
         'm' => $num * 1024 * 1024,
@@ -103,32 +108,60 @@ function parse_size(string $val): int
     };
 }
 
-$root = dirname(__DIR__);
+function bytes_to_human(int $bytes): string
+{
+    $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    $i = 0;
+    $n = (float) $bytes;
+    while ($n >= 1024 && $i < count($units) - 1) {
+        $n /= 1024;
+        $i++;
+    }
+
+    return round($n, 1).' '.$units[$i];
+}
+
+function mask_secret(?string $value): string
+{
+    if ($value === null || $value === '') {
+        return 'MISSING';
+    }
+
+    return '*** ('.strlen($value).' chars)';
+}
 
 // ---------------------------------------------------------------------------
 // 1. PHP runtime
 // ---------------------------------------------------------------------------
 
-$phpOk = version_compare(PHP_VERSION, '8.3.0', '>=');
-check('PHP', 'Phiên bản PHP ≥ 8.3', $phpOk, 'Hiện tại: '.PHP_VERSION.' (khuyến nghị 8.4)', true);
+$phpMinOk = version_compare(PHP_VERSION, '8.3.0', '>=');
+check('PHP', 'Phiên bản PHP ≥ 8.3', $phpMinOk, 'Hiện tại: '.PHP_VERSION, true);
+
+$phpRecOk = version_compare(PHP_VERSION, '8.4.0', '>=');
+check('PHP', 'Phiên bản PHP ≥ 8.4 (khuyến nghị)', $phpRecOk, 'Hiện tại: '.PHP_VERSION.' — khớp Dockerfile prod', false);
+
 check('PHP', 'SAPI', true, PHP_SAPI.' · '.php_uname('s').' '.php_uname('m'), false);
-check('PHP', 'Timezone', date_default_timezone_get() !== '', 'date.timezone = '.ini_get('date.timezone').' · runtime = '.date_default_timezone_get(), false);
+
+$tz = ini_get('date.timezone') ?: date_default_timezone_get();
+check('PHP', 'Timezone', $tz !== '' && $tz !== 'UTC' || $tz === 'UTC', "date.timezone={$tz}", false);
 
 $memory = ini_get('memory_limit');
-$memoryOk = $memory === '-1' || parse_size($memory) >= 256 * 1024 * 1024;
+$memoryOk = parse_size((string) $memory) >= 256 * 1024 * 1024;
 check('PHP', 'memory_limit ≥ 256M', $memoryOk, "Hiện tại: {$memory} (khuyến nghị 512M)", true);
 
 $upload = ini_get('upload_max_filesize');
 $post = ini_get('post_max_size');
-$uploadOk = parse_size($upload) >= 32 * 1024 * 1024;
-check('PHP', 'upload_max_filesize ≥ 32M', $uploadOk, "upload_max_filesize={$upload}, post_max_size={$post} (khuyến nghị 64M / 68M)", false);
+$uploadOk = parse_size((string) $upload) >= 32 * 1024 * 1024;
+check('PHP', 'upload_max_filesize ≥ 32M', $uploadOk, "upload={$upload}, post={$post} (khuyến nghị 64M/68M)", false);
 
 $exec = (int) ini_get('max_execution_time');
-check('PHP', 'max_execution_time', $exec === 0 || $exec >= 60, "Hiện tại: {$exec}s", false);
-check('PHP', 'expose_php = Off', strtolower((string) ini_get('expose_php')) === '0' || ini_get('expose_php') === '' || ini_get('expose_php') === 'Off', 'expose_php='.var_export(ini_get('expose_php'), true), false);
+check('PHP', 'max_execution_time ≥ 60 hoặc 0', $exec === 0 || $exec >= 60, "Hiện tại: {$exec}s", false);
+
+$exposeOff = in_array(strtolower((string) ini_get('expose_php')), ['0', 'off', ''], true);
+check('PHP', 'expose_php = Off', $exposeOff, 'expose_php='.var_export(ini_get('expose_php'), true), false);
 
 // ---------------------------------------------------------------------------
-// 2. Extensions (khớp docker/php/Dockerfile + Laravel)
+// 2. Extensions (khớp docker/php/Dockerfile + Laravel core)
 // ---------------------------------------------------------------------------
 
 $requiredExt = [
@@ -136,30 +169,32 @@ $requiredExt = [
     'pdo_mysql' => 'MySQL driver',
     'mbstring' => 'Multibyte strings',
     'openssl' => 'TLS / encryption',
-    'tokenizer' => 'Laravel blade/compiler',
+    'tokenizer' => 'Blade / compiler',
     'xml' => 'XML parsing',
     'ctype' => 'Character type checks',
-    'json' => 'JSON',
+    'json' => 'JSON encode/decode',
     'fileinfo' => 'MIME detection',
-    'curl' => 'HTTP client',
+    'curl' => 'HTTP client (Meilisearch, webhooks)',
     'bcmath' => 'Billing / precision math',
     'intl' => 'i18n / collation',
-    'zip' => 'Archives',
-    'gd' => 'Image processing (thumbnails)',
+    'zip' => 'Archives / exports',
+    'gd' => 'Image thumbnails',
     'exif' => 'Image metadata',
-    'redis' => 'phpredis (cache/queue/session)',
-    'pcntl' => 'Horizon / Reverb / queue signals',
+    'redis' => 'phpredis — cache/queue/session',
+    'pcntl' => 'Horizon / Reverb / queue signals (CLI)',
 ];
 
 $optionalExt = [
-    'opcache' => 'OPcache (bắt buộc khuyến nghị production)',
+    'opcache' => 'OPcache — bắt buộc khuyến nghị trên production FPM',
     'sodium' => 'Modern crypto',
     'imagick' => 'Advanced image processing',
 ];
 
 foreach ($requiredExt as $ext => $label) {
     $loaded = extension_loaded($ext);
-    check('Extension (bắt buộc)', "{$ext} — {$label}", $loaded, $loaded ? 'loaded' : 'MISSING', true);
+    // pcntl thường không có trên PHP-FPM web SAPI — chỉ cảnh báo, không fail cứng.
+    $required = $ext !== 'pcntl' || $isCli;
+    check('Extension (bắt buộc)', "{$ext} — {$label}", $loaded || ($ext === 'pcntl' && ! $isCli), $loaded ? 'loaded' : ($ext === 'pcntl' ? 'OK trên FPM (cần trên CLI cho Horizon)' : 'MISSING'), $required);
 }
 
 foreach ($optionalExt as $ext => $label) {
@@ -168,17 +203,18 @@ foreach ($optionalExt as $ext => $label) {
 }
 
 if (extension_loaded('opcache')) {
-    $opEnabled = (bool) ini_get('opcache.enable');
+    $opEnabled = filter_var(ini_get('opcache.enable'), FILTER_VALIDATE_BOOL);
     $validate = (string) ini_get('opcache.validate_timestamps');
     check('OPcache', 'opcache.enable = 1', $opEnabled, 'opcache.enable='.var_export(ini_get('opcache.enable'), true), false);
     check(
         'OPcache',
-        'opcache.validate_timestamps = 0 (prod)',
+        'opcache.validate_timestamps = 0 (production)',
         $validate === '0',
-        "Hiện tại: {$validate} — production nên = 0 và warm cache sau deploy",
+        "Hiện tại: {$validate} — production nên = 0, reload FPM sau deploy",
         false
     );
-    check('OPcache', 'memory_consumption', true, ini_get('opcache.memory_consumption').' MB', false);
+    check('OPcache', 'memory_consumption', true, (string) ini_get('opcache.memory_consumption').' MB', false);
+    check('OPcache', 'max_accelerated_files', true, (string) ini_get('opcache.max_accelerated_files'), false);
 }
 
 // ---------------------------------------------------------------------------
@@ -188,6 +224,7 @@ if (extension_loaded('opcache')) {
 $paths = [
     'storage' => $root.'/storage',
     'storage/app' => $root.'/storage/app',
+    'storage/app/public' => $root.'/storage/app/public',
     'storage/framework' => $root.'/storage/framework',
     'storage/framework/cache' => $root.'/storage/framework/cache',
     'storage/framework/sessions' => $root.'/storage/framework/sessions',
@@ -203,53 +240,54 @@ foreach ($paths as $label => $path) {
     check('Filesystem', "{$label} tồn tại + writable", $writable, $exists ? ($writable ? $path : "không ghi được: {$path}") : "không tồn tại: {$path}", true);
 }
 
+$envPath = $root.'/.env';
+$envExists = is_file($envPath);
+check('Filesystem', '.env tồn tại', $envExists, $envExists ? $envPath : 'Copy từ .env.example', true);
+
+if ($envExists) {
+    $perms = fileperms($envPath) & 0777;
+    $permOk = ($perms & 0o077) === 0 || $perms === 0o600 || $perms === 0o640;
+    check('Filesystem', '.env không world-readable', $permOk, sprintf('mode=%o (khuyến nghị 600)', $perms), false);
+}
+
 $publicStorage = $root.'/public/storage';
 $linkOk = is_link($publicStorage) || is_dir($publicStorage);
 check('Filesystem', 'public/storage (storage:link)', $linkOk, $linkOk ? 'OK' : 'Chạy: php artisan storage:link', false);
 
 $vendor = is_dir($root.'/vendor') && is_file($root.'/vendor/autoload.php');
-check('Filesystem', 'vendor/ (composer install)', $vendor, $vendor ? 'OK' : 'Chạy: composer install --no-dev --optimize-autoloader', true);
+check('Filesystem', 'vendor/ (composer install)', $vendor, $vendor ? 'OK' : 'composer install --no-dev --optimize-autoloader', true);
 
 $buildManifest = is_file($root.'/public/build/manifest.json');
-check('Filesystem', 'public/build/manifest.json (Vite)', $buildManifest, $buildManifest ? 'OK' : 'Chạy: npm ci && npm run build', true);
+check('Filesystem', 'public/build/manifest.json (Vite build)', $buildManifest, $buildManifest ? 'OK' : 'npm ci && npm run build', true);
 
-$envExists = is_file($root.'/.env');
-check('Filesystem', '.env tồn tại', $envExists, $envExists ? 'OK' : 'Copy từ .env.example và cấu hình production', true);
+// Disk space on storage partition
+$freeBytes = @disk_free_space($root.'/storage');
+if ($freeBytes !== false) {
+    $freeOk = $freeBytes >= 2 * 1024 * 1024 * 1024; // ≥ 2 GB
+    check('Filesystem', 'Disk trống ≥ 2 GB (storage)', $freeOk, bytes_to_human((int) $freeBytes).' free', false);
+}
 
-// Document root hint
-$docRoot = $_SERVER['DOCUMENT_ROOT'] ?? '';
-if ($docRoot !== '') {
-    $expectedPublic = realpath($root.'/public') ?: ($root.'/public');
-    $docReal = realpath($docRoot) ?: $docRoot;
-    check(
-        'Web server',
-        'Document root = public/',
-        $docReal === $expectedPublic,
-        "DOCUMENT_ROOT={$docReal} · expected={$expectedPublic}",
-        true
-    );
+// Document root (web only)
+if (! $isCli) {
+    $docRoot = $_SERVER['DOCUMENT_ROOT'] ?? '';
+    if ($docRoot !== '') {
+        $expectedPublic = realpath($root.'/public') ?: ($root.'/public');
+        $docReal = realpath($docRoot) ?: $docRoot;
+        check(
+            'Web server',
+            'Document root = public/',
+            $docReal === $expectedPublic,
+            "DOCUMENT_ROOT={$docReal} · expected={$expectedPublic}",
+            true
+        );
+    }
 }
 
 // ---------------------------------------------------------------------------
-// 4. Application env (nếu có .env)
+// 4. Application env
 // ---------------------------------------------------------------------------
 
 if ($envExists) {
-    // Ensure .env loaded for CLI too
-    if ($isCli) {
-        foreach (file($root.'/.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
-            if (str_starts_with(trim($line), '#') || ! str_contains($line, '=')) {
-                continue;
-            }
-            [$k, $v] = explode('=', $line, 2);
-            $k = trim($k);
-            $v = trim($v, " \t\"'");
-            if (! array_key_exists($k, $_ENV)) {
-                $_ENV[$k] = $v;
-            }
-        }
-    }
-
     $appEnv = env_val('APP_ENV', 'unknown');
     $appDebug = strtolower((string) env_val('APP_DEBUG', 'false'));
     $appKey = env_val('APP_KEY', '');
@@ -257,23 +295,46 @@ if ($envExists) {
 
     check('App config', 'APP_ENV = production', $appEnv === 'production', "APP_ENV={$appEnv}", false);
     check('App config', 'APP_DEBUG = false', in_array($appDebug, ['false', '0', ''], true), "APP_DEBUG={$appDebug}", $appEnv === 'production');
-    check('App config', 'APP_KEY đã set', $appKey !== null && $appKey !== '' && $appKey !== 'base64:', "APP_KEY ".($appKey ? 'present ('.strlen($appKey).' chars)' : 'EMPTY'), true);
-    check('App config', 'APP_URL đã set', $appUrl !== null && $appUrl !== '', "APP_URL={$appUrl}", true);
+    check('App config', 'APP_KEY đã set', $appKey !== '' && $appKey !== 'base64:', mask_secret($appKey), true);
+    check('App config', 'APP_URL đã set', $appUrl !== '', "APP_URL={$appUrl}", true);
 
-    $requiredEnv = [
+    $checkToken = env_val('CHECK_TOKEN', '');
+    $defaultTokens = ['medlearn-check-change-me', 'CHANGE_ME_LONG_RANDOM_TOKEN', ''];
+    $tokenStrong = $checkToken !== '' && ! in_array($checkToken, $defaultTokens, true);
+    check('Security', 'CHECK_TOKEN đã đổi (không dùng mặc định)', $tokenStrong, $tokenStrong ? mask_secret($checkToken) : 'Đổi CHECK_TOKEN trong .env trước khi mở check.php', false);
+
+    $coreEnv = [
         'DB_CONNECTION', 'DB_HOST', 'DB_DATABASE', 'DB_USERNAME', 'DB_PASSWORD',
         'REDIS_HOST', 'CACHE_STORE', 'QUEUE_CONNECTION', 'SESSION_DRIVER',
         'SCOUT_DRIVER', 'MEILISEARCH_HOST', 'MEILISEARCH_KEY',
         'FILESYSTEM_DISK',
     ];
-    foreach ($requiredEnv as $key) {
+    foreach ($coreEnv as $key) {
         $v = env_val($key);
-        check('App config', "{$key}", $v !== null && $v !== '', $v !== null && $v !== '' ? (str_contains(strtolower($key), 'password') || str_contains(strtolower($key), 'key') || str_contains(strtolower($key), 'secret') ? '***' : $v) : 'MISSING', true);
+        $isSecret = str_contains(strtolower($key), 'password')
+            || str_contains(strtolower($key), 'key')
+            || str_contains(strtolower($key), 'secret');
+        check('App config', $key, $v !== null && $v !== '', $v ? ($isSecret ? mask_secret($v) : $v) : 'MISSING', true);
+    }
+
+    $broadcast = env_val('BROADCAST_CONNECTION', '');
+    check('App config', 'BROADCAST_CONNECTION', $broadcast !== '', "BROADCAST_CONNECTION={$broadcast}", false);
+
+    $reverbKeys = ['REVERB_APP_ID', 'REVERB_APP_KEY', 'REVERB_APP_SECRET', 'REVERB_HOST'];
+    foreach ($reverbKeys as $key) {
+        $v = env_val($key);
+        check('Reverb / WS', $key, $v !== null && $v !== '', mask_secret($v), false);
+    }
+
+    // Production cache files (after optimize)
+    if ($appEnv === 'production') {
+        $cachedConfig = is_file($root.'/bootstrap/cache/config.php');
+        check('Laravel cache', 'bootstrap/cache/config.php', $cachedConfig, $cachedConfig ? 'OK — đã config:cache' : 'Chạy: php artisan config:cache', false);
     }
 }
 
 // ---------------------------------------------------------------------------
-// 5. Connectivity (best-effort, không fail cứng nếu extension thiếu)
+// 5. Connectivity
 // ---------------------------------------------------------------------------
 
 $dbHost = env_val('DB_HOST');
@@ -290,12 +351,14 @@ if ($dbHost && extension_loaded('pdo_mysql')) {
             PDO::ATTR_TIMEOUT => 5,
         ]);
         $ver = (string) $pdo->query('SELECT VERSION()')->fetchColumn();
-        check('Connectivity', 'MySQL kết nối', true, "Server: {$ver}", true);
+        $mysqlOk = version_compare($ver, '8.0.0', '>=');
+        check('Connectivity', 'MySQL kết nối', true, "Server {$ver}", true);
+        check('Connectivity', 'MySQL ≥ 8.0', $mysqlOk, "Version: {$ver}", false);
     } catch (Throwable $e) {
         check('Connectivity', 'MySQL kết nối', false, $e->getMessage(), true);
     }
 } else {
-    check('Connectivity', 'MySQL kết nối', false, 'Thiếu DB_* hoặc pdo_mysql', false);
+    check('Connectivity', 'MySQL kết nối', false, 'Thiếu DB_* hoặc ext-pdo_mysql', false);
 }
 
 $redisHost = env_val('REDIS_HOST');
@@ -328,37 +391,22 @@ if ($meiliHost) {
     check('Connectivity', 'Meilisearch /health', $ok, $ok ? $url : ($body === false ? "unreachable: {$url}" : "unexpected: {$body}"), true);
 }
 
-$awsEndpoint = env_val('AWS_ENDPOINT');
 $filesystemDisk = env_val('FILESYSTEM_DISK', 'local');
-if ($filesystemDisk === 's3' && $awsEndpoint && function_exists('curl_init')) {
-    $ch = curl_init(rtrim($awsEndpoint, '/'));
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 3,
-        CURLOPT_CONNECTTIMEOUT => 2,
-        CURLOPT_NOBODY => true,
-    ]);
-    curl_exec($ch);
-    $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $err = curl_error($ch);
-    curl_close($ch);
-    // S3 có thể trả 403/400 khi HEAD root — quan trọng là TCP/HTTP phản hồi.
-    check('Connectivity', 'S3 endpoint reachable', $code > 0, $code > 0 ? "HTTP {$code} @ {$awsEndpoint}" : ($err ?: 'no response'), false);
-} else {
-    $storageRoot = dirname(__DIR__).'/storage/app';
+if ($filesystemDisk === 'local') {
+    $storageRoot = $root.'/storage/app';
     $writable = is_dir($storageRoot) && is_writable($storageRoot);
     check('Connectivity', 'Local storage writable', $writable, $writable ? $storageRoot : "not writable: {$storageRoot}", true);
 }
 
 // ---------------------------------------------------------------------------
-// 6. Process / binary hints
+// 6. CLI tools (informational)
 // ---------------------------------------------------------------------------
 
-$binaries = ['composer' => false, 'node' => false, 'npm' => false, 'mysql' => false, 'redis-cli' => false];
-foreach (array_keys($binaries) as $bin) {
-    $which = trim((string) shell_exec('command -v '.escapeshellarg($bin).' 2>/dev/null'));
-    $binaries[$bin] = $which !== '';
-    check('CLI tools', $bin, $binaries[$bin], $binaries[$bin] ? $which : 'not in PATH', false);
+if ($isCli) {
+    foreach (['composer', 'node', 'npm', 'mysql', 'redis-cli'] as $bin) {
+        $which = trim((string) shell_exec('command -v '.escapeshellarg($bin).' 2>/dev/null'));
+        check('CLI tools', $bin, $which !== '', $which !== '' ? $which : 'not in PATH', false);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -377,12 +425,31 @@ foreach ($checks as $c) {
         $optionalFail++;
     }
 }
+
 $allOk = $requiredFail === 0;
 $status = $allOk ? ($optionalFail === 0 ? 'PASS' : 'PASS_WITH_WARNINGS') : 'FAIL';
 
 // ---------------------------------------------------------------------------
 // Output
 // ---------------------------------------------------------------------------
+
+if ($wantJson) {
+    if (! $isCli) {
+        header('Content-Type: application/json; charset=utf-8');
+        header('X-Robots-Tag: noindex, nofollow');
+        header('Cache-Control: no-store');
+    }
+    echo json_encode([
+        'status' => $status,
+        'php_version' => PHP_VERSION,
+        'sapi' => PHP_SAPI,
+        'required_failures' => $requiredFail,
+        'warnings' => $optionalFail,
+        'checked_at' => date('c'),
+        'checks' => $checks,
+    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)."\n";
+    exit($allOk ? 0 : 1);
+}
 
 if ($isCli) {
     echo "MedLearn environment check — {$status}\n";
@@ -394,10 +461,11 @@ if ($isCli) {
             echo "\n[{$current}]\n";
         }
         $mark = $c['ok'] ? 'OK  ' : ($c['required'] ? 'FAIL' : 'WARN');
-        echo sprintf("  [%s] %-45s %s\n", $mark, $c['name'], $c['detail']);
+        echo sprintf("  [%s] %-50s %s\n", $mark, $c['name'], $c['detail']);
     }
     echo "\n".str_repeat('=', 72)."\n";
     echo "Required failures: {$requiredFail} · Warnings: {$optionalFail}\n";
+    echo "JSON: php public/check.php --json\n";
     echo "Xóa public/check.php sau khi kiểm tra xong trên production.\n";
     exit($allOk ? 0 : 1);
 }
@@ -450,16 +518,17 @@ $statusColor = match ($status) {
 <body>
 <div class="wrap">
     <h1>MedLearn — Environment Check</h1>
-    <p class="sub">Kiểm tra PHP, extension, quyền thư mục và kết nối hạ tầng trước/sau deploy production.</p>
+    <p class="sub">Kiểm tra PHP, extension, quyền thư mục, biến môi trường và kết nối hạ tầng trước/sau deploy production.</p>
     <span class="badge"><?= htmlspecialchars($status) ?></span>
     <p class="meta">
         PHP <?= htmlspecialchars(PHP_VERSION) ?> · <?= htmlspecialchars(PHP_SAPI) ?> ·
         Required fail: <?= (int) $requiredFail ?> · Warnings: <?= (int) $optionalFail ?> ·
-        <?= htmlspecialchars(date('c')) ?>
+        <?= htmlspecialchars(date('c')) ?> ·
+        <a href="?token=<?= htmlspecialchars((string) ($_GET['token'] ?? '')) ?>&amp;format=json" style="color:#93c5fd">JSON</a>
     </p>
     <div class="alert">
-        <strong>Bảo mật:</strong> Xóa hoặc vô hiệu hóa <code>public/check.php</code> ngay sau khi kiểm tra xong.
-        Đặt <code>CHECK_TOKEN</code> mạnh trong <code>.env</code> và truy cập bằng <code>?token=...</code>.
+        <strong>Bảo mật:</strong> Xóa <code>public/check.php</code> ngay sau khi kiểm tra xong.
+        Đặt <code>CHECK_TOKEN</code> mạnh trong <code>.env</code>.
     </div>
     <?php foreach ($byGroup as $group => $items): ?>
         <section>

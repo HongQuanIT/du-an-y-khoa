@@ -1,11 +1,47 @@
 # Changelog
 
+## 2026-08-07
+
+### Sửa lỗi frontend phòng live sau rebase
+- Gỡ conflict marker còn sót trong `app.js` / `changelog.md` (lỗi `Unexpected token '<<'`).
+- Chỉ gọi `Livewire.start()` một lần để tránh `Cannot redefine property: $persist`.
+- Bổ sung `@livewireStyles` / `@livewireScriptConfig` cho layout live.
+
+### Module Classroom — Live chữa đề (LiveKit)
+- Thêm module Classroom: tạo/tham gia lớp, lịch buổi live, phòng full-bleed với LiveKit (cam/mic/share).
+- Chat realtime (Reverb), lọc “Chỉ hỏi”, tắt/bật chat, giơ tay có hàng đợi + âm thanh, reaction tim/like bay kiểu Meet.
+- Panel đề đồng bộ host/viewer, cửa sổ màn phụ presenter; tách “Chữa đề” khỏi screen-share để tránh loop.
+- Egress/VOD (HLS) tùy chọn, webhook LiveKit, entitlement `classroom.host`, Docker LiveKit + docs.
+
+### An toàn test và QBank
+- Ép `APP_ENV=testing` + SQLite in-memory trong `TestCase` để `php artisan test` không `migrate:fresh` MySQL thật.
+- Phiên QBank không còn câu hỏi redirect về index thay vì summary (tránh vòng redirect vô hạn).
+
 ## 2026-08-06
 
 ### Ổn định phiên thi và môi trường phát triển
 - Tự tính thời gian thi theo 90 giây mỗi câu và giới hạn số câu theo đúng tập câu khớp bộ lọc.
 - Cảnh báo thời gian tại các mốc 5, 4, 3 phút, 30 và 15 giây; đổi nút ba chấm thành biểu tượng ghi chú.
 - Sửa biểu thức Alpine ở phiên Study Plan; chỉ khởi tạo Reverb khi bật cấu hình và xử lý kết nối khi dùng BFCache.
+
+### check.php — JSON output và kiểm tra chặt hơn
+- Hỗ trợ `?format=json` / `--json`; load `.env` thống nhất cho CLI và web.
+- Bổ sung kiểm tra PHP 8.4 khuyến nghị, mask secret, security token; cập nhật mục `deploy-production.md`.
+
+### Deploy production — aaPanel, seed và troubleshooting
+- Bổ sung mục lục và hướng dẫn deploy qua aaPanel / Git webhook (`scripts/deploy.sh`).
+- Thêm seeding lần đầu trên production và bảng troubleshooting thường gặp.
+
+### SRS Module 44 — Classroom / Live Review
+- Thêm đặc tả lớp chữa đề livestream LiveKit (B2C), phân biệt Organization (32) B2B Phase 2.
+- Cập nhật nền tảng: tổng quan, kiến trúc, RBAC, mô hình dữ liệu, tracking, glossary, trạng thái.
+- Liên kết Videos (14), Notification (27); ghi chú phân biệt trong Organization (32).
+- Bổ sung quan hệ User ↔ Classroom trên mô hình dữ liệu; sửa tham chiếu mục 8.
+- Làm rõ Instructor/`classroom.host` trong RBAC; WebRTC trên sơ đồ kiến trúc; đồng bộ tên cột module 44.
+
+### Header public — breakpoint menu về md
+- Nav và nút đăng nhập hiện từ `md`; drawer mobile dưới `md` (trước dùng `lg`).
+- Đơn giản hóa nút menu Material Symbols; bỏ `@resize.window` đóng drawer.
 
 ### Hoàn thiện Question Bank và đồng bộ phiên học
 - Làm thật bộ lọc kỳ thi, bài viết, triệu chứng, chủ đề, trạng thái và năm mức độ khó; bổ sung dữ liệu seed 200 câu hỏi.

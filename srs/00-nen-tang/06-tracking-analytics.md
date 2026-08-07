@@ -68,6 +68,9 @@ Lưu vào `tracking_events` (insert-only) + có thể forward tới kho phân t�
 ### Notification & Engagement
 `notification_receive`, `notification_open`, `streak_continue`, `streak_break`, `reminder_click`.
 
+### Classroom / Live Review (Module 44)
+`classroom_create`, `classroom_join`, `classroom_leave`, `classroom_invite`, `live_schedule`, `live_start`, `live_join`, `live_end`, `live_chat_send`, `live_raise_hand`, `live_moderate`, `recording_ready`, `recording_play`.
+
 ## 4. Bảng thuộc tính bắt buộc theo nhóm
 
 | Nhóm event | Property bắt buộc |
@@ -79,6 +82,7 @@ Lưu vào `tracking_events` (insert-only) + có thể forward tới kho phân t�
 | content | content_type, content_id |
 | monetization | plan_id (nếu có), source (nơi bấm) |
 | ai_* | thread_id, tokens (nếu đo) |
+| classroom_* / live_* | classroom_id; live_*: thêm session_id |
 
 ## 5. Pipeline phân tích
 

@@ -77,10 +77,22 @@ docker compose restart vite
 
 ## 7) URL tham chiếu (local)
 
-- App (Nginx): `http://localhost`
+- App (Nginx): `http://localhost` (hoặc `http://localhost:${APP_PORT}` nếu đổi port)
 - Vite dev server: `http://localhost:5173`
 - Reverb WebSocket: `ws://localhost:8080`
+- **LiveKit (Classroom SFU):** `ws://localhost:7880` — xem [`docs/livekit.md`](docs/livekit.md)
 - Meilisearch: `http://localhost:7700`
 - Mailpit UI: `http://localhost:8025`
 - Adminer (MySQL UI): `http://localhost:8081`
+
+## 8) LiveKit (Classroom livestream)
+
+Self-host trong Docker — không cần tài khoản Cloud:
+
+1. Copy biến từ `.env.example` vào `.env` (khối `LIVEKIT_*`), đảm bảo key/secret khớp `docker/livekit/livekit.yaml`.
+2. `docker compose up -d livekit`
+3. `docker compose exec app php artisan config:clear`
+4. Vào Classroom → start live → UI báo LiveKit sẵn sàng.
+
+Chi tiết: [`docs/livekit.md`](docs/livekit.md).
 

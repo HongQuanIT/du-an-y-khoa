@@ -1,0 +1,11 @@
+{
+    "name": "Classroom",
+    "alias": "classroom",
+    "description": "Community live review classrooms (Module 44)",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Classroom\\Providers\\ClassroomServiceProvider"
+    ],
+    "files": []
+}

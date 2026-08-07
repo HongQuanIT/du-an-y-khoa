@@ -58,8 +58,12 @@ final class StudySessionController extends Controller
         $attempts = $this->attempts($session);
         $index = $this->resolveIndex($request, $session, $questionIds, $attempts);
 
+        // Empty question set must not redirect to summary — summary bounces
+        // incomplete sessions back here and creates an infinite redirect loop.
         if ($index === null) {
-            return redirect()->route('qbank.summary', $session);
+            return redirect()
+                ->route('qbank.index')
+                ->with('status', 'Phiên này không còn câu hỏi để tiếp tục. Hãy tạo phiên mới.');
         }
 
         $question = $this->snapshots->question($session, (string) $questionIds[$index]);

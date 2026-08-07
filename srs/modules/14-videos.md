@@ -2,6 +2,8 @@
 
 **Nhóm:** Content · **Ưu tiên:** Trung bình · **Phụ thuộc:** Media Management (37), Library (09), Procedures (12) · **Trạng thái:** ✅
 
+> **Liên quan Module 44:** Player HLS / signed URL / watermark của module này được **tái dùng** cho VOD recording buổi live (`live_recordings` → `media`). Videos = thư viện bài giảng tĩnh; Classroom Live = livestream + recording sau buổi chữa đề — không gộp catalog.
+
 ## 0. Tóm tắt module
 Thư viện video bài giảng/hướng dẫn thủ thuật với player hỗ trợ chapter, tốc độ, phụ đề, ghi chú theo timestamp, theo dõi tiến độ xem. Streaming HLS, bảo vệ nội dung Premium.
 

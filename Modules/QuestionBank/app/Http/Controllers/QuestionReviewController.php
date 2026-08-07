@@ -21,6 +21,12 @@ final class QuestionReviewController extends Controller
         $this->authorize('view', $session);
 
         if ($session->status !== SessionStatus::Completed) {
+            if (($session->question_ids ?? []) === []) {
+                return redirect()
+                    ->route('qbank.index')
+                    ->with('status', 'Phiên này không còn câu hỏi để ôn. Hãy tạo phiên mới.');
+            }
+
             return redirect()->route('qbank.session', $session);
         }
 
