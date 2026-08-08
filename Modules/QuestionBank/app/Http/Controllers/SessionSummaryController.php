@@ -82,6 +82,7 @@ final class SessionSummaryController extends Controller
             'timeSpentSeconds' => $summary['time_spent_seconds'],
             'topics' => $topics,
             'chartBars' => $chartBars,
+            'questionOverview' => $this->insights->questionOverview($session),
             'summaryConfig' => [
                 'page_title' => 'Phân tích kết quả',
                 'heading' => 'Phân tích kết quả',

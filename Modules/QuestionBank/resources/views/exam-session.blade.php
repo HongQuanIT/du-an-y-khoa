@@ -55,7 +55,9 @@
         calculatorError: false,
         _clock: null,
         _warningTimeout: null,
+        _historyHandler: null,
         init() {
+            this.installBrowserExitGuard();
             this.maybeShowTimeWarning();
             this._clock = setInterval(() => {
                 this.elapsed++;
@@ -72,6 +74,17 @@
         destroy() {
             clearInterval(this._clock);
             clearTimeout(this._warningTimeout);
+            if (this._historyHandler) window.removeEventListener('popstate', this._historyHandler);
+        },
+        installBrowserExitGuard() {
+            if (!window.history.state?.sessionExitGuard) {
+                window.history.pushState({ sessionExitGuard: true }, '', window.location.href);
+            }
+            this._historyHandler = async () => {
+                window.history.pushState({ sessionExitGuard: true }, '', window.location.href);
+                if (!this.exitOpen) await this.requestExit();
+            };
+            window.addEventListener('popstate', this._historyHandler);
         },
         maybeShowTimeWarning() {
             if (this.remaining === null || this.remaining <= 0) return;

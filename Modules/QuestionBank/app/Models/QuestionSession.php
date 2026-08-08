@@ -32,7 +32,7 @@ use Modules\QuestionBank\Enums\SessionStatus;
  * @property int $correct_count
  * @property int|null $time_limit_seconds
  * @property array<string, mixed>|null $paused_state
- * @property array<string, array{note?: string, stem_html?: string, flagged?: bool}>|null $annotations
+ * @property array<string, array{note?: string, stem_html?: string, flagged?: bool, key_info_used?: bool, attending_tip_used?: bool}>|null $annotations
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */

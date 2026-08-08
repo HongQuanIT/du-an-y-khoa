@@ -14,6 +14,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionSession;
+use Modules\QuestionBank\Services\QuestionSessionInsights;
 use Modules\QuestionBank\Services\QuestionSessionSnapshots;
 use Modules\StudyPlan\Actions\AnswerPlanQuestionAction;
 use Modules\StudyPlan\Actions\SavePlanSessionAnnotationAction;
@@ -34,6 +35,7 @@ final class StudyPlanSessionController extends Controller
         private readonly AnswerPlanQuestionAction $answerQuestion,
         private readonly SavePlanSessionAnnotationAction $saveAnnotation,
         private readonly QuestionSessionSnapshots $snapshots,
+        private readonly QuestionSessionInsights $insights,
     ) {}
 
     public function show(Request $request, StudyPlan $plan, StudyPlanTask $task): View|RedirectResponse
@@ -102,6 +104,8 @@ final class StudyPlanSessionController extends Controller
             'note' => ['nullable', 'string', 'max:5000'],
             'stem_html' => ['nullable', 'string', 'max:20000'],
             'flagged' => ['nullable', 'boolean'],
+            'key_info_used' => ['nullable', 'boolean'],
+            'attending_tip_used' => ['nullable', 'boolean'],
         ]);
 
         $session = $this->sessionFor($plan, $task);
@@ -119,6 +123,8 @@ final class StudyPlanSessionController extends Controller
             array_key_exists('note', $validated) ? ($validated['note'] ?? '') : null,
             array_key_exists('stem_html', $validated) ? ($validated['stem_html'] ?? null) : null,
             array_key_exists('flagged', $validated) ? (bool) $validated['flagged'] : null,
+            array_key_exists('key_info_used', $validated) ? (bool) $validated['key_info_used'] : null,
+            array_key_exists('attending_tip_used', $validated) ? (bool) $validated['attending_tip_used'] : null,
         );
 
         return ApiResponse::item($annotation);
@@ -341,6 +347,7 @@ final class StudyPlanSessionController extends Controller
             'timeSpentSeconds' => $timeSpent,
             'topics' => $topics,
             'chartBars' => $chartBars,
+            'questionOverview' => $this->insights->questionOverview($session),
         ]);
     }
 

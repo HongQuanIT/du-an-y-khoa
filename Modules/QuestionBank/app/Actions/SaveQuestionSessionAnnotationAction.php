@@ -14,7 +14,7 @@ use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionSession;
 use Modules\QuestionBank\Models\QuestionStatus as UserQuestionStatusModel;
 
-/** Persist sanitized per-question notes, stem highlights and review flags. */
+/** Persist sanitized per-question notes, stem highlights, key-info use and review flags. */
 final class SaveQuestionSessionAnnotationAction
 {
     use AsAction;
@@ -23,7 +23,7 @@ final class SaveQuestionSessionAnnotationAction
     private const HIGHLIGHT_COLORS = ['#EF4444', '#F59E0B', '#10B981'];
 
     /**
-     * @return array{note: string, stem_html: string, flagged: bool}
+     * @return array{note: string, stem_html: string, flagged: bool, key_info_used: bool, attending_tip_used: bool}
      */
     public function handle(
         QuestionSession $session,
@@ -31,6 +31,8 @@ final class SaveQuestionSessionAnnotationAction
         ?string $note = null,
         ?string $stemHtml = null,
         ?bool $flagged = null,
+        ?bool $keyInfoUsed = null,
+        ?bool $attendingTipUsed = null,
     ): array {
         return DB::transaction(function () use (
             $session,
@@ -38,6 +40,8 @@ final class SaveQuestionSessionAnnotationAction
             $note,
             $stemHtml,
             $flagged,
+            $keyInfoUsed,
+            $attendingTipUsed,
         ): array {
             $currentSession = QuestionSession::query()
                 ->lockForUpdate()
@@ -45,7 +49,7 @@ final class SaveQuestionSessionAnnotationAction
             $this->assertQuestionBelongsToSession($currentSession, $question);
 
             $key = (string) $question->getKey();
-            /** @var array<string, array{note?: string, stem_html?: string, flagged?: bool}> $annotations */
+            /** @var array<string, array{note?: string, stem_html?: string, flagged?: bool, key_info_used?: bool, attending_tip_used?: bool}> $annotations */
             $annotations = $currentSession->annotations ?? [];
             $current = $annotations[$key] ?? [];
 
@@ -61,10 +65,22 @@ final class SaveQuestionSessionAnnotationAction
                 $current['flagged'] = $flagged;
             }
 
+            if ($keyInfoUsed === true) {
+                // Once revealed, it remains part of this attempt's learning history.
+                $current['key_info_used'] = true;
+            }
+
+            if ($attendingTipUsed === true) {
+                // Once revealed, it remains part of this attempt's learning history.
+                $current['attending_tip_used'] = true;
+            }
+
             $annotations[$key] = [
                 'note' => (string) ($current['note'] ?? ''),
                 'stem_html' => (string) ($current['stem_html'] ?? e((string) $question->stem)),
                 'flagged' => (bool) ($current['flagged'] ?? false),
+                'key_info_used' => (bool) ($current['key_info_used'] ?? false),
+                'attending_tip_used' => (bool) ($current['attending_tip_used'] ?? false),
             ];
 
             $currentSession->forceFill(['annotations' => $annotations])->save();

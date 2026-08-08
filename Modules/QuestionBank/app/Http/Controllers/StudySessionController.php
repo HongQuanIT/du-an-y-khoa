@@ -224,6 +224,8 @@ final class StudySessionController extends Controller
             'note' => ['nullable', 'string', 'max:5000'],
             'stem_html' => ['nullable', 'string', 'max:20000'],
             'flagged' => ['nullable', 'boolean'],
+            'key_info_used' => ['nullable', 'boolean'],
+            'attending_tip_used' => ['nullable', 'boolean'],
         ]);
 
         abort_unless(
@@ -241,6 +243,8 @@ final class StudySessionController extends Controller
             array_key_exists('note', $validated) ? ($validated['note'] ?? '') : null,
             array_key_exists('stem_html', $validated) ? ($validated['stem_html'] ?? null) : null,
             array_key_exists('flagged', $validated) ? (bool) $validated['flagged'] : null,
+            array_key_exists('key_info_used', $validated) ? (bool) $validated['key_info_used'] : null,
+            array_key_exists('attending_tip_used', $validated) ? (bool) $validated['attending_tip_used'] : null,
         );
 
         return ApiResponse::item($annotation);

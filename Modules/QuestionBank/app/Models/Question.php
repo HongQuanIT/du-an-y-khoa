@@ -23,6 +23,8 @@ use Modules\QuestionBank\Enums\QuestionStatus;
  * @property string $id
  * @property string $stem
  * @property string|null $explanation
+ * @property array<int, string>|null $key_info
+ * @property string|null $attending_tip
  * @property Difficulty $difficulty
  * @property QuestionStatus $status
  * @property int|null $topic_id
@@ -43,6 +45,8 @@ class Question extends Model
     protected $fillable = [
         'stem',
         'explanation',
+        'key_info',
+        'attending_tip',
         'difficulty',
         'status',
         'topic_id',
@@ -52,6 +56,7 @@ class Question extends Model
     protected $casts = [
         'difficulty' => Difficulty::class,
         'status' => QuestionStatus::class,
+        'key_info' => 'array',
         'is_free' => 'boolean',
         'version' => 'integer',
     ];

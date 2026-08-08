@@ -35,13 +35,29 @@
     $isAnswered = $attempt !== null;
     $nextIndex = $index + 1 < $total ? $index + 1 : null;
     $prevIndex = $index > 0 ? $index - 1 : null;
+    $keyInfoRenderer = app(\Modules\QuestionBank\Services\QuestionKeyInfoRenderer::class);
+    $keyInfo = $keyInfoRenderer->resolvePhrases(
+        (string) $question->stem,
+        (array) ($question->key_info ?? []),
+    );
+    $hasKeyInfo = $keyInfo !== [];
+    $keyInfoHtml = $keyInfoRenderer->render((string) $question->stem, $keyInfo);
+    $attendingTip = trim((string) ($question->attending_tip ?? ''));
+    if ($attendingTip === '' && $hasKeyInfo) {
+        $attendingTip = 'Hãy tập trung vào các dấu hiệu: '.implode('; ', $keyInfo)
+            .'. Kết hợp chúng để xác định chẩn đoán hoặc bước xử trí phù hợp nhất.';
+    }
+    $hasAttendingTip = $attendingTip !== '';
 
     $tools = [
         ['icon' => 'bookmark', 'label' => 'Lưu câu hỏi'],
         ['icon' => 'flag', 'label' => 'Gắn cờ', 'action' => 'flag'],
         ['icon' => 'description', 'label' => 'Ghi chú', 'action' => 'notes'],
+        ['icon' => 'menu_book', 'label' => 'Nghiên cứu', 'action' => 'research'],
         ['icon' => 'drive_file_rename_outline', 'label' => 'Tô màu văn bản', 'action' => 'highlight'],
     ];
+
+    $labReferenceGroups = \Modules\QuestionBank\Support\LabReferenceValues::groups();
 
     $highlightColors = [
         ['hex' => '#EF4444', 'title' => 'Đỏ'],
@@ -60,7 +76,18 @@
         notesOpen: false,
         navigatorOpen: false,
         exitOpen: false,
+        labQuery: '',
+        activeLabTab: 'serum',
+        labReferenceGroups: @js($labReferenceGroups),
+        researchOpen: false,
         highlightMode: false,
+        keyInfoEnabled: @js($isAnswered && $hasKeyInfo),
+        keyInfoUsed: false,
+        hasKeyInfo: @js($hasKeyInfo),
+        attendingTipOpen: @js($isAnswered && $hasAttendingTip),
+        attendingTipUsed: false,
+        attendingTip: @js($attendingTip),
+        hasAttendingTip: @js($hasAttendingTip),
         flagged: @js($flagged),
         sessionIncomplete: @js($sessionIncomplete),
         exitUrl: @js($exitUrl),
@@ -72,6 +99,23 @@
         annotateUrl: @js($playerConfig['annotate_url']),
         csrf: @js(csrf_token()),
         questionId: @js($question->id),
+        _historyHandler: null,
+        init() {
+            this.installBrowserExitGuard();
+        },
+        destroy() {
+            if (this._historyHandler) window.removeEventListener('popstate', this._historyHandler);
+        },
+        installBrowserExitGuard() {
+            if (!window.history.state?.sessionExitGuard) {
+                window.history.pushState({ sessionExitGuard: true }, '', window.location.href);
+            }
+            this._historyHandler = () => {
+                window.history.pushState({ sessionExitGuard: true }, '', window.location.href);
+                if (!this.exitOpen) this.requestExit();
+            };
+            window.addEventListener('popstate', this._historyHandler);
+        },
         requestExit() {
             if (this.sessionIncomplete) {
                 this.exitOpen = true;
@@ -79,11 +123,49 @@
             }
             window.location.href = this.exitUrl;
         },
+        openResearch() {
+            this.notesOpen = false;
+            this.navigatorOpen = false;
+            this.researchOpen = true;
+        },
+        filteredLabs() {
+            const rows = this.labReferenceGroups[this.activeLabTab]?.rows || [];
+            const query = this.labQuery.trim().toLocaleLowerCase('vi');
+            if (!query) return rows;
+            return rows.filter((item) =>
+                !item.section && ((item.test || '') + ' ' + (item.reference || '') + ' ' + (item.si || ''))
+                    .toLocaleLowerCase('vi').includes(query)
+            );
+        },
         toggleHighlight() {
+            if (this.keyInfoEnabled) this.keyInfoEnabled = false;
+            if (this.attendingTipOpen) this.attendingTipOpen = false;
             this.highlightMode = !this.highlightMode;
             if (!this.highlightMode) this.selectionBar.show = false;
-            const stem = document.getElementById('session-stem');
-            if (stem) stem.classList.toggle('cursor-text', this.highlightMode);
+            this.$nextTick(() => {
+                const stem = document.getElementById('session-stem');
+                if (stem) stem.classList.toggle('cursor-text', this.highlightMode);
+            });
+        },
+        toggleKeyInfo() {
+            if (!this.hasKeyInfo) return;
+            this.keyInfoEnabled = !this.keyInfoEnabled;
+            this.highlightMode = false;
+            this.selectionBar.show = false;
+            if (this.keyInfoEnabled) {
+                this.keyInfoUsed = true;
+                this.persistAnnotation({ key_info_used: true });
+            }
+        },
+        toggleAttendingTip() {
+            if (!this.hasAttendingTip) return;
+            this.attendingTipOpen = !this.attendingTipOpen;
+            this.highlightMode = false;
+            this.selectionBar.show = false;
+            if (this.attendingTipOpen) {
+                this.attendingTipUsed = true;
+                this.persistAnnotation({ attending_tip_used: true });
+            }
         },
         async toggleFlag() {
             this.flagged = !this.flagged;
@@ -154,7 +236,7 @@
             this.noteSaved = true;
             this.notesOpen = false;
         },
-    }" @keydown.escape.window="notesOpen = false; navigatorOpen = false; exitOpen = false; selectionBar.show = false"
+    }" @keydown.escape.window="notesOpen = false; navigatorOpen = false; exitOpen = false; researchOpen = false; selectionBar.show = false"
         @mouseup.window="onTextSelect()">
 
         <div class="flex min-h-screen flex-col bg-white">
@@ -195,15 +277,20 @@
             </header>
 
             <main class="flex flex-1 bg-white pb-28">
-                <aside
+                <aside x-show="!researchOpen"
                     class="group sticky top-header-height hidden h-[calc(100vh-var(--spacing-header-height))] w-16 shrink-0 overflow-y-auto border-r border-outline-variant bg-white transition-all duration-300 hover:w-56 lg:block">
                     <nav class="space-y-2 p-4">
                         @foreach ($tools as $tool)
                             <button type="button"
                                 @if (($tool['action'] ?? null) === 'notes') @click="notesOpen = true"
+                                @elseif (($tool['action'] ?? null) === 'research') @click="openResearch()"
                                 @elseif (($tool['action'] ?? null) === 'highlight') @click="toggleHighlight()"
                                 @elseif (($tool['action'] ?? null) === 'flag') @click="toggleFlag()" @endif
-                                @if (($tool['action'] ?? null) === 'highlight')
+                                @if (($tool['action'] ?? null) === 'research') data-testid="research-reference-toggle" @endif
+                                @if (($tool['action'] ?? null) === 'research')
+                                    class="flex w-full items-center justify-center gap-3 rounded-lg px-0 py-2.5 transition-colors group-hover:justify-start group-hover:px-3"
+                                    :class="researchOpen ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-high hover:text-primary'"
+                                @elseif (($tool['action'] ?? null) === 'highlight')
                                     class="flex w-full items-center justify-center gap-3 rounded-lg px-0 py-2.5 transition-colors group-hover:justify-start group-hover:px-3"
                                     :class="highlightMode ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-high hover:text-primary'"
                                 @elseif (($tool['action'] ?? null) === 'flag')
@@ -280,6 +367,8 @@
                             this.selected = id;
                             this.stopTimer();
                             this.revealed = true;
+                            if (this.hasKeyInfo) this.keyInfoEnabled = true;
+                            if (this.hasAttendingTip) this.attendingTipOpen = true;
                             this.persist(id);
                         },
                         isCorrect() {
@@ -332,7 +421,24 @@
                             }
                         },
                     }">
-                    <div class="mx-auto max-w-4xl space-y-6 px-4 py-8 md:px-12">
+                    <div class="flex min-h-full w-full flex-col items-stretch lg:flex-row">
+                        <aside x-show="researchOpen" x-cloak x-transition.opacity
+                            class="z-30 w-full shrink-0 overflow-hidden border-r border-outline-variant bg-white lg:sticky lg:top-0 lg:h-[calc(100vh-var(--spacing-header-height)-5rem)] lg:w-1/2"
+                            data-testid="research-reference-panel">
+                            @include('studyplan::partials.lab-reference-table', [
+                                'labPanelPrefix' => 'research-lab',
+                                'labCloseAction' => 'researchOpen = false',
+                            ])
+                        </aside>
+
+                        <div class="w-full flex-1 space-y-6 px-4 py-8 md:px-10"
+                            :class="researchOpen ? 'max-w-none' : 'mx-auto max-w-4xl'"
+                            data-testid="question-answer-pane">
+                        <div x-show="researchOpen" x-cloak
+                            class="flex items-center gap-2 border-b border-outline-variant pb-3 text-on-surface-variant">
+                            <span class="material-symbols-outlined text-[20px]">quiz</span>
+                            <span class="font-label-md text-label-md font-bold">Câu hỏi – câu trả lời</span>
+                        </div>
                         <div class="flex items-center justify-between gap-3">
                             <div class="flex items-center gap-2 rounded-full bg-surface-container-highest px-3 py-1">
                                 <span class="size-2 rounded-full bg-primary"></span>
@@ -357,8 +463,60 @@
                         </div>
 
                         <article class="space-y-6">
-                            <p id="session-stem" class="font-body-lg text-body-lg leading-relaxed text-on-surface select-text">{!! $stemHtml !!}</p>
+                            <div x-show="keyInfoUsed" x-cloak
+                                class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-bold tracking-wide text-amber-700 uppercase"
+                                data-testid="key-info-used-badge">
+                                <span class="material-symbols-outlined text-[15px] fill-1">check_circle</span>
+                                <span>Đã dùng kiến thức</span>
+                            </div>
+                            <template x-if="!keyInfoEnabled">
+                                <p id="session-stem"
+                                    class="font-body-lg text-body-lg leading-relaxed whitespace-pre-line text-on-surface select-text">{!! $stemHtml !!}</p>
+                            </template>
+                            <template x-if="keyInfoEnabled">
+                                <p class="font-body-lg text-body-lg leading-relaxed whitespace-pre-line text-on-surface select-text"
+                                    data-testid="key-info-stem">{!! $keyInfoHtml !!}</p>
+                            </template>
                         </article>
+
+                        <div class="flex min-h-12 items-center border-y border-outline-variant bg-surface-container-lowest px-1"
+                            data-testid="question-knowledge-toolbar">
+                            <button type="button" @click="toggleKeyInfo()" :disabled="!hasKeyInfo"
+                                class="inline-flex h-12 items-center gap-2 border-b-2 px-3 text-label-sm font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+                                :class="keyInfoEnabled
+                                    ? 'border-amber-600 text-amber-700'
+                                    : 'border-transparent text-on-surface-variant hover:bg-surface-container-high hover:text-primary'"
+                                title="{{ $hasKeyInfo ? 'Gạch chân kiến thức chính' : 'Câu này chưa có kiến thức được đánh dấu' }}"
+                                :aria-pressed="keyInfoEnabled">
+                                <span class="material-symbols-outlined text-[18px]">format_align_left</span>
+                                <span>Kiến thức</span>
+                            </button>
+                            <button type="button" @click="toggleAttendingTip()" :disabled="!hasAttendingTip"
+                                class="inline-flex h-12 items-center gap-2 border-b-2 px-3 text-label-sm font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+                                :class="attendingTipOpen
+                                    ? 'border-amber-600 text-amber-700'
+                                    : 'border-transparent text-on-surface-variant hover:bg-surface-container-high hover:text-primary'"
+                                title="{{ $hasAttendingTip ? 'Mở gợi ý cho câu hỏi' : 'Câu này chưa có gợi ý' }}"
+                                :aria-pressed="attendingTipOpen"
+                                data-testid="attending-tip-toggle">
+                                <span class="material-symbols-outlined text-[18px]">help</span>
+                                <span>Gợi ý</span>
+                            </button>
+                        </div>
+
+                        <div x-show="attendingTipOpen" x-cloak x-transition class="space-y-3"
+                            data-testid="attending-tip-panel">
+                            <div x-show="attendingTipUsed"
+                                class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-bold tracking-wide text-amber-700 uppercase"
+                                data-testid="attending-tip-used-badge">
+                                <span class="material-symbols-outlined text-[15px] fill-1">check_circle</span>
+                                <span>Đã dùng gợi ý</span>
+                            </div>
+                            <div class="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50/70 p-4 text-on-surface">
+                                <span class="material-symbols-outlined mt-0.5 shrink-0 text-amber-700">stethoscope</span>
+                                <p class="font-body-md text-body-md leading-relaxed italic" x-text="attendingTip"></p>
+                            </div>
+                        </div>
 
                         <section class="space-y-3">
                             <template x-for="option in options" :key="option.id">
@@ -405,6 +563,7 @@
                             <p class="mb-1 text-label-sm font-bold tracking-wider text-primary uppercase">Giải thích</p>
                             <p class="text-body-md leading-relaxed text-on-surface" x-text="questionExplanation"></p>
                         </div>
+                    </div>
                     </div>
 
                     <footer

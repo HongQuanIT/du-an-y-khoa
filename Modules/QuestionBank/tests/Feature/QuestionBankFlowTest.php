@@ -24,6 +24,7 @@ use Modules\QuestionBank\Models\QuestionSession;
 use Modules\QuestionBank\Models\QuestionSessionSnapshot;
 use Modules\QuestionBank\Models\QuestionStatus;
 use Modules\QuestionBank\Models\Topic;
+use Modules\QuestionBank\Services\QuestionKeyInfoRenderer;
 use Spatie\Permission\Models\Role as RoleModel;
 use Tests\TestCase;
 
@@ -93,6 +94,22 @@ final class QuestionBankFlowTest extends TestCase
             ->postJson(route('qbank.count'), $this->sessionPayload(count: 10))
             ->assertOk()
             ->assertJsonPath('data.count', 2);
+    }
+
+    public function test_key_info_derives_clinical_clues_for_legacy_questions(): void
+    {
+        $stem = '[Amboss] Ca lâm sàng #064 – Skin & Subcutaneous Tissue. '
+            .'Viêm khớp gối nóng đỏ, dịch đục, sốt. '
+            .'Xét nghiệm dịch khớp ưu tiên để loại trừ?';
+        $renderer = app(QuestionKeyInfoRenderer::class);
+        $phrases = $renderer->resolvePhrases($stem, []);
+
+        $this->assertSame(['Viêm khớp gối nóng đỏ, dịch đục, sốt.'], $phrases);
+        $this->assertStringContainsString(
+            '<span data-key-info class="underline decoration-amber-600 decoration-2 underline-offset-2">'
+                .'Viêm khớp gối nóng đỏ, dịch đục, sốt.</span>',
+            $renderer->render($stem, $phrases),
+        );
     }
 
     public function test_custom_scope_filters_are_real_hard_boundaries_and_preserve_free_gating(): void
@@ -194,6 +211,14 @@ final class QuestionBankFlowTest extends TestCase
     {
         $first = $this->createQuestion($this->topic, true, Difficulty::Medium, 'Study first');
         $second = $this->createQuestion($this->topic, true, Difficulty::Medium, 'Study second');
+        $first->update([
+            'key_info' => ['Study first'],
+            'attending_tip' => 'Gợi ý dành cho câu hỏi đầu tiên.',
+        ]);
+        $second->update([
+            'key_info' => ['Study second'],
+            'attending_tip' => 'Gợi ý dành cho câu hỏi thứ hai.',
+        ]);
 
         $this->actingAs($this->user)
             ->post(route('qbank.store'), $this->sessionPayload(count: 2, difficulty: Difficulty::Medium))
@@ -208,9 +233,60 @@ final class QuestionBankFlowTest extends TestCase
             ->assertSee('Phiên học tập')
             ->assertSee('Navigator')
             ->assertSee('Lưu câu hỏi')
+            ->assertSee('Kiến thức')
+            ->assertSee('Gợi ý')
+            ->assertSee('data-testid="question-knowledge-toolbar"', false)
+            ->assertSee("window.addEventListener('popstate'", false)
+            ->assertSee('installBrowserExitGuard()', false)
+            ->assertSee('data-testid="attending-tip-toggle"', false)
+            ->assertSee('data-testid="attending-tip-panel"', false)
+            ->assertSee('data-testid="attending-tip-used-badge"', false)
+            ->assertSeeInOrder(['Ghi chú', 'Nghiên cứu'])
+            ->assertSee('data-testid="research-reference-toggle"', false)
+            ->assertSee('data-testid="research-reference-panel"', false)
+            ->assertSee('data-testid="research-lab-values-table"', false)
+            ->assertSee('data-testid="research-lab-tab-serum"', false)
+            ->assertSee('data-testid="research-lab-tab-cerebrospinal"', false)
+            ->assertSee('data-testid="research-lab-tab-blood"', false)
+            ->assertSee('data-testid="research-lab-tab-urine_bmi"', false)
+            ->assertSee('data-testid="question-answer-pane"', false)
+            ->assertSee('Câu hỏi – câu trả lời')
+            ->assertSee('Lab Values')
+            ->assertSee('Reference Range')
+            ->assertSee('SI Reference')
+            ->assertDontSee('data-testid="lab-reference-toggle"', false)
+            ->assertDontSee('data-testid="lab-reference-panel"', false)
+            ->assertSee('Alanine aminotransferase (ALT)')
+            ->assertSee('Body Mass Index (BMI)')
+            ->assertSee('data-testid="key-info-used-badge"', false)
+            ->assertSee('Đã dùng kiến thức')
+            ->assertSee('Đã dùng gợi ý')
+            ->assertSee('data-key-info', false)
             ->assertSee('Ghi chú')
             ->assertSee('Tô màu văn bản')
             ->assertSee('Chọn một đáp án để xem giải thích');
+
+        $this->actingAs($this->user)
+            ->postJson(route('qbank.session.annotate', $session), [
+                'question_id' => $first->getKey(),
+                'key_info_used' => true,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.key_info_used', true);
+
+        $this->actingAs($this->user)
+            ->postJson(route('qbank.session.annotate', $session), [
+                'question_id' => $second->getKey(),
+                'attending_tip_used' => true,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.attending_tip_used', true);
+
+        $this->actingAs($this->user)
+            ->get(route('qbank.session', $session))
+            ->assertOk()
+            ->assertSee('keyInfoUsed: false', false)
+            ->assertSee('attendingTipUsed: false', false);
 
         foreach ($session->question_ids as $index => $questionId) {
             $question = Question::with('options')->findOrFail($questionId);
@@ -228,8 +304,23 @@ final class QuestionBankFlowTest extends TestCase
 
             if ($index === 0) {
                 $response->assertRedirect(route('qbank.session', [$session, 'index' => 0]));
+
+                $this->actingAs($this->user)
+                    ->get(route('qbank.session', [$session, 'index' => 0]))
+                    ->assertOk()
+                    ->assertSee('keyInfoEnabled: true', false)
+                    ->assertSee('attendingTipOpen: true', false);
             }
         }
+
+        $this->assertTrue((bool) QuestionAttempt::query()
+            ->where('session_id', $session->getKey())
+            ->where('question_id', $first->getKey())
+            ->value('used_hint'));
+        $this->assertTrue((bool) QuestionAttempt::query()
+            ->where('session_id', $session->getKey())
+            ->where('question_id', $second->getKey())
+            ->value('used_hint'));
 
         $this->assertSame(SessionStatus::Active, $session->refresh()->status);
         $this->assertSame(2, $session->answered_count);
@@ -246,16 +337,45 @@ final class QuestionBankFlowTest extends TestCase
             ->assertRedirect(route('qbank.summary', $session));
         $this->assertSame(SessionStatus::Completed, $session->refresh()->status);
 
+        $peer = User::factory()->create();
+        $peerSession = QuestionSession::factory()->create([
+            'user_id' => $peer->getKey(),
+            'question_ids' => $session->question_ids,
+            'total' => 2,
+            'answered_count' => 2,
+            'correct_count' => 1,
+        ]);
+        foreach ($session->question_ids as $index => $questionId) {
+            QuestionAttempt::factory()->create([
+                'session_id' => $peerSession->getKey(),
+                'user_id' => $peer->getKey(),
+                'question_id' => $questionId,
+                'is_correct' => $index !== 0,
+            ]);
+        }
+
         $this->actingAs($this->user)
             ->get(route('qbank.summary', $session))
             ->assertOk()
             ->assertViewIs('studyplan::session-summary')
             ->assertViewHas('summary', fn (array $summary): bool => $summary['accuracy'] === 50)
             ->assertViewHas('accuracy', 50)
+            ->assertViewHas('questionOverview', function (array $rows): bool {
+                return count($rows) === 2
+                    && collect($rows)->every(fn (array $row): bool => $row['peer_accuracy'] === 50
+                        && $row['peer_users'] === 2
+                        && $row['time_spent_seconds'] === 30
+                        && $row['difficulty'] === 'Trung bình');
+            })
             ->assertSee('Tóm tắt nhanh')
             ->assertSee('Tỷ lệ đúng theo chủ đề')
             ->assertSee('data-testid="topic-accuracy-chart-scroll"', false)
             ->assertSee('Phân tích chi tiết chủ đề')
+            ->assertSee('Tổng quan từng câu')
+            ->assertSee('Thời gian cho mỗi câu hỏi')
+            ->assertSee('Thống kê đồng nghiệp')
+            ->assertSee('Khó khăn')
+            ->assertSee('data-testid="question-overview-table"', false)
             ->assertSee('Quay lại ngân hàng câu hỏi');
 
         $this->actingAs($this->user)
@@ -338,6 +458,59 @@ final class QuestionBankFlowTest extends TestCase
         );
     }
 
+    public function test_question_overview_paginates_after_five_rows(): void
+    {
+        for ($number = 1; $number <= 6; $number++) {
+            $this->createQuestion(
+                $this->topic,
+                true,
+                Difficulty::Easy,
+                "Câu phân trang {$number}",
+            );
+        }
+
+        $this->actingAs($this->user)
+            ->post(route('qbank.store'), $this->sessionPayload(count: 6, difficulty: Difficulty::Easy))
+            ->assertRedirect();
+
+        $session = QuestionSession::firstOrFail();
+
+        foreach ($session->question_ids as $index => $questionId) {
+            $question = Question::with('options')->findOrFail($questionId);
+            $this->actingAs($this->user)->post(route('qbank.session.answer', $session), [
+                'question_id' => $questionId,
+                'option_ids' => [$question->options->firstWhere('is_correct', true)->id],
+                'index' => $index,
+                'time_spent_seconds' => $index + 1,
+            ]);
+        }
+
+        $this->actingAs($this->user)
+            ->post(route('qbank.session.finish', $session))
+            ->assertRedirect(route('qbank.summary', $session));
+
+        $firstPageQuestion = Question::findOrFail($session->question_ids[0]);
+        $secondPageQuestion = Question::findOrFail($session->question_ids[5]);
+
+        $this->actingAs($this->user)
+            ->get(route('qbank.summary', $session))
+            ->assertOk()
+            ->assertSee($firstPageQuestion->stem)
+            ->assertDontSee($secondPageQuestion->stem)
+            ->assertSee('1–5')
+            ->assertSee('/ 6 câu')
+            ->assertSee('question_page=2', false)
+            ->assertSee('data-testid="question-overview-pagination"', false);
+
+        $this->actingAs($this->user)
+            ->get(route('qbank.summary', [$session, 'question_page' => 2]))
+            ->assertOk()
+            ->assertDontSee($firstPageQuestion->stem)
+            ->assertSee($secondPageQuestion->stem)
+            ->assertSee('6–6')
+            ->assertSee('/ 6 câu');
+    }
+
     public function test_exam_answers_are_not_graded_or_completed_until_finish(): void
     {
         $this->createQuestion($this->topic, true, Difficulty::Hard, 'Exam first');
@@ -363,6 +536,8 @@ final class QuestionBankFlowTest extends TestCase
                 'Nộp Bài Ngay',
             ])
             ->assertSee('data-testid="exam-calculator-trigger"', false)
+            ->assertSee("window.addEventListener('popstate'", false)
+            ->assertSee('installBrowserExitGuard()', false)
             ->assertSee('data-testid="exam-calculator"', false)
             ->assertSee('aria-label="Mở ghi chú"', false)
             ->assertSee('Có thể sử dụng bàn phím số')
@@ -815,6 +990,15 @@ final class QuestionBankFlowTest extends TestCase
         $this->assertSame('Goodpasture syndrome', $options->first()?->content);
         $this->assertTrue((bool) $options->first()?->is_correct);
         $this->assertTrue($options->slice(1)->every(fn (QuestionOption $option): bool => ! $option->is_correct));
+        $this->assertSame([
+            'blood-tinged sputum',
+            'three episodes of blood in his urine',
+            'linear deposits of IgG along the glomerular basement membrane',
+        ], $question->key_info);
+        $this->assertSame(
+            'Ho ra máu kết hợp tiểu máu, suy thận và IgG lắng đọng dạng đường thẳng dọc màng đáy cầu thận là bộ dấu hiệu điển hình của bệnh kháng màng đáy cầu thận (hội chứng Goodpasture).',
+            $question->attending_tip,
+        );
 
         foreach (QuestionScopeType::cases() as $scopeType) {
             $this->assertSame(
