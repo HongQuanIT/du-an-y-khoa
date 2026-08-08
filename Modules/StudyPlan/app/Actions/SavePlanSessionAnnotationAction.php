@@ -16,7 +16,7 @@ final class SavePlanSessionAnnotationAction
     ) {}
 
     /**
-     * @return array{note: string, stem_html: string, flagged: bool}
+     * @return array{note: string, stem_html: string, flagged: bool, key_info_used: bool, attending_tip_used: bool}
      */
     public function handle(
         QuestionSession $session,
@@ -24,6 +24,8 @@ final class SavePlanSessionAnnotationAction
         ?string $note = null,
         ?string $stemHtml = null,
         ?bool $flagged = null,
+        ?bool $keyInfoUsed = null,
+        ?bool $attendingTipUsed = null,
     ): array {
         return $this->saveAnnotation->handle(
             $session,
@@ -31,6 +33,8 @@ final class SavePlanSessionAnnotationAction
             $note,
             $stemHtml,
             $flagged,
+            $keyInfoUsed,
+            $attendingTipUsed,
         );
     }
 }

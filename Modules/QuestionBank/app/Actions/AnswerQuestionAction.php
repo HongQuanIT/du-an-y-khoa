@@ -82,6 +82,9 @@ final class AnswerQuestionAction
             $flagged = $existing instanceof QuestionAttempt
                 ? $existing->flagged
                 : (bool) (($currentSession->annotations ?? [])[(string) $question->getKey()]['flagged'] ?? false);
+            $questionAnnotation = ($currentSession->annotations ?? [])[(string) $question->getKey()] ?? [];
+            $usedHint = (bool) ($questionAnnotation['key_info_used'] ?? false)
+                || (bool) ($questionAnnotation['attending_tip_used'] ?? false);
             $isStudy = $currentSession->mode === SessionMode::Study;
             $isCorrect = $isStudy
                 ? $this->grader->isCorrect($question, $selectedOptionIds)
@@ -97,7 +100,7 @@ final class AnswerQuestionAction
                     'user_id' => (int) $currentSession->user_id,
                     'selected_option_ids' => $selectedOptionIds,
                     'is_correct' => $isCorrect,
-                    'used_hint' => false,
+                    'used_hint' => $usedHint,
                     'time_spent_seconds' => $timeSpentSeconds,
                     'flagged' => $flagged,
                     'answered_at' => $now,

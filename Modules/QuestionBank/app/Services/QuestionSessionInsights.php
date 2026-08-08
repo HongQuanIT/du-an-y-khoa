@@ -187,6 +187,83 @@ final class QuestionSessionInsights
         return $items;
     }
 
+    /**
+     * Build one row per question for the session overview. Community accuracy
+     * uses the latest graded attempt from each user so repeats are not weighted.
+     *
+     * @return list<array{
+     *   id: string, question_id: string, excerpt: string, result: string,
+     *   time_spent_seconds: int, peer_accuracy: int|null, peer_users: int,
+     *   difficulty: string
+     * }>
+     */
+    public function questionOverview(QuestionSession $session): array
+    {
+        $questionIds = array_values(array_map('strval', $session->question_ids ?? []));
+
+        if ($questionIds === []) {
+            return [];
+        }
+
+        $questions = $this->snapshots->questionMap($session);
+        $sessionAttempts = $this->attempts($session);
+        $latestByQuestionAndUser = [];
+
+        $communityAttempts = QuestionAttempt::query()
+            ->whereIn('question_id', $questionIds)
+            ->whereNotNull('is_correct')
+            ->orderByDesc('id')
+            ->get(['id', 'user_id', 'question_id', 'is_correct']);
+
+        foreach ($communityAttempts as $attempt) {
+            $questionId = (string) $attempt->question_id;
+            $userId = (int) $attempt->user_id;
+
+            if (isset($latestByQuestionAndUser[$questionId][$userId])) {
+                continue;
+            }
+
+            $latestByQuestionAndUser[$questionId][$userId] = (bool) $attempt->is_correct;
+        }
+
+        $rows = [];
+
+        foreach ($questionIds as $position => $questionId) {
+            $question = $questions[$questionId] ?? null;
+
+            if (! $question instanceof Question) {
+                continue;
+            }
+
+            $attempt = $sessionAttempts[$questionId] ?? null;
+            $peerResults = $latestByQuestionAndUser[$questionId] ?? [];
+            $peerUsers = count($peerResults);
+            $peerCorrect = count(array_filter($peerResults));
+            $difficulty = $question->difficulty;
+
+            $rows[] = [
+                'id' => 'Q'.($position + 1),
+                'question_id' => $questionId,
+                'excerpt' => Str::limit(strip_tags((string) $question->stem), 90),
+                'result' => match (true) {
+                    ! $attempt instanceof QuestionAttempt || $attempt->is_correct === null => 'skipped',
+                    (bool) $attempt->is_correct => 'correct',
+                    default => 'wrong',
+                },
+                'time_spent_seconds' => $attempt instanceof QuestionAttempt
+                    ? (int) $attempt->time_spent_seconds
+                    : 0,
+                'peer_accuracy' => $peerUsers > 0
+                    ? (int) round($peerCorrect / $peerUsers * 100)
+                    : null,
+                'peer_users' => $peerUsers,
+                'difficulty' => $difficulty->label(),
+            ];
+        }
+
+        return $rows;
+    }
+
     /** @return array<string, QuestionAttempt> */
     public function attempts(QuestionSession $session): array
     {

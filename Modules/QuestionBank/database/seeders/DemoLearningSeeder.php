@@ -312,6 +312,12 @@ TEXT;
         $question->forceFill([
             'stem' => $stem,
             'explanation' => 'Goodpasture syndrome (anti-GBM disease) presents with pulmonary hemorrhage and rapidly progressive glomerulonephritis. Linear IgG along the glomerular basement membrane is the classic biopsy finding.',
+            'key_info' => [
+                'blood-tinged sputum',
+                'three episodes of blood in his urine',
+                'linear deposits of IgG along the glomerular basement membrane',
+            ],
+            'attending_tip' => 'Ho ra máu kết hợp tiểu máu, suy thận và IgG lắng đọng dạng đường thẳng dọc màng đáy cầu thận là bộ dấu hiệu điển hình của bệnh kháng màng đáy cầu thận (hội chứng Goodpasture).',
             'difficulty' => Difficulty::VeryHard,
             'status' => QuestionStatus::Published,
             'topic_id' => ($topics['urology'] ?? $topics['nephrology'] ?? null)?->id,

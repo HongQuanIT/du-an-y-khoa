@@ -16,6 +16,13 @@
 ### An toàn test và QBank
 - Ép `APP_ENV=testing` + SQLite in-memory trong `TestCase` để `php artisan test` không `migrate:fresh` MySQL thật.
 - Phiên QBank không còn câu hỏi redirect về index thay vì summary (tránh vòng redirect vô hạn).
+## 2026-08-08
+
+### Hoàn thiện công cụ học tập và phân tích phiên
+- Thêm Kiến thức, Gợi ý và Nghiên cứu dùng chung cho Question Bank và Study Plan; bổ sung bảng tham chiếu Lab theo bốn nhóm xét nghiệm.
+- Tự mở kiến thức/gợi ý sau khi trả lời, lưu lịch sử dùng trợ giúp và chặn Back/Forward bằng popup xác nhận thoát như nút X.
+- Bổ sung tổng quan từng câu với thời gian, tỷ lệ đồng nghiệp, mức độ khó và phân trang 5 câu; giữ biểu đồ chủ đề responsive.
+- Mở rộng snapshot, dữ liệu demo Goodpasture, migration và kiểm thử cho các luồng học tập, thi và tổng kết.
 
 ## 2026-08-06
 

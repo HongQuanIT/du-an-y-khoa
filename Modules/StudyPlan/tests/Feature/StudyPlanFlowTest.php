@@ -187,6 +187,48 @@ final class StudyPlanFlowTest extends TestCase
         $this->assertSame($session->getKey(), $task->refresh()->sessionId());
         $this->assertCount(5, $session->question_ids);
         $this->assertSame(5, $session->snapshots()->count());
+
+        $this->actingAs($this->user)
+            ->get(route('study-plan.session', [$plan, $task]))
+            ->assertOk()
+            ->assertSee('Kiến thức')
+            ->assertSee('Gợi ý')
+            ->assertSee('data-testid="question-knowledge-toolbar"', false)
+            ->assertSee("window.addEventListener('popstate'", false)
+            ->assertSee('installBrowserExitGuard()', false)
+            ->assertSee('data-testid="attending-tip-toggle"', false)
+            ->assertSee('data-testid="attending-tip-panel"', false)
+            ->assertSee('data-testid="attending-tip-used-badge"', false)
+            ->assertSeeInOrder(['Ghi chú', 'Nghiên cứu'])
+            ->assertSee('data-testid="research-reference-toggle"', false)
+            ->assertSee('data-testid="research-reference-panel"', false)
+            ->assertSee('data-testid="research-lab-values-table"', false)
+            ->assertSee('data-testid="research-lab-tab-serum"', false)
+            ->assertSee('data-testid="research-lab-tab-cerebrospinal"', false)
+            ->assertSee('data-testid="research-lab-tab-blood"', false)
+            ->assertSee('data-testid="research-lab-tab-urine_bmi"', false)
+            ->assertSee('data-testid="question-answer-pane"', false)
+            ->assertSee('Câu hỏi – câu trả lời')
+            ->assertSee('Lab Values')
+            ->assertSee('Reference Range')
+            ->assertSee('SI Reference')
+            ->assertDontSee('data-testid="lab-reference-toggle"', false)
+            ->assertDontSee('data-testid="lab-reference-panel"', false)
+            ->assertSee('Alanine aminotransferase (ALT)')
+            ->assertSee('Body Mass Index (BMI)')
+            ->assertSee('data-testid="key-info-used-badge"', false)
+            ->assertSee('Đã dùng kiến thức')
+            ->assertSee('Đã dùng gợi ý')
+            ->assertSee('data-key-info', false);
+
+        $questionId = (string) $session->question_ids[0];
+        $this->actingAs($this->user)
+            ->postJson(route('study-plan.session.annotate', [$plan, $task]), [
+                'question_id' => $questionId,
+                'attending_tip_used' => true,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.attending_tip_used', true);
     }
 
     public function test_answering_every_question_completes_the_task(): void
@@ -217,10 +259,16 @@ final class StudyPlanFlowTest extends TestCase
         $this->actingAs($this->user)
             ->get(route('study-plan.session.summary', [$plan, $task]))
             ->assertOk()
+            ->assertViewHas('questionOverview', fn (array $rows): bool => count($rows) === 5)
             ->assertSee('Phân tích kết quả')
             ->assertSee('Xem lại từng câu')
             ->assertSee('Tỷ lệ đúng theo chủ đề')
-            ->assertSee('data-testid="topic-accuracy-chart-scroll"', false);
+            ->assertSee('data-testid="topic-accuracy-chart-scroll"', false)
+            ->assertSee('Tổng quan từng câu')
+            ->assertSee('Thời gian cho mỗi câu hỏi')
+            ->assertSee('Thống kê đồng nghiệp')
+            ->assertSee('Khó khăn')
+            ->assertSee('data-testid="question-overview-table"', false);
 
         $this->actingAs($this->user)
             ->get(route('study-plan.session.review', [$plan, $task]))
@@ -465,6 +513,7 @@ final class StudyPlanFlowTest extends TestCase
             $question = Question::create([
                 'stem' => "Câu hỏi kiểm thử #{$i}?",
                 'explanation' => 'Giải thích.',
+                'key_info' => ["kiểm thử #{$i}"],
                 'difficulty' => 'medium',
                 'status' => QuestionStatus::Published,
                 'topic_id' => $this->topic->id,
