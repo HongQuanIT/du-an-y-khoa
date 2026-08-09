@@ -33,7 +33,14 @@ class RolePermissionSeeder extends Seeder
             }
         });
 
+        // Ensure PHP-FPM / Redis do not keep a stale permission map after seed.
         app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        try {
+            \Illuminate\Support\Facades\Artisan::call('permission:cache-reset');
+        } catch (\Throwable) {
+            // Command may be unavailable in some test boots; forgetCached is enough.
+        }
     }
 
     /**
@@ -54,6 +61,18 @@ class RolePermissionSeeder extends Seeder
                 PermissionEnum::ExamManage->value,
             ],
 
+            RoleEnum::Instructor => [
+                PermissionEnum::QuestionView->value,
+                PermissionEnum::LibraryView->value,
+                PermissionEnum::ClassroomCreate->value,
+                PermissionEnum::ClassroomManage->value,
+                PermissionEnum::ClassroomJoin->value,
+                PermissionEnum::ClassroomModerate->value,
+                PermissionEnum::LiveStart->value,
+                PermissionEnum::LiveJoin->value,
+                PermissionEnum::ExamTake->value,
+            ],
+
             RoleEnum::Student => [
                 PermissionEnum::QuestionView->value,
                 PermissionEnum::SessionStart->value,
@@ -61,6 +80,8 @@ class RolePermissionSeeder extends Seeder
                 PermissionEnum::SessionReview->value,
                 PermissionEnum::LibraryView->value,
                 PermissionEnum::ExamTake->value,
+                PermissionEnum::ClassroomJoin->value,
+                PermissionEnum::LiveJoin->value,
             ],
         };
     }

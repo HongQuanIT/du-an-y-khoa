@@ -185,7 +185,7 @@
                         <span class="material-symbols-outlined text-[18px]">clinical_notes</span>
                         Tình huống lâm sàng
                     </div>
-                    <div class="font-body-lg text-body-lg leading-relaxed text-on-surface">{!! $stemHtml !!}</div>
+                    <div class="prose prose-sm max-w-none font-body-lg text-body-lg leading-relaxed text-on-surface">{!! $stemHtml !!}</div>
                 </article>
 
                 @if (! $isExam && $isAnswered && filled($question->explanation))
@@ -194,7 +194,7 @@
                             <span class="material-symbols-outlined text-primary">lightbulb</span>
                             <h2 class="font-headline-sm text-headline-sm text-on-surface">Giải thích</h2>
                         </div>
-                        <p class="whitespace-pre-line text-body-md leading-relaxed text-on-surface">{{ $question->explanation }}</p>
+                        <div class="prose prose-sm max-w-none font-body-md text-body-md leading-relaxed text-on-surface">{!! \App\Support\Html\SafeHtml::forDisplay($question->explanation) !!}</div>
                     </section>
                 @endif
             </section>

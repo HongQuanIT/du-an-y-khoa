@@ -42,10 +42,10 @@
     );
     $hasKeyInfo = $keyInfo !== [];
     $keyInfoHtml = $keyInfoRenderer->render((string) $question->stem, $keyInfo);
-    $attendingTip = trim((string) ($question->attending_tip ?? ''));
+    $attendingTip = \App\Support\Html\SafeHtml::forDisplay((string) ($question->attending_tip ?? ''));
     if ($attendingTip === '' && $hasKeyInfo) {
-        $attendingTip = 'Hãy tập trung vào các dấu hiệu: '.implode('; ', $keyInfo)
-            .'. Kết hợp chúng để xác định chẩn đoán hoặc bước xử trí phù hợp nhất.';
+        $attendingTip = e('Hãy tập trung vào các dấu hiệu: '.implode('; ', $keyInfo)
+            .'. Kết hợp chúng để xác định chẩn đoán hoặc bước xử trí phù hợp nhất.');
     }
     $hasAttendingTip = $attendingTip !== '';
 
@@ -65,7 +65,7 @@
         ['hex' => '#10B981', 'title' => 'Xanh lá'],
     ];
     $note = $note ?? '';
-    $stemHtml = $stemHtml ?? e((string) $question->stem);
+    $stemHtml = $stemHtml ?? \App\Support\Html\SafeHtml::forDisplay((string) $question->stem);
     $flagged = (bool) ($flagged ?? false);
     $flaggedIds = $flaggedIds ?? [];
     $sessionIncomplete = count($answeredIds) < $total;
@@ -333,7 +333,7 @@
                         elapsed: @js($isAnswered ? (int) ($attempt?->time_spent_seconds ?? 0) : 0),
                         running: @js(! $isAnswered),
                         _timer: null,
-                        questionExplanation: @js($question->explanation),
+                        questionExplanation: @js(\App\Support\Html\SafeHtml::forDisplay((string) ($question->explanation ?? ''))),
                         saveUrl: @js($playerConfig['answer_url']),
                         csrf: @js(csrf_token()),
                         questionId: @js($question->id),
@@ -470,12 +470,12 @@
                                 <span>Đã dùng kiến thức</span>
                             </div>
                             <template x-if="!keyInfoEnabled">
-                                <p id="session-stem"
-                                    class="font-body-lg text-body-lg leading-relaxed whitespace-pre-line text-on-surface select-text">{!! $stemHtml !!}</p>
+                                <div id="session-stem"
+                                    class="prose prose-sm max-w-none font-body-lg text-body-lg leading-relaxed text-on-surface select-text">{!! $stemHtml !!}</div>
                             </template>
                             <template x-if="keyInfoEnabled">
-                                <p class="font-body-lg text-body-lg leading-relaxed whitespace-pre-line text-on-surface select-text"
-                                    data-testid="key-info-stem">{!! $keyInfoHtml !!}</p>
+                                <div class="prose prose-sm max-w-none font-body-lg text-body-lg leading-relaxed text-on-surface select-text"
+                                    data-testid="key-info-stem">{!! $keyInfoHtml !!}</div>
                             </template>
                         </article>
 
@@ -514,7 +514,7 @@
                             </div>
                             <div class="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50/70 p-4 text-on-surface">
                                 <span class="material-symbols-outlined mt-0.5 shrink-0 text-amber-700">stethoscope</span>
-                                <p class="font-body-md text-body-md leading-relaxed italic" x-text="attendingTip"></p>
+                                <div class="prose prose-sm max-w-none font-body-md text-body-md leading-relaxed italic" x-html="attendingTip"></div>
                             </div>
                         </div>
 
@@ -561,7 +561,7 @@
                         <div x-show="revealed && questionExplanation" x-cloak
                             class="rounded-r-lg border-l-4 border-primary bg-primary/5 py-3 pr-4 pl-4">
                             <p class="mb-1 text-label-sm font-bold tracking-wider text-primary uppercase">Giải thích</p>
-                            <p class="text-body-md leading-relaxed text-on-surface" x-text="questionExplanation"></p>
+                            <div class="prose prose-sm max-w-none text-body-md leading-relaxed text-on-surface" x-html="questionExplanation"></div>
                         </div>
                     </div>
                     </div>

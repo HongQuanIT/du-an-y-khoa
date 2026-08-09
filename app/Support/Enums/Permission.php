@@ -42,6 +42,17 @@ enum Permission: string
     case CmsManage = 'cms.manage';
     case FeatureFlagManage = 'feature_flag.manage';
 
+    // Classroom / live review (Module 44)
+    case ClassroomCreate = 'classroom.create';
+    case ClassroomManage = 'classroom.manage';
+    case ClassroomJoin = 'classroom.join';
+    case ClassroomModerate = 'classroom.moderate';
+    case ClassroomOversee = 'classroom.oversee';
+    case LiveStart = 'live.start';
+    case LiveJoin = 'live.join';
+    case LiveForceEnd = 'live.force_end';
+    case InstructorAssign = 'instructor.assign';
+
     // Feature-gated capabilities
     case AiUse = 'ai.use';
     case AnalyticsAdvanced = 'analytics.advanced';

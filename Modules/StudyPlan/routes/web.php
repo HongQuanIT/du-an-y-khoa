@@ -15,7 +15,7 @@ use Modules\StudyPlan\Http\Controllers\StudyPlanTaskController;
 | another plan cannot be addressed (srs/modules/04 §13).
 */
 
-Route::middleware('auth')
+Route::middleware(['auth', 'learner'])
     ->prefix('study-plan')
     ->name('study-plan.')
     ->scopeBindings()

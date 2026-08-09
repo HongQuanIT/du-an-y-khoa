@@ -16,6 +16,7 @@ use Modules\QuestionBank\Actions\CompleteQuestionSessionAction;
 use Modules\QuestionBank\Actions\PauseQuestionSessionAction;
 use Modules\QuestionBank\Actions\ResumeQuestionSessionAction;
 use Modules\QuestionBank\Actions\SaveQuestionSessionAnnotationAction;
+use App\Support\Html\SafeHtml;
 use Modules\QuestionBank\Enums\SessionMode;
 use Modules\QuestionBank\Enums\SessionStatus;
 use Modules\QuestionBank\Models\QuestionAttempt;
@@ -91,7 +92,7 @@ final class StudySessionController extends Controller
             'answeredIds' => $attempts->keys()->all(),
             'flaggedIds' => $flaggedIds,
             'note' => (string) ($annotation['note'] ?? ''),
-            'stemHtml' => (string) ($annotation['stem_html'] ?? e((string) $question->stem)),
+            'stemHtml' => (string) ($annotation['stem_html'] ?? SafeHtml::forDisplay((string) $question->stem)),
             'flagged' => (bool) ($annotation['flagged']
                 ?? ($attempt instanceof QuestionAttempt && $attempt->flagged)),
             'remainingSeconds' => $this->remainingSeconds($session),

@@ -76,3 +76,16 @@ Không có POST/PUT/DELETE sửa log (ghi qua hệ thống nội bộ).
 
 ## 15. Đề xuất cải tiến
 - Hash chain/ký số đảm bảo toàn vẹn (tamper-evident); cảnh báo bất thường (nhiều thay đổi quyền); SIEM integration; giữ log theo yêu cầu pháp lý; diff trực quan đẹp hơn.
+
+## 16. Phạm vi triển khai & hạng mục hoãn
+
+**Đã có:** tra cứu audit UI (`/admin/audit`), filter action/actor/IP, chi tiết before/after.
+
+**Hoãn — chưa làm ngay:**
+
+| Hạng mục | Mục đích | Ghi chú |
+|----------|----------|---------|
+| **Export CSV** | Mang log ra ngoài cho điều tra/legal/sec; filter thời gian bắt buộc; job async nếu lớn; audit chính việc export | Ưu tiên hơn User CSV khi cần bằng chứng |
+| **Timeline theo entity** (API/UI chuyên sâu) | Lịch sử đầy đủ một user/question từ mọi action | User detail đã có “audit gần đây” rút gọn |
+
+Ưu tiên sản phẩm hiện tại: **Phase 2 Question Management (module 35)** trước các export/CSKH nâng cao.

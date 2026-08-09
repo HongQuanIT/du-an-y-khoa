@@ -7,15 +7,21 @@
 
 | Route | Màn hình |
 |-------|----------|
-| `/register` | Đăng ký |
-| `/login` | Đăng nhập |
+| `/register` | Đăng ký (học viên) |
+| `/login` | Đăng nhập **học viên** |
+| `/admin/login` | Đăng nhập **quản trị** (Admin / Super Admin / Content Editor) — tách portal, **cùng** web guard/session |
+| `/admin/logout` | Đăng xuất khỏi phiên admin → `/admin/login` |
+| `/teach/login` | Đăng nhập **giảng viên** (`instructor`) — portal `/teach` (đã chốt; triển khai Phase A) |
+| `/teach/logout` | Đăng xuất → `/teach/login` |
 | `/verify-email` | Xác thực email |
 | `/forgot-password` | Quên mật khẩu |
 | `/reset-password/{token}` | Đặt lại mật khẩu |
 | `/2fa/challenge` | Nhập mã 2FA |
 | `/2fa/setup` | Bật 2FA |
 | `/onboarding` | Wizard thiết lập ban đầu |
-| `/oauth/{provider}/callback` | Callback OAuth |
+| `/oauth/{provider}/callback` | Callback OAuth (chỉ cổng học viên) |
+
+> **Tách portal (mức 2 + Instructor):** Ba cổng login — `/login` (learner), `/teach/login` (instructor), `/admin/login` (staff CMS). Cùng guard `web`. Sau login: middleware đẩy đúng portal (learner ↛ admin/teach; instructor ↛ learner dashboard & `/admin`; staff ↛ learner & `/teach` vận hành). `url.intended` chỉ trong cùng portal. Chi tiết Classroom/Instructor: Module 44 §16.
 
 ## 1. Tổng quan từng màn hình
 
@@ -24,11 +30,23 @@
 - **Đến từ:** Landing CTA, Paywall, `/pricing?plan=`.
 - **Đi sang:** `/verify-email` (email) hoặc `/onboarding` (OAuth đã verified).
 
-### 1.2 Đăng nhập (`/login`)
-- **Mục đích:** Truy cập tài khoản.
-- **Đến từ:** Header, redirect khi truy cập route cần auth.
+### 1.2 Đăng nhập học viên (`/login`)
+- **Mục đích:** Truy cập tài khoản học viên.
+- **Đến từ:** Header, redirect khi truy cập route học viên cần auth.
 - **Đi sang:** Dashboard, hoặc `/2fa/challenge` nếu bật 2FA, hoặc URL đích trước đó (intended).
+- **Không chấp nhận** tài khoản staff → hướng `/admin/login`; tài khoản instructor → hướng `/teach/login`.
 
+### 1.2b Đăng nhập quản trị (`/admin/login`)
+- **Mục đích:** Cổng riêng vào khu `/admin/*`.
+- **Đến từ:** Bookmark, redirect guest khi truy cập `/admin/*`.
+- **Đi sang:** `/admin/2fa/setup` (chưa enroll) hoặc `/admin/2fa/challenge` → `/admin` sau khi TOTP OK.
+- **Không** OAuth / đăng ký / remember me. Student/instructor credentials → lỗi chung (không enumeration role).
+- **2FA TOTP bắt buộc** (Google Authenticator / tương thích); recovery codes hiện 1 lần sau setup; mỗi phiên login admin phải challenge lại.
+
+### 1.2c Đăng nhập giảng viên (`/teach/login`) — đã chốt, Phase A
+- **Mục đích:** Cổng vào workspace `/teach/*` (chữa đề vận hành).
+- **Không** OAuth / đăng ký công khai — tài khoản do Admin gán role `instructor`.
+- **Đi sang:** `/teach` dashboard. Từ chối student/staff (hướng đúng portal).
 ### 1.3 Onboarding wizard (`/onboarding`)
 - **Mục đích:** Thu thập mục tiêu học (kỳ thi, ngày thi, chuyên ngành quan tâm) để cá nhân hóa.
 - **Đến từ:** Sau đăng ký thành công lần đầu.
@@ -89,8 +107,17 @@
    → nếu email tồn tại: liên kết account / cảnh báo → login
    → nếu mới: tạo user (verified) → /onboarding
 
-ĐĂNG NHẬP:
- /login → submit → (2FA bật? → /2fa/challenge) → set session → intended URL/Dashboard
+ĐĂNG NHẬP HỌC VIÊN:
+ /login → submit → (staff? → từ chối + hướng /admin/login)
+   → (2FA bật? → /2fa/challenge) → set session → intended URL/Dashboard
+
+ĐĂNG NHẬP QUẢN TRỊ:
+ /admin/login → submit → (không phải staff? → lỗi chung, không login)
+   → chưa enroll 2FA? → /admin/2fa/setup (QR + confirm + lưu recovery)
+   → đã enroll? → /admin/2fa/challenge (TOTP hoặc recovery)
+   → session đánh dấu 2FA OK + audit admin.login → /admin
+ Guest vào /admin/* → redirect /admin/login (không dùng /login học viên)
+ Middleware staff.2fa chặn mọi trang admin (trừ setup/challenge/logout) nếu chưa confirm phiên.
 
 QUÊN MẬT KHẨU:
  /forgot-password → nhập email → gửi link (luôn báo "đã gửi nếu tồn tại")

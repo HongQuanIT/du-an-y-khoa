@@ -15,7 +15,7 @@ use Modules\QuestionBank\Http\Controllers\StudySessionController;
 | Add server-rendered pages here; API lives in routes/api.php.
 */
 
-Route::middleware('auth')->group(function (): void {
+Route::middleware(['auth', 'learner'])->group(function (): void {
     Route::get('/qbank', QuestionBankPageController::class)->name('qbank.index');
     Route::get('/qbank/create', [CustomSessionController::class, 'create'])->name('qbank.create');
     Route::post('/qbank/create', [CustomSessionController::class, 'store'])->name('qbank.store');

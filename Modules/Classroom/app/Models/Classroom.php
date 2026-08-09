@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
+use Modules\Classroom\Enums\ClassroomPurpose;
 use Modules\Classroom\Enums\ClassroomStatus;
 use Modules\Classroom\Enums\ClassroomVisibility;
 use Modules\Classroom\Enums\LiveSessionStatus;
@@ -25,6 +26,7 @@ use Modules\Classroom\Enums\MemberStatus;
  * @property string $title
  * @property string|null $description
  * @property int $host_user_id
+ * @property ClassroomPurpose $purpose
  * @property ClassroomVisibility $visibility
  * @property string|null $join_code
  * @property ClassroomStatus $status
@@ -39,6 +41,7 @@ class Classroom extends Model
         'title',
         'description',
         'host_user_id',
+        'purpose',
         'visibility',
         'join_code',
         'status',
@@ -48,6 +51,7 @@ class Classroom extends Model
     ];
 
     protected $casts = [
+        'purpose' => ClassroomPurpose::class,
         'visibility' => ClassroomVisibility::class,
         'status' => ClassroomStatus::class,
         'max_members' => 'integer',

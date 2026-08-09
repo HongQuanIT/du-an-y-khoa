@@ -28,16 +28,16 @@ Khẩu hiệu: *"Học hiệu quả hơn — hiểu bản chất, nhớ lâu, lu
 |-------|-------|-------------|
 | **Guest** | Khách chưa đăng nhập | Xem landing, preview giới hạn, đăng ký |
 | **Student (Free)** | Người học miễn phí | Làm câu hỏi free, thư viện giới hạn, tính năng cá nhân cơ bản |
-| **Premium Student** | Người học trả phí | Toàn bộ Qbank, thư viện, AI, analytics nâng cao; **host lớp chữa đề** (Module 44) |
-| **Content Editor** | Biên tập nội dung | CRUD câu hỏi, bài viết, media (theo workflow duyệt) |
-| **Admin** | Quản trị hệ thống | Quản lý user, nội dung, cấu hình |
-| **Super Admin** | Toàn quyền | Cấu hình hệ thống, phân quyền, billing, feature flag |
-| 🔵 **Instructor** *(hoãn ngữ cảnh Org)* | Giảng viên/mentor tổ chức | Tạo lớp org, giao bài, xem tiến độ — **Phase 2 (gắn Organization)**. Role `instructor` vẫn có thể host Classroom cộng đồng (44) khi được gán. |
+| **Premium Student** | Người học trả phí | Toàn bộ Qbank, thư viện, AI, analytics nâng cao; **host lớp chữa đề cộng đồng** trên `/classes` (Module 44) |
+| **Instructor** | Giảng viên / mentor vận hành | Portal **`/teach`**: tạo & chạy lớp chữa đề (feedback QBank / exam); không dùng UI học viên hay admin CMS. Quyền lớp **org B2B** vẫn 🔵 Phase 2 |
+| **Content Editor** | Biên tập nội dung | CRUD câu hỏi, bài viết, media (theo workflow duyệt) — portal `/admin` |
+| **Admin** | Quản trị hệ thống | Quản lý user, nội dung, cấu hình; **oversight** lớp (force-end / archive) — không chữa đề hàng ngày |
+| **Super Admin** | Toàn quyền | Phân quyền, billing, feature flag; gán `instructor`; oversight lớp |
 | 🔵 **Organization Admin** *(hoãn)* | Quản trị tổ chức (trường/bệnh viện) | Quản lý thành viên, ghế license, báo cáo tổ chức — **Phase 2** |
 
 Chi tiết ma trận quyền: xem `03-phan-quyen-rbac.md`.
 
-> 🔵 **Ghi chú phạm vi:** Module **Organization (32)** cùng actor **Organization Admin** (và quyền lớp B2B của Instructor) đã **hoãn sang Phase 2**. **Classroom / Live Review (44)** thuộc phạm vi hiện tại (B2C, Premium host) — **không** thay thế Organization.
+> 🔵 **Ghi chú phạm vi:** Module **Organization (32)** đã **hoãn Phase 2**. **Classroom (44)** + **Instructor portal `/teach`** thuộc phạm vi hiện tại. Admin = governance lớp; Instructor = operations; Learner = join/xem.
 
 ## 4. Phạm vi hệ thống (Scope) — 43 module hiện tại + 1 module hoãn (Phase 2)
 
@@ -97,8 +97,9 @@ Chi tiết ma trận quyền: xem `03-phan-quyen-rbac.md`.
 - **Library Article**: bài viết y khoa liên kết chéo với câu hỏi, thuốc, hình ảnh.
 - **Flashcard**: thẻ ghi nhớ (spaced repetition).
 - **Study Plan**: lộ trình học cá nhân hóa theo ngày thi mục tiêu.
-- **Classroom**: lớp chữa đề cộng đồng (B2C); host Premium; khác lớp tổ chức B2B (Module 32, Phase 2).
+- **Classroom**: lớp chữa đề (B2C); host cộng đồng (Premium `/classes`) hoặc vận hành (Instructor `/teach`); khác lớp tổ chức B2B (Module 32, Phase 2).
 - **Live Session**: một buổi livestream trong Classroom (LiveKit); sau khi kết thúc còn VOD + chat read-only.
+- **Instructor portal**: khu `/teach` riêng cho giảng viên — không lẫn learner/admin.
 
 ## 8. Ràng buộc phi chức năng (NFR) tóm tắt
 

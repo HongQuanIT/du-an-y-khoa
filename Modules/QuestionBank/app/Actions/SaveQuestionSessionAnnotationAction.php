@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\QuestionBank\Actions;
 
 use App\Support\Concerns\AsAction;
+use App\Support\Html\SafeHtml;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
@@ -77,7 +78,7 @@ final class SaveQuestionSessionAnnotationAction
 
             $annotations[$key] = [
                 'note' => (string) ($current['note'] ?? ''),
-                'stem_html' => (string) ($current['stem_html'] ?? e((string) $question->stem)),
+                'stem_html' => (string) ($current['stem_html'] ?? SafeHtml::forDisplay((string) $question->stem)),
                 'flagged' => (bool) ($current['flagged'] ?? false),
                 'key_info_used' => (bool) ($current['key_info_used'] ?? false),
                 'attending_tip_used' => (bool) ($current['attending_tip_used'] ?? false),
@@ -150,12 +151,15 @@ final class SaveQuestionSessionAnnotationAction
     }
 
     /**
-     * Keep only highlight <mark> tags and reject payloads that alter stem text.
+     * Keep highlight <mark> plus safe rich-text tags from the question stem.
+     * Reject payloads that alter visible stem text.
      */
-    private function sanitizeStemHtml(string $html, string $plainStem): string
+    private function sanitizeStemHtml(string $html, string $storedStem): string
     {
-        $allowed = strip_tags($html, '<mark>');
+        $allowedTags = '<mark><p><br><strong><b><em><i><u><s><ul><ol><li><h2><h3><blockquote><a><img><sub><sup><span>';
+        $allowed = strip_tags($html, $allowedTags);
         $allowed = preg_replace('/\s+on\w+\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)/i', '', $allowed) ?? $allowed;
+        $allowed = preg_replace('/javascript\s*:/i', '', $allowed) ?? $allowed;
         $allowed = preg_replace_callback(
             '/<mark\b([^>]*)>/i',
             function (array $matches): string {
@@ -171,11 +175,10 @@ final class SaveQuestionSessionAnnotationAction
             $allowed,
         ) ?? $allowed;
 
-        $text = html_entity_decode(strip_tags($allowed), ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $normalize = static fn (string $value): string => preg_replace('/\s+/u', '', $value) ?? '';
 
-        if ($normalize($text) !== $normalize($plainStem)) {
-            return e($plainStem);
+        if ($normalize(SafeHtml::plainText($allowed)) !== $normalize(SafeHtml::plainText($storedStem))) {
+            return SafeHtml::forDisplay($storedStem);
         }
 
         return $allowed;

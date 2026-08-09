@@ -1,6 +1,7 @@
 import { Livewire, Alpine } from '../../vendor/livewire/livewire/dist/livewire.esm';
 import { bootLivekitRooms } from './classroom/livekit-room';
 import { bootLiveRooms } from './classroom/live-room';
+import { registerRichEditor } from './admin/rich-editor';
 
 // Reverb is optional. Do not open an idle WebSocket on every page when no
 // realtime feature is enabled; this also avoids stale sockets during BFCache
@@ -15,9 +16,11 @@ if (import.meta.env.VITE_REVERB_ENABLED === 'true') {
 if (! window.__medlearnLivewireStarted) {
     window.__medlearnLivewireStarted = true;
     window.Alpine = Alpine;
+    registerRichEditor(Alpine);
     Livewire.start();
 } else if (! window.Alpine) {
     window.Alpine = Alpine;
+    registerRichEditor(Alpine);
 }
 
 const bootClassroom = () => {

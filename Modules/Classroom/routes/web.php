@@ -21,7 +21,7 @@ use Modules\Classroom\Http\Controllers\LiveSessionController;
 
 Route::post('/webhooks/livekit', LiveKitWebhookController::class)->name('webhooks.livekit');
 
-Route::middleware('auth')
+Route::middleware(['auth', 'learner'])
     ->prefix('classes')
     ->name('classroom.')
     ->scopeBindings()

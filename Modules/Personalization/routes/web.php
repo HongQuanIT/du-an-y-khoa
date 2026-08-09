@@ -12,7 +12,7 @@ use Modules\Personalization\Http\Controllers\FlashcardsDashboardController;
 | Personalization — web routes (notes, flashcards). Add pages here.
 */
 
-Route::middleware('auth')->group(function (): void {
+Route::middleware(['auth', 'learner'])->group(function (): void {
     Route::get('/flashcards', FlashcardsDashboardController::class)->name('flashcards.index');
     Route::get('/flashcards/create', FlashcardCreateController::class)->name('flashcards.create');
     Route::get('/flashcards/deck', FlashcardDeckDetailController::class)->name('flashcards.deck');
