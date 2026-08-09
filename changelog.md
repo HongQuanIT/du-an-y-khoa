@@ -1,5 +1,56 @@
 # Changelog
 
+## 2026-08-09
+
+### Phase A — Instructor portal + Classroom oversight
+- Role `instructor` + permissions Classroom/Live/`instructor.assign`; seed user `instructor@medlearn.local`.
+- Portal `/teach` (login/logout/dashboard shell), middleware `instructor`; tách 3 cổng với learner & admin.
+- Admin `/admin/classrooms`: giám sát mọi lớp, filter, force-end live, archive + audit.
+- Cột `classrooms.purpose` (`community_review` / `feedback_review` / `exam_review`).
+- Sau seed permission: reset Spatie cache (`permission:cache-reset`) — tránh menu admin chỉ còn Dashboard khi cache cũ.
+- Chưa: CRUD lớp trên `/teach`, review queue, chữa exam (Phase B/C).
+
+### SRS — chốt Instructor portal & Classroom oversight
+- Ba portal: Learner `/login`, Instructor `/teach`, Admin `/admin` (cùng `web` session).
+- Super Admin/Admin: **oversight** lớp only (`classroom.oversee`, force-end/archive) — không vận hành chữa đề.
+- Instructor: role + workspace `/teach` (feedback QBank / exam); host không phụ thuộc Premium.
+- Premium vẫn host lớp cộng đồng trên `/classes`. Roadmap Phase A→D ghi ở Module 44 §16.
+- Cập nhật: `03-phan-quyen-rbac`, `01-tong-quan`, `02-auth`, `04-data`, `08-glossary`, `33-admin`, `44-classroom`.
+
+### Phase 2a — Question Management (MVP)
+- Admin `/admin/questions`: list/filter, tạo/sửa stem+options+topic+difficulty, workflow `draft → in_review → published → retired`.
+- Thêm status `in_review`; Content Editor gửi duyệt; `question.publish` để xuất bản/retire; ghi audit.
+- Chưa: media module đầy đủ, import, report queue, version history UI.
+- Sửa `audit_logs.auditable_id` → string (UUID câu hỏi không còn bị truncate trên MySQL).
+- Rich editor (Quill) cho câu hỏi / giải thích / gợi ý: format text + chèn ảnh; sanitize HTML; hiển thị an toàn phía học viên.
+
+### SRS — hoãn CSKH nâng cao, ưu tiên QBank
+- Ghi chú hoãn impersonate, subscription override, bulk users, export CSV (Users/Audit) tại module 34 §16, 40 §16, 33, 35 §16.
+
+### Phase 1 — User Management, Roles, Audit UI
+- Users: `/admin/users` list/filter + chi tiết; đổi role/status, verify email, gửi reset password; cột `users.status`; chặn login khi suspended/banned.
+- Roles: `/admin/roles`, ma trận permission (chỉ Super Admin lưu), `/admin/permissions` catalog.
+- Audit: `/admin/audit` filter + chi tiết before/after; mọi mutate user/role ghi `audit_logs`.
+- Password reset guest tối thiểu (`/reset-password/{token}`) để link admin gửi được.
+- Chưa làm: impersonate, subscription override, bulk, export CSV.
+
+### Phase 0 Admin shell + 2FA TOTP bắt buộc
+- Bảng `two_factor_secrets` / `audit_logs`; TOTP (Google2FA + QR); `/admin/2fa/setup|challenge|recovery`.
+- Middleware `staff.2fa`: staff phải enroll + xác thực mỗi phiên trước khi vào `/admin`.
+- `AdminMenu` lọc theo permission; layout + KPI placeholder; `Auditor` ghi `admin.login` / `admin.2fa.enabled`.
+- Component `admin.page-header`, `admin.kpi-card`; cập nhật test portal.
+- Sửa lưu `recovery_codes`: dùng cast `array` (hash bcrypt) thay `encrypted:array` — tránh lỗi MySQL JSON invalid.
+
+### Tách portal học viên / admin sau login
+- Middleware `learner`: staff không vào được dashboard/QBank/StudyPlan/Classroom/Flashcards — redirect về `/admin`.
+- Layout admin riêng (`layouts.admin`) + trang tổng quan; redirect sau login chỉ giữ intended cùng portal.
+- Cập nhật test tách portal.
+
+### Tách cổng đăng nhập học viên / admin (mức 2)
+- Thêm `/admin/login` và `/admin/logout`; guest vào `/admin/*` được đưa tới cổng admin (không dùng `/login` học viên).
+- Cùng guard/session `web`: staff bị từ chối ở `/login`, học viên bị từ chối ở `/admin/login` (lỗi chung); admin không OAuth / remember me.
+- Cập nhật SRS Auth (02) và Admin Dashboard (33); thêm feature test tách portal.
+
 ## 2026-08-07
 
 ### Sửa lỗi frontend phòng live sau rebase

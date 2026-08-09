@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Support\Concerns\AsAction;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Modules\Classroom\Enums\ClassroomPurpose;
 use Modules\Classroom\Enums\ClassroomStatus;
 use Modules\Classroom\Enums\ClassroomVisibility;
 use Modules\Classroom\Enums\MemberRole;
@@ -20,17 +21,20 @@ final class CreateClassroomAction
     use AsAction;
 
     /**
-     * @param  array{title: string, description?: string|null, visibility?: string, max_members?: int|null}  $data
+     * @param  array{title: string, description?: string|null, visibility?: string, purpose?: string, max_members?: int|null}  $data
      */
     public function handle(User $host, array $data): Classroom
     {
         return DB::transaction(function () use ($host, $data): Classroom {
             $visibility = ClassroomVisibility::from($data['visibility'] ?? ClassroomVisibility::Public->value);
+            $purpose = ClassroomPurpose::tryFrom((string) ($data['purpose'] ?? ''))
+                ?? ClassroomPurpose::CommunityReview;
 
             $classroom = Classroom::create([
                 'title' => $data['title'],
                 'description' => $data['description'] ?? null,
                 'host_user_id' => $host->getKey(),
+                'purpose' => $purpose,
                 'visibility' => $visibility,
                 'join_code' => $this->makeJoinCode(),
                 'status' => ClassroomStatus::Active,

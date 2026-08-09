@@ -122,7 +122,11 @@ flowchart LR
 
 ## 5. Business Logic
 
-- **Host entitlement:** `classroom.host` gắn Premium (và role `instructor` / `admin` / `super_admin` mặc định có). Free: join được, không create/start.
+- **Host entitlement:**
+  - Premium student: `classroom.host` → tạo/start trên `/classes` (cộng đồng).
+  - Instructor: host trên `/teach` theo **role** (không phụ thuộc Premium).
+  - Free: join được, không create/start.
+  - Admin: oversight (`classroom.oversee`), không thay `/teach`.
 - **Visibility:** `public` (catalog), `unlisted` (link/code), `invite_only` (chỉ invite).
 - **Membership:** `host` / `cohost` / `member`; status `invited` / `active` / `left` / `banned`.
 - **Session lifecycle:** `scheduled` → `live` → `ended` | `cancelled`. Chỉ 1 session `live` / classroom tại một thời điểm (MVP).
@@ -183,13 +187,13 @@ Tham chiếu nhóm Classroom trong `04-mo-hinh-du-lieu.md`.
 | Actor | Được làm |
 |-------|----------|
 | **Guest** | Không (redirect login) |
-| **Student Free** | Join public/unlisted (nếu cho phép); xem live + VOD; **không** create/start |
-| **Premium** | + tạo lớp, schedule, start/end live, moderate lớp mình, mời cohost |
-| **Instructor** *(role hệ thống; Org Phase 2 vẫn hoãn)* | Như Premium host (có `classroom.host` mặc định) |
-| **Content Editor** | Không host mặc định (trừ khi Premium) |
-| **Admin / Super Admin** | Quản lý/gỡ lớp vi phạm, force-end, xem audit |
+| **Student Free** | Join public/unlisted; xem live + VOD; **không** create/start |
+| **Premium** | Host lớp **cộng đồng** trên `/classes` (entitlement `classroom.host`) |
+| **Instructor** | Portal **`/teach`**: tạo/chạy lớp vận hành; gắn đề từ feedback QBank / exam; **không** vào learner UI hay `/admin` |
+| **Content Editor** | Không host mặc định |
+| **Admin / Super Admin** | **Oversight only** (`classroom.oversee`): xem mọi lớp, force-end, archive/gỡ vi phạm, audit — **không** thay giảng viên chữa đề hàng ngày |
 
-Permissions: `classroom.create`, `classroom.manage`, `classroom.join`, `classroom.moderate`, `live.start`, `live.join`. Entitlement: `classroom.host`.
+Permissions: `classroom.create`, `classroom.manage`, `classroom.join`, `classroom.moderate`, `classroom.oversee`, `live.start`, `live.join`, `live.force_end`. Entitlement `classroom.host` = Premium cộng đồng; Instructor host bằng **role**.
 
 ## 10. Edge Cases
 
@@ -242,3 +246,44 @@ Properties gợi ý: `classroom_id`, `session_id`, `visibility`, `role_in_class`
 - Clip highlight tự động từ recording; transcript + AI tóm tắt buổi chữa.
 - Liên kết Phase 2: map `classroom` ↔ Organization `class` cho trường thuê host nội bộ.
 - Lịch nhắc calendar (ICS); waitlist khi `max_members`.
+
+## 16. Đã chốt — Instructor portal & oversight (2026-08-09)
+
+> **Quyết định sản phẩm:** Super Admin/Admin **không** quản lý lớp như giảng viên. Giảng viên là actor riêng (không learner, không admin CMS).
+
+### Nguyên tắc
+- **Admin = governance** (oversight, gán instructor, force-end, archive).
+- **Instructor = operations** (tạo buổi chữa, gắn đề, live host studio).
+- **Learner = participation** (join, xem live/VOD).
+- Premium host cộng đồng vẫn trên `/classes` — **song song**, không thay `/teach`.
+
+### Portal `/teach` (UI)
+| Route | Màn |
+|-------|-----|
+| `/teach/login`, `/teach/logout` | Đăng nhập giảng viên (tách portal, cùng `web` session) |
+| `/teach` | Dashboard: sắp/đang live, lớp của tôi, câu cần chữa |
+| `/teach/classes`, `/teach/classes/create`, `/teach/classes/{id}` | CRUD lớp mình host/cohost |
+| `/teach/review-queue` | Hàng đợi từ feedback/report QBank |
+| `/teach/exams/{id}/review` | Chọn exam → tạo session chữa |
+| Host studio | Tái dùng LiveKit presenter (Module 44 hiện có) |
+
+Layout: teaching console (không sidebar Users/Roles/CMS).
+
+### Admin oversight
+- Menu `/admin`: **Lớp học (giám sát)** — list mọi lớp, filter host/status, force-end / archive.
+- Không phải workspace chữa đề.
+
+### `purpose` lớp (cùng bảng `classrooms`)
+| Value | Nguồn đề | Host chính |
+|-------|----------|------------|
+| `community_review` | Cộng đồng / Premium | Premium trên `/classes` |
+| `feedback_review` | Feedback / report QBank | Instructor `/teach` |
+| `exam_review` | Exam / kỳ thi | Instructor `/teach` |
+
+### Roadmap triển khai
+| Phase | Nội dung | Trạng thái |
+|-------|----------|------------|
+| **A** | Role `instructor` + `/teach` shell + middleware tách portal + admin oversight list | ✅ Done |
+| **B** | Review queue từ feedback QBank → `question_set` | Pending |
+| **C** | Chữa theo exam + cohost nhiều GV | Pending |
+| **D** | Liên kết Org B2B (Module 32) — ngoài phạm vi hiện tại | Pending |

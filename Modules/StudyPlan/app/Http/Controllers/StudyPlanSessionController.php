@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\StudyPlan\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Support\Html\SafeHtml;
 use App\Support\Http\Responses\ApiResponse;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
@@ -89,7 +90,7 @@ final class StudyPlanSessionController extends Controller
             'answeredIds' => $attempts->keys()->all(),
             'questionIds' => $questionIds,
             'note' => (string) ($annotation['note'] ?? ''),
-            'stemHtml' => (string) ($annotation['stem_html'] ?? e((string) $question->stem)),
+            'stemHtml' => (string) ($annotation['stem_html'] ?? SafeHtml::forDisplay((string) $question->stem)),
             'flagged' => $flagged,
             'flaggedIds' => $flaggedIds,
         ]);
@@ -423,7 +424,7 @@ final class StudyPlanSessionController extends Controller
             };
 
             $annotation = ($session->annotations ?? [])[(string) $questionId] ?? [];
-            $stemHtml = (string) ($annotation['stem_html'] ?? e((string) $question->stem));
+            $stemHtml = (string) ($annotation['stem_html'] ?? SafeHtml::forDisplay((string) $question->stem));
             $note = (string) ($annotation['note'] ?? '');
             $flagged = (bool) ($annotation['flagged'] ?? $attempt?->flagged ?? false);
 

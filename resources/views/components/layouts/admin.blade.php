@@ -1,0 +1,126 @@
+@props([
+    'title' => null,
+])
+
+@php
+    $navItems = \Modules\Admin\Support\AdminMenu::for(auth()->user());
+@endphp
+
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="light antialiased">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{{ $title ? $title . ' — Quản trị' : 'Quản trị — ' . config('app.name') }}</title>
+
+    @fonts
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @livewireStyles
+</head>
+
+<body class="bg-surface-container-lowest font-body-md text-on-surface" x-data="{ menu: false }"
+    @keydown.escape.window="menu = false">
+    <aside
+        class="fixed top-0 left-0 z-50 hidden h-screen w-sidebar-width flex-col border-r border-outline-variant bg-surface p-4 md:flex">
+        <div class="mb-6 px-2">
+            <a href="{{ route('admin.dashboard') }}" class="block">
+                <span class="font-headline-sm text-headline-sm font-extrabold text-primary tracking-tight">{{ config('app.name') }}</span>
+                <span class="mt-0.5 block font-label-sm text-label-sm text-on-surface-variant">Quản trị hệ thống</span>
+            </a>
+        </div>
+        <nav class="flex flex-1 flex-col gap-1 overflow-y-auto" aria-label="Menu quản trị">
+            @foreach ($navItems as $item)
+                @php
+                    $active = $item['match'] && request()->routeIs($item['match']);
+                    $href = $item['route'] ? route($item['route']) : null;
+                @endphp
+                @if ($href)
+                    <a href="{{ $href }}"
+                        class="flex items-center gap-3 rounded-lg px-3 py-2.5 font-label-md text-label-md transition-colors {{ $active ? 'bg-primary-container text-on-primary-container' : 'text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface' }}">
+                        <span class="material-symbols-outlined text-[22px] leading-none">{{ $item['icon'] }}</span>
+                        {{ $item['label'] }}
+                    </a>
+                @else
+                    <span
+                        class="flex cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2.5 font-label-md text-label-md text-on-surface-variant/50"
+                        title="Sắp có">
+                        <span class="material-symbols-outlined text-[22px] leading-none">{{ $item['icon'] }}</span>
+                        <span class="flex-1">{{ $item['label'] }}</span>
+                        <span class="font-label-sm text-label-sm">Sắp có</span>
+                    </span>
+                @endif
+            @endforeach
+        </nav>
+        <form method="post" action="{{ route('admin.logout') }}" class="mt-4 border-t border-outline-variant pt-4">
+            @csrf
+            <button type="submit"
+                class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 font-label-md text-label-md text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface">
+                <span class="material-symbols-outlined text-[22px] leading-none">logout</span>
+                Đăng xuất
+            </button>
+        </form>
+    </aside>
+
+    <div x-show="menu" x-cloak @click="menu = false" class="fixed inset-0 z-50 bg-black/40 md:hidden"></div>
+    <aside x-show="menu" x-cloak x-transition:enter="transition ease-out duration-200"
+        x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0"
+        x-transition:leave="transition ease-in duration-150" x-transition:leave-start="translate-x-0"
+        x-transition:leave-end="-translate-x-full"
+        class="fixed top-0 bottom-0 left-0 z-[60] flex w-sidebar-width flex-col border-r border-outline-variant bg-surface p-4 md:hidden"
+        @click.stop>
+        <div class="mb-4 flex items-center justify-between px-2">
+            <span class="font-label-md text-label-md font-semibold text-on-surface-variant">Quản trị</span>
+            <button type="button" @click="menu = false"
+                class="inline-flex size-10 items-center justify-center rounded-lg text-on-surface transition-colors hover:bg-surface-container-low"
+                aria-label="Đóng menu">
+                <span class="material-symbols-outlined text-[24px] leading-none">close</span>
+            </button>
+        </div>
+        <nav class="flex flex-1 flex-col gap-1">
+            @foreach ($navItems as $item)
+                @php $href = $item['route'] ? route($item['route']) : null; @endphp
+                @if ($href)
+                    <a href="{{ $href }}" @click="menu = false"
+                        class="flex items-center gap-3 rounded-lg px-3 py-2.5 font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-low">
+                        <span class="material-symbols-outlined text-[22px] leading-none">{{ $item['icon'] }}</span>
+                        {{ $item['label'] }}
+                    </a>
+                @endif
+            @endforeach
+        </nav>
+    </aside>
+
+    <header
+        class="fixed top-0 right-0 left-0 z-40 flex h-header-height items-center justify-between border-b border-outline-variant bg-surface px-margin-mobile md:left-sidebar-width md:px-margin-desktop">
+        <div class="flex min-w-0 flex-1 items-center gap-2">
+            <button type="button" @click="menu = true"
+                class="hidden size-10 shrink-0 items-center justify-center rounded-lg text-on-surface transition-colors hover:bg-surface-container-low max-md:inline-flex"
+                :aria-expanded="menu" aria-label="Mở menu">
+                <span class="material-symbols-outlined text-[24px] leading-none">menu</span>
+            </button>
+            <h1 class="truncate font-headline-sm text-headline-sm text-on-surface">{{ $title ?? 'Tổng quan' }}</h1>
+        </div>
+        <div class="ml-2 flex shrink-0 items-center gap-3">
+            <div class="hidden text-right sm:block">
+                <p class="font-label-md text-label-md text-on-surface">{{ auth()->user()->name }}</p>
+                <p class="font-label-sm text-label-sm text-on-surface-variant">Quản trị viên</p>
+            </div>
+            <span
+                class="flex size-10 items-center justify-center rounded-full border border-outline-variant bg-primary-container font-bold text-body-md text-on-primary-container">
+                {{ Str::upper(Str::substr(auth()->user()->name, 0, 1)) }}
+            </span>
+        </div>
+    </header>
+
+    <main class="min-h-screen bg-surface-container-lowest pt-header-height md:ml-sidebar-width">
+        <div class="p-margin-mobile md:p-margin-desktop">
+            {{ $slot }}
+        </div>
+    </main>
+
+    @livewireScriptConfig
+</body>
+
+</html>

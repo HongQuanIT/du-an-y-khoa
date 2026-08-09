@@ -18,6 +18,7 @@
     },
     "dependencies": {
         "hls.js": "^1.6.17",
-        "livekit-client": "^2.21.0"
+        "livekit-client": "^2.21.0",
+        "quill": "^2.0.3"
     }
 }

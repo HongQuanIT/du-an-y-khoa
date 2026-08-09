@@ -7,11 +7,13 @@ Bảng điều khiển vận hành cho Admin/Super Admin: KPI hệ thống (ngư
 
 | Route | Màn hình |
 |-------|----------|
+| `/admin/login` | Đăng nhập quản trị (tách khỏi `/login` học viên; cùng guard/session) |
+| `/admin/logout` | Đăng xuất → `/admin/login` |
 | `/admin` | Dashboard quản trị |
 
 ## 1. Tổng quan
 - **Mục đích:** Nhìn nhanh sức khỏe hệ thống & kinh doanh.
-- **Đến từ:** Đăng nhập admin, avatar menu (admin).
+- **Đến từ:** `/admin/login` (portal riêng), không đi qua `/login` học viên.
 - **Đi sang:** Các module quản trị.
 
 ## 2. Phân tích giao diện
@@ -30,8 +32,11 @@ Bảng điều khiển vận hành cho Admin/Super Admin: KPI hệ thống (ngư
 
 ## 4. Luồng người dùng
 ```
-Admin login (2FA) → /admin → thấy report chờ 12 → sang Question Management xử lý
+/admin/login → 2FA setup hoặc challenge → /admin
+ → thấy report chờ 12 → sang Question Management xử lý
 Thấy payment_failed tăng → sang Billing/Reports điều tra.
+Staff không dùng /login học viên; student không vào được /admin/login.
+Menu sidebar lọc theo permission (AdminMenu); layout độc lập học viên.
 ```
 
 ## 5. Business Logic
@@ -65,6 +70,10 @@ Thấy payment_failed tăng → sang Billing/Reports điều tra.
 
 ## 13. Security
 - Chỉ admin (RBAC + 2FA bắt buộc); audit truy cập; scope quyền; IP allowlist tùy chọn cho admin.
+- **Tách portal:** staff không truy cập khu học viên (`/dashboard`, qbank, …) — middleware `learner` đẩy về `/admin`. Layout `AdminLayout` độc lập với layout học viên.
+- Phase 1 UI: Users / Roles / Audit đã có route + permission middleware.
+- **Hoãn (chưa làm ngay):** impersonate, subscription override, bulk users, export CSV (Users + Audit) — chi tiết ở `34-user-management.md` §16 và `40-audit-log.md` §16.
+- **Đã chốt (Classroom):** Admin/Super Admin chỉ **oversight** lớp (`classroom.oversee`) — menu giám sát, force-end/archive; **không** workspace chữa đề. Vận hành lớp = role `instructor` + portal `/teach` (xem `44-classroom-live-review.md` §16).
 
 ## 14. Performance
 - Read replica + cache; downsample chart; alerts nhẹ.

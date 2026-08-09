@@ -7,7 +7,19 @@
 - **Subscription** là lớp gating độc lập với role: xác định quyền truy cập nội dung Premium.
 - Kết hợp: `access = role_permissions ∩ subscription_entitlements ∩ feature_flags`.
 
-> 🔵 **Phạm vi hiện tại:** Quyền **tổ chức B2B** của Instructor/Org Admin (`org.*`, giao bài org, ghế license…) **hoãn Phase 2** (Module 32). **Classroom / Live Review (44)** thuộc phạm vi hiện tại: Premium (+ `instructor`/admin) host lớp cộng đồng qua entitlement `classroom.host`. Cột Org Admin và dòng org.* bên dưới vẫn đánh dấu 🔵.
+> 🔵 **Phạm vi hiện tại:** Quyền **tổ chức B2B** (`org.*`, giao bài org, ghế license…) **hoãn Phase 2** (Module 32). **Classroom (44)** + **role `instructor` + portal `/teach`** thuộc phạm vi hiện tại (đã chốt). Cột Org Admin và dòng org.* vẫn đánh dấu 🔵.
+
+## 1.1 Ba portal (cùng guard `web`)
+
+| Portal | Login | Ai vào | Không vào |
+|--------|-------|--------|-----------|
+| **Learner** | `/login` | `student` | staff, instructor |
+| **Instructor (Teach)** | `/teach/login` | `instructor` | student, staff CMS |
+| **Admin** | `/admin/login` | `content_editor`, `admin`, `super_admin` | student, instructor |
+
+- Giảng viên **không** dùng layout học viên và **không** vào `/admin` (CMS/users/RBAC).
+- Admin/Super Admin **không** vận hành lớp hàng ngày trên `/teach`; chỉ **giám sát** (`classroom.oversee`) trên `/admin`.
+- Chi tiết Classroom: `srs/modules/44-classroom-live-review.md` §16.
 
 ## 2. Danh sách Role
 
@@ -15,34 +27,32 @@
 |------|-----------|----------|
 | Guest | `guest` | Chưa đăng nhập |
 | Student (Free) | `student` | Mặc định sau đăng ký |
-| Premium Student | `student` + subscription `premium` | Gating theo subscription |
-| Content Editor | `content_editor` | Nội dung |
-| Admin | `admin` | Toàn hệ thống (giới hạn cấu hình) |
-| Super Admin | `super_admin` | Toàn quyền |
-| Instructor | `instructor` | Host Classroom cộng đồng (44) khi được gán; quyền lớp **org B2B** vẫn 🔵 Phase 2 |
+| Premium Student | `student` + subscription `premium` | Gating theo subscription; có thể host lớp **cộng đồng** trên `/classes` |
+| **Instructor** | `instructor` | Portal `/teach`; host lớp chữa đề vận hành (feedback QBank / exam); **không** phụ thuộc Premium |
+| Content Editor | `content_editor` | CMS nội dung (`/admin`) |
+| Admin | `admin` | Quản trị + oversight lớp |
+| Super Admin | `super_admin` | Toàn quyền + oversight |
 | 🔵 Organization Admin *(hoãn)* | `org_admin` | Phase 2 — phạm vi tổ chức |
 
-> Premium là **entitlement** gắn với subscription, không phải role riêng — người dùng vẫn là `student` nhưng có `entitlement: premium` (gồm `classroom.host`). Role `instructor` có `classroom.host` mặc định kể cả khi ngữ cảnh Organization còn hoãn.
+> Premium là **entitlement**, không phải role. Host cộng đồng (Premium student) ≠ Instructor vận hành. Instructor có `classroom.host` theo **role** (không mất khi hết Premium — họ không dựa Premium).
 
 ## 3. Ma trận quyền (Permission Matrix)
 
-Chú thích: ✅ full · 🔓 giới hạn/preview · ➖ không có · 🔒 cần Premium
+Chú thích: ✅ full · 🔓 giới hạn/preview · ➖ không có · 🔒 cần Premium · 👁 oversight only
 
-> Cột **Instructor** và **Org Admin** (🔵) thuộc Phase 2 — chưa áp dụng ở phạm vi hiện tại.
+> Cột **Org Admin** (🔵) vẫn Phase 2. Cột **Instructor** đã **chốt** (portal `/teach`).
 
-| Năng lực | Guest | Student | Premium | 🔵 Instructor | Content Editor | 🔵 Org Admin | Admin | Super Admin |
+| Năng lực | Guest | Student | Premium | Instructor | Content Editor | 🔵 Org Admin | Admin | Super Admin |
 |----------|:----:|:-------:|:-------:|:----------:|:--------------:|:---------:|:-----:|:-----------:|
 | Xem Landing | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Đăng ký/Đăng nhập | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Làm câu hỏi free | 🔓 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Toàn bộ Qbank | ➖ | 🔒 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Thư viện y khoa đầy đủ | 🔓 | 🔒 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| AI Assistant | ➖ | 🔒 | ✅ | ✅ | ✅ | ➖ | ✅ | ✅ |
-| Analytics nâng cao | ➖ | 🔓 | ✅ | ✅ | ➖ | 🔓 | ✅ | ✅ |
-| Flashcards/Notes/Highlight | ➖ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Exams/Self Assessment | ➖ | 🔒 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Host lớp chữa đề (Classroom 44)** | ➖ | 🔒 | ✅ | ✅ | ➖ | ➖ | ✅ | ✅ |
-| **Tham gia lớp / xem live & VOD (44)** | ➖ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Làm câu hỏi (learner UI) | 🔓 | ✅ | ✅ | ➖ | ➖ | ✅ | ➖ | ➖ |
+| Toàn bộ Qbank (học) | ➖ | 🔒 | ✅ | 🔓 preview trong `/teach` | ✅ | ✅ | ✅ | ✅ |
+| **Host lớp cộng đồng** (`/classes`) | ➖ | 🔒 | ✅ | ➖ | ➖ | ➖ | 🔓 | 🔓 |
+| **Host lớp vận hành** (`/teach`) | ➖ | ➖ | ➖ | ✅ | ➖ | ➖ | 🔓 | 🔓 |
+| **Tham gia lớp / live & VOD** | ➖ | ✅ | ✅ | 🔓 (preview) | ✅ | ✅ | ✅ | ✅ |
+| **Oversight mọi lớp** (force-end, archive) | ➖ | ➖ | ➖ | ➖ | ➖ | ➖ | 👁 | 👁 |
+| Gán role `instructor` | ➖ | ➖ | ➖ | ➖ | ➖ | ➖ | 🔓 | ✅ |
 | 🔵 Tạo lớp org, giao bài *(Phase 2)* | ➖ | ➖ | ➖ | ✅ | ➖ | ✅ | ✅ | ✅ |
 | 🔵 Xem tiến độ học viên org *(Phase 2)* | ➖ | ➖ | ➖ | ✅ | ➖ | ✅ | ✅ | ✅ |
 | CRUD nội dung câu hỏi | ➖ | ➖ | ➖ | ➖ | ✅ | ➖ | ✅ | ✅ |
@@ -66,10 +76,17 @@ library.view, library.edit, library.publish
 user.view, user.manage, user.impersonate
 role.manage, permission.manage
 audit.view, report.export, cms.manage, feature_flag.manage
-classroom.create, classroom.manage, classroom.join, classroom.moderate, live.start, live.join
+classroom.create, classroom.manage, classroom.join, classroom.moderate, classroom.oversee
+live.start, live.join, live.force_end, instructor.assign
 # 🔵 Phase 2 (Organization, chưa dùng): org.manage_members, org.manage_billing, org.view_reports
 ai.use, analytics.advanced, exam.take, exam.manage
 ```
+
+| Permission Classroom | Ai có | Ý nghĩa |
+|----------------------|-------|---------|
+| `classroom.create` / `classroom.manage` / `live.*` (lớp mình) | Instructor; Premium host (cộng đồng) | Vận hành lớp mình host/cohost |
+| `classroom.oversee` / `live.force_end` | Admin, Super Admin | Giám sát mọi lớp — **không** thay workspace `/teach` |
+| `instructor.assign` | Super Admin (Admin hạn chế) | Gán/thu hồi role `instructor` |
 
 ## 5. Subscription entitlements
 
@@ -81,7 +98,7 @@ ai.use, analytics.advanced, exam.take, exam.manage
 | `analytics.advanced` | Heatmap, dự báo, so sánh peer |
 | `exam.simulation` | Mô phỏng thi đầy đủ |
 | `offline.download` | Tải nội dung offline (nếu có) |
-| `classroom.host` | Tạo lớp chữa đề + start livestream (Module 44); Free vẫn join được |
+| `classroom.host` | Host lớp **cộng đồng** trên `/classes` (Premium student). Instructor **không** dựa entitlement này — có quyền host qua role trên `/teach`. Free vẫn join được. |
 
 Free tier có quota giới hạn (vd: N câu/ngày, N lượt AI/ngày).
 
@@ -104,5 +121,5 @@ Free tier có quota giới hạn (vd: N câu/ngày, N lượt AI/ngày).
 ## 8. Trường hợp đặc biệt
 
 - **Impersonate**: chỉ Super Admin; ghi audit; banner cảnh báo; không thao tác billing khi impersonate.
-- **Hết hạn subscription**: role giữ nguyên, entitlement Premium (gồm `classroom.host`) bị thu hồi ngay; dữ liệu cá nhân (notes, flashcards) vẫn giữ (read-only nếu vượt quota free). Lớp đã tạo: vẫn xem VOD/chat read-only; **không** start live mới.
-- 🔵 *(Phase 2)* **Role kép** (Instructor + Org Admin) và **Downgrade tổ chức** (org hết license → thành viên về Free) — áp dụng khi bật Module Organization.
+- **Hết hạn subscription**: role giữ nguyên, entitlement Premium (gồm `classroom.host` cộng đồng) bị thu hồi; dữ liệu cá nhân giữ. Lớp cộng đồng đã tạo: VOD/read-only; **không** start live mới trên `/classes`. **Instructor** không bị ảnh hưởng (host bằng role).
+- 🔵 *(Phase 2)* **Role kép** (Instructor + Org Admin) và **Downgrade tổ chức** — khi bật Module Organization.

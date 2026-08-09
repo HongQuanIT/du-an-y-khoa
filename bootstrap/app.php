@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Middleware\AssignRequestId;
+use App\Http\Middleware\EnsureInstructor;
+use App\Http\Middleware\EnsureLearner;
+use App\Http\Middleware\EnsureStaffTwoFactor;
 use App\Http\Middleware\EnsureSubscriptionActive;
 use App\Http\Middleware\ForceJsonResponse;
 use App\Http\Middleware\SetLocale;
@@ -33,6 +36,11 @@ return Application::configure(basePath: dirname(__DIR__))
                 ->prefix('admin')
                 ->name('admin.')
                 ->group(base_path('routes/admin.php'));
+
+            Route::middleware('web')
+                ->prefix('teach')
+                ->name('teach.')
+                ->group(base_path('routes/teach.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
@@ -49,13 +57,25 @@ return Application::configure(basePath: dirname(__DIR__))
         // Default API rate limit (per-user/IP) — see AppServiceProvider limiters.
         $middleware->throttleApi('api');
 
-        // Session guards: guests land on the login screen, authenticated users
-        // on their role-specific home.
-        $middleware->redirectGuestsTo(fn () => route('login'));
+        // Guests hit the matching portal login; authenticated users go home by role.
+        $middleware->redirectGuestsTo(function (Request $request) {
+            if ($request->is('admin') || $request->is('admin/*')) {
+                return route('admin.login');
+            }
+
+            if ($request->is('teach') || $request->is('teach/*')) {
+                return route('teach.login');
+            }
+
+            return route('login');
+        });
         $middleware->redirectUsersTo(fn (Request $request) => HomePath::for($request->user()));
 
         // Route middleware aliases.
         $middleware->alias([
+            'learner' => EnsureLearner::class,
+            'instructor' => EnsureInstructor::class,
+            'staff.2fa' => EnsureStaffTwoFactor::class,
             'subscription' => EnsureSubscriptionActive::class,
             'role' => RoleMiddleware::class,
             'permission' => PermissionMiddleware::class,

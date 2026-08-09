@@ -80,3 +80,18 @@ Impersonate (Super Admin) → xem như user → banner cảnh báo → thoát.
 
 ## 15. Đề xuất cải tiến
 - Ghi chú CSKH per user; lịch sử hành động admin trên user; phát hiện tài khoản chia sẻ; công cụ merge tài khoản trùng.
+
+## 16. Phạm vi triển khai & hạng mục hoãn
+
+**Đã có (Phase 1):** list/filter users, chi tiết, đổi role/status, verify email, gửi reset password; Roles matrix; Audit UI.
+
+**Hoãn — chưa làm ngay** (ưu tiên Phase 2 Question Management / nội dung học). Ghi lại để triển khai khi CSKH/Billing đủ nhu cầu:
+
+| Hạng mục | Mục đích | Điều kiện nên làm |
+|----------|----------|-------------------|
+| **Impersonate** | Super Admin xem UI đúng như học viên để debug/CSKH; banner + audit; cấm billing | Khi thường xuyên cần tái hiện bug theo tài khoản |
+| **Subscription override** | Cấp/thu Premium thủ công (khiếu nại, bồi hoàn, trial/partner); lý do + audit; tách `source=manual` khỏi cổng thanh toán | Khi Billing/Subscription đã chạy end-to-end |
+| **Bulk actions** | Khóa/mở hoặc đổi role nhiều user; confirm + queue + cùng rule privilege | Khi quy mô user lớn và thao tác lặp lại thường xuyên |
+| **Export CSV (Users)** | Xuất danh sách user cho báo cáo/CRM ngoài; kiểm soát PII + audit export | Khi có nhu cầu báo cáo vận hành thật |
+
+Thứ tự gợi ý khi làm lại: Audit CSV (module 40) → Subscription override → Impersonate → Bulk.

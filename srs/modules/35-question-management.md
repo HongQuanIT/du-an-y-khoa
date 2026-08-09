@@ -90,3 +90,13 @@ Validation nghiêm; `409` version conflict; audit mọi mutate.
 
 ## 15. Đề xuất cải tiến
 - AI hỗ trợ soạn (gợi ý distractor, kiểm tra chất lượng, phát hiện trùng); psychometrics (độ phân biệt, IRT); quy trình duyệt nhiều cấp; gắn nguồn tự động; phát hiện câu mơ hồ theo dữ liệu.
+
+## 16. Phạm vi triển khai (Phase 2a MVP → mở rộng)
+
+**Đang ưu tiên sau Admin Phase 0–1.** Các hạng mục User CSKH nâng cao (impersonate, override Premium, bulk, CSV) **hoãn** — xem module 34 §16.
+
+| Đợt | Phạm vi |
+|-----|---------|
+| **2a MVP** | List + filter; create/edit stem/options/explanation/topic/difficulty/`is_free`; workflow `draft → in_review → published → retired`; RBAC + audit; không media/import/report |
+| **2b** | Report queue, preview học viên, optimistic version conflict UX |
+| **2c** | Import batch, version history/rollback, media picker (phụ thuộc module 37) |

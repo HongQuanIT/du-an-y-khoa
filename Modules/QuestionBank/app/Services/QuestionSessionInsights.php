@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\QuestionBank\Services;
 
+use App\Support\Html\SafeHtml;
 use Illuminate\Support\Str;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
@@ -157,7 +158,7 @@ final class QuestionSessionInsights
                 'topic' => $topic instanceof Topic ? (string) $topic->name : 'Tổng hợp',
                 'excerpt' => Str::limit(strip_tags((string) $question->stem), 140),
                 'stem' => (string) $question->stem,
-                'stem_html' => (string) ($annotation['stem_html'] ?? e((string) $question->stem)),
+                'stem_html' => (string) ($annotation['stem_html'] ?? SafeHtml::forDisplay((string) $question->stem)),
                 'note' => (string) ($annotation['note'] ?? ''),
                 'flagged' => (bool) ($annotation['flagged']
                     ?? ($attempt instanceof QuestionAttempt && $attempt->flagged)),

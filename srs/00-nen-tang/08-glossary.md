@@ -36,7 +36,9 @@
 | **Reverb** | Server WebSocket của Laravel (realtime) |
 | **LiveKit** | SFU WebRTC cho livestream lớp chữa đề (Module 44); app cấp JWT join token |
 | **Egress** | Pipeline ghi hình phòng LiveKit → file/HLS (VOD sau buổi live) |
-| **Classroom** | Lớp chữa đề cộng đồng (B2C); khác lớp tổ chức B2B (Module 32 Phase 2) |
+| **Classroom** | Lớp chữa đề B2C; `purpose`: community / feedback / exam review; khác lớp org B2B |
 | **Live Session** | Một buổi livestream trong Classroom (`scheduled` → `live` → `ended`) |
+| **Instructor portal (`/teach`)** | Workspace giảng viên: tạo lớp, gắn đề, host live — tách learner & admin |
+| **Classroom oversight** | Admin/Super Admin giám sát mọi lớp (force-end, archive) — không vận hành chữa đề |
 | **Cohost** | Thành viên lớp được host ủy quyền publish/moderate |
 | **Meilisearch** | Công cụ full-text search |
