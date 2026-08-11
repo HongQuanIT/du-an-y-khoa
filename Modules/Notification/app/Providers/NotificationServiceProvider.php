@@ -22,7 +22,9 @@ class NotificationServiceProvider extends ModuleServiceProvider
      *
      * @var string[]
      */
-    // protected array $commands = [];
+    protected array $commands = [
+        \Modules\Notification\Console\SendStudyPlanRemindersCommand::class,
+    ];
 
     /**
      * Provider classes to register.
@@ -32,6 +34,7 @@ class NotificationServiceProvider extends ModuleServiceProvider
     protected array $providers = [
         EventServiceProvider::class,
         RouteServiceProvider::class,
+        NotificationViewServiceProvider::class,
     ];
 
     /**
@@ -39,8 +42,10 @@ class NotificationServiceProvider extends ModuleServiceProvider
      *
      * @param  $schedule
      */
-    // protected function configureSchedules(Schedule $schedule): void
-    // {
-    //     $schedule->command('inspire')->hourly();
-    // }
+    protected function configureSchedules(Schedule $schedule): void
+    {
+        $schedule->command('notification:study-plan-reminders')
+            ->dailyAt('08:00')
+            ->withoutOverlapping();
+    }
 }

@@ -467,7 +467,7 @@
                                 class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-bold tracking-wide text-amber-700 uppercase"
                                 data-testid="key-info-used-badge">
                                 <span class="material-symbols-outlined text-[15px] fill-1">check_circle</span>
-                                <span>Đã dùng kiến thức</span>
+                                <span>Đã dùng gợi ý</span>
                             </div>
                             <template x-if="!keyInfoEnabled">
                                 <div id="session-stem"
@@ -486,21 +486,21 @@
                                 :class="keyInfoEnabled
                                     ? 'border-amber-600 text-amber-700'
                                     : 'border-transparent text-on-surface-variant hover:bg-surface-container-high hover:text-primary'"
-                                title="{{ $hasKeyInfo ? 'Gạch chân kiến thức chính' : 'Câu này chưa có kiến thức được đánh dấu' }}"
+                                title="{{ $hasKeyInfo ? 'Gạch chân các ý chính' : 'Câu này chưa có gợi ý được đánh dấu' }}"
                                 :aria-pressed="keyInfoEnabled">
                                 <span class="material-symbols-outlined text-[18px]">format_align_left</span>
-                                <span>Kiến thức</span>
+                                <span>Gợi ý</span>
                             </button>
                             <button type="button" @click="toggleAttendingTip()" :disabled="!hasAttendingTip"
                                 class="inline-flex h-12 items-center gap-2 border-b-2 px-3 text-label-sm font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40"
                                 :class="attendingTipOpen
                                     ? 'border-amber-600 text-amber-700'
                                     : 'border-transparent text-on-surface-variant hover:bg-surface-container-high hover:text-primary'"
-                                title="{{ $hasAttendingTip ? 'Mở gợi ý cho câu hỏi' : 'Câu này chưa có gợi ý' }}"
+                                title="{{ $hasAttendingTip ? 'Mở kiến thức cho câu hỏi' : 'Câu này chưa có kiến thức' }}"
                                 :aria-pressed="attendingTipOpen"
                                 data-testid="attending-tip-toggle">
                                 <span class="material-symbols-outlined text-[18px]">help</span>
-                                <span>Gợi ý</span>
+                                <span>Kiến thức</span>
                             </button>
                         </div>
 
@@ -510,7 +510,7 @@
                                 class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-bold tracking-wide text-amber-700 uppercase"
                                 data-testid="attending-tip-used-badge">
                                 <span class="material-symbols-outlined text-[15px] fill-1">check_circle</span>
-                                <span>Đã dùng gợi ý</span>
+                                <span>Đã dùng kiến thức</span>
                             </div>
                             <div class="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50/70 p-4 text-on-surface">
                                 <span class="material-symbols-outlined mt-0.5 shrink-0 text-amber-700">stethoscope</span>

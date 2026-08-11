@@ -2,6 +2,12 @@
     <x-auth.shell tagline="Chào mừng trở lại!">
         <h2 class="font-headline-md text-headline-md text-on-surface mb-8">Đăng nhập</h2>
 
+        @if (session('status'))
+            <div class="mb-6 rounded-lg border border-primary/25 bg-primary-fixed/25 px-4 py-3 font-body-md text-body-md text-primary">
+                {{ session('status') }}
+            </div>
+        @endif
+
         <x-auth.errors />
 
         <form class="space-y-5" action="{{ route('login') }}" method="post">
@@ -20,7 +26,7 @@
                         class="text-label-md font-label-md text-on-surface-variant group-hover:text-on-surface transition-colors">Ghi
                         nhớ đăng nhập</span>
                 </label>
-                <a class="text-label-md font-label-md text-primary hover:underline" href="#">Quên mật khẩu?</a>
+                <a class="text-label-md font-label-md text-primary hover:underline" href="{{ route('password.request') }}">Quên mật khẩu?</a>
             </div>
 
             <x-auth.submit>Đăng nhập</x-auth.submit>

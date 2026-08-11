@@ -23,6 +23,8 @@ class DatabaseSeeder extends Seeder
         // Study plan on top of that slice: an active plan with history + schedule.
         $this->call(StudyPlanDatabaseSeeder::class);
 
+        $this->call(\Modules\Billing\Database\Seeders\BillingDatabaseSeeder::class);
+
         $this->command->info('Đăng nhập dev: student@medlearn.local / password (admin@medlearn.local cho khu vực admin).');
     }
 }

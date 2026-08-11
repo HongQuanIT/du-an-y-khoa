@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-08-11
+
+### Profile, Settings và Billing cơ bản
+- Thêm trang hồ sơ nghề nghiệp/mục tiêu học và Settings Amboss (liên hệ, bảo mật, thông báo, gói, đổi mã, giấy phép tổ chức, hóa đơn, ghi chú).
+- Upload/xóa avatar; quên mật khẩu (email reset); tab Settings đồng bộ URL `?tab=`.
+- Module Billing: plans/subscriptions/redeem/institution/invoices; nối `User::entitlements()`; seed mã `MEDLEARN2026` và domain `@medlearn.local`.
+- Thông báo in-app khi hoàn thành phiên Q-Bank (chuông header); email nhắc Study Plan theo pref `email_plan` (cron 8:00).
+- Mock HTML `profile-user` / `setting-user`; kiểm thử Auth/Billing/Notification.
+
+### Study Plan — sửa nhãn hỗ trợ phiên
+- Đổi nhãn tab “Kiến thức” ↔ “Gợi ý” cho đúng nghĩa trên session Study Plan.
+
 ## 2026-08-09
 
 ### Phase A — Instructor portal + Classroom oversight
@@ -50,7 +62,6 @@
 - Thêm `/admin/login` và `/admin/logout`; guest vào `/admin/*` được đưa tới cổng admin (không dùng `/login` học viên).
 - Cùng guard/session `web`: staff bị từ chối ở `/login`, học viên bị từ chối ở `/admin/login` (lỗi chung); admin không OAuth / remember me.
 - Cập nhật SRS Auth (02) và Admin Dashboard (33); thêm feature test tách portal.
-
 ## 2026-08-07
 
 ### Sửa lỗi frontend phòng live sau rebase

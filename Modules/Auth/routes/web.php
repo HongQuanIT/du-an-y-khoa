@@ -5,6 +5,8 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Route;
 use Modules\Auth\Http\Controllers\AuthenticatedSessionController;
 use Modules\Auth\Http\Controllers\PasswordResetController;
+use Modules\Auth\Http\Controllers\PasswordResetLinkController;
+use Modules\Auth\Http\Controllers\ProfileController;
 use Modules\Auth\Http\Controllers\RegisteredUserController;
 
 /*
@@ -27,6 +29,25 @@ Route::middleware('guest')->group(function (): void {
         ->name('password.update');
 });
 
-Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
-    ->middleware('auth')
-    ->name('logout');
+Route::get('/forgot-password', [PasswordResetLinkController::class, 'create'])->name('password.request');
+Route::post('/forgot-password', [PasswordResetLinkController::class, 'store'])
+    ->middleware('throttle:auth')
+    ->name('password.email');
+
+Route::middleware('auth')->group(function (): void {
+    Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
+        ->name('logout');
+
+    Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
+    Route::get('/settings', [ProfileController::class, 'edit'])->name('settings.edit');
+    Route::put('/settings/profile', [ProfileController::class, 'updateProfile'])->name('settings.profile');
+    Route::put('/settings/avatar', [ProfileController::class, 'updateAvatar'])->name('settings.avatar');
+    Route::delete('/settings/avatar', [ProfileController::class, 'destroyAvatar'])->name('settings.avatar.destroy');
+    Route::put('/settings/objective', [ProfileController::class, 'updateObjective'])->name('settings.objective');
+    Route::put('/settings/password', [ProfileController::class, 'updatePassword'])->name('settings.password');
+    Route::put('/settings/notifications', [ProfileController::class, 'updateNotifications'])->name('settings.notifications');
+    Route::post('/settings/redeem', [ProfileController::class, 'redeemCode'])->name('settings.redeem');
+    Route::post('/settings/org-license', [ProfileController::class, 'activateOrgLicense'])->name('settings.org-license');
+    Route::post('/settings/org-license/renew', [ProfileController::class, 'renewOrgLicense'])->name('settings.org-license.renew');
+    Route::put('/settings/notes', [ProfileController::class, 'updateNotes'])->name('settings.notes');
+});
