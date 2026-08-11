@@ -1,4 +1,4 @@
-@props(['name', 'label', 'type' => 'text'])
+@props(['name', 'label', 'type' => 'text', 'value' => null])
 
 <div class="space-y-1.5">
     <label class="text-label-md font-label-md text-on-surface-variant" for="{{ $name }}">{{ $label }}</label>
@@ -11,6 +11,6 @@
                 'id' => $name,
                 'name' => $name,
                 'type' => $type,
-                'value' => old($name),
+                'value' => old($name, $value),
             ]) }}>
 </div>

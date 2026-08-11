@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+
+<html lang="vi">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Hồ sơ cá nhân - MedPro</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-surface": "#191c1e",
+                        "secondary": "#1f6771",
+                        "on-primary-fixed": "#00201d",
+                        "on-secondary-fixed-variant": "#004f58",
+                        "tertiary": "#7f4025",
+                        "on-tertiary-fixed": "#370e00",
+                        "error-container": "#ffdad6",
+                        "primary-fixed-dim": "#80d5cb",
+                        "inverse-surface": "#2d3133",
+                        "surface-dim": "#d8dadc",
+                        "secondary-container": "#a8ebf6",
+                        "secondary-fixed-dim": "#8fd1dc",
+                        "border-subtle": "#E2E8F0",
+                        "on-secondary": "#ffffff",
+                        "error": "#ba1a1a",
+                        "primary-fixed": "#9cf2e8",
+                        "surface-variant": "#e0e3e5",
+                        "inverse-on-surface": "#eff1f3",
+                        "tertiary-fixed-dim": "#ffb598",
+                        "on-tertiary": "#ffffff",
+                        "tertiary-container": "#9c573a",
+                        "surface-bright": "#f8f9fb",
+                        "surface-container-high": "#e6e8ea",
+                        "background": "#f8f9fb",
+                        "on-primary": "#ffffff",
+                        "primary": "#005c55",
+                        "on-secondary-fixed": "#001f24",
+                        "tertiary-fixed": "#ffdbce",
+                        "outline-variant": "#bdc9c6",
+                        "on-error": "#ffffff",
+                        "on-background": "#191c1e",
+                        "on-primary-fixed-variant": "#00504a",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-container": "#a3faef",
+                        "on-tertiary-container": "#ffe5db",
+                        "deep-navy": "#0E4248",
+                        "primary-container": "#0f766e",
+                        "outline": "#6e7977",
+                        "on-surface-variant": "#3e4947",
+                        "surface-container": "#eceef0",
+                        "surface-container-low": "#f2f4f6",
+                        "on-error-container": "#93000a",
+                        "surface-tint": "#006a63",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-secondary-container": "#256c76",
+                        "surface": "#f8f9fb",
+                        "on-tertiary-fixed-variant": "#72361b",
+                        "inverse-primary": "#80d5cb",
+                        "accent-pink": "#D35485",
+                        "secondary-fixed": "#abedf9"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "margin-desktop": "40px",
+                        "base": "8px",
+                        "gutter": "24px",
+                        "container-max": "1200px",
+                        "margin-mobile": "16px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Be Vietnam Pro"],
+                        "title-md": ["Be Vietnam Pro"],
+                        "display-lg": ["Be Vietnam Pro"],
+                        "body-md": ["Be Vietnam Pro"],
+                        "headline-lg": ["Be Vietnam Pro"],
+                        "headline-lg-mobile": ["Be Vietnam Pro"],
+                        "body-lg": ["Be Vietnam Pro"],
+                        "label-sm": ["Be Vietnam Pro"]
+                    },
+                    "fontSize": {
+                        "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500" }],
+                        "title-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-md": ["14px", { "lineHeight": "22px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "body-lg": ["16px", { "lineHeight": "26px", "fontWeight": "400" }],
+                        "label-sm": ["11px", { "lineHeight": "14px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+            background-color: #f8f9fb;
+            color: #191c1e;
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .filled-icon {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+
+<body class="bg-surface text-on-surface antialiased flex">
+    <!-- SideNavBar -->
+    <nav
+        class="bg-surface dark:bg-on-surface h-screen w-[240px] fixed left-0 top-0 border-r border-border-subtle dark:border-outline-variant flex flex-col h-full py-base hidden md:flex">
+        <div class="px-gutter pb-margin-desktop pt-base">
+            <span class="font-title-md text-title-md font-bold text-primary dark:text-primary-fixed block">MedPro</span>
+            <span class="font-label-sm text-label-sm text-on-surface-variant block mt-1">Clinical Precision</span>
+        </div>
+        <div class="flex-1 flex flex-col gap-1 px-base">
+            <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant dark:text-surface-variant hover:bg-surface-container dark:hover:bg-on-primary-fixed-variant transition-colors cursor-pointer active:opacity-80"
+                href="#">
+                <span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+                <span class="font-label-md text-label-md">Dashboard</span>
+            </a>
+            <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant dark:text-surface-variant hover:bg-surface-container dark:hover:bg-on-primary-fixed-variant transition-colors cursor-pointer active:opacity-80"
+                href="#">
+                <span class="material-symbols-outlined" data-icon="calendar_today">calendar_today</span>
+                <span class="font-label-md text-label-md">Study Plan</span>
+            </a>
+            <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant dark:text-surface-variant hover:bg-surface-container dark:hover:bg-on-primary-fixed-variant transition-colors cursor-pointer active:opacity-80"
+                href="#">
+                <span class="material-symbols-outlined" data-icon="menu_book">menu_book</span>
+                <span class="font-label-md text-label-md">Library</span>
+            </a>
+            <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant dark:text-surface-variant hover:bg-surface-container dark:hover:bg-on-primary-fixed-variant transition-colors cursor-pointer active:opacity-80"
+                href="#">
+                <span class="material-symbols-outlined" data-icon="quiz">quiz</span>
+                <span class="font-label-md text-label-md">QBank</span>
+            </a>
+            <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant dark:text-surface-variant hover:bg-surface-container dark:hover:bg-on-primary-fixed-variant transition-colors cursor-pointer active:opacity-80"
+                href="#">
+                <span class="material-symbols-outlined" data-icon="style">style</span>
+                <span class="font-label-md text-label-md">Flashcards</span>
+            </a>
+        </div>
+        <div class="mt-auto flex flex-col gap-1 px-base border-t border-border-subtle pt-4">
+            <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant dark:text-surface-variant hover:bg-surface-container dark:hover:bg-on-primary-fixed-variant transition-colors cursor-pointer active:opacity-80"
+                href="#">
+                <span class="material-symbols-outlined" data-icon="settings">settings</span>
+                <span class="font-label-md text-label-md">Settings</span>
+            </a>
+            <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-primary font-bold border-r-2 border-primary bg-surface-container hover:bg-surface-container dark:hover:bg-on-primary-fixed-variant transition-colors cursor-pointer active:opacity-80"
+                href="#">
+                <span class="material-symbols-outlined filled-icon" data-icon="account_circle">account_circle</span>
+                <span class="font-label-md text-label-md">Profile</span>
+            </a>
+        </div>
+    </nav>
+    <!-- Main Content Area -->
+    <div class="flex-1 md:ml-[240px] flex flex-col min-h-screen">
+        <!-- TopNavBar -->
+        <header
+            class="bg-surface dark:bg-on-surface h-16 fixed top-0 right-0 left-0 md:left-[240px] z-50 border-b border-border-subtle dark:border-outline-variant flex items-center justify-between px-margin-mobile md:px-margin-desktop w-auto md:w-full">
+            <div class="flex items-center md:hidden">
+                <span class="font-title-md text-title-md font-bold text-primary dark:text-primary-fixed">MedPro</span>
+            </div>
+            <div class="flex items-center justify-end w-full md:w-auto gap-4">
+                <button
+                    class="text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-primary-fixed transition-colors cursor-pointer active:scale-95 transition-transform p-2">
+                    <span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+                </button>
+                <div class="w-8 h-8 rounded-full overflow-hidden border border-border-subtle">
+                    <img alt="User Avatar" class="w-full h-full object-cover"
+                        data-alt="A highly detailed close-up portrait of a young male medical student looking directly at the camera with a calm, professional expression. He is wearing a clean white lab coat over a light blue scrub top. The background is a slightly blurred, bright, minimalist hospital corridor or clinical setting with soft, cool white lighting typical of a high-end medical facility. The image should convey professionalism, focus, and modern healthcare."
+                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuCiPtfW5CX3swiw3PokubKJtzCPd9brzIL_uXcenG7VdOAqu79cuqGr3TOdTAvoJ3TKsFt3hIRDr9aljaO4Q2LUzqYdurLeykJ01Tg52gf_C288Jx7a493ccs7iP45RaSs-hCaqH3NV3K35zd0FpDS3cUe2vf9cAGlWOgJ0_s_-XuB525MAK6VxT7A_pWhuN6Pw3CX3K0hXOXjLN6iUfa1AeiRBHklsgB9Ld1xvsY0lN9XlF1E5nFKk" />
+                </div>
+            </div>
+        </header>
+        <!-- Page Content -->
+        <main class="flex-1 mt-16 p-margin-mobile md:p-margin-desktop bg-background max-w-container-max mx-auto w-full">
+            <!-- Header Profile Section -->
+            <section class="bg-surface-container-lowest rounded-xl border border-border-subtle p-gutter mb-8">
+                <div class="flex flex-col md:flex-row items-start md:items-center gap-6">
+                    <div
+                        class="w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden border-4 border-surface shadow-sm shrink-0">
+                        <img alt="Nguyễn Văn An Avatar" class="w-full h-full object-cover"
+                            data-alt="A highly detailed close-up portrait of a young male medical student looking directly at the camera with a calm, professional expression. He is wearing a clean white lab coat over a light blue scrub top. The background is a slightly blurred, bright, minimalist hospital corridor or clinical setting with soft, cool white lighting typical of a high-end medical facility. The image should convey professionalism, focus, and modern healthcare."
+                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuD2qEWWs4FP9z5Iq7XmKjvTlcvASPa91ZAha4KJXVOnrdSuRHDnVeFimh9Iz8oPkj_kGXyJ4XLyz8PSoDY5Y1Cxzt39Hm42ZQEswCUtUnYW5ehB_EAAjfGxs0xe7-QgBy6yFMzNQjx4ojjss0rFlx8tfHHcrPddBDK7gbwGUcwCydO5ly5LCRCMRdyDYwunUxOiwQ-1dH6Bb1oQyxp52TRZ3bsx6bhM605wcpLcnzBX1cY_5s5czL0r" />
+                    </div>
+                    <div class="flex-1">
+                        <h1
+                            class="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-2">
+                            Nguyễn Văn An</h1>
+                        <p class="font-body-lg text-body-lg text-on-surface-variant flex items-center gap-2 mb-4">
+                            <span class="material-symbols-outlined text-[18px]">school</span>
+                            Sinh viên Y khoa năm 5 - ĐH Y Dược TP.HCM
+                        </p>
+                        <button
+                            class="px-4 py-2 border border-primary-container text-primary-container font-label-md text-label-md rounded-lg hover:bg-surface-container-low transition-colors">
+                            Chỉnh sửa hồ sơ
+                        </button>
+                    </div>
+                </div>
+            </section>
+            <!-- Stats Grid -->
+            <section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div
+                    class="bg-surface-container-lowest rounded-xl border border-border-subtle p-6 flex flex-col items-start hover:shadow-[0_4px_12px_rgba(15,118,110,0.05)] transition-shadow">
+                    <div
+                        class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center mb-4 text-on-secondary-container">
+                        <span class="material-symbols-outlined filled-icon"
+                            data-icon="local_fire_department">local_fire_department</span>
+                    </div>
+                    <span class="font-display-lg text-display-lg text-on-surface mb-1">15</span>
+                    <span class="font-body-md text-body-md text-on-surface-variant">Ngày học liên tục</span>
+                </div>
+                <div
+                    class="bg-surface-container-lowest rounded-xl border border-border-subtle p-6 flex flex-col items-start hover:shadow-[0_4px_12px_rgba(15,118,110,0.05)] transition-shadow">
+                    <div
+                        class="w-10 h-10 rounded-full bg-primary-fixed-dim/20 flex items-center justify-center mb-4 text-primary">
+                        <span class="material-symbols-outlined" data-icon="check_circle">check_circle</span>
+                    </div>
+                    <span class="font-display-lg text-display-lg text-on-surface mb-1">1,200</span>
+                    <span class="font-body-md text-body-md text-on-surface-variant">Câu hỏi đã hoàn thành</span>
+                </div>
+                <div
+                    class="bg-surface-container-lowest rounded-xl border border-border-subtle p-6 flex flex-col items-start hover:shadow-[0_4px_12px_rgba(15,118,110,0.05)] transition-shadow">
+                    <div
+                        class="w-10 h-10 rounded-full bg-tertiary-fixed/40 flex items-center justify-center mb-4 text-tertiary">
+                        <span class="material-symbols-outlined" data-icon="percent">percent</span>
+                    </div>
+                    <span class="font-display-lg text-display-lg text-on-surface mb-1">85%</span>
+                    <span class="font-body-md text-body-md text-on-surface-variant">Tỷ lệ trả lời đúng</span>
+                </div>
+            </section>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Badges Section -->
+                <section class="bg-surface-container-lowest rounded-xl border border-border-subtle p-gutter">
+                    <h2 class="font-title-md text-title-md text-on-surface mb-6 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary">military_tech</span>
+                        Huy hiệu đạt được
+                    </h2>
+                    <div class="space-y-4">
+                        <div
+                            class="flex items-center gap-4 p-4 border border-border-subtle rounded-lg bg-surface-bright">
+                            <div
+                                class="w-12 h-12 rounded-full bg-[#E0F2FE] flex items-center justify-center text-[#0284C7]">
+                                <span class="material-symbols-outlined text-[28px]"
+                                    data-icon="accessibility_new">accessibility_new</span>
+                            </div>
+                            <div>
+                                <h3 class="font-label-md text-label-md text-on-surface mb-1">Bậc thầy giải phẫu</h3>
+                                <p class="font-body-md text-body-md text-on-surface-variant text-sm">Hoàn thành xuất sắc
+                                    Module Giải phẫu cơ thể người.</p>
+                            </div>
+                        </div>
+                        <div
+                            class="flex items-center gap-4 p-4 border border-border-subtle rounded-lg bg-surface-bright">
+                            <div
+                                class="w-12 h-12 rounded-full bg-[#F3E8FF] flex items-center justify-center text-[#9333EA]">
+                                <span class="material-symbols-outlined text-[28px]" data-icon="bedtime">bedtime</span>
+                            </div>
+                            <div>
+                                <h3 class="font-label-md text-label-md text-on-surface mb-1">Cú đêm</h3>
+                                <p class="font-body-md text-body-md text-on-surface-variant text-sm">Tích cực học tập
+                                    sau 22:00 trong 5 ngày liên tiếp.</p>
+                            </div>
+                        </div>
+                        <div
+                            class="flex items-center gap-4 p-4 border border-border-subtle rounded-lg bg-surface-bright">
+                            <div
+                                class="w-12 h-12 rounded-full bg-[#FEF9C3] flex items-center justify-center text-[#CA8A04]">
+                                <span class="material-symbols-outlined text-[28px]"
+                                    data-icon="travel_explore">travel_explore</span>
+                            </div>
+                            <div>
+                                <h3 class="font-label-md text-label-md text-on-surface mb-1">Thợ săn học thuật</h3>
+                                <p class="font-body-md text-body-md text-on-surface-variant text-sm">Đọc hơn 50 bài viết
+                                    thư viện trong tuần.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                <!-- Activity Chart Section -->
+                <section
+                    class="bg-surface-container-lowest rounded-xl border border-border-subtle p-gutter flex flex-col">
+                    <h2 class="font-title-md text-title-md text-on-surface mb-6 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary">bar_chart</span>
+                        Tiến trình học tập (7 ngày)
+                    </h2>
+                    <div
+                        class="flex-1 flex items-end justify-between gap-2 pt-8 pb-2 relative mt-auto border-b border-border-subtle h-48">
+                        <!-- Chart Grid Lines (Background) -->
+                        <div
+                            class="absolute inset-0 flex flex-col justify-between pointer-events-none pb-8 text-xs text-outline-variant">
+                            <div class="w-full border-t border-surface-variant h-0"></div>
+                            <div class="w-full border-t border-surface-variant h-0"></div>
+                            <div class="w-full border-t border-surface-variant h-0"></div>
+                            <div class="w-full border-t border-surface-variant h-0"></div>
+                        </div>
+                        <!-- Bars -->
+                        <div class="relative flex flex-col items-center w-full group">
+                            <div
+                                class="w-8 md:w-12 bg-primary/30 rounded-t-sm h-[40%] group-hover:bg-primary transition-colors">
+                            </div>
+                            <span
+                                class="font-label-sm text-label-sm text-on-surface-variant mt-2 absolute -bottom-6">T2</span>
+                        </div>
+                        <div class="relative flex flex-col items-center w-full group">
+                            <div
+                                class="w-8 md:w-12 bg-primary/30 rounded-t-sm h-[60%] group-hover:bg-primary transition-colors">
+                            </div>
+                            <span
+                                class="font-label-sm text-label-sm text-on-surface-variant mt-2 absolute -bottom-6">T3</span>
+                        </div>
+                        <div class="relative flex flex-col items-center w-full group">
+                            <div
+                                class="w-8 md:w-12 bg-primary rounded-t-sm h-[90%] shadow-[0_0_8px_rgba(15,118,110,0.4)]">
+                            </div>
+                            <span
+                                class="font-label-sm text-label-sm text-primary font-bold mt-2 absolute -bottom-6">T4</span>
+                        </div>
+                        <div class="relative flex flex-col items-center w-full group">
+                            <div
+                                class="w-8 md:w-12 bg-primary/30 rounded-t-sm h-[30%] group-hover:bg-primary transition-colors">
+                            </div>
+                            <span
+                                class="font-label-sm text-label-sm text-on-surface-variant mt-2 absolute -bottom-6">T5</span>
+                        </div>
+                        <div class="relative flex flex-col items-center w-full group">
+                            <div
+                                class="w-8 md:w-12 bg-primary/30 rounded-t-sm h-[75%] group-hover:bg-primary transition-colors">
+                            </div>
+                            <span
+                                class="font-label-sm text-label-sm text-on-surface-variant mt-2 absolute -bottom-6">T6</span>
+                        </div>
+                        <div class="relative flex flex-col items-center w-full group">
+                            <div
+                                class="w-8 md:w-12 bg-primary/30 rounded-t-sm h-[50%] group-hover:bg-primary transition-colors">
+                            </div>
+                            <span
+                                class="font-label-sm text-label-sm text-on-surface-variant mt-2 absolute -bottom-6">T7</span>
+                        </div>
+                        <div class="relative flex flex-col items-center w-full group">
+                            <div
+                                class="w-8 md:w-12 bg-primary/30 rounded-t-sm h-[20%] group-hover:bg-primary transition-colors">
+                            </div>
+                            <span
+                                class="font-label-sm text-label-sm text-on-surface-variant mt-2 absolute -bottom-6">CN</span>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+</body>
+
+</html>

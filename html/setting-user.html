@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+
+<html lang="vi">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Cài đặt - MedPro</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-surface": "#191c1e",
+                        "secondary": "#1f6771",
+                        "on-primary-fixed": "#00201d",
+                        "on-secondary-fixed-variant": "#004f58",
+                        "tertiary": "#7f4025",
+                        "on-tertiary-fixed": "#370e00",
+                        "error-container": "#ffdad6",
+                        "primary-fixed-dim": "#80d5cb",
+                        "inverse-surface": "#2d3133",
+                        "surface-dim": "#d8dadc",
+                        "secondary-container": "#a8ebf6",
+                        "secondary-fixed-dim": "#8fd1dc",
+                        "border-subtle": "#E2E8F0",
+                        "on-secondary": "#ffffff",
+                        "error": "#ba1a1a",
+                        "primary-fixed": "#9cf2e8",
+                        "surface-variant": "#e0e3e5",
+                        "inverse-on-surface": "#eff1f3",
+                        "tertiary-fixed-dim": "#ffb598",
+                        "on-tertiary": "#ffffff",
+                        "tertiary-container": "#9c573a",
+                        "surface-bright": "#f8f9fb",
+                        "surface-container-high": "#e6e8ea",
+                        "background": "#f8f9fb",
+                        "on-primary": "#ffffff",
+                        "primary": "#005c55",
+                        "on-secondary-fixed": "#001f24",
+                        "tertiary-fixed": "#ffdbce",
+                        "outline-variant": "#bdc9c6",
+                        "on-error": "#ffffff",
+                        "on-background": "#191c1e",
+                        "on-primary-fixed-variant": "#00504a",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-container": "#a3faef",
+                        "on-tertiary-container": "#ffe5db",
+                        "deep-navy": "#0E4248",
+                        "primary-container": "#0f766e",
+                        "outline": "#6e7977",
+                        "on-surface-variant": "#3e4947",
+                        "surface-container": "#eceef0",
+                        "surface-container-low": "#f2f4f6",
+                        "on-error-container": "#93000a",
+                        "surface-tint": "#006a63",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-secondary-container": "#256c76",
+                        "surface": "#f8f9fb",
+                        "on-tertiary-fixed-variant": "#72361b",
+                        "inverse-primary": "#80d5cb",
+                        "accent-pink": "#D35485",
+                        "secondary-fixed": "#abedf9"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "margin-desktop": "40px",
+                        "base": "8px",
+                        "gutter": "24px",
+                        "container-max": "1200px",
+                        "margin-mobile": "16px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Be Vietnam Pro"],
+                        "title-md": ["Be Vietnam Pro"],
+                        "display-lg": ["Be Vietnam Pro"],
+                        "body-md": ["Be Vietnam Pro"],
+                        "headline-lg": ["Be Vietnam Pro"],
+                        "headline-lg-mobile": ["Be Vietnam Pro"],
+                        "body-lg": ["Be Vietnam Pro"],
+                        "label-sm": ["Be Vietnam Pro"]
+                    },
+                    "fontSize": {
+                        "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500" }],
+                        "title-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-md": ["14px", { "lineHeight": "22px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "body-lg": ["16px", { "lineHeight": "26px", "fontWeight": "400" }],
+                        "label-sm": ["11px", { "lineHeight": "14px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: theme('colors.background');
+            color: theme('colors.on-background');
+        }
+
+        .focus-ring:focus-within {
+            border-color: theme('colors.primary');
+            box-shadow: 0 0 0 2px theme('colors.primary-fixed-dim');
+            outline: none;
+        }
+    </style>
+</head>
+
+<body class="font-body-md text-body-md antialiased overflow-x-hidden">
+    <!-- TopNavBar -->
+    <header
+        class="bg-surface dark:bg-on-surface h-16 fixed top-0 right-0 left-[240px] z-50 border-b border-border-subtle dark:border-outline-variant flat no shadows flex items-center justify-between px-margin-desktop w-full hidden md:flex">
+        <div class="flex items-center gap-4">
+            <!-- Search removed as requested 'search_bar': 'on_left' but no explicit structure given in JSON, keeping it minimal -->
+            <div class="relative w-64">
+                <span
+                    class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
+                <input
+                    class="w-full h-10 pl-10 pr-4 bg-surface-container rounded-lg border-transparent focus-ring text-body-md transition-colors placeholder:text-on-surface-variant"
+                    placeholder="Search..." type="text" />
+            </div>
+        </div>
+        <div class="flex items-center gap-6">
+            <button
+                class="text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-primary-fixed transition-colors cursor-pointer active:scale-95 transition-transform flex items-center justify-center">
+                <span class="material-symbols-outlined">notifications</span>
+            </button>
+            <div
+                class="w-8 h-8 rounded-full overflow-hidden border border-border-subtle cursor-pointer active:scale-95 transition-transform">
+                <img alt="User Avatar" class="w-full h-full object-cover"
+                    data-alt="A professional headshot of a medical practitioner in a clinical setting. Clean, minimalist lighting. The subject exudes competence and focus, fitting a high-end medical education platform. The background is slightly blurred to keep focus on the subject."
+                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuDkylfqLQ6IzXTFdz7HBVhGFDLSep317za-VyCH0HCa92uetZ22L0IHbD6_XgJzjvrzDraUkYMsrIz0mn1Y9T29cKk5R6z1ZXXmSnZYuNJKDBg3oP5NqvqJhW0N08M-7YyaxVotCDWDoqEZIJKrxwpddSzcaneeK2sGPNBXd-z_MDjxdWRY2c_MEwoXkFWOVI7X0eKzFwH9LZvyoo_orz43dZNwhVJF-AdHJQtgpZCTVVvdoX8POxaD" />
+            </div>
+        </div>
+    </header>
+    <!-- SideNavBar -->
+    <nav
+        class="bg-surface dark:bg-on-surface h-screen w-[240px] fixed left-0 top-0 border-r border-border-subtle dark:border-outline-variant flat no shadows flex flex-col h-full py-base z-50 hidden md:flex">
+        <!-- Brand -->
+        <div class="px-6 py-4 mb-4">
+            <div class="flex items-center gap-3">
+                <div
+                    class="w-8 h-8 bg-primary-container rounded flex items-center justify-center text-on-primary font-bold">
+                    M</div>
+                <div>
+                    <h1 class="font-title-md text-title-md font-bold text-primary dark:text-primary-fixed">MedPro</h1>
+                    <p class="font-label-sm text-label-sm text-on-surface-variant">Clinical Precision</p>
+                </div>
+            </div>
+        </div>
+        <!-- Main Nav -->
+        <div class="flex-1 px-4 space-y-1">
+            <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant dark:text-surface-variant hover:bg-surface-container dark:hover:bg-on-primary-fixed-variant transition-colors cursor-pointer active:opacity-80"
+                href="#">
+                <span class="material-symbols-outlined text-[20px]">dashboard</span>
+                <span class="font-label-md text-label-md">Dashboard</span>
+            </a>
+            <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant dark:text-surface-variant hover:bg-surface-container dark:hover:bg-on-primary-fixed-variant transition-colors cursor-pointer active:opacity-80"
+                href="#">
+                <span class="material-symbols-outlined text-[20px]">calendar_today</span>
+                <span class="font-label-md text-label-md">Study Plan</span>
+            </a>
+            <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant dark:text-surface-variant hover:bg-surface-container dark:hover:bg-on-primary-fixed-variant transition-colors cursor-pointer active:opacity-80"
+                href="#">
+                <span class="material-symbols-outlined text-[20px]">menu_book</span>
+                <span class="font-label-md text-label-md">Library</span>
+            </a>
+            <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant dark:text-surface-variant hover:bg-surface-container dark:hover:bg-on-primary-fixed-variant transition-colors cursor-pointer active:opacity-80"
+                href="#">
+                <span class="material-symbols-outlined text-[20px]">quiz</span>
+                <span class="font-label-md text-label-md">QBank</span>
+            </a>
+            <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant dark:text-surface-variant hover:bg-surface-container dark:hover:bg-on-primary-fixed-variant transition-colors cursor-pointer active:opacity-80"
+                href="#">
+                <span class="material-symbols-outlined text-[20px]">style</span>
+                <span class="font-label-md text-label-md">Flashcards</span>
+            </a>
+        </div>
+        <!-- Footer Nav -->
+        <div class="px-4 mt-auto space-y-1 pt-4 border-t border-border-subtle">
+            <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-primary font-bold border-r-2 border-primary bg-surface-container-low cursor-pointer active:opacity-80"
+                href="#">
+                <span class="material-symbols-outlined text-[20px]"
+                    style="font-variation-settings: 'FILL' 1;">settings</span>
+                <span class="font-label-md text-label-md">Settings</span>
+            </a>
+            <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant dark:text-surface-variant hover:bg-surface-container dark:hover:bg-on-primary-fixed-variant transition-colors cursor-pointer active:opacity-80"
+                href="#">
+                <span class="material-symbols-outlined text-[20px]">account_circle</span>
+                <span class="font-label-md text-label-md">Profile</span>
+            </a>
+        </div>
+    </nav>
+    <!-- Main Content Canvas -->
+    <main class="md:ml-[240px] md:pt-16 min-h-screen">
+        <div class="max-w-[800px] mx-auto px-margin-mobile md:px-margin-desktop py-8 md:py-12">
+            <!-- Page Header -->
+            <div class="mb-10">
+                <h1 class="font-headline-lg text-headline-lg text-on-surface mb-2">Settings</h1>
+                <p class="font-body-lg text-body-lg text-on-surface-variant">Manage your account preferences and
+                    security.</p>
+            </div>
+            <!-- Settings Layout: Sidebar + Content -->
+            <div class="flex flex-col md:flex-row gap-10 items-start">
+                <!-- Settings Tabs -->
+                <div
+                    class="w-full md:w-48 flex-shrink-0 flex flex-row md:flex-col gap-2 overflow-x-auto md:overflow-visible pb-2 md:pb-0 border-b md:border-b-0 border-border-subtle">
+                    <button
+                        class="px-4 py-2 text-left font-label-md text-label-md text-primary font-bold md:border-l-2 border-primary bg-surface-container-low rounded-r-lg whitespace-nowrap transition-colors">Tài
+                        khoản</button>
+                    <button
+                        class="px-4 py-2 text-left font-label-md text-label-md text-on-surface-variant hover:bg-surface-container rounded-lg whitespace-nowrap transition-colors">Bảo
+                        mật</button>
+                    <button
+                        class="px-4 py-2 text-left font-label-md text-label-md text-on-surface-variant hover:bg-surface-container rounded-lg whitespace-nowrap transition-colors">Thông
+                        báo</button>
+                    <button
+                        class="px-4 py-2 text-left font-label-md text-label-md text-on-surface-variant hover:bg-surface-container rounded-lg whitespace-nowrap transition-colors">Gói
+                        đăng ký</button>
+                </div>
+                <!-- Settings Content Panel -->
+                <div
+                    class="flex-1 w-full space-y-12 bg-surface-container-lowest rounded-xl border border-border-subtle p-6 md:p-8">
+                    <!-- Form Thông tin -->
+                    <section>
+                        <h2 class="font-title-md text-title-md text-on-surface mb-6 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-primary text-[20px]">person</span>
+                            Thông tin cá nhân
+                        </h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Field: Tên hiển thị -->
+                            <div class="flex flex-col gap-1.5 focus-ring rounded-lg">
+                                <label class="font-label-sm text-label-sm text-on-surface-variant">Tên hiển thị</label>
+                                <input
+                                    class="h-10 px-3 bg-surface border border-border-subtle rounded-md text-body-md text-on-surface focus:outline-none transition-all"
+                                    type="text" value="Dr. An Nguyen" />
+                            </div>
+                            <!-- Field: Email -->
+                            <div class="flex flex-col gap-1.5 focus-ring rounded-lg">
+                                <label class="font-label-sm text-label-sm text-on-surface-variant">Email</label>
+                                <input
+                                    class="h-10 px-3 bg-surface-container-low border border-border-subtle rounded-md text-body-md text-on-surface-variant cursor-not-allowed"
+                                    disabled="" type="email" value="an.nguyen@example.com" />
+                            </div>
+                            <!-- Field: Chuyên ngành -->
+                            <div class="flex flex-col gap-1.5 focus-ring rounded-lg relative">
+                                <label class="font-label-sm text-label-sm text-on-surface-variant">Chuyên ngành</label>
+                                <select
+                                    class="h-10 px-3 pr-8 bg-surface border border-border-subtle rounded-md text-body-md text-on-surface focus:outline-none appearance-none transition-all">
+                                    <option>Nội khoa</option>
+                                    <option>Ngoại khoa</option>
+                                    <option>Nhi khoa</option>
+                                    <option>Sản phụ khoa</option>
+                                </select>
+                                <span
+                                    class="material-symbols-outlined absolute right-2 top-[30px] text-on-surface-variant pointer-events-none">expand_more</span>
+                            </div>
+                            <!-- Field: Cơ sở đào tạo -->
+                            <div class="flex flex-col gap-1.5 focus-ring rounded-lg">
+                                <label class="font-label-sm text-label-sm text-on-surface-variant">Cơ sở đào tạo / Công
+                                    tác</label>
+                                <input
+                                    class="h-10 px-3 bg-surface border border-border-subtle rounded-md text-body-md text-on-surface focus:outline-none transition-all"
+                                    type="text" value="Bệnh viện Đại học Y Dược" />
+                            </div>
+                        </div>
+                    </section>
+                    <hr class="border-border-subtle" />
+                    <!-- Khu vực Đổi mật khẩu -->
+                    <section>
+                        <h2 class="font-title-md text-title-md text-on-surface mb-6 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-primary text-[20px]">lock</span>
+                            Đổi mật khẩu
+                        </h2>
+                        <div class="max-w-md space-y-5">
+                            <div class="flex flex-col gap-1.5 focus-ring rounded-lg">
+                                <label class="font-label-sm text-label-sm text-on-surface-variant">Mật khẩu hiện
+                                    tại</label>
+                                <input
+                                    class="h-10 px-3 bg-surface border border-border-subtle rounded-md text-body-md text-on-surface focus:outline-none transition-all"
+                                    placeholder="••••••••" type="password" />
+                            </div>
+                            <div class="flex flex-col gap-1.5 focus-ring rounded-lg">
+                                <label class="font-label-sm text-label-sm text-on-surface-variant">Mật khẩu mới</label>
+                                <input
+                                    class="h-10 px-3 bg-surface border border-border-subtle rounded-md text-body-md text-on-surface focus:outline-none transition-all"
+                                    placeholder="Tối thiểu 8 ký tự" type="password" />
+                            </div>
+                            <div class="flex flex-col gap-1.5 focus-ring rounded-lg">
+                                <label class="font-label-sm text-label-sm text-on-surface-variant">Xác nhận mật khẩu
+                                    mới</label>
+                                <input
+                                    class="h-10 px-3 bg-surface border border-border-subtle rounded-md text-body-md text-on-surface focus:outline-none transition-all"
+                                    placeholder="" type="password" />
+                            </div>
+                        </div>
+                    </section>
+                    <!-- Form Actions -->
+                    <div class="pt-6 border-t border-border-subtle flex justify-end gap-4">
+                        <button
+                            class="px-6 py-2.5 rounded border border-primary text-primary font-label-md text-label-md hover:bg-surface-container-low transition-colors">Hủy</button>
+                        <button
+                            class="px-6 py-2.5 rounded bg-primary-container text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity">Lưu
+                            thay đổi</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+
+</html>

@@ -2,6 +2,12 @@
 
 declare(strict_types=1);
 
-/*
-| Notification — web routes. Add notification center pages here.
-*/
+use Illuminate\Support\Facades\Route;
+use Modules\Notification\Http\Controllers\NotificationController;
+
+Route::middleware('auth')->group(function (): void {
+    Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead'])
+        ->name('notifications.read');
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])
+        ->name('notifications.read-all');
+});

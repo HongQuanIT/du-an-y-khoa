@@ -3,6 +3,8 @@
 namespace Modules\Notification\Providers;
 
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
+use Modules\Notification\Listeners\NotifySessionCompleted;
+use Modules\QuestionBank\Data\QuestionSessionProgressed;
 
 class EventServiceProvider extends ServiceProvider
 {
@@ -11,7 +13,11 @@ class EventServiceProvider extends ServiceProvider
      *
      * @var array<string, array<int, string>>
      */
-    protected $listen = [];
+    protected $listen = [
+        QuestionSessionProgressed::class => [
+            NotifySessionCompleted::class,
+        ],
+    ];
 
     /**
      * Indicates if events should be discovered.

@@ -76,6 +76,16 @@ final class TargetExams
         return self::all()[$key]['title'] ?? 'Kế hoạch học tập';
     }
 
+    /** Label for account UI; shows a neutral placeholder when unset. */
+    public static function displayTitle(?string $key): string
+    {
+        if ($key === null || $key === '' || ! isset(self::all()[$key])) {
+            return 'Chưa chọn';
+        }
+
+        return self::all()[$key]['title'];
+    }
+
     public static function planName(string $key, Carbon $targetDate): string
     {
         return 'Ôn thi '.self::title($key).' '.$targetDate->year;
