@@ -6,6 +6,39 @@ import tailwindcss from '@tailwindcss/vite';
 const vitePort = Number(process.env.VITE_PORT || 5173);
 const appPort = Number(process.env.APP_PORT || 80);
 
+/** Browsers omit :80/:443 in Origin; allow both forms for local dev. */
+function resolveDevCorsOrigins() {
+    const origins = new Set();
+
+    const add = (raw) => {
+        try {
+            const url = new URL(raw);
+            origins.add(url.origin);
+
+            const defaultPort = url.protocol === 'https:' ? '443' : '80';
+            const port = url.port || defaultPort;
+
+            if (port === '80' || port === '443') {
+                origins.add(`${url.protocol}//${url.hostname}`);
+            }
+            if (port === '80') {
+                origins.add(`${url.protocol}//${url.hostname}:80`);
+            }
+        } catch {
+            // ignore invalid URL
+        }
+    };
+
+    if (process.env.APP_URL) {
+        add(process.env.APP_URL);
+    }
+
+    add(`http://localhost:${appPort}`);
+    add('http://127.0.0.1');
+
+    return [...origins];
+}
+
 export default defineConfig({
     plugins: [
         laravel({
@@ -32,9 +65,9 @@ export default defineConfig({
     server: {
         host: '0.0.0.0',
         port: vitePort,
-        // Page is served from Nginx (APP_PORT); Vite must allow that origin for @vite/client.
+        // Page is served from Nginx (APP_PORT); allow Origin variants (with/without :80).
         cors: {
-            origin: `http://localhost:${appPort}`,
+            origin: resolveDevCorsOrigins(),
         },
         hmr: {
             host: 'localhost',
