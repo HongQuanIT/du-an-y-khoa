@@ -18,39 +18,23 @@ use Modules\Billing\Actions\RedeemCodeAction;
 use Modules\Billing\Actions\RenewInstitutionLicenseAction;
 use Modules\Billing\Models\InstitutionMember;
 use Modules\Billing\Models\Invoice;
+use Modules\Billing\Support\CurrentSubscription;
 use Modules\Billing\Support\MembershipSummary;
 
-/**
- * Amboss-style career/study profile and account settings.
- */
+/** Unified account hub at `/profile` (profile + settings tabs). */
 final class ProfileController extends Controller
 {
+    /** @var list<string> */
+    private const TABS = [
+        'career', 'contact', 'security', 'notifications',
+        'membership', 'invoices', 'redeem', 'notes', 'org-license',
+    ];
+
     public function show(Request $request): View
     {
-        return view('auth::profile', [
-            'user' => $request->user(),
-        ]);
-    }
-
-    public function edit(Request $request): View
-    {
-        $tab = (string) $request->query('tab', 'contact');
-        $allowed = [
-            'contact', 'account', 'security', 'notifications',
-            'membership', 'billing', 'invoices', 'redeem', 'notes',
-            'org-license',
-        ];
-        if (! in_array($tab, $allowed, true)) {
-            $tab = 'contact';
-        }
-
-        $tab = match ($tab) {
-            'account' => 'contact',
-            'billing' => 'membership',
-            default => $tab,
-        };
-
+        $tab = $this->normalizeTab((string) $request->query('tab', 'career'));
         $user = $request->user();
+
         $prefs = $user->notification_prefs ?? [
             'email_session' => true,
             'email_plan' => true,
@@ -65,17 +49,27 @@ final class ProfileController extends Controller
             ->get()
             ->filter(fn (InstitutionMember $member): bool => $member->institution?->isValid() ?? false);
 
-        return view('auth::settings', [
-            'user' => $user,
+        return view('auth::profile', [
             'tab' => $tab,
+            'user' => $user,
             'prefs' => $prefs,
             'membership' => MembershipSummary::for($user),
+            'currentSubscription' => CurrentSubscription::for($user),
             'invoices' => Invoice::query()
                 ->where('user_id', $user->getKey())
                 ->orderByDesc('issued_at')
                 ->get(),
             'orgMembers' => $orgMembers,
         ]);
+    }
+
+    public function redirectLegacySettings(Request $request): RedirectResponse
+    {
+        $tab = $request->has('tab')
+            ? $this->normalizeTab((string) $request->query('tab'))
+            : 'contact';
+
+        return redirect()->route('profile.show', $this->tabRouteParams($tab), 301);
     }
 
     public function updateProfile(Request $request): RedirectResponse
@@ -91,7 +85,7 @@ final class ProfileController extends Controller
 
             if ($validator->fails()) {
                 return redirect()
-                    ->route('settings.edit', ['tab' => 'contact'])
+                    ->route('profile.show', $this->tabRouteParams('contact'))
                     ->withErrors($validator)
                     ->withInput();
             }
@@ -99,7 +93,7 @@ final class ProfileController extends Controller
             $request->user()->forceFill($validator->validated())->save();
 
             return redirect()
-                ->route('settings.edit', ['tab' => 'contact'])
+                ->route('profile.show', $this->tabRouteParams('contact'))
                 ->with('status', 'Đã lưu thông tin liên hệ.');
         }
 
@@ -157,7 +151,7 @@ final class ProfileController extends Controller
 
         if ($validator->fails()) {
             return redirect()
-                ->route('settings.edit', ['tab' => 'security'])
+                ->route('profile.show', $this->tabRouteParams('security'))
                 ->withErrors($validator);
         }
 
@@ -168,7 +162,7 @@ final class ProfileController extends Controller
         ])->save();
 
         return redirect()
-            ->route('settings.edit', ['tab' => 'security'])
+            ->route('profile.show', $this->tabRouteParams('security'))
             ->with('status', 'Đã đổi mật khẩu thành công.');
     }
 
@@ -191,7 +185,7 @@ final class ProfileController extends Controller
         ])->save();
 
         return redirect()
-            ->route('settings.edit', ['tab' => 'notifications'])
+            ->route('profile.show', $this->tabRouteParams('notifications'))
             ->with('status', 'Đã cập nhật tùy chọn thông báo.');
     }
 
@@ -205,7 +199,7 @@ final class ProfileController extends Controller
 
         if ($validator->fails()) {
             return redirect()
-                ->route('settings.edit', ['tab' => 'contact'])
+                ->route('profile.show')
                 ->withErrors($validator);
         }
 
@@ -217,7 +211,7 @@ final class ProfileController extends Controller
         $user->forceFill(['avatar_path' => $path])->save();
 
         return redirect()
-            ->route('settings.edit', ['tab' => 'contact'])
+            ->route('profile.show')
             ->with('status', 'Đã cập nhật ảnh đại diện.');
     }
 
@@ -229,7 +223,7 @@ final class ProfileController extends Controller
         $user?->forceFill(['avatar_path' => null])->save();
 
         return redirect()
-            ->route('settings.edit', ['tab' => 'contact'])
+            ->route('profile.show')
             ->with('status', 'Đã xóa ảnh đại diện.');
     }
 
@@ -245,7 +239,7 @@ final class ProfileController extends Controller
             $subscription = $redeem->handle($request->user(), (string) $request->input('code'));
         } catch (\Illuminate\Validation\ValidationException $exception) {
             return redirect()
-                ->route('settings.edit', ['tab' => 'redeem'])
+                ->route('profile.show', $this->tabRouteParams('redeem'))
                 ->withErrors($exception->errors())
                 ->withInput();
         }
@@ -253,7 +247,7 @@ final class ProfileController extends Controller
         $planName = $subscription->plan?->name ?? 'Premium';
 
         return redirect()
-            ->route('settings.edit', ['tab' => 'membership'])
+            ->route('profile.show', $this->tabRouteParams('membership'))
             ->with('status', "Đã kích hoạt gói {$planName} thành công.");
     }
 
@@ -269,13 +263,13 @@ final class ProfileController extends Controller
             $activate->handle($request->user(), (string) $request->input('institution_email'));
         } catch (\Illuminate\Validation\ValidationException $exception) {
             return redirect()
-                ->route('settings.edit', ['tab' => 'org-license'])
+                ->route('profile.show', $this->tabRouteParams('org-license'))
                 ->withErrors($exception->errors())
                 ->withInput();
         }
 
         return redirect()
-            ->route('settings.edit', ['tab' => 'org-license'])
+            ->route('profile.show', $this->tabRouteParams('org-license'))
             ->with('status', 'Đã kích hoạt giấy phép tổ chức.');
     }
 
@@ -289,12 +283,12 @@ final class ProfileController extends Controller
             $renew->handle($request->user(), (int) $request->input('member_id'));
         } catch (\Illuminate\Validation\ValidationException $exception) {
             return redirect()
-                ->route('settings.edit', ['tab' => 'org-license'])
+                ->route('profile.show', $this->tabRouteParams('org-license'))
                 ->withErrors($exception->errors());
         }
 
         return redirect()
-            ->route('settings.edit', ['tab' => 'org-license'])
+            ->route('profile.show', $this->tabRouteParams('org-license'))
             ->with('status', 'Đã gia hạn giấy phép tổ chức.');
     }
 
@@ -311,8 +305,26 @@ final class ProfileController extends Controller
         ])->save();
 
         return redirect()
-            ->route('settings.edit', ['tab' => 'notes'])
+            ->route('profile.show', $this->tabRouteParams('notes'))
             ->with('status', 'Đã lưu ghi chú.');
+    }
+
+    private function normalizeTab(string $tab): string
+    {
+        $tab = match ($tab) {
+            '', 'career' => 'career',
+            'account' => 'contact',
+            'billing' => 'membership',
+            default => $tab,
+        };
+
+        return in_array($tab, self::TABS, true) ? $tab : 'career';
+    }
+
+    /** @return array<string, string> */
+    private function tabRouteParams(string $tab): array
+    {
+        return $tab === 'career' ? [] : ['tab' => $tab];
     }
 
     private function deleteAvatarFile(?string $path): void

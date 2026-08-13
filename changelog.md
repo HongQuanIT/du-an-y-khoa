@@ -2,10 +2,25 @@
 
 ## 2026-08-13
 
+### Billing — CMS bảng giá & thống kê học viên
+- Migration `plan_prices`, SKU Premium (1 tháng / 1–3 năm); seed Free + Premium; auto `compare_at` từ `savings_percent`.
+- Admin `/admin/billing/plans`: CRUD tier/SKU, menu **Bảng giá** (`billing.manage`); KPI học viên Free/Premium; phân bổ theo SKU.
+- `/pricing` đọc DB; badge gói hiện tại; `/subscription` + tab membership; API `GET /api/v1/plans`, `/api/v1/subscription`.
+- Thống kê chỉ role Học viên; Free = mặc định (không subscription); lịch sử Premium drill-down theo SKU/nguồn.
+
+### Dev — Vite CORS localhost
+- `vite.config.js`: cho phép Origin `localhost` có/không cổng `:80`; truyền `APP_URL` vào service vite.
+
 ### 2FA tùy chọn cho học viên
 - Settings tab Bảo mật: bật TOTP (QR + mã khôi phục), tắt bằng xác nhận mật khẩu; staff không dùng luồng này.
 - Login `/login`: nếu đã bật 2FA thì hỏi mã tại `/2fa/challenge`; cookie nhớ thiết bị 30 ngày (tắt/bật lại 2FA thì hết hiệu lực).
 - Không challenge portal giảng viên `/teach`.
+
+### Hub tài khoản thống nhất tại `/profile`
+- Gộp Settings vào `/profile?tab=...`; `/settings` chuyển hướng 301; xóa trang settings riêng.
+- Layout SaaS: component `account-layout`, sidebar nhóm Hồ sơ / Tài khoản / Thanh toán / Khác.
+- Panel hồ sơ nghề nghiệp và cài đặt tách partial; sửa lỗi Blade khi tách layout.
+- Sidebar app gộp mục «Tài khoản»; cập nhật redirect form và test Auth profile.
 
 ## 2026-08-11
 

@@ -75,6 +75,13 @@ final class AdminMenu
                 'match' => 'admin.reports.*',
             ],
             [
+                'label' => 'Bảng giá',
+                'icon' => 'payments',
+                'route' => 'admin.billing.plans.index',
+                'permission' => Permission::BillingManage->value,
+                'match' => 'admin.billing.*',
+            ],
+            [
                 'label' => 'Phân quyền',
                 'icon' => 'admin_panel_settings',
                 'route' => 'admin.roles.index',

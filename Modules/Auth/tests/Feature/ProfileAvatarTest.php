@@ -24,7 +24,7 @@ final class ProfileAvatarTest extends TestCase
             ->put(route('settings.avatar'), [
                 'avatar' => UploadedFile::fake()->image('avatar.jpg', 400, 400)->size(800),
             ])
-            ->assertRedirect(route('settings.edit', ['tab' => 'contact']))
+            ->assertRedirect(route('profile.show'))
             ->assertSessionHas('status');
 
         $user->refresh();
@@ -35,7 +35,7 @@ final class ProfileAvatarTest extends TestCase
 
         $this->actingAs($user)
             ->delete(route('settings.avatar.destroy'))
-            ->assertRedirect(route('settings.edit', ['tab' => 'contact']))
+            ->assertRedirect(route('profile.show'))
             ->assertSessionHas('status');
 
         $user->refresh();
@@ -50,11 +50,11 @@ final class ProfileAvatarTest extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->from(route('settings.edit', ['tab' => 'contact']))
+            ->from(route('profile.show'))
             ->put(route('settings.avatar'), [
                 'avatar' => UploadedFile::fake()->create('notes.pdf', 100, 'application/pdf'),
             ])
-            ->assertRedirect(route('settings.edit', ['tab' => 'contact']))
+            ->assertRedirect(route('profile.show'))
             ->assertSessionHasErrors('avatar');
 
         $this->assertNull($user->fresh()->avatar_path);

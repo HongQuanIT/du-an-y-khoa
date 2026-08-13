@@ -6,6 +6,11 @@ namespace Modules\Landing\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\Request;
+use Modules\Billing\Actions\ListPublicPlansAction;
+use Modules\Billing\Models\PlanPrice;
+use Modules\Billing\Support\CurrentSubscription;
+use Modules\Billing\Support\MoneyFormatter;
 
 class LandingController extends Controller
 {
@@ -19,9 +24,34 @@ class LandingController extends Controller
         return view('landing::features');
     }
 
-    public function pricing(): View
+    public function pricing(Request $request, ListPublicPlansAction $list): View
     {
-        return view('landing::pricing');
+        $catalog = $list->handle();
+        $current = CurrentSubscription::for($request->user());
+
+        $yearlyForAlpine = $catalog['yearlyPrices']->mapWithKeys(function (PlanPrice $price): array {
+            $years = max(1, (int) round(($price->duration_days ?? 365) / 365));
+
+            return [$years => [
+                'id' => $price->id,
+                'label' => $price->label,
+                'total' => $price->price_cents,
+                'perMonth' => $price->perMonthCents() ?? 0,
+                'save' => $price->displaySavingsPercent() ?? 0,
+                'listPrice' => $price->listPriceCents() ?? 0,
+                'months' => (int) round(($price->duration_days ?? 365) / 30),
+                'badge' => $price->badge_label,
+                'cta' => $price->cta_label ?? 'Mua gói '.$price->label,
+            ]];
+        });
+
+        return view('landing::pricing', [
+            'free' => $catalog['free'],
+            'premium' => $catalog['premium'],
+            'monthlyPrice' => $catalog['monthlyPrice'],
+            'yearlyForAlpine' => $yearlyForAlpine,
+            'current' => $current,
+        ]);
     }
 
     public function about(): View

@@ -38,7 +38,7 @@ final class SettingsTwoFactorTest extends TestCase
         $user->assignRole(Role::Student->value);
 
         $this->actingAs($user)
-            ->get(route('settings.edit', ['tab' => 'security']))
+            ->get(route('profile.show', ['tab' => 'security']))
             ->assertOk()
             ->assertSee('Xác thực hai bước (2FA)')
             ->assertSee('Bật 2FA');
@@ -80,7 +80,7 @@ final class SettingsTwoFactorTest extends TestCase
 
         $this->actingAs($user)
             ->post(route('settings.2fa.recovery.finish'))
-            ->assertRedirect(route('settings.edit', ['tab' => 'security']))
+            ->assertRedirect(route('profile.show', ['tab' => 'security']))
             ->assertSessionHas('status');
     }
 
@@ -92,11 +92,11 @@ final class SettingsTwoFactorTest extends TestCase
 
         $this->actingAs($user)
             ->withSession([TwoFactorSession::KEY => now()->timestamp])
-            ->from(route('settings.edit', ['tab' => 'security']))
+            ->from(route('profile.show', ['tab' => 'security']))
             ->delete(route('settings.2fa.disable'), [
                 'current_password' => 'wrong-password',
             ])
-            ->assertRedirect(route('settings.edit', ['tab' => 'security']))
+            ->assertRedirect(route('profile.show', ['tab' => 'security']))
             ->assertSessionHasErrors('current_password');
 
         $this->assertTrue($user->fresh()->hasTwoFactorEnabled());
@@ -110,11 +110,11 @@ final class SettingsTwoFactorTest extends TestCase
 
         $this->actingAs($user)
             ->withSession([TwoFactorSession::KEY => now()->timestamp])
-            ->from(route('settings.edit', ['tab' => 'security']))
+            ->from(route('profile.show', ['tab' => 'security']))
             ->delete(route('settings.2fa.disable'), [
                 'current_password' => 'Password1!',
             ])
-            ->assertRedirect(route('settings.edit', ['tab' => 'security']))
+            ->assertRedirect(route('profile.show', ['tab' => 'security']))
             ->assertSessionHas('status')
             ->assertSessionMissing(TwoFactorSession::KEY);
 
@@ -138,7 +138,7 @@ final class SettingsTwoFactorTest extends TestCase
         $user->assignRole(Role::Admin->value);
 
         $this->actingAs($user)
-            ->get(route('settings.edit', ['tab' => 'security']))
+            ->get(route('profile.show', ['tab' => 'security']))
             ->assertOk()
             ->assertSee('Đổi mật khẩu')
             ->assertDontSee('Xác thực hai bước (2FA)');

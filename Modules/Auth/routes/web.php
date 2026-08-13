@@ -47,7 +47,7 @@ Route::middleware('auth')->group(function (): void {
         ->name('student.2fa.challenge.verify');
 
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
-    Route::get('/settings', [ProfileController::class, 'edit'])->name('settings.edit');
+    Route::get('/settings', [ProfileController::class, 'redirectLegacySettings'])->name('settings.edit');
     Route::put('/settings/profile', [ProfileController::class, 'updateProfile'])->name('settings.profile');
     Route::put('/settings/avatar', [ProfileController::class, 'updateAvatar'])->name('settings.avatar');
     Route::delete('/settings/avatar', [ProfileController::class, 'destroyAvatar'])->name('settings.avatar.destroy');

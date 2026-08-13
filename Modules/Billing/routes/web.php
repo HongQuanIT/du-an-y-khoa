@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
-/*
-| Billing — web routes (plans, checkout, invoices). Add pages here.
-*/
+use Illuminate\Support\Facades\Route;
+use Modules\Billing\Http\Controllers\SubscriptionController;
+
+Route::middleware('auth')->group(function (): void {
+    Route::get('/subscription', [SubscriptionController::class, 'show'])->name('subscription.show');
+});

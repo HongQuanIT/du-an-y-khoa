@@ -41,6 +41,15 @@ docker compose exec app php artisan key:generate --force
 docker compose exec app php artisan migrate --seed
 ```
 
+Sau khi **pull code có thêm quyền admin mới** (ví dụ `billing.manage`), chạy lại:
+
+```bash
+docker compose exec app php artisan db:seed --class=Database\\Seeders\\RolePermissionSeeder
+docker compose exec app php artisan permission:cache-reset
+```
+
+Nếu sidebar admin thiếu mục mới (vd. **Bảng giá**), thường do bước trên chưa chạy.
+
 Tạo link storage (idempotent):
 
 ```bash
