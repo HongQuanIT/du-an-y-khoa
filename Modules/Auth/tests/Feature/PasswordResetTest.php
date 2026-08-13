@@ -35,7 +35,7 @@ final class PasswordResetTest extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->get(route('settings.edit', ['tab' => 'security']))
+            ->get(route('profile.show', ['tab' => 'security']))
             ->assertOk()
             ->assertSee('Quên mật khẩu?');
     }

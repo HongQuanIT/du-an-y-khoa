@@ -27,7 +27,7 @@ final class SettingsTwoFactorController extends Controller
 
         if ($user->hasTwoFactorEnabled()) {
             return redirect()
-                ->route('settings.edit', ['tab' => 'security'])
+                ->route('profile.show', ['tab' => 'security'])
                 ->with('status', 'Xác thực hai bước đã được bật.');
         }
 
@@ -67,7 +67,7 @@ final class SettingsTwoFactorController extends Controller
         $codes = $request->session()->get('two_factor_recovery_codes');
 
         if (! is_array($codes) || $codes === []) {
-            return redirect()->route('settings.edit', ['tab' => 'security']);
+            return redirect()->route('profile.show', ['tab' => 'security']);
         }
 
         return view('auth::two-factor-recovery', [
@@ -82,7 +82,7 @@ final class SettingsTwoFactorController extends Controller
         $request->session()->forget('two_factor_recovery_codes');
 
         return redirect()
-            ->route('settings.edit', ['tab' => 'security'])
+            ->route('profile.show', ['tab' => 'security'])
             ->with('status', 'Đã bật xác thực hai bước.');
     }
 
@@ -97,7 +97,7 @@ final class SettingsTwoFactorController extends Controller
         $disable->handle($user, (string) $request->input('current_password'), $request);
 
         return redirect()
-            ->route('settings.edit', ['tab' => 'security'])
+            ->route('profile.show', ['tab' => 'security'])
             ->with('status', 'Đã tắt xác thực hai bước.');
     }
 

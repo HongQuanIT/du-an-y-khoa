@@ -24,7 +24,7 @@
         </form>
 
         <p class="mt-6 text-center">
-            <a href="{{ route('settings.edit', ['tab' => 'security']) }}"
+            <a href="{{ route('profile.show', ['tab' => 'security']) }}"
                 class="font-label-sm text-label-sm text-primary hover:underline">
                 Hủy — quay lại Cài đặt
             </a>

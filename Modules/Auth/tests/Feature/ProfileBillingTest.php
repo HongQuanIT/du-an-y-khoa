@@ -29,7 +29,7 @@ final class ProfileBillingTest extends TestCase
 
         $this->actingAs($user)
             ->post(route('settings.redeem'), ['code' => 'medlearn2026'])
-            ->assertRedirect(route('settings.edit', ['tab' => 'membership']))
+            ->assertRedirect(route('profile.show', ['tab' => 'membership']))
             ->assertSessionHas('status');
 
         $this->assertTrue(
@@ -46,9 +46,9 @@ final class ProfileBillingTest extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->from(route('settings.edit', ['tab' => 'redeem']))
+            ->from(route('profile.show', ['tab' => 'redeem']))
             ->post(route('settings.redeem'), ['code' => 'INVALID'])
-            ->assertRedirect(route('settings.edit', ['tab' => 'redeem']))
+            ->assertRedirect(route('profile.show', ['tab' => 'redeem']))
             ->assertSessionHasErrors('code');
     }
 
@@ -60,7 +60,7 @@ final class ProfileBillingTest extends TestCase
             ->post(route('settings.org-license'), [
                 'institution_email' => 'student@medlearn.local',
             ])
-            ->assertRedirect(route('settings.edit', ['tab' => 'org-license']))
+            ->assertRedirect(route('profile.show', ['tab' => 'org-license']))
             ->assertSessionHas('status');
 
         $this->assertTrue(
@@ -80,7 +80,7 @@ final class ProfileBillingTest extends TestCase
             ->put(route('settings.notes'), [
                 'account_notes' => 'Nhắc ôn tim mạch tuần này.',
             ])
-            ->assertRedirect(route('settings.edit', ['tab' => 'notes']))
+            ->assertRedirect(route('profile.show', ['tab' => 'notes']))
             ->assertSessionHas('status');
 
         $this->assertSame('Nhắc ôn tim mạch tuần này.', $user->fresh()->account_notes);

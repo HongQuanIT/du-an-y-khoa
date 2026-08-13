@@ -188,10 +188,6 @@
                             class="block w-full rounded-lg bg-primary px-4 py-2.5 text-center font-label-md text-label-md font-bold text-on-primary transition-opacity hover:opacity-90">
                             Quản lý tài khoản
                         </a>
-                        <a href="{{ route('settings.edit', ['tab' => 'contact']) }}" @click="accountMenu = false"
-                            class="mt-2 block w-full rounded-lg border border-outline-variant px-4 py-2.5 text-center font-label-md text-label-md font-bold text-on-surface transition-colors hover:bg-surface-container-low">
-                            Liên hệ & cài đặt
-                        </a>
                     </div>
 
                     <div class="space-y-4 p-4">

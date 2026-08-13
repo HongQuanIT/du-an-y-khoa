@@ -40,25 +40,15 @@
         <span class="material-symbols-outlined text-body-sm">stars</span>
         Nâng cấp tài khoản
     </a>
-    <a href="{{ route('settings.edit') }}"
-        @if ($closeOnNavigate) @click="menu = false" @endif
-        @class([
-            'flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors',
-            'bg-primary/10 font-semibold text-primary' => request()->routeIs('settings.*'),
-            'text-on-surface-variant hover:bg-surface-container-low' => ! request()->routeIs('settings.*'),
-        ])>
-        <span class="material-symbols-outlined" @if (request()->routeIs('settings.*')) style="font-variation-settings: 'FILL' 1;" @endif>settings</span>
-        <span class="font-body-md text-body-md">Cài đặt</span>
-    </a>
     <a href="{{ route('profile.show') }}"
         @if ($closeOnNavigate) @click="menu = false" @endif
         @class([
             'flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors',
-            'bg-primary/10 font-semibold text-primary' => request()->routeIs('profile.*'),
-            'text-on-surface-variant hover:bg-surface-container-low' => ! request()->routeIs('profile.*'),
+            'bg-primary/10 font-semibold text-primary' => request()->routeIs('profile.show'),
+            'text-on-surface-variant hover:bg-surface-container-low' => ! request()->routeIs('profile.show'),
         ])>
-        <span class="material-symbols-outlined" @if (request()->routeIs('profile.*')) style="font-variation-settings: 'FILL' 1;" @endif>account_circle</span>
-        <span class="font-body-md text-body-md">Hồ sơ</span>
+        <span class="material-symbols-outlined" @if (request()->routeIs('profile.show')) style="font-variation-settings: 'FILL' 1;" @endif>manage_accounts</span>
+        <span class="font-body-md text-body-md">Tài khoản</span>
     </a>
     <form action="{{ route('logout') }}" method="post">
         @csrf

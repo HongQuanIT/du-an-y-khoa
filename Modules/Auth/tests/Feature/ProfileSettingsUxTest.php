@@ -25,13 +25,13 @@ final class ProfileSettingsUxTest extends TestCase
         $user = User::factory()->create(['password' => 'Password1!']);
 
         $this->actingAs($user)
-            ->from(route('settings.edit', ['tab' => 'security']))
+            ->from(route('profile.show', ['tab' => 'security']))
             ->put(route('settings.password'), [
                 'current_password' => 'wrong-password',
                 'password' => 'short',
                 'password_confirmation' => 'mismatch',
             ])
-            ->assertRedirect(route('settings.edit', ['tab' => 'security']))
+            ->assertRedirect(route('profile.show', ['tab' => 'security']))
             ->assertSessionHasErrors(['current_password', 'password']);
     }
 
@@ -40,15 +40,28 @@ final class ProfileSettingsUxTest extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->get(route('settings.edit', ['tab' => 'security']))
+            ->get(route('profile.show', ['tab' => 'security']))
             ->assertOk()
             ->assertSee('Đổi mật khẩu')
             ->assertDontSee('Tùy chọn thông báo');
 
         $this->actingAs($user)
-            ->get(route('settings.edit', ['tab' => 'notifications']))
+            ->get(route('profile.show', ['tab' => 'notifications']))
             ->assertOk()
             ->assertSee('Tùy chọn thông báo')
             ->assertDontSee('Đổi mật khẩu');
+    }
+
+    public function test_legacy_settings_url_redirects_to_profile(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('settings.edit', ['tab' => 'security']))
+            ->assertRedirect(route('profile.show', ['tab' => 'security']));
+
+        $this->actingAs($user)
+            ->get(route('settings.edit'))
+            ->assertRedirect(route('profile.show', ['tab' => 'contact']));
     }
 }

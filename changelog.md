@@ -7,6 +7,12 @@
 - Login `/login`: nếu đã bật 2FA thì hỏi mã tại `/2fa/challenge`; cookie nhớ thiết bị 30 ngày (tắt/bật lại 2FA thì hết hiệu lực).
 - Không challenge portal giảng viên `/teach`.
 
+### Hub tài khoản thống nhất tại `/profile`
+- Gộp Settings vào `/profile?tab=...`; `/settings` chuyển hướng 301; xóa trang settings riêng.
+- Layout SaaS: component `account-layout`, sidebar nhóm Hồ sơ / Tài khoản / Thanh toán / Khác.
+- Panel hồ sơ nghề nghiệp và cài đặt tách partial; sửa lỗi Blade khi tách layout.
+- Sidebar app gộp mục «Tài khoản»; cập nhật redirect form và test Auth profile.
+
 ## 2026-08-11
 
 ### Profile, Settings và Billing cơ bản
