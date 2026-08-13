@@ -53,6 +53,7 @@ Route::middleware('auth')->group(function (): void {
     Route::delete('/settings/avatar', [ProfileController::class, 'destroyAvatar'])->name('settings.avatar.destroy');
     Route::put('/settings/objective', [ProfileController::class, 'updateObjective'])->name('settings.objective');
     Route::put('/settings/password', [ProfileController::class, 'updatePassword'])->name('settings.password');
+    Route::put('/settings/appearance', [ProfileController::class, 'updateAppearance'])->name('settings.appearance');
     Route::put('/settings/notifications', [ProfileController::class, 'updateNotifications'])->name('settings.notifications');
     Route::post('/settings/redeem', [ProfileController::class, 'redeemCode'])->name('settings.redeem');
     Route::post('/settings/org-license', [ProfileController::class, 'activateOrgLicense'])->name('settings.org-license');

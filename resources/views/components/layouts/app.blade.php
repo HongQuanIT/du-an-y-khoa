@@ -1,6 +1,8 @@
 @props(['title' => null])
 
 @php
+    use Modules\Billing\Support\CurrentSubscription;
+
     // Dashboard, Q-Bank, StudyPlan, Flashcards are wired; the rest land as modules ship.
     $navItems = [
         ['label' => 'Dashboard', 'icon' => 'dashboard', 'route' => 'dashboard'],
@@ -12,6 +14,22 @@
         ['label' => 'Phân tích', 'icon' => 'analytics', 'route' => null],
         ['label' => 'Kỳ thi', 'icon' => 'assignment', 'route' => null],
     ];
+
+    $headerSubscription = CurrentSubscription::for(auth()->user());
+    $membershipChipParts = [$headerSubscription['is_free'] ? 'Free' : 'Premium'];
+
+    if (! $headerSubscription['is_free'] && filled($headerSubscription['price_label'])) {
+        $membershipChipParts[] = $headerSubscription['price_label'];
+    }
+
+    if (! $headerSubscription['is_free'] && $headerSubscription['ends_at']?->isFuture()) {
+        $membershipChipParts[] = 'còn '.(int) now()->diffInDays($headerSubscription['ends_at']).' ngày';
+    } elseif (! $headerSubscription['is_free'] && $headerSubscription['ends_at'] === null) {
+        $membershipChipParts[] = 'không giới hạn';
+    }
+
+    $membershipChipLabel = implode(' · ', $membershipChipParts);
+    $isStudent = auth()->user()->getRoleNames()->first() === 'student';
 @endphp
 
 <!DOCTYPE html>
@@ -19,6 +37,7 @@
 
 <head>
     <meta charset="utf-8">
+    <x-theme-init />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ? $title . ' - ' . config('app.name') : config('app.name') }}</title>
@@ -29,7 +48,22 @@
 </head>
 
 <body class="bg-surface font-body-md text-on-surface"
-    x-data="{ menu: false, accountMenu: false, notificationsOpen: false, language: 'vi', units: 'si', theme: 'light' }"
+    x-data="{
+        menu: false,
+        accountMenu: false,
+        notificationsOpen: false,
+        theme: 'light',
+        initTheme() {
+            this.theme = window.MedlearnTheme?.getStoredTheme?.() ?? 'system';
+        },
+        async setTheme(value) {
+            this.theme = value;
+            if (window.MedlearnTheme?.setTheme) {
+                this.theme = await window.MedlearnTheme.setTheme(value);
+            }
+        },
+    }"
+    x-init="initTheme()"
     @keydown.escape.window="menu = false; accountMenu = false; notificationsOpen = false">
     <!-- SideNavBar (desktop) -->
     <aside
@@ -149,7 +183,7 @@
                 <div class="hidden text-right sm:block">
                     <p class="font-label-md text-label-md text-on-surface">{{ auth()->user()->name }}</p>
                     <p class="font-label-sm text-label-sm text-on-surface-variant">
-                        {{ auth()->user()->getRoleNames()->first() === 'student' ? 'Học viên' : 'Nhân sự' }}
+                        {{ $isStudent ? 'Học viên' : 'Nhân sự' }}
                     </p>
                 </div>
                 <span
@@ -175,49 +209,41 @@
                         <div>
                             <p class="font-title-md text-title-md font-bold text-on-surface">{{ auth()->user()->name }}</p>
                             <p class="font-body-md text-body-md text-on-surface-variant">
-                                {{ auth()->user()->getRoleNames()->first() === 'student' ? 'Học viên Y khoa' : 'Nhân sự' }}
+                                {{ $isStudent ? 'Học viên Y khoa' : 'Nhân sự' }}
                             </p>
                         </div>
-                        <div>
-                            <p class="font-label-md text-label-md font-bold tracking-wide text-on-surface-variant uppercase">Mục tiêu học tập hiện tại</p>
-                            <p class="font-body-md text-body-md text-on-surface-variant">
-                                {{ auth()->user()->studyObjectiveLabel() }}
-                            </p>
-                        </div>
+
+                        <a href="{{ route('profile.show', ['tab' => 'membership']) }}" @click="accountMenu = false"
+                            @class([
+                                'inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-label-sm font-semibold transition-opacity hover:opacity-90',
+                                'bg-surface-container-high text-on-surface-variant' => $headerSubscription['is_free'],
+                                'bg-primary/15 text-primary' => ! $headerSubscription['is_free'],
+                            ])>
+                            <span class="material-symbols-outlined text-[16px]">workspace_premium</span>
+                            {{ $membershipChipLabel }}
+                        </a>
+
                         <a href="{{ route('profile.show') }}" @click="accountMenu = false"
                             class="block w-full rounded-lg bg-primary px-4 py-2.5 text-center font-label-md text-label-md font-bold text-on-primary transition-opacity hover:opacity-90">
                             Quản lý tài khoản
                         </a>
+
+                        @if ($headerSubscription['is_free'])
+                            <a href="{{ route('landing.pricing') }}" @click="accountMenu = false"
+                                class="block text-center font-label-sm text-primary hover:underline">
+                                Nâng cấp gói
+                            </a>
+                        @endif
                     </div>
 
-                    <div class="space-y-4 p-4">
-                        <label class="block">
-                            <span class="font-label-md text-label-md font-bold tracking-wide text-on-surface-variant uppercase">Ngôn ngữ</span>
-                            <select x-model="language"
-                                class="mt-2 w-full rounded-lg border border-outline bg-surface px-3 py-2.5 font-body-md text-body-md text-on-surface focus:border-primary focus:ring-primary">
-                                <option value="vi">vi — Tiếng Việt</option>
-                                <option value="en">en — English</option>
-                            </select>
-                        </label>
-
-                        <fieldset>
-                            <legend class="font-label-md text-label-md font-bold tracking-wide text-on-surface-variant uppercase">Đơn vị</legend>
-                            <div class="mt-2 grid grid-cols-3 overflow-hidden rounded-lg border border-outline-variant">
-                                <template x-for="option in [{ value: 'si', label: 'SI' }, { value: 'us', label: 'US' }, { value: 'both', label: 'Cả hai' }]" :key="option.value">
-                                    <button type="button" @click="units = option.value" x-text="option.label"
-                                        class="border-r border-outline-variant px-2 py-2.5 font-label-md text-label-md font-bold last:border-r-0"
-                                        :class="units === option.value ? 'bg-primary-container text-white' : 'bg-surface text-on-surface-variant'"></button>
-                                </template>
-                            </div>
-                        </fieldset>
-
+                    <div class="p-4">
                         <fieldset>
                             <legend class="font-label-md text-label-md font-bold tracking-wide text-on-surface-variant uppercase">Giao diện</legend>
                             <div class="mt-2 grid grid-cols-3 overflow-hidden rounded-lg border border-outline-variant">
                                 <template x-for="option in [{ value: 'light', label: 'Sáng' }, { value: 'dark', label: 'Tối' }, { value: 'system', label: 'Hệ thống' }]" :key="option.value">
-                                    <button type="button" @click="theme = option.value" x-text="option.label"
+                                    <button type="button" @click="setTheme(option.value)" x-text="option.label"
                                         class="border-r border-outline-variant px-2 py-2.5 font-label-md text-label-md font-bold last:border-r-0"
-                                        :class="theme === option.value ? 'bg-primary-container text-white' : 'bg-surface text-on-surface-variant'"></button>
+                                        :class="theme === option.value ? 'bg-primary-container text-on-primary-container' : 'bg-surface text-on-surface-variant'"></button>
                                 </template>
                             </div>
                         </fieldset>

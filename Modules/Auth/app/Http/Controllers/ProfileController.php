@@ -7,6 +7,7 @@ namespace Modules\Auth\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Support\TargetExams;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -164,6 +165,29 @@ final class ProfileController extends Controller
         return redirect()
             ->route('profile.show', $this->tabRouteParams('security'))
             ->with('status', 'Đã đổi mật khẩu thành công.');
+    }
+
+    public function updateAppearance(Request $request): JsonResponse|RedirectResponse
+    {
+        $validated = $request->validate([
+            'theme' => ['required', 'string', Rule::in(['light', 'dark', 'system'])],
+        ], [], [
+            'theme' => 'giao diện',
+        ]);
+
+        $request->user()->forceFill([
+            'theme' => $validated['theme'],
+        ])->save();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'theme' => $validated['theme'],
+            ]);
+        }
+
+        return redirect()
+            ->back()
+            ->with('status', 'Đã lưu giao diện.');
     }
 
     public function updateNotifications(Request $request): RedirectResponse
