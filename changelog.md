@@ -2,6 +2,11 @@
 
 ## 2026-08-13
 
+### Giao diện sáng/tối & menu tài khoản
+- Dark mode token `@layer theme`; toggle Sáng/Tối/Hệ thống; đồng bộ mọi layout qua `theme-init`.
+- Lưu `users.theme` + `PUT /settings/appearance`; áp dụng ngay, reload giữ preference.
+- Menu header gọn: chip gói membership, bỏ ngôn ngữ/đơn vị giả; link nâng cấp khi Free.
+
 ### Billing — CMS bảng giá & thống kê học viên
 - Migration `plan_prices`, SKU Premium (1 tháng / 1–3 năm); seed Free + Premium; auto `compare_at` từ `savings_percent`.
 - Admin `/admin/billing/plans`: CRUD tier/SKU, menu **Bảng giá** (`billing.manage`); KPI học viên Free/Premium; phân bổ theo SKU.

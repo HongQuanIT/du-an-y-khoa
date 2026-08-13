@@ -35,6 +35,7 @@ use Spatie\Permission\Traits\HasRoles;
     'email',
     'password',
     'locale',
+    'theme',
     'status',
     'headline',
     'specialty',

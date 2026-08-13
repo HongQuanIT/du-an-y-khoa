@@ -1,5 +1,7 @@
 @import 'tailwindcss';
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 @source '../../Modules/**/resources/views/**/*.blade.php';
@@ -128,13 +130,82 @@
     --color-on-error-container: #93000a;
 }
 
+@layer theme {
+    .light {
+        color-scheme: light;
+    }
+
+    .dark {
+        color-scheme: dark;
+
+        --color-primary: #80d5cb;
+        --color-on-primary: #003731;
+        --color-primary-container: #00504a;
+        --color-on-primary-container: #9cf2e8;
+        --color-primary-fixed: #9cf2e8;
+        --color-primary-fixed-dim: #80d5cb;
+        --color-on-primary-fixed: #00201d;
+        --color-on-primary-fixed-variant: #00504a;
+
+        --color-secondary: #b4c5ff;
+        --color-on-secondary: #002a77;
+        --color-secondary-container: #003ea8;
+        --color-secondary-fixed: #dbe1ff;
+        --color-secondary-fixed-dim: #b4c5ff;
+        --color-on-secondary-container: #dbe1ff;
+        --color-on-secondary-fixed: #00174b;
+        --color-on-secondary-fixed-variant: #003ea8;
+
+        --color-tertiary: #ffb598;
+        --color-on-tertiary: #552107;
+        --color-tertiary-container: #72361b;
+        --color-on-tertiary-container: #ffdbce;
+        --color-tertiary-fixed: #ffdbce;
+        --color-tertiary-fixed-dim: #ffb598;
+        --color-on-tertiary-fixed: #370e00;
+        --color-on-tertiary-fixed-variant: #72361b;
+
+        --color-background: #0f1419;
+        --color-on-background: #e8edf5;
+        --color-surface: #131b2e;
+        --color-on-surface: #e8edf5;
+        --color-on-surface-variant: #a8b4c4;
+        --color-surface-variant: #323f52;
+        --color-surface-dim: #131b2e;
+        --color-surface-bright: #1e293b;
+        --color-surface-tint: #80d5cb;
+        --color-surface-container-lowest: #0a0e14;
+        --color-surface-container-low: #1a2332;
+        --color-surface-container: #222d3d;
+        --color-surface-container-high: #2a3648;
+        --color-surface-container-highest: #323f52;
+
+        --color-inverse-surface: #e8edf5;
+        --color-inverse-on-surface: #283044;
+        --color-inverse-primary: #006a63;
+
+        --color-outline: #8896a8;
+        --color-outline-variant: #3d4a5c;
+        --color-border: #2a3648;
+        --color-text-secondary: #94a3b8;
+
+        --color-success: #4ade80;
+        --color-warning: #fbbf24;
+        --color-error: #f87171;
+        --color-error-container: #7f1d1d;
+        --color-on-error: #ffffff;
+        --color-on-error-container: #ffdad6;
+    }
+}
+
 @layer components {
     .premium-card {
         @apply bg-surface rounded-2xl border border-border shadow-sm;
     }
 
     .glass {
-        @apply bg-white/70 backdrop-blur-md;
+        @apply backdrop-blur-md;
+        background-color: color-mix(in srgb, var(--color-surface) 72%, transparent);
     }
 
     .premium-text {
@@ -170,7 +241,7 @@
     }
 
     .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: #bdc9c6;
+        background: var(--color-outline-variant);
         border-radius: 10px;
     }
 
@@ -185,7 +256,7 @@
         top: 0;
         bottom: 0;
         width: 2px;
-        background-color: #e2e8f0;
+        background-color: var(--color-border);
         z-index: 0;
     }
 
@@ -249,7 +320,7 @@
 
     .linear-divider {
         height: 1px;
-        background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
+        background: linear-gradient(90deg, transparent, var(--color-border), transparent);
     }
 
     .donut-chart {
@@ -259,7 +330,7 @@
     }
 
     .donut-inner {
-        background: white;
+        background: var(--color-surface);
         position: absolute;
         top: 15%;
         left: 15%;
@@ -273,7 +344,7 @@
 
     .blur-overlay {
         backdrop-filter: blur(4px);
-        background: rgba(255, 255, 255, 0.4);
+        background: color-mix(in srgb, var(--color-surface) 40%, transparent);
     }
 
     .glass-ai {
@@ -287,14 +358,14 @@
     }
 
     .option-button:hover {
-        background-color: #f1f4f3;
-        border-color: #005c55;
+        background-color: var(--color-surface-container-low);
+        border-color: var(--color-primary);
     }
 
     .option-button.selected {
-        background-color: #e6f1f0;
-        border-color: #005c55;
-        box-shadow: 0 0 0 1px #005c55;
+        background-color: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 1px var(--color-primary);
     }
 
     @keyframes slideInUp {
@@ -319,6 +390,43 @@
 
 [x-cloak] {
     display: none !important;
+}
+
+/*
+ * Legacy hardcoded surfaces (bg-white, hex backgrounds) → map to semantic tokens in dark mode.
+ * Giữ nguyên light; dark không bị “ố trắng”.
+ */
+.dark .bg-white {
+    background-color: var(--color-surface);
+}
+
+.dark .bg-white\/10 {
+    background-color: color-mix(in srgb, var(--color-surface) 10%, transparent);
+}
+
+.dark .bg-white\/20 {
+    background-color: color-mix(in srgb, var(--color-surface) 20%, transparent);
+}
+
+.dark .bg-white\/50 {
+    background-color: color-mix(in srgb, var(--color-surface) 50%, transparent);
+}
+
+.dark .bg-white\/70 {
+    background-color: color-mix(in srgb, var(--color-surface) 70%, transparent);
+}
+
+.dark .bg-\[\#F8FAFC\],
+.dark .bg-\[\#f7faf8\] {
+    background-color: var(--color-background);
+}
+
+.dark .text-black {
+    color: var(--color-on-surface);
+}
+
+.dark .border-white\/20 {
+    border-color: color-mix(in srgb, var(--color-outline-variant) 55%, transparent);
 }
 
 html,
@@ -395,8 +503,8 @@ mark[data-hl='#10b981'] {
 /* Quill (admin question editor) */
 .admin-rich-editor .ql-toolbar.ql-snow {
     border: none;
-    border-bottom: 1px solid var(--color-outline-variant, #c4c7c5);
-    background: var(--color-surface-container-low, #f3f4f2);
+    border-bottom: 1px solid var(--color-outline-variant);
+    background: var(--color-surface-container-low);
 }
 .admin-rich-editor .ql-container.ql-snow {
     border: none;
@@ -410,4 +518,25 @@ mark[data-hl='#10b981'] {
     max-width: 100%;
     height: auto;
     border-radius: 0.5rem;
+}
+
+.dark .admin-rich-editor .ql-container.ql-snow {
+    background: var(--color-surface);
+    color: var(--color-on-surface);
+}
+
+.dark .admin-rich-editor .ql-editor.ql-blank::before {
+    color: var(--color-on-surface-variant);
+}
+
+.dark .admin-rich-editor .ql-snow .ql-stroke {
+    stroke: var(--color-on-surface-variant);
+}
+
+.dark .admin-rich-editor .ql-snow .ql-fill {
+    fill: var(--color-on-surface-variant);
+}
+
+.dark .admin-rich-editor .ql-snow .ql-picker {
+    color: var(--color-on-surface-variant);
 }
