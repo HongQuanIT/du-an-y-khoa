@@ -171,6 +171,50 @@
                         </div>
                     </form>
                 </section>
+
+                @unless (\App\Support\Auth\Staff::isStaff(auth()->user()))
+                <section class="mt-6 rounded-xl border border-outline-variant bg-surface-container-lowest p-6 md:p-8">
+                    <h2 class="mb-2 flex items-center gap-2 font-title-md text-title-md text-on-surface">
+                        <span class="material-symbols-outlined text-primary text-[20px]">phonelink_lock</span>
+                        Xác thực hai bước (2FA)
+                    </h2>
+                    <p class="mb-6 max-w-xl font-body-md text-body-md text-on-surface-variant">
+                        Tăng bảo mật bằng mã từ ứng dụng Authenticator. Mặc định không bắt buộc — chỉ cần khi bạn bật.
+                    </p>
+
+                    @if (auth()->user()->hasTwoFactorEnabled())
+                        <div class="mb-5 flex items-center gap-2">
+                            <span class="inline-flex items-center rounded-md bg-primary/10 px-2.5 py-1 font-label-sm text-label-sm font-semibold text-primary">
+                                Đã bật
+                            </span>
+                        </div>
+                        <form method="post" action="{{ route('settings.2fa.disable') }}" class="max-w-md space-y-4">
+                            @csrf
+                            @method('DELETE')
+                            <div class="flex flex-col gap-1.5">
+                                <label for="disable_2fa_password" class="font-label-sm text-label-sm text-on-surface-variant">
+                                    Mật khẩu hiện tại để tắt 2FA
+                                </label>
+                                <input id="disable_2fa_password" name="current_password" type="password" required autocomplete="current-password"
+                                    class="h-10 rounded-md border border-outline-variant bg-surface px-3 font-body-md text-body-md focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 @error('current_password') border-error @enderror"
+                                    placeholder="••••••••">
+                                @error('current_password')
+                                    <p class="font-body-sm text-body-sm text-error">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <button type="submit"
+                                class="rounded-md border border-error/40 bg-error-container px-5 py-2.5 font-label-md text-label-md font-semibold text-on-error-container hover:opacity-90">
+                                Tắt xác thực hai bước
+                            </button>
+                        </form>
+                    @else
+                        <a href="{{ route('settings.2fa.setup') }}"
+                            class="inline-flex rounded-md bg-primary px-5 py-2.5 font-label-md text-label-md font-semibold text-on-primary hover:opacity-90">
+                            Bật 2FA
+                        </a>
+                    @endif
+                </section>
+                @endunless
                 @elseif ($contactPanel === 'notifications')
                 <section class="rounded-xl border border-outline-variant bg-surface-container-lowest p-6 md:p-8">
                     <form method="post" action="{{ route('settings.notifications') }}" class="space-y-6">
