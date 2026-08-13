@@ -192,6 +192,23 @@
     </section>
 
 @elseif ($tab === 'membership')
+    @php
+        $currentSubscription = $currentSubscription ?? [
+            'plan_name' => $membership['plan_name'] ?? 'Free',
+            'description' => $membership['description'] ?? '',
+            'price_label' => null,
+            'source' => $membership['source'] ?? null,
+            'starts_at' => null,
+            'ends_at' => $membership['ends_at'] ?? null,
+            'is_free' => ($membership['plan_name'] ?? 'Free') === 'Free',
+            'entitlement_labels' => [],
+        ];
+        $sourceLabels = [
+            'purchase' => 'Mua trực tiếp',
+            'redeem' => 'Đổi mã',
+            'institution' => 'Giấy phép tổ chức',
+        ];
+    @endphp
     <section class="{{ $cardClass }}">
         <div class="{{ $cardHeaderClass }}">
             <h2 class="font-title-md text-title-md text-on-surface">Gói hiện tại</h2>
@@ -203,15 +220,43 @@
         <div class="{{ $cardBodyClass }} space-y-5">
             <div class="flex flex-col gap-4 rounded-xl border border-outline-variant bg-surface-container-lowest/50 p-5 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <p class="font-headline-sm text-headline-sm text-on-surface">{{ $membership['plan_name'] }}</p>
-                    <p class="mt-1 font-body-md text-body-md text-on-surface-variant">{{ $membership['description'] }}</p>
+                    <p class="font-headline-sm text-headline-sm text-on-surface">
+                        {{ $currentSubscription['plan_name'] }}
+                        @if ($currentSubscription['price_label'])
+                            <span class="font-body-md text-on-surface-variant">· {{ $currentSubscription['price_label'] }}</span>
+                        @endif
+                    </p>
+                    <p class="mt-1 font-body-md text-body-md text-on-surface-variant">{{ $currentSubscription['description'] }}</p>
+                    @if ($currentSubscription['source'])
+                        <p class="mt-2 font-body-sm text-body-sm text-on-surface-variant">
+                            Nguồn: {{ $sourceLabels[$currentSubscription['source']] ?? $currentSubscription['source'] }}
+                        </p>
+                    @endif
                 </div>
                 <span class="inline-flex w-fit items-center rounded-full bg-primary/10 px-3 py-1 font-label-sm text-label-sm font-semibold text-primary">
-                    Đang sử dụng
+                    {{ $currentSubscription['is_free'] ? 'Miễn phí' : 'Đang sử dụng' }}
                 </span>
             </div>
 
+            @if (($currentSubscription['entitlement_labels'] ?? []) !== [])
+                <div>
+                    <h3 class="mb-2 font-label-sm text-label-sm font-semibold text-on-surface">Quyền lợi</h3>
+                    <ul class="space-y-1.5">
+                        @foreach ($currentSubscription['entitlement_labels'] as $label)
+                            <li class="flex items-center gap-2 font-body-sm text-body-sm text-on-surface">
+                                <span class="material-symbols-outlined text-[16px] text-primary">check_circle</span>
+                                {{ $label }}
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
             <div class="flex flex-wrap gap-3">
+                <a href="{{ route('subscription.show') }}"
+                    class="inline-flex items-center gap-2 rounded-lg border border-outline-variant px-5 py-2.5 font-label-md text-label-md text-on-surface hover:bg-surface-container-low">
+                    Chi tiết gói
+                </a>
                 <a href="{{ route('landing.pricing') }}"
                     class="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 font-label-md text-label-md font-semibold text-on-primary hover:opacity-90">
                     <span class="material-symbols-outlined text-[18px]">stars</span>

@@ -58,4 +58,7 @@ enum Permission: string
     case AnalyticsAdvanced = 'analytics.advanced';
     case ExamTake = 'exam.take';
     case ExamManage = 'exam.manage';
+
+    // Billing / subscription admin
+    case BillingManage = 'billing.manage';
 }

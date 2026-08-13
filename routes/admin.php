@@ -6,6 +6,8 @@ use App\Support\Enums\Permission;
 use App\Support\Enums\Role;
 use Illuminate\Support\Facades\Route;
 use Modules\Admin\Http\Controllers\AuditLogController;
+use Modules\Admin\Http\Controllers\BillingPlanController;
+use Modules\Admin\Http\Controllers\BillingSubscriptionController;
 use Modules\Admin\Http\Controllers\ClassroomOversightController;
 use Modules\Admin\Http\Controllers\EditorImageUploadController;
 use Modules\Admin\Http\Controllers\QuestionController;
@@ -105,5 +107,17 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
         Route::post('/editor/images', EditorImageUploadController::class)
             ->middleware('throttle:30,1')
             ->name('editor.images');
+
+        Route::middleware('permission:'.Permission::BillingManage->value)->group(function (): void {
+            Route::get('/billing/plans', [BillingPlanController::class, 'index'])->name('billing.plans.index');
+            Route::get('/billing/subscriptions', [BillingSubscriptionController::class, 'index'])->name('billing.subscriptions.index');
+            Route::get('/billing/plans/{plan}/edit', [BillingPlanController::class, 'edit'])->name('billing.plans.edit');
+            Route::put('/billing/plans/{plan}', [BillingPlanController::class, 'update'])->name('billing.plans.update');
+            Route::get('/billing/plans/{plan}/prices/create', [BillingPlanController::class, 'createPrice'])->name('billing.plans.prices.create');
+            Route::post('/billing/plans/{plan}/prices', [BillingPlanController::class, 'storePrice'])->name('billing.plans.prices.store');
+            Route::get('/billing/plan-prices/{planPrice}/edit', [BillingPlanController::class, 'editPrice'])->name('billing.plan-prices.edit');
+            Route::put('/billing/plan-prices/{planPrice}', [BillingPlanController::class, 'updatePrice'])->name('billing.plan-prices.update');
+            Route::delete('/billing/plan-prices/{planPrice}', [BillingPlanController::class, 'destroyPrice'])->name('billing.plan-prices.destroy');
+        });
     });
 });

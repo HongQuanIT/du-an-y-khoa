@@ -18,6 +18,7 @@ use Modules\Billing\Actions\RedeemCodeAction;
 use Modules\Billing\Actions\RenewInstitutionLicenseAction;
 use Modules\Billing\Models\InstitutionMember;
 use Modules\Billing\Models\Invoice;
+use Modules\Billing\Support\CurrentSubscription;
 use Modules\Billing\Support\MembershipSummary;
 
 /** Unified account hub at `/profile` (profile + settings tabs). */
@@ -53,6 +54,7 @@ final class ProfileController extends Controller
             'user' => $user,
             'prefs' => $prefs,
             'membership' => MembershipSummary::for($user),
+            'currentSubscription' => CurrentSubscription::for($user),
             'invoices' => Invoice::query()
                 ->where('user_id', $user->getKey())
                 ->orderByDesc('issued_at')
