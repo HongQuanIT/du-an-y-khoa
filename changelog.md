@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-08-13
+
+### 2FA tùy chọn cho học viên
+- Settings tab Bảo mật: bật TOTP (QR + mã khôi phục), tắt bằng xác nhận mật khẩu; staff không dùng luồng này.
+- Login `/login`: nếu đã bật 2FA thì hỏi mã tại `/2fa/challenge`; cookie nhớ thiết bị 30 ngày (tắt/bật lại 2FA thì hết hiệu lực).
+- Không challenge portal giảng viên `/teach`.
+
 ## 2026-08-11
 
 ### Profile, Settings và Billing cơ bản
@@ -62,6 +69,7 @@
 - Thêm `/admin/login` và `/admin/logout`; guest vào `/admin/*` được đưa tới cổng admin (không dùng `/login` học viên).
 - Cùng guard/session `web`: staff bị từ chối ở `/login`, học viên bị từ chối ở `/admin/login` (lỗi chung); admin không OAuth / remember me.
 - Cập nhật SRS Auth (02) và Admin Dashboard (33); thêm feature test tách portal.
+
 ## 2026-08-07
 
 ### Sửa lỗi frontend phòng live sau rebase

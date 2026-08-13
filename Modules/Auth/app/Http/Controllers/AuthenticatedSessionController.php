@@ -7,6 +7,7 @@ namespace Modules\Auth\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Support\Auth\HomePath;
 use App\Support\Auth\PortalRedirect;
+use App\Support\Auth\StudentTwoFactorDevice;
 use App\Support\Auth\TwoFactorSession;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -26,6 +27,14 @@ final class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
         TwoFactorSession::clear($request);
+
+        if ($user->hasTwoFactorEnabled()) {
+            if (StudentTwoFactorDevice::isTrusted($request, $user)) {
+                TwoFactorSession::confirm($request);
+            } else {
+                return redirect()->route('student.2fa.challenge');
+            }
+        }
 
         return PortalRedirect::afterLogin(
             $request,
