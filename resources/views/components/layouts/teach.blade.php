@@ -13,8 +13,8 @@
         [
             'label' => 'Lớp của tôi',
             'icon' => 'school',
-            'route' => null,
-            'match' => null,
+            'route' => 'teach.classes.index',
+            'match' => 'teach.classes.*',
         ],
         [
             'label' => 'Hàng chờ chữa',
@@ -40,8 +40,23 @@
     @livewireStyles
 </head>
 
-<body class="bg-surface-container-lowest font-body-md text-on-surface" x-data="{ menu: false }"
-    @keydown.escape.window="menu = false">
+<body class="bg-surface-container-lowest font-body-md text-on-surface"
+    x-data="{
+        menu: false,
+        accountMenu: false,
+        theme: 'light',
+        initTheme() {
+            this.theme = window.MedlearnTheme?.getStoredTheme?.() ?? 'system';
+        },
+        async setTheme(value) {
+            this.theme = value;
+            if (window.MedlearnTheme?.setTheme) {
+                this.theme = await window.MedlearnTheme.setTheme(value);
+            }
+        },
+    }"
+    x-init="initTheme()"
+    @keydown.escape.window="menu = false; accountMenu = false">
     <aside
         class="fixed top-0 left-0 z-50 hidden h-screen w-sidebar-width flex-col border-r border-outline-variant bg-surface p-4 md:flex">
         <div class="mb-6 px-2">
@@ -73,14 +88,13 @@
                 @endif
             @endforeach
         </nav>
-        <form method="post" action="{{ route('teach.logout') }}" class="mt-4 border-t border-outline-variant pt-4">
-            @csrf
-            <button type="submit"
-                class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 font-label-md text-label-md text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface">
-                <span class="material-symbols-outlined text-[22px] leading-none">logout</span>
-                Đăng xuất
-            </button>
-        </form>
+        <div class="mt-4 border-t border-outline-variant pt-4">
+            <a href="{{ route('teach.profile.show') }}"
+                class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 font-label-md text-label-md text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface {{ request()->routeIs('teach.profile.*') ? 'bg-primary/10 font-semibold text-primary' : '' }}">
+                <span class="material-symbols-outlined text-[22px] leading-none">manage_accounts</span>
+                Hồ sơ
+            </a>
+        </div>
     </aside>
 
     <div x-show="menu" x-cloak @click="menu = false" class="fixed inset-0 z-50 bg-black/40 md:hidden"></div>
@@ -109,6 +123,11 @@
                     </a>
                 @endif
             @endforeach
+            <a href="{{ route('teach.profile.show') }}" @click="menu = false"
+                class="flex items-center gap-3 rounded-lg px-3 py-2.5 font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-low">
+                <span class="material-symbols-outlined text-[22px] leading-none">manage_accounts</span>
+                Hồ sơ
+            </a>
         </nav>
     </aside>
 
@@ -122,15 +141,66 @@
             </button>
             <h1 class="truncate font-headline-sm text-headline-sm text-on-surface">{{ $title ?? 'Tổng quan' }}</h1>
         </div>
-        <div class="ml-2 flex shrink-0 items-center gap-3">
-            <div class="hidden text-right sm:block">
-                <p class="font-label-md text-label-md text-on-surface">{{ auth()->user()->name }}</p>
-                <p class="font-label-sm text-label-sm text-on-surface-variant">Giảng viên</p>
-            </div>
-            <span
-                class="flex size-10 items-center justify-center rounded-full border border-outline-variant bg-primary-container font-bold text-body-md text-on-primary-container">
-                {{ Str::upper(Str::substr(auth()->user()->name, 0, 1)) }}
-            </span>
+
+        <div class="relative ml-2 flex shrink-0 items-center" @click.outside="accountMenu = false">
+            <button type="button" @click="accountMenu = !accountMenu"
+                class="flex items-center gap-3 rounded-xl p-1.5 text-left transition-colors hover:bg-surface-container-low focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                :aria-expanded="accountMenu" aria-haspopup="dialog" aria-label="Mở menu tài khoản">
+                <div class="hidden text-right sm:block">
+                    <p class="font-label-md text-label-md text-on-surface">{{ auth()->user()->name }}</p>
+                    <p class="font-label-sm text-label-sm text-on-surface-variant">Giảng viên</p>
+                </div>
+                <span
+                    class="flex size-10 items-center justify-center overflow-hidden rounded-full border border-outline-variant bg-primary-container font-bold text-body-md text-on-primary-container">
+                    @if (auth()->user()->avatarUrl())
+                        <img src="{{ auth()->user()->avatarUrl() }}" alt="{{ auth()->user()->name }}" class="size-full object-cover">
+                    @else
+                        {{ auth()->user()->avatarInitial() }}
+                    @endif
+                </span>
+            </button>
+
+            <section x-show="accountMenu" x-cloak
+                x-transition:enter="transition ease-out duration-150"
+                x-transition:enter-start="translate-y-1 opacity-0"
+                x-transition:enter-end="translate-y-0 opacity-100"
+                x-transition:leave="transition ease-in duration-100"
+                x-transition:leave-start="translate-y-0 opacity-100"
+                x-transition:leave-end="translate-y-1 opacity-0"
+                class="absolute top-[calc(100%+0.5rem)] right-0 z-50 w-[min(100vw-2rem,320px)] overflow-hidden rounded-[10px] border border-outline-variant bg-surface shadow-xl"
+                role="dialog" aria-label="Tùy chọn tài khoản">
+                <div class="space-y-3 bg-primary-container/40 p-4">
+                    <div>
+                        <p class="font-title-md text-title-md font-bold text-on-surface">{{ auth()->user()->name }}</p>
+                        <p class="font-body-md text-body-md text-on-surface-variant">Giảng viên</p>
+                    </div>
+                    <a href="{{ route('teach.profile.show') }}" @click="accountMenu = false"
+                        class="block w-full rounded-lg bg-primary px-4 py-2.5 text-center font-label-md text-label-md font-bold text-on-primary transition-opacity hover:opacity-90">
+                        Quản lý hồ sơ
+                    </a>
+                </div>
+
+                <div class="p-4">
+                    <fieldset>
+                        <legend class="font-label-md text-label-md font-bold tracking-wide text-on-surface-variant uppercase">Giao diện</legend>
+                        <div class="mt-2 grid grid-cols-3 overflow-hidden rounded-lg border border-outline-variant">
+                            <template x-for="option in [{ value: 'light', label: 'Sáng' }, { value: 'dark', label: 'Tối' }, { value: 'system', label: 'Hệ thống' }]" :key="option.value">
+                                <button type="button" @click="setTheme(option.value)" x-text="option.label"
+                                    class="border-r border-outline-variant px-2 py-2.5 font-label-md text-label-md font-bold last:border-r-0"
+                                    :class="theme === option.value ? 'bg-primary-container text-on-primary-container' : 'bg-surface text-on-surface-variant'"></button>
+                            </template>
+                        </div>
+                    </fieldset>
+                </div>
+
+                <form action="{{ route('teach.logout') }}" method="post" class="border-t border-outline-variant p-3">
+                    @csrf
+                    <button type="submit"
+                        class="w-full rounded-lg px-4 py-2.5 font-label-md text-label-md font-bold tracking-wide text-on-surface-variant uppercase transition-colors hover:bg-surface-container-low">
+                        Đăng xuất
+                    </button>
+                </form>
+            </section>
         </div>
     </header>
 

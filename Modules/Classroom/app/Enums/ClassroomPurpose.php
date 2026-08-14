@@ -25,4 +25,24 @@ enum ClassroomPurpose: string
             self::ExamReview => 'Chữa đề thi',
         };
     }
+
+    public function description(): string
+    {
+        return match ($this) {
+            self::CommunityReview => 'Lớp chữa đề cộng đồng (host Premium).',
+            self::FeedbackReview => 'Chữa câu từ feedback / report QBank.',
+            self::ExamReview => 'Chữa theo đề thi / kỳ thi.',
+        };
+    }
+
+    public function isTeachPurpose(): bool
+    {
+        return $this === self::FeedbackReview || $this === self::ExamReview;
+    }
+
+    /** @return list<self> */
+    public static function teachCases(): array
+    {
+        return [self::FeedbackReview, self::ExamReview];
+    }
 }
