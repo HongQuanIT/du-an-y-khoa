@@ -29,7 +29,7 @@
         ['value' => 'correct', 'label' => 'Làm đúng', 'icon' => 'check_circle'],
         ['value' => 'correct_with_hints', 'label' => 'Đúng có gợi ý', 'icon' => 'lightbulb'],
         ['value' => 'omitted', 'label' => 'Bỏ qua', 'icon' => 'remove_circle'],
-        ['value' => 'marked', 'label' => 'Đã đánh dấu', 'icon' => 'bookmark'],
+        ['value' => 'marked', 'label' => 'Đã đánh dấu', 'icon' => 'folder_managed'],
     ];
     $difficultyOptions = \App\Support\ScopeFilters::difficulties();
 
@@ -62,6 +62,10 @@
             articleTitles: {{ Illuminate\Support\Js::from($articleTitles)->toHtml() }},
             symptoms: {{ Illuminate\Support\Js::from($initialSymptoms)->toHtml() }},
             symptomTitles: {{ Illuminate\Support\Js::from($symptomTitles)->toHtml() }},
+            folderId: null,
+            folderName: '',
+            foldersModalOpen: false,
+            folders: {{ Illuminate\Support\Js::from($bookmarkFolders)->toHtml() }},
             activeFilter: null,
             filterSearch: '',
             showAdvanced: false,
@@ -77,6 +81,8 @@
             },
             async refreshCount() {
                 if (!this.$refs.builderForm) return;
+                // Wait for Alpine to flush DOM updates so hidden inputs reflect current state
+                await this.$nextTick();
                 const requestId = ++this.countRequest;
                 this.counting = true;
                 try {
@@ -84,6 +90,9 @@
                     if (!body.has('count')) {
                         body.set('count', String(Math.max(1, Number(this.count) || 1)));
                     }
+                    // Explicitly override from Alpine state to avoid stale DOM values
+                    body.set('saved_only', this.savedOnly ? '1' : '0');
+                    body.set('folder_id', this.folderId ? String(this.folderId) : '');
                     const response = await fetch(this.countUrl, {
                         method: 'POST',
                         headers: {
@@ -198,6 +207,8 @@
             <input type="hidden" name="symptoms[]" :value="symptom">
         </template>
         <input type="hidden" name="question_status_mode" value="{{ $initialStatusMode }}">
+        <input type="hidden" name="saved_only" :value="savedOnly ? '1' : '0'">
+        <input type="hidden" name="folder_id" :value="folderId ?? ''">
 
         <div class="mx-auto w-full max-w-[1440px] flex-1 overflow-y-auto p-4 pb-8 md:p-8">
             <div class="mb-8 flex items-center justify-between gap-4">
@@ -271,6 +282,8 @@
 
                             <div class="-mx-6 space-y-0 border-t border-outline-variant">
                                 <button type="button" @click="openFilter('exams')"
+                                    :disabled="source === 'weak_topics' || savedOnly"
+                                    :class="(source === 'weak_topics' || savedOnly) && 'opacity-50 pointer-events-none'"
                                     class="group flex w-full items-center justify-between border-b border-outline-variant px-6 py-4 text-left transition-colors hover:bg-surface-container-lowest">
                                     <span class="flex items-center gap-4">
                                         <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">add</span>
@@ -281,6 +294,8 @@
                                 </button>
 
                                 <button type="button" @click="openFilter('articles')"
+                                    :disabled="source === 'weak_topics' || savedOnly"
+                                    :class="(source === 'weak_topics' || savedOnly) && 'opacity-50 pointer-events-none'"
                                     class="group flex w-full items-center justify-between border-b border-outline-variant px-6 py-4 text-left transition-colors hover:bg-surface-container-lowest">
                                     <span class="flex items-center gap-4">
                                         <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">add</span>
@@ -291,6 +306,8 @@
                                 </button>
 
                                 <button type="button" @click="openFilter('systems')"
+                                    :disabled="source === 'weak_topics' || savedOnly"
+                                    :class="(source === 'weak_topics' || savedOnly) && 'opacity-50 pointer-events-none'"
                                     class="group flex w-full items-center justify-between border-b border-outline-variant px-6 py-4 text-left transition-colors hover:bg-surface-container-lowest">
                                     <span class="flex items-center gap-4">
                                         <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">add</span>
@@ -301,6 +318,8 @@
                                 </button>
 
                                 <button type="button" @click="openFilter('specialties')"
+                                    :disabled="source === 'weak_topics' || savedOnly"
+                                    :class="(source === 'weak_topics' || savedOnly) && 'opacity-50 pointer-events-none'"
                                     class="group flex w-full items-center justify-between border-b border-outline-variant px-6 py-4 text-left transition-colors hover:bg-surface-container-lowest">
                                     <span class="flex items-center gap-4">
                                         <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">add</span>
@@ -311,6 +330,8 @@
                                 </button>
 
                                 <button type="button" @click="openFilter('symptoms')"
+                                    :disabled="source === 'weak_topics' || savedOnly"
+                                    :class="(source === 'weak_topics' || savedOnly) && 'opacity-50 pointer-events-none'"
                                     class="group flex w-full items-center justify-between border-b border-outline-variant px-6 py-4 text-left transition-colors hover:bg-surface-container-lowest">
                                     <span class="flex items-center gap-4">
                                         <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">add</span>
@@ -320,22 +341,89 @@
                                         x-text="symptomLabel()"></span>
                                 </button>
 
-                                <label class="group flex cursor-pointer items-center justify-between px-6 py-4 transition-colors hover:bg-surface-container-lowest"
-                                    :class="source === 'weak_topics' && 'opacity-60'">
+                                <button type="button" @click="foldersModalOpen = true"
+                                    :disabled="source === 'weak_topics'"
+                                    :class="source === 'weak_topics' && 'opacity-50 pointer-events-none'"
+                                    class="group flex w-full items-center justify-between border-b border-outline-variant px-6 py-4 text-left transition-colors hover:bg-surface-container-lowest">
                                     <span class="flex items-center gap-4">
                                         <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">add</span>
                                         <span class="font-medium">Câu hỏi đã lưu</span>
                                     </span>
-                                    <span class="flex items-center gap-3">
-                                        <span class="text-sm text-on-surface-variant" x-text="savedOnly ? 'Chỉ câu đã lưu' : 'Tất cả'"></span>
-                                        <input type="checkbox" name="saved_only" value="1" x-model="savedOnly"
-                                            :disabled="source === 'weak_topics'"
-                                            class="size-5 rounded border-outline-variant text-primary focus:ring-primary">
+                                    <span class="flex items-center gap-2">
+                                        <span class="text-sm font-semibold"
+                                            :class="savedOnly ? 'text-primary' : 'text-on-surface-variant'"
+                                            x-text="folderId ? folderName : (savedOnly ? 'Chỉ câu đã lưu' : 'Tất cả')"></span>
+                                        <span class="material-symbols-outlined text-[18px] text-on-surface-variant">chevron_right</span>
                                     </span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
+                                </button>
+                             </div>
+                         </div>
+                     </div>
+
+                     <!-- Bookmark Collections Modal -->
+                     <div x-show="foldersModalOpen" x-cloak
+                         class="fixed inset-0 z-50 flex items-center justify-center p-4"
+                         @keydown.escape.window="foldersModalOpen = false">
+                         <div class="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
+                             @click="foldersModalOpen = false"></div>
+
+                         <div class="relative w-full max-w-md rounded-2xl border border-outline-variant bg-white p-6 shadow-2xl transition-all"
+                             @click.stop>
+                             <div class="mb-4 flex items-center justify-between">
+                                 <h3 class="text-headline-sm font-bold text-on-surface">Chọn bộ sưu tập câu hỏi đã lưu</h3>
+                                 <button type="button" @click="foldersModalOpen = false"
+                                     class="flex size-8 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface">
+                                     <span class="material-symbols-outlined text-[20px]">close</span>
+                                 </button>
+                             </div>
+
+                             <div class="space-y-2.5 max-h-80 overflow-y-auto pr-1">
+                                 <!-- Option: Tất cả câu hỏi đã lưu -->
+                                 <button type="button"
+                                     @click="savedOnly = true; folderId = null; folderName = 'Tất cả câu đã lưu'; selectedTopics = []; articles = []; symptoms = []; examKey = ''; foldersModalOpen = false; refreshCount()"
+                                     :class="savedOnly && !folderId ? 'border-primary bg-primary/5 text-primary font-bold' : 'border-outline-variant hover:bg-surface-container-low text-on-surface'"
+                                     class="flex w-full items-center justify-between rounded-xl border p-4 text-left transition-all">
+                                     <div class="flex items-center gap-3">
+                                         <span class="material-symbols-outlined text-[22px]">grid_view</span>
+                                         <div>
+                                             <p class="text-sm font-bold">Tất cả câu đã lưu</p>
+                                             <p class="text-xs text-on-surface-variant">Bao gồm câu hỏi từ tất cả bộ sưu tập</p>
+                                         </div>
+                                     </div>
+                                     <span x-show="savedOnly && !folderId" class="material-symbols-outlined text-primary text-[20px]">check</span>
+                                 </button>
+
+                                 <!-- User Collections -->
+                                 <template x-for="f in folders" :key="f.id">
+                                     <button type="button"
+                                         @click="savedOnly = true; folderId = f.id; folderName = f.name; selectedTopics = []; articles = []; symptoms = []; examKey = ''; foldersModalOpen = false; refreshCount()"
+                                         :class="folderId == f.id ? 'border-primary bg-primary/5 text-primary font-bold' : 'border-outline-variant hover:bg-surface-container-low text-on-surface'"
+                                         class="flex w-full items-center justify-between rounded-xl border p-4 text-left transition-all">
+                                         <div class="flex items-center gap-3">
+                                             <span class="material-symbols-outlined text-[22px]">folder_managed</span>
+                                             <div>
+                                                 <p class="text-sm font-bold" x-text="f.name"></p>
+                                                 <p class="text-xs text-on-surface-variant" x-text="f.items_count + ' câu hỏi'"></p>
+                                             </div>
+                                         </div>
+                                         <span x-show="folderId == f.id" class="material-symbols-outlined text-primary text-[20px]">check</span>
+                                     </button>
+                                 </template>
+                             </div>
+
+                             <div class="mt-4 flex items-center justify-between border-t border-outline-variant/60 pt-4">
+                                 <button type="button"
+                                     @click="savedOnly = false; folderId = null; folderName = ''; foldersModalOpen = false; refreshCount()"
+                                     class="text-xs font-bold text-on-surface-variant hover:text-error">
+                                     Bỏ chọn lọc câu lưu
+                                 </button>
+                                 <button type="button" @click="foldersModalOpen = false"
+                                     class="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white hover:bg-primary/90">
+                                     Đóng
+                                 </button>
+                             </div>
+                         </div>
+                     </div>
                 </section>
 
                 <aside class="col-span-12 lg:col-span-5">

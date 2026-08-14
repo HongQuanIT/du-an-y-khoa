@@ -49,11 +49,6 @@
                 </a>
             @endif
         </div>
-    @elseif ($task->status === \Modules\StudyPlan\Enums\TaskStatus::Skipped || $task->isMissed())
-        <span class="flex w-full items-center justify-center gap-2 rounded-lg bg-error/10 py-2 font-label-md text-error">
-            <span class="material-symbols-outlined text-[18px]">remove_circle</span>
-            Bỏ qua
-        </span>
     @elseif (! $task->type->isSupported())
         <span class="block w-full rounded-lg border border-outline-variant py-2 text-center font-label-md text-on-surface-variant">
             Sắp có

@@ -94,6 +94,97 @@
         bookmarkSaving: false,
         bookmarkError: '',
         bookmarkUrl: @js($bookmarkUrl),
+        folderModalOpen: false,
+        folderSearchQuery: '',
+        folders: [],
+        foldersLoading: false,
+        foldersError: '',
+        async openFolderModal() {
+            this.folderModalOpen = true;
+            this.folderSearchQuery = '';
+            this.foldersLoading = true;
+            this.foldersError = '';
+            try {
+                const response = await fetch(`/bookmarks/folders?question_id=${encodeURIComponent(this.questionId)}`, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+                if (!response.ok) throw new Error('Không thể tải danh sách thư mục.');
+                const payload = await response.json();
+                this.folders = payload?.data?.folders || [];
+                this.bookmarked = Boolean(payload?.data?.bookmarked);
+            } catch (error) {
+                this.foldersError = error?.message || 'Không thể tải danh sách thư mục.';
+            } finally {
+                this.foldersLoading = false;
+            }
+        },
+        async toggleFolderItem(folder) {
+            this.foldersError = '';
+            try {
+                const response = await fetch(`/bookmarks/folders/${folder.id}/toggle`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': this.csrf,
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: JSON.stringify({ question_id: String(this.questionId), in_folder: !folder.in_folder }),
+                });
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => null);
+                    throw new Error(errData?.message || 'Không thể thực hiện thao tác.');
+                }
+                const payload = await response.json();
+                this.folders = payload?.data?.folders || [];
+                this.bookmarked = Boolean(payload?.data?.bookmarked);
+            } catch (error) {
+                this.foldersError = error?.message || 'Không thể thực hiện thao tác.';
+            }
+        },
+        async createFolderAndAttach() {
+            const name = this.folderSearchQuery.trim();
+            if (!name) return;
+            this.foldersError = '';
+            try {
+                const response = await fetch('/bookmarks/folders', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': this.csrf,
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: JSON.stringify({ name: name, question_id: String(this.questionId) }),
+                });
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => null);
+                    throw new Error(errData?.message || 'Không thể tạo thư mục.');
+                }
+                const payload = await response.json();
+                this.folders = payload?.data?.folders || [];
+                this.bookmarked = Boolean(payload?.data?.bookmarked);
+                this.folderSearchQuery = '';
+            } catch (error) {
+                this.foldersError = error?.message || 'Không thể tạo thư mục.';
+            }
+        },
+        get inFolders() {
+            const q = this.folderSearchQuery.trim().toLowerCase();
+            return this.folders.filter(f => f.in_folder && (!q || f.name.toLowerCase().includes(q)));
+        },
+        get notInFolders() {
+            const q = this.folderSearchQuery.trim().toLowerCase();
+            return this.folders.filter(f => !f.in_folder && (!q || f.name.toLowerCase().includes(q)));
+        },
+        get canCreateQueryFolder() {
+            const q = this.folderSearchQuery.trim();
+            if (!q) return false;
+            return !this.folders.some(f => f.name.toLowerCase() === q.toLowerCase());
+        },
         sessionIncomplete: @js($sessionIncomplete),
         exitUrl: @js($exitUrl),
         selectionBar: { show: false, x: 0, y: 0 },
@@ -536,7 +627,7 @@
                                 <span class="material-symbols-outlined text-[18px]">help</span>
                                 <span>Kiến thức</span>
                             </button>
-                            <button type="button" @click="setBookmark()" :disabled="bookmarkSaving"
+                            <button type="button" @click="openFolderModal()" :disabled="bookmarkSaving"
                                 class="inline-flex h-12 items-center gap-2 border-b-2 px-3 text-label-sm font-bold transition-colors disabled:cursor-wait disabled:opacity-60"
                                 :class="bookmarked
                                     ? 'border-primary text-primary'
@@ -546,12 +637,90 @@
                                 :aria-pressed="bookmarked"
                                 data-testid="question-bookmark-toggle">
                                 <span class="material-symbols-outlined text-[18px]"
-                                    :class="bookmarked && 'fill-1'">bookmark</span>
+                                    :class="bookmarked && 'fill-1'">folder_managed</span>
                                 <span class="hidden sm:inline" x-text="bookmarked ? 'Đã lưu' : 'Lưu'"></span>
                             </button>
                             <span x-show="bookmarkError" x-cloak
                                 class="px-2 text-xs font-medium text-error"
                                 x-text="bookmarkError"></span>
+                        </div>
+
+                        <!-- Save question in folder modal -->
+                        <div x-show="folderModalOpen" x-cloak
+                            class="fixed inset-0 z-50 flex items-center justify-center p-4"
+                            @keydown.escape.window="folderModalOpen = false">
+                            <div class="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
+                                @click="folderModalOpen = false"></div>
+
+                            <div class="relative w-full max-w-md rounded-2xl border border-outline-variant bg-white p-6 shadow-2xl transition-all"
+                                @click.stop>
+                                <div class="mb-4 flex items-center justify-between">
+                                    <h3 class="text-headline-sm font-bold text-on-surface">Save question in folder</h3>
+                                    <button type="button" @click="folderModalOpen = false"
+                                        class="flex size-8 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface"
+                                        aria-label="Đóng">
+                                        <span class="material-symbols-outlined text-[20px]">close</span>
+                                    </button>
+                                </div>
+
+                                <div class="relative mb-4">
+                                    <input type="text" x-model="folderSearchQuery"
+                                        @keydown.enter.prevent="canCreateQueryFolder && createFolderAndAttach()"
+                                        placeholder="Create or find folder"
+                                        class="w-full rounded-xl border border-outline-variant bg-white px-4 py-2.5 pr-10 text-sm font-medium text-on-surface placeholder:text-on-surface-variant/60 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
+                                    <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[20px] text-outline">search</span>
+                                </div>
+
+                                <div x-show="foldersLoading" class="py-6 text-center text-on-surface-variant">
+                                    <span class="material-symbols-outlined animate-spin text-[24px]">progress_activity</span>
+                                </div>
+
+                                <div x-show="foldersError" x-text="foldersError" class="mb-3 text-xs font-semibold text-error"></div>
+
+                                <div x-show="canCreateQueryFolder && !foldersLoading" class="mb-3">
+                                    <button type="button" @click="createFolderAndAttach()"
+                                        class="flex w-full items-center justify-between rounded-xl border border-dashed border-primary/40 bg-primary/5 px-3.5 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/10">
+                                        <span>+ Tạo thư mục "<span x-text="folderSearchQuery"></span>"</span>
+                                        <span class="material-symbols-outlined text-[18px]">add</span>
+                                    </button>
+                                </div>
+
+                                <div x-show="!foldersLoading" class="max-h-64 space-y-4 overflow-y-auto pr-1">
+                                    <!-- IN FOLDERS SECTION -->
+                                    <div x-show="inFolders.length > 0">
+                                        <p class="mb-2 text-[11px] font-bold tracking-wider text-on-surface-variant/80 uppercase">IN FOLDERS</p>
+                                        <div class="space-y-1">
+                                            <template x-for="folder in inFolders" :key="'in-' + folder.id">
+                                                <div class="flex items-center justify-between rounded-lg py-1.5 px-2 hover:bg-surface-container-lowest">
+                                                    <span class="text-sm font-medium text-on-surface" x-text="folder.name"></span>
+                                                    <button type="button" @click="toggleFolderItem(folder)"
+                                                        class="flex size-7 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-error/10 hover:text-error"
+                                                        title="Xóa khỏi thư mục">
+                                                        <span class="material-symbols-outlined text-[18px]">close</span>
+                                                    </button>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+
+                                    <!-- NOT IN FOLDERS SECTION -->
+                                    <div x-show="notInFolders.length > 0">
+                                        <p class="mb-2 text-[11px] font-bold tracking-wider text-on-surface-variant/80 uppercase">NOT IN FOLDERS</p>
+                                        <div class="space-y-1">
+                                            <template x-for="folder in notInFolders" :key="'not-' + folder.id">
+                                                <div class="flex items-center justify-between rounded-lg py-1.5 px-2 hover:bg-surface-container-lowest">
+                                                    <span class="text-sm font-medium text-on-surface" x-text="folder.name"></span>
+                                                    <button type="button" @click="toggleFolderItem(folder)"
+                                                        class="flex size-7 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-primary/10 hover:text-primary"
+                                                        title="Thêm vào thư mục">
+                                                        <span class="material-symbols-outlined text-[18px]">add</span>
+                                                    </button>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <div x-show="attendingTipOpen" x-cloak x-transition class="space-y-3"

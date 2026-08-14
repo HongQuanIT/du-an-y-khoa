@@ -193,16 +193,6 @@
                                                 Phân tích
                                             </a>
                                         @endif
-                                    @elseif ($task->status === \Modules\StudyPlan\Enums\TaskStatus::Skipped)
-                                        <span class="flex flex-1 items-center justify-center gap-1 rounded-lg bg-error/10 py-2 font-label-md text-error">
-                                            <span class="material-symbols-outlined text-[18px]">remove_circle</span>
-                                            Bỏ qua
-                                        </span>
-                                        <button type="button"
-                                            @click="rescheduleTaskId = {{ $task->id }}; rescheduleDate = '{{ max($task->date, now())->toDateString() }}'"
-                                            class="rounded-lg border border-outline-variant px-3 py-2 font-label-md text-label-md text-primary transition-colors hover:bg-surface-container-low">
-                                            Dời lịch
-                                        </button>
                                     @else
                                         @if ($task->type->isSupported())
                                             <form method="POST" action="{{ route('study-plan.tasks.start', [$plan, $task]) }}"

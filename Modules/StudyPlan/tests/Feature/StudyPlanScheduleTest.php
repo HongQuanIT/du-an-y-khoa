@@ -72,10 +72,21 @@ final class StudyPlanScheduleTest extends TestCase
         $this->actingAs($this->user)
             ->get(route('study-plan.detail', $plan))
             ->assertOk()
-            ->assertSee('Bỏ qua')
-            ->assertDontSee('title="Bỏ qua"', false);
+            ->assertSee('Bắt đầu');
 
         $this->assertSame(TaskStatus::Skipped, $task->refresh()->status);
+    }
+
+    public function test_skipped_tasks_can_be_started_or_continued(): void
+    {
+        $plan = $this->createPlan();
+        $task = $this->firstTask($plan);
+        $task->forceFill(['status' => TaskStatus::Skipped])->save();
+
+        $this->actingAs($this->user)
+            ->get(route('study-plan.detail', $plan))
+            ->assertOk()
+            ->assertSee('Bắt đầu');
     }
 
     public function test_web_edit_routes_are_removed(): void

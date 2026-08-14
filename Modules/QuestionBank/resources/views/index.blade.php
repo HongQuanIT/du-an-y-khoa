@@ -201,7 +201,7 @@
             <div class="flex flex-wrap gap-2">
                 <a href="{{ route('qbank.bookmarks') }}"
                     class="inline-flex items-center justify-center gap-2 rounded-xl border border-outline-variant px-5 py-3 text-label-md font-bold text-on-surface transition-colors hover:bg-surface-container-low">
-                    <span class="material-symbols-outlined text-[20px]">bookmark</span>
+                    <span class="material-symbols-outlined text-[20px]">folder_managed</span>
                     Câu hỏi đã lưu
                 </a>
                 <a href="{{ route('qbank.create') }}"

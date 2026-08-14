@@ -44,21 +44,27 @@ final class PlanQuestionSelector
             ? null
             : $this->eligibleQuestionIds($userId, $statuses, $filters['question_status_mode']);
 
-        if ($filters['saved_only']) {
+        // savedOnly: intersect applied as a DB subquery in pick(), not in PHP.
+        $savedForUserId = $filters['saved_only'] ? $userId : null;
+
+        if ($eligible !== null && $savedForUserId !== null) {
+            // Pre-filter eligible IDs against bookmark IDs to keep the
+            // WHERE IN list small; the subquery covers the rest.
             $bookmarked = Bookmark::questionIdsForUser($userId);
-            $eligible = $eligible === null
-                ? $bookmarked
-                : array_values(array_intersect($eligible, $bookmarked));
+            $eligible = array_values(array_intersect($eligible, $bookmarked));
+            $savedForUserId = null; // subquery already embedded in eligible
         }
 
-        $seen = $eligible === null ? $this->answeredQuestionIds($userId) : [];
+        $seen = ($eligible === null && $savedForUserId === null)
+            ? $this->answeredQuestionIds($userId)
+            : [];
 
-        $picked = $this->pick($limit, $topicIds, $seen, $eligible, $difficulties);
-        $picked = $this->topUp($picked, $limit, $planTopicIds, $seen, $eligible, $difficulties);
-        $picked = $this->topUp($picked, $limit, [], $seen, $eligible, $difficulties);
+        $picked = $this->pick($limit, $topicIds, $seen, $eligible, $difficulties, $savedForUserId);
+        $picked = $this->topUp($picked, $limit, $planTopicIds, $seen, $eligible, $difficulties, $savedForUserId);
+        $picked = $this->topUp($picked, $limit, [], $seen, $eligible, $difficulties, $savedForUserId);
 
         // Everything in scope is already answered — fall back to a re-run.
-        return $this->topUp($picked, $limit, $planTopicIds, [], $eligible, $difficulties)
+        return $this->topUp($picked, $limit, $planTopicIds, [], $eligible, $difficulties, $savedForUserId)
             ->shuffle()
             ->values()
             ->all();
@@ -71,13 +77,18 @@ final class PlanQuestionSelector
     {
         $filters = $task->plan->scopeFilters();
         $difficulties = $filters['difficulties'];
-        $bookmarked = $filters['saved_only']
-            ? Bookmark::questionIdsForUser($userId)
-            : null;
+        // Apply saved-only as a DB subquery rather than loading all IDs into PHP.
+        $savedForUserId = $filters['saved_only'] ? $userId : null;
         $incorrect = UserQuestionStatusModel::query()
             ->where('user_id', $userId)
             ->where('status', UserQuestionStatus::Incorrect)
-            ->when($bookmarked !== null, fn ($query) => $query->whereIn('question_id', $bookmarked))
+            ->when(
+                $savedForUserId !== null,
+                fn ($query) => $query->whereIn(
+                    'question_id',
+                    Bookmark::bookmarkSubquery($savedForUserId),
+                )
+            )
             ->when(
                 $difficulties !== [],
                 fn ($query) => $query->whereHas(
@@ -97,9 +108,10 @@ final class PlanQuestionSelector
             $incorrect,
             $limit,
             $this->expandTopics($task->plan->scopeTopicIds()),
-            $bookmarked === null ? $this->answeredQuestionIds($userId) : [],
-            $bookmarked,
+            $savedForUserId === null ? $this->answeredQuestionIds($userId) : [],
+            null,
             $difficulties,
+            $savedForUserId,
         );
 
         return $topUp->shuffle()->values()->all();
@@ -120,6 +132,7 @@ final class PlanQuestionSelector
         array $exclude,
         ?array $eligible = null,
         array $difficulties = [],
+        ?int $savedForUserId = null,
     ): Collection {
         $missing = $limit - $picked->count();
 
@@ -133,6 +146,7 @@ final class PlanQuestionSelector
             array_merge($exclude, $picked->all()),
             $eligible,
             $difficulties,
+            $savedForUserId,
         );
 
         return $picked->concat($more)->unique()->values();
@@ -151,6 +165,7 @@ final class PlanQuestionSelector
         array $exclude,
         ?array $eligible = null,
         array $difficulties = [],
+        ?int $savedForUserId = null,
     ): Collection {
         if ($limit <= 0) {
             return collect();
@@ -162,6 +177,10 @@ final class PlanQuestionSelector
             ->when($exclude !== [], fn ($query) => $query->whereNotIn('id', $exclude))
             ->when($eligible !== null, fn ($query) => $query->whereIn('id', $eligible))
             ->when($difficulties !== [], fn ($query) => $query->whereIn('difficulty', $difficulties))
+            ->when(
+                $savedForUserId !== null,
+                fn ($query) => $query->whereIn('id', Bookmark::bookmarkSubquery($savedForUserId))
+            )
             ->inRandomOrder()
             ->limit($limit)
             ->pluck('id');

@@ -26,14 +26,24 @@ final class CustomSessionController extends Controller
         private readonly SessionQuestionSelector $selector,
     ) {}
 
-    public function create(): View
+    public function create(\Illuminate\Http\Request $request): View
     {
+        $userId = $request->user() ? (int) $request->user()->getKey() : 0;
+        $bookmarkFolders = $userId > 0
+            ? \Modules\Personalization\Models\BookmarkFolder::query()
+                ->where('user_id', $userId)
+                ->withCount('items')
+                ->orderByDesc('id')
+                ->get()
+            : collect();
+
         return view('questionbank::custom-session', [
             'specialties' => Topic::query()->where('type', 'specialty')->orderBy('order')->get(),
             'systems' => Topic::query()->where('type', 'system')->orderBy('name')->get(),
             'exams' => TargetExams::selectable(),
             'articles' => ScopeFilters::articles(),
             'symptoms' => ScopeFilters::symptoms(),
+            'bookmarkFolders' => $bookmarkFolders,
         ]);
     }
 

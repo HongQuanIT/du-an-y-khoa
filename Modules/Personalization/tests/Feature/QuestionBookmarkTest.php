@@ -57,6 +57,41 @@ final class QuestionBookmarkTest extends TestCase
         $this->assertDatabaseCount('bookmarks', 0);
     }
 
+    public function test_student_can_manage_bookmark_folders_and_toggle_items(): void
+    {
+        $question = Question::factory()->free()->create(['topic_id' => null]);
+
+        // Fetch folders -> auto creates default folder "câu hỏi lưu"
+        $this->actingAs($this->user)
+            ->getJson(route('bookmarks.folders.index').'?question_id='.$question->id)
+            ->assertOk()
+            ->assertJsonPath('data.bookmarked', false)
+            ->assertJsonPath('data.folders.0.name', 'câu hỏi lưu');
+
+        // Create custom folder "HY"
+        $response = $this->actingAs($this->user)
+            ->postJson(route('bookmarks.folders.store'), [
+                'name' => 'HY',
+                'question_id' => (string) $question->id,
+            ])
+            ->assertOk();
+
+        $folderId = $response->json('data.folders.1.id');
+        $this->assertTrue($response->json('data.bookmarked'));
+        $this->assertTrue(Bookmark::hasQuestion((int) $this->user->id, (string) $question->id));
+
+        // Toggle question out of "HY" folder
+        $toggleResponse = $this->actingAs($this->user)
+            ->postJson(route('bookmarks.folders.toggle', ['folder' => $folderId]), [
+                'question_id' => (string) $question->id,
+                'in_folder' => false,
+            ])
+            ->assertOk();
+
+        $this->assertFalse($toggleResponse->json('data.bookmarked'));
+        $this->assertFalse(Bookmark::hasQuestion((int) $this->user->id, (string) $question->id));
+    }
+
     public function test_qbank_saved_only_uses_bookmarks(): void
     {
         $saved = Question::factory()->free()->create(['topic_id' => null]);

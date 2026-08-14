@@ -118,6 +118,38 @@ final class QuestionBankFlowTest extends TestCase
         $this->assertSame(25, $session->filters['count']);
     }
 
+    public function test_can_count_and_create_session_for_specific_folder(): void
+    {
+        $folder = \Modules\Personalization\Models\BookmarkFolder::query()->create([
+            'user_id' => $this->user->id,
+            'name' => 'Bộ sưu tập đặc biệt',
+        ]);
+        $question1 = $this->createQuestion($this->topic, true, Difficulty::Easy, 'Câu 1');
+        $this->createQuestion($this->topic, true, Difficulty::Easy, 'Câu 2');
+
+        \Modules\Personalization\Models\BookmarkFolderItem::query()->create([
+            'folder_id' => $folder->id,
+            'question_id' => (string) $question1->id,
+        ]);
+
+        $payload = array_merge($this->sessionPayload(count: 10), [
+            'folder_id' => $folder->id,
+            'saved_only' => 1,
+        ]);
+
+        $this->actingAs($this->user)
+            ->postJson(route('qbank.count'), $payload)
+            ->assertOk()
+            ->assertJsonPath('data.count', 1);
+
+        $this->actingAs($this->user)
+            ->post(route('qbank.store'), $payload)
+            ->assertRedirect();
+
+        $session = QuestionSession::latest('id')->firstOrFail();
+        $this->assertSame(1, $session->total);
+    }
+
     public function test_key_info_derives_clinical_clues_for_legacy_questions(): void
     {
         $stem = '[Amboss] Ca lâm sàng #064 – Skin & Subcutaneous Tissue. '
