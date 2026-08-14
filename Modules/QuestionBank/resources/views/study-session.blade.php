@@ -371,7 +371,7 @@
         </main>
         <footer
             class="fixed bottom-0 left-0 z-50 flex w-full items-center justify-between border-t border-outline-variant bg-white px-4 py-4">
-            <span class="material-symbols-outlined text-outline">bookmark</span>
+            <span class="material-symbols-outlined text-outline">folder_managed</span>
             <button type="button" @click="notesOpen = true" class="material-symbols-outlined text-outline"
                 aria-label="Ghi chú">description</button>
             <button type="button"

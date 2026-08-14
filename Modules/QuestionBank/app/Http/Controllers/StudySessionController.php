@@ -5,18 +5,19 @@ declare(strict_types=1);
 namespace Modules\QuestionBank\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Support\Html\SafeHtml;
 use App\Support\Http\Responses\ApiResponse;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Modules\Personalization\Models\Bookmark;
 use Modules\QuestionBank\Actions\AnswerQuestionAction;
 use Modules\QuestionBank\Actions\CompleteQuestionSessionAction;
 use Modules\QuestionBank\Actions\PauseQuestionSessionAction;
 use Modules\QuestionBank\Actions\ResumeQuestionSessionAction;
 use Modules\QuestionBank\Actions\SaveQuestionSessionAnnotationAction;
-use App\Support\Html\SafeHtml;
 use Modules\QuestionBank\Enums\SessionMode;
 use Modules\QuestionBank\Enums\SessionStatus;
 use Modules\QuestionBank\Models\QuestionAttempt;
@@ -95,6 +96,11 @@ final class StudySessionController extends Controller
             'stemHtml' => (string) ($annotation['stem_html'] ?? SafeHtml::forDisplay((string) $question->stem)),
             'flagged' => (bool) ($annotation['flagged']
                 ?? ($attempt instanceof QuestionAttempt && $attempt->flagged)),
+            'bookmarked' => Bookmark::hasQuestion(
+                (int) $request->user()->getAuthIdentifier(),
+                $questionKey,
+            ),
+            'bookmarkUrl' => route('bookmarks.questions.set', $questionKey),
             'remainingSeconds' => $this->remainingSeconds($session),
         ];
 

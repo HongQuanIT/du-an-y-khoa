@@ -6,7 +6,6 @@ namespace Modules\QuestionBank\Actions;
 
 use App\Models\User;
 use App\Support\Concerns\AsAction;
-use App\Support\Enums\Entitlement;
 use Illuminate\Support\Facades\DB;
 use Modules\QuestionBank\Data\CreateSessionData;
 use Modules\QuestionBank\Enums\SessionMode;
@@ -30,8 +29,7 @@ final class CreateQuestionSessionAction
 
     public function handle(User $user, CreateSessionData $data): QuestionSession
     {
-        $maxQuestions = $user->hasEntitlement(Entitlement::QbankFull->value) ? 100 : 20;
-        $count = max(1, min($maxQuestions, $data->count));
+        $count = max(1, $data->count);
         $data = new CreateSessionData(
             mode: $data->mode,
             source: $data->source,
@@ -41,6 +39,7 @@ final class CreateQuestionSessionAction
             questionStatuses: $data->questionStatuses,
             questionStatusMode: $data->questionStatusMode,
             savedOnly: $data->savedOnly,
+            folderId: $data->folderId,
             examKey: $data->examKey,
             articles: $data->articles,
             symptoms: $data->symptoms,
@@ -62,6 +61,7 @@ final class CreateQuestionSessionAction
             questionStatuses: $data->questionStatuses,
             questionStatusMode: $data->questionStatusMode,
             savedOnly: $data->savedOnly,
+            folderId: $data->folderId,
             examKey: $data->examKey,
             articles: $data->articles,
             symptoms: $data->symptoms,

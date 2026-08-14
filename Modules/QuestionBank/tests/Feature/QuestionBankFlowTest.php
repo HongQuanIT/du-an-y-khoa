@@ -81,7 +81,9 @@ final class QuestionBankFlowTest extends TestCase
             ->assertSee('Rất khó')
             ->assertSee('name="difficulties[]"', false)
             ->assertSee('1 phút 30 giây mỗi câu')
+            ->assertSee(':disabled="matching === 0"', false)
             ->assertSee(':max="Math.max(1, questionLimit())"', false)
+            ->assertSee('@input="countTouched = true; clampQuestionCount()"', false)
             ->assertDontSee('name="time_limit_minutes"', false)
             ->assertDontSeeText('const difficulty = form.querySelector');
 
@@ -94,6 +96,58 @@ final class QuestionBankFlowTest extends TestCase
             ->postJson(route('qbank.count'), $this->sessionPayload(count: 10))
             ->assertOk()
             ->assertJsonPath('data.count', 2);
+    }
+
+    public function test_session_size_can_equal_the_full_matching_pool(): void
+    {
+        for ($index = 1; $index <= 25; $index++) {
+            $this->createQuestion($this->topic, true, Difficulty::Easy, 'Câu miễn phí '.$index);
+        }
+
+        $this->actingAs($this->user)
+            ->postJson(route('qbank.count'), $this->sessionPayload(count: 25))
+            ->assertOk()
+            ->assertJsonPath('data.count', 25);
+
+        $this->actingAs($this->user)
+            ->post(route('qbank.store'), $this->sessionPayload(count: 25))
+            ->assertRedirect();
+
+        $session = QuestionSession::firstOrFail();
+        $this->assertSame(25, $session->total);
+        $this->assertSame(25, $session->filters['count']);
+    }
+
+    public function test_can_count_and_create_session_for_specific_folder(): void
+    {
+        $folder = \Modules\Personalization\Models\BookmarkFolder::query()->create([
+            'user_id' => $this->user->id,
+            'name' => 'Bộ sưu tập đặc biệt',
+        ]);
+        $question1 = $this->createQuestion($this->topic, true, Difficulty::Easy, 'Câu 1');
+        $this->createQuestion($this->topic, true, Difficulty::Easy, 'Câu 2');
+
+        \Modules\Personalization\Models\BookmarkFolderItem::query()->create([
+            'folder_id' => $folder->id,
+            'question_id' => (string) $question1->id,
+        ]);
+
+        $payload = array_merge($this->sessionPayload(count: 10), [
+            'folder_id' => $folder->id,
+            'saved_only' => 1,
+        ]);
+
+        $this->actingAs($this->user)
+            ->postJson(route('qbank.count'), $payload)
+            ->assertOk()
+            ->assertJsonPath('data.count', 1);
+
+        $this->actingAs($this->user)
+            ->post(route('qbank.store'), $payload)
+            ->assertRedirect();
+
+        $session = QuestionSession::latest('id')->firstOrFail();
+        $this->assertSame(1, $session->total);
     }
 
     public function test_key_info_derives_clinical_clues_for_legacy_questions(): void

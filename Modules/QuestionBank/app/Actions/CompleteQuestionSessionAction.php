@@ -183,11 +183,7 @@ final class CompleteQuestionSessionAction
         }
 
         $status->fill([
-            // Preserve the bookmark fallback across grading. Correct/incorrect
-            // can still be derived from attempts; unmark restores that state.
-            'status' => $status->exists && $status->status === UserQuestionStatus::Marked
-                ? UserQuestionStatus::Marked
-                : $nextStatus,
+            'status' => $nextStatus,
             'attempts_count' => $attemptsCount,
             'last_attempt_at' => $attemptedAt,
             'last_correct_at' => $nextStatus === UserQuestionStatus::Correct

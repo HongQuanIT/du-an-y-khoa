@@ -7,6 +7,12 @@
 - `/teach/profile`: hub hồ sơ giảng viên (thông tin, liên hệ, bảo mật, giao diện); cập nhật avatar.
 - Layout `/teach`: nav «Lớp của tôi», menu tài khoản (theme Sáng/Tối/Hệ thống, đăng xuất); dashboard «Bắt đầu nhanh».
 - Test `TeachClassroomTest`, `TeachProfileTest`.
+### Bộ sưu tập câu hỏi đã lưu (Bookmark Folders)
+- Tạo bảng `bookmark_folders` và `bookmark_folder_items`, hỗ trợ quản lý câu hỏi lưu theo từng thư mục/bộ sưu tập.
+- Thêm action tạo, xóa bộ sưu tập (`CreateBookmarkFolderAction`, `DeleteBookmarkFolderAction`), toggle câu hỏi vào bộ sưu tập (`ToggleBookmarkFolderItemAction`).
+- Thiết kế lại trang `/qbank/bookmarks` dạng lưới bộ sưu tập, phân trang 3 bộ sưu tập/trang, hỗ trợ xóa bộ sưu tập có xác nhận.
+- Cập nhật popup lưu câu hỏi trên trang luyện tập (Bookmark modal) chia thành 2 phần: "Trong thư mục" và "Chưa có trong thư mục".
+- Cập nhật trang tạo phiên tùy chỉnh `/qbank/create`: tích hợp popup chọn bộ sưu tập khi lọc "Câu hỏi đã lưu", tự động khóa các bộ lọc khác khi chọn bộ sưu tập và đồng bộ đếm câu hỏi chính xác ngắt race-condition Alpine/FormData.
 
 ## 2026-08-13
 
@@ -23,6 +29,14 @@
 
 ### Dev — Vite CORS localhost
 - `vite.config.js`: cho phép Origin `localhost` có/không cổng `:80`; truyền `APP_URL` vào service vite.
+### Q-Bank tạo phiên
+- Số câu làm mặc định bằng tổng câu phù hợp (ví dụ 69/69); có thể giảm, không vượt quá tổng đó. Không kẹp theo hạn 20/100 của gói.
+
+### Bookmark câu hỏi
+- Thêm bookmark thật theo user cho câu hỏi; icon lưu đặt cạnh “Kiến thức” và dùng chung trong phiên Q-Bank/Study Plan.
+- Bộ lọc “Chỉ câu đã lưu” khi tạo Q-Bank hoặc Study Plan đọc từ bảng `bookmarks`; gắn cờ tiếp tục chỉ thuộc phiên.
+- Chuyển dữ liệu `question_status=marked` cũ sang bookmark và khôi phục trạng thái làm bài gần nhất.
+- Trang `/qbank/bookmarks`: xem danh sách câu đã lưu, bấm câu để xem đề và đáp án, bỏ lưu, tạo phiên từ câu đã chọn.
 
 ### 2FA tùy chọn cho học viên
 - Settings tab Bảo mật: bật TOTP (QR + mã khôi phục), tắt bằng xác nhận mật khẩu; staff không dùng luồng này.

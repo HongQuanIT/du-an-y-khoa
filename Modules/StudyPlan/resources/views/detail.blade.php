@@ -160,11 +160,6 @@
                                                                     Phân tích
                                                                 </a>
                                                             @endif
-                                                        @elseif ($task->status === \Modules\StudyPlan\Enums\TaskStatus::Skipped)
-                                                            <span class="flex items-center gap-1 text-label-md text-error">
-                                                                <span class="material-symbols-outlined text-[18px]">remove_circle</span>
-                                                                Bỏ qua
-                                                            </span>
                                                         @elseif (! $task->type->isSupported())
                                                             <span class="text-label-md text-on-surface-variant">Sắp có</span>
                                                         @else
@@ -172,7 +167,7 @@
                                                                 action="{{ route('study-plan.tasks.start', [$plan, $task]) }}">
                                                                 @csrf
                                                                 <button type="submit"
-                                                                    class="rounded-lg px-5 py-2 text-center font-label-md font-semibold transition-colors {{ $day['isToday'] ? 'bg-primary text-white hover:bg-primary-container' : 'border border-outline-variant bg-white text-on-surface hover:bg-surface-container-low' }}">
+                                                                    class="rounded-lg bg-primary px-5 py-2 text-center font-label-md font-semibold text-white transition-colors hover:bg-primary-container">
                                                                     {{ $task->isStarted() ? 'Tiếp tục' : 'Bắt đầu' }}
                                                                 </button>
                                                             </form>

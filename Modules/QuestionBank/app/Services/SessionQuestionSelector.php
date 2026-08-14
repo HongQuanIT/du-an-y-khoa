@@ -10,6 +10,7 @@ use App\Support\TargetExams;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Modules\Personalization\Models\Bookmark;
 use Modules\QuestionBank\Data\CreateSessionData;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionScopeType;
@@ -53,6 +54,7 @@ final class SessionQuestionSelector
             $difficulties,
             $canUsePremium,
             $data,
+            $userId,
         );
 
         return $picked->shuffle()->values()->all();
@@ -83,6 +85,7 @@ final class SessionQuestionSelector
             $this->parseDifficulties($data->difficulties),
             $canUsePremium,
             $data,
+            $userId,
         )->count();
     }
 
@@ -94,7 +97,9 @@ final class SessionQuestionSelector
         CreateSessionData $data,
         bool $canUsePremium,
     ): ?array {
-        $eligible = $data->questionStatuses === []
+        // savedOnly is applied as a DB subquery inside questionQuery();
+        // we only resolve question_status IDs here.
+        return $data->questionStatuses === []
             ? null
             : $this->eligibleQuestionIds(
                 $userId,
@@ -102,18 +107,6 @@ final class SessionQuestionSelector
                 $data->questionStatusMode,
                 $canUsePremium,
             );
-
-        // Bookmark persistence has not landed yet. `marked` is the canonical
-        // server-side fallback, and remains an additional constraint when the
-        // caller also supplies answer-status filters.
-        if ($data->savedOnly) {
-            $marked = $this->statusQuestionIds($userId, [UserQuestionStatus::Marked]);
-            $eligible = $eligible === null
-                ? $marked
-                : array_values(array_intersect($eligible, $marked));
-        }
-
-        return $eligible;
     }
 
     /**
@@ -192,6 +185,7 @@ final class SessionQuestionSelector
         array $difficulties,
         bool $canUsePremium,
         ?CreateSessionData $data = null,
+        ?int $userId = null,
     ): Collection {
         $missing = $limit - $picked->count();
 
@@ -207,6 +201,7 @@ final class SessionQuestionSelector
             $difficulties,
             $canUsePremium,
             $data,
+            $userId,
         );
 
         return $picked->concat($more)->unique()->values();
@@ -227,6 +222,7 @@ final class SessionQuestionSelector
         array $difficulties,
         bool $canUsePremium,
         ?CreateSessionData $data = null,
+        ?int $userId = null,
     ): Collection {
         if ($limit <= 0) {
             return collect();
@@ -239,6 +235,7 @@ final class SessionQuestionSelector
             $difficulties,
             $canUsePremium,
             $data,
+            $userId,
         )
             ->inRandomOrder()
             ->limit($limit)
@@ -259,6 +256,7 @@ final class SessionQuestionSelector
         array $difficulties,
         bool $canUsePremium,
         ?CreateSessionData $data = null,
+        ?int $userId = null,
     ): Builder {
         $query = Question::query()
             ->where('status', QuestionStatus::Published)
@@ -270,6 +268,19 @@ final class SessionQuestionSelector
 
         if (! $data instanceof CreateSessionData) {
             return $query;
+        }
+
+        // Apply saved-only or specific folder filtering
+        if ($data->folderId !== null && $userId !== null) {
+            $itemQuestionIds = \Modules\Personalization\Models\BookmarkFolderItem::query()
+                ->where('folder_id', $data->folderId)
+                ->pluck('question_id')
+                ->map(fn ($id) => (string) $id)
+                ->all();
+
+            $query->whereIn('id', $itemQuestionIds);
+        } elseif ($data->savedOnly && $userId !== null) {
+            $query->whereIn('id', Bookmark::bookmarkSubquery($userId));
         }
 
         $examKeys = $data->examKey === null
@@ -370,7 +381,7 @@ final class SessionQuestionSelector
 
         $directStatuses = [];
         if (in_array('marked', $statuses, true)) {
-            $directStatuses[] = UserQuestionStatus::Marked;
+            $eligible = $eligible->concat(Bookmark::questionIdsForUser($userId));
         }
         if (in_array('omitted', $statuses, true)) {
             $directStatuses[] = UserQuestionStatus::Omitted;
