@@ -7,6 +7,8 @@ namespace Modules\Classroom\Tests\Feature;
 use App\Models\User;
 use App\Support\Enums\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Classroom\Actions\CreateClassroomAction;
+use Modules\Classroom\Enums\ClassroomStatus;
 use Modules\Classroom\Enums\LiveSessionStatus;
 use Modules\Classroom\Models\Classroom;
 use Modules\QuestionBank\Models\Question;
@@ -37,15 +39,12 @@ final class ClassroomFlowTest extends TestCase
         $member = User::factory()->create();
         $member->assignRole(Role::Student->value);
 
-        $this->actingAs($host)
-            ->post(route('classroom.store'), [
-                'title' => 'Chữa đề Tim mạch',
-                'description' => 'Demo',
-                'visibility' => 'public',
-            ])
-            ->assertRedirect();
-
-        $classroom = Classroom::query()->firstOrFail();
+        $classroom = app(CreateClassroomAction::class)->handle($host, [
+            'title' => 'Chữa đề Tim mạch',
+            'description' => 'Demo',
+            'visibility' => 'public',
+        ]);
+        $classroom->update(['status' => ClassroomStatus::Active]);
 
         $this->actingAs($member)
             ->post(route('classroom.join', $classroom))
@@ -99,12 +98,11 @@ final class ClassroomFlowTest extends TestCase
         $member = User::factory()->create();
         $member->assignRole(Role::Student->value);
 
-        $this->actingAs($host)->post(route('classroom.store'), [
+        $classroom = app(CreateClassroomAction::class)->handle($host, [
             'title' => 'Lớp mute chat',
             'visibility' => 'public',
         ]);
-
-        $classroom = Classroom::query()->firstOrFail();
+        $classroom->update(['status' => ClassroomStatus::Active]);
 
         $this->actingAs($member)->post(route('classroom.join', $classroom));
 
@@ -159,12 +157,12 @@ final class ClassroomFlowTest extends TestCase
         $member = User::factory()->create();
         $member->assignRole(Role::Student->value);
 
-        $this->actingAs($host)->post(route('classroom.store'), [
+        $classroom = app(CreateClassroomAction::class)->handle($host, [
             'title' => 'Lớp giơ tay',
             'visibility' => 'public',
         ]);
+        $classroom->update(['status' => ClassroomStatus::Active]);
 
-        $classroom = Classroom::query()->firstOrFail();
         $this->actingAs($member)->post(route('classroom.join', $classroom));
 
         $this->actingAs($host)->post(route('classroom.sessions.store', $classroom), [
@@ -214,11 +212,12 @@ final class ClassroomFlowTest extends TestCase
         $member = User::factory()->create();
         $member->assignRole(Role::Student->value);
 
-        $this->actingAs($host)->post(route('classroom.store'), [
+        $classroom = app(CreateClassroomAction::class)->handle($host, [
             'title' => 'Lớp reaction',
             'visibility' => 'public',
         ]);
-        $classroom = Classroom::query()->firstOrFail();
+        $classroom->update(['status' => ClassroomStatus::Active]);
+
         $this->actingAs($member)->post(route('classroom.join', $classroom));
         $this->actingAs($host)->post(route('classroom.sessions.store', $classroom), [
             'title' => 'Buổi reaction',
@@ -258,12 +257,11 @@ final class ClassroomFlowTest extends TestCase
             'is_free' => true,
         ]);
 
-        $this->actingAs($host)->post(route('classroom.store'), [
+        $classroom = app(CreateClassroomAction::class)->handle($host, [
             'title' => 'Lớp test',
             'visibility' => 'public',
         ]);
-
-        $classroom = Classroom::query()->firstOrFail();
+        $classroom->update(['status' => ClassroomStatus::Active]);
 
         $this->actingAs($host)->post(route('classroom.sessions.store', $classroom), [
             'title' => 'Buổi có đề',

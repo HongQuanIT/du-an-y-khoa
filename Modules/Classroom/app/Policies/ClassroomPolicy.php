@@ -7,6 +7,7 @@ namespace Modules\Classroom\Policies;
 use App\Models\User;
 use App\Support\Enums\Entitlement;
 use App\Support\Enums\Role;
+use Modules\Classroom\Enums\ClassroomStatus;
 use Modules\Classroom\Enums\ClassroomVisibility;
 use Modules\Classroom\Enums\MemberStatus;
 use Modules\Classroom\Models\Classroom;
@@ -20,20 +21,29 @@ final class ClassroomPolicy
 
     public function view(User $user, Classroom $classroom): bool
     {
+        if ($user->hasAnyRole([Role::Admin->value, Role::SuperAdmin->value])) {
+            return true;
+        }
+
+        if ($classroom->isHostOrCohost($user) || $classroom->isActiveMember($user)) {
+            return true;
+        }
+
+        if (! $classroom->status->isVisibleToLearners()) {
+            return false;
+        }
+
         if ($classroom->visibility === ClassroomVisibility::Public) {
             return true;
         }
 
-        if ($classroom->isActiveMember($user)) {
-            return true;
-        }
-
-        return $user->hasAnyRole([Role::Admin->value, Role::SuperAdmin->value]);
+        return false;
     }
 
+    /** Only instructors create classrooms (via `/teach`). Learner hosting is disabled. */
     public function create(User $user): bool
     {
-        return $user->hasEntitlement(Entitlement::ClassroomHost->value);
+        return $user->hasRole(Role::Instructor->value);
     }
 
     public function update(User $user, Classroom $classroom): bool
@@ -44,6 +54,10 @@ final class ClassroomPolicy
 
     public function join(User $user, Classroom $classroom): bool
     {
+        if (! $classroom->status->isVisibleToLearners()) {
+            return false;
+        }
+
         $member = $classroom->memberFor($user);
 
         if ($member?->status === MemberStatus::Banned) {
@@ -59,7 +73,17 @@ final class ClassroomPolicy
 
     public function manageLive(User $user, Classroom $classroom): bool
     {
-        return $this->update($user, $classroom)
-            && $user->hasEntitlement(Entitlement::ClassroomHost->value);
+        if (! $this->update($user, $classroom)) {
+            return false;
+        }
+
+        return $user->hasRole(Role::Instructor->value)
+            || $user->hasEntitlement(Entitlement::ClassroomHost->value);
+    }
+
+    public function startLive(User $user, Classroom $classroom): bool
+    {
+        return $this->manageLive($user, $classroom)
+            && $classroom->status->isVisibleToLearners();
     }
 }

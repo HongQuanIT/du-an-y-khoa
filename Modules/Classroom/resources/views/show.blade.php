@@ -153,13 +153,17 @@
                                                 Vào phòng
                                             </a>
                                         @endif
-                                        @if ($canHostLive && $sess->status === LiveSessionStatus::Scheduled)
+                                        @if ($canStartLive && $sess->status === LiveSessionStatus::Scheduled)
                                             <form method="post" action="{{ route('classroom.sessions.start', [$classroom, $sess]) }}">
                                                 @csrf
                                                 <button type="submit" class="rounded-lg bg-error px-3 py-1.5 text-sm font-semibold text-white">
                                                     Bắt đầu live
                                                 </button>
                                             </form>
+                                        @elseif ($canHostLive && ! ($canStartLive ?? false) && $sess->status === LiveSessionStatus::Scheduled)
+                                            <span class="rounded-lg bg-surface-container px-3 py-1.5 text-xs text-on-surface-variant" title="Chờ admin duyệt lớp">
+                                                Chờ duyệt lớp
+                                            </span>
                                         @endif
                                         @if ($canHostLive && $sess->status === LiveSessionStatus::Live)
                                             <form method="post" action="{{ route('classroom.sessions.end', [$classroom, $sess]) }}"

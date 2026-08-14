@@ -12,6 +12,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Modules\Auth\Models\TwoFactorSecret;
 use Modules\Auth\Services\TotpService;
+use Modules\Admin\Actions\ApproveClassroomAction;
 use Modules\Classroom\Actions\CreateClassroomAction;
 use Modules\Classroom\Enums\ClassroomPurpose;
 use Modules\Classroom\Enums\ClassroomStatus;
@@ -40,6 +41,8 @@ final class AdminClassroomOversightTest extends TestCase
             'title' => 'Lớp chữa Step 1',
             'purpose' => ClassroomPurpose::FeedbackReview->value,
         ]);
+
+        $this->assertSame(ClassroomStatus::PendingApproval, $classroom->status);
 
         $this->actingAs($admin)
             ->withSession([TwoFactorSession::KEY => now()->timestamp])
@@ -91,6 +94,28 @@ final class AdminClassroomOversightTest extends TestCase
         $this->assertDatabaseHas('audit_logs', [
             'actor_id' => $admin->id,
             'action' => 'classroom.live.force_end',
+        ]);
+    }
+
+    public function test_admin_can_approve_pending_classroom(): void
+    {
+        $admin = $this->staffWith2fa(Role::Admin);
+        $host = User::factory()->create();
+        $host->assignRole(Role::Instructor->value);
+
+        $classroom = app(CreateClassroomAction::class)->handle($host, [
+            'title' => 'Lớp chờ duyệt',
+            'purpose' => ClassroomPurpose::ExamReview->value,
+            'visibility' => 'public',
+        ]);
+
+        app(ApproveClassroomAction::class)->handle($admin, $classroom);
+
+        $this->assertSame(ClassroomStatus::Active, $classroom->fresh()->status);
+
+        $this->assertDatabaseHas('audit_logs', [
+            'actor_id' => $admin->id,
+            'action' => 'classroom.approve',
         ]);
     }
 

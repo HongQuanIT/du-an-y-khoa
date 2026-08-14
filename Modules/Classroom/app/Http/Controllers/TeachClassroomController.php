@@ -76,7 +76,7 @@ final class TeachClassroomController extends Controller
 
         return redirect()
             ->route('teach.classes.show', $classroom)
-            ->with('status', 'Đã tạo lớp chữa đề.');
+            ->with('status', 'Đã gửi lớp chờ duyệt. Admin sẽ duyệt trước khi hiển thị cho học viên.');
     }
 
     public function show(Request $request, Classroom $classroom): View

@@ -233,7 +233,7 @@ Có thể dùng `Article(type=procedure)` + field mở rộng: `steps JSON, indi
 | purpose | VARCHAR(30) | enum: `community_review` / `feedback_review` / `exam_review` — xem Module 44 §16 |
 | visibility | VARCHAR(20) | enum: public / unlisted / invite_only |
 | join_code | VARCHAR(16) null | mã tham gia; unique khi có |
-| status | VARCHAR(20) | enum: draft / active / archived |
+| status | VARCHAR(20) | enum: draft / **pending_approval** / active / archived |
 | max_members | INT null | |
 | cover_media_id | FK Media null | |
 | meta | JSON | |

@@ -2,6 +2,12 @@
 
 ## 2026-08-14
 
+### Catalog /classes — card và duyệt lớp giảng viên
+- Card lớp: cover fallback theo `purpose`, avatar host, badge live/VOD/lịch, filter (live/sắp tới/recording).
+- Tắt học viên tạo lớp (`/classes/create`); chỉ giảng viên tạo trên `/teach` → `pending_approval`.
+- Admin `/admin/classrooms`: duyệt/từ chối lớp; catalog học viên chỉ hiện lớp `active`; chặn join/start live khi chưa duyệt.
+- SRS Module 44 §17, ERD `pending_approval`, RBAC; test `ClassroomCatalogTest` và cập nhật flow/admin.
+
 ### Portal /teach Phase B — lớp và hồ sơ giảng viên
 - `/teach/classes`: danh sách, tạo và chi tiết stub lớp chữa đề (feedback QBank / exam); enum `ClassroomPurpose`/`MemberRole` bổ sung helper.
 - `/teach/profile`: hub hồ sơ giảng viên (thông tin, liên hệ, bảo mật, giao diện); cập nhật avatar.

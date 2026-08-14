@@ -10,8 +10,10 @@ use App\Support\Enums\Permission;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Modules\Admin\Actions\ApproveClassroomAction;
 use Modules\Admin\Actions\ArchiveClassroomAction;
 use Modules\Admin\Actions\ForceEndClassroomLiveAction;
+use Modules\Admin\Actions\RejectClassroomAction;
 use Modules\Classroom\Enums\ClassroomPurpose;
 use Modules\Classroom\Enums\ClassroomStatus;
 use Modules\Classroom\Enums\LiveSessionStatus;
@@ -52,8 +54,13 @@ final class ClassroomOversightController extends Controller
 
         $classrooms = $query->paginate(20)->withQueryString();
 
+        $pendingCount = Classroom::query()
+            ->where('status', ClassroomStatus::PendingApproval)
+            ->count();
+
         return view('admin::classrooms.index', [
             'classrooms' => $classrooms,
+            'pendingCount' => $pendingCount,
             'statuses' => ClassroomStatus::cases(),
             'purposes' => ClassroomPurpose::cases(),
             'filters' => [
@@ -76,6 +83,24 @@ final class ClassroomOversightController extends Controller
         }
 
         return back()->with('status', 'Đã force-end buổi live.');
+    }
+
+    public function approve(Classroom $classroom, ApproveClassroomAction $action): RedirectResponse
+    {
+        $this->authorizePermission(Permission::ClassroomOversee);
+
+        $action->handle($this->actor(), $classroom);
+
+        return back()->with('status', 'Đã duyệt lớp — hiển thị cho học viên.');
+    }
+
+    public function reject(Classroom $classroom, RejectClassroomAction $action): RedirectResponse
+    {
+        $this->authorizePermission(Permission::ClassroomOversee);
+
+        $action->handle($this->actor(), $classroom);
+
+        return back()->with('status', 'Đã từ chối lớp học.');
     }
 
     public function archive(Classroom $classroom, ArchiveClassroomAction $action): RedirectResponse

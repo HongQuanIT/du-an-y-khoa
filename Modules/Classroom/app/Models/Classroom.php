@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Modules\Classroom\Enums\ClassroomPurpose;
 use Modules\Classroom\Enums\ClassroomStatus;
@@ -17,6 +18,7 @@ use Modules\Classroom\Enums\ClassroomVisibility;
 use Modules\Classroom\Enums\LiveSessionStatus;
 use Modules\Classroom\Enums\MemberRole;
 use Modules\Classroom\Enums\MemberStatus;
+use Modules\Classroom\Enums\RecordingStatus;
 
 /**
  * Community live-review classroom (srs/modules/44).
@@ -108,6 +110,48 @@ class Classroom extends Model
         return $this->hasOne(LiveSession::class)
             ->where('status', LiveSessionStatus::Live->value)
             ->latestOfMany();
+    }
+
+    /** Nearest future scheduled session. */
+    /** @return HasOne<LiveSession, $this> */
+    public function upcomingSession(): HasOne
+    {
+        return $this->hasOne(LiveSession::class)
+            ->where('status', LiveSessionStatus::Scheduled->value)
+            ->where('scheduled_at', '>', now())
+            ->oldest('scheduled_at');
+    }
+
+    /** Latest ended session with a ready VOD recording. */
+    /** @return HasOne<LiveSession, $this> */
+    public function replaySession(): HasOne
+    {
+        return $this->hasOne(LiveSession::class)
+            ->where('status', LiveSessionStatus::Ended->value)
+            ->whereHas('recordings', fn ($query) => $query->where('status', RecordingStatus::Ready->value))
+            ->latest('ended_at');
+    }
+
+    public function catalogCoverUrl(): ?string
+    {
+        $path = $this->meta['cover_path'] ?? null;
+        if (! is_string($path) || $path === '') {
+            return null;
+        }
+
+        return Storage::disk('public')->url($path);
+    }
+
+    public function coverInitial(): string
+    {
+        return strtoupper(substr($this->title, 0, 1));
+    }
+
+    public function isLiveNow(): bool
+    {
+        return $this->relationLoaded('liveSession')
+            ? $this->liveSession !== null
+            : $this->liveSession()->exists();
     }
 
     public function memberFor(User $user): ?ClassroomMember

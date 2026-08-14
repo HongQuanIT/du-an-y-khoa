@@ -84,6 +84,10 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
             Route::get('/classrooms', [ClassroomOversightController::class, 'index'])->name('classrooms.index');
             Route::post('/classrooms/{classroom}/force-end', [ClassroomOversightController::class, 'forceEnd'])
                 ->name('classrooms.force-end');
+            Route::post('/classrooms/{classroom}/approve', [ClassroomOversightController::class, 'approve'])
+                ->name('classrooms.approve');
+            Route::post('/classrooms/{classroom}/reject', [ClassroomOversightController::class, 'reject'])
+                ->name('classrooms.reject');
             Route::post('/classrooms/{classroom}/archive', [ClassroomOversightController::class, 'archive'])
                 ->name('classrooms.archive');
         });
