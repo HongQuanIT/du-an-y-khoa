@@ -5,11 +5,10 @@
      * @var array<string, array{title: string, icon: string, hint: string}> $exams
      * @var array<int, array{id: string, name: string}> $articles
      * @var array<int, array{id: string, name: string}> $symptoms
-     * @var int $maxQuestions
      */
     $initialMode = old('mode', request('mode', 'study'));
     $initialSource = old('source', request('source', 'custom'));
-    $initialCount = (int) old('count', min(10, $maxQuestions));
+    $initialCount = max(1, (int) old('count', 1));
     $initialDifficultyInput = old(
         'difficulties',
         request('difficulties', old('difficulty', request('difficulty', []))),
@@ -49,7 +48,6 @@
             mode: {{ Illuminate\Support\Js::from($initialMode)->toHtml() }},
             source: {{ Illuminate\Support\Js::from($initialSource)->toHtml() }},
             count: {{ Illuminate\Support\Js::from($initialCount)->toHtml() }},
-            maxQuestions: {{ Illuminate\Support\Js::from($maxQuestions)->toHtml() }},
             difficulties: {{ Illuminate\Support\Js::from($initialDifficulties)->toHtml() }},
             difficultyLabels: {{ Illuminate\Support\Js::from(collect($difficultyOptions)->pluck('name', 'id')->all())->toHtml() }},
             difficultyOptionCount: {{ count($difficultyOptions) }},
@@ -70,7 +68,7 @@
             matching: null,
             counting: false,
             countRequest: 0,
-            countError: '',
+            countTouched: {{ old('count') !== null ? 'true' : 'false' }},
             submitting: false,
             countUrl: {{ Illuminate\Support\Js::from(route('qbank.count', absolute: false))->toHtml() }},
             csrf: {{ Illuminate\Support\Js::from(csrf_token())->toHtml() }},
@@ -81,8 +79,11 @@
                 if (!this.$refs.builderForm) return;
                 const requestId = ++this.countRequest;
                 this.counting = true;
-                this.countError = '';
                 try {
+                    const body = new FormData(this.$refs.builderForm);
+                    if (!body.has('count')) {
+                        body.set('count', String(Math.max(1, Number(this.count) || 1)));
+                    }
                     const response = await fetch(this.countUrl, {
                         method: 'POST',
                         headers: {
@@ -90,7 +91,7 @@
                             'X-CSRF-TOKEN': this.csrf,
                             'X-Requested-With': 'XMLHttpRequest',
                         },
-                        body: new FormData(this.$refs.builderForm),
+                        body,
                     });
                     const payload = await response.json();
                     if (requestId !== this.countRequest) return;
@@ -99,11 +100,10 @@
                         throw new Error(details[0] || payload?.error?.message || 'Không thể đếm câu hỏi.');
                     }
                     this.matching = Number(payload?.data?.count ?? 0);
-                    this.clampQuestionCount();
+                    this.syncQuestionCount();
                 } catch (error) {
                     if (requestId !== this.countRequest) return;
-                    this.matching = null;
-                    this.countError = error?.message || 'Không thể cập nhật số câu phù hợp.';
+                    this.matching = 0;
                 } finally {
                     if (requestId === this.countRequest) this.counting = false;
                 }
@@ -116,8 +116,15 @@
                 return this.selectedTopics.filter((id) => ids.includes(String(id))).length;
             },
             questionLimit() {
-                if (this.matching === null) return this.maxQuestions;
-                return Math.min(this.maxQuestions, Math.max(0, Number(this.matching)));
+                return Math.max(0, Number(this.matching) || 0);
+            },
+            syncQuestionCount() {
+                const limit = this.questionLimit();
+                if (!this.countTouched && limit >= 1) {
+                    this.count = limit;
+                    return;
+                }
+                this.clampQuestionCount();
             },
             clampQuestionCount() {
                 const limit = this.questionLimit();
@@ -125,7 +132,12 @@
                     this.count = 1;
                     return;
                 }
-                this.count = Math.min(limit, Math.max(1, Number(this.count) || 1));
+                const next = Number(this.count);
+                if (!Number.isFinite(next) || next < 1) {
+                    this.count = 1;
+                    return;
+                }
+                this.count = Math.min(limit, Math.floor(next));
             },
             examDurationLabel() {
                 const seconds = Math.max(1, Number(this.count) || 1) * 90;
@@ -159,7 +171,8 @@
                 this.$refs.builderForm.reset();
                 this.mode = 'study';
                 this.source = 'custom';
-                this.count = Math.min(10, {{ Illuminate\Support\Js::from($maxQuestions)->toHtml() }});
+                this.countTouched = false;
+                this.count = 1;
                 this.difficulties = [];
                 this.statuses = [];
                 this.selectedTopics = [];
@@ -172,8 +185,8 @@
                 this.$nextTick(() => this.refreshCount());
             },
         }"
-        @change.debounce.350ms="if ($event.target.name) refreshCount()"
-        @input.debounce.500ms="if ($event.target.name) refreshCount()"
+        @change.debounce.350ms="if ($event.target.name && $event.target.name !== 'count') refreshCount()"
+        @input.debounce.500ms="if ($event.target.name && $event.target.name !== 'count') refreshCount()"
         @keydown.escape.window="activeFilter = null" @submit="submitting = true">
         @csrf
         <input type="hidden" name="source" :value="source">
@@ -400,15 +413,17 @@
                                     Số lượng câu hỏi
                                 </label>
                                 <div class="flex items-center gap-3">
-                                    <input id="question-count" type="number" name="count" min="1"
+                                    <input id="question-count" type="number" name="count" min="1" step="1"
                                         :max="Math.max(1, questionLimit())" x-model.number="count"
+                                        :disabled="matching === 0"
+                                        @input="countTouched = true; clampQuestionCount()"
+                                        @change="countTouched = true; clampQuestionCount()"
                                         @blur="clampQuestionCount()" required
-                                        class="w-20 rounded-lg border border-outline-variant py-2.5 text-center text-lg font-bold focus:ring-2 focus:ring-primary">
+                                        class="w-20 rounded-lg border border-outline-variant py-2.5 text-center text-lg font-bold focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60">
                                     <span class="text-lg font-medium text-on-surface-variant">
                                         / <span x-text="counting ? '…' : (matching ?? 0)"></span>
                                     </span>
                                 </div>
-                                <p x-show="countError" x-cloak class="mt-2 text-xs font-medium text-error" x-text="countError"></p>
                             </div>
                         </div>
                     </div>

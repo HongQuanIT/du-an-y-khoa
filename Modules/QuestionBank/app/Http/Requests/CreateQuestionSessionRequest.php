@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\QuestionBank\Http\Requests;
 
-use App\Support\Enums\Entitlement;
 use App\Support\ScopeFilters;
 use App\Support\TargetExams;
 use Illuminate\Foundation\Http\FormRequest;
@@ -45,12 +44,10 @@ final class CreateQuestionSessionRequest extends FormRequest
     /** @return array<string, mixed> */
     public function rules(): array
     {
-        $maxQuestions = $this->user()?->hasEntitlement(Entitlement::QbankFull->value) ? 100 : 20;
-
         return [
             'mode' => ['required', Rule::enum(SessionMode::class)],
             'source' => ['required', Rule::enum(SessionSource::class), 'in:custom,weak_topics'],
-            'count' => ['required', 'integer', 'min:1', 'max:'.$maxQuestions],
+            'count' => ['required', 'integer', 'min:1', 'max:10000'],
             'topic_ids' => ['nullable', 'array'],
             'topic_ids.*' => ['integer', 'distinct', 'exists:topics,id'],
             'difficulties' => ['nullable', 'array', 'max:'.count(Difficulty::cases())],
@@ -75,7 +72,7 @@ final class CreateQuestionSessionRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'count.max' => 'Tài khoản hiện tại được tạo tối đa :max câu mỗi phiên.',
+            'count.max' => 'Số câu làm không được vượt quá tổng câu phù hợp.',
         ];
     }
 

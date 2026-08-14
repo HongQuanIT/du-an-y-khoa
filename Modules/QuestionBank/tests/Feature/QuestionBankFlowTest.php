@@ -81,7 +81,9 @@ final class QuestionBankFlowTest extends TestCase
             ->assertSee('Rất khó')
             ->assertSee('name="difficulties[]"', false)
             ->assertSee('1 phút 30 giây mỗi câu')
+            ->assertSee(':disabled="matching === 0"', false)
             ->assertSee(':max="Math.max(1, questionLimit())"', false)
+            ->assertSee('@input="countTouched = true; clampQuestionCount()"', false)
             ->assertDontSee('name="time_limit_minutes"', false)
             ->assertDontSeeText('const difficulty = form.querySelector');
 
@@ -94,6 +96,26 @@ final class QuestionBankFlowTest extends TestCase
             ->postJson(route('qbank.count'), $this->sessionPayload(count: 10))
             ->assertOk()
             ->assertJsonPath('data.count', 2);
+    }
+
+    public function test_session_size_can_equal_the_full_matching_pool(): void
+    {
+        for ($index = 1; $index <= 25; $index++) {
+            $this->createQuestion($this->topic, true, Difficulty::Easy, 'Câu miễn phí '.$index);
+        }
+
+        $this->actingAs($this->user)
+            ->postJson(route('qbank.count'), $this->sessionPayload(count: 25))
+            ->assertOk()
+            ->assertJsonPath('data.count', 25);
+
+        $this->actingAs($this->user)
+            ->post(route('qbank.store'), $this->sessionPayload(count: 25))
+            ->assertRedirect();
+
+        $session = QuestionSession::firstOrFail();
+        $this->assertSame(25, $session->total);
+        $this->assertSame(25, $session->filters['count']);
     }
 
     public function test_key_info_derives_clinical_clues_for_legacy_questions(): void

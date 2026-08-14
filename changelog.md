@@ -23,6 +23,14 @@
 
 ### Dev — Vite CORS localhost
 - `vite.config.js`: cho phép Origin `localhost` có/không cổng `:80`; truyền `APP_URL` vào service vite.
+### Q-Bank tạo phiên
+- Số câu làm mặc định bằng tổng câu phù hợp (ví dụ 69/69); có thể giảm, không vượt quá tổng đó. Không kẹp theo hạn 20/100 của gói.
+
+### Bookmark câu hỏi
+- Thêm bookmark thật theo user cho câu hỏi; icon lưu đặt cạnh “Kiến thức” và dùng chung trong phiên Q-Bank/Study Plan.
+- Bộ lọc “Chỉ câu đã lưu” khi tạo Q-Bank hoặc Study Plan đọc từ bảng `bookmarks`; gắn cờ tiếp tục chỉ thuộc phiên.
+- Chuyển dữ liệu `question_status=marked` cũ sang bookmark và khôi phục trạng thái làm bài gần nhất.
+- Trang `/qbank/bookmarks`: xem danh sách câu đã lưu, bấm câu để xem đề và đáp án, bỏ lưu, tạo phiên từ câu đã chọn.
 
 ### 2FA tùy chọn cho học viên
 - Settings tab Bảo mật: bật TOTP (QR + mã khôi phục), tắt bằng xác nhận mật khẩu; staff không dùng luồng này.

@@ -13,6 +13,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
+use Modules\Personalization\Models\Bookmark;
 use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionSession;
 use Modules\QuestionBank\Services\QuestionSessionInsights;
@@ -93,6 +94,11 @@ final class StudyPlanSessionController extends Controller
             'stemHtml' => (string) ($annotation['stem_html'] ?? SafeHtml::forDisplay((string) $question->stem)),
             'flagged' => $flagged,
             'flaggedIds' => $flaggedIds,
+            'bookmarked' => Bookmark::hasQuestion(
+                (int) $request->user()->getAuthIdentifier(),
+                (string) $question->getKey(),
+            ),
+            'bookmarkUrl' => route('bookmarks.questions.set', $question),
         ]);
     }
 

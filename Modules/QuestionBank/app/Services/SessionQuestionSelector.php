@@ -10,6 +10,7 @@ use App\Support\TargetExams;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Modules\Personalization\Models\Bookmark;
 use Modules\QuestionBank\Data\CreateSessionData;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionScopeType;
@@ -103,11 +104,8 @@ final class SessionQuestionSelector
                 $canUsePremium,
             );
 
-        // Bookmark persistence has not landed yet. `marked` is the canonical
-        // server-side fallback, and remains an additional constraint when the
-        // caller also supplies answer-status filters.
         if ($data->savedOnly) {
-            $marked = $this->statusQuestionIds($userId, [UserQuestionStatus::Marked]);
+            $marked = Bookmark::questionIdsForUser($userId);
             $eligible = $eligible === null
                 ? $marked
                 : array_values(array_intersect($eligible, $marked));
@@ -370,7 +368,7 @@ final class SessionQuestionSelector
 
         $directStatuses = [];
         if (in_array('marked', $statuses, true)) {
-            $directStatuses[] = UserQuestionStatus::Marked;
+            $eligible = $eligible->concat(Bookmark::questionIdsForUser($userId));
         }
         if (in_array('omitted', $statuses, true)) {
             $directStatuses[] = UserQuestionStatus::Omitted;

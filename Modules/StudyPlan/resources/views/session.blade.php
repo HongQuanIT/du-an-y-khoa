@@ -50,7 +50,6 @@
     $hasAttendingTip = $attendingTip !== '';
 
     $tools = [
-        ['icon' => 'bookmark', 'label' => 'Lưu câu hỏi'],
         ['icon' => 'flag', 'label' => 'Gắn cờ', 'action' => 'flag'],
         ['icon' => 'description', 'label' => 'Ghi chú', 'action' => 'notes'],
         ['icon' => 'menu_book', 'label' => 'Nghiên cứu', 'action' => 'research'],
@@ -68,6 +67,8 @@
     $stemHtml = $stemHtml ?? \App\Support\Html\SafeHtml::forDisplay((string) $question->stem);
     $flagged = (bool) ($flagged ?? false);
     $flaggedIds = $flaggedIds ?? [];
+    $bookmarked = (bool) ($bookmarked ?? false);
+    $bookmarkUrl = $bookmarkUrl ?? route('bookmarks.questions.set', $question);
     $sessionIncomplete = count($answeredIds) < $total;
 @endphp
 
@@ -89,6 +90,10 @@
         attendingTip: @js($attendingTip),
         hasAttendingTip: @js($hasAttendingTip),
         flagged: @js($flagged),
+        bookmarked: @js($bookmarked),
+        bookmarkSaving: false,
+        bookmarkError: '',
+        bookmarkUrl: @js($bookmarkUrl),
         sessionIncomplete: @js($sessionIncomplete),
         exitUrl: @js($exitUrl),
         selectionBar: { show: false, x: 0, y: 0 },
@@ -170,6 +175,35 @@
         async toggleFlag() {
             this.flagged = !this.flagged;
             await this.persistAnnotation({ flagged: this.flagged });
+        },
+        async setBookmark() {
+            if (this.bookmarkSaving) return;
+            const previous = this.bookmarked;
+            this.bookmarked = !previous;
+            this.bookmarkSaving = true;
+            this.bookmarkError = '';
+
+            try {
+                const response = await fetch(this.bookmarkUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': this.csrf,
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: JSON.stringify({ bookmarked: this.bookmarked }),
+                });
+
+                if (!response.ok) throw new Error('Không thể lưu câu hỏi.');
+                const payload = await response.json();
+                this.bookmarked = Boolean(payload?.data?.bookmarked);
+            } catch (error) {
+                this.bookmarked = previous;
+                this.bookmarkError = error?.message || 'Không thể lưu câu hỏi.';
+            } finally {
+                this.bookmarkSaving = false;
+            }
         },
         onTextSelect() {
             if (!this.highlightMode) { this.selectionBar.show = false; return; }
@@ -502,6 +536,22 @@
                                 <span class="material-symbols-outlined text-[18px]">help</span>
                                 <span>Kiến thức</span>
                             </button>
+                            <button type="button" @click="setBookmark()" :disabled="bookmarkSaving"
+                                class="inline-flex h-12 items-center gap-2 border-b-2 px-3 text-label-sm font-bold transition-colors disabled:cursor-wait disabled:opacity-60"
+                                :class="bookmarked
+                                    ? 'border-primary text-primary'
+                                    : 'border-transparent text-on-surface-variant hover:bg-surface-container-high hover:text-primary'"
+                                :title="bookmarked ? 'Bỏ lưu câu hỏi' : 'Lưu câu hỏi'"
+                                :aria-label="bookmarked ? 'Bỏ lưu câu hỏi' : 'Lưu câu hỏi'"
+                                :aria-pressed="bookmarked"
+                                data-testid="question-bookmark-toggle">
+                                <span class="material-symbols-outlined text-[18px]"
+                                    :class="bookmarked && 'fill-1'">bookmark</span>
+                                <span class="hidden sm:inline" x-text="bookmarked ? 'Đã lưu' : 'Lưu'"></span>
+                            </button>
+                            <span x-show="bookmarkError" x-cloak
+                                class="px-2 text-xs font-medium text-error"
+                                x-text="bookmarkError"></span>
                         </div>
 
                         <div x-show="attendingTipOpen" x-cloak x-transition class="space-y-3"

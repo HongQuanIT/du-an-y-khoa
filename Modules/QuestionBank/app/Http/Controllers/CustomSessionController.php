@@ -5,14 +5,12 @@ declare(strict_types=1);
 namespace Modules\QuestionBank\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Support\Enums\Entitlement;
 use App\Support\Http\Responses\ApiResponse;
 use App\Support\ScopeFilters;
 use App\Support\TargetExams;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Modules\QuestionBank\Actions\CreateQuestionSessionAction;
 use Modules\QuestionBank\Http\Requests\CreateQuestionSessionRequest;
@@ -28,7 +26,7 @@ final class CustomSessionController extends Controller
         private readonly SessionQuestionSelector $selector,
     ) {}
 
-    public function create(Request $request): View
+    public function create(): View
     {
         return view('questionbank::custom-session', [
             'specialties' => Topic::query()->where('type', 'specialty')->orderBy('order')->get(),
@@ -36,7 +34,6 @@ final class CustomSessionController extends Controller
             'exams' => TargetExams::selectable(),
             'articles' => ScopeFilters::articles(),
             'symptoms' => ScopeFilters::symptoms(),
-            'maxQuestions' => $request->user()?->hasEntitlement(Entitlement::QbankFull->value) ? 100 : 20,
         ]);
     }
 

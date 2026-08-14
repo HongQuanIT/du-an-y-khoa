@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\StudyPlan\Services;
 
 use Illuminate\Support\Collection;
+use Modules\Personalization\Models\Bookmark;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Enums\UserQuestionStatus;
 use Modules\QuestionBank\Models\Question;
@@ -29,6 +30,7 @@ final class PlanQuestionSelector
     public function forTask(StudyPlanTask $task, int $limit): array
     {
         $userId = $task->plan->user_id;
+        $filters = $task->plan->scopeFilters();
 
         if ($task->type === TaskType::Review) {
             return $this->reviewQuestions($userId, $task, $limit);
@@ -36,12 +38,19 @@ final class PlanQuestionSelector
 
         $topicIds = $this->expandTopics($task->topicIds());
         $planTopicIds = $this->expandTopics($task->plan->scopeTopicIds());
-        $filters = $task->plan->scopeFilters();
         $statuses = $filters['question_statuses'];
         $difficulties = $filters['difficulties'];
         $eligible = $statuses === []
             ? null
             : $this->eligibleQuestionIds($userId, $statuses, $filters['question_status_mode']);
+
+        if ($filters['saved_only']) {
+            $bookmarked = Bookmark::questionIdsForUser($userId);
+            $eligible = $eligible === null
+                ? $bookmarked
+                : array_values(array_intersect($eligible, $bookmarked));
+        }
+
         $seen = $eligible === null ? $this->answeredQuestionIds($userId) : [];
 
         $picked = $this->pick($limit, $topicIds, $seen, $eligible, $difficulties);
@@ -60,10 +69,15 @@ final class PlanQuestionSelector
      */
     private function reviewQuestions(int $userId, StudyPlanTask $task, int $limit): array
     {
-        $difficulties = $task->plan->scopeFilters()['difficulties'];
+        $filters = $task->plan->scopeFilters();
+        $difficulties = $filters['difficulties'];
+        $bookmarked = $filters['saved_only']
+            ? Bookmark::questionIdsForUser($userId)
+            : null;
         $incorrect = UserQuestionStatusModel::query()
             ->where('user_id', $userId)
             ->where('status', UserQuestionStatus::Incorrect)
+            ->when($bookmarked !== null, fn ($query) => $query->whereIn('question_id', $bookmarked))
             ->when(
                 $difficulties !== [],
                 fn ($query) => $query->whereHas(
@@ -83,8 +97,8 @@ final class PlanQuestionSelector
             $incorrect,
             $limit,
             $this->expandTopics($task->plan->scopeTopicIds()),
-            $this->answeredQuestionIds($userId),
-            null,
+            $bookmarked === null ? $this->answeredQuestionIds($userId) : [],
+            $bookmarked,
             $difficulties,
         );
 

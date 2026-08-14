@@ -9,11 +9,9 @@ use App\Support\Html\SafeHtml;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
-use Modules\QuestionBank\Enums\UserQuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionSession;
-use Modules\QuestionBank\Models\QuestionStatus as UserQuestionStatusModel;
 
 /** Persist sanitized per-question notes, stem highlights, key-info use and review flags. */
 final class SaveQuestionSessionAnnotationAction
@@ -91,10 +89,6 @@ final class SaveQuestionSessionAnnotationAction
                     ->where('session_id', $currentSession->getKey())
                     ->where('question_id', $question->getKey())
                     ->update(['flagged' => $flagged]);
-
-                if (Question::withTrashed()->whereKey($question->getKey())->exists()) {
-                    $this->syncMarkedFallback((int) $currentSession->user_id, $question, $flagged);
-                }
             }
 
             return $annotations[$key];
@@ -108,46 +102,6 @@ final class SaveQuestionSessionAnnotationAction
         if (! in_array((string) $question->getKey(), $questionIds, true)) {
             throw new InvalidArgumentException('Câu hỏi không thuộc phiên làm bài này.');
         }
-    }
-
-    /**
-     * Until Bookmark persistence lands, a flagged question is represented by
-     * `question_status=marked`. Unflagging restores the latest answer state.
-     */
-    private function syncMarkedFallback(int $userId, Question $question, bool $flagged): void
-    {
-        $status = UserQuestionStatusModel::firstOrNew([
-            'user_id' => $userId,
-            'question_id' => $question->getKey(),
-        ]);
-
-        if ($flagged) {
-            $status->forceFill(['status' => UserQuestionStatus::Marked])->save();
-
-            return;
-        }
-
-        if (! $status->exists || $status->status !== UserQuestionStatus::Marked) {
-            return;
-        }
-
-        $latestAttempt = QuestionAttempt::query()
-            ->where('user_id', $userId)
-            ->where('question_id', $question->getKey())
-            // Exam autosaves are deliberately ungraded and must not leak an
-            // omitted/correctness state before explicit completion.
-            ->whereNotNull('is_correct')
-            ->orderByDesc('answered_at')
-            ->orderByDesc('id')
-            ->first();
-
-        $restored = match (true) {
-            $latestAttempt === null => UserQuestionStatus::Unseen,
-            $latestAttempt->is_correct === true => UserQuestionStatus::Correct,
-            default => UserQuestionStatus::Incorrect,
-        };
-
-        $status->forceFill(['status' => $restored])->save();
     }
 
     /**
