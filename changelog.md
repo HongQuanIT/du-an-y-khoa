@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-08-14
+
+### Portal /teach Phase B — lớp và hồ sơ giảng viên
+- `/teach/classes`: danh sách, tạo và chi tiết stub lớp chữa đề (feedback QBank / exam); enum `ClassroomPurpose`/`MemberRole` bổ sung helper.
+- `/teach/profile`: hub hồ sơ giảng viên (thông tin, liên hệ, bảo mật, giao diện); cập nhật avatar.
+- Layout `/teach`: nav «Lớp của tôi», menu tài khoản (theme Sáng/Tối/Hệ thống, đăng xuất); dashboard «Bắt đầu nhanh».
+- Test `TeachClassroomTest`, `TeachProfileTest`.
+
 ## 2026-08-13
 
 ### Giao diện sáng/tối & menu tài khoản

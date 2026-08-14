@@ -14,6 +14,15 @@ enum MemberRole: string
     case Cohost = 'cohost';
     case Member = 'member';
 
+    public function label(): string
+    {
+        return match ($this) {
+            self::Host => 'Host',
+            self::Cohost => 'Cohost',
+            self::Member => 'Thành viên',
+        };
+    }
+
     public function canPublish(): bool
     {
         return $this === self::Host || $this === self::Cohost;
