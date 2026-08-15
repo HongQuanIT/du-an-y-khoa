@@ -31,8 +31,12 @@ final class ListQuestionsRequest extends FormRequest
 
     public function toData(): ListQuestionsData
     {
+        $query = strip_tags($this->string('q')->trim()->value());
+        $query = preg_replace('/[\x00-\x1F\x7F]+/u', ' ', $query) ?? '';
+        $query = preg_replace('/\s+/u', ' ', $query) ?? '';
+
         return new ListQuestionsData(
-            query: $this->string('q')->value() ?: null,
+            query: $query !== '' ? $query : null,
             difficulty: $this->input('filter.difficulty'),
             topicId: $this->has('filter.topic_id') ? $this->integer('filter.topic_id') : null,
             freeOnly: $this->has('filter.is_free') ? $this->boolean('filter.is_free') : null,

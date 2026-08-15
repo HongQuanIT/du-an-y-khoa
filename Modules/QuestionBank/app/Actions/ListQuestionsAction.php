@@ -8,9 +8,12 @@ use App\Models\User;
 use App\Support\Concerns\AsAction;
 use App\Support\Enums\Entitlement;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Modules\QuestionBank\Data\ListQuestionsData;
+use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Repositories\QuestionRepository;
+use Throwable;
 
 /**
  * Use case: list published questions.
@@ -40,11 +43,38 @@ final class ListQuestionsAction
         }
 
         if ($data->query !== null && $data->query !== '') {
-            return Question::search($data->query)
-                ->when($data->difficulty, fn ($search) => $search->where('difficulty', $data->difficulty))
-                ->when($data->topicId, fn ($search) => $search->where('topic_id', $data->topicId))
-                ->when($data->freeOnly, fn ($search) => $search->where('is_free', true))
-                ->paginate($data->perPage);
+            if (config('scout.driver') !== 'meilisearch') {
+                return $this->questions->paginatePublished($data);
+            }
+
+            try {
+                $paginator = Question::search($data->query)
+                    ->when($data->difficulty, fn ($search) => $search->where('difficulty', $data->difficulty))
+                    ->when($data->topicId, fn ($search) => $search->where('topic_id', $data->topicId))
+                    ->when(
+                        $data->freeOnly !== null,
+                        fn ($search) => $search->where('is_free', $data->freeOnly),
+                    )
+                    // Search-index values are eventually consistent. Re-apply
+                    // access boundaries to current DB rows before serialising.
+                    ->query(fn (EloquentBuilder $query) => $query
+                        ->where('status', QuestionStatus::Published)
+                        ->when(
+                            $data->freeOnly !== null,
+                            fn (EloquentBuilder $query) => $query->where('is_free', $data->freeOnly),
+                        ))
+                    ->paginate($data->perPage);
+
+                if ($paginator->count() === 0) {
+                    return $this->questions->paginatePublished($data);
+                }
+
+                return $paginator;
+            } catch (Throwable $exception) {
+                report($exception);
+
+                return $this->questions->paginatePublished($data);
+            }
         }
 
         return $this->questions->paginatePublished($data);

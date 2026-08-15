@@ -16,12 +16,14 @@ use Laravel\Scout\Searchable;
 use Modules\QuestionBank\Database\Factories\QuestionFactory;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionStatus;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * A single QBank question (reference implementation of the module pattern).
  *
  * @property string $id
  * @property string $stem
+ * @property string|null $stem_image_path
  * @property string|null $explanation
  * @property array<int, string>|null $key_info
  * @property string|null $attending_tip
@@ -44,6 +46,7 @@ class Question extends Model
 
     protected $fillable = [
         'stem',
+        'stem_image_path',
         'explanation',
         'key_info',
         'attending_tip',
@@ -71,6 +74,24 @@ class Question extends Model
     public function options(): HasMany
     {
         return $this->hasMany(QuestionOption::class, 'question_id');
+    }
+
+    public function stemImageUrl(): ?string
+    {
+        $path = $this->getAttributes()['stem_image_path'] ?? null;
+        if (! is_string($path) || $path === '') {
+            return null;
+        }
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        if (str_starts_with($path, '/storage/')) {
+            return $path;
+        }
+
+        return Storage::disk('public')->url($path);
     }
 
     /** @return HasMany<QuestionScope, $this> */
@@ -116,9 +137,16 @@ class Question extends Model
      */
     public function toSearchableArray(): array
     {
+        $plainStem = strip_tags(html_entity_decode(
+            (string) $this->stem,
+            ENT_QUOTES | ENT_HTML5,
+            'UTF-8',
+        ));
+        $plainStem = trim(preg_replace('/\s+/u', ' ', $plainStem) ?? $plainStem);
+
         return [
             'id' => $this->getKey(),
-            'stem' => $this->stem,
+            'stem' => $plainStem,
             'difficulty' => $this->difficulty->value,
             'topic_id' => $this->topic_id,
             'is_free' => $this->is_free,

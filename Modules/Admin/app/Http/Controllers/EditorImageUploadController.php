@@ -32,6 +32,7 @@ final class EditorImageUploadController extends Controller
         $path = $file->storeAs('question-editor/'.now()->format('Y/m'), $name, 'public');
 
         return response()->json([
+            'path' => $path,
             'url' => Storage::disk('public')->url($path),
         ]);
     }
