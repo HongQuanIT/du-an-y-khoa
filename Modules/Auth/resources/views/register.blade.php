@@ -63,8 +63,8 @@
                 <input class="mt-1 w-4 h-4 text-primary border-border rounded focus:ring-primary" id="terms" name="terms"
                     type="checkbox" value="1" @checked(old('terms')) required>
                 <label class="font-body-sm text-body-sm text-on-surface-variant leading-tight" for="terms">
-                    Tôi đồng ý với <a class="text-primary font-medium hover:underline" href="#">Điều khoản</a>
-                    &amp; <a class="text-primary font-medium hover:underline" href="#">Chính sách bảo mật</a>
+                    Tôi đồng ý với <a class="text-primary font-medium hover:underline" href="{{ route('landing.terms') }}">Điều khoản</a>
+                    &amp; <a class="text-primary font-medium hover:underline" href="{{ route('landing.privacy') }}">Chính sách bảo mật</a>
                     của {{ config('app.name') }}.
                 </label>
             </div>

@@ -37,6 +37,8 @@
 
 <x-layouts.app title="Trang chủ học tập">
     <div class="mx-auto max-w-[1200px] space-y-gutter p-margin-mobile md:p-margin-desktop">
+        <x-cms.announcement-banners placement="dashboard" />
+
         <!-- Greeting & Streak -->
         <div class="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
             <div>

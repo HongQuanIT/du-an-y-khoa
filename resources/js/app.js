@@ -3,8 +3,15 @@ import { bootLivekitRooms } from './classroom/livekit-room';
 import { bootLiveRooms } from './classroom/live-room';
 import { registerRichEditor } from './admin/rich-editor';
 import { bootstrapTheme } from './theme';
+import { bootstrapCookieConsent, registerCookieBannerAlpine } from './cookie-consent';
 
 bootstrapTheme();
+bootstrapCookieConsent();
+
+// Register Alpine.data before Livewire boots Alpine (and on alpine:init as fallback).
+document.addEventListener('alpine:init', () => {
+    registerCookieBannerAlpine(window.Alpine ?? Alpine);
+});
 
 // Reverb is optional. Do not open an idle WebSocket on every page when no
 // realtime feature is enabled; this also avoids stale sockets during BFCache
@@ -20,10 +27,15 @@ if (! window.__medlearnLivewireStarted) {
     window.__medlearnLivewireStarted = true;
     window.Alpine = Alpine;
     registerRichEditor(Alpine);
+    registerCookieBannerAlpine(Alpine);
     Livewire.start();
-} else if (! window.Alpine) {
+} else if (window.Alpine) {
+    registerRichEditor(window.Alpine);
+    registerCookieBannerAlpine(window.Alpine);
+} else {
     window.Alpine = Alpine;
     registerRichEditor(Alpine);
+    registerCookieBannerAlpine(Alpine);
 }
 
 const bootClassroom = () => {

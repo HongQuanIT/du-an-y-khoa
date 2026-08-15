@@ -7,21 +7,27 @@ namespace Modules\Landing\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Modules\Admin\Models\Faq;
+use Modules\Admin\Support\Cms\CmsPageSeo;
+use Modules\Admin\Support\Enums\CmsPageKey;
+use Modules\Admin\Support\Enums\FaqCategory;
 use Modules\Billing\Actions\ListPublicPlansAction;
 use Modules\Billing\Models\PlanPrice;
 use Modules\Billing\Support\CurrentSubscription;
-use Modules\Billing\Support\MoneyFormatter;
+use Modules\Landing\Support\PublicSeo;
+use Modules\Landing\Support\ResolvedCmsPage;
 
 class LandingController extends Controller
 {
     public function home(): View
     {
-        return view('landing::home');
+        return $this->renderLandingBlocks(CmsPageKey::Home, 'landing::home');
     }
 
     public function features(): View
     {
-        return view('landing::features');
+        return $this->renderLandingBlocks(CmsPageKey::Features, 'landing::features');
     }
 
     public function pricing(Request $request, ListPublicPlansAction $list): View
@@ -51,21 +57,84 @@ class LandingController extends Controller
             'monthlyPrice' => $catalog['monthlyPrice'],
             'yearlyForAlpine' => $yearlyForAlpine,
             'current' => $current,
+            'seo' => PublicSeo::forStatic(
+                title: 'Bảng giá',
+                description: 'So sánh gói Free và Premium — chọn lộ trình ôn thi Y khoa phù hợp ngân sách của bạn.',
+                routeName: 'landing.pricing',
+            ),
         ]);
     }
 
     public function about(): View
     {
-        return view('landing::about');
+        return $this->renderCmsPage(CmsPageKey::About, 'landing::about');
     }
 
     public function contact(): View
     {
-        return view('landing::contact');
+        return $this->renderCmsPage(CmsPageKey::Contact, 'landing::contact');
+    }
+
+    public function terms(): View
+    {
+        return $this->renderCmsPage(CmsPageKey::Terms, 'landing::terms');
+    }
+
+    public function privacy(): View
+    {
+        return $this->renderCmsPage(CmsPageKey::Privacy, 'landing::privacy');
     }
 
     public function faq(): View
     {
-        return view('landing::faq');
+        /** @var Collection<string, Collection<int, Faq>> $faqsByCategory */
+        $faqsByCategory = Faq::query()
+            ->published()
+            ->ordered()
+            ->get()
+            ->groupBy(fn (Faq $faq): string => $faq->category->value);
+
+        return view('landing::faq', [
+            'categories' => FaqCategory::cases(),
+            'faqsByCategory' => $faqsByCategory,
+            'seo' => PublicSeo::forStatic(
+                title: 'Câu hỏi thường gặp',
+                description: 'Giải đáp thắc mắc về tài khoản, gói học, thanh toán và cách luyện thi trên nền tảng.',
+                routeName: 'landing.faq',
+                schemaType: CmsPageSeo::SCHEMA_WEB_PAGE,
+            ),
+        ]);
+    }
+
+    private function renderCmsPage(CmsPageKey $key, string $view): View
+    {
+        $page = ResolvedCmsPage::published($key);
+
+        abort_if($page === null, 404);
+
+        return view($view, [
+            'page' => $page,
+            'content' => ResolvedCmsPage::content($key),
+            'pageTitle' => $page->title ?: $key->defaultTitle(),
+            'seo' => PublicSeo::forCms($key, $page),
+        ]);
+    }
+
+    /** Home/Features always render; draft falls back to defaults (no 404). */
+    private function renderLandingBlocks(CmsPageKey $key, string $view): View
+    {
+        $page = ResolvedCmsPage::published($key);
+
+        return view($view, [
+            'page' => $page,
+            'content' => ResolvedCmsPage::content($key),
+            'seo' => $page !== null
+                ? PublicSeo::forCms($key, $page)
+                : PublicSeo::forStatic(
+                    title: $key->defaultTitle(),
+                    description: $key->defaultSeoDescription(),
+                    routeName: $key->routeName(),
+                ),
+        ]);
     }
 }

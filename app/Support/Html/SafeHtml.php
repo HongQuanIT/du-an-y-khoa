@@ -11,6 +11,8 @@ final class SafeHtml
 {
     private const ALLOWED_TAGS = '<p><br><strong><b><em><i><u><s><ul><ol><li><h2><h3><blockquote><a><img><sub><sup><span>';
 
+    private const CMS_PAGE_TAGS = '<p><br><strong><b><em><i><u><s><ul><ol><li><h1><h2><h3><h4><blockquote><a><img><sub><sup><span><div><section><article><header><footer><hr>';
+
     public static function fromEditor(?string $html): string
     {
         if ($html === null) {
@@ -24,6 +26,21 @@ final class SafeHtml
         }
 
         return self::sanitize($html);
+    }
+
+    public static function fromCmsPage(?string $html): string
+    {
+        if ($html === null) {
+            return '';
+        }
+
+        $html = trim($html);
+
+        if ($html === '' || $html === '<p><br></p>' || $html === '<p></p>') {
+            return '';
+        }
+
+        return self::sanitizeCmsPage($html);
     }
 
     /**
@@ -40,6 +57,19 @@ final class SafeHtml
         }
 
         return self::sanitize($value);
+    }
+
+    public static function forCmsPage(?string $value): string
+    {
+        if ($value === null || $value === '') {
+            return '';
+        }
+
+        if (! self::looksLikeHtml($value)) {
+            return nl2br(e($value), false);
+        }
+
+        return self::sanitizeCmsPage($value);
     }
 
     public static function plainText(?string $value): string
@@ -95,6 +125,79 @@ final class SafeHtml
         ) ?? $clean;
 
         return $clean;
+    }
+
+    private static function sanitizeCmsPage(string $html): string
+    {
+        $clean = strip_tags($html, self::CMS_PAGE_TAGS);
+        $clean = preg_replace('/\s+on\w+\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)/i', '', $clean) ?? $clean;
+        $clean = preg_replace('/javascript\s*:/i', '', $clean) ?? $clean;
+
+        $clean = preg_replace_callback(
+            '/<a\b([^>]*)>/i',
+            static function (array $matches): string {
+                $attrs = $matches[1];
+                $href = self::extractAttr($attrs, 'href');
+                if ($href === null || ! self::isSafeUrl($href)) {
+                    return '<a>';
+                }
+
+                return self::rebuildTag('a', $attrs, [
+                    'href' => $href,
+                    'rel' => 'noopener noreferrer',
+                ]);
+            },
+            $clean,
+        ) ?? $clean;
+
+        $clean = preg_replace_callback(
+            '/<img\b([^>]*)>/i',
+            static function (array $matches): string {
+                $attrs = $matches[1];
+                $src = self::extractAttr($attrs, 'src');
+                if ($src === null || ! self::isSafeImageUrl($src)) {
+                    return '';
+                }
+
+                return self::rebuildTag('img', $attrs, [
+                    'src' => $src,
+                    'alt' => self::extractAttr($attrs, 'alt') ?? '',
+                ], true);
+            },
+            $clean,
+        ) ?? $clean;
+
+        return $clean;
+    }
+
+    /**
+     * @param  array<string, string>  $overrides
+     */
+    private static function rebuildTag(string $tag, string $attrs, array $overrides, bool $selfClosing = false): string
+    {
+        $allowed = ['class', 'id', 'title', 'width', 'height', 'loading', 'decoding', 'style', 'aria-label'];
+        $parts = [];
+
+        foreach ($overrides as $name => $value) {
+            $parts[] = $name.'="'.e($value).'"';
+        }
+
+        foreach ($allowed as $name) {
+            if (array_key_exists($name, $overrides)) {
+                continue;
+            }
+
+            $value = self::extractAttr($attrs, $name);
+            if ($value !== null && $value !== '') {
+                $parts[] = $name.'="'.e($value).'"';
+            }
+        }
+
+        $joined = implode(' ', $parts);
+
+        return $selfClosing
+            ? '<'.$tag.' '.$joined.'>'
+            : '<'.$tag.' '.$joined.'>';
     }
 
     private static function extractAttr(string $attrs, string $name): ?string

@@ -27,7 +27,7 @@
     $monthlyCta = $ctaForTier('premium', $monthlyPrice?->cta_label ?? 'Nâng cấp theo tháng');
 @endphp
 
-<x-layouts.public title="Bảng giá">
+<x-layouts.public :seo="$seo">
     <div class="w-full max-w-container-max mx-auto px-margin-mobile md:px-gutter py-16"
         x-data="{
             years: {{ $defaultYears }},

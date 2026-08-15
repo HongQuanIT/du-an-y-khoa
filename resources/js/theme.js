@@ -13,8 +13,10 @@ export function resolveThemeMode(preference) {
 }
 
 export function applyThemeMode(mode) {
+    const lock = document.documentElement.dataset.themeLock;
+    const resolved = (lock === 'light' || lock === 'dark') ? lock : (mode === 'dark' ? 'dark' : 'light');
     document.documentElement.classList.remove('light', 'dark');
-    document.documentElement.classList.add(mode === 'dark' ? 'dark' : 'light');
+    document.documentElement.classList.add(resolved);
 }
 
 export function applyTheme(preference) {
@@ -22,6 +24,10 @@ export function applyTheme(preference) {
 }
 
 export function getStoredTheme() {
+    if (typeof window.__forceTheme === 'string' && (window.__forceTheme === 'light' || window.__forceTheme === 'dark')) {
+        return window.__forceTheme;
+    }
+
     if (typeof window.__userThemePreference === 'string') {
         return window.__userThemePreference;
     }
@@ -92,6 +98,10 @@ export function bootstrapTheme() {
     initTheme();
 
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+        if (typeof window.__forceTheme === 'string') {
+            return;
+        }
+
         if (getStoredTheme() === 'system') {
             applyTheme('system');
         }

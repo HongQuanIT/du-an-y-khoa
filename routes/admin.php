@@ -9,6 +9,10 @@ use Modules\Admin\Http\Controllers\AuditLogController;
 use Modules\Admin\Http\Controllers\BillingPlanController;
 use Modules\Admin\Http\Controllers\BillingSubscriptionController;
 use Modules\Admin\Http\Controllers\ClassroomOversightController;
+use Modules\Admin\Http\Controllers\Cms\BannerController;
+use Modules\Admin\Http\Controllers\Cms\FaqController;
+use Modules\Admin\Http\Controllers\Cms\MenuController;
+use Modules\Admin\Http\Controllers\Cms\PageController;
 use Modules\Admin\Http\Controllers\EditorImageUploadController;
 use Modules\Admin\Http\Controllers\QuestionController;
 use Modules\Admin\Http\Controllers\RoleController;
@@ -111,6 +115,34 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
         Route::post('/editor/images', EditorImageUploadController::class)
             ->middleware('throttle:30,1')
             ->name('editor.images');
+
+        Route::middleware('permission:'.Permission::CmsManage->value)->group(function (): void {
+            Route::redirect('/cms', '/cms/pages')->name('cms.index');
+            Route::get('/cms/faq', [FaqController::class, 'index'])->name('cms.faq.index');
+            Route::get('/cms/faq/create', [FaqController::class, 'create'])->name('cms.faq.create');
+            Route::post('/cms/faq', [FaqController::class, 'store'])->name('cms.faq.store');
+            Route::get('/cms/faq/{faq}/edit', [FaqController::class, 'edit'])->name('cms.faq.edit');
+            Route::put('/cms/faq/{faq}', [FaqController::class, 'update'])->name('cms.faq.update');
+            Route::delete('/cms/faq/{faq}', [FaqController::class, 'destroy'])->name('cms.faq.destroy');
+            Route::post('/cms/faq/{faq}/move-up', [FaqController::class, 'moveUp'])->name('cms.faq.move-up');
+            Route::post('/cms/faq/{faq}/move-down', [FaqController::class, 'moveDown'])->name('cms.faq.move-down');
+
+            Route::get('/cms/pages', [PageController::class, 'index'])->name('cms.pages.index');
+            Route::get('/cms/pages/{cmsPage}/edit', [PageController::class, 'edit'])->name('cms.pages.edit');
+            Route::put('/cms/pages/{cmsPage}', [PageController::class, 'update'])->name('cms.pages.update');
+
+            Route::get('/cms/banners', [BannerController::class, 'index'])->name('cms.banners.index');
+            Route::get('/cms/banners/create', [BannerController::class, 'create'])->name('cms.banners.create');
+            Route::post('/cms/banners', [BannerController::class, 'store'])->name('cms.banners.store');
+            Route::get('/cms/banners/{banner}/edit', [BannerController::class, 'edit'])->name('cms.banners.edit');
+            Route::put('/cms/banners/{banner}', [BannerController::class, 'update'])->name('cms.banners.update');
+            Route::delete('/cms/banners/{banner}', [BannerController::class, 'destroy'])->name('cms.banners.destroy');
+            Route::post('/cms/banners/{banner}/toggle', [BannerController::class, 'toggle'])->name('cms.banners.toggle');
+
+            Route::get('/cms/menus', [MenuController::class, 'index'])->name('cms.menus.index');
+            Route::get('/cms/menus/{menu}/edit', [MenuController::class, 'edit'])->name('cms.menus.edit');
+            Route::put('/cms/menus/{menu}', [MenuController::class, 'update'])->name('cms.menus.update');
+        });
 
         Route::middleware('permission:'.Permission::BillingManage->value)->group(function (): void {
             Route::get('/billing/plans', [BillingPlanController::class, 'index'])->name('billing.plans.index');

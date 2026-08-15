@@ -1,6 +1,60 @@
 # Changelog
 
+## 2026-08-15
+
+### Public — Cookie consent (localStorage + cookie)
+- Banner cookie: Chấp nhận / Từ chối ghi `cookie_consent` vào **localStorage** và cookie 1 năm (`SameSite=Lax`).
+- Đã chọn → không hiện lại; footer **Cookie Settings** (`#cookie-settings`) mở lại banner để đổi lựa chọn.
+- API `window.CookieConsent` (`get` / `set` / `allowsAnalytics`) cho analytics sau này; link Chính sách bảo mật trên banner.
+- Fix persist: banner vanilla JS + `style.display` (Tailwind `flex` ghi đè HTML `[hidden]`); xóa hash `#cookie-settings` sau khi chọn.
+
+### CMS Phần 7 — Menu (header / footer)
+- Bảng `menus` (key + items JSON); catalog cố định `header` / `footer`.
+- Admin `/admin/cms/menus`: sửa label, loại route|url (allowlist), bật/tắt, sắp xếp ↑↓, thêm/xóa.
+- Public header + footer đọc `ResolvedMenu` (cache plain array); Đăng nhập/Đăng ký giữ cứng.
+- Seeder `MenuSeeder`; audit `cms.menu.update`; test `AdminCmsMenuTest`.
+
+### CMS Phần 5 — Landing blocks (home, features)
+- Catalog CMS thêm `home` / `features`; tab **Landing** quản lý riêng (copy/ảnh theo section, layout Blade cố định).
+- Public `/` và `/features` luôn mở: đã publish → nội dung CMS + SEO; nháp → defaults (không 404).
+- Form admin `home` / `features`; seeder xuất bản sẵn; sitemap không trùng URL landing.
+- Test mở rộng `AdminCmsPageTest`, `CmsPageSeederTest`.
+
+### CMS Phần 3 — Banner + hiển thị landing/dashboard
+- Bảng `banners` (nội dung, CTA, variant, placement, audience, lịch, bật/tắt, dismissible).
+- Admin `/admin/cms/banners`: CRUD, lọc, toggle nhanh; audit `cms.banner.*`.
+- Component `<x-cms.announcement-banners>` trên landing home + dashboard học viên (target Free/Premium/guest…).
+- Seeder 2 banner mẫu; test `AdminCmsBannerTest`.
+
+
 ## 2026-08-14
+
+### Fix — 404 / landing public luôn sáng
+- `theme-init` hỗ trợ `force="light"`; layout public + `errors/404` khóa light (không theo OS/admin dark).
+
+### CMS — Publish/unpublish + 404
+- Form admin chỉnh layout (section phẳng, sticky actions, URL rõ khi xuất bản).
+- Xuất bản / Lưu thay đổi / Ngừng xuất bản; ngừng xuất bản → URL public trả 404; sitemap chỉ liệt kê trang đã publish.
+- Trang `errors/404` theo layout public (header/footer, CTA, lối tắt SaaS).
+
+### CMS / SEO — On-page (Yoast-style) + sitemap
+- Admin CMS: focus keyphrase, SEO title/description, keywords, canonical, robots index/follow, OG, Twitter Card, schema type.
+- Public layout: meta robots/keywords, canonical, Open Graph, Twitter Card, JSON-LD (Organization + WebSite + WebPage/AboutPage/ContactPage).
+- `/sitemap.xml` (tự cập nhật CMS + landing), `/robots.txt` động kèm Sitemap URL; footer link Sitemap.
+
+### CMS Phần 3 — Nội dung có cấu trúc (JSON theo section)
+- Migration `2026_08_15_140000` thêm `content` / drop `body` cho DB đã tạo trước (tránh lỗi MissingAttribute `content`).
+- Cột `content` JSON thay `body`; admin nhập text/URL ảnh theo từng phần, không sửa HTML.
+- Blade public giữ layout cố định; `CmsPageDefaults` + `CmsPageContentResolver` merge mặc định với DB.
+- Form admin theo trang: about (hero/story/values/stats/experts/partners/cta), contact, terms/privacy (sections).
+- Cache CMS lưu page ID (fix `__PHP_Incomplete_Class`); `ResolvedCmsPage::forget()` khi lưu.
+
+### CMS Phần 2 — Trang tĩnh (admin + public terms/privacy)
+- Bảng `faqs`, CRUD admin `/admin/cms/faq` (sub-nav CMS, KPI, lọc, sắp xếp lên/xuống).
+- Rich editor + sanitize HTML; trạng thái nháp/xuất bản; audit `cms.faq.*`.
+- Public `/faq` đọc FAQ đã xuất bản theo danh mục; tìm kiếm client-side; empty state.
+- Seeder 4 FAQ mẫu; role `content_editor` được `cms.manage`; menu CMS trỏ `/admin/cms/faq`.
+- Test `AdminCmsFaqTest`.
 
 ### Catalog /classes — card và duyệt lớp giảng viên
 - Card lớp: cover fallback theo `purpose`, avatar host, badge live/VOD/lịch, filter (live/sắp tới/recording).
