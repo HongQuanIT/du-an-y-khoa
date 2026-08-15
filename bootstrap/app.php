@@ -72,6 +72,9 @@ return Application::configure(basePath: dirname(__DIR__))
         });
         $middleware->redirectUsersTo(fn (Request $request) => HomePath::for($request->user()));
 
+        // JS-owned consent cookie must not be encrypted / stripped by Laravel.
+        $middleware->encryptCookies(except: ['cookie_consent']);
+
         // Route middleware aliases.
         $middleware->alias([
             'learner' => EnsureLearner::class,

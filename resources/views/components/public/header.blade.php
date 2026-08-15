@@ -1,11 +1,7 @@
 @php
-    $navLinks = [
-        ['label' => 'Tính năng', 'route' => 'landing.features'],
-        ['label' => 'Bảng giá', 'route' => 'landing.pricing'],
-        ['label' => 'Về chúng tôi', 'route' => 'landing.about'],
-        ['label' => 'Liên hệ', 'route' => 'landing.contact'],
-        ['label' => 'FAQ', 'route' => 'landing.faq'],
-    ];
+    use Modules\Admin\Support\Cms\ResolvedMenu;
+
+    $navLinks = ResolvedMenu::headerLinks();
 @endphp
 
 <nav x-data="{ open: false }"
@@ -16,11 +12,11 @@
 
         <div class="hidden md:flex items-center gap-8">
             @foreach ($navLinks as $link)
-                <a href="{{ route($link['route']) }}"
+                <a href="{{ $link['href'] }}"
                     @class([
                         'transition-colors duration-200 font-label-md text-label-md',
-                        'text-primary font-bold' => request()->routeIs($link['route']),
-                        'text-on-surface-variant hover:text-primary' => !request()->routeIs($link['route']),
+                        'text-primary font-bold' => $link['route'] && request()->routeIs($link['route']),
+                        'text-on-surface-variant hover:text-primary' => ! ($link['route'] && request()->routeIs($link['route'])),
                     ])>{{ $link['label'] }}</a>
             @endforeach
         </div>
@@ -46,11 +42,11 @@
     <div x-show="open" x-cloak x-transition.origin.top
         class="md:hidden border-t border-border bg-surface px-margin-mobile py-4 space-y-1">
         @foreach ($navLinks as $link)
-            <a href="{{ route($link['route']) }}"
+            <a href="{{ $link['href'] }}"
                 @class([
                     'block px-3 py-2.5 rounded-lg font-label-md text-label-md transition-colors',
-                    'bg-primary-fixed/20 text-primary' => request()->routeIs($link['route']),
-                    'text-on-surface-variant hover:bg-surface-container-low' => !request()->routeIs($link['route']),
+                    'bg-primary-fixed/20 text-primary' => $link['route'] && request()->routeIs($link['route']),
+                    'text-on-surface-variant hover:bg-surface-container-low' => ! ($link['route'] && request()->routeIs($link['route'])),
                 ])>{{ $link['label'] }}</a>
         @endforeach
         <div class="pt-3 mt-2 border-t border-border flex flex-col gap-3">

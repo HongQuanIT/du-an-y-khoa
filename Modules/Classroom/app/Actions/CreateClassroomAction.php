@@ -37,7 +37,7 @@ final class CreateClassroomAction
                 'purpose' => $purpose,
                 'visibility' => $visibility,
                 'join_code' => $this->makeJoinCode(),
-                'status' => ClassroomStatus::Active,
+                'status' => ClassroomStatus::PendingApproval,
                 'max_members' => $data['max_members'] ?? null,
             ]);
 

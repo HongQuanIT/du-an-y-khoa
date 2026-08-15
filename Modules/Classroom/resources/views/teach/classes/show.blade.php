@@ -25,6 +25,9 @@
                     <span class="rounded-full bg-surface-container-high px-2.5 py-0.5 font-label-sm text-on-surface-variant">
                         {{ $classroom->visibility->label() }}
                     </span>
+                    @if ($classroom->status === \Modules\Classroom\Enums\ClassroomStatus::PendingApproval)
+                        <span class="rounded-full bg-tertiary/15 px-2.5 py-0.5 font-label-sm font-semibold text-tertiary">Chờ duyệt</span>
+                    @endif
                     @if ($classroom->liveSession)
                         <span class="rounded-full bg-error/10 px-2.5 py-0.5 font-label-sm font-semibold text-error">LIVE</span>
                     @endif
@@ -47,6 +50,12 @@
             </div>
         </div>
     </div>
+
+    @if ($classroom->status === \Modules\Classroom\Enums\ClassroomStatus::PendingApproval)
+        <div class="mb-6 rounded-xl border border-tertiary/30 bg-tertiary/10 px-4 py-3 font-body-sm text-body-sm text-on-surface">
+            Lớp đang <strong>chờ admin duyệt</strong>. Học viên chưa thấy trên catalog; sau khi duyệt bạn mới có thể bắt đầu live.
+        </div>
+    @endif
 
     <div class="grid gap-6 lg:grid-cols-3">
         <div class="space-y-6 lg:col-span-2">

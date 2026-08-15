@@ -25,6 +25,11 @@ class DatabaseSeeder extends Seeder
 
         $this->call(\Modules\Billing\Database\Seeders\BillingDatabaseSeeder::class);
 
+        $this->call(\Modules\Admin\Database\Seeders\FaqSeeder::class);
+        $this->call(\Modules\Admin\Database\Seeders\CmsPageSeeder::class);
+        $this->call(\Modules\Admin\Database\Seeders\BannerSeeder::class);
+        $this->call(\Modules\Admin\Database\Seeders\MenuSeeder::class);
+
         $this->command->info('Đăng nhập dev: student@medlearn.local / password (admin@medlearn.local cho khu vực admin).');
     }
 }

@@ -51,6 +51,7 @@ final class ClassroomShowController extends Controller
             'isMember' => $classroom->isActiveMember($user),
             'canManage' => $user->can('update', $classroom),
             'canHostLive' => $user->can('manageLive', $classroom),
+            'canStartLive' => $user->can('startLive', $classroom),
             'canHostEntitlement' => $user->hasEntitlement(Entitlement::ClassroomHost->value),
             'qbankSessions' => $qbankSessions,
             'sampleQuestions' => $sampleQuestions,

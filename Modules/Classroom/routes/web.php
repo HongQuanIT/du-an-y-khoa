@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
-use Modules\Classroom\Http\Controllers\ClassroomCreateController;
 use Modules\Classroom\Http\Controllers\ClassroomIndexController;
 use Modules\Classroom\Http\Controllers\ClassroomInviteController;
 use Modules\Classroom\Http\Controllers\ClassroomMembershipController;
@@ -27,8 +26,6 @@ Route::middleware(['auth', 'learner'])
     ->scopeBindings()
     ->group(function (): void {
         Route::get('/', ClassroomIndexController::class)->name('index');
-        Route::get('/create', [ClassroomCreateController::class, 'create'])->name('create');
-        Route::post('/', [ClassroomCreateController::class, 'store'])->name('store');
 
         Route::get('/{classroom}', ClassroomShowController::class)->name('show');
         Route::get('/{classroom}/settings', [ClassroomSettingsController::class, 'edit'])->name('settings');

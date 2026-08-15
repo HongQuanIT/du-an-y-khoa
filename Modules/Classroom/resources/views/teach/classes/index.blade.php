@@ -70,6 +70,8 @@
                             <td class="px-4 py-3">
                                 @if ($classroom->liveSession)
                                     <span class="rounded-full bg-error/10 px-2 py-0.5 font-label-sm font-semibold text-error">LIVE</span>
+                                @elseif ($classroom->status === \Modules\Classroom\Enums\ClassroomStatus::PendingApproval)
+                                    <span class="rounded-full bg-tertiary/15 px-2 py-0.5 font-label-sm font-semibold text-tertiary">Chờ duyệt</span>
                                 @elseif ($classroom->sessions->isNotEmpty())
                                     <span class="rounded-full bg-surface-container-high px-2 py-0.5 font-label-sm text-on-surface-variant">
                                         Sắp live

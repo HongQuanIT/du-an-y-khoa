@@ -9,6 +9,7 @@ use App\Support\Enums\Role;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Classroom\Enums\ClassroomPurpose;
+use Modules\Classroom\Enums\ClassroomStatus;
 use Modules\Classroom\Enums\ClassroomVisibility;
 use Modules\Classroom\Enums\MemberRole;
 use Modules\Classroom\Enums\MemberStatus;
@@ -58,6 +59,7 @@ final class TeachClassroomTest extends TestCase
         $this->assertNotNull($classroom);
         $this->assertSame(ClassroomPurpose::FeedbackReview, $classroom->purpose);
         $this->assertSame($instructor->id, $classroom->host_user_id);
+        $this->assertSame(ClassroomStatus::PendingApproval, $classroom->status);
 
         $this->actingAs($instructor)
             ->get(route('teach.classes.show', $classroom))

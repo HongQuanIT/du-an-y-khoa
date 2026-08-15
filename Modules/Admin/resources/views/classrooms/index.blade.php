@@ -1,8 +1,20 @@
 <x-layouts.admin title="Lớp học">
     <x-admin.page-header title="Lớp học (giám sát)"
-        description="Xem mọi lớp trên hệ thống. Force-end live hoặc lưu trữ khi cần — không thay workspace giảng viên." />
+        description="Duyệt lớp giảng viên, force-end live hoặc lưu trữ khi cần." />
 
     <x-admin.flash />
+
+    @if ($pendingCount > 0)
+        <div class="mb-6 flex flex-col gap-3 rounded-xl border border-tertiary/30 bg-tertiary/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <p class="font-body-sm text-body-sm text-on-surface">
+                <span class="font-semibold">{{ $pendingCount }}</span> lớp đang chờ duyệt trước khi hiển thị cho học viên.
+            </p>
+            <a href="{{ route('admin.classrooms.index', ['status' => \Modules\Classroom\Enums\ClassroomStatus::PendingApproval->value]) }}"
+                class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 font-label-md text-label-md text-on-primary hover:opacity-90">
+                Xem chờ duyệt
+            </a>
+        </div>
+    @endif
 
     <form method="get" action="{{ route('admin.classrooms.index') }}"
         class="mb-6 grid grid-cols-1 gap-3 rounded-xl border border-outline-variant bg-surface p-4 sm:grid-cols-4">
@@ -67,8 +79,12 @@
                         <td class="px-4 py-3 text-on-surface-variant">
                             {{ $classroom->purpose?->label() ?? '—' }}
                         </td>
-                        <td class="px-4 py-3 text-on-surface-variant">
-                            {{ $classroom->status->label() }}
+                        <td class="px-4 py-3">
+                            @if ($classroom->status === \Modules\Classroom\Enums\ClassroomStatus::PendingApproval)
+                                <span class="font-label-sm text-label-sm font-semibold text-tertiary">{{ $classroom->status->label() }}</span>
+                            @else
+                                <span class="text-on-surface-variant">{{ $classroom->status->label() }}</span>
+                            @endif
                         </td>
                         <td class="px-4 py-3 text-on-surface-variant">
                             {{ $classroom->active_members_count }}
@@ -82,6 +98,23 @@
                         </td>
                         <td class="px-4 py-3">
                             <div class="flex flex-wrap justify-end gap-2">
+                                @if ($classroom->status === \Modules\Classroom\Enums\ClassroomStatus::PendingApproval)
+                                    <form method="post" action="{{ route('admin.classrooms.approve', $classroom) }}">
+                                        @csrf
+                                        <button type="submit"
+                                            class="rounded-lg bg-primary px-3 py-1.5 font-label-sm text-label-sm font-semibold text-on-primary hover:opacity-90">
+                                            Duyệt
+                                        </button>
+                                    </form>
+                                    <form method="post" action="{{ route('admin.classrooms.reject', $classroom) }}"
+                                        onsubmit="return confirm('Từ chối lớp này?')">
+                                        @csrf
+                                        <button type="submit"
+                                            class="rounded-lg border border-outline-variant px-3 py-1.5 font-label-sm text-label-sm text-on-surface hover:bg-surface-container-low">
+                                            Từ chối
+                                        </button>
+                                    </form>
+                                @endif
                                 @if ($classroom->live_sessions_count > 0)
                                     <form method="post" action="{{ route('admin.classrooms.force-end', $classroom) }}"
                                         onsubmit="return confirm('Force-end buổi live của lớp này?')">

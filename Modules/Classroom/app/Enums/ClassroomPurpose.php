@@ -45,4 +45,23 @@ enum ClassroomPurpose: string
     {
         return [self::FeedbackReview, self::ExamReview];
     }
+
+    public function coverIcon(): string
+    {
+        return match ($this) {
+            self::CommunityReview => 'groups',
+            self::FeedbackReview => 'flag',
+            self::ExamReview => 'quiz',
+        };
+    }
+
+    /** Tailwind gradient classes for default catalog cover. */
+    public function coverGradientClass(): string
+    {
+        return match ($this) {
+            self::CommunityReview => 'from-primary to-primary-container',
+            self::FeedbackReview => 'from-tertiary to-tertiary-container',
+            self::ExamReview => 'from-secondary to-secondary-container',
+        };
+    }
 }

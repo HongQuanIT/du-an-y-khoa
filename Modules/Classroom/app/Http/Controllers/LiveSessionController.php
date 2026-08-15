@@ -34,7 +34,7 @@ final class LiveSessionController extends Controller
         LiveSession $liveSession,
         StartLiveSessionAction $action,
     ): RedirectResponse {
-        $this->authorize('manageLive', $classroom);
+        $this->authorize('startLive', $classroom);
 
         $action->handle($classroom, $liveSession);
 

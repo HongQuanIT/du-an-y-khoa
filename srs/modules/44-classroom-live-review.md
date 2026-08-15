@@ -2,29 +2,31 @@
 
 **Nhóm:** Community · **Ưu tiên:** Cao · **Phụ thuộc:** Auth (02), Subscription (28), Videos (14 — player HLS), Notification (27), Exam/Qbank (05/23, liên kết đề tùy chọn) · **Trạng thái:** 🟡
 
-> **Phân biệt Module 32 Organization (🔵 Phase 2):** Organization là **B2B** (ghế license, org_admin, assignment trong tổ chức). Module 44 là **B2C cộng đồng** — Premium host tạo lớp chữa đề, **không** phụ thuộc `organizations` / `classes` của Org. Tên bảng dùng `classrooms` / `live_sessions` để tránh đụng `classes` Phase 2. Khi bật Org sau này có thể liên kết lớp cộng đồng ↔ lớp tổ chức (ngoài phạm vi hiện tại).
+> **Phân biệt Module 32 Organization (🔵 Phase 2):** Organization là **B2B** (ghế license, org_admin, assignment trong tổ chức). Module 44 là **B2C cộng đồng** — giảng viên host lớp chữa đề qua `/teach`, **không** phụ thuộc `organizations` / `classes` của Org. Tên bảng dùng `classrooms` / `live_sessions` để tránh đụng `classes` Phase 2. Khi bật Org sau này có thể liên kết lớp cộng đồng ↔ lớp tổ chức (ngoài phạm vi hiện tại).
 
 ## 0. Tóm tắt module
-Không gian **lớp chữa đề** với **livestream LiveKit (WebRTC)**: host (Premium / instructor / admin) tạo lớp, lên lịch buổi live; học viên đăng nhập tham gia nếu được phép. Trong lúc `live`: video/audio + chat/Q&A/raise-hand. Sau `ended`: tắt giao tiếp realtime; lớp vẫn xem được metadata, **recording VOD (HLS)**, lịch sử chat **read-only**, tài liệu/đề gắn kèm.
+Không gian **lớp chữa đề** với **livestream LiveKit (WebRTC)**: **giảng viên** tạo lớp trên `/teach` (chờ **admin duyệt** trước khi hiển thị catalog học viên), lên lịch buổi live; học viên đăng nhập tham gia nếu được phép. Trong lúc `live`: video/audio + chat/Q&A/raise-hand. Sau `ended`: tắt giao tiếp realtime; lớp vẫn xem được metadata, **recording VOD (HLS)**, lịch sử chat **read-only**, tài liệu/đề gắn kèm.
 
 | Route | Màn hình | Quyền |
 |-------|----------|-------|
-| `/classes` | Catalog lớp (public/unlisted mình biết) | Auth |
-| `/classes/create` | Tạo lớp (wizard) | `classroom.host` (Premium+) |
-| `/classes/{id}` | Chi tiết lớp: mô tả, lịch, thành viên, recording | Member / viewer theo visibility |
+| `/classes` | Catalog lớp (chỉ lớp đã duyệt + public/unlisted mình biết) | Auth (learner) |
+| ~~`/classes/create`~~ | ~~Tạo lớp~~ | **Tắt tạm** — học viên không tạo lớp |
+| `/classes/{id}` | Chi tiết lớp: mô tả, lịch, thành viên, recording | Member / viewer theo visibility + lớp `active` |
 | `/classes/{id}/settings` | Cài đặt lớp (host/cohost) | Host / cohost |
 | `/classes/{id}/live/{session}` | Phòng live (viewer) hoặc host studio | Member + session live/ended (VOD) |
 | `/classes/{id}/live/{session}/host` | Host studio (publish cam/mic/screen) | Host / cohost |
+| `/teach/classes/create` | Tạo lớp (giảng viên) | Role `instructor` |
+| `/admin/classrooms` | Giám sát + **duyệt/từ chối** lớp chờ | `classroom.oversee` |
 
 Không bao gồm: quản lý tổ chức/ghế B2B (32), CMS marketing (42), thư viện video bài giảng tĩnh (14 — chỉ **tái dùng player** cho VOD).
 
 ## 1. Tổng quan từng màn hình
 
 ### 1.1 Catalog (`/classes`)
-- **Mục đích:** Khám phá lớp public; vào lớp đã join; tạo lớp mới (CTA Premium).
+- **Mục đích:** Khám phá lớp public **đã được admin duyệt**; vào lớp đã join; **không** có CTA tạo lớp (tắt tạm học viên host).
 - **Khi dùng:** Muốn học chữa đề cùng cộng đồng / tìm buổi live sắp diễn ra.
 - **Đến từ:** Sidebar, Dashboard widget “Đang live”, deep link notification, search.
-- **Đi sang:** `/classes/{id}`, `/classes/create`, paywall nâng cấp nếu Free muốn host.
+- **Đi sang:** `/classes/{id}` (lớp đã duyệt).
 
 ### 1.2 Chi tiết lớp (`/classes/{id}`)
 - **Mục đích:** Xem mô tả, lịch session, danh sách recording, join/leave, invite.
@@ -40,7 +42,8 @@ Không bao gồm: quản lý tổ chức/ghế B2B (32), CMS marketing (42), th�
 |-----------|-----------|----------|-----|-----------|-----------|
 | **Class catalog** | Grid/list lớp + filter (live now / sắp tới / đã join) | `/classes` | — | Auth | Grid → list |
 | **Live now badge** | Badge đỏ “LIVE” + số viewer | Catalog + detail | Khi không live | Reverb presence | — |
-| **Create class CTA** | Nút tạo lớp | Catalog | Free không entitlement → paywall | `classroom.host` | — |
+| **Create class CTA** | ~~Nút tạo lớp học viên~~ | — | Catalog learner | **Tắt tạm** | — |
+| **Admin approve class** | Duyệt / từ chối lớp `pending_approval` | `/admin/classrooms` | — | `classroom.oversee` | — |
 | **Class header** | Cover, title, host, visibility, join code | Detail | — | — | Stack mobile |
 | **Session list** | Lịch scheduled / live / ended + CTA | Detail | — | — | Card |
 | **Member roster** | Thành viên, role_in_class, ban | Detail / live sidebar | Invite-only ẩn roster public | Host xem đủ; member tùy setting | Drawer mobile |
@@ -89,22 +92,24 @@ Không bao gồm: quản lý tổ chức/ghế B2B (32), CMS marketing (42), th�
 ## 4. Luồng người dùng
 
 ```
-[Host Premium]
-/classes → Create → điền title/visibility → tạo classroom (role host)
+[Giảng viên /teach]
+/teach/classes/create → tạo classroom (status pending_approval)
+→ Admin duyệt (/admin/classrooms) → status active → hiện catalog học viên
 → Schedule live_session → (optional) gắn exam/question set
-→ Tới giờ: /host → Start live → Laravel tạo LiveKit room + egress
+→ Tới giờ: host studio → Start live (chỉ khi active) → LiveKit room + egress
 → Publish A/V → Members join bằng token subscriber
 → Chat/Q&A → End live → room đóng, chat khóa, egress → R2 HLS
 → Members xem VOD + chat history read-only
 
 [Học viên Free/Premium]
-Catalog / invite / join_code → Join classroom
+Catalog (lớp active) / invite / join_code → Join classroom
 → Notification "live sắp bắt đầu" → vào room khi live
 → Sau end: mở lại lớp xem recording (không chat gửi mới)
 
 Ngoại lệ:
-- Free bấm "Tạo lớp" → Paywall (entitlement classroom.host)
-- Host mất Premium giữa chừng → không start live mới; VOD/read-only vẫn OK
+- Học viên **không** tạo lớp (route `/classes/create` tắt tạm)
+- Lớp chưa duyệt: ẩn catalog; host vẫn xem trên `/teach`; chặn start live
+- Host mất Premium (legacy community host) → không start live mới; VOD/read-only vẫn OK
 - Recording processing → badge "Đang xử lý"; failed → retry egress (host/admin)
 ```
 
@@ -122,11 +127,16 @@ flowchart LR
 
 ## 5. Business Logic
 
-- **Host entitlement:**
-  - Premium student: `classroom.host` → tạo/start trên `/classes` (cộng đồng).
+- **Tạo lớp (đã chốt 2026-08-14):**
+  - **Chỉ giảng viên** (`instructor`) tạo trên `/teach/classes/create`.
+  - Lớp mới: `status = pending_approval` — **chưa** hiện catalog học viên, **chưa** join public, **chưa** start live.
+  - Admin duyệt → `active`; từ chối → `archived`.
+  - Học viên Premium host cộng đồng trên `/classes`: **tắt tạm** (Phase sau có thể bật lại).
+- **Host entitlement (legacy):**
+  - Premium `classroom.host`: giữ quyền vận hành lớp cộng đồng cũ (nếu có); không tạo lớp mới trên learner UI.
   - Instructor: host trên `/teach` theo **role** (không phụ thuộc Premium).
-  - Free: join được, không create/start.
-  - Admin: oversight (`classroom.oversee`), không thay `/teach`.
+  - Free: join được (lớp đã duyệt), không create/start.
+  - Admin: oversight (`classroom.oversee`), duyệt lớp, force-end, archive.
 - **Visibility:** `public` (catalog), `unlisted` (link/code), `invite_only` (chỉ invite).
 - **Membership:** `host` / `cohost` / `member`; status `invited` / `active` / `left` / `banned`.
 - **Session lifecycle:** `scheduled` → `live` → `ended` | `cancelled`. Chỉ 1 session `live` / classroom tại một thời điểm (MVP).
@@ -144,7 +154,7 @@ Tham chiếu nhóm Classroom trong `04-mo-hinh-du-lieu.md`.
 
 | Entity | Field chính |
 |--------|-------------|
-| **Classroom** | `id, uuid, title, description, host_user_id, visibility(public/unlisted/invite_only), join_code, status(draft/active/archived), max_members, cover_media_id, meta JSON` |
+| **Classroom** | `id, uuid, title, description, host_user_id, visibility(public/unlisted/invite_only), join_code, status(draft/pending_approval/active/archived), max_members, cover_media_id, meta JSON` |
 | **ClassroomMember** | `classroom_id, user_id, role_in_class(host/cohost/member), status(invited/active/left/banned), joined_at` — unique `(classroom_id, user_id)` |
 | **LiveSession** | `classroom_id, title, scheduled_at, started_at, ended_at, status(scheduled/live/ended/cancelled), livekit_room_name, linked_exam_id null, question_set JSON null` |
 | **LiveSessionMessage** | `live_session_id, user_id, body, type(chat/question/system), is_hidden, created_at` |
@@ -157,7 +167,7 @@ Tham chiếu nhóm Classroom trong `04-mo-hinh-du-lieu.md`.
 | Method | URL | Payload | Response | Quyền |
 |--------|-----|---------|----------|-------|
 | GET | `/api/v1/classrooms` | filter | list | Auth |
-| POST | `/api/v1/classrooms` | title, visibility… | classroom | `classroom.create` + `classroom.host` |
+| POST | `/api/v1/classrooms` | title, visibility… | classroom | Role `instructor` (portal teach) |
 | GET/PATCH | `/api/v1/classrooms/{id}` | — / update | classroom | view / `classroom.manage` |
 | POST | `/api/v1/classrooms/{id}/join` | `{code?}` | membership | Auth + visibility |
 | POST | `/api/v1/classrooms/{id}/leave` | — | ok | Member |
@@ -187,13 +197,13 @@ Tham chiếu nhóm Classroom trong `04-mo-hinh-du-lieu.md`.
 | Actor | Được làm |
 |-------|----------|
 | **Guest** | Không (redirect login) |
-| **Student Free** | Join public/unlisted; xem live + VOD; **không** create/start |
-| **Premium** | Host lớp **cộng đồng** trên `/classes` (entitlement `classroom.host`) |
-| **Instructor** | Portal **`/teach`**: tạo/chạy lớp vận hành; gắn đề từ feedback QBank / exam; **không** vào learner UI hay `/admin` |
+| **Student Free** | Join lớp **đã duyệt** (public/unlisted); xem live + VOD; **không** create |
+| **Premium** | ~~Host lớp cộng đồng trên `/classes`~~ **tắt tạm** |
+| **Instructor** | Portal **`/teach`**: tạo lớp (chờ duyệt), chạy buổi chữa sau duyệt; gắn đề feedback/exam |
 | **Content Editor** | Không host mặc định |
-| **Admin / Super Admin** | **Oversight only** (`classroom.oversee`): xem mọi lớp, force-end, archive/gỡ vi phạm, audit — **không** thay giảng viên chữa đề hàng ngày |
+| **Admin / Super Admin** | **Oversight** (`classroom.oversee`): duyệt/từ chối lớp, xem mọi lớp, force-end, archive — **không** thay giảng viên chữa đề hàng ngày |
 
-Permissions: `classroom.create`, `classroom.manage`, `classroom.join`, `classroom.moderate`, `classroom.oversee`, `live.start`, `live.join`, `live.force_end`. Entitlement `classroom.host` = Premium cộng đồng; Instructor host bằng **role**.
+Permissions: `classroom.create` (instructor), `classroom.manage`, `classroom.join`, `classroom.moderate`, `classroom.oversee`, `live.start`, `live.join`, `live.force_end`. Entitlement `classroom.host` = Premium cộng đồng (legacy); Instructor host bằng **role**.
 
 ## 10. Edge Cases
 
@@ -208,7 +218,8 @@ Permissions: `classroom.create`, `classroom.manage`, `classroom.join`, `classroo
 | Join invite_only không invite | `403` |
 | Refresh/back khi live | Re-fetch token + reconnect; không tạo session mới |
 | Concurrent ban + đang trong room | Revoke: kick qua LiveKit API + từ chối token/chat |
-| Chat khi ended | `422` + UI readonly |
+| Join lớp chưa duyệt | `403` / ẩn catalog |
+| Start live lớp chưa duyệt | `403` |
 
 ## 11. Tracking
 
@@ -270,15 +281,23 @@ Properties gợi ý: `classroom_id`, `session_id`, `visibility`, `role_in_class`
 Layout: teaching console (không sidebar Users/Roles/CMS).
 
 ### Admin oversight
-- Menu `/admin`: **Lớp học (giám sát)** — list mọi lớp, filter host/status, force-end / archive.
+- Menu `/admin`: **Lớp học (giám sát)** — list mọi lớp, filter host/status, **duyệt / từ chối** lớp `pending_approval`, force-end / archive.
 - Không phải workspace chữa đề.
 
 ### `purpose` lớp (cùng bảng `classrooms`)
 | Value | Nguồn đề | Host chính |
 |-------|----------|------------|
-| `community_review` | Cộng đồng / Premium | Premium trên `/classes` |
+| `community_review` | Cộng đồng / Premium | **Tắt tạm** trên `/classes` |
 | `feedback_review` | Feedback / report QBank | Instructor `/teach` |
 | `exam_review` | Exam / kỳ thi | Instructor `/teach` |
+
+## 17. Đã chốt — Duyệt lớp & tắt học viên host (2026-08-14)
+
+- Học viên **không** tạo lớp trên `/classes` (route/UI tắt tạm).
+- **Giảng viên** tạo lớp trên `/teach/classes/create` → `status = pending_approval`.
+- **Admin** duyệt (`active`) hoặc từ chối (`archived`) trên `/admin/classrooms`.
+- Catalog học viên chỉ liệt kê lớp `active` + public (và lớp đã join).
+- Chặn join / start live khi lớp chưa duyệt.
 
 ### Roadmap triển khai
 | Phase | Nội dung | Trạng thái |

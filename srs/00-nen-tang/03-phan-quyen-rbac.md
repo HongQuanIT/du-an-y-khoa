@@ -84,8 +84,8 @@ ai.use, analytics.advanced, exam.take, exam.manage
 
 | Permission Classroom | Ai có | Ý nghĩa |
 |----------------------|-------|---------|
-| `classroom.create` / `classroom.manage` / `live.*` (lớp mình) | Instructor; Premium host (cộng đồng) | Vận hành lớp mình host/cohost |
-| `classroom.oversee` / `live.force_end` | Admin, Super Admin | Giám sát mọi lớp — **không** thay workspace `/teach` |
+| `classroom.create` / `classroom.manage` / `live.*` (lớp mình) | **Instructor** (tạo trên `/teach`; lớp mới `pending_approval`) | Vận hành lớp mình host/cohost sau admin duyệt |
+| `classroom.oversee` / `live.force_end` | Admin, Super Admin | Giám sát, **duyệt/từ chối** lớp, force-end — **không** thay workspace `/teach` |
 | `instructor.assign` | Super Admin (Admin hạn chế) | Gán/thu hồi role `instructor` |
 
 ## 5. Subscription entitlements

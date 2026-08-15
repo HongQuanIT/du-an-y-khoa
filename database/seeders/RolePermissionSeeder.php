@@ -52,6 +52,7 @@ class RolePermissionSeeder extends Seeder
             RoleEnum::SuperAdmin, RoleEnum::Admin => PermissionEnum::values(),
 
             RoleEnum::ContentEditor => [
+                PermissionEnum::CmsManage->value,
                 PermissionEnum::QuestionView->value,
                 PermissionEnum::QuestionCreate->value,
                 PermissionEnum::QuestionUpdate->value,

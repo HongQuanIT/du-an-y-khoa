@@ -11,6 +11,7 @@ enum ClassroomStatus: string
     use EnumValues;
 
     case Draft = 'draft';
+    case PendingApproval = 'pending_approval';
     case Active = 'active';
     case Archived = 'archived';
 
@@ -18,8 +19,14 @@ enum ClassroomStatus: string
     {
         return match ($this) {
             self::Draft => 'Nháp',
+            self::PendingApproval => 'Chờ duyệt',
             self::Active => 'Đang hoạt động',
             self::Archived => 'Đã lưu trữ',
         };
+    }
+
+    public function isVisibleToLearners(): bool
+    {
+        return $this === self::Active;
     }
 }
