@@ -12,7 +12,7 @@
         ['label' => 'Kế hoạch học tập', 'icon' => 'event_note', 'route' => 'study-plan.index', 'match' => 'study-plan.*'],
         ['label' => 'Classroom', 'icon' => 'cast_for_education', 'route' => 'classroom.index', 'match' => 'classroom.*'],
         ['label' => 'Phân tích', 'icon' => 'analytics', 'route' => null],
-        ['label' => 'Kỳ thi', 'icon' => 'assignment', 'route' => null],
+        ['label' => 'Kỳ thi', 'icon' => 'assignment', 'route' => 'exam.index', 'match' => 'exam.*'],
     ];
 
     $headerSubscription = CurrentSubscription::for(auth()->user());
@@ -52,6 +52,63 @@
         menu: false,
         accountMenu: false,
         notificationsOpen: false,
+        search: {
+            open: false,
+            loading: false,
+            query: @js((string) request('q', '')),
+            suggestions: [],
+            controller: null,
+            async fetchSuggestions() {
+                const query = this.query.trim();
+                if (this.controller) {
+                    this.controller.abort();
+                }
+
+                this.controller = new AbortController();
+                this.loading = true;
+
+                try {
+                    const url = new URL(@js(route('search.suggest')), window.location.origin);
+                    if (query !== '') {
+                        url.searchParams.set('q', query);
+                    }
+                    url.searchParams.set('limit', '6');
+
+                    const response = await fetch(url.toString(), {
+                        headers: { 'Accept': 'application/json' },
+                        credentials: 'same-origin',
+                        signal: this.controller.signal,
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('search_suggest_failed');
+                    }
+
+                    const payload = await response.json();
+                    this.suggestions = Array.isArray(payload.data) ? payload.data : [];
+                    this.open = true;
+                } catch (error) {
+                    if (error?.name !== 'AbortError') {
+                        this.suggestions = [];
+                    }
+                } finally {
+                    this.loading = false;
+                }
+            },
+            clear() {
+                this.query = '';
+                this.suggestions = [];
+                this.open = true;
+                this.fetchSuggestions();
+            },
+            openDropdown() {
+                this.open = true;
+                this.fetchSuggestions();
+            },
+            submit() {
+                window.location.assign(@js(route('search.index')) + '?q=' + encodeURIComponent(this.query.trim()));
+            },
+        },
         theme: 'light',
         initTheme() {
             this.theme = window.MedlearnTheme?.getStoredTheme?.() ?? 'system';
@@ -101,11 +158,51 @@
                 <span class="material-symbols-outlined text-[24px] leading-none">menu</span>
             </button>
 
-            <div class="relative w-full max-w-md">
-                <span
-                    class="material-symbols-outlined absolute top-1/2 left-3 -translate-y-1/2 text-on-surface-variant">search</span>
-                <input type="search" placeholder="Tìm kiếm bài học, câu hỏi..." aria-label="Tìm kiếm"
-                    class="w-full rounded-lg border-none bg-surface-container-low py-2 pr-4 pl-10 font-body-sm text-body-sm focus:ring-2 focus:ring-primary">
+            <div class="relative w-full max-w-2xl" @click.outside="search.open = false">
+                <form method="GET" action="{{ route('search.index') }}" role="search" class="relative" @submit.prevent="search.submit()">
+                    <span
+                        class="material-symbols-outlined pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-on-surface-variant">search</span>
+                    <input name="q" x-model="search.query" type="search"
+                        placeholder="Tìm kiếm bài học, câu hỏi, thuốc..." aria-label="Tìm kiếm toàn hệ thống"
+                        autocomplete="off"
+                        @focus="search.openDropdown()"
+                        @input.debounce.250ms="search.openDropdown()"
+                        class="w-full rounded-lg border-none bg-surface-container-low py-2 pr-4 pl-10 font-body-sm text-body-sm focus:ring-2 focus:ring-primary">
+                </form>
+
+                <section x-show="search.open" x-cloak
+                    x-transition:enter="transition ease-out duration-150"
+                    x-transition:enter-start="opacity-0 translate-y-1"
+                    x-transition:enter-end="opacity-100 translate-y-0"
+                    class="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-outline-variant bg-surface shadow-xl">
+                    <div class="border-b border-outline-variant px-4 py-3">
+                        <p class="font-label-sm text-label-sm text-on-surface-variant">
+                            <span x-show="search.loading">Đang tìm gợi ý…</span>
+                            <span x-show="!search.loading">Gợi ý tìm kiếm</span>
+                        </p>
+                    </div>
+                    <div class="max-h-[min(60vh,28rem)] overflow-y-auto">
+                        <template x-if="search.suggestions.length === 0 && !search.loading">
+                            <p class="px-4 py-5 font-body-sm text-body-sm text-on-surface-variant">
+                                Chưa có gợi ý phù hợp.
+                            </p>
+                        </template>
+                        <template x-for="item in search.suggestions" :key="item.id">
+                            <a :href="item.url ?? ('{{ route('search.index') }}?q=' + encodeURIComponent(item.text))"
+                                class="block border-b border-outline-variant/60 px-4 py-3 transition-colors last:border-0 hover:bg-primary/5"
+                                @click="search.open = false">
+                                <div class="flex items-center justify-between gap-3">
+                                    <div class="min-w-0">
+                                        <p class="truncate font-body-md text-body-md font-medium text-on-surface" x-text="item.text"></p>
+                                        <p class="mt-1 font-label-sm text-label-sm text-on-surface-variant" x-html="item.highlight"></p>
+                                    </div>
+                                    <span class="rounded-full bg-surface-container-low px-2.5 py-1 font-label-xs text-label-xs text-on-surface-variant"
+                                        x-text="item.type || 'keyword'"></span>
+                                </div>
+                            </a>
+                        </template>
+                    </div>
+                </section>
             </div>
         </div>
 

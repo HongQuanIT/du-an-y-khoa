@@ -29,9 +29,16 @@ final class QuestionRepository extends EloquentRepository
     {
         return $this->query()
             ->where('status', QuestionStatus::Published)
+            ->when($data->query, function ($query, string $search): void {
+                $pattern = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $search).'%';
+                $query->whereRaw("stem LIKE ? ESCAPE '!'", [$pattern]);
+            })
             ->when($data->difficulty, fn ($q, $difficulty) => $q->where('difficulty', $difficulty))
             ->when($data->topicId, fn ($q, $topicId) => $q->where('topic_id', $topicId))
-            ->when($data->freeOnly, fn ($q) => $q->where('is_free', true))
+            ->when(
+                $data->freeOnly !== null,
+                fn ($q) => $q->where('is_free', $data->freeOnly),
+            )
             ->orderByDesc('created_at')
             ->paginate($data->perPage);
     }

@@ -440,6 +440,29 @@ final class QuestionBankFlowTest extends TestCase
             ->assertSee($second->stem);
     }
 
+    public function test_study_session_renders_question_image_next_to_stem(): void
+    {
+        $this->createQuestion(
+            $this->topic,
+            true,
+            Difficulty::Easy,
+            'Image stem',
+            'question-images/image-stem.png',
+        );
+
+        $this->actingAs($this->user)
+            ->post(route('qbank.store'), $this->sessionPayload(count: 1, difficulty: Difficulty::Easy))
+            ->assertRedirect();
+
+        $session = QuestionSession::firstOrFail();
+
+        $this->actingAs($this->user)
+            ->get(route('qbank.session', $session))
+            ->assertOk()
+            ->assertSee('/storage/question-images/image-stem.png', false)
+            ->assertSee('Ảnh minh họa câu hỏi');
+    }
+
     public function test_session_snapshot_preserves_content_grading_and_review_after_question_is_changed_and_deleted(): void
     {
         $question = $this->createQuestion(
@@ -1106,9 +1129,11 @@ final class QuestionBankFlowTest extends TestCase
         bool $isFree,
         Difficulty $difficulty,
         string $stem,
+        ?string $stemImagePath = null,
     ): Question {
         $question = Question::create([
             'stem' => $stem,
+            'stem_image_path' => $stemImagePath,
             'explanation' => 'Giải thích cho '.$stem,
             'difficulty' => $difficulty,
             'status' => PublicationStatus::Published,

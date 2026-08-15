@@ -9,7 +9,7 @@ namespace App\Support\Html;
  */
 final class SafeHtml
 {
-    private const ALLOWED_TAGS = '<p><br><strong><b><em><i><u><s><ul><ol><li><h2><h3><blockquote><a><img><sub><sup><span>';
+    private const ALLOWED_TAGS = '<p><br><strong><b><em><i><u><s><ul><ol><li><h2><h3><h4><h5><h6><blockquote><a><img><sub><sup><span><mark><code><pre><hr><table><thead><tbody><tfoot><tr><th><td>';
 
     private const CMS_PAGE_TAGS = '<p><br><strong><b><em><i><u><s><ul><ol><li><h1><h2><h3><h4><blockquote><a><img><sub><sup><span><div><section><article><header><footer><hr>';
 
@@ -83,7 +83,7 @@ final class SafeHtml
 
     public static function looksLikeHtml(string $value): bool
     {
-        return (bool) preg_match('/<\s*(p|div|br|img|ul|ol|li|h[1-6]|strong|em|a|span)\b/i', $value);
+        return (bool) preg_match('/<\s*(p|div|br|img|ul|ol|li|h[1-6]|strong|em|a|span|table|tr|td|th|mark)\b/i', $value);
     }
 
     public static function isBlank(?string $value): bool
@@ -120,6 +120,40 @@ final class SafeHtml
                 $alt = self::extractAttr($attrs, 'alt') ?? '';
 
                 return '<img src="'.e($src).'" alt="'.e($alt).'" class="max-w-full h-auto rounded-lg my-2">';
+            },
+            $clean,
+        ) ?? $clean;
+
+        // Preserve data-hint attribute on <mark> tags (Question Hint feature).
+        $clean = preg_replace_callback(
+            '/<mark\b([^>]*)>/i',
+            static function (array $matches): string {
+                $attrs = $matches[1];
+                $dataHint = self::extractAttr($attrs, 'data-hint');
+
+                if ($dataHint === 'true') {
+                    return '<mark class="ql-hint" data-hint="true">';
+                }
+
+                return '<mark>';
+            },
+            $clean,
+        ) ?? $clean;
+
+        // Convert old <span data-hint="true"> to <mark> for backward compatibility,
+        // and strip all other attributes from <span> to prevent style/class injection.
+        $clean = preg_replace_callback(
+            '/<span\b([^>]*)>/i',
+            static function (array $matches): string {
+                $attrs = $matches[1];
+                $dataHint = self::extractAttr($attrs, 'data-hint');
+
+                if ($dataHint === 'true') {
+                    return '<mark class="ql-hint" data-hint="true">';
+                }
+
+                // Plain <span> without data-hint: strip all attributes
+                return '<span>';
             },
             $clean,
         ) ?? $clean;

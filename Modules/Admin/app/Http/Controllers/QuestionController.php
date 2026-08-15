@@ -130,7 +130,9 @@ final class QuestionController extends Controller
     /**
      * @return array{
      *     stem: string,
+     *     stem_image_path: ?string,
      *     explanation: ?string,
+     *     key_info: array<int, string>,
      *     attending_tip: ?string,
      *     difficulty: string,
      *     topic_id: int,
@@ -142,7 +144,9 @@ final class QuestionController extends Controller
     {
         $data = $request->validate([
             'stem' => ['required', 'string'],
+            'stem_image_path' => ['nullable', 'string', 'max:1024'],
             'explanation' => ['nullable', 'string'],
+            'key_info' => ['nullable', 'string'],
             'attending_tip' => ['nullable', 'string'],
             'difficulty' => ['required', Rule::in(Difficulty::values())],
             'topic_id' => ['required', 'integer', 'exists:topics,id'],
@@ -174,13 +178,30 @@ final class QuestionController extends Controller
 
         return [
             'stem' => $data['stem'],
+            'stem_image_path' => $data['stem_image_path'] ?? null,
             'explanation' => $data['explanation'] ?? null,
+            'key_info' => $this->parseKeyInfo($data['key_info'] ?? null),
             'attending_tip' => $data['attending_tip'] ?? null,
             'difficulty' => $data['difficulty'],
             'topic_id' => (int) $data['topic_id'],
             'is_free' => $request->boolean('is_free'),
             'options' => $options,
         ];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function parseKeyInfo(?string $raw): array
+    {
+        $lines = preg_split('/\r\n|\r|\n/u', (string) $raw) ?: [];
+
+        return collect($lines)
+            ->map(fn (string $line): string => trim(strip_tags($line)))
+            ->filter(fn (string $line): bool => $line !== '')
+            ->unique()
+            ->values()
+            ->all();
     }
 
     private function authorizePermission(Permission $permission): void

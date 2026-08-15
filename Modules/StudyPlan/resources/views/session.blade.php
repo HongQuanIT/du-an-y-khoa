@@ -40,7 +40,8 @@
         (string) $question->stem,
         (array) ($question->key_info ?? []),
     );
-    $hasKeyInfo = $keyInfo !== [];
+    $hasHintMarks = str_contains((string) $question->stem, 'data-hint');
+    $hasKeyInfo = $keyInfo !== [] || $hasHintMarks;
     $keyInfoHtml = $keyInfoRenderer->render((string) $question->stem, $keyInfo);
     $attendingTip = \App\Support\Html\SafeHtml::forDisplay((string) ($question->attending_tip ?? ''));
     if ($attendingTip === '' && $hasKeyInfo) {
@@ -70,6 +71,7 @@
     $bookmarked = (bool) ($bookmarked ?? false);
     $bookmarkUrl = $bookmarkUrl ?? route('bookmarks.questions.set', $question);
     $sessionIncomplete = count($answeredIds) < $total;
+    $stemImageUrl = $question->stemImageUrl();
 @endphp
 
 <x-layouts.auth :title="$playerConfig['page_title']">
@@ -440,11 +442,11 @@
 
                 @php
                     $optionPayload = $question->options->map(fn ($option) => [
-                        'id' => (int) $option->id,
-                        'label' => $option->label,
-                        'content' => $option->content,
-                        'correct' => (bool) $option->is_correct,
-                        'explanation' => $option->explanation,
+                        'id'          => (int) $option->id,
+                        'label'       => $option->label,
+                        'content'     => $option->content,
+                        'correct'     => (bool) $option->is_correct,
+                        'explanation' => \App\Support\Html\SafeHtml::forDisplay((string) ($option->explanation ?? '')),
                     ])->values();
                 @endphp
 
@@ -587,22 +589,33 @@
                             </div>
                         </div>
 
-                        <article class="space-y-6">
-                            <div x-show="keyInfoUsed" x-cloak
-                                class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-bold tracking-wide text-amber-700 uppercase"
-                                data-testid="key-info-used-badge">
-                                <span class="material-symbols-outlined text-[15px] fill-1">check_circle</span>
-                                <span>Đã dùng gợi ý</span>
-                            </div>
-                            <template x-if="!keyInfoEnabled">
-                                <div id="session-stem"
-                                    class="prose prose-sm max-w-none font-body-lg text-body-lg leading-relaxed text-on-surface select-text">{!! $stemHtml !!}</div>
-                            </template>
-                            <template x-if="keyInfoEnabled">
-                                <div class="prose prose-sm max-w-none font-body-lg text-body-lg leading-relaxed text-on-surface select-text"
-                                    data-testid="key-info-stem">{!! $keyInfoHtml !!}</div>
-                            </template>
-                        </article>
+                        <div class="grid gap-5 {{ $stemImageUrl ? 'lg:grid-cols-[minmax(0,1fr)_minmax(280px,380px)] lg:items-start' : '' }}">
+                            <article class="space-y-6" :class="{ 'key-info-active': keyInfoEnabled }">
+                                <div x-show="keyInfoUsed" x-cloak
+                                    class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-bold tracking-wide text-amber-700 uppercase"
+                                    data-testid="key-info-used-badge">
+                                    <span class="material-symbols-outlined text-[15px] fill-1">check_circle</span>
+                                    <span>Đã dùng gợi ý</span>
+                                </div>
+                                <template x-if="!keyInfoEnabled">
+                                    <div id="session-stem"
+                                        class="prose prose-sm max-w-none font-body-lg text-body-lg leading-relaxed text-on-surface select-text">{!! $stemHtml !!}</div>
+                                </template>
+                                <template x-if="keyInfoEnabled">
+                                    <div class="prose prose-sm max-w-none font-body-lg text-body-lg leading-relaxed text-on-surface select-text"
+                                        data-testid="key-info-stem">{!! $keyInfoHtml !!}</div>
+                                </template>
+                            </article>
+
+                            @if ($stemImageUrl)
+                                <aside class="overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-sm">
+                                    <div class="bg-white flex justify-center">
+                                        <img src="{{ $stemImageUrl }}" alt="Ảnh minh họa câu hỏi"
+                                            class="w-full h-auto max-h-[600px] object-contain">
+                                    </div>
+                                </aside>
+                            @endif
+                        </div>
 
                         <div class="flex min-h-12 items-center border-y border-outline-variant bg-surface-container-lowest px-1"
                             data-testid="question-knowledge-toolbar">
@@ -770,8 +783,8 @@
                                         <p class="text-label-sm font-bold tracking-wide uppercase"
                                             :class="option.correct ? 'text-[#16A34A]' : 'text-error'"
                                             x-text="option.correct ? 'Đáp án đúng' : 'Vì sao sai'"></p>
-                                        <p class="text-body-sm leading-relaxed text-on-surface-variant"
-                                            x-text="detailText(option)"></p>
+                                        <div class="prose prose-sm max-w-none text-body-sm leading-relaxed text-on-surface-variant"
+                                            x-html="detailText(option)"></div>
                                     </div>
                                 </div>
                             </template>
@@ -975,3 +988,49 @@
         </div>
     </div>
 </x-layouts.auth>
+
+{{-- ── Question Hint: click-to-reveal for students ── --}}
+<style>
+    /* Student: hint hidden by default (looks like normal text) */
+    #session-stem mark[data-hint],
+    [data-testid="key-info-stem"] mark[data-hint] {
+        cursor: pointer;
+        transition: text-decoration 0.2s ease;
+        background-color: transparent;
+        color: inherit;
+        text-decoration: none;
+    }
+    /* Student: revealed individually on click */
+    #session-stem mark[data-hint].revealed,
+    [data-testid="key-info-stem"] mark[data-hint].revealed {
+        text-decoration: underline #ea580c;
+        text-decoration-style: solid;
+        text-decoration-thickness: 2px;
+        text-underline-offset: 4px;
+        background-color: transparent;
+    }
+    /* Student: ALL hints revealed when clicking the "Gợi ý" toolbar button */
+    .key-info-active #session-stem mark[data-hint],
+    .key-info-active [data-testid="key-info-stem"] mark[data-hint] {
+        text-decoration: underline #ea580c;
+        text-decoration-style: solid;
+        text-decoration-thickness: 2px;
+        text-underline-offset: 4px;
+        background-color: transparent;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('click', function (e) {
+            const hint = e.target.closest('mark[data-hint]');
+            if (!hint) return;
+
+            // Only toggle within the question stem areas
+            const stemContainer = hint.closest('#session-stem, [data-testid="key-info-stem"]');
+            if (!stemContainer) return;
+
+            hint.classList.toggle('revealed');
+        });
+    });
+</script>

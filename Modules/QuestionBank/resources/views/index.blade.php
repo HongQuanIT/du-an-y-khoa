@@ -1,4 +1,11 @@
 @php
+    $stats ??= [
+        'total_sessions' => 0,
+        'completed_sessions' => 0,
+        'accuracy' => 0.0,
+        'answered_questions' => 0,
+    ];
+
     $modeLabels = [
         'study' => 'Học tập',
         'exam' => 'Thi thử',
@@ -189,6 +196,9 @@
             this.deleteOpen = false;
         },
     }" @keydown.escape.window="openMenu = null; closeModals()">
+        @if (isset($searchResult))
+            @include('questionbank::partials.search-results')
+        @else
         <div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
                 <h1 class="mb-2 font-headline-md text-headline-md font-bold text-on-surface">Lịch sử phiên luyện</h1>
@@ -687,5 +697,6 @@
                 </form>
             </div>
         </div>
+        @endif
     </section>
 </x-layouts.app>

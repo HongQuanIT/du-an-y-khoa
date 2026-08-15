@@ -1,5 +1,8 @@
 <?php
 
+use Modules\QuestionBank\Models\Question;
+use Modules\Search\Models\SearchDocument;
+
 return [
 
     /*
@@ -55,7 +58,7 @@ return [
     |
     */
 
-    'after_commit' => false,
+    'after_commit' => env('SCOUT_AFTER_COMMIT', true),
 
     /*
     |--------------------------------------------------------------------------
@@ -140,9 +143,77 @@ return [
         'host' => env('MEILISEARCH_HOST', 'http://localhost:7700'),
         'key' => env('MEILISEARCH_KEY'),
         'index-settings' => [
-            // 'users' => [
-            //     'filterableAttributes'=> ['id', 'name', 'email'],
-            // ],
+            Question::class => [
+                'searchableAttributes' => ['stem'],
+                'displayedAttributes' => [
+                    'id',
+                    'stem',
+                    'difficulty',
+                    'topic_id',
+                    'is_free',
+                ],
+                'filterableAttributes' => [
+                    'difficulty',
+                    'topic_id',
+                    'is_free',
+                ],
+                'synonyms' => [
+                    'viêm phổi' => ['pneumonia'],
+                    'pneumonia' => ['viêm phổi'],
+                    'nhồi máu cơ tim' => ['myocardial infarction', 'heart attack'],
+                    'myocardial infarction' => ['nhồi máu cơ tim', 'heart attack'],
+                    'tăng huyết áp' => ['hypertension', 'cao huyết áp'],
+                    'hypertension' => ['tăng huyết áp', 'cao huyết áp'],
+                    'đái tháo đường' => ['diabetes mellitus', 'tiểu đường'],
+                    'diabetes mellitus' => ['đái tháo đường', 'tiểu đường'],
+                    'đột quỵ' => ['stroke', 'tai biến mạch máu não'],
+                    'stroke' => ['đột quỵ', 'tai biến mạch máu não'],
+                ],
+                'typoTolerance' => [
+                    'enabled' => true,
+                    'minWordSizeForTypos' => [
+                        'oneTypo' => 5,
+                        'twoTypos' => 9,
+                    ],
+                ],
+            ],
+            SearchDocument::class => [
+                'searchableAttributes' => ['title', 'summary', 'body'],
+                'displayedAttributes' => [
+                    'id',
+                    'source_type',
+                    'source_id',
+                    'scope',
+                    'type',
+                    'title',
+                    'summary',
+                    'body',
+                    'url',
+                    'is_free',
+                ],
+                'filterableAttributes' => [
+                    'scope',
+                    'type',
+                    'is_free',
+                ],
+                'synonyms' => [
+                    'viêm phổi' => ['pneumonia'],
+                    'pneumonia' => ['viêm phổi'],
+                    'tăng huyết áp' => ['hypertension', 'cao huyết áp'],
+                    'hypertension' => ['tăng huyết áp', 'cao huyết áp'],
+                    'đái tháo đường' => ['diabetes mellitus', 'tiểu đường'],
+                    'diabetes mellitus' => ['đái tháo đường', 'tiểu đường'],
+                    'đột quỵ' => ['stroke', 'tai biến mạch máu não'],
+                    'stroke' => ['đột quỵ', 'tai biến mạch máu não'],
+                ],
+                'typoTolerance' => [
+                    'enabled' => true,
+                    'minWordSizeForTypos' => [
+                        'oneTypo' => 5,
+                        'twoTypos' => 9,
+                    ],
+                ],
+            ],
         ],
     ],
 

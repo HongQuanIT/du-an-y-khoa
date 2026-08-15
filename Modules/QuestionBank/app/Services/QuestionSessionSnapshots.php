@@ -158,6 +158,7 @@ final class QuestionSessionSnapshots
         return [
             'id' => (string) $question->getKey(),
             'stem' => (string) $question->stem,
+            'stem_image_path' => $question->stem_image_path,
             'explanation' => $question->explanation,
             'key_info' => array_values((array) $question->key_info),
             'attending_tip' => $question->attending_tip,
@@ -191,6 +192,7 @@ final class QuestionSessionSnapshots
         $question->forceFill([
             'id' => (string) $payload['id'],
             'stem' => (string) $payload['stem'],
+            'stem_image_path' => $payload['stem_image_path'] ?? null,
             'explanation' => $payload['explanation'] ?? null,
             'key_info' => array_values((array) ($payload['key_info'] ?? [])),
             'attending_tip' => $payload['attending_tip'] ?? null,
