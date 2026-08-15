@@ -21,6 +21,7 @@
     $flaggedLookup = array_fill_keys(array_map('strval', $flaggedIds), true);
     $answeredCount = count($answeredIds);
     $flaggedCount = count($flaggedIds);
+    $stemImageUrl = $question->stemImageUrl();
 @endphp
 
 <x-layouts.auth title="Chế độ thi">
@@ -369,10 +370,21 @@
                                     {{ $question->topic?->name ?? 'Tổng hợp' }} / {{ $question->difficulty->label() }}
                                 </span>
                             </div>
-                            <article class="max-w-none">
-                                <h2 class="mb-4 font-headline-md text-headline-md text-on-surface">Trường hợp lâm sàng</h2>
-                                <div class="text-body-md leading-relaxed whitespace-pre-line text-on-surface">{!! $stemHtml !!}</div>
-                            </article>
+                            <div class="grid gap-5 {{ $stemImageUrl ? 'lg:grid-cols-[minmax(0,1fr)_minmax(280px,380px)] lg:items-start' : '' }}">
+                                <article class="max-w-none">
+                                    <h2 class="mb-4 font-headline-md text-headline-md text-on-surface">Trường hợp lâm sàng</h2>
+                                    <div class="text-body-md leading-relaxed whitespace-pre-line text-on-surface">{!! $stemHtml !!}</div>
+                                </article>
+
+                                @if ($stemImageUrl)
+                                    <aside class="overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-sm">
+                                        <div class="bg-white flex justify-center">
+                                            <img src="{{ $stemImageUrl }}" alt="Ảnh minh họa câu hỏi"
+                                                class="w-full h-auto max-h-[600px] object-contain">
+                                        </div>
+                                    </aside>
+                                @endif
+                            </div>
                         </section>
 
                         <section class="space-y-4">

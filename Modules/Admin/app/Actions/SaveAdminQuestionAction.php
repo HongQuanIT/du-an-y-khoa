@@ -25,7 +25,9 @@ final class SaveAdminQuestionAction
     /**
      * @param  array{
      *     stem: string,
+     *     stem_image_path: ?string,
      *     explanation: ?string,
+     *     key_info: array<int, string>,
      *     attending_tip: ?string,
      *     difficulty: string,
      *     topic_id: int,
@@ -48,7 +50,9 @@ final class SaveAdminQuestionAction
 
             $question->fill([
                 'stem' => SafeHtml::fromEditor($data['stem']),
+                'stem_image_path' => $this->sanitizeStemImagePath($data['stem_image_path'] ?? null),
                 'explanation' => SafeHtml::fromEditor($data['explanation'] ?? null) ?: null,
+                'key_info' => $this->sanitizeKeyInfo($data['key_info'] ?? []),
                 'attending_tip' => SafeHtml::fromEditor($data['attending_tip'] ?? null) ?: null,
                 'difficulty' => Difficulty::from($data['difficulty']),
                 'topic_id' => $data['topic_id'],
@@ -76,6 +80,39 @@ final class SaveAdminQuestionAction
 
             return $question;
         });
+    }
+
+    private function sanitizeStemImagePath(?string $path): ?string
+    {
+        $path = trim((string) $path);
+
+        if ($path === '') {
+            return null;
+        }
+
+        $parsed = parse_url($path, PHP_URL_PATH) ?: $path;
+
+        if (str_starts_with($parsed, '/storage/')) {
+            $parsed = substr($parsed, 9); // strlen('/storage/')
+        } elseif (str_starts_with($parsed, 'storage/')) {
+            $parsed = substr($parsed, 8); // strlen('storage/')
+        }
+
+        return $parsed !== '' ? $parsed : null;
+    }
+
+    /**
+     * @param  array<int, string>  $keyInfo
+     * @return array<int, string>
+     */
+    private function sanitizeKeyInfo(array $keyInfo): array
+    {
+        return collect($keyInfo)
+            ->map(fn (mixed $item): string => trim(strip_tags((string) $item)))
+            ->filter(fn (string $item): bool => $item !== '')
+            ->unique()
+            ->values()
+            ->all();
     }
 
     /**
@@ -111,7 +148,7 @@ final class SaveAdminQuestionAction
                 'label' => $labels[$index] ?? (string) ($index + 1),
                 'content' => $row['content'],
                 'is_correct' => (bool) $row['is_correct'],
-                'explanation' => $row['explanation'] ?? null,
+                'explanation' => SafeHtml::fromEditor($row['explanation'] ?? null) ?: null,
                 'order' => $index + 1,
             ];
 

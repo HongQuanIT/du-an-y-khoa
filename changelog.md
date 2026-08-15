@@ -26,6 +26,11 @@
 - Component `<x-cms.announcement-banners>` trên landing home + dashboard học viên (target Free/Premium/guest…).
 - Seeder 2 banner mẫu; test `AdminCmsBannerTest`.
 
+### Tải ảnh câu hỏi & Giao diện hiển thị ảnh
+- Sửa lỗi xử lý đường dẫn ảnh (`SaveAdminQuestionAction`): loại bỏ chính xác tiền tố `/storage/` giúp lưu trữ đúng relative path.
+- Khắc phục lỗi 403 Forbidden hiển thị ảnh trên Docker do symlink tuyệt đối.
+- Bổ sung tính năng Kéo thả (Drag & Drop) và Dán ảnh từ clipboard (Ctrl+V / Cmd+V) vào ô tải ảnh câu hỏi trong trang Admin (`rich-editor.js`, `questions/form.blade.php`).
+- Cập nhật khung hiển thị ảnh câu hỏi tại trang tạo câu hỏi Admin, chế độ Study mode và Exam mode tự động co giãn theo tỷ lệ thực của ảnh (`form.blade.php`, `session.blade.php`, `exam-session.blade.php`).
 
 ## 2026-08-14
 
