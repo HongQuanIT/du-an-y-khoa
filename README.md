@@ -99,6 +99,7 @@ docker compose exec app ./vendor/bin/pint          # format PSR-12
 docker compose exec app ./vendor/bin/phpstan analyse
 
 # Search / Realtime / Queue
+docker compose exec app php artisan scout:sync-index-settings
 docker compose exec app php artisan scout:import "Modules\\QuestionBank\\Models\\Question"
 # Reverb, Horizon, Scheduler chạy sẵn dưới dạng service riêng.
 ```

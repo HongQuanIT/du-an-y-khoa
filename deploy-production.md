@@ -346,6 +346,7 @@ HORIZON_PREFIX=medlearn_horizon
 
 SCOUT_DRIVER=meilisearch
 SCOUT_QUEUE=true
+SCOUT_AFTER_COMMIT=true
 MEILISEARCH_HOST=http://127.0.0.1:7700
 MEILISEARCH_KEY=CHANGE_ME_MEILI_MASTER_KEY
 
@@ -426,6 +427,7 @@ php artisan view:cache
 php artisan event:cache
 
 # Index search (sau khi có dữ liệu)
+php artisan scout:sync-index-settings
 php artisan scout:import "Modules\\QuestionBank\\Models\\Question"
 # Import thêm các model Scout khác khi module sẵn sàng
 ```
@@ -910,6 +912,7 @@ Dataset VM14K (~14k câu): copy file JSONL vào `Modules/QuestionBank/database/s
 ### 20.3 Index Meilisearch sau seed
 
 ```bash
+php artisan scout:sync-index-settings
 php artisan scout:import "Modules\\QuestionBank\\Models\\Question"
 ```
 
