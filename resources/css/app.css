@@ -505,14 +505,24 @@ mark[data-hl='#10b981'] {
     border: none;
     border-bottom: 1px solid var(--color-outline-variant);
     background: var(--color-surface-container-low);
+    border-top-left-radius: 0.75rem;
+    border-top-right-radius: 0.75rem;
 }
 .admin-rich-editor .ql-container.ql-snow {
     border: none;
     font-family: inherit;
     font-size: 0.875rem;
+    border-bottom-left-radius: 0.75rem;
+    border-bottom-right-radius: 0.75rem;
 }
 .admin-rich-editor .ql-editor {
     min-height: 160px;
+}
+.admin-rich-editor .ql-editor.ql-blank::before {
+    font-style: italic;
+    color: var(--color-on-surface-variant);
+    opacity: 0.6;
+    pointer-events: none;
 }
 .admin-rich-editor .ql-editor img {
     max-width: 100%;
@@ -540,3 +550,127 @@ mark[data-hl='#10b981'] {
 .dark .admin-rich-editor .ql-snow .ql-picker {
     color: var(--color-on-surface-variant);
 }
+
+/* Custom Quill toolbar button: Hint */
+.ql-toolbar button.ql-hint {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 24px;
+    padding: 0;
+}
+.ql-toolbar button.ql-hint:hover {
+    background-color: var(--color-surface-container-high, #f1f5f9);
+    border-radius: 4px;
+}
+
+/* Admin editor: hint always visible with colored underline */
+.admin-rich-editor mark[data-hint] {
+    background-color: transparent;
+    color: inherit;
+    text-decoration: underline #ea580c;
+    text-decoration-style: dashed;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+    cursor: default;
+}
+
+/* Mini Quill variant (option explanations) */
+.admin-rich-editor.mini .ql-toolbar.ql-snow {
+    padding: 4px 8px;
+}
+.admin-rich-editor.mini .ql-toolbar.ql-snow .ql-formats {
+    margin-right: 8px;
+}
+.admin-rich-editor.mini .ql-editor {
+    min-height: 60px;
+    padding: 8px 12px;
+    font-size: 0.8125rem;
+}
+.admin-rich-editor.mini .ql-editor img {
+    max-width: 220px;
+    height: auto;
+    border-radius: 6px;
+    margin-top: 4px;
+    display: block;
+}
+.admin-rich-editor.mini .ql-editor img + em,
+.admin-rich-editor.mini .ql-editor img ~ p:first-of-type {
+    font-size: 0.75rem;
+    color: var(--color-on-surface-variant);
+}
+
+/* Medical Laboratory & Content Table Styling */
+.prose table,
+.ql-editor table {
+    width: auto;
+    max-width: 100%;
+    margin: 1.25rem auto;
+    border-collapse: separate;
+    border-spacing: 0;
+    border-radius: 12px;
+    border: 1px solid var(--color-outline-variant, #e2e8f0);
+    background-color: var(--color-surface, #ffffff);
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+    font-size: 0.875rem;
+}
+
+.prose table th,
+.ql-editor table th {
+    background-color: var(--color-surface-container-low, #f8fafc);
+    color: var(--color-on-surface, #0f172a);
+    font-weight: 600;
+    text-align: left;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--color-outline-variant, #e2e8f0);
+    border-right: 1px solid var(--color-outline-variant, #e2e8f0);
+}
+
+.prose table th:last-child,
+.ql-editor table th:last-child {
+    border-right: none;
+}
+
+.prose table td,
+.ql-editor table td {
+    padding: 8px 16px;
+    color: var(--color-on-surface, #1e293b);
+    border-bottom: 1px solid var(--color-outline-variant, #f1f5f9);
+    border-right: 1px solid var(--color-outline-variant, #f1f5f9);
+    vertical-align: top;
+}
+
+.prose table tr:last-child td,
+.ql-editor table tr:last-child td {
+    border-bottom: none;
+}
+
+.prose table td:last-child,
+.ql-editor table td:last-child {
+    border-right: none;
+}
+
+.prose table tr:hover td,
+.ql-editor table tr:hover td {
+    background-color: var(--color-surface-container-lowest, #f8fafc);
+}
+
+/* Medical Lab Highlight (e.g. abnormal lab values) */
+.prose mark,
+.ql-editor mark,
+mark {
+    background-color: #fef08a;
+    color: #854d0e;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-weight: 600;
+}
+.dark .prose mark,
+.dark .ql-editor mark,
+.dark mark {
+    background-color: #713f12;
+    color: #fef08a;
+}
+

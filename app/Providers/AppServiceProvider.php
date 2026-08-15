@@ -7,9 +7,11 @@ namespace App\Providers;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use App\Support\Enums\Role;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -23,6 +25,7 @@ class AppServiceProvider extends ServiceProvider
         $this->configureModels();
         $this->configureRateLimiters();
         $this->configurePasswordPolicy();
+        $this->configureAuthorization();
     }
 
     /**
@@ -65,5 +68,19 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('exports', fn (Request $request) => Limit::perMinute(5)
             ->by($request->user()?->getAuthIdentifier() ?? $request->ip()));
+    }
+
+    /**
+     * Super Admin should behave as full-access even if cached permissions lag behind.
+     */
+    private function configureAuthorization(): void
+    {
+        Gate::before(function ($user, string $ability): ?bool {
+            if ($user !== null && method_exists($user, 'hasRole') && $user->hasRole(Role::SuperAdmin->value)) {
+                return true;
+            }
+
+            return null;
+        });
     }
 }
