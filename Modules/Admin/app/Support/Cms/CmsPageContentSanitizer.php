@@ -28,6 +28,8 @@ final class CmsPageContentSanitizer
         foreach ($content as $field => $value) {
             if (is_array($value)) {
                 $sanitized[$field] = self::walk($value);
+            } elseif (is_string($field) && str_ends_with($field, '_media_id')) {
+                $sanitized[$field] = $value === '' || $value === null ? null : (int) $value;
             } elseif (is_string($value)) {
                 $sanitized[$field] = trim(strip_tags($value));
             } else {

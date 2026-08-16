@@ -40,6 +40,8 @@ enum Permission: string
     case AuditView = 'audit.view';
     case ReportExport = 'report.export';
     case CmsManage = 'cms.manage';
+    case MediaView = 'media.view';
+    case MediaManage = 'media.manage';
     case FeatureFlagManage = 'feature_flag.manage';
 
     // Classroom / live review (Module 44)

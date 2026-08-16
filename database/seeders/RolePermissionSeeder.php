@@ -7,6 +7,7 @@ namespace Database\Seeders;
 use App\Support\Enums\Permission as PermissionEnum;
 use App\Support\Enums\Role as RoleEnum;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -37,7 +38,7 @@ class RolePermissionSeeder extends Seeder
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         try {
-            \Illuminate\Support\Facades\Artisan::call('permission:cache-reset');
+            Artisan::call('permission:cache-reset');
         } catch (\Throwable) {
             // Command may be unavailable in some test boots; forgetCached is enough.
         }
@@ -53,6 +54,8 @@ class RolePermissionSeeder extends Seeder
 
             RoleEnum::ContentEditor => [
                 PermissionEnum::CmsManage->value,
+                PermissionEnum::MediaView->value,
+                PermissionEnum::MediaManage->value,
                 PermissionEnum::QuestionView->value,
                 PermissionEnum::QuestionCreate->value,
                 PermissionEnum::QuestionUpdate->value,

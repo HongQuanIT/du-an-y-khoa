@@ -19,7 +19,6 @@
 
     <section class="space-y-4 pt-6">
         <h4 class="font-label-md text-label-md text-on-surface">Bản đồ</h4>
-        @include('admin::cms.pages.forms._field', ['label' => 'URL ảnh bản đồ', 'name' => 'content[map][image_url]', 'type' => 'url', 'value' => $c['map']['image_url'], 'required' => true])
-        @include('admin::cms.pages.forms._field', ['label' => 'Mô tả ảnh (alt)', 'name' => 'content[map][image_alt]', 'value' => $c['map']['image_alt'], 'required' => true])
+        @include('admin::cms.pages.forms._image', ['label' => 'Ảnh bản đồ', 'prefix' => 'content[map]', 'value' => $c['map'], 'aspect' => '16/9'])
     </section>
 </div>

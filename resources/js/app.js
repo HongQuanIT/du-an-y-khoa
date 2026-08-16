@@ -2,6 +2,7 @@ import { Livewire, Alpine } from '../../vendor/livewire/livewire/dist/livewire.e
 import { bootLivekitRooms } from './classroom/livekit-room';
 import { bootLiveRooms } from './classroom/live-room';
 import { registerRichEditor } from './admin/rich-editor';
+import { registerMediaPicker } from './admin/media-picker';
 import { bootstrapTheme } from './theme';
 import { bootstrapCookieConsent, registerCookieBannerAlpine } from './cookie-consent';
 
@@ -27,14 +28,17 @@ if (! window.__medlearnLivewireStarted) {
     window.__medlearnLivewireStarted = true;
     window.Alpine = Alpine;
     registerRichEditor(Alpine);
+    registerMediaPicker(Alpine);
     registerCookieBannerAlpine(Alpine);
     Livewire.start();
 } else if (window.Alpine) {
     registerRichEditor(window.Alpine);
+    registerMediaPicker(window.Alpine);
     registerCookieBannerAlpine(window.Alpine);
 } else {
     window.Alpine = Alpine;
     registerRichEditor(Alpine);
+    registerMediaPicker(Alpine);
     registerCookieBannerAlpine(Alpine);
 }
 

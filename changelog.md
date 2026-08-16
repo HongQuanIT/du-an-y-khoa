@@ -10,6 +10,15 @@
 - Cập nhật thẻ trạng thái kỳ thi ở giao diện: hiển thị "Chưa xong", "Đã xong" và các nút Tiếp tục/Làm lại tương ứng.
 - Bổ sung phân trang (pagination) cho danh sách kỳ thi.
 - Thêm tính năng xem phóng to ảnh (Lightbox) khi click vào ảnh tĩnh ở màn hình làm bài.
+## 2026-08-16
+
+### Media library (local disk) + CMS image slot
+- Module 37: bảng `media` / `media_usages` / `media_jobs`; ảnh + video lưu **local** (`public` disk), không R2/CDN.
+- Admin `/admin/media`: lưới thư viện, chi tiết (metadata, biến thể, nơi dùng), xóa chặn khi đang gắn.
+- Picker + Image slot trên form CMS (landing/trang tĩnh/OG/Twitter): tải lên, kéo-thả, chọn lại từ thư viện; lưu `image_media_id`.
+- Upload ảnh sinh thumb/webp (GD); video lưu file gốc. Quyền `media.view` / `media.manage` (content editor có cả hai).
+- Test `AdminMediaLibraryTest`.
+- Picker tab **URL / CDN**: dán ảnh ngoài (tham chiếu URL, không lưu file) hoặc **tải về máy chủ**; chặn SSRF khi import. Badge CDN trên lưới.
 
 ## 2026-08-15
 

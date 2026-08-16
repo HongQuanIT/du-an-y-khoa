@@ -19,6 +19,7 @@ use Modules\Admin\Http\Controllers\RoleController;
 use Modules\Admin\Http\Controllers\UserController;
 use Modules\Auth\Http\Controllers\AdminTwoFactorController;
 use Modules\Auth\Http\Controllers\AuthenticatedSessionController;
+use Modules\Media\Http\Controllers\MediaController;
 
 /*
 |--------------------------------------------------------------------------
@@ -123,6 +124,19 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
         Route::post('/editor/images', EditorImageUploadController::class)
             ->middleware('throttle:30,1')
             ->name('editor.images');
+
+        Route::middleware('permission:'.Permission::MediaView->value)->group(function (): void {
+            Route::get('/media', [MediaController::class, 'index'])->name('media.index');
+            Route::get('/media/items', [MediaController::class, 'items'])->name('media.items');
+            Route::get('/media/{media}', [MediaController::class, 'show'])->name('media.show');
+        });
+
+        Route::middleware('permission:'.Permission::MediaManage->value)->group(function (): void {
+            Route::post('/media', [MediaController::class, 'store'])->middleware('throttle:30,1')->name('media.store');
+            Route::post('/media/from-url', [MediaController::class, 'storeFromUrl'])->middleware('throttle:20,1')->name('media.from-url');
+            Route::put('/media/{media}', [MediaController::class, 'update'])->name('media.update');
+            Route::delete('/media/{media}', [MediaController::class, 'destroy'])->name('media.destroy');
+        });
 
         Route::middleware('permission:'.Permission::CmsManage->value)->group(function (): void {
             Route::redirect('/cms', '/cms/pages')->name('cms.index');

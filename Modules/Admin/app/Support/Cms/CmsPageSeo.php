@@ -6,6 +6,7 @@ namespace Modules\Admin\Support\Cms;
 
 use Modules\Admin\Models\CmsPage;
 use Modules\Admin\Support\Enums\CmsPageKey;
+use Modules\Media\Support\HydrateMediaUrls;
 
 /**
  * WordPress/Yoast-style SEO bag stored in cms_pages.seo JSON.
@@ -55,9 +56,11 @@ final class CmsPageSeo
             'og_title' => null,
             'og_description' => null,
             'og_image' => null,
+            'og_image_media_id' => null,
             'twitter_title' => null,
             'twitter_description' => null,
             'twitter_image' => null,
+            'twitter_image_media_id' => null,
             'schema_type' => self::defaultSchemaType($key),
         ];
     }
@@ -107,9 +110,11 @@ final class CmsPageSeo
             'og_title' => $trim($input['og_title'] ?? null),
             'og_description' => $trim($input['og_description'] ?? null),
             'og_image' => $trim($input['og_image'] ?? null),
+            'og_image_media_id' => self::intOrNull($input['og_image_media_id'] ?? null),
             'twitter_title' => $trim($input['twitter_title'] ?? null),
             'twitter_description' => $trim($input['twitter_description'] ?? null),
             'twitter_image' => $trim($input['twitter_image'] ?? null),
+            'twitter_image_media_id' => self::intOrNull($input['twitter_image_media_id'] ?? null),
             'schema_type' => $schemaType,
         ];
     }
@@ -122,10 +127,10 @@ final class CmsPageSeo
         $defaults = self::defaults($key);
         $stored = is_array($page?->seo ?? null) ? $page->seo : [];
 
-        return array_merge($defaults, array_filter(
+        return HydrateMediaUrls::apply(array_merge($defaults, array_filter(
             $stored,
             static fn (mixed $value): bool => $value !== null && $value !== '',
-        ));
+        )));
     }
 
     /**
@@ -143,11 +148,22 @@ final class CmsPageSeo
             'robots_follow' => ['nullable', 'string', 'in:follow,nofollow'],
             'og_title' => ['nullable', 'string', 'max:95'],
             'og_description' => ['nullable', 'string', 'max:200'],
-            'og_image' => ['nullable', 'url', 'max:2048'],
+            'og_image' => ['nullable', 'string', 'max:2048'],
+            'og_image_media_id' => ['nullable', 'integer', 'exists:media,id'],
             'twitter_title' => ['nullable', 'string', 'max:70'],
             'twitter_description' => ['nullable', 'string', 'max:200'],
-            'twitter_image' => ['nullable', 'url', 'max:2048'],
+            'twitter_image' => ['nullable', 'string', 'max:2048'],
+            'twitter_image_media_id' => ['nullable', 'integer', 'exists:media,id'],
             'schema_type' => ['nullable', 'string', 'in:'.implode(',', self::schemaTypes())],
         ];
+    }
+
+    private static function intOrNull(mixed $value): ?int
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return (int) $value;
     }
 }

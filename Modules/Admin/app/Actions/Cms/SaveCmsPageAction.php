@@ -13,6 +13,8 @@ use Modules\Admin\Support\Cms\CmsPageContentSanitizer;
 use Modules\Admin\Support\Cms\CmsPageSeo;
 use Modules\Admin\Support\Enums\CmsPageStatus;
 use Modules\Landing\Support\ResolvedCmsPage;
+use Modules\Media\Actions\SyncMediaUsagesAction;
+use Modules\Media\Support\HydrateMediaUrls;
 
 final class SaveCmsPageAction
 {
@@ -46,9 +48,11 @@ final class SaveCmsPageAction
             'og_title',
             'og_description',
             'og_image',
+            'og_image_media_id',
             'twitter_title',
             'twitter_description',
             'twitter_image',
+            'twitter_image_media_id',
             'schema_type',
         ]);
 
@@ -63,6 +67,12 @@ final class SaveCmsPageAction
         ]);
 
         $page->save();
+
+        $usageIds = array_merge(
+            HydrateMediaUrls::collectIds($content),
+            HydrateMediaUrls::collectIds(is_array($page->seo) ? $page->seo : []),
+        );
+        SyncMediaUsagesAction::run($page, $usageIds);
 
         if ($key !== null) {
             ResolvedCmsPage::forget($key);
