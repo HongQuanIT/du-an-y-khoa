@@ -3,6 +3,7 @@
 ## 2026-08-18
 
 ### Exam Module & Flow Improvements
+- Lưu lại script `test_exam.php` dùng để test nhanh luồng thi thử trên terminal.
 - Thêm tính năng CRUD quản lý kỳ thi (Exam) ở Admin.
 - Tích hợp kết quả kỳ thi vào Global Search.
 - Điều chỉnh phân luồng Session Mode giữa Exam và Study, đảm bảo URL và logic độc lập.
