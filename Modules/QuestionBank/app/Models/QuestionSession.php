@@ -57,6 +57,7 @@ class QuestionSession extends Model
         'time_limit_seconds',
         'paused_state',
         'annotations',
+        'exam_id',
     ];
 
     protected $casts = [

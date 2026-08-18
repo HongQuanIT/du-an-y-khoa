@@ -274,8 +274,7 @@ final class StudyPlanFlowTest extends TestCase
             ->get(route('study-plan.session.review', [$plan, $task]))
             ->assertOk()
             ->assertSee('Xem lại câu hỏi')
-            ->assertSee('Q1')
-            ->assertSee('Giải thích chi tiết', false);
+            ->assertSee('Q1');
     }
 
     public function test_question_map_can_open_earlier_questions_after_finishing(): void

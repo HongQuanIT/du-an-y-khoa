@@ -56,40 +56,41 @@ final class ExamModuleTest extends TestCase
         $this->actingAs($this->user)
             ->get(route('exam.index'))
             ->assertOk()
-            ->assertSee('Kỳ thi mô phỏng')
-            ->assertSee('Bác sĩ nội trú')
-            ->assertSee('NBME')
-            ->assertSee('value="2"', false)
+            ->assertSee('Exam simulation')
+            ->assertSee('resident')
+            ->assertSee('nbme')
             ->assertSee('Nâng cấp để bắt đầu');
     }
 
     public function test_premium_user_can_start_exam_session_from_catalog(): void
     {
-        $first = $this->examQuestion('Resident first', 'resident');
-        $second = $this->examQuestion('Resident second', 'resident');
+        $first = $this->examQuestion('Resident first', 'Resident');
+        $second = $this->examQuestion('Resident second', 'Resident');
+        $exam = \Modules\Exam\Models\Exam::where('title', 'Resident')->first();
         $this->grantPremium($this->user);
 
         $this->actingAs($this->user)
-            ->post(route('exam.start', 'resident'), ['count' => 2])
+            ->post(route('exam.start', $exam->id), ['count' => 2])
             ->assertRedirect();
 
         $session = QuestionSession::query()->firstOrFail();
 
         $this->assertSame(SessionMode::Exam, $session->mode);
         $this->assertSame(SessionSource::Exam, $session->source);
-        $this->assertSame('resident', $session->filters['exam_key']);
+        $this->assertSame($exam->id, $session->exam_id);
         $this->assertSame(2, $session->total);
-        $this->assertSame(180, $session->time_limit_seconds);
+        $this->assertSame(180 * 60, $session->time_limit_seconds);
         $this->assertEqualsCanonicalizing([$first->getKey(), $second->getKey()], $session->question_ids);
         $this->assertSame(2, QuestionSessionSnapshot::query()->where('session_id', $session->getKey())->count());
     }
 
     public function test_starting_exam_requires_exam_simulation_entitlement(): void
     {
-        $this->examQuestion('Resident first', 'resident');
+        $this->examQuestion('Resident first', 'Resident');
+        $exam = \Modules\Exam\Models\Exam::where('title', 'Resident')->first();
 
         $this->actingAs($this->user)
-            ->post(route('exam.start', 'resident'), ['count' => 1])
+            ->post(route('exam.start', $exam->id), ['count' => 1])
             ->assertRedirect(route('billing.plans'));
 
         $this->assertSame(0, QuestionSession::query()->count());
@@ -106,11 +107,16 @@ final class ExamModuleTest extends TestCase
                 'topic_id' => $this->topic->getKey(),
             ]);
 
-        QuestionScope::query()->create([
-            'question_id' => $question->getKey(),
-            'scope_type' => QuestionScopeType::Exam,
-            'scope_key' => $examKey,
-        ]);
+        $exam = \Modules\Exam\Models\Exam::query()->firstOrCreate(
+            ['title' => $examKey],
+            [
+                'description' => 'Test exam',
+                'duration_minutes' => 180,
+                'status' => \Modules\Exam\Enums\ExamStatus::Published,
+                'is_published' => true,
+            ]
+        );
+        $exam->questions()->attach($question->getKey());
 
         return $question;
     }

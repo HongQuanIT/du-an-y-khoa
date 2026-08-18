@@ -85,7 +85,7 @@ final class ExamSessionSummaryController extends Controller
             'summaryConfig' => [
                 'page_title' => 'Phân tích kết quả',
                 'heading' => 'Phân tích kết quả',
-                'subtitle' => $modeLabel.' · hoàn thành '.$summary['total'].' câu hỏi trong phiên này.',
+                'subtitle' => $modeLabel.' · đã xong '.$summary['total'].' câu hỏi trong phiên này.',
                 'breadcrumbs' => [
                     ['label' => 'Kỳ thi', 'url' => route('exam.index')],
                     [
@@ -100,6 +100,7 @@ final class ExamSessionSummaryController extends Controller
                 'back_icon' => 'assignment',
                 'progress_label' => $summary['answered'].'/'.$summary['total'].' câu đã trả lời',
                 'context_message' => 'Kết quả đã được lưu vào lịch sử Kỳ thi.',
+                'retry_url' => route('exam.start', $session->exam_id),
             ],
         ]);
     }

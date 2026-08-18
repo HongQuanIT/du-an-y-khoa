@@ -252,12 +252,10 @@
                                 Những dòng này sẽ được dùng để gạch chân trong chế độ học tập của học viên.
                             </p>
                         </div>
-                        <x-admin.rich-editor name="explanation" label="Giải thích chi tiết (hiển thị sau khi trả lời)"
-                            :value="old('explanation', $question->explanation)"
-                            placeholder="Lý thuyết, cơ chế, giải thích từng đáp án..." />
-                        <x-admin.rich-editor name="attending_tip" label="Gợi ý lâm sàng (hiển thị trước khi chọn)"
+
+                        <x-admin.rich-editor name="attending_tip" label="Kiến thức"
                             :value="old('attending_tip', $question->attending_tip)"
-                            placeholder="Gợi ý ngắn giúp người học suy luận trước khi chọn..." />
+                            placeholder="Kiến thức bổ sung..." />
                     </div>
                 </div>
 

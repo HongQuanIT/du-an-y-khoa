@@ -790,11 +790,7 @@
                             </template>
                         </section>
 
-                        <div x-show="revealed && questionExplanation" x-cloak
-                            class="rounded-r-lg border-l-4 border-primary bg-primary/5 py-3 pr-4 pl-4">
-                            <p class="mb-1 text-label-sm font-bold tracking-wider text-primary uppercase">Giải thích</p>
-                            <div class="prose prose-sm max-w-none text-body-md leading-relaxed text-on-surface" x-html="questionExplanation"></div>
-                        </div>
+
                     </div>
                     </div>
 

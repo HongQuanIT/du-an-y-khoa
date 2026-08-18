@@ -43,11 +43,11 @@ final class StudySessionController extends Controller
         $this->authorize('view', $session);
 
         if ($this->finishExpiredExam($session)) {
-            return redirect()->route('qbank.summary', $session);
+            return redirect($this->summaryUrl($session));
         }
 
         if ($session->status === SessionStatus::Completed) {
-            return redirect()->route('qbank.summary', $session);
+            return redirect($this->summaryUrl($session));
         }
 
         abort_unless(
@@ -113,7 +113,7 @@ final class StudySessionController extends Controller
                 'exit_url' => route('qbank.index'),
                 'pause_url' => route('qbank.session.pause', $session),
                 'finish_url' => route('qbank.session.finish', $session),
-                'summary_url' => route('qbank.summary', $session),
+                'summary_url' => $this->summaryUrl($session),
                 'annotate_url' => route('qbank.session.annotate', $session),
                 'answer_url' => route('qbank.session.answer', $session),
                 'question_route' => 'qbank.session',
@@ -140,7 +140,7 @@ final class StudySessionController extends Controller
         if ($this->finishExpiredExam($session)) {
             return $request->expectsJson()
                 ? ApiResponse::error('SESSION_EXPIRED', 'Phiên thi đã hết giờ.', 409)
-                : redirect()->route('qbank.summary', $session);
+                : redirect($this->summaryUrl($session));
         }
 
         if ($session->status === SessionStatus::Paused) {
@@ -197,8 +197,8 @@ final class StudySessionController extends Controller
                 'saved' => true,
                 'answered_count' => $session->answered_count,
                 'completed' => $session->status === SessionStatus::Completed,
-                'next_url' => route('qbank.session', [$session, 'index' => $nextIndex]),
-                'summary_url' => route('qbank.summary', $session),
+                'next_url' => $this->sessionUrl($session, $nextIndex),
+                'summary_url' => $this->summaryUrl($session),
             ];
 
             if (! $isExam) {
@@ -209,12 +209,12 @@ final class StudySessionController extends Controller
         }
 
         if ($session->status === SessionStatus::Completed) {
-            return redirect()->route('qbank.summary', $session);
+            return redirect($this->summaryUrl($session));
         }
 
         $targetIndex = $isExam ? $nextIndex : (int) ($validated['index'] ?? 0);
 
-        return redirect()->route('qbank.session', [$session, 'index' => $targetIndex]);
+        return redirect($this->sessionUrl($session, $targetIndex));
     }
 
     public function annotate(Request $request, QuestionSession $session): JsonResponse
@@ -285,7 +285,7 @@ final class StudySessionController extends Controller
         $index = (int) ($session->paused_state['current_index'] ?? 0);
         $this->resumeSession->handle($session);
 
-        return redirect()->route('qbank.session', [$session, 'index' => $index]);
+        return redirect($this->sessionUrl($session, $index));
     }
 
     public function finish(QuestionSession $session): RedirectResponse
@@ -298,7 +298,7 @@ final class StudySessionController extends Controller
         );
         $this->completeSession->handle($session);
 
-        return redirect()->route('qbank.summary', $session);
+        return redirect($this->summaryUrl($session));
     }
 
     /** @return Collection<string, QuestionAttempt> */
@@ -365,5 +365,23 @@ final class StudySessionController extends Controller
     private function remainingSeconds(QuestionSession $session): ?int
     {
         return $this->timer->remainingSeconds($session);
+    }
+
+    private function summaryUrl(QuestionSession $session): string
+    {
+        if ($session->mode === SessionMode::Exam) {
+            return route('exam.summary', $session);
+        }
+
+        return route('qbank.summary', $session);
+    }
+
+    private function sessionUrl(QuestionSession $session, int $index = 0): string
+    {
+        if ($session->mode === SessionMode::Exam) {
+            return route('exam.session', [$session, 'index' => $index]);
+        }
+
+        return route('qbank.session', [$session, 'index' => $index]);
     }
 }

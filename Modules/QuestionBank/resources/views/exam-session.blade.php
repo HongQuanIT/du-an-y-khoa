@@ -37,6 +37,8 @@
         mobileNav: false,
         warningVisible: false,
         warningLabel: '',
+        imageViewerOpen: false,
+        imageViewerSrc: '',
         flagged: @js((bool) $flagged),
         noteText: @js($note),
         annotationSaving: false,
@@ -318,7 +320,7 @@
             event.preventDefault();
         },
     }" @keydown.window="handleCalculatorKey($event)"
-        @keydown.escape.window="exitOpen = false; finishOpen = false; notesOpen = false; calculatorOpen = false; mobileNav = false">
+        @keydown.escape.window="exitOpen = false; finishOpen = false; notesOpen = false; calculatorOpen = false; mobileNav = false; imageViewerOpen = false">
         <header
             class="fixed inset-x-0 top-0 z-50 flex h-16 items-center justify-between border-b border-outline-variant bg-surface px-4 md:px-8">
             <div class="flex items-center gap-3 md:gap-6">
@@ -378,9 +380,9 @@
 
                                 @if ($stemImageUrl)
                                     <aside class="overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-sm">
-                                        <div class="bg-white flex justify-center">
+                                        <div class="bg-white flex justify-center cursor-zoom-in" @click="imageViewerOpen = true; imageViewerSrc = '{{ $stemImageUrl }}'">
                                             <img src="{{ $stemImageUrl }}" alt="Ảnh minh họa câu hỏi"
-                                                class="w-full h-auto max-h-[600px] object-contain">
+                                                class="w-full h-auto max-h-[600px] object-contain transition-transform hover:scale-[1.02]">
                                         </div>
                                     </aside>
                                 @endif
@@ -676,6 +678,17 @@
                     </button>
                 </div>
             </section>
+        </div>
+        
+        <div x-show="imageViewerOpen" x-cloak x-transition.opacity
+            class="fixed inset-0 z-[150] flex items-center justify-center bg-black/90 p-4"
+            @click="imageViewerOpen = false">
+            <button type="button" class="absolute right-4 top-4 flex size-12 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20">
+                <span class="material-symbols-outlined text-[24px]">close</span>
+            </button>
+            <img :src="imageViewerSrc" alt="Ảnh phóng to"
+                class="max-h-full max-w-full cursor-zoom-out object-contain"
+                @click.stop="imageViewerOpen = false">
         </div>
     </div>
 </x-layouts.auth>

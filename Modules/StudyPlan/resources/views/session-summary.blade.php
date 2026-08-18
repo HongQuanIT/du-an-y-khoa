@@ -455,6 +455,16 @@
                     <span class="material-symbols-outlined">{{ $summaryConfig['back_icon'] }}</span>
                     {{ $summaryConfig['back_label'] }}
                 </a>
+                @if (isset($summaryConfig['retry_url']))
+                    <form method="POST" action="{{ $summaryConfig['retry_url'] }}" class="w-full sm:w-auto">
+                        @csrf
+                        <button type="submit"
+                            class="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 font-bold text-white shadow-lg transition-all hover:brightness-110 active:scale-95">
+                            <span class="material-symbols-outlined">refresh</span>
+                            Làm lại
+                        </button>
+                    </form>
+                @endif
             </div>
         </div>
     </div>

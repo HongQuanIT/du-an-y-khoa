@@ -232,32 +232,7 @@
                     </button>
                 </div>
 
-                <div class="space-y-6">
-                    <div class="flex items-center gap-3">
-                        <span class="material-symbols-outlined text-primary">lightbulb</span>
-                        <h4 class="font-headline-sm text-headline-sm">Giải thích chi tiết</h4>
-                    </div>
-                    <div class="max-w-none space-y-4 text-on-surface-variant">
-                        <p class="text-body-md leading-relaxed">
-                            Dựa trên các triệu chứng lâm sàng và cận lâm sàng, bệnh nhân có đầy đủ tiêu chuẩn chẩn đoán
-                            <strong>Nhồi máu cơ tim cấp có ST chênh lên (STEMI)</strong>.
-                        </p>
-                        <ul class="list-disc space-y-2 pl-5 text-body-md">
-                            <li><strong>Lâm sàng:</strong> Đau thắt ngực điển hình kéo dài trên 20 phút (30 phút trong
-                                trường hợp này), không đáp ứng với nghỉ ngơi.</li>
-                            <li><strong>Điện tâm đồ:</strong> ST chênh lên ở các chuyển đạo từ V1 đến V4 tương ứng với
-                                vùng cấp máu của động mạch liên thất trước (LAD), đây là vùng thành trước rộng của thất
-                                trái.</li>
-                            <li><strong>Men tim:</strong> Troponin I tăng cao khẳng định có sự hoại tử tế bào cơ tim.
-                            </li>
-                        </ul>
-                        <p
-                            class="rounded-lg border-l-4 border-primary bg-surface-container p-4 text-body-sm italic">
-                            "Lưu ý: STEMI là một cấp cứu nội khoa cần can thiệp tái thông mạch vành càng sớm càng tốt
-                            trong 'giờ vàng' để hạn chế tối đa diện hoại tử cơ tim."
-                        </p>
-                    </div>
-                </div>
+
 
                 <div class="glass-ai rounded-2xl p-6 shadow-sm">
                     <div class="mb-6 flex items-center justify-between">

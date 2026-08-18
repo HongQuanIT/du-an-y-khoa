@@ -17,37 +17,34 @@ final class ExamCatalogService
 {
     public function __construct(private readonly SessionQuestionSelector $selector) {}
 
-    /**
-     * @return list<array{
-     *     key: string,
-     *     title: string,
-     *     icon: string,
-     *     hint: string,
-     *     available_count: int,
-     *     default_count: int,
-     *     estimated_minutes: int
-     * }>
-     */
-    public function cards(User $user): array
+    public function cards(User $user): \Illuminate\Pagination\LengthAwarePaginator
     {
-        $cards = [];
+        $exams = \Modules\Exam\Models\Exam::withCount('questions')
+            ->where('status', \Modules\Exam\Enums\ExamStatus::Published)
+            ->paginate(6);
 
-        foreach (TargetExams::selectable() as $key => $exam) {
-            $available = $this->availableCount($user, (string) $key);
-            $defaultCount = min(40, max(1, $available));
+        // Get completed sessions for this user for these exams
+        $sessions = QuestionSession::query()
+            ->where('user_id', $user->getKey())
+            ->where('mode', SessionMode::Exam)
+            ->where('source', SessionSource::Exam)
+            ->whereIn('exam_id', $exams->pluck('id'))
+            ->get()
+            ->keyBy('exam_id');
 
-            $cards[] = [
-                'key' => (string) $key,
-                'title' => (string) $exam['title'],
-                'icon' => (string) $exam['icon'],
-                'hint' => (string) $exam['hint'],
-                'available_count' => $available,
-                'default_count' => $defaultCount,
-                'estimated_minutes' => (int) ceil($defaultCount * 90 / 60),
+        $exams->getCollection()->transform(function ($exam) use ($sessions) {
+            return [
+                'id' => $exam->id,
+                'title' => $exam->title,
+                'icon_url' => $exam->icon ? \Illuminate\Support\Facades\Storage::disk('public')->url($exam->icon) : null,
+                'description' => $exam->description,
+                'question_count' => $exam->questions_count,
+                'duration_minutes' => $exam->duration_minutes,
+                'session' => $sessions->get($exam->id), // Will be null if not started/completed
             ];
-        }
+        });
 
-        return $cards;
+        return $exams;
     }
 
     /**
@@ -59,18 +56,9 @@ final class ExamCatalogService
             ->where('user_id', $user->getKey())
             ->where('mode', SessionMode::Exam)
             ->where('source', SessionSource::Exam)
+            ->whereNotNull('exam_id')
             ->latest('updated_at')
             ->limit(6)
             ->get();
-    }
-
-    private function availableCount(User $user, string $examKey): int
-    {
-        return $this->selector->countForSession($user, new CreateSessionData(
-            mode: SessionMode::Exam,
-            source: SessionSource::Exam,
-            count: 10_000,
-            examKey: $examKey,
-        ));
     }
 }

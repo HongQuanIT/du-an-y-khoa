@@ -41,6 +41,7 @@ final class CreateQuestionSessionAction
             savedOnly: $data->savedOnly,
             folderId: $data->folderId,
             examKey: $data->examKey,
+            examId: $data->examId,
             articles: $data->articles,
             symptoms: $data->symptoms,
         );
@@ -63,6 +64,7 @@ final class CreateQuestionSessionAction
             savedOnly: $data->savedOnly,
             folderId: $data->folderId,
             examKey: $data->examKey,
+            examId: $data->examId,
             articles: $data->articles,
             symptoms: $data->symptoms,
         );
@@ -82,6 +84,7 @@ final class CreateQuestionSessionAction
                 'time_limit_seconds' => $timeLimit,
                 'paused_state' => null,
                 'annotations' => [],
+                'exam_id' => $data->examId,
             ]);
             $this->snapshots->capture($session);
 

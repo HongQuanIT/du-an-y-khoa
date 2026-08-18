@@ -4,6 +4,11 @@ namespace Modules\Search\Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
+use Modules\Classroom\Enums\ClassroomStatus;
+use Modules\Classroom\Enums\ClassroomVisibility;
+use Modules\Classroom\Models\Classroom;
+use Modules\Exam\Enums\ExamStatus;
+use Modules\Exam\Models\Exam;
 use Modules\Library\Models\Article;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
@@ -62,6 +67,54 @@ class SearchDatabaseSeeder extends Seeder
                     'is_free' => (bool) $article->is_free,
                     'is_published' => true,
                     'published_at' => $article->published_at ?? $now,
+                ]);
+            });
+
+        Classroom::query()
+            ->where('status', ClassroomStatus::Active)
+            ->where('visibility', ClassroomVisibility::Public)
+            ->orderBy('created_at')
+            ->get()
+            ->each(function (Classroom $classroom) use ($now): void {
+                $title = SearchText::normalize(SearchText::plain((string) $classroom->title), 255);
+                $description = SearchText::plain((string) ($classroom->description ?? ''));
+
+                SearchDocument::query()->create([
+                    'source_type' => Classroom::class,
+                    'source_id' => $classroom->getKey(),
+                    'scope' => 'classroom',
+                    'type' => 'classroom',
+                    'title' => $title,
+                    'summary' => $description,
+                    'body' => trim($title.' '.$description),
+                    'url' => route('classroom.show', $classroom),
+                    'is_free' => true,
+                    'is_published' => true,
+                    'published_at' => $classroom->updated_at ?? $now,
+                ]);
+            });
+
+        Exam::query()
+            ->where('is_published', true)
+            ->where('status', ExamStatus::Published)
+            ->orderBy('created_at')
+            ->get()
+            ->each(function (Exam $exam) use ($now): void {
+                $title = SearchText::normalize(SearchText::plain((string) $exam->title), 255);
+                $description = SearchText::plain((string) ($exam->description ?? ''));
+
+                SearchDocument::query()->create([
+                    'source_type' => Exam::class,
+                    'source_id' => $exam->getKey(),
+                    'scope' => 'exam',
+                    'type' => 'exam',
+                    'title' => $title,
+                    'summary' => $description,
+                    'body' => trim($title.' '.$description),
+                    'url' => route('exam.index'),
+                    'is_free' => false,
+                    'is_published' => true,
+                    'published_at' => $exam->updated_at ?? $now,
                 ]);
             });
     }

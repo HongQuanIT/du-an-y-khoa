@@ -248,15 +248,7 @@
                         </template>
                     </div>
 
-                    <div class="space-y-4" x-show="current.explanation">
-                        <div class="flex items-center gap-3">
-                            <span class="material-symbols-outlined text-primary">lightbulb</span>
-                            <h4 class="font-headline-sm text-headline-sm">Giải thích chi tiết</h4>
-                        </div>
-                        <div class="rounded-r-lg border-l-4 border-primary bg-primary/5 p-4">
-                            <p class="text-body-md leading-relaxed text-on-surface" x-text="current.explanation"></p>
-                        </div>
-                    </div>
+
 
                     <div class="flex items-center justify-between border-t border-outline-variant pt-8 pb-20 md:pb-10">
                         <button type="button" @click="prev()"

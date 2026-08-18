@@ -18,7 +18,7 @@ Route::middleware(['auth', 'learner'])
     ->name('exam.')
     ->group(function (): void {
         Route::get('/', ExamIndexController::class)->name('index');
-        Route::post('/{examKey}/start', StartExamController::class)
+        Route::post('/{exam}/start', StartExamController::class)
             ->middleware('subscription:exam.simulation')
             ->name('start');
         Route::get('/{session}/summary', ExamSessionSummaryController::class)->name('summary');

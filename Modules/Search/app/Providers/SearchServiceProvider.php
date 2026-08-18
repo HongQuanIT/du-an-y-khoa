@@ -3,10 +3,22 @@
 namespace Modules\Search\Providers;
 
 use Illuminate\Console\Scheduling\Schedule;
+use Modules\Classroom\Models\Classroom;
+use Modules\Exam\Models\Exam;
+use Modules\Search\Observers\ClassroomSearchObserver;
+use Modules\Search\Observers\ExamSearchObserver;
 use Nwidart\Modules\Support\ModuleServiceProvider;
 
 class SearchServiceProvider extends ModuleServiceProvider
 {
+    public function boot(): void
+    {
+        parent::boot();
+
+        Exam::observe(ExamSearchObserver::class);
+        Classroom::observe(ClassroomSearchObserver::class);
+    }
+
     /**
      * The name of the module.
      */

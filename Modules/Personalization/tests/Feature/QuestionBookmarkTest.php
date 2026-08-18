@@ -175,8 +175,7 @@ final class QuestionBookmarkTest extends TestCase
             ->assertSee('Câu hỏi bookmark để xem đáp án?')
             ->assertSee('Đáp án sai của bookmark')
             ->assertSee('Đáp án đúng của bookmark')
-            ->assertSee('Đáp án đúng')
-            ->assertSee('Giải thích dành cho câu đã lưu.');
+            ->assertSee('Đáp án đúng');
     }
 
     public function test_student_can_remove_bookmark_from_qbank_list(): void

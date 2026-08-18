@@ -55,8 +55,12 @@ final class CustomSessionController extends Controller
             throw ValidationException::withMessages(['filters' => $exception->getMessage()]);
         }
 
+        $route = $session->mode === \Modules\QuestionBank\Enums\SessionMode::Exam
+            ? 'exam.session'
+            : 'qbank.session';
+
         return redirect()
-            ->route('qbank.session', $session)
+            ->route($route, $session)
             ->with('status', 'Đã tạo phiên luyện tập.');
     }
 
