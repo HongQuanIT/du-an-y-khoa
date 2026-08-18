@@ -16,13 +16,6 @@ final class StartExamRequest extends FormRequest
     /** @return array<string, mixed> */
     public function rules(): array
     {
-        return [
-            'count' => ['required', 'integer', 'min:1', 'max:200'],
-        ];
-    }
-
-    public function count(): int
-    {
-        return max(1, min(200, $this->integer('count')));
+        return [];
     }
 }

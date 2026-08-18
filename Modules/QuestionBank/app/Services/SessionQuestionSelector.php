@@ -39,6 +39,15 @@ final class SessionQuestionSelector
             return $this->weakTopicQuestions($userId, $data->count, $canUsePremium);
         }
 
+        if ($data->examId !== null) {
+            return DB::table('exam_question')
+                ->where('exam_id', $data->examId)
+                ->orderBy('order')
+                ->pluck('question_id')
+                ->map(fn ($id) => (string) $id)
+                ->all();
+        }
+
         $topicIds = $this->expandTopics($data->topicIds);
         $eligible = $this->eligibleForData($userId, $data, $canUsePremium);
 
@@ -76,6 +85,10 @@ final class SessionQuestionSelector
                 [],
                 $canUsePremium,
             )->count();
+        }
+
+        if ($data->examId !== null) {
+            return DB::table('exam_question')->where('exam_id', $data->examId)->count();
         }
 
         return $this->questionQuery(

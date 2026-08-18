@@ -1,11 +1,10 @@
 @php
-    use App\Support\TargetExams;
     use Modules\QuestionBank\Enums\SessionStatus;
 
     $statusLabels = [
         'active' => 'Đang làm',
         'paused' => 'Tạm dừng',
-        'completed' => 'Hoàn thành',
+        'completed' => 'Đã xong',
         'expired' => 'Hết giờ',
         'abandoned' => 'Đã bỏ',
     ];
@@ -28,9 +27,9 @@
         <div class="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div class="max-w-3xl">
                 <p class="mb-2 text-sm font-bold uppercase tracking-wide text-primary">Exam simulation</p>
-                <h1 class="font-headline-lg text-headline-lg font-bold text-on-surface">Kỳ thi mô phỏng</h1>
+                <h1 class="font-headline-lg text-headline-lg font-bold text-on-surface">Kỳ thi</h1>
                 <p class="mt-3 text-sm leading-6 text-on-surface-variant sm:text-base">
-                    Chọn mục tiêu thi, hệ thống sẽ rút đề từ QBank theo exam tag, khóa snapshot câu hỏi và chạy bằng chế độ thi có timer.
+                    Làm bài thi thử với cấu trúc mô phỏng kỳ thi thật. Thời gian sẽ được tính lùi giống hệt thi thật.
                 </p>
             </div>
             @unless ($canStartExam)
@@ -43,48 +42,57 @@
         </div>
 
         <div class="grid gap-4 lg:grid-cols-3">
-            @foreach ($examCards as $exam)
+            @forelse ($examCards as $exam)
                 @php
-                    $available = (int) $exam['available_count'];
                     $locked = ! $canStartExam;
-                    $disabled = $locked || $available === 0;
+                    $session = $exam['session'] ?? null;
+                    $isCompleted = $session && $session->status === SessionStatus::Completed;
+                    $isActive = $session && $session->status !== SessionStatus::Completed;
                 @endphp
-                <article class="flex h-full flex-col rounded-2xl border border-outline-variant bg-white p-5 shadow-sm">
+                <article class="flex h-full flex-col rounded-2xl border {{ $isCompleted ? 'border-success/50 bg-success/5' : 'border-outline-variant bg-white' }} p-5 shadow-sm">
                     <div class="flex min-h-[92px] items-start justify-between gap-4">
                         <div class="flex min-w-0 flex-1 items-start gap-3">
-                            <span class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary text-white">
-                                <span class="material-symbols-outlined text-[24px] text-white">{{ $exam['icon'] }}</span>
-                            </span>
+                            @if($exam['icon_url'])
+                                <img src="{{ $exam['icon_url'] }}" alt="Icon" class="size-11 shrink-0 rounded-xl object-cover border border-outline-variant">
+                            @else
+                                <span class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary text-white">
+                                    <span class="material-symbols-outlined text-[24px] text-white">quiz</span>
+                                </span>
+                            @endif
                             <div class="min-w-0">
-                                <h2 class="text-lg font-bold text-on-surface">{{ $exam['title'] }}</h2>
-                                <p class="mt-1 text-sm leading-6 text-on-surface-variant">{{ $exam['hint'] }}</p>
+                                <h2 class="text-lg font-bold text-on-surface line-clamp-2">{{ $exam['title'] }}</h2>
+                                <p class="mt-1 text-sm leading-6 text-on-surface-variant line-clamp-2">{{ $exam['description'] }}</p>
                             </div>
                         </div>
                         @if ($locked)
-                            <span class="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800">Premium</span>
+                            <span class="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800 shrink-0">Premium</span>
                         @endif
                     </div>
 
                     <div class="mt-5 grid grid-cols-2 gap-3 text-sm">
                         <div class="flex min-h-[84px] flex-col justify-between rounded-xl bg-surface-container-low p-3">
-                            <p class="text-xs font-bold text-on-surface-variant">Câu khả dụng</p>
-                            <p class="mt-1 text-2xl font-bold text-on-surface">{{ number_format($available, 0, ',', '.') }}</p>
+                            <p class="text-xs font-bold text-on-surface-variant">Số câu</p>
+                            <p class="mt-1 text-2xl font-bold text-on-surface">{{ $exam['question_count'] }}</p>
                         </div>
                         <div class="flex min-h-[84px] flex-col justify-between rounded-xl bg-surface-container-low p-3">
-                            <p class="text-xs font-bold text-on-surface-variant">Thời gian gợi ý</p>
-                            <p class="mt-1 text-2xl font-bold text-on-surface">{{ $exam['estimated_minutes'] }}'</p>
+                            <p class="text-xs font-bold text-on-surface-variant">Thời gian</p>
+                            <p class="mt-1 text-2xl font-bold text-on-surface">{{ $exam['duration_minutes'] }}'</p>
                         </div>
                     </div>
 
-                    <form method="POST" action="{{ route('exam.start', $exam['key']) }}" class="mt-5 flex flex-1 flex-col gap-3">
-                        @csrf
-                        <label class="block min-h-[74px]">
-                            <span class="mb-1.5 block text-xs font-bold text-on-surface-variant">Số câu</span>
-                            <input type="number" name="count" min="1" max="{{ max(1, min(200, $available)) }}"
-                                value="{{ $exam['default_count'] }}" @disabled($disabled)
-                                class="h-11 w-full rounded-xl border border-outline-variant bg-surface px-3 text-sm leading-none focus:border-primary focus:ring-1 focus:ring-primary disabled:cursor-not-allowed disabled:bg-surface-container-low disabled:text-on-surface-variant">
-                        </label>
+                    @if ($session)
+                        <div class="mt-4 flex items-center justify-between rounded-xl {{ $isCompleted ? 'bg-success/10 text-success' : 'bg-primary/10 text-primary' }} px-4 py-3 text-sm font-bold">
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[20px]">{{ $isCompleted ? 'check_circle' : 'pending' }}</span>
+                                <span>{{ $isCompleted ? 'Đã xong' : 'Chưa xong' }} ({{ $session->answered_count }}/{{ $session->total }})</span>
+                            </div>
+                            @if ($isCompleted)
+                                <a href="{{ route('exam.summary', $session) }}" class="underline hover:text-success/80">Xem kết quả</a>
+                            @endif
+                        </div>
+                    @endif
 
+                    <div class="mt-5 flex flex-1 flex-col gap-3">
                         <div class="mt-auto">
                             @if ($locked)
                                 <a href="{{ route('billing.plans') }}"
@@ -92,18 +100,42 @@
                                     <span class="material-symbols-outlined text-[18px]">lock</span>
                                     Nâng cấp để bắt đầu
                                 </a>
-                            @else
-                                <button type="submit" @disabled($disabled)
-                                    class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-outline">
+                            @elseif ($isActive)
+                                <a href="{{ route('exam.session', $session) }}"
+                                    class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-white transition-colors hover:bg-primary/90">
                                     <span class="material-symbols-outlined text-[18px]">play_arrow</span>
-                                    {{ $available === 0 ? 'Chưa có câu phù hợp' : 'Bắt đầu thi' }}
-                                </button>
+                                    Tiếp tục
+                                </a>
+                            @else
+                                <form method="POST" action="{{ route('exam.start', $exam['id']) }}" class="w-full">
+                                    @csrf
+                                    <button type="submit" @disabled($exam['question_count'] == 0)
+                                        class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-outline {{ $isCompleted ? 'bg-surface-container-highest text-on-surface hover:bg-surface-container-highest/80' : 'bg-primary' }}">
+                                        @if($isCompleted)
+                                            <span class="material-symbols-outlined text-[18px] text-on-surface">refresh</span>
+                                            <span class="text-on-surface">Làm lại</span>
+                                        @else
+                                            <span class="material-symbols-outlined text-[18px]">play_arrow</span>
+                                            {{ $exam['question_count'] == 0 ? 'Đề trống' : 'Bắt đầu thi' }}
+                                        @endif
+                                    </button>
+                                </form>
                             @endif
                         </div>
-                    </form>
+                    </div>
                 </article>
-            @endforeach
+            @empty
+                <div class="col-span-full rounded-2xl border border-dashed border-outline-variant bg-white px-6 py-12 text-center">
+                    <p class="font-bold text-on-surface">Chưa có đề thi nào.</p>
+                </div>
+            @endforelse
         </div>
+
+        @if ($examCards->hasPages())
+            <div class="mt-8">
+                {{ $examCards->links() }}
+            </div>
+        @endif
 
         <section class="mt-10">
             <div class="mb-4 flex items-center justify-between gap-3">
@@ -123,8 +155,8 @@
                 <div class="overflow-hidden rounded-2xl border border-outline-variant bg-white shadow-sm">
                     @foreach ($recentSessions as $session)
                         @php
-                            $examKey = is_array($session->filters) ? ($session->filters['exam_key'] ?? null) : null;
-                            $examTitle = TargetExams::displayTitle(is_string($examKey) ? $examKey : null);
+                            $examId = is_array($session->filters) ? ($session->filters['exam_id'] ?? null) : null;
+                            $examTitle = $examId ? \Modules\Exam\Models\Exam::find($examId)?->title : 'Kỳ thi';
                             $status = $session->status->value;
                             $targetRoute = $session->status === SessionStatus::Completed
                                 ? route('exam.summary', $session)

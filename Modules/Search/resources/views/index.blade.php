@@ -7,6 +7,8 @@
         'disease' => 'Bệnh',
         'drug' => 'Thuốc',
         'procedure' => 'Thủ thuật',
+        'classroom' => 'Lớp học',
+        'exam' => 'Kỳ thi',
         'keyword' => 'Từ khoá',
     ];
 @endphp
@@ -14,21 +16,21 @@
 <x-layouts.app title="Tìm kiếm">
     <div class="px-4 py-6 md:px-8">
         <div class="mx-auto max-w-6xl space-y-6">
-            <section class="rounded-2xl border border-outline-variant bg-white p-5 shadow-sm">
-                <form method="get" action="{{ route('search.index') }}" class="grid gap-3 md:grid-cols-[1fr_auto]">
-                    <div class="relative">
-                        <span class="material-symbols-outlined pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-on-surface-variant">search</span>
-                        <input name="q" value="{{ $query }}" type="search" placeholder="Tìm bài viết, câu hỏi, thuốc, thủ thuật..."
-                            autocomplete="off"
-                            class="w-full rounded-xl border border-outline-variant bg-surface py-3 pr-4 pl-10 font-body-md text-body-md focus:border-primary focus:ring-2 focus:ring-primary/20">
-                    </div>
-                    <button type="submit"
-                        class="inline-flex items-center justify-center rounded-xl bg-primary px-5 py-3 font-label-md text-label-md font-semibold text-white">
-                        Tìm kiếm
-                    </button>
-                </form>
+            @if ($query === '')
+                <section class="rounded-2xl border border-outline-variant bg-white p-5 shadow-sm">
+                    <form method="get" action="{{ route('search.index') }}" class="grid gap-3 md:grid-cols-[1fr_auto]">
+                        <div class="relative">
+                            <span class="material-symbols-outlined pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-on-surface-variant">search</span>
+                            <input name="q" value="{{ $query }}" type="search" placeholder="Tìm bài viết, thuốc, thủ thuật, classroom, kỳ thi..."
+                                autocomplete="off"
+                                class="w-full rounded-xl border border-outline-variant bg-surface py-3 pr-4 pl-10 font-body-md text-body-md focus:border-primary focus:ring-2 focus:ring-primary/20">
+                        </div>
+                        <button type="submit"
+                            class="inline-flex items-center justify-center rounded-xl bg-primary px-5 py-3 font-label-md text-label-md font-semibold text-white">
+                            Tìm kiếm
+                        </button>
+                    </form>
 
-                @if ($query === '')
                     <div class="mt-5 grid gap-4 md:grid-cols-2">
                         <div class="rounded-xl bg-surface-container-low p-4">
                             <p class="font-label-md text-label-md font-semibold text-on-surface">Gợi ý gần đây</p>
@@ -48,12 +50,12 @@
                             <ul class="mt-3 space-y-2 font-body-sm text-body-sm text-on-surface-variant">
                                 <li>• Gõ tên bệnh, thuốc, hoặc chủ đề.</li>
                                 <li>• Bấm Enter để tìm toàn hệ thống.</li>
-                                <li>• Kết quả sẽ tự gom từ Qbank và Library.</li>
+                                <li>• Kết quả sẽ tự gom từ thư viện nội dung.</li>
                             </ul>
                         </div>
                     </div>
-                @endif
-            </section>
+                </section>
+            @endif
 
             @if ($result !== null)
                 <section class="rounded-2xl border border-outline-variant bg-white p-5 shadow-sm">
@@ -68,7 +70,7 @@
                         </div>
                         <form method="get" action="{{ route('search.index') }}" class="flex flex-wrap gap-2">
                             <input type="hidden" name="q" value="{{ $query }}">
-                            @foreach (['' => 'Tất cả', 'question' => 'Câu hỏi', 'article' => 'Bài viết', 'disease' => 'Bệnh', 'drug' => 'Thuốc', 'procedure' => 'Thủ thuật'] as $value => $label)
+                            @foreach (['' => 'Tất cả', 'article' => 'Bài viết', 'disease' => 'Bệnh', 'drug' => 'Thuốc', 'procedure' => 'Thủ thuật', 'classroom' => 'Classroom', 'exam' => 'Kỳ thi'] as $value => $label)
                                 <button type="submit" name="type" value="{{ $value }}"
                                     @class([
                                         'rounded-full px-3 py-1.5 font-label-sm text-label-sm transition-colors',

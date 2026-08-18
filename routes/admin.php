@@ -111,6 +111,14 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
             Route::post('/questions/{question}/transition', [QuestionController::class, 'transition'])
                 ->name('questions.transition');
         });
+        
+        // --- Exams ---
+        Route::get('/exams', [\Modules\Admin\Http\Controllers\ExamController::class, 'index'])->name('exams.index');
+        Route::get('/exams/create', [\Modules\Admin\Http\Controllers\ExamController::class, 'create'])->name('exams.create');
+        Route::post('/exams', [\Modules\Admin\Http\Controllers\ExamController::class, 'store'])->name('exams.store');
+        Route::get('/exams/{exam}/edit', [\Modules\Admin\Http\Controllers\ExamController::class, 'edit'])->name('exams.edit');
+        Route::put('/exams/{exam}', [\Modules\Admin\Http\Controllers\ExamController::class, 'update'])->name('exams.update');
+        Route::delete('/exams/{exam}', [\Modules\Admin\Http\Controllers\ExamController::class, 'destroy'])->name('exams.destroy');
 
         Route::post('/editor/images', EditorImageUploadController::class)
             ->middleware('throttle:30,1')

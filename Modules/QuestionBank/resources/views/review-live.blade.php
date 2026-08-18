@@ -217,17 +217,7 @@
                             </template>
                         </section>
 
-                        <section class="space-y-3">
-                            <div class="flex items-center gap-2">
-                                <span class="material-symbols-outlined text-primary">lightbulb</span>
-                                <h2 class="font-headline-sm text-headline-sm text-on-surface">Giải thích chi tiết</h2>
-                            </div>
-                            <div class="rounded-r-xl border-l-4 border-primary bg-primary/5 p-5">
-                                <p x-show="current.explanation" class="whitespace-pre-line text-body-md leading-relaxed text-on-surface"
-                                    x-text="current.explanation"></p>
-                                <p x-show="!current.explanation" class="text-body-sm text-on-surface-variant">Câu hỏi này chưa có giải thích tổng quát.</p>
-                            </div>
-                        </section>
+
 
                         <section x-show="current.note" class="space-y-3">
                             <div class="flex items-center gap-2">

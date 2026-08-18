@@ -47,6 +47,13 @@ final class AdminMenu
                 'match' => 'admin.questions.*',
             ],
             [
+                'label' => 'Kỳ thi',
+                'icon' => 'assignment',
+                'route' => 'admin.exams.index',
+                'permission' => Permission::QuestionView->value,
+                'match' => 'admin.exams.*',
+            ],
+            [
                 'label' => 'Lớp học',
                 'icon' => 'school',
                 'route' => 'admin.classrooms.index',

@@ -23,6 +23,7 @@
     $answeredLookup = array_fill_keys(array_map('strval', $answeredIds), true);
     $flaggedLookup = array_fill_keys(array_map('strval', $flaggedIds), true);
     $difficultyLabel = $question->difficulty->label();
+    $stemImageUrl = $question->stemImageUrl();
 @endphp
 
 <x-layouts.auth :title="$isExam ? 'Phiên thi' : 'Phiên học tập'">
@@ -35,6 +36,8 @@
         answering: false,
         flagged: @js((bool) $flagged),
         noteText: @js($note),
+        imageViewerOpen: false,
+        imageViewerSrc: '',
         annotationSaving: false,
         annotationSaved: false,
         annotationError: '',
@@ -190,7 +193,7 @@
         async saveNote() {
             if (await this.persistAnnotation({ note: this.noteText })) this.notesOpen = false;
         },
-    }" @keydown.escape.window="navigatorOpen = false; notesOpen = false; exitOpen = false; finishOpen = false">
+    }" @keydown.escape.window="navigatorOpen = false; notesOpen = false; exitOpen = false; finishOpen = false; imageViewerOpen = false">
         <header class="sticky top-0 z-40 border-b border-outline-variant bg-white/95 backdrop-blur">
             <div class="flex h-header-height items-center justify-between gap-3 px-4 md:px-8">
                 <div class="flex min-w-0 flex-1 items-center gap-3">
@@ -277,19 +280,20 @@
                         <span class="material-symbols-outlined text-[18px]">clinical_notes</span>
                         Tình huống lâm sàng
                     </div>
-                    <div class="prose prose-sm max-w-none font-body-lg text-body-lg leading-relaxed text-on-surface">{!! $stemHtml !!}</div>
-                </article>
-
-                @if (! $isExam && $isAnswered && filled($question->explanation))
-                    <section class="space-y-3 rounded-2xl border border-primary/20 bg-primary/5 p-5 md:p-6">
-                        <div class="flex items-center gap-2">
-                            <span class="material-symbols-outlined text-primary">lightbulb</span>
-                            <h2 class="font-headline-sm text-headline-sm text-on-surface">Giải thích</h2>
-                        </div>
-                        <div class="prose prose-sm max-w-none font-body-md text-body-md leading-relaxed text-on-surface">{!! \App\Support\Html\SafeHtml::forDisplay($question->explanation) !!}</div>
-                    </section>
-                @endif
-            </section>
+                    
+                    <div class="grid gap-5 {{ $stemImageUrl ? 'lg:grid-cols-[minmax(0,1fr)_minmax(280px,380px)] lg:items-start' : '' }}">
+                        <div class="prose prose-sm max-w-none font-body-lg text-body-lg leading-relaxed text-on-surface">{!! $stemHtml !!}</div>
+                        
+                        @if ($stemImageUrl)
+                            <aside class="overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-sm">
+                                <div class="bg-white flex justify-center cursor-zoom-in" @click="imageViewerOpen = true; imageViewerSrc = '{{ $stemImageUrl }}'">
+                                    <img src="{{ $stemImageUrl }}" alt="Ảnh minh họa câu hỏi"
+                                        class="w-full h-auto max-h-[600px] object-contain transition-transform hover:scale-[1.02]">
+                                </div>
+                            </aside>
+                        @endif
+                    </div>
+                </article>            </section>
 
             <section class="space-y-4 lg:pt-14">
                 <div class="flex items-center justify-between">
@@ -617,6 +621,17 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        <div x-show="imageViewerOpen" x-cloak x-transition.opacity
+            class="fixed inset-0 z-[150] flex items-center justify-center bg-black/90 p-4"
+            @click="imageViewerOpen = false">
+            <button type="button" class="absolute right-4 top-4 flex size-12 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20">
+                <span class="material-symbols-outlined text-[24px]">close</span>
+            </button>
+            <img :src="imageViewerSrc" alt="Ảnh phóng to"
+                class="max-h-full max-w-full cursor-zoom-out object-contain"
+                @click.stop="imageViewerOpen = false">
         </div>
     </div>
 </x-layouts.auth>

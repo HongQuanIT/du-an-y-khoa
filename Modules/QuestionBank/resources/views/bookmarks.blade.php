@@ -270,12 +270,7 @@
                                                         </div>
                                                     @endif
 
-                                                    @if (filled($item['explanation']))
-                                                        <div class="rounded-xl border border-primary/20 bg-primary/5 p-4 text-body-sm text-on-surface">
-                                                            <p class="mb-1 text-label-sm font-bold text-primary">Giải thích</p>
-                                                            <div>{!! $item['explanation'] !!}</div>
-                                                        </div>
-                                                    @endif
+
                                                 </div>
                                             </template>
                                         </div>

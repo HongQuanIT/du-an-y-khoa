@@ -8,6 +8,11 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Modules\Classroom\Enums\ClassroomStatus;
+use Modules\Classroom\Enums\ClassroomVisibility;
+use Modules\Classroom\Models\Classroom;
+use Modules\Exam\Enums\ExamStatus;
+use Modules\Exam\Models\Exam;
 use Modules\Search\Data\GlobalSearchQueryData;
 use Modules\Search\Data\GlobalSearchResult;
 use Modules\Search\Models\SearchDocument;
@@ -22,6 +27,81 @@ final class GlobalSearchService
 
     /** @var list<string> */
     private const FACETS = ['scope', 'type', 'is_free'];
+
+    /** @var list<string> */
+    private const SEARCHABLE_SCOPES = ['library', 'classroom', 'exam'];
+
+    public function syncExamsAndClassrooms(): void
+    {
+        $now = now();
+
+        $publishedExamIds = Exam::query()
+            ->where('status', ExamStatus::Published)
+            ->get()
+            ->each(function (Exam $exam) use ($now): void {
+                $title = SearchText::normalize(SearchText::plain((string) $exam->title), 255);
+                $description = SearchText::plain((string) ($exam->description ?? ''));
+
+                SearchDocument::query()->updateOrCreate(
+                    [
+                        'source_type' => Exam::class,
+                        'source_id' => $exam->getKey(),
+                    ],
+                    [
+                        'scope' => 'exam',
+                        'type' => 'exam',
+                        'title' => $title,
+                        'summary' => $description,
+                        'body' => trim($title.' '.$description),
+                        'url' => route('exam.index'),
+                        'is_free' => false,
+                        'is_published' => true,
+                        'published_at' => $exam->updated_at ?? $now,
+                    ]
+                );
+            })
+            ->pluck('id')
+            ->all();
+
+        SearchDocument::query()
+            ->where('source_type', Exam::class)
+            ->whereNotIn('source_id', $publishedExamIds)
+            ->delete();
+
+        $activeClassroomIds = Classroom::query()
+            ->where('status', ClassroomStatus::Active)
+            ->where('visibility', ClassroomVisibility::Public)
+            ->get()
+            ->each(function (Classroom $classroom) use ($now): void {
+                $title = SearchText::normalize(SearchText::plain((string) $classroom->title), 255);
+                $description = SearchText::plain((string) ($classroom->description ?? ''));
+
+                SearchDocument::query()->updateOrCreate(
+                    [
+                        'source_type' => Classroom::class,
+                        'source_id' => $classroom->getKey(),
+                    ],
+                    [
+                        'scope' => 'classroom',
+                        'type' => 'classroom',
+                        'title' => $title,
+                        'summary' => $description,
+                        'body' => trim($title.' '.$description),
+                        'url' => route('classroom.show', $classroom),
+                        'is_free' => true,
+                        'is_published' => true,
+                        'published_at' => $classroom->updated_at ?? $now,
+                    ]
+                );
+            })
+            ->pluck('id')
+            ->all();
+
+        SearchDocument::query()
+            ->where('source_type', Classroom::class)
+            ->whereNotIn('source_id', $activeClassroomIds)
+            ->delete();
+    }
 
     public function search(GlobalSearchQueryData $data): GlobalSearchResult
     {
@@ -128,6 +208,7 @@ final class GlobalSearchService
         }
 
         $search = SearchDocument::search($data->query)->options($options);
+        $search->whereIn('scope', self::SEARCHABLE_SCOPES);
 
         if ($data->type !== null && $data->type !== '') {
             $search->where('type', $data->type);
@@ -158,6 +239,7 @@ final class GlobalSearchService
         $documents = SearchDocument::query()
             ->whereIn('id', $ids)
             ->where('is_published', true)
+            ->whereIn('scope', self::SEARCHABLE_SCOPES)
             ->orderByDesc('published_at')
             ->get()
             ->keyBy(fn (SearchDocument $document): string => (string) $document->getKey());
@@ -252,6 +334,7 @@ final class GlobalSearchService
 
         return SearchDocument::query()
             ->where('is_published', true)
+            ->whereIn('scope', self::SEARCHABLE_SCOPES)
             ->when($type !== null && $type !== '', fn (Builder $builder) => $builder->where('type', $type))
             ->where(function (Builder $builder) use ($terms): void {
                 foreach ($terms as $index => $term) {
@@ -334,6 +417,7 @@ final class GlobalSearchService
         if ($popular === []) {
             $popular = SearchDocument::query()
                 ->where('is_published', true)
+                ->whereIn('scope', self::SEARCHABLE_SCOPES)
                 ->latest('published_at')
                 ->limit($limit)
                 ->pluck('title')
@@ -371,6 +455,7 @@ final class GlobalSearchService
         $documents = SearchDocument::query()
             ->whereIn('id', $ids)
             ->where('is_published', true)
+            ->whereIn('scope', self::SEARCHABLE_SCOPES)
             ->limit($limit)
             ->get()
             ->keyBy(fn (SearchDocument $document): string => (string) $document->getKey());

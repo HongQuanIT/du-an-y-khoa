@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-08-18
+
+### Exam Module & Flow Improvements
+- Thêm tính năng CRUD quản lý kỳ thi (Exam) ở Admin.
+- Tích hợp kết quả kỳ thi vào Global Search.
+- Điều chỉnh phân luồng Session Mode giữa Exam và Study, đảm bảo URL và logic độc lập.
+- Cập nhật thẻ trạng thái kỳ thi ở giao diện: hiển thị "Chưa xong", "Đã xong" và các nút Tiếp tục/Làm lại tương ứng.
+- Bổ sung phân trang (pagination) cho danh sách kỳ thi.
+- Thêm tính năng xem phóng to ảnh (Lightbox) khi click vào ảnh tĩnh ở màn hình làm bài.
+
 ## 2026-08-15
 
 ### Public — Cookie consent (localStorage + cookie)

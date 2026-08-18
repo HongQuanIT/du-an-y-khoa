@@ -36,6 +36,7 @@ final class CreateSessionData
         public readonly bool $savedOnly = false,
         public readonly ?int $folderId = null,
         public readonly ?string $examKey = null,
+        public readonly ?int $examId = null,
         public readonly array $articles = [],
         public readonly array $symptoms = [],
     ) {}
@@ -56,6 +57,7 @@ final class CreateSessionData
             'saved_only' => $this->savedOnly,
             'folder_id' => $this->folderId,
             'exam_key' => $this->examKey,
+            'exam_id' => $this->examId,
             'articles' => array_values($this->articles),
             'symptoms' => array_values($this->symptoms),
             'count' => $this->count,
