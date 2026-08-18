@@ -122,7 +122,7 @@
             <div class="overflow-hidden rounded-xl border border-outline-variant bg-surface">
                 <div class="border-b border-outline-variant px-5 py-4">
                     <h3 class="font-label-md text-label-md text-on-surface">Nội dung theo từng phần</h3>
-                    <p class="mt-1 font-label-sm text-on-surface-variant">Chỉ nhập văn bản / URL ảnh — bố cục HTML cố định trên website.</p>
+                    <p class="mt-1 font-label-sm text-on-surface-variant">Chỉ nhập văn bản / chọn ảnh từ thư viện — bố cục HTML cố định trên website.</p>
                 </div>
                 <div class="p-5">
                     @include($formView, ['content' => $content])
@@ -234,7 +234,16 @@
             <div class="space-y-4 p-5">
                 @include('admin::cms.pages.forms._field', ['label' => 'OG title', 'name' => 'og_title', 'value' => old('og_title', $seo['og_title'] ?? ''), 'required' => false])
                 @include('admin::cms.pages.forms._field', ['label' => 'OG description', 'name' => 'og_description', 'type' => 'textarea', 'rows' => 2, 'value' => old('og_description', $seo['og_description'] ?? ''), 'required' => false])
-                @include('admin::cms.pages.forms._field', ['label' => 'OG image URL', 'name' => 'og_image', 'type' => 'url', 'value' => old('og_image', $seo['og_image'] ?? ''), 'required' => false, 'hint' => 'Khuyến nghị 1200×630'])
+                <x-admin.image-slot
+                    label="OG image"
+                    media-id-name="og_image_media_id"
+                    url-name="og_image"
+                    :media-id="old('og_image_media_id', $seo['og_image_media_id'] ?? null)"
+                    :url="old('og_image', $seo['og_image'] ?? '')"
+                    aspect="1.91/1"
+                    :required="false"
+                    hint="Khuyến nghị 1200×630. Tải lên hoặc chọn từ thư viện."
+                />
             </div>
         </div>
 
@@ -246,7 +255,16 @@
             <div class="space-y-4 p-5">
                 @include('admin::cms.pages.forms._field', ['label' => 'Twitter title', 'name' => 'twitter_title', 'value' => old('twitter_title', $seo['twitter_title'] ?? ''), 'required' => false])
                 @include('admin::cms.pages.forms._field', ['label' => 'Twitter description', 'name' => 'twitter_description', 'type' => 'textarea', 'rows' => 2, 'value' => old('twitter_description', $seo['twitter_description'] ?? ''), 'required' => false])
-                @include('admin::cms.pages.forms._field', ['label' => 'Twitter image URL', 'name' => 'twitter_image', 'type' => 'url', 'value' => old('twitter_image', $seo['twitter_image'] ?? ''), 'required' => false])
+                <x-admin.image-slot
+                    label="Twitter image"
+                    media-id-name="twitter_image_media_id"
+                    url-name="twitter_image"
+                    :media-id="old('twitter_image_media_id', $seo['twitter_image_media_id'] ?? null)"
+                    :url="old('twitter_image', $seo['twitter_image'] ?? '')"
+                    aspect="1.91/1"
+                    :required="false"
+                    hint="Để trống sẽ dùng OG image."
+                />
             </div>
         </div>
 

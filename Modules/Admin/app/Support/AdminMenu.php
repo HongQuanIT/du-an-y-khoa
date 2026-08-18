@@ -75,6 +75,13 @@ final class AdminMenu
                 'match' => 'admin.cms.*',
             ],
             [
+                'label' => 'Media',
+                'icon' => 'perm_media',
+                'route' => 'admin.media.index',
+                'permission' => Permission::MediaView->value,
+                'match' => 'admin.media.*',
+            ],
+            [
                 'label' => 'Báo cáo',
                 'icon' => 'analytics',
                 'route' => 'admin.reports.index',

@@ -34,8 +34,7 @@ final class CmsPageContentRules
             'content.hero.subtitle' => ['required', 'string', 'max:1000'],
             'content.hero.primary_cta_label' => ['required', 'string', 'max:64'],
             'content.hero.secondary_cta_label' => ['required', 'string', 'max:64'],
-            'content.hero.image_url' => ['required', 'url', 'max:2048'],
-            'content.hero.image_alt' => ['required', 'string', 'max:255'],
+            ...self::image('content.hero'),
             'content.stats.items' => ['required', 'array', 'size:3'],
             'content.stats.items.*.value' => ['required', 'string', 'max:64'],
             'content.stats.items.*.label' => ['required', 'string', 'max:255'],
@@ -46,8 +45,7 @@ final class CmsPageContentRules
             'content.feature_blocks.items.*.eyebrow' => ['required', 'string', 'max:120'],
             'content.feature_blocks.items.*.title' => ['required', 'string', 'max:255'],
             'content.feature_blocks.items.*.body' => ['required', 'string', 'max:2000'],
-            'content.feature_blocks.items.*.image_url' => ['required', 'url', 'max:2048'],
-            'content.feature_blocks.items.*.image_alt' => ['required', 'string', 'max:255'],
+            ...self::image('content.feature_blocks.items.*'),
             'content.feature_blocks.items.0.bullets' => ['required', 'array', 'size:2'],
             'content.feature_blocks.items.0.bullets.*' => ['required', 'string', 'max:255'],
             'content.feature_blocks.items.1.mini_cards' => ['required', 'array', 'size:2'],
@@ -64,7 +62,7 @@ final class CmsPageContentRules
             'content.testimonials.items.*.name' => ['required', 'string', 'max:120'],
             'content.testimonials.items.*.role' => ['required', 'string', 'max:255'],
             'content.testimonials.items.*.quote' => ['required', 'string', 'max:1000'],
-            'content.testimonials.items.*.image_url' => ['required', 'url', 'max:2048'],
+            ...self::image('content.testimonials.items.*', alt: false),
             'content.pricing.heading' => ['required', 'string', 'max:255'],
             'content.pricing.subtitle' => ['required', 'string', 'max:500'],
             'content.pricing.free.name' => ['required', 'string', 'max:120'],
@@ -111,8 +109,7 @@ final class CmsPageContentRules
             'content.bento.qbank.body' => ['required', 'string', 'max:2000'],
             'content.bento.qbank.tags' => ['required', 'array', 'size:3'],
             'content.bento.qbank.tags.*' => ['required', 'string', 'max:64'],
-            'content.bento.qbank.image_url' => ['required', 'url', 'max:2048'],
-            'content.bento.qbank.image_alt' => ['required', 'string', 'max:255'],
+            ...self::image('content.bento.qbank'),
             'content.bento.study_exam.title' => ['required', 'string', 'max:255'],
             'content.bento.study_exam.body' => ['required', 'string', 'max:2000'],
             'content.bento.flashcards.title' => ['required', 'string', 'max:255'],
@@ -120,17 +117,14 @@ final class CmsPageContentRules
             'content.bento.ai_tutor.title' => ['required', 'string', 'max:255'],
             'content.bento.ai_tutor.body' => ['required', 'string', 'max:2000'],
             'content.bento.ai_tutor.cta_label' => ['required', 'string', 'max:64'],
-            'content.bento.ai_tutor.image_url' => ['required', 'url', 'max:2048'],
-            'content.bento.ai_tutor.image_alt' => ['required', 'string', 'max:255'],
+            ...self::image('content.bento.ai_tutor'),
             'content.bento.analytics.title' => ['required', 'string', 'max:255'],
             'content.bento.analytics.badge' => ['required', 'string', 'max:64'],
             'content.bento.analytics.body' => ['required', 'string', 'max:2000'],
-            'content.bento.analytics.image_url' => ['required', 'url', 'max:2048'],
-            'content.bento.analytics.image_alt' => ['required', 'string', 'max:255'],
+            ...self::image('content.bento.analytics'),
             'content.bento.library.title' => ['required', 'string', 'max:255'],
             'content.bento.library.body' => ['required', 'string', 'max:2000'],
-            'content.bento.library.image_url' => ['required', 'url', 'max:2048'],
-            'content.bento.library.image_alt' => ['required', 'string', 'max:255'],
+            ...self::image('content.bento.library'),
             'content.bento.path.title' => ['required', 'string', 'max:255'],
             'content.bento.path.body' => ['required', 'string', 'max:2000'],
             'content.bento.exam_sim.title' => ['required', 'string', 'max:255'],
@@ -156,8 +150,7 @@ final class CmsPageContentRules
             'content.story.paragraph_1' => ['required', 'string', 'max:5000'],
             'content.story.paragraph_2' => ['required', 'string', 'max:5000'],
             'content.story.tagline' => ['required', 'string', 'max:255'],
-            'content.story.image_url' => ['required', 'url', 'max:2048'],
-            'content.story.image_alt' => ['required', 'string', 'max:255'],
+            ...self::image('content.story'),
             'content.values.heading' => ['required', 'string', 'max:255'],
             'content.values.items' => ['required', 'array', 'size:4'],
             'content.values.items.*.title' => ['required', 'string', 'max:255'],
@@ -170,7 +163,7 @@ final class CmsPageContentRules
             'content.experts.items' => ['required', 'array', 'size:6'],
             'content.experts.items.*.name' => ['required', 'string', 'max:255'],
             'content.experts.items.*.role' => ['required', 'string', 'max:255'],
-            'content.experts.items.*.image_url' => ['required', 'url', 'max:2048'],
+            ...self::image('content.experts.items.*', alt: false),
             'content.partners.label' => ['required', 'string', 'max:255'],
             'content.partners.items' => ['required', 'array', 'size:5'],
             'content.partners.items.*' => ['required', 'string', 'max:255'],
@@ -193,8 +186,7 @@ final class CmsPageContentRules
             'content.hotline' => ['required', 'string', 'max:64'],
             'content.address' => ['required', 'string', 'max:500'],
             'content.hours' => ['required', 'string', 'max:255'],
-            'content.map.image_url' => ['required', 'url', 'max:2048'],
-            'content.map.image_alt' => ['required', 'string', 'max:255'],
+            ...self::image('content.map'),
         ];
     }
 
@@ -209,5 +201,22 @@ final class CmsPageContentRules
             'content.sections.*.title' => ['required', 'string', 'max:255'],
             'content.sections.*.body' => ['required', 'string', 'max:10000'],
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function image(string $prefix, bool $alt = true): array
+    {
+        $rules = [
+            "{$prefix}.image_media_id" => ['nullable', 'integer', 'exists:media,id'],
+            "{$prefix}.image_url" => ['required_without:'.$prefix.'.image_media_id', 'nullable', 'string', 'max:2048'],
+        ];
+
+        if ($alt) {
+            $rules["{$prefix}.image_alt"] = ['required', 'string', 'max:255'];
+        }
+
+        return $rules;
     }
 }

@@ -6,6 +6,7 @@ namespace Modules\Admin\Support\Cms;
 
 use Modules\Admin\Models\CmsPage;
 use Modules\Admin\Support\Enums\CmsPageKey;
+use Modules\Media\Support\HydrateMediaUrls;
 
 final class CmsPageContentResolver
 {
@@ -22,7 +23,7 @@ final class CmsPageContentResolver
             $stored = is_array($value) ? $value : [];
         }
 
-        return self::mergeRecursive($defaults, $stored);
+        return HydrateMediaUrls::apply(self::mergeRecursive($defaults, $stored));
     }
 
     /**

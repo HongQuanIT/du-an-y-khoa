@@ -15,8 +15,7 @@
         @include('admin::cms.pages.forms._field', ['label' => 'Đoạn 1', 'name' => 'content[story][paragraph_1]', 'type' => 'textarea', 'rows' => 4, 'value' => $c['story']['paragraph_1'], 'required' => true])
         @include('admin::cms.pages.forms._field', ['label' => 'Đoạn 2', 'name' => 'content[story][paragraph_2]', 'type' => 'textarea', 'rows' => 4, 'value' => $c['story']['paragraph_2'], 'required' => true])
         @include('admin::cms.pages.forms._field', ['label' => 'Tagline', 'name' => 'content[story][tagline]', 'value' => $c['story']['tagline'], 'required' => true])
-        @include('admin::cms.pages.forms._field', ['label' => 'URL ảnh', 'name' => 'content[story][image_url]', 'type' => 'url', 'value' => $c['story']['image_url'], 'required' => true])
-        @include('admin::cms.pages.forms._field', ['label' => 'Mô tả ảnh (alt)', 'name' => 'content[story][image_alt]', 'value' => $c['story']['image_alt'], 'required' => true])
+        @include('admin::cms.pages.forms._image', ['label' => 'Ảnh câu chuyện', 'prefix' => 'content[story]', 'value' => $c['story'], 'aspect' => '4/3'])
     </section>
 
     <section class="space-y-4 py-6">
@@ -50,7 +49,7 @@
                 <p class="font-label-sm text-on-surface-variant">Chuyên gia #{{ $index + 1 }}</p>
                 @include('admin::cms.pages.forms._field', ['label' => 'Họ tên', 'name' => "content[experts][items][{$index}][name]", 'value' => $expert['name'], 'required' => true])
                 @include('admin::cms.pages.forms._field', ['label' => 'Vai trò', 'name' => "content[experts][items][{$index}][role]", 'value' => $expert['role'], 'required' => true])
-                @include('admin::cms.pages.forms._field', ['label' => 'URL ảnh', 'name' => "content[experts][items][{$index}][image_url]", 'type' => 'url', 'value' => $expert['image_url'], 'required' => true])
+                @include('admin::cms.pages.forms._image', ['label' => 'Ảnh chuyên gia', 'prefix' => "content[experts][items][{$index}]", 'value' => $expert, 'aspect' => '1/1', 'showAlt' => false])
             </div>
         @endforeach
     </section>

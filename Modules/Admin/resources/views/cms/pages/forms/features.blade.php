@@ -19,8 +19,7 @@
         @foreach ($c['bento']['qbank']['tags'] as $index => $tag)
             @include('admin::cms.pages.forms._field', ['label' => 'Tag #'.($index + 1), 'name' => "content[bento][qbank][tags][{$index}]", 'value' => $tag, 'required' => true])
         @endforeach
-        @include('admin::cms.pages.forms._field', ['label' => 'URL ảnh', 'name' => 'content[bento][qbank][image_url]', 'type' => 'url', 'value' => $c['bento']['qbank']['image_url'], 'required' => true])
-        @include('admin::cms.pages.forms._field', ['label' => 'Mô tả ảnh (alt)', 'name' => 'content[bento][qbank][image_alt]', 'value' => $c['bento']['qbank']['image_alt'], 'required' => true])
+        @include('admin::cms.pages.forms._image', ['label' => 'Ảnh QBank', 'prefix' => 'content[bento][qbank]', 'value' => $c['bento']['qbank'], 'aspect' => '4/3'])
     </section>
 
     <section class="space-y-4 py-6">
@@ -40,8 +39,7 @@
         @include('admin::cms.pages.forms._field', ['label' => 'Tiêu đề', 'name' => 'content[bento][ai_tutor][title]', 'value' => $c['bento']['ai_tutor']['title'], 'required' => true])
         @include('admin::cms.pages.forms._field', ['label' => 'Nội dung', 'name' => 'content[bento][ai_tutor][body]', 'type' => 'textarea', 'rows' => 3, 'value' => $c['bento']['ai_tutor']['body'], 'required' => true])
         @include('admin::cms.pages.forms._field', ['label' => 'Nút CTA', 'name' => 'content[bento][ai_tutor][cta_label]', 'value' => $c['bento']['ai_tutor']['cta_label'], 'required' => true])
-        @include('admin::cms.pages.forms._field', ['label' => 'URL ảnh', 'name' => 'content[bento][ai_tutor][image_url]', 'type' => 'url', 'value' => $c['bento']['ai_tutor']['image_url'], 'required' => true])
-        @include('admin::cms.pages.forms._field', ['label' => 'Mô tả ảnh (alt)', 'name' => 'content[bento][ai_tutor][image_alt]', 'value' => $c['bento']['ai_tutor']['image_alt'], 'required' => true])
+        @include('admin::cms.pages.forms._image', ['label' => 'Ảnh AI Tutor', 'prefix' => 'content[bento][ai_tutor]', 'value' => $c['bento']['ai_tutor'], 'aspect' => '4/3'])
     </section>
 
     <section class="space-y-4 py-6">
@@ -49,16 +47,14 @@
         @include('admin::cms.pages.forms._field', ['label' => 'Tiêu đề', 'name' => 'content[bento][analytics][title]', 'value' => $c['bento']['analytics']['title'], 'required' => true])
         @include('admin::cms.pages.forms._field', ['label' => 'Badge', 'name' => 'content[bento][analytics][badge]', 'value' => $c['bento']['analytics']['badge'], 'required' => true])
         @include('admin::cms.pages.forms._field', ['label' => 'Nội dung', 'name' => 'content[bento][analytics][body]', 'type' => 'textarea', 'rows' => 3, 'value' => $c['bento']['analytics']['body'], 'required' => true])
-        @include('admin::cms.pages.forms._field', ['label' => 'URL ảnh', 'name' => 'content[bento][analytics][image_url]', 'type' => 'url', 'value' => $c['bento']['analytics']['image_url'], 'required' => true])
-        @include('admin::cms.pages.forms._field', ['label' => 'Mô tả ảnh (alt)', 'name' => 'content[bento][analytics][image_alt]', 'value' => $c['bento']['analytics']['image_alt'], 'required' => true])
+        @include('admin::cms.pages.forms._image', ['label' => 'Ảnh Analytics', 'prefix' => 'content[bento][analytics]', 'value' => $c['bento']['analytics'], 'aspect' => '4/3'])
     </section>
 
     <section class="space-y-4 py-6">
         <h4 class="font-label-md text-label-md text-on-surface">Bento — Library</h4>
         @include('admin::cms.pages.forms._field', ['label' => 'Tiêu đề', 'name' => 'content[bento][library][title]', 'value' => $c['bento']['library']['title'], 'required' => true])
         @include('admin::cms.pages.forms._field', ['label' => 'Nội dung', 'name' => 'content[bento][library][body]', 'type' => 'textarea', 'rows' => 3, 'value' => $c['bento']['library']['body'], 'required' => true])
-        @include('admin::cms.pages.forms._field', ['label' => 'URL ảnh', 'name' => 'content[bento][library][image_url]', 'type' => 'url', 'value' => $c['bento']['library']['image_url'], 'required' => true])
-        @include('admin::cms.pages.forms._field', ['label' => 'Mô tả ảnh (alt)', 'name' => 'content[bento][library][image_alt]', 'value' => $c['bento']['library']['image_alt'], 'required' => true])
+        @include('admin::cms.pages.forms._image', ['label' => 'Ảnh Library', 'prefix' => 'content[bento][library]', 'value' => $c['bento']['library'], 'aspect' => '4/3'])
     </section>
 
     <section class="space-y-4 py-6">

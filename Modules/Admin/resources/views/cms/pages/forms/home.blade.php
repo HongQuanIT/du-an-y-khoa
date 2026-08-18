@@ -11,8 +11,7 @@
         @include('admin::cms.pages.forms._field', ['label' => 'Mô tả ngắn', 'name' => 'content[hero][subtitle]', 'type' => 'textarea', 'rows' => 2, 'value' => $c['hero']['subtitle'], 'required' => true])
         @include('admin::cms.pages.forms._field', ['label' => 'Nút chính', 'name' => 'content[hero][primary_cta_label]', 'value' => $c['hero']['primary_cta_label'], 'required' => true])
         @include('admin::cms.pages.forms._field', ['label' => 'Nút phụ', 'name' => 'content[hero][secondary_cta_label]', 'value' => $c['hero']['secondary_cta_label'], 'required' => true])
-        @include('admin::cms.pages.forms._field', ['label' => 'URL ảnh', 'name' => 'content[hero][image_url]', 'type' => 'url', 'value' => $c['hero']['image_url'], 'required' => true])
-        @include('admin::cms.pages.forms._field', ['label' => 'Mô tả ảnh (alt)', 'name' => 'content[hero][image_alt]', 'value' => $c['hero']['image_alt'], 'required' => true])
+        @include('admin::cms.pages.forms._image', ['label' => 'Ảnh hero', 'prefix' => 'content[hero]', 'value' => $c['hero'], 'aspect' => '16/9'])
     </section>
 
     <section class="space-y-4 py-6">
@@ -44,8 +43,7 @@
                 @include('admin::cms.pages.forms._field', ['label' => 'Eyebrow', 'name' => "content[feature_blocks][items][{$index}][eyebrow]", 'value' => $block['eyebrow'], 'required' => true])
                 @include('admin::cms.pages.forms._field', ['label' => 'Tiêu đề', 'name' => "content[feature_blocks][items][{$index}][title]", 'value' => $block['title'], 'required' => true])
                 @include('admin::cms.pages.forms._field', ['label' => 'Nội dung', 'name' => "content[feature_blocks][items][{$index}][body]", 'type' => 'textarea', 'rows' => 3, 'value' => $block['body'], 'required' => true])
-                @include('admin::cms.pages.forms._field', ['label' => 'URL ảnh', 'name' => "content[feature_blocks][items][{$index}][image_url]", 'type' => 'url', 'value' => $block['image_url'], 'required' => true])
-                @include('admin::cms.pages.forms._field', ['label' => 'Mô tả ảnh (alt)', 'name' => "content[feature_blocks][items][{$index}][image_alt]", 'value' => $block['image_alt'], 'required' => true])
+                @include('admin::cms.pages.forms._image', ['label' => 'Ảnh khối', 'prefix' => "content[feature_blocks][items][{$index}]", 'value' => $block, 'aspect' => '4/3'])
 
                 @if ($index === 0)
                     @foreach ($block['bullets'] as $bulletIndex => $bullet)
@@ -84,7 +82,7 @@
                 @include('admin::cms.pages.forms._field', ['label' => 'Họ tên', 'name' => "content[testimonials][items][{$index}][name]", 'value' => $item['name'], 'required' => true])
                 @include('admin::cms.pages.forms._field', ['label' => 'Vai trò', 'name' => "content[testimonials][items][{$index}][role]", 'value' => $item['role'], 'required' => true])
                 @include('admin::cms.pages.forms._field', ['label' => 'Trích dẫn', 'name' => "content[testimonials][items][{$index}][quote]", 'type' => 'textarea', 'rows' => 3, 'value' => $item['quote'], 'required' => true])
-                @include('admin::cms.pages.forms._field', ['label' => 'URL ảnh', 'name' => "content[testimonials][items][{$index}][image_url]", 'type' => 'url', 'value' => $item['image_url'], 'required' => true])
+                @include('admin::cms.pages.forms._image', ['label' => 'Ảnh học viên', 'prefix' => "content[testimonials][items][{$index}]", 'value' => $item, 'aspect' => '1/1', 'showAlt' => false])
             </div>
         @endforeach
     </section>
