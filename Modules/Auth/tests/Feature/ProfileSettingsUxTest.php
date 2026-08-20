@@ -5,13 +5,22 @@ declare(strict_types=1);
 namespace Modules\Auth\Tests\Feature;
 
 use App\Models\User;
+use App\Support\Enums\Role;
 use App\Support\TargetExams;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 final class ProfileSettingsUxTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->seed(RolePermissionSeeder::class);
+    }
 
     public function test_study_objective_display_title_when_unset(): void
     {
@@ -62,6 +71,43 @@ final class ProfileSettingsUxTest extends TestCase
 
         $this->actingAs($user)
             ->get(route('settings.edit'))
-            ->assertRedirect(route('profile.show', ['tab' => 'contact']));
+            ->assertRedirect(route('profile.show'));
+    }
+
+    public function test_admin_profile_hides_student_billing_notification_and_extra_tabs(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole(Role::Admin->value);
+
+        $this->actingAs($admin);
+
+        $nav = view('auth::partials.account-nav', ['active' => 'security'])->render();
+
+        $this->assertStringContainsString('Bảo mật', $nav);
+        $this->assertStringNotContainsString('Liên hệ', $nav);
+        $this->assertStringNotContainsString('Thông báo', $nav);
+        $this->assertStringNotContainsString('Gói &amp; giấy phép', $nav);
+        $this->assertStringNotContainsString('Hóa đơn', $nav);
+        $this->assertStringNotContainsString('Đổi mã', $nav);
+        $this->assertStringNotContainsString('Giấy phép tổ chức', $nav);
+        $this->assertStringNotContainsString('Ghi chú cá nhân', $nav);
+    }
+
+    public function test_student_profile_keeps_billing_notification_and_extra_tabs(): void
+    {
+        $student = User::factory()->create();
+        $student->assignRole(Role::Student->value);
+
+        $this->actingAs($student);
+
+        $nav = view('auth::partials.account-nav', ['active' => 'security'])->render();
+
+        $this->assertStringContainsString('Thông báo', $nav);
+        $this->assertStringContainsString('Gói &amp; giấy phép', $nav);
+        $this->assertStringNotContainsString('Liên hệ', $nav);
+        $this->assertStringContainsString('Hóa đơn', $nav);
+        $this->assertStringContainsString('Đổi mã', $nav);
+        $this->assertStringContainsString('Giấy phép tổ chức', $nav);
+        $this->assertStringContainsString('Ghi chú cá nhân', $nav);
     }
 }

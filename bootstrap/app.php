@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\AssignRequestId;
+use App\Http\Middleware\EnsureSystemIsAvailable;
 use App\Http\Middleware\EnsureInstructor;
 use App\Http\Middleware\EnsureLearner;
 use App\Http\Middleware\EnsureStaffTwoFactor;
@@ -49,7 +50,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->prepend(AssignRequestId::class);
 
         // Locale resolution for browser + API clients.
-        $middleware->web(append: [SetLocale::class, EnsureStudentTwoFactor::class]);
+        $middleware->web(append: [SetLocale::class, EnsureSystemIsAvailable::class, EnsureStudentTwoFactor::class]);
 
         // API is JSON-only: force JSON negotiation, then resolve locale.
         $middleware->api(prepend: [ForceJsonResponse::class]);

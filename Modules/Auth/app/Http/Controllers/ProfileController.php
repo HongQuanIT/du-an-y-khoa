@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\Auth\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
+use App\Support\Enums\Role;
 use App\Support\TargetExams;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
@@ -14,6 +16,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\ValidationException;
 use Modules\Billing\Actions\ActivateInstitutionLicenseAction;
 use Modules\Billing\Actions\RedeemCodeAction;
 use Modules\Billing\Actions\RenewInstitutionLicenseAction;
@@ -27,14 +30,14 @@ final class ProfileController extends Controller
 {
     /** @var list<string> */
     private const TABS = [
-        'career', 'contact', 'security', 'notifications',
+        'career', 'security', 'notifications',
         'membership', 'invoices', 'redeem', 'notes', 'org-license',
     ];
 
     public function show(Request $request): View
     {
-        $tab = $this->normalizeTab((string) $request->query('tab', 'career'));
         $user = $request->user();
+        $tab = $this->normalizeTab((string) $request->query('tab', 'career'), $user);
 
         $prefs = $user->notification_prefs ?? [
             'email_session' => true,
@@ -66,9 +69,10 @@ final class ProfileController extends Controller
 
     public function redirectLegacySettings(Request $request): RedirectResponse
     {
+        $user = $request->user();
         $tab = $request->has('tab')
-            ? $this->normalizeTab((string) $request->query('tab'))
-            : 'contact';
+            ? $this->normalizeTab((string) $request->query('tab'), $user)
+            : 'career';
 
         return redirect()->route('profile.show', $this->tabRouteParams($tab), 301);
     }
@@ -76,27 +80,6 @@ final class ProfileController extends Controller
     public function updateProfile(Request $request): RedirectResponse
     {
         $form = (string) $request->input('_form', 'career');
-
-        if ($form === 'contact') {
-            $validator = Validator::make($request->all(), [
-                'name' => ['required', 'string', 'max:120'],
-            ], [], [
-                'name' => 'tên hiển thị',
-            ]);
-
-            if ($validator->fails()) {
-                return redirect()
-                    ->route('profile.show', $this->tabRouteParams('contact'))
-                    ->withErrors($validator)
-                    ->withInput();
-            }
-
-            $request->user()->forceFill($validator->validated())->save();
-
-            return redirect()
-                ->route('profile.show', $this->tabRouteParams('contact'))
-                ->with('status', 'Đã lưu thông tin liên hệ.');
-        }
 
         $validated = $request->validate([
             'name' => ['nullable', 'string', 'max:120'],
@@ -261,7 +244,7 @@ final class ProfileController extends Controller
 
         try {
             $subscription = $redeem->handle($request->user(), (string) $request->input('code'));
-        } catch (\Illuminate\Validation\ValidationException $exception) {
+        } catch (ValidationException $exception) {
             return redirect()
                 ->route('profile.show', $this->tabRouteParams('redeem'))
                 ->withErrors($exception->errors())
@@ -285,7 +268,7 @@ final class ProfileController extends Controller
 
         try {
             $activate->handle($request->user(), (string) $request->input('institution_email'));
-        } catch (\Illuminate\Validation\ValidationException $exception) {
+        } catch (ValidationException $exception) {
             return redirect()
                 ->route('profile.show', $this->tabRouteParams('org-license'))
                 ->withErrors($exception->errors())
@@ -305,7 +288,7 @@ final class ProfileController extends Controller
 
         try {
             $renew->handle($request->user(), (int) $request->input('member_id'));
-        } catch (\Illuminate\Validation\ValidationException $exception) {
+        } catch (ValidationException $exception) {
             return redirect()
                 ->route('profile.show', $this->tabRouteParams('org-license'))
                 ->withErrors($exception->errors());
@@ -333,16 +316,23 @@ final class ProfileController extends Controller
             ->with('status', 'Đã lưu ghi chú.');
     }
 
-    private function normalizeTab(string $tab): string
+    private function normalizeTab(string $tab, ?User $user = null): string
     {
         $tab = match ($tab) {
             '', 'career' => 'career',
-            'account' => 'contact',
             'billing' => 'membership',
             default => $tab,
         };
 
-        return in_array($tab, self::TABS, true) ? $tab : 'career';
+        if (! in_array($tab, self::TABS, true)) {
+            return 'career';
+        }
+
+        if ($this->isAdminAccount($user) && ! in_array($tab, ['career', 'security'], true)) {
+            return 'career';
+        }
+
+        return $tab;
     }
 
     /** @return array<string, string> */
@@ -356,5 +346,10 @@ final class ProfileController extends Controller
         if ($path !== null && $path !== '' && Storage::disk('public')->exists($path)) {
             Storage::disk('public')->delete($path);
         }
+    }
+
+    private function isAdminAccount(?User $user): bool
+    {
+        return $user !== null && $user->hasAnyRole([Role::Admin->value, Role::SuperAdmin->value]);
     }
 }

@@ -20,7 +20,7 @@ Route::middleware('guest')->group(function (): void {
     Route::post('/login', [AuthenticatedSessionController::class, 'store'])
         ->middleware('throttle:auth');
 
-    Route::view('/register', 'auth::register')->name('register');
+    Route::get('/register', [RegisteredUserController::class, 'create'])->name('register');
     Route::post('/register', [RegisteredUserController::class, 'store'])
         ->middleware('throttle:auth');
 

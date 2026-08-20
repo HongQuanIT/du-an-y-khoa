@@ -1,5 +1,8 @@
 @php
+    use App\Support\Enums\Role;
+
     $active = $active ?? 'career';
+    $isAdminAccount = auth()->user()?->hasAnyRole([Role::Admin->value, Role::SuperAdmin->value]) ?? false;
 
     $profileRoute = fn (?string $tab = null): string => $tab === null || $tab === 'career'
         ? route('profile.show')
@@ -10,7 +13,6 @@
             'career' => ['label' => 'Hồ sơ cá nhân', 'icon' => 'person', 'href' => $profileRoute()],
         ],
         'Tài khoản' => [
-            'contact' => ['label' => 'Liên hệ', 'icon' => 'mail', 'href' => $profileRoute('contact')],
             'security' => ['label' => 'Bảo mật', 'icon' => 'lock', 'href' => $profileRoute('security')],
             'notifications' => ['label' => 'Thông báo', 'icon' => 'notifications', 'href' => $profileRoute('notifications')],
         ],
@@ -24,6 +26,10 @@
             'notes' => ['label' => 'Ghi chú cá nhân', 'icon' => 'sticky_note_2', 'href' => $profileRoute('notes')],
         ],
     ];
+
+    if ($isAdminAccount) {
+        unset($groups['Tài khoản']['notifications'], $groups['Thanh toán'], $groups['Khác']);
+    }
 
     $allItems = collect($groups)->flatMap(fn (array $items): array => $items);
 @endphp

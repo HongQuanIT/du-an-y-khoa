@@ -10,7 +10,15 @@
         ->map(fn ($question) => [
             'id' => (string) $question->id,
             'text' => strip_tags($question->stem),
+            'topic' => $question->topic?->name,
+            'difficulty' => $question->difficulty?->label(),
         ])->values()->all();
+    $availableQuestionsMapped = $availableQuestions->map(fn ($question) => [
+        'id' => (string) $question->id,
+        'text' => strip_tags($question->stem),
+        'topic' => $question->topic?->name,
+        'difficulty' => $question->difficulty?->label(),
+    ])->values()->all();
     $questionsCount = (int) ($exam->questions_count ?? count($questionRows));
     $statusValue = old('status', $exam->status?->value ?? 'draft');
     $published = $statusValue === 'published';
@@ -185,7 +193,8 @@
                                 <span class="material-symbols-outlined pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-[18px] text-on-surface-variant">search</span>
                                 <input type="search" x-model="search"
                                     placeholder="Tìm câu hỏi để thêm..."
-                                    class="h-10 w-full rounded-lg border-none bg-surface-container-low py-2 pr-3 pl-10 font-body-sm text-on-surface focus:ring-2 focus:ring-primary">
+                                    class="h-10 w-full rounded-lg border-none bg-surface-container-low py-2 pr-10 pl-10 font-body-sm text-on-surface focus:ring-2 focus:ring-primary">
+                                <span x-show="isSearching" class="material-symbols-outlined pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 animate-spin text-[18px] text-primary">progress_activity</span>
                             </div>
                         </div>
 
@@ -226,7 +235,13 @@
                                                 </button>
                                             </div>
 
-                                            <p class="min-w-0 pt-1 font-body-sm leading-6 text-on-surface" x-text="question.text"></p>
+                                            <div class="min-w-0 pt-1">
+                                                <div class="mb-1.5 flex flex-wrap gap-1.5">
+                                                    <span class="rounded bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary" x-text="question.topic || 'Tổng hợp'"></span>
+                                                    <span class="rounded bg-surface-container-high px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant" x-show="question.difficulty" x-text="question.difficulty"></span>
+                                                </div>
+                                                <p class="font-body-sm leading-6 text-on-surface" x-text="question.text"></p>
+                                            </div>
 
                                             <button type="button" @click="removeQuestion(index)"
                                                 class="flex size-9 items-center justify-center rounded-md text-error hover:bg-error/10">
@@ -252,6 +267,10 @@
                                     <template x-for="question in filteredAvailable" :key="question.id">
                                         <button type="button" @click="addQuestion(question)"
                                             class="block w-full rounded-lg border border-outline-variant bg-surface p-3 text-left hover:border-primary hover:bg-primary/5">
+                                            <div class="mb-1.5 flex flex-wrap gap-1.5">
+                                                <span class="rounded bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary" x-text="question.topic || 'Tổng hợp'"></span>
+                                                <span class="rounded bg-surface-container-high px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant" x-show="question.difficulty" x-text="question.difficulty"></span>
+                                            </div>
                                             <span class="line-clamp-3 font-body-sm leading-6 text-on-surface" x-text="question.text"></span>
                                             <span class="mt-2 inline-flex items-center gap-1 font-label-sm text-primary">
                                                 <span class="material-symbols-outlined text-[16px]">add_circle</span>
@@ -295,27 +314,46 @@
     <script>
         function examQuestions() {
             return {
-                available: @json($availableQuestions->map(fn ($question) => [
-                    'id' => (string) $question->id,
-                    'text' => strip_tags($question->stem),
-                ])->values()),
+                available: @json($availableQuestionsMapped),
                 selected: @json($questionRows),
                 search: '',
                 duration: @json($duration),
                 draggingIndex: null,
-                get filteredAvailable() {
-                    const term = this.search.trim().toLowerCase();
-                    const selectedIds = new Set(this.selected.map((question) => String(question.id)));
-
-                    return this.available.filter((question) => {
-                        if (selectedIds.has(String(question.id))) return false;
-                        if (!term) return true;
-                        return question.text.toLowerCase().includes(term);
+                isSearching: false,
+                searchTimeout: null,
+                init() {
+                    this.$watch('search', (value) => {
+                        this.fetchQuestions(value);
                     });
+                },
+                fetchQuestions(term) {
+                    this.isSearching = true;
+                    clearTimeout(this.searchTimeout);
+                    this.searchTimeout = setTimeout(() => {
+                        fetch(`/admin/exams/questions/search?q=${encodeURIComponent(term.trim())}`)
+                            .then(res => res.json())
+                            .then(data => {
+                                this.available = data;
+                                this.isSearching = false;
+                            })
+                            .catch(err => {
+                                console.error('Search failed:', err);
+                                this.isSearching = false;
+                            });
+                    }, 300);
+                },
+                get filteredAvailable() {
+                    const selectedIds = new Set(this.selected.map((question) => String(question.id)));
+                    return this.available.filter((question) => !selectedIds.has(String(question.id)));
                 },
                 addQuestion(question) {
                     if (!question || this.selected.find((item) => item.id == question.id)) return;
-                    this.selected.push({ id: question.id, text: question.text });
+                    this.selected.push({ 
+                        id: question.id, 
+                        text: question.text,
+                        topic: question.topic,
+                        difficulty: question.difficulty
+                    });
                 },
                 removeQuestion(index) {
                     this.selected.splice(index, 1);

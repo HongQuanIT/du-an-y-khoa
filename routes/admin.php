@@ -16,6 +16,7 @@ use Modules\Admin\Http\Controllers\Cms\PageController;
 use Modules\Admin\Http\Controllers\EditorImageUploadController;
 use Modules\Admin\Http\Controllers\QuestionController;
 use Modules\Admin\Http\Controllers\RoleController;
+use Modules\Admin\Http\Controllers\SettingController;
 use Modules\Admin\Http\Controllers\UserController;
 use Modules\Auth\Http\Controllers\AdminTwoFactorController;
 use Modules\Auth\Http\Controllers\AuthenticatedSessionController;
@@ -80,6 +81,11 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
             Route::get('/permissions', [RoleController::class, 'permissionsCatalog'])->name('permissions.index');
         });
 
+        Route::middleware('permission:'.Permission::SystemManage->value)->group(function (): void {
+            Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
+            Route::post('/settings', [SettingController::class, 'update'])->name('settings.update');
+        });
+
         Route::middleware('permission:'.Permission::AuditView->value)->group(function (): void {
             Route::get('/audit', [AuditLogController::class, 'index'])->name('audit.index');
             Route::get('/audit/{audit}', [AuditLogController::class, 'show'])->name('audit.show');
@@ -114,6 +120,7 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
         });
         
         // --- Exams ---
+        Route::get('/exams/questions/search', [\Modules\Admin\Http\Controllers\ExamController::class, 'searchQuestions'])->name('exams.questions.search');
         Route::get('/exams', [\Modules\Admin\Http\Controllers\ExamController::class, 'index'])->name('exams.index');
         Route::get('/exams/create', [\Modules\Admin\Http\Controllers\ExamController::class, 'create'])->name('exams.create');
         Route::post('/exams', [\Modules\Admin\Http\Controllers\ExamController::class, 'store'])->name('exams.store');

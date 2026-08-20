@@ -12,6 +12,8 @@ use Illuminate\View\View;
 use Modules\Exam\Enums\ExamStatus;
 use Modules\Exam\Models\Exam;
 use Modules\QuestionBank\Models\Question;
+use Modules\QuestionBank\Enums\Difficulty;
+use Illuminate\Http\JsonResponse;
 
 final class ExamController extends Controller
 {
@@ -139,9 +141,51 @@ final class ExamController extends Controller
     private function availableQuestions()
     {
         return Question::query()
+            ->with('topic')
             ->latest()
-            ->limit(100)
+            ->limit(50) // Reduced initial load limit
             ->get();
+    }
+
+    public function searchQuestions(Request $request): JsonResponse
+    {
+        $term = trim($request->input('q', ''));
+        
+        $query = Question::query()
+            ->with('topic')
+            ->latest();
+
+        if ($term !== '') {
+            $termLower = mb_strtolower($term);
+            
+            // Map term to difficulty values
+            $difficulties = [];
+            foreach (Difficulty::cases() as $case) {
+                if (str_contains(mb_strtolower($case->label()), $termLower)) {
+                    $difficulties[] = $case->value;
+                }
+            }
+
+            $query->where(function ($q) use ($term, $difficulties) {
+                $q->where('stem', 'LIKE', "%{$term}%")
+                  ->orWhereHas('topic', function ($q2) use ($term) {
+                      $q2->where('name', 'LIKE', "%{$term}%");
+                  });
+                  
+                if (!empty($difficulties)) {
+                    $q->orWhereIn('difficulty', $difficulties);
+                }
+            });
+        }
+
+        $questions = $query->limit(50)->get()->map(fn ($question) => [
+            'id' => (string) $question->id,
+            'text' => strip_tags($question->stem),
+            'topic' => $question->topic?->name,
+            'difficulty' => $question->difficulty?->label(),
+        ])->values()->all();
+
+        return response()->json($questions);
     }
 
     /**
