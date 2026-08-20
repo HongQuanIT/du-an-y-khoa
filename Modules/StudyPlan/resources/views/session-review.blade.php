@@ -241,7 +241,8 @@
                                             án đúng</span>
                                     </template>
                                     <template x-if="option.explanation && (option.state === 'correct' || option.state === 'correct_selected' || option.state === 'wrong_selected')">
-                                        <p class="pt-1 text-body-sm text-on-surface-variant" x-text="option.explanation"></p>
+                                        <div class="prose prose-sm max-w-none pt-1 text-body-sm text-on-surface-variant"
+                                            x-html="option.explanation"></div>
                                     </template>
                                 </div>
                             </div>
@@ -280,8 +281,8 @@
                 <div class="space-y-3 p-6">
                     <p class="text-label-sm text-on-surface-variant"
                         x-text="'Câu ' + ((current?.index ?? 0) + 1)"></p>
-                    <div class="min-h-[160px] whitespace-pre-wrap rounded-lg border border-outline-variant bg-surface-container-lowest p-4 text-body-md text-on-surface"
-                        x-text="current?.note || 'Chưa có ghi chú cho câu hỏi này.'"></div>
+                    <div class="prose prose-sm min-h-[160px] max-w-none rounded-lg border border-outline-variant bg-surface-container-lowest p-4 text-body-md text-on-surface"
+                        x-html="current?.noteHtml || current?.note || 'Chưa có ghi chú cho câu hỏi này.'"></div>
                 </div>
                 <div class="flex justify-end border-t border-outline-variant px-6 py-4">
                     <button type="button" @click="notesOpen = false"

@@ -662,15 +662,20 @@ mark[data-hl='#10b981'] {
 .ql-editor mark,
 mark {
     background-color: #fef08a;
-    color: #854d0e;
-    padding: 1px 5px;
+    color: inherit;
     border-radius: 4px;
-    font-weight: 600;
+    font-weight: inherit;
+    padding: 0;
 }
 .dark .prose mark,
 .dark .ql-editor mark,
 .dark mark {
     background-color: #713f12;
-    color: #fef08a;
+    color: inherit;
 }
 
+[contenteditable="true"][data-placeholder]:empty::before {
+    content: attr(data-placeholder);
+    color: var(--color-on-surface-variant, #64748b);
+    pointer-events: none;
+}

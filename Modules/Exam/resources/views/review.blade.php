@@ -21,6 +21,7 @@
             filter: @js($initialFilter),
             activeKey: @js($items[0]['question_id'] ?? null),
             detailOpen: false,
+            notesOpen: false,
             get filtered() {
                 return this.items.filter((item) => this.matches(item, this.filter));
             },
@@ -82,7 +83,7 @@
                 if (option.state === 'wrong_selected') return 'border-error bg-error text-white';
                 return 'border-outline-variant text-on-surface-variant';
             },
-        }" @keydown.escape.window="detailOpen = false">
+        }" @keydown.escape.window="detailOpen = false; notesOpen = false">
         <aside class="z-10 w-full shrink-0 flex-col border-r border-outline-variant bg-white md:flex md:w-[400px] lg:w-[440px]"
             :class="detailOpen ? 'hidden md:flex' : 'flex'">
             <div class="border-b border-outline-variant bg-surface-container-lowest p-4 md:p-5">
@@ -187,6 +188,17 @@
                             </div>
                             <div class="rounded-2xl border border-outline-variant bg-white p-5 text-body-lg leading-relaxed text-on-surface shadow-sm md:p-6"
                                 x-html="current.stem_html"></div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <button type="button" @click="notesOpen = true"
+                                    class="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant px-3 py-1.5 text-label-sm text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-primary">
+                                    <span class="material-symbols-outlined text-[18px]">description</span>
+                                    <span x-text="current.note ? 'Xem ghi chú' : 'Ghi chú'"></span>
+                                </button>
+                                <span x-show="current.note" x-cloak
+                                    class="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
+                                    Đã ghi chú khi làm bài
+                                </span>
+                            </div>
                         </section>
 
                         <section class="space-y-3">
@@ -207,8 +219,9 @@
                                                     Bạn đã chọn
                                                 </span>
                                             </div>
-                                            <p x-show="option.explanation" class="mt-3 text-body-sm leading-relaxed text-on-surface-variant"
-                                                x-text="option.explanation"></p>
+                                            <div x-show="option.explanation"
+                                                class="prose prose-sm mt-3 max-w-none text-body-sm leading-relaxed text-on-surface-variant"
+                                                x-html="option.explanation"></div>
                                         </div>
                                         <span x-show="option.correct" class="material-symbols-outlined text-success">check_circle</span>
                                         <span x-show="option.selected && !option.correct" class="material-symbols-outlined text-error">cancel</span>
@@ -220,5 +233,32 @@
                 </article>
             </template>
         </main>
+
+        <div x-show="notesOpen && current" x-cloak x-transition.opacity
+            class="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <div class="absolute inset-0 bg-on-background/40 backdrop-blur-sm" @click="notesOpen = false"></div>
+            <div class="relative flex w-full max-w-lg flex-col overflow-hidden rounded-xl bg-white shadow-lg"
+                @click.outside="notesOpen = false">
+                <div class="flex items-center justify-between border-b border-outline-variant px-6 py-4">
+                    <h3 class="font-headline-sm text-headline-sm text-on-surface">Ghi chú cá nhân</h3>
+                    <button type="button" @click="notesOpen = false"
+                        class="flex size-8 items-center justify-center rounded-full transition-colors hover:bg-surface-container-high">
+                        <span class="material-symbols-outlined text-outline">close</span>
+                    </button>
+                </div>
+                <div class="space-y-3 p-6">
+                    <p class="text-label-sm text-on-surface-variant"
+                        x-text="'Câu ' + ((current?.index ?? 0) + 1)"></p>
+                    <div class="prose prose-sm min-h-[160px] max-w-none rounded-lg border border-outline-variant bg-surface-container-lowest p-4 text-body-md text-on-surface"
+                        x-html="current?.note_html || current?.note || 'Chưa có ghi chú cho câu hỏi này.'"></div>
+                </div>
+                <div class="flex justify-end border-t border-outline-variant px-6 py-4">
+                    <button type="button" @click="notesOpen = false"
+                        class="rounded-lg bg-primary-container px-4 py-2 font-label-md text-white transition-opacity hover:opacity-90">
+                        Đóng
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 </x-layouts.app>

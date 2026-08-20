@@ -84,7 +84,7 @@ final class ExamController extends Controller
     public function edit(Exam $exam): View
     {
         $exam->loadCount('questions');
-        $exam->load(['questions' => fn ($q) => $q->orderBy('exam_question.order')]);
+        $exam->load(['questions' => fn ($q) => $q->with('topic')->orderBy('exam_question.order')]);
         
         $availableQuestions = $this->availableQuestions();
             

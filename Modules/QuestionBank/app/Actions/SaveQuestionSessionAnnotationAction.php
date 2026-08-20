@@ -22,12 +22,13 @@ final class SaveQuestionSessionAnnotationAction
     private const HIGHLIGHT_COLORS = ['#EF4444', '#F59E0B', '#10B981'];
 
     /**
-     * @return array{note: string, stem_html: string, flagged: bool, key_info_used: bool, attending_tip_used: bool}
+     * @return array{note: string, note_html: string, stem_html: string, flagged: bool, key_info_used: bool, attending_tip_used: bool}
      */
     public function handle(
         QuestionSession $session,
         Question $question,
         ?string $note = null,
+        ?string $noteHtml = null,
         ?string $stemHtml = null,
         ?bool $flagged = null,
         ?bool $keyInfoUsed = null,
@@ -37,6 +38,7 @@ final class SaveQuestionSessionAnnotationAction
             $session,
             $question,
             $note,
+            $noteHtml,
             $stemHtml,
             $flagged,
             $keyInfoUsed,
@@ -54,6 +56,11 @@ final class SaveQuestionSessionAnnotationAction
 
             if ($note !== null) {
                 $current['note'] = Str::limit(trim(strip_tags($note)), 5000, '');
+            }
+
+            if ($noteHtml !== null) {
+                $current['note_html'] = $this->sanitizeNoteHtml($noteHtml);
+                $current['note'] = Str::limit(SafeHtml::plainText($current['note_html']), 5000, '');
             }
 
             if ($stemHtml !== null) {
@@ -76,6 +83,7 @@ final class SaveQuestionSessionAnnotationAction
 
             $annotations[$key] = [
                 'note' => (string) ($current['note'] ?? ''),
+                'note_html' => (string) ($current['note_html'] ?? nl2br(e((string) ($current['note'] ?? '')))),
                 'stem_html' => (string) ($current['stem_html'] ?? SafeHtml::forDisplay((string) $question->stem)),
                 'flagged' => (bool) ($current['flagged'] ?? false),
                 'key_info_used' => (bool) ($current['key_info_used'] ?? false),
@@ -136,6 +144,32 @@ final class SaveQuestionSessionAnnotationAction
         }
 
         return $allowed;
+    }
+
+    private function sanitizeNoteHtml(string $html): string
+    {
+        $allowedTags = '<p><br><strong><b><em><i><u><s><ul><ol><li><h3><blockquote><mark><a>';
+        $html = preg_replace('/<\s*(script|style)\b[^>]*>.*?<\s*\/\s*\1\s*>/is', '', $html) ?? $html;
+        $allowed = strip_tags($html, $allowedTags);
+        $allowed = preg_replace('/\s+on\w+\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)/i', '', $allowed) ?? $allowed;
+        $allowed = preg_replace('/javascript\s*:/i', '', $allowed) ?? $allowed;
+        $allowed = preg_replace('/\s+style\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)/i', '', $allowed) ?? $allowed;
+        $allowed = preg_replace('/<a\b(?![^>]*\shref=)([^>]*)>/i', '<a$1>', $allowed) ?? $allowed;
+        $allowed = preg_replace_callback('/<a\b([^>]*)>/i', function (array $matches): string {
+            $attrs = $matches[1];
+            if (preg_match('/href\s*=\s*["\']([^"\']+)["\']/i', $attrs, $href) !== 1) {
+                return '<a>';
+            }
+
+            $url = $href[1];
+            if (! str_starts_with($url, 'https://') && ! str_starts_with($url, 'http://') && ! str_starts_with($url, 'mailto:')) {
+                return '<a>';
+            }
+
+            return '<a href="'.e($url).'" target="_blank" rel="noopener noreferrer">';
+        }, $allowed) ?? $allowed;
+
+        return Str::limit(trim($allowed), 20000, '');
     }
 
     private function resolveHighlightHex(string $attrs): ?string

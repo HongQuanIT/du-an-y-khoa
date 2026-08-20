@@ -91,6 +91,7 @@ final class StudyPlanSessionController extends Controller
             'answeredIds' => $attempts->keys()->all(),
             'questionIds' => $questionIds,
             'note' => (string) ($annotation['note'] ?? ''),
+            'noteHtml' => (string) ($annotation['note_html'] ?? nl2br(e((string) ($annotation['note'] ?? '')))),
             'stemHtml' => (string) ($annotation['stem_html'] ?? SafeHtml::forDisplay((string) $question->stem)),
             'flagged' => $flagged,
             'flaggedIds' => $flaggedIds,
@@ -109,6 +110,7 @@ final class StudyPlanSessionController extends Controller
         $validated = $request->validate([
             'question_id' => ['required', 'string'],
             'note' => ['nullable', 'string', 'max:5000'],
+            'note_html' => ['nullable', 'string', 'max:20000'],
             'stem_html' => ['nullable', 'string', 'max:20000'],
             'flagged' => ['nullable', 'boolean'],
             'key_info_used' => ['nullable', 'boolean'],
@@ -128,6 +130,7 @@ final class StudyPlanSessionController extends Controller
             $session,
             $question,
             array_key_exists('note', $validated) ? ($validated['note'] ?? '') : null,
+            array_key_exists('note_html', $validated) ? ($validated['note_html'] ?? '') : null,
             array_key_exists('stem_html', $validated) ? ($validated['stem_html'] ?? null) : null,
             array_key_exists('flagged', $validated) ? (bool) $validated['flagged'] : null,
             array_key_exists('key_info_used', $validated) ? (bool) $validated['key_info_used'] : null,
@@ -432,6 +435,7 @@ final class StudyPlanSessionController extends Controller
             $annotation = ($session->annotations ?? [])[(string) $questionId] ?? [];
             $stemHtml = (string) ($annotation['stem_html'] ?? SafeHtml::forDisplay((string) $question->stem));
             $note = (string) ($annotation['note'] ?? '');
+            $noteHtml = (string) ($annotation['note_html'] ?? nl2br(e($note)));
             $flagged = (bool) ($annotation['flagged'] ?? $attempt?->flagged ?? false);
 
             $items[] = [
@@ -453,6 +457,7 @@ final class StudyPlanSessionController extends Controller
                 'stem' => $question->stem,
                 'stemHtml' => $stemHtml,
                 'note' => $note,
+                'noteHtml' => $noteHtml,
                 'hasNote' => trim($note) !== '',
                 'explanation' => $question->explanation,
                 'pick' => $pick,

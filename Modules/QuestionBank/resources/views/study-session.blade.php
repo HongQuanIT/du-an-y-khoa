@@ -127,16 +127,34 @@
                 if (!sel || sel.isCollapsed || !sel.rangeCount) return;
                 const range = sel.getRangeAt(0);
                 if (!range.toString().trim()) return;
+                const startMark = range.startContainer.nodeType === Node.TEXT_NODE
+                    ? range.startContainer.parentElement?.closest('mark')
+                    : range.startContainer.closest?.('mark');
+                const endMark = range.endContainer.nodeType === Node.TEXT_NODE
+                    ? range.endContainer.parentElement?.closest('mark')
+                    : range.endContainer.closest?.('mark');
+                if (startMark && startMark === endMark) {
+                    startMark.style.backgroundColor = hex + '4D';
+                    startMark.setAttribute('data-hl', hex);
+                    sel.removeAllRanges();
+                    this.selectionBar.show = false;
+                    return;
+                }
                 const mark = document.createElement('mark');
                 mark.className = 'rounded-sm';
                 mark.style.backgroundColor = hex + '4D';
-                try {
-                    range.surroundContents(mark);
-                } catch (e) {
-                    const fragment = range.extractContents();
-                    mark.appendChild(fragment);
-                    range.insertNode(mark);
-                }
+                const unwrapMarks = (node) => {
+                    if (!node) return;
+                    node.querySelectorAll?.('mark').forEach((existing) => {
+                        const parent = existing.parentNode;
+                        while (existing.firstChild) parent.insertBefore(existing.firstChild, existing);
+                        parent.removeChild(existing);
+                    });
+                };
+                const fragment = range.extractContents();
+                unwrapMarks(fragment);
+                mark.appendChild(fragment);
+                range.insertNode(mark);
                 sel.removeAllRanges();
                 this.selectionBar.show = false;
             },
@@ -584,10 +602,10 @@
                 class="size-5 rounded-full shadow-sm transition-transform hover:scale-110"
                 style="background-color: {{ $color['hex'] }}"></button>
         @endforeach
-        <div class="mx-0.5 h-3 w-px bg-outline-variant"></div>
         <button type="button" @mousedown.prevent @click="clearHighlight()"
-            class="material-symbols-outlined text-[16px] text-outline transition-colors hover:text-error"
-            title="Xóa tô màu">delete</button>
+            class="flex size-5 items-center justify-center rounded-full border border-outline-variant bg-white text-[12px] font-bold leading-none text-outline transition-colors hover:border-error hover:text-error"
+            title="Xóa tô màu"
+            aria-label="Xóa tô màu">x</button>
     </div>
     </div>
 </x-layouts.auth>

@@ -16,12 +16,13 @@ final class SavePlanSessionAnnotationAction
     ) {}
 
     /**
-     * @return array{note: string, stem_html: string, flagged: bool, key_info_used: bool, attending_tip_used: bool}
+     * @return array{note: string, note_html: string, stem_html: string, flagged: bool, key_info_used: bool, attending_tip_used: bool}
      */
     public function handle(
         QuestionSession $session,
         Question $question,
         ?string $note = null,
+        ?string $noteHtml = null,
         ?string $stemHtml = null,
         ?bool $flagged = null,
         ?bool $keyInfoUsed = null,
@@ -31,6 +32,7 @@ final class SavePlanSessionAnnotationAction
             $session,
             $question,
             $note,
+            $noteHtml,
             $stemHtml,
             $flagged,
             $keyInfoUsed,

@@ -41,6 +41,7 @@
         imageViewerSrc: '',
         flagged: @js((bool) $flagged),
         noteText: @js($note),
+        noteHtml: @js($noteHtml ?? nl2br(e($note))),
         annotationSaving: false,
         annotationError: '',
         remaining: @js($remainingSeconds),
@@ -207,7 +208,16 @@
             if (!await this.persistAnnotation({ flagged: this.flagged })) this.flagged = previous;
         },
         async saveNote() {
-            if (await this.persistAnnotation({ note: this.noteText })) this.notesOpen = false;
+            const editor = this.$refs.noteEditor;
+            this.noteHtml = editor ? editor.innerHTML : this.noteHtml;
+            this.noteText = editor ? editor.innerText.trim() : this.noteText;
+            if (await this.persistAnnotation({ note: this.noteText, note_html: this.noteHtml })) this.notesOpen = false;
+        },
+        formatNote(command, value = null) {
+            this.$refs.noteEditor?.focus();
+            document.execCommand(command, false, value);
+            this.noteHtml = this.$refs.noteEditor?.innerHTML || '';
+            this.noteText = this.$refs.noteEditor?.innerText.trim() || '';
         },
         calculatorDigit(digit) {
             if (this.calculatorError || this.calculatorWaiting) {
@@ -372,7 +382,7 @@
                                     {{ $question->topic?->name ?? 'Tổng hợp' }} / {{ $question->difficulty->label() }}
                                 </span>
                             </div>
-                            <div class="grid gap-5 {{ $stemImageUrl ? 'lg:grid-cols-[minmax(0,1fr)_minmax(280px,380px)] lg:items-start' : '' }}">
+                            <div class="space-y-5">
                                 <article class="max-w-none">
                                     <h2 class="mb-4 font-headline-md text-headline-md text-on-surface">Trường hợp lâm sàng</h2>
                                     <div class="text-body-md leading-relaxed whitespace-pre-line text-on-surface">{!! $stemHtml !!}</div>
@@ -380,9 +390,10 @@
 
                                 @if ($stemImageUrl)
                                     <aside class="overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-sm">
-                                        <div class="bg-white flex justify-center cursor-zoom-in" @click="imageViewerOpen = true; imageViewerSrc = '{{ $stemImageUrl }}'">
+                                        <div class="group relative bg-white flex justify-center cursor-zoom-in"
+                                            @click="imageViewerOpen = true; imageViewerSrc = '{{ $stemImageUrl }}'">
                                             <img src="{{ $stemImageUrl }}" alt="Ảnh minh họa câu hỏi"
-                                                class="w-full h-auto max-h-[600px] object-contain transition-transform hover:scale-[1.02]">
+                                                class="w-full h-auto max-h-[600px] object-contain">
                                         </div>
                                     </aside>
                                 @endif
@@ -662,9 +673,39 @@
                     </button>
                 </div>
                 <div class="p-5">
-                    <textarea x-model="noteText" maxlength="5000" rows="7"
-                        class="w-full rounded-xl border border-outline-variant p-4 focus:border-primary focus:ring-1 focus:ring-primary"
-                        placeholder="Nhập ghi chú của bạn..."></textarea>
+                    <div class="overflow-hidden rounded-xl border border-outline-variant bg-white focus-within:border-primary focus-within:ring-1 focus-within:ring-primary">
+                        <div class="flex flex-wrap items-center gap-1 border-b border-outline-variant bg-surface-container-lowest p-2">
+                            <button type="button" @click="formatNote('bold')" class="flex size-8 items-center justify-center rounded hover:bg-surface-container-high" title="In đậm">
+                                <span class="font-bold">B</span>
+                            </button>
+                            <button type="button" @click="formatNote('italic')" class="flex size-8 items-center justify-center rounded hover:bg-surface-container-high" title="In nghiêng">
+                                <span class="italic">I</span>
+                            </button>
+                            <button type="button" @click="formatNote('underline')" class="flex size-8 items-center justify-center rounded hover:bg-surface-container-high" title="Gạch chân">
+                                <span class="underline">U</span>
+                            </button>
+                            <div class="mx-1 h-5 w-px bg-outline-variant"></div>
+                            <button type="button" @click="formatNote('formatBlock', 'h3')" class="flex size-8 items-center justify-center rounded hover:bg-surface-container-high" title="Tiêu đề">
+                                <span class="material-symbols-outlined text-[18px]">title</span>
+                            </button>
+                            <button type="button" @click="formatNote('insertUnorderedList')" class="flex size-8 items-center justify-center rounded hover:bg-surface-container-high" title="Danh sách">
+                                <span class="material-symbols-outlined text-[18px]">format_list_bulleted</span>
+                            </button>
+                            <button type="button" @click="formatNote('insertOrderedList')" class="flex size-8 items-center justify-center rounded hover:bg-surface-container-high" title="Danh sách số">
+                                <span class="material-symbols-outlined text-[18px]">format_list_numbered</span>
+                            </button>
+                            <button type="button" @click="formatNote('formatBlock', 'blockquote')" class="flex size-8 items-center justify-center rounded hover:bg-surface-container-high" title="Trích dẫn">
+                                <span class="material-symbols-outlined text-[18px]">format_quote</span>
+                            </button>
+                            <button type="button" @click="formatNote('backColor', '#fef08a')" class="flex size-8 items-center justify-center rounded hover:bg-surface-container-high" title="Highlight">
+                                <span class="material-symbols-outlined text-[18px]">ink_highlighter</span>
+                            </button>
+                        </div>
+                        <div x-ref="noteEditor" contenteditable="true" x-html="noteHtml"
+                            @input="noteHtml = $refs.noteEditor.innerHTML; noteText = $refs.noteEditor.innerText.trim()"
+                            class="prose prose-sm min-h-[190px] max-w-none overflow-y-auto p-4 text-body-md outline-none"
+                            data-placeholder="Nhập ghi chú của bạn..."></div>
+                    </div>
                     <div class="mt-2 flex text-xs">
                         <span x-show="annotationError" class="text-error" x-text="annotationError"></span>
                         <span class="ml-auto text-on-surface-variant" x-text="noteText.length + '/5000'"></span>
