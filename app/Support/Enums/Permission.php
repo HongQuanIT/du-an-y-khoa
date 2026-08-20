@@ -42,6 +42,7 @@ enum Permission: string
     case CmsManage = 'cms.manage';
     case MediaView = 'media.view';
     case MediaManage = 'media.manage';
+    case SystemManage = 'system.manage';
     case FeatureFlagManage = 'feature_flag.manage';
 
     // Classroom / live review (Module 44)

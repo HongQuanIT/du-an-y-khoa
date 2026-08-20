@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-08-20
+
+### Cài đặt Hệ thống & Chế độ Bảo trì (System Settings & Maintenance)
+- Thêm bảng `settings`, model `Setting` và helper `setting()` phục vụ cấu hình hệ thống toàn cục.
+- Trang Admin Cài đặt (`/admin/settings`): quản lý tên hệ thống, thông tin liên hệ, bật/tắt đăng ký học viên, chế độ bảo trì và thông báo hệ thống.
+- Bổ sung middleware `EnsureSystemIsAvailable` chặn truy cập khi bật bảo trì và hiển thị trang thông báo bảo trì.
+- Cập nhật Header, Footer đọc động cấu hình site name, hotline, support email và ẩn/hiện nút đăng ký theo settings.
+- Bổ sung endpoint tìm kiếm câu hỏi AJAX `/admin/exams/questions/search` khi tạo và chỉnh sửa kỳ thi.
+- Hoàn thiện giao diện tab Cài đặt tài khoản `/profile`.
+
 ## 2026-08-18
 
 ### Exam Module & Flow Improvements

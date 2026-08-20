@@ -27,8 +27,23 @@
     @livewireStyles
 </head>
 
-<body class="bg-surface-container-lowest font-body-md text-on-surface" x-data="{ menu: false }"
-    @keydown.escape.window="menu = false">
+<body class="bg-surface-container-lowest font-body-md text-on-surface"
+    x-data="{
+        menu: false,
+        accountMenu: false,
+        theme: 'light',
+        initTheme() {
+            this.theme = window.MedlearnTheme?.getStoredTheme?.() ?? 'system';
+        },
+        async setTheme(value) {
+            this.theme = value;
+            if (window.MedlearnTheme?.setTheme) {
+                this.theme = await window.MedlearnTheme.setTheme(value);
+            }
+        },
+    }"
+    x-init="initTheme()"
+    @keydown.escape.window="menu = false; accountMenu = false">
     <aside
         class="fixed top-0 left-0 z-50 hidden h-screen w-sidebar-width flex-col border-r border-outline-variant bg-surface p-4 md:flex">
         <div class="mb-6 px-2">
@@ -110,14 +125,67 @@
             <h1 class="truncate font-headline-sm text-headline-sm text-on-surface">{{ $title ?? 'Tổng quan' }}</h1>
         </div>
         <div class="ml-2 flex shrink-0 items-center gap-3">
-            <div class="hidden text-right sm:block">
-                <p class="font-label-md text-label-md text-on-surface">{{ auth()->user()->name }}</p>
-                <p class="font-label-sm text-label-sm text-on-surface-variant">Quản trị viên</p>
+            <div class="relative" @click.outside="accountMenu = false">
+                <button type="button" @click="accountMenu = !accountMenu"
+                    class="flex items-center gap-3 rounded-xl p-1.5 text-left transition-colors hover:bg-surface-container-low focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                    :aria-expanded="accountMenu" aria-haspopup="dialog" aria-label="Mở menu tài khoản">
+                <div class="hidden text-right sm:block">
+                    <p class="font-label-md text-label-md text-on-surface">{{ auth()->user()->name }}</p>
+                    <p class="font-label-sm text-label-sm text-on-surface-variant">Quản trị viên</p>
+                </div>
+                <span
+                    class="flex size-10 items-center justify-center overflow-hidden rounded-full border border-outline-variant bg-primary-container font-bold text-body-md text-on-primary-container">
+                    @if (auth()->user()->avatarUrl())
+                        <img src="{{ auth()->user()->avatarUrl() }}" alt="{{ auth()->user()->name }}" class="size-full object-cover">
+                    @else
+                        {{ auth()->user()->avatarInitial() }}
+                    @endif
+                </span>
+                </button>
+
+                <section x-show="accountMenu" x-cloak
+                    x-transition:enter="transition ease-out duration-150"
+                    x-transition:enter-start="translate-y-1 opacity-0"
+                    x-transition:enter-end="translate-y-0 opacity-100"
+                    x-transition:leave="transition ease-in duration-100"
+                    x-transition:leave-start="translate-y-0 opacity-100"
+                    x-transition:leave-end="translate-y-1 opacity-0"
+                    class="fixed top-header-height right-0 z-50 max-h-[calc(100vh-var(--header-height))] w-full overflow-y-auto border-l border-b border-outline-variant bg-surface shadow-xl sm:absolute sm:top-[calc(100%+0.5rem)] sm:w-[320px] sm:rounded-[10px] sm:border"
+                    role="dialog" aria-label="Tùy chọn tài khoản">
+                    <div class="space-y-3 bg-primary-container/40 p-4">
+                        <div>
+                            <p class="font-title-md text-title-md font-bold text-on-surface">{{ auth()->user()->name }}</p>
+                            <p class="font-body-md text-body-md text-on-surface-variant">Quản trị viên</p>
+                        </div>
+
+                        <a href="{{ route('profile.show') }}" @click="accountMenu = false"
+                            class="block w-full rounded-lg bg-primary px-4 py-2.5 text-center font-label-md text-label-md font-bold text-on-primary transition-opacity hover:opacity-90">
+                            Quản lý tài khoản
+                        </a>
+                    </div>
+
+                    <div class="p-4">
+                        <fieldset>
+                            <legend class="font-label-md text-label-md font-bold tracking-wide text-on-surface-variant uppercase">Giao diện</legend>
+                            <div class="mt-2 grid grid-cols-3 overflow-hidden rounded-lg border border-outline-variant">
+                                <template x-for="option in [{ value: 'light', label: 'Sáng' }, { value: 'dark', label: 'Tối' }, { value: 'system', label: 'Hệ thống' }]" :key="option.value">
+                                    <button type="button" @click="setTheme(option.value)" x-text="option.label"
+                                        class="border-r border-outline-variant px-2 py-2.5 font-label-md text-label-md font-bold last:border-r-0"
+                                        :class="theme === option.value ? 'bg-primary-container text-on-primary-container' : 'bg-surface text-on-surface-variant'"></button>
+                                </template>
+                            </div>
+                        </fieldset>
+                    </div>
+
+                    <form action="{{ route('admin.logout') }}" method="post" class="border-t border-outline-variant p-3">
+                        @csrf
+                        <button type="submit"
+                            class="w-full rounded-lg px-4 py-2.5 font-label-md text-label-md font-bold tracking-wide text-on-surface-variant uppercase transition-colors hover:bg-surface-container-low">
+                            Đăng xuất
+                        </button>
+                    </form>
+                </section>
             </div>
-            <span
-                class="flex size-10 items-center justify-center rounded-full border border-outline-variant bg-primary-container font-bold text-body-md text-on-primary-container">
-                {{ Str::upper(Str::substr(auth()->user()->name, 0, 1)) }}
-            </span>
         </div>
     </header>
 

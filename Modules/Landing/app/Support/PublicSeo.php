@@ -21,7 +21,8 @@ final class PublicSeo
         $page ??= ResolvedCmsPage::published($key);
         $seo = CmsPageSeo::merged($page, $key);
         $title = trim((string) ($seo['meta_title'] ?? '')) ?: ($page?->title ?? $key->defaultTitle());
-        $description = trim((string) ($seo['meta_description'] ?? '')) ?: $key->defaultSeoDescription();
+        $defaultDescription = setting('general.seo_description', $key->defaultSeoDescription());
+        $description = trim((string) ($seo['meta_description'] ?? '')) ?: trim((string) $defaultDescription);
         $url = self::absoluteUrl($seo['canonical_url'] ?? null) ?? route($key->routeName());
 
         return self::build(
@@ -44,9 +45,11 @@ final class PublicSeo
         string $schemaType = CmsPageSeo::SCHEMA_WEB_PAGE,
         array $overrides = [],
     ): array {
+        $defaultDescription = setting('general.seo_description');
+
         return self::build(
             title: $title,
-            description: $description,
+            description: trim((string) ($defaultDescription ?? '')) !== '' ? (string) $defaultDescription : $description,
             url: route($routeName),
             seo: $overrides,
             schemaType: $schemaType,

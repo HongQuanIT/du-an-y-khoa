@@ -8,7 +8,6 @@
         'org-license' => ['Giấy phép tổ chức', 'Kích hoạt và quản lý giấy phép từ trường hoặc bệnh viện.'],
         'security' => ['Bảo mật', 'Quản lý mật khẩu và bảo vệ tài khoản.'],
         'notifications' => ['Thông báo', 'Chọn loại thông báo bạn muốn nhận.'],
-        'contact' => ['Liên hệ', 'Tên hiển thị và thông tin liên lạc trên tài khoản.'],
         default => ['Hồ sơ cá nhân', 'Quản lý thông tin nghề nghiệp và mục tiêu học tập để cá nhân hóa lộ trình ôn luyện.'],
     };
 @endphp

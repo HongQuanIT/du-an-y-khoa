@@ -103,6 +103,13 @@ final class AdminMenu
                 'match' => 'admin.roles.*',
             ],
             [
+                'label' => 'Cài đặt',
+                'icon' => 'settings',
+                'route' => 'admin.settings.index',
+                'permission' => Permission::SystemManage->value,
+                'match' => 'admin.settings.*',
+            ],
+            [
                 'label' => 'Audit',
                 'icon' => 'history',
                 'route' => 'admin.audit.index',

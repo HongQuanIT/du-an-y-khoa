@@ -5,9 +5,15 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Modules\Admin\Database\Seeders\BannerSeeder;
+use Modules\Admin\Database\Seeders\CmsPageSeeder;
+use Modules\Admin\Database\Seeders\FaqSeeder;
+use Modules\Admin\Database\Seeders\MenuSeeder;
+use Modules\Admin\Database\Seeders\SettingsSeeder;
+use Modules\Billing\Database\Seeders\BillingDatabaseSeeder;
 use Modules\Library\Database\Seeders\LibraryDatabaseSeeder;
-use Modules\Search\Database\Seeders\SearchDatabaseSeeder;
 use Modules\QuestionBank\Database\Seeders\QuestionBankDatabaseSeeder;
+use Modules\Search\Database\Seeders\SearchDatabaseSeeder;
 use Modules\StudyPlan\Database\Seeders\StudyPlanDatabaseSeeder;
 
 class DatabaseSeeder extends Seeder
@@ -29,12 +35,13 @@ class DatabaseSeeder extends Seeder
         // Study plan on top of that slice: an active plan with history + schedule.
         $this->call(StudyPlanDatabaseSeeder::class);
 
-        $this->call(\Modules\Billing\Database\Seeders\BillingDatabaseSeeder::class);
+        $this->call(BillingDatabaseSeeder::class);
 
-        $this->call(\Modules\Admin\Database\Seeders\FaqSeeder::class);
-        $this->call(\Modules\Admin\Database\Seeders\CmsPageSeeder::class);
-        $this->call(\Modules\Admin\Database\Seeders\BannerSeeder::class);
-        $this->call(\Modules\Admin\Database\Seeders\MenuSeeder::class);
+        $this->call(SettingsSeeder::class);
+        $this->call(FaqSeeder::class);
+        $this->call(CmsPageSeeder::class);
+        $this->call(BannerSeeder::class);
+        $this->call(MenuSeeder::class);
 
         $this->command->info('Đăng nhập dev: student@medlearn.local / password (admin@medlearn.local cho khu vực admin).');
     }
