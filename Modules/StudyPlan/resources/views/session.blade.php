@@ -44,10 +44,6 @@
     $hasKeyInfo = $keyInfo !== [] || $hasHintMarks;
     $keyInfoHtml = $keyInfoRenderer->render((string) $question->stem, $keyInfo);
     $attendingTip = \App\Support\Html\SafeHtml::forDisplay((string) ($question->attending_tip ?? ''));
-    if ($attendingTip === '' && $hasKeyInfo) {
-        $attendingTip = e('Hãy tập trung vào các dấu hiệu: '.implode('; ', $keyInfo)
-            .'. Kết hợp chúng để xác định chẩn đoán hoặc bước xử trí phù hợp nhất.');
-    }
     $hasAttendingTip = $attendingTip !== '';
 
     $tools = [
@@ -91,6 +87,8 @@
         attendingTipUsed: false,
         attendingTip: @js($attendingTip),
         hasAttendingTip: @js($hasAttendingTip),
+        imageViewerOpen: false,
+        imageViewerSrc: '',
         flagged: @js($flagged),
         bookmarked: @js($bookmarked),
         bookmarkSaving: false,
@@ -191,6 +189,7 @@
         exitUrl: @js($exitUrl),
         selectionBar: { show: false, x: 0, y: 0 },
         noteText: @js($note),
+        noteHtml: @js($noteHtml ?? nl2br(e($note))),
         noteSaving: false,
         noteSaved: false,
         stemHtml: @js($stemHtml),
@@ -322,20 +321,56 @@
             if (!range.toString().trim()) return;
             const stemEl = document.getElementById('session-stem');
             if (!stemEl || !stemEl.contains(range.commonAncestorContainer)) return;
+
+            const startMark = range.startContainer.nodeType === Node.TEXT_NODE
+                ? range.startContainer.parentElement?.closest('mark')
+                : range.startContainer.closest?.('mark');
+            const endMark = range.endContainer.nodeType === Node.TEXT_NODE
+                ? range.endContainer.parentElement?.closest('mark')
+                : range.endContainer.closest?.('mark');
+
+            if (startMark && startMark === endMark) {
+                startMark.setAttribute('data-hl', hex);
+                startMark.setAttribute('style', 'background-color: ' + hex + '4D');
+                sel.removeAllRanges();
+                this.selectionBar.show = false;
+                this.stemHtml = stemEl.innerHTML;
+                this.persistAnnotation({ stem_html: this.stemHtml });
+                return;
+            }
+
             const mark = document.createElement('mark');
             mark.className = 'rounded-sm';
             mark.setAttribute('data-hl', hex);
             mark.setAttribute('style', 'background-color: ' + hex + '4D');
-            try {
-                range.surroundContents(mark);
-            } catch (e) {
-                const fragment = range.extractContents();
-                mark.appendChild(fragment);
-                range.insertNode(mark);
-            }
+            const unwrapMarks = (node) => {
+                if (!node) return;
+                node.querySelectorAll?.('mark').forEach((existing) => {
+                    const parent = existing.parentNode;
+                    while (existing.firstChild) parent.insertBefore(existing.firstChild, existing);
+                    parent.removeChild(existing);
+                });
+            };
+            const fragment = range.extractContents();
+            unwrapMarks(fragment);
+            mark.appendChild(fragment);
+            range.insertNode(mark);
             sel.removeAllRanges();
             this.selectionBar.show = false;
             this.stemHtml = stemEl.innerHTML;
+            this.persistAnnotation({ stem_html: this.stemHtml });
+        },
+        clearHighlight() {
+            const root = document.getElementById('session-stem');
+            if (!root) return;
+            root.querySelectorAll('mark').forEach((mark) => {
+                const parent = mark.parentNode;
+                while (mark.firstChild) parent.insertBefore(mark.firstChild, mark);
+                parent.removeChild(mark);
+                parent.normalize();
+            });
+            this.selectionBar.show = false;
+            this.stemHtml = root.innerHTML;
             this.persistAnnotation({ stem_html: this.stemHtml });
         },
         async persistAnnotation(payload) {
@@ -358,10 +393,19 @@
             if (this.noteSaving) return;
             this.noteSaving = true;
             this.noteSaved = false;
-            await this.persistAnnotation({ note: this.noteText });
+            const editor = this.$refs.noteEditor;
+            this.noteHtml = editor ? editor.innerHTML : this.noteHtml;
+            this.noteText = editor ? editor.innerText.trim() : this.noteText;
+            await this.persistAnnotation({ note: this.noteText, note_html: this.noteHtml });
             this.noteSaving = false;
             this.noteSaved = true;
             this.notesOpen = false;
+        },
+        formatNote(command, value = null) {
+            this.$refs.noteEditor?.focus();
+            document.execCommand(command, false, value);
+            this.noteHtml = this.$refs.noteEditor?.innerHTML || '';
+            this.noteText = this.$refs.noteEditor?.innerText.trim() || '';
         },
     }" @keydown.escape.window="notesOpen = false; navigatorOpen = false; exitOpen = false; researchOpen = false; selectionBar.show = false"
         @mouseup.window="onTextSelect()">
@@ -455,6 +499,7 @@
                         options: @js($optionPayload),
                         selected: @js(isset($selectedOptionIds[0]) ? (int) $selectedOptionIds[0] : null),
                         revealed: @js($isAnswered),
+                        expandedOptions: [],
                         saving: false,
                         startedAt: Date.now(),
                         elapsed: @js($isAnswered ? (int) ($attempt?->time_spent_seconds ?? 0) : 0),
@@ -490,8 +535,17 @@
                             return m + ':' + String(s).padStart(2, '0');
                         },
                         choose(id) {
-                            if (this.revealed) return;
+                            if (this.revealed) {
+                                if (this.expandedOptions.includes(id)) {
+                                    this.expandedOptions = this.expandedOptions.filter((item) => item !== id);
+                                } else {
+                                    this.expandedOptions = [...this.expandedOptions, id];
+                                }
+                                return;
+                            }
+
                             this.selected = id;
+                            this.expandedOptions = [id];
                             this.stopTimer();
                             this.revealed = true;
                             if (this.hasKeyInfo) this.keyInfoEnabled = true;
@@ -503,19 +557,19 @@
                             return picked ? picked.correct : false;
                         },
                         wrapClass(option) {
-                            if (!this.revealed) {
+                            if (!this.revealed || !this.expandedOptions.includes(option.id)) {
                                 return 'border-outline-variant bg-white hover:border-primary/50 hover:bg-primary/5 cursor-pointer';
                             }
                             if (option.correct) return 'border-[#16A34A] bg-[#16A34A]/5';
                             return 'border-error bg-error/5';
                         },
                         badgeClass(option) {
-                            if (!this.revealed) return 'border border-outline-variant text-on-surface-variant';
+                            if (!this.revealed || !this.expandedOptions.includes(option.id)) return 'border border-outline-variant text-on-surface-variant';
                             if (option.correct) return 'bg-[#16A34A] text-white';
                             return 'bg-error text-white';
                         },
                         showDetail(option) {
-                            return this.revealed;
+                            return this.revealed && this.expandedOptions.includes(option.id);
                         },
                         detailText(option) {
                             if (option.explanation) return option.explanation;
@@ -589,7 +643,7 @@
                             </div>
                         </div>
 
-                        <div class="grid gap-5 {{ $stemImageUrl ? 'lg:grid-cols-[minmax(0,1fr)_minmax(280px,380px)] lg:items-start' : '' }}">
+                        <div class="space-y-5">
                             <article class="space-y-6" :class="{ 'key-info-active': keyInfoEnabled }">
                                 <div x-show="keyInfoUsed" x-cloak
                                     class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-bold tracking-wide text-amber-700 uppercase"
@@ -609,7 +663,8 @@
 
                             @if ($stemImageUrl)
                                 <aside class="overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-sm">
-                                    <div class="bg-white flex justify-center">
+                                    <div class="group relative bg-white flex justify-center cursor-zoom-in"
+                                        @click="imageViewerOpen = true; imageViewerSrc = '{{ $stemImageUrl }}'">
                                         <img src="{{ $stemImageUrl }}" alt="Ảnh minh họa câu hỏi"
                                             class="w-full h-auto max-h-[600px] object-contain">
                                     </div>
@@ -629,17 +684,19 @@
                                 <span class="material-symbols-outlined text-[18px]">format_align_left</span>
                                 <span>Gợi ý</span>
                             </button>
-                            <button type="button" @click="toggleAttendingTip()" :disabled="!hasAttendingTip"
-                                class="inline-flex h-12 items-center gap-2 border-b-2 px-3 text-label-sm font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40"
-                                :class="attendingTipOpen
-                                    ? 'border-amber-600 text-amber-700'
-                                    : 'border-transparent text-on-surface-variant hover:bg-surface-container-high hover:text-primary'"
-                                title="{{ $hasAttendingTip ? 'Mở kiến thức cho câu hỏi' : 'Câu này chưa có kiến thức' }}"
-                                :aria-pressed="attendingTipOpen"
-                                data-testid="attending-tip-toggle">
-                                <span class="material-symbols-outlined text-[18px]">help</span>
-                                <span>Kiến thức</span>
-                            </button>
+                            @if ($hasAttendingTip)
+                                <button type="button" @click="toggleAttendingTip()"
+                                    class="inline-flex h-12 items-center gap-2 border-b-2 px-3 text-label-sm font-bold transition-colors"
+                                    :class="attendingTipOpen
+                                        ? 'border-amber-600 text-amber-700'
+                                        : 'border-transparent text-on-surface-variant hover:bg-surface-container-high hover:text-primary'"
+                                    title="Mở kiến thức cho câu hỏi"
+                                    :aria-pressed="attendingTipOpen"
+                                    data-testid="attending-tip-toggle">
+                                    <span class="material-symbols-outlined text-[18px]">help</span>
+                                    <span>Kiến thức</span>
+                                </button>
+                            @endif
                             <button type="button" @click="openFolderModal()" :disabled="bookmarkSaving"
                                 class="inline-flex h-12 items-center gap-2 border-b-2 px-3 text-label-sm font-bold transition-colors disabled:cursor-wait disabled:opacity-60"
                                 :class="bookmarked
@@ -736,19 +793,21 @@
                             </div>
                         </div>
 
-                        <div x-show="attendingTipOpen" x-cloak x-transition class="space-y-3"
-                            data-testid="attending-tip-panel">
-                            <div x-show="attendingTipUsed"
-                                class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-bold tracking-wide text-amber-700 uppercase"
-                                data-testid="attending-tip-used-badge">
-                                <span class="material-symbols-outlined text-[15px] fill-1">check_circle</span>
-                                <span>Đã dùng kiến thức</span>
+                        @if ($hasAttendingTip)
+                            <div x-show="attendingTipOpen" x-cloak x-transition class="space-y-3"
+                                data-testid="attending-tip-panel">
+                                <div x-show="attendingTipUsed"
+                                    class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-bold tracking-wide text-amber-700 uppercase"
+                                    data-testid="attending-tip-used-badge">
+                                    <span class="material-symbols-outlined text-[15px] fill-1">check_circle</span>
+                                    <span>Đã dùng kiến thức</span>
+                                </div>
+                                <div class="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50/70 p-4 text-on-surface">
+                                    <span class="material-symbols-outlined mt-0.5 shrink-0 text-amber-700">stethoscope</span>
+                                    <div class="prose prose-sm max-w-none font-body-md text-body-md leading-relaxed italic" x-html="attendingTip"></div>
+                                </div>
                             </div>
-                            <div class="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50/70 p-4 text-on-surface">
-                                <span class="material-symbols-outlined mt-0.5 shrink-0 text-amber-700">stethoscope</span>
-                                <div class="prose prose-sm max-w-none font-body-md text-body-md leading-relaxed italic" x-html="attendingTip"></div>
-                            </div>
-                        </div>
+                        @endif
 
                         <section class="space-y-3">
                             <template x-for="option in options" :key="option.id">
@@ -756,24 +815,24 @@
                                     :class="wrapClass(option)"
                                     @click="choose(option.id)"
                                     role="button"
-                                    :tabindex="revealed ? -1 : 0">
+                                    tabindex="0">
                                     <div class="flex items-start gap-4 p-4">
                                         <span class="flex size-8 shrink-0 items-center justify-center rounded-full font-bold"
                                             :class="badgeClass(option)" x-text="option.label"></span>
                                         <div class="min-w-0 flex-1 space-y-1 pt-1">
                                             <span class="block font-body-md text-body-md text-on-surface"
                                                 x-text="option.content"></span>
-                                            <template x-if="revealed && option.id === selected">
+                                            <template x-if="revealed && expandedOptions.includes(option.id) && option.id === selected">
                                                 <span class="inline-block rounded px-2 py-0.5 text-[10px] font-bold uppercase"
                                                     :class="option.correct ? 'bg-[#16A34A] text-white' : 'bg-error text-white'"
                                                     x-text="option.correct ? 'Lựa chọn của bạn · Đúng' : 'Lựa chọn của bạn'"></span>
                                             </template>
                                         </div>
-                                        <template x-if="revealed && option.correct">
+                                        <template x-if="revealed && expandedOptions.includes(option.id) && option.correct">
                                             <span class="material-symbols-outlined text-[#16A34A]"
                                                 style="font-variation-settings: 'FILL' 1;">check_circle</span>
                                         </template>
-                                        <template x-if="revealed && !option.correct">
+                                        <template x-if="revealed && expandedOptions.includes(option.id) && !option.correct">
                                             <span class="material-symbols-outlined text-error"
                                                 style="font-variation-settings: 'FILL' 1;">cancel</span>
                                         </template>
@@ -854,9 +913,39 @@
                     </button>
                 </div>
                 <div class="space-y-4 p-6">
-                    <textarea x-model="noteText"
-                        class="min-h-[160px] w-full resize-none rounded-lg border border-outline-variant p-4 text-body-md outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-                        placeholder="Nhập nội dung ghi chú của bạn tại đây..."></textarea>
+                    <div class="overflow-hidden rounded-lg border border-outline-variant bg-white focus-within:border-primary focus-within:ring-1 focus-within:ring-primary">
+                        <div class="flex flex-wrap items-center gap-1 border-b border-outline-variant bg-surface-container-lowest p-2">
+                            <button type="button" @click="formatNote('bold')" class="flex size-8 items-center justify-center rounded hover:bg-surface-container-high" title="In đậm">
+                                <span class="font-bold">B</span>
+                            </button>
+                            <button type="button" @click="formatNote('italic')" class="flex size-8 items-center justify-center rounded hover:bg-surface-container-high" title="In nghiêng">
+                                <span class="italic">I</span>
+                            </button>
+                            <button type="button" @click="formatNote('underline')" class="flex size-8 items-center justify-center rounded hover:bg-surface-container-high" title="Gạch chân">
+                                <span class="underline">U</span>
+                            </button>
+                            <div class="mx-1 h-5 w-px bg-outline-variant"></div>
+                            <button type="button" @click="formatNote('formatBlock', 'h3')" class="flex size-8 items-center justify-center rounded hover:bg-surface-container-high" title="Tiêu đề">
+                                <span class="material-symbols-outlined text-[18px]">title</span>
+                            </button>
+                            <button type="button" @click="formatNote('insertUnorderedList')" class="flex size-8 items-center justify-center rounded hover:bg-surface-container-high" title="Danh sách">
+                                <span class="material-symbols-outlined text-[18px]">format_list_bulleted</span>
+                            </button>
+                            <button type="button" @click="formatNote('insertOrderedList')" class="flex size-8 items-center justify-center rounded hover:bg-surface-container-high" title="Danh sách số">
+                                <span class="material-symbols-outlined text-[18px]">format_list_numbered</span>
+                            </button>
+                            <button type="button" @click="formatNote('formatBlock', 'blockquote')" class="flex size-8 items-center justify-center rounded hover:bg-surface-container-high" title="Trích dẫn">
+                                <span class="material-symbols-outlined text-[18px]">format_quote</span>
+                            </button>
+                            <button type="button" @click="formatNote('backColor', '#fef08a')" class="flex size-8 items-center justify-center rounded hover:bg-surface-container-high" title="Highlight">
+                                <span class="material-symbols-outlined text-[18px]">ink_highlighter</span>
+                            </button>
+                        </div>
+                        <div x-ref="noteEditor" contenteditable="true" x-html="noteHtml"
+                            @input="noteHtml = $refs.noteEditor.innerHTML; noteText = $refs.noteEditor.innerText.trim()"
+                            class="prose prose-sm min-h-[190px] max-w-none overflow-y-auto p-4 text-body-md outline-none"
+                            data-placeholder="Nhập nội dung ghi chú của bạn tại đây..."></div>
+                    </div>
                     <div class="flex items-center justify-between gap-3">
                         <p class="text-label-sm text-outline-variant italic">
                             Ghi chú gắn với câu hỏi này và hiện lại khi xem kết quả.
@@ -935,12 +1024,28 @@
         <div x-show="selectionBar.show" x-cloak
             class="pointer-events-auto fixed z-[90] flex -translate-x-1/2 -translate-y-full items-center gap-2 rounded-lg border border-outline-variant bg-white p-1.5 shadow-lg"
             :style="{ left: selectionBar.x + 'px', top: selectionBar.y + 'px' }">
-            @foreach ($highlightColors as $color)
-                <button type="button" title="{{ $color['title'] }}" @mousedown.prevent
-                    @click="applyColor('{{ $color['hex'] }}')"
-                    class="size-5 rounded-full shadow-sm transition-transform hover:scale-110"
-                    style="background-color: {{ $color['hex'] }}"></button>
-            @endforeach
+        @foreach ($highlightColors as $color)
+            <button type="button" title="{{ $color['title'] }}" @mousedown.prevent
+                @click="applyColor('{{ $color['hex'] }}')"
+                class="size-5 rounded-full shadow-sm transition-transform hover:scale-110"
+                style="background-color: {{ $color['hex'] }}"></button>
+        @endforeach
+            <button type="button" @mousedown.prevent @click="clearHighlight()"
+                class="flex size-5 items-center justify-center rounded-full border border-outline-variant bg-white text-[12px] font-bold leading-none text-outline transition-colors hover:border-error hover:text-error"
+                title="Xóa tô màu"
+                aria-label="Xóa tô màu">x</button>
+        </div>
+
+        <div x-show="imageViewerOpen" x-cloak x-transition.opacity
+            class="fixed inset-0 z-[150] flex items-center justify-center bg-black/90 p-4"
+            @click="imageViewerOpen = false">
+            <button type="button"
+                class="absolute right-4 top-4 flex size-12 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20">
+                <span class="material-symbols-outlined text-[24px]">close</span>
+            </button>
+            <img :src="imageViewerSrc" alt="Ảnh phóng to"
+                class="max-h-full max-w-full cursor-zoom-out object-contain"
+                @click.stop="imageViewerOpen = false">
         </div>
 
         <!-- Exit confirm (chưa làm xong) -->

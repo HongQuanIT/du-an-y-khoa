@@ -160,6 +160,7 @@ final class QuestionSessionInsights
                 'stem' => (string) $question->stem,
                 'stem_html' => (string) ($annotation['stem_html'] ?? SafeHtml::forDisplay((string) $question->stem)),
                 'note' => (string) ($annotation['note'] ?? ''),
+                'note_html' => (string) ($annotation['note_html'] ?? nl2br(e((string) ($annotation['note'] ?? '')))),
                 'flagged' => (bool) ($annotation['flagged']
                     ?? ($attempt instanceof QuestionAttempt && $attempt->flagged)),
                 'explanation' => (string) ($question->explanation ?? ''),

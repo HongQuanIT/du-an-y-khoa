@@ -152,7 +152,7 @@
                                 {{ $attributes['is_free'] ? 'Miễn phí' : 'Premium' }}
                             </span>
                         </div>
-                        <p class="[&_mark]:rounded [&_mark]:bg-yellow-200 [&_mark]:px-0.5 [&_mark]:text-on-surface text-sm leading-7 text-on-surface sm:text-base">
+                        <p class="[&_mark]:rounded [&_mark]:bg-yellow-200 [&_mark]:text-on-surface text-sm leading-7 text-on-surface sm:text-base">
                             {!! $item['highlight'] !!}
                         </p>
                     </div>

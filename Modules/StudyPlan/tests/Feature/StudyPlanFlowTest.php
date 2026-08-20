@@ -231,6 +231,33 @@ final class StudyPlanFlowTest extends TestCase
             ->assertJsonPath('data.attending_tip_used', true);
     }
 
+    public function test_empty_attending_tip_does_not_render_knowledge_for_user(): void
+    {
+        $plan = $this->createPlan();
+        $task = $this->todayTask($plan);
+        $question = Question::firstOrFail();
+        $question->update([
+            'attending_tip' => null,
+            'key_info' => ['kiểm thử'],
+        ]);
+
+        $this->actingAs($this->user)
+            ->post(route('study-plan.tasks.start', [$plan, $task]))
+            ->assertRedirect(route('study-plan.session', [$plan, $task]));
+
+        $session = QuestionSession::firstOrFail();
+        $session->forceFill(['question_ids' => [(string) $question->getKey()]])->save();
+        $task->forceFill(['ref' => array_merge($task->ref ?? [], ['session_id' => $session->getKey()])])->save();
+
+        $this->actingAs($this->user)
+            ->get(route('study-plan.session', [$plan, $task]))
+            ->assertOk()
+            ->assertSee('Gợi ý')
+            ->assertDontSee('data-testid="attending-tip-toggle"', false)
+            ->assertDontSee('data-testid="attending-tip-panel"', false)
+            ->assertDontSee('data-testid="attending-tip-used-badge"', false);
+    }
+
     public function test_answering_every_question_completes_the_task(): void
     {
         $plan = $this->createPlan();
@@ -412,16 +439,21 @@ final class StudyPlanFlowTest extends TestCase
         $this->actingAs($this->user)
             ->postJson(route('study-plan.session.annotate', [$plan, $task]), [
                 'question_id' => $questionId,
-                'note' => 'Nhớ cơ chế adenosine cắt vòng vào lại.',
+                'note_html' => '<h3 onclick="bad()">Cơ chế</h3><p><strong>Nhớ cơ chế adenosine</strong> cắt vòng vào lại.</p><script>alert(1)</script>',
                 'stem_html' => $stemHtml,
             ])
             ->assertOk()
-            ->assertJsonPath('data.note', 'Nhớ cơ chế adenosine cắt vòng vào lại.')
+            ->assertJsonPath('data.note', 'Cơ chếNhớ cơ chế adenosine cắt vòng vào lại.')
+            ->assertJsonPath('data.note_html', '<h3>Cơ chế</h3><p><strong>Nhớ cơ chế adenosine</strong> cắt vòng vào lại.</p>')
             ->assertJsonPath('data.stem_html', '<mark class="rounded-sm" data-hl="#EF4444" style="background-color: #EF44444D">'.e($question->stem).'</mark>');
 
         $this->assertSame(
-            'Nhớ cơ chế adenosine cắt vòng vào lại.',
+            'Cơ chếNhớ cơ chế adenosine cắt vòng vào lại.',
             $session->refresh()->annotations[$questionId]['note'] ?? null,
+        );
+        $this->assertSame(
+            '<h3>Cơ chế</h3><p><strong>Nhớ cơ chế adenosine</strong> cắt vòng vào lại.</p>',
+            $session->refresh()->annotations[$questionId]['note_html'] ?? null,
         );
 
         foreach ($session->question_ids as $index => $id) {
@@ -513,6 +545,7 @@ final class StudyPlanFlowTest extends TestCase
                 'stem' => "Câu hỏi kiểm thử #{$i}?",
                 'explanation' => 'Giải thích.',
                 'key_info' => ["kiểm thử #{$i}"],
+                'attending_tip' => "Kiến thức kiểm thử #{$i}.",
                 'difficulty' => 'medium',
                 'status' => QuestionStatus::Published,
                 'topic_id' => $this->topic->id,
