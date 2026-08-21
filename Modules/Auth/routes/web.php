@@ -10,6 +10,7 @@ use Modules\Auth\Http\Controllers\ProfileController;
 use Modules\Auth\Http\Controllers\RegisteredUserController;
 use Modules\Auth\Http\Controllers\SettingsTwoFactorController;
 use Modules\Auth\Http\Controllers\StudentTwoFactorController;
+use App\Http\Controllers\SupportChatController;
 
 /*
 | Auth — web routes (login/register/password screens).
@@ -39,6 +40,10 @@ Route::post('/forgot-password', [PasswordResetLinkController::class, 'store'])
 Route::middleware('auth')->group(function (): void {
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
         ->name('logout');
+
+    Route::get('/support', [SupportChatController::class, 'index'])->name('support.index');
+    Route::post('/support', [SupportChatController::class, 'store'])->middleware('throttle:20,1')->name('support.store');
+    Route::post('/support/{conversation}/messages', [SupportChatController::class, 'message'])->middleware('throttle:30,1')->name('support.messages.store');
 
     Route::get('/2fa/challenge', [StudentTwoFactorController::class, 'show'])
         ->name('student.2fa.challenge');

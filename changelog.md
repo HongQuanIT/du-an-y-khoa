@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-08-21
+
+### Support Chat (Module 45)
+- Thêm kênh chat hỗ trợ user ↔ admin với AI tuyến đầu (FAQ) và handoff khi cần nhân viên.
+- Migration + model hội thoại/tin nhắn; badge unread và hàng đợi admin.
+- UI launcher người dùng và inbox/thread admin; realtime Reverb (presence + typing).
+- SRS module `45-support-chat.md`; cấu hình OpenAI cho `SupportAiResponder`.
+
 ## 2026-08-20
 
 ### Cài đặt Hệ thống & Chế độ Bảo trì (System Settings & Maintenance)

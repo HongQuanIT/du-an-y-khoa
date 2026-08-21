@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Admin\Support;
 
+use App\Models\SupportConversation;
 use App\Models\User;
 use App\Support\Enums\Permission;
 use Illuminate\Support\Facades\Route;
@@ -11,7 +12,7 @@ use Illuminate\Support\Facades\Route;
 /**
  * Admin sidebar items filtered by permission (and optional route readiness).
  *
- * @phpstan-type MenuItem array{label: string, icon: string, route: ?string, permission: ?string, match: ?string}
+ * @phpstan-type MenuItem array{label: string, icon: string, route: ?string, permission: ?string, match: ?string, badge?: int}
  */
 final class AdminMenu
 {
@@ -103,6 +104,13 @@ final class AdminMenu
                 'match' => 'admin.roles.*',
             ],
             [
+                'label' => 'Hỗ trợ chat',
+                'icon' => 'support_agent',
+                'route' => 'admin.support.index',
+                'permission' => Permission::SystemManage->value,
+                'match' => 'admin.support.*',
+            ],
+            [
                 'label' => 'Cài đặt',
                 'icon' => 'settings',
                 'route' => 'admin.settings.index',
@@ -134,6 +142,9 @@ final class AdminMenu
                 'permission' => $item['permission'],
                 'match' => $item['match'],
                 'coming_soon' => ! $routeReady && $item['route'] !== 'admin.dashboard',
+                'badge' => $item['route'] === 'admin.support.index' && $user->can(Permission::SystemManage->value)
+                    ? SupportConversation::pendingAdminAttentionCountFor($user)
+                    : 0,
             ];
         }
 

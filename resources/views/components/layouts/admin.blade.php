@@ -4,6 +4,12 @@
 
 @php
     $navItems = \Modules\Admin\Support\AdminMenu::for(auth()->user());
+    $supportBadgeCount = collect($navItems)->firstWhere('route', 'admin.support.index')['badge'] ?? 0;
+    $canSupportInbox = auth()->user()?->can(\App\Support\Enums\Permission::SystemManage->value)
+        && \Illuminate\Support\Facades\Route::has('admin.support.index');
+    $supportPendingIds = $canSupportInbox
+        ? \App\Models\SupportConversation::pendingAdminAttentionIdsFor(auth()->user())
+        : [];
 @endphp
 
 <!DOCTYPE html>
@@ -28,6 +34,10 @@
 </head>
 
 <body class="bg-surface-container-lowest font-body-md text-on-surface"
+    @if ($canSupportInbox)
+        data-support-inbox="1"
+        data-support-pending-ids="{{ implode(',', $supportPendingIds) }}"
+    @endif
     x-data="{
         menu: false,
         accountMenu: false,
@@ -62,7 +72,13 @@
                     <a href="{{ $href }}"
                         class="flex items-center gap-3 rounded-lg px-3 py-2.5 font-label-md text-label-md transition-colors {{ $active ? 'bg-primary-container text-on-primary-container' : 'text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface' }}">
                         <span class="material-symbols-outlined text-[22px] leading-none">{{ $item['icon'] }}</span>
-                        {{ $item['label'] }}
+                        <span class="flex-1">{{ $item['label'] }}</span>
+                        @if ($item['route'] === 'admin.support.index')
+                            <span data-support-menu-badge
+                                class="min-w-5 items-center justify-center rounded-full bg-error px-1.5 py-0.5 text-[11px] font-bold leading-none text-white {{ $supportBadgeCount > 0 ? 'inline-flex' : 'hidden' }}">@if ($supportBadgeCount > 0){{ $supportBadgeCount > 99 ? '99+' : $supportBadgeCount }}@endif</span>
+                        @elseif (($item['badge'] ?? 0) > 0)
+                            <span class="inline-flex min-w-5 items-center justify-center rounded-full bg-error px-1.5 py-0.5 text-[11px] font-bold leading-none text-white">{{ ($item['badge'] ?? 0) > 99 ? '99+' : $item['badge'] }}</span>
+                        @endif
                     </a>
                 @else
                     <span
@@ -107,7 +123,13 @@
                     <a href="{{ $href }}" @click="menu = false"
                         class="flex items-center gap-3 rounded-lg px-3 py-2.5 font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-low">
                         <span class="material-symbols-outlined text-[22px] leading-none">{{ $item['icon'] }}</span>
-                        {{ $item['label'] }}
+                        <span class="flex-1">{{ $item['label'] }}</span>
+                        @if ($item['route'] === 'admin.support.index')
+                            <span data-support-menu-badge
+                                class="min-w-5 items-center justify-center rounded-full bg-error px-1.5 py-0.5 text-[11px] font-bold leading-none text-white {{ $supportBadgeCount > 0 ? 'inline-flex' : 'hidden' }}">@if ($supportBadgeCount > 0){{ $supportBadgeCount > 99 ? '99+' : $supportBadgeCount }}@endif</span>
+                        @elseif (($item['badge'] ?? 0) > 0)
+                            <span class="inline-flex min-w-5 items-center justify-center rounded-full bg-error px-1.5 py-0.5 text-[11px] font-bold leading-none text-white">{{ ($item['badge'] ?? 0) > 99 ? '99+' : $item['badge'] }}</span>
+                        @endif
                     </a>
                 @endif
             @endforeach
@@ -197,6 +219,7 @@
 
     @include('media::admin.picker')
     @livewireScriptConfig
+    @stack('scripts')
 </body>
 
 </html>
