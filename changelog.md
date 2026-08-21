@@ -2,6 +2,12 @@
 
 ## 2026-08-21
 
+### Admin settings layout
+- Chuyển toàn bộ luồng settings tài khoản sang layout admin để dùng đúng sidebar và header quản trị.
+- Gỡ hai khối `Thông tin nghề nghiệp` và `Mục tiêu học tập` khỏi trang settings.
+
+## 2026-08-21
+
 ### Support Chat (Module 45)
 - Thêm kênh chat hỗ trợ user ↔ admin với AI tuyến đầu (FAQ) và handoff khi cần nhân viên.
 - Migration + model hội thoại/tin nhắn; badge unread và hàng đợi admin.
