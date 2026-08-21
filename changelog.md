@@ -2,11 +2,23 @@
 
 ## 2026-08-21
 
+### Admin settings layout
+- Chuyển toàn bộ luồng settings tài khoản sang layout admin để dùng đúng sidebar và header quản trị.
+- Gỡ hai khối `Thông tin nghề nghiệp` và `Mục tiêu học tập` khỏi trang settings.
+
+## 2026-08-21
+
 ### Support Chat (Module 45)
 - Thêm kênh chat hỗ trợ user ↔ admin với AI tuyến đầu (FAQ) và handoff khi cần nhân viên.
 - Migration + model hội thoại/tin nhắn; badge unread và hàng đợi admin.
 - UI launcher người dùng và inbox/thread admin; realtime Reverb (presence + typing).
 - SRS module `45-support-chat.md`; cấu hình OpenAI cho `SupportAiResponder`.
+### Classroom Live + Teach Portal
+- Hoàn thiện luồng live teach: vào Studio trước khi bắt đầu live, kết thúc live tự quay về trang lớp thay vì báo lỗi 409.
+- Thêm quản lý học viên trong Studio: đếm người đang vào phòng, kick khỏi live hiện tại và không ban khỏi lớp.
+- Tối ưu LiveKit cho học viên xem live mượt hơn: camera giảng viên 540p, screen share 720p/15fps, ưu tiên track video chính.
+- Sửa render đề/ghi chú rich text để không lộ thẻ HTML và đồng bộ hiển thị ở user/studio/màn phụ.
+- Làm lại bộ lọc admin classroom cho đều hơn, có border rõ và spacing thống nhất.
 
 ## 2026-08-20
 

@@ -17,37 +17,39 @@
     @endif
 
     <form method="get" action="{{ route('admin.classrooms.index') }}"
-        class="mb-6 grid grid-cols-1 gap-3 rounded-xl border border-outline-variant bg-surface p-4 sm:grid-cols-4">
-        <div class="sm:col-span-2">
-            <label class="mb-1 block font-label-sm text-label-sm text-on-surface-variant" for="q">Tìm kiếm</label>
-            <input id="q" name="q" value="{{ $filters['q'] }}" type="search" placeholder="Tiêu đề hoặc mã join"
-                class="w-full rounded-lg border-none bg-surface-container-low px-3 py-2 font-body-sm text-body-sm focus:ring-2 focus:ring-primary">
-        </div>
-        <div>
-            <label class="mb-1 block font-label-sm text-label-sm text-on-surface-variant" for="status">Trạng thái</label>
-            <select id="status" name="status"
-                class="w-full rounded-lg border-none bg-surface-container-low px-3 py-2 font-body-sm text-body-sm focus:ring-2 focus:ring-primary">
-                <option value="">Tất cả</option>
-                @foreach ($statuses as $status)
-                    <option value="{{ $status->value }}" @selected($filters['status'] === $status->value)>{{ $status->label() }}</option>
-                @endforeach
-            </select>
-        </div>
-        <div>
-            <label class="mb-1 block font-label-sm text-label-sm text-on-surface-variant" for="purpose">Mục đích</label>
-            <select id="purpose" name="purpose"
-                class="w-full rounded-lg border-none bg-surface-container-low px-3 py-2 font-body-sm text-body-sm focus:ring-2 focus:ring-primary">
-                <option value="">Tất cả</option>
-                @foreach ($purposes as $purpose)
-                    <option value="{{ $purpose->value }}" @selected($filters['purpose'] === $purpose->value)>{{ $purpose->label() }}</option>
-                @endforeach
-            </select>
-        </div>
-        <div class="sm:col-span-4 flex gap-2">
-            <button type="submit"
-                class="rounded-lg bg-primary px-4 py-2 font-label-md text-label-md text-on-primary hover:opacity-90">Lọc</button>
-            <a href="{{ route('admin.classrooms.index') }}"
-                class="rounded-lg px-4 py-2 font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-low">Xóa lọc</a>
+        class="mb-6 rounded-xl border border-outline-variant bg-surface p-4 shadow-sm">
+        <div class="grid grid-cols-1 items-end gap-4 lg:grid-cols-[minmax(280px,2fr)_minmax(180px,1fr)_minmax(180px,1fr)_auto]">
+            <div>
+                <label class="mb-1.5 block font-label-sm text-label-sm font-medium text-on-surface-variant" for="q">Tìm kiếm</label>
+                <input id="q" name="q" value="{{ $filters['q'] }}" type="search" placeholder="Tiêu đề hoặc mã join"
+                    class="h-11 w-full rounded-lg border border-outline-variant bg-surface px-3 font-body-sm text-body-sm text-on-surface placeholder:text-on-surface-variant/70 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+            </div>
+            <div>
+                <label class="mb-1.5 block font-label-sm text-label-sm font-medium text-on-surface-variant" for="status">Trạng thái</label>
+                <select id="status" name="status"
+                    class="h-11 w-full rounded-lg border border-outline-variant bg-surface px-3 font-body-sm text-body-sm text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+                    <option value="">Tất cả</option>
+                    @foreach ($statuses as $status)
+                        <option value="{{ $status->value }}" @selected($filters['status'] === $status->value)>{{ $status->label() }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label class="mb-1.5 block font-label-sm text-label-sm font-medium text-on-surface-variant" for="purpose">Mục đích</label>
+                <select id="purpose" name="purpose"
+                    class="h-11 w-full rounded-lg border border-outline-variant bg-surface px-3 font-body-sm text-body-sm text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+                    <option value="">Tất cả</option>
+                    @foreach ($purposes as $purpose)
+                        <option value="{{ $purpose->value }}" @selected($filters['purpose'] === $purpose->value)>{{ $purpose->label() }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="flex gap-2">
+                <button type="submit"
+                    class="inline-flex h-11 items-center justify-center rounded-lg bg-primary px-4 font-label-md text-label-md font-semibold text-on-primary hover:opacity-90">Lọc</button>
+                <a href="{{ route('admin.classrooms.index') }}"
+                    class="inline-flex h-11 items-center justify-center rounded-lg border border-outline-variant px-4 font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-low">Xóa lọc</a>
+            </div>
         </div>
     </form>
 

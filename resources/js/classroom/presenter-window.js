@@ -29,7 +29,7 @@ if (root instanceof HTMLElement) {
             return;
         }
         if (stem) {
-            stem.textContent = panel.question.stem;
+            stem.innerHTML = panel.question.stem ?? '';
         }
         if (options) {
             options.innerHTML = '';
@@ -42,13 +42,20 @@ if (root instanceof HTMLElement) {
                     li.style.borderColor = '#2563eb';
                     li.style.background = '#eff6ff';
                 }
-                li.textContent = `${String.fromCharCode(65 + i)}. ${opt.content}`;
+                const label = document.createElement('span');
+                label.style.fontWeight = '600';
+                label.textContent = `${String.fromCharCode(65 + i)}. `;
+
+                const content = document.createElement('span');
+                content.innerHTML = opt.content ?? '';
+
+                li.append(label, content);
                 options.appendChild(li);
             });
         }
         if (explanation) {
             if (panel.show_answer && panel.question.explanation) {
-                explanation.textContent = panel.question.explanation;
+                explanation.innerHTML = panel.question.explanation;
                 explanation.style.display = 'block';
             } else {
                 explanation.style.display = 'none';

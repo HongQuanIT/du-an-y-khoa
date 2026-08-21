@@ -26,22 +26,36 @@ final class LiveKitTokenService
     }
 
     /**
-     * @return array{token: string, url: string, role: string, configured: bool, room: string, identity: string}
+     * @param  list<string>|null  $publishSources
+     * @return array{token: string, url: string, role: string, configured: bool, room: string, identity: string, can_publish_audio: bool, can_publish_video: bool, can_publish_screen: bool}
      */
-    public function issue(LiveSession $session, User $user, MemberRole $role): array
+    public function issue(LiveSession $session, User $user, MemberRole $role, ?array $publishSources = null): array
     {
         $room = $session->livekit_room_name ?? ('classroom-'.$session->uuid);
-        $canPublish = $role->canPublish();
+        $sources = $publishSources ?? ($role->canPublish()
+            ? ['camera', 'microphone', 'screen_share', 'screen_share_audio']
+            : []);
+        $sources = array_values(array_unique($sources));
+        $canPublish = $sources !== [];
+        $canPublishAudio = in_array('microphone', $sources, true);
+        $canPublishVideo = in_array('camera', $sources, true);
+        $canPublishScreen = in_array('screen_share', $sources, true);
         $identity = 'user-'.$user->getKey();
+        $clientRole = $role->canPublish()
+            ? 'publisher'
+            : ($canPublish ? 'speaker' : 'subscriber');
 
         if (! $this->isConfigured()) {
             return [
                 'token' => 'stub.'.$identity.'.'.$room,
                 'url' => '',
-                'role' => $canPublish ? 'publisher' : 'subscriber',
+                'role' => $clientRole,
                 'configured' => false,
                 'room' => $room,
                 'identity' => $identity,
+                'can_publish_audio' => $canPublishAudio,
+                'can_publish_video' => $canPublishVideo,
+                'can_publish_screen' => $canPublishScreen,
             ];
         }
 
@@ -63,20 +77,20 @@ final class LiveKitTokenService
                 'canPublish' => $canPublish,
                 'canSubscribe' => true,
                 'canPublishData' => true,
-                // Explicit sources so mic + screen share are allowed (not only camera).
-                'canPublishSources' => $canPublish
-                    ? ['camera', 'microphone', 'screen_share', 'screen_share_audio']
-                    : [],
+                'canPublishSources' => $sources,
             ],
         ];
 
         return [
             'token' => $this->encodeJwt($payload, $apiSecret),
             'url' => $url,
-            'role' => $canPublish ? 'publisher' : 'subscriber',
+            'role' => $clientRole,
             'configured' => true,
             'room' => $room,
             'identity' => $identity,
+            'can_publish_audio' => $canPublishAudio,
+            'can_publish_video' => $canPublishVideo,
+            'can_publish_screen' => $canPublishScreen,
         ];
     }
 

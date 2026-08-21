@@ -36,10 +36,13 @@ final class LiveRoomController extends Controller
         ]);
         $messages = $liveSession->messages->sortBy('created_at')->values();
 
-        $role = $classroom->roleFor($user) ?? MemberRole::Member;
+        $role = $classroom->purpose->isTeachPurpose()
+            ? MemberRole::Member
+            : ($classroom->roleFor($user) ?? MemberRole::Member);
         $tokenPayload = $liveSession->isLive()
-            ? $tokens->issue($liveSession, $user, $role)
+            ? $tokens->issue($liveSession, $user, $role, $classroom->purpose->isTeachPurpose() ? ['microphone'] : null)
             : null;
+        $canHostLive = ! $classroom->purpose->isTeachPurpose() && $user->can('manageLive', $classroom);
 
         return view('classroom::live.room', [
             'classroom' => $classroom,
@@ -47,7 +50,7 @@ final class LiveRoomController extends Controller
             'messages' => $messages,
             'role' => $role,
             'canModerate' => $role->canModerate(),
-            'canHostLive' => $user->can('manageLive', $classroom),
+            'canHostLive' => $canHostLive,
             'tokenPayload' => $tokenPayload,
             'livekitConfigured' => $tokens->isConfigured(),
             'chatReadonly' => ! $liveSession->allowsChatSend(),

@@ -13,6 +13,13 @@
                     :class="tab === 'questions' ? 'border-b-2 border-primary text-primary' : 'text-on-surface-variant'"
                     class="flex-1 py-3 text-sm font-medium">Đề</button>
             @endif
+            @if ($canModerate)
+                <button type="button" @click="tab = 'participants'"
+                    :class="tab === 'participants' ? 'border-b-2 border-primary text-primary' : 'text-on-surface-variant'"
+                    class="flex-1 py-3 text-sm font-medium">
+                    Học viên <span data-lk-participant-count>0</span>
+                </button>
+            @endif
         </div>
     @endunless
 
@@ -107,6 +114,23 @@
             @if($mobile) x-show="mobileTab === 'questions'" @endif
         >
             @include('classroom::live.partials.question-panel')
+        </div>
+    @endif
+
+    @if ($canModerate)
+        <div data-lk-participants-panel
+            class="flex min-h-0 flex-1 flex-col"
+            @unless($mobile) x-show="tab === 'participants'" @endunless
+            @if($mobile) x-show="mobileTab === 'participants'" @endif
+        >
+            <div class="flex shrink-0 items-center justify-between border-b border-outline-variant px-4 py-3">
+                <h2 class="font-semibold text-on-surface">Học viên đang vào</h2>
+                <span data-lk-participant-count class="text-xs text-on-surface-variant">0</span>
+            </div>
+            <div data-lk-participants-empty class="px-4 py-8 text-center text-sm text-on-surface-variant">
+                Chưa có học viên trong phòng.
+            </div>
+            <ul data-lk-participants class="min-h-0 flex-1 divide-y divide-outline-variant overflow-y-auto"></ul>
         </div>
     @endif
 </div>

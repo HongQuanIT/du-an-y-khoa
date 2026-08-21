@@ -1,12 +1,12 @@
 <?php
 
 use App\Http\Middleware\AssignRequestId;
-use App\Http\Middleware\EnsureSystemIsAvailable;
 use App\Http\Middleware\EnsureInstructor;
 use App\Http\Middleware\EnsureLearner;
 use App\Http\Middleware\EnsureStaffTwoFactor;
 use App\Http\Middleware\EnsureStudentTwoFactor;
 use App\Http\Middleware\EnsureSubscriptionActive;
+use App\Http\Middleware\EnsureSystemIsAvailable;
 use App\Http\Middleware\ForceJsonResponse;
 use App\Http\Middleware\SetLocale;
 use App\Support\Auth\HomePath;
