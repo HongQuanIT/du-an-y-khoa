@@ -7,6 +7,12 @@
 - Migration + model hội thoại/tin nhắn; badge unread và hàng đợi admin.
 - UI launcher người dùng và inbox/thread admin; realtime Reverb (presence + typing).
 - SRS module `45-support-chat.md`; cấu hình OpenAI cho `SupportAiResponder`.
+### Classroom Live + Teach Portal
+- Hoàn thiện luồng live teach: vào Studio trước khi bắt đầu live, kết thúc live tự quay về trang lớp thay vì báo lỗi 409.
+- Thêm quản lý học viên trong Studio: đếm người đang vào phòng, kick khỏi live hiện tại và không ban khỏi lớp.
+- Tối ưu LiveKit cho học viên xem live mượt hơn: camera giảng viên 540p, screen share 720p/15fps, ưu tiên track video chính.
+- Sửa render đề/ghi chú rich text để không lộ thẻ HTML và đồng bộ hiển thị ở user/studio/màn phụ.
+- Làm lại bộ lọc admin classroom cho đều hơn, có border rõ và spacing thống nhất.
 
 ## 2026-08-20
 

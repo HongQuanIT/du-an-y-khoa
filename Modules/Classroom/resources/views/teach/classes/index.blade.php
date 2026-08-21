@@ -72,7 +72,7 @@
                                     <span class="rounded-full bg-error/10 px-2 py-0.5 font-label-sm font-semibold text-error">LIVE</span>
                                 @elseif ($classroom->status === \Modules\Classroom\Enums\ClassroomStatus::PendingApproval)
                                     <span class="rounded-full bg-tertiary/15 px-2 py-0.5 font-label-sm font-semibold text-tertiary">Chờ duyệt</span>
-                                @elseif ($classroom->sessions->isNotEmpty())
+                                @elseif ($classroom->upcomingSession)
                                     <span class="rounded-full bg-surface-container-high px-2 py-0.5 font-label-sm text-on-surface-variant">
                                         Sắp live
                                     </span>
@@ -91,5 +91,8 @@
                 </tbody>
             </table>
         </div>
+        @if ($classrooms->hasPages())
+            <div class="mt-4">{{ $classrooms->links() }}</div>
+        @endif
     @endif
 </x-layouts.teach>

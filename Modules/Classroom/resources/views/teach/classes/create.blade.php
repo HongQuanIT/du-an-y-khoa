@@ -6,7 +6,7 @@
 <x-layouts.teach title="Tạo lớp">
     <div class="mx-auto max-w-2xl">
         <a href="{{ route('teach.classes.index') }}"
-            class="mb-4 inline-flex items-center gap-1 font-label-sm text-label-sm text-primary hover:underline">
+            class="mb-4 inline-flex items-center gap-1 rounded-lg px-2 py-1 font-label-sm text-label-sm text-primary no-underline hover:bg-primary/5 hover:no-underline">
             <span class="material-symbols-outlined text-[18px]">arrow_back</span>
             Lớp của tôi
         </a>

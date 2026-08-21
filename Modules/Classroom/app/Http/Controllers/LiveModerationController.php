@@ -154,6 +154,33 @@ final class LiveModerationController extends Controller
             ->where('user_id', $user->getKey())
             ->update(['status' => MemberStatus::Banned->value]);
 
+        $this->broadcastKick($classroom, $user);
+
         return ApiResponse::item(['banned' => true]);
+    }
+
+    public function kickMember(
+        Request $request,
+        Classroom $classroom,
+        User $user,
+    ): JsonResponse {
+        $this->authorize('update', $classroom);
+        abort_if($classroom->host_user_id === $user->getKey(), 422, 'Cannot kick host.');
+        abort_unless($classroom->isActiveMember($user), 404);
+
+        $this->broadcastKick($classroom, $user);
+
+        return ApiResponse::item(['kicked' => true]);
+    }
+
+    private function broadcastKick(Classroom $classroom, User $user): void
+    {
+        $liveSession = $classroom->liveSession()->first();
+        if ($liveSession !== null) {
+            event(new LiveSessionUpdated($liveSession, [
+                'kicked_user_id' => (int) $user->getKey(),
+                'redirect_url' => route('classroom.index'),
+            ]));
+        }
     }
 }

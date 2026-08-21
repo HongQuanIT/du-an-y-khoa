@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Classroom\Services;
 
-use App\Models\User;
+use App\Support\Html\SafeHtml;
 use Illuminate\Support\Collection;
 use Modules\Classroom\Models\LiveSession;
 use Modules\QuestionBank\Models\Question;
@@ -20,11 +20,11 @@ final class LiveQuestionPanelService
      *   map: list<array{id: string, label: string}>
      * }
      */
-    public function panel(LiveSession $session, ?User $user = null): array
+    public function panel(LiveSession $session): array
     {
         $ids = $session->questionIds();
         $index = min(max(0, $session->current_question_index), max(0, count($ids) - 1));
-        $questions = $this->questionsById($ids, $user);
+        $questions = $this->questionsById($ids);
         $currentId = $ids[$index] ?? null;
 
         return [
@@ -45,22 +45,19 @@ final class LiveQuestionPanelService
      * @param  list<string>  $ids
      * @return Collection<string, Question>
      */
-    private function questionsById(array $ids, ?User $user): Collection
+    private function questionsById(array $ids): Collection
     {
         if ($ids === []) {
             return collect();
         }
 
-        $query = Question::query()
+        // Quyền xem được bảo vệ ở Classroom; mọi thành viên live phải nhận cùng một câu.
+        return Question::query()
             ->with(['options' => fn ($q) => $q->orderBy('order')])
             ->whereIn('id', $ids)
-            ->where('status', 'published');
-
-        if ($user !== null && ! $user->hasEntitlement(\App\Support\Enums\Entitlement::QbankFull->value)) {
-            $query->where('is_free', true);
-        }
-
-        return $query->get()->keyBy(fn (Question $q) => (string) $q->getKey());
+            ->where('status', 'published')
+            ->get()
+            ->keyBy(fn (Question $q) => (string) $q->getKey());
     }
 
     /** @return array<string, mixed>|null */
@@ -73,15 +70,15 @@ final class LiveQuestionPanelService
         $options = $question->options->sortBy('order')->values()->map(
             fn ($opt): array => [
                 'id' => (int) $opt->getKey(),
-                'content' => (string) $opt->content,
+                'content' => SafeHtml::forDisplay((string) $opt->content),
                 'is_correct' => $showAnswer ? (bool) $opt->is_correct : null,
             ],
         )->all();
 
         return [
             'id' => (string) $question->getKey(),
-            'stem' => (string) $question->stem,
-            'explanation' => $showAnswer ? (string) ($question->explanation ?? '') : null,
+            'stem' => SafeHtml::forDisplay((string) $question->stem),
+            'explanation' => $showAnswer ? SafeHtml::forDisplay((string) ($question->explanation ?? '')) : null,
             'difficulty' => $question->difficulty->value,
             'options' => $options,
         ];

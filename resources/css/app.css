@@ -7,6 +7,18 @@
 @source '../../Modules/**/resources/views/**/*.blade.php';
 @source '../views/**/*.blade.php';
 
+@layer base {
+    a {
+        text-decoration-line: none;
+    }
+}
+
+@layer utilities {
+    a.hover\:underline:hover {
+        text-decoration-line: none;
+    }
+}
+
 @theme {
     /* Typography - toàn bộ giao diện dùng Be Vietnam Pro (token font-* của mockup) */
     --font-sans: 'Be Vietnam Pro', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',

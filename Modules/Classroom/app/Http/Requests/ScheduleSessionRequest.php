@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\Classroom\Http\Requests;
 
+use App\Support\Enums\Entitlement;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Enums\SessionStatus;
 use Modules\QuestionBank\Models\QuestionSession;
 
@@ -31,7 +33,16 @@ final class ScheduleSessionRequest extends FormRequest
                 ),
             ],
             'question_ids' => ['nullable', 'array', 'max:50'],
-            'question_ids.*' => ['uuid', 'exists:questions,id'],
+            'question_ids.*' => [
+                'uuid',
+                'distinct',
+                Rule::exists('questions', 'id')->where(function ($query): void {
+                    $query->where('status', QuestionStatus::Published->value);
+                    if (! $this->user()?->hasEntitlement(Entitlement::QbankFull->value)) {
+                        $query->where('is_free', true);
+                    }
+                }),
+            ],
         ];
     }
 

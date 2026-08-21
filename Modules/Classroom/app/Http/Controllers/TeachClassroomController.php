@@ -5,18 +5,29 @@ declare(strict_types=1);
 namespace Modules\Classroom\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Support\Enums\Entitlement;
 use App\Support\Enums\Role;
+use App\Support\Http\Responses\ApiResponse;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Modules\Classroom\Actions\CreateClassroomAction;
+use Modules\Classroom\Actions\EndLiveSessionAction;
+use Modules\Classroom\Actions\ScheduleLiveSessionAction;
+use Modules\Classroom\Actions\StartLiveSessionAction;
 use Modules\Classroom\Enums\ClassroomPurpose;
 use Modules\Classroom\Enums\ClassroomVisibility;
 use Modules\Classroom\Enums\LiveSessionStatus;
 use Modules\Classroom\Enums\MemberRole;
 use Modules\Classroom\Enums\MemberStatus;
+use Modules\Classroom\Http\Requests\ScheduleSessionRequest;
 use Modules\Classroom\Http\Requests\StoreTeachClassroomRequest;
 use Modules\Classroom\Models\Classroom;
+use Modules\Classroom\Models\LiveSession;
+use Modules\Classroom\Services\LiveKitTokenService;
+use Modules\QuestionBank\Enums\QuestionStatus;
+use Modules\QuestionBank\Models\Question;
 
 final class TeachClassroomController extends Controller
 {
@@ -35,25 +46,29 @@ final class TeachClassroomController extends Controller
                     ->where('status', MemberStatus::Active->value)
                     ->whereIn('role_in_class', [MemberRole::Host->value, MemberRole::Cohost->value]);
             })
-            ->with(['host', 'liveSession'])
+            ->with(['host', 'liveSession', 'upcomingSession'])
             ->withCount('activeMembers')
-            ->with(['sessions' => fn ($query) => $query
-                ->where('status', LiveSessionStatus::Scheduled->value)
-                ->where('scheduled_at', '>', now())
-                ->orderBy('scheduled_at')
-                ->limit(1)])
             ->latest()
-            ->get();
+            ->paginate(15)
+            ->withQueryString();
 
-        $liveNow = $classrooms->filter(fn (Classroom $c): bool => $c->liveSession !== null)->count();
-        $upcoming = $classrooms->filter(fn (Classroom $c): bool => $c->sessions->isNotEmpty())->count();
+        $baseQuery = Classroom::query()
+            ->whereIn('purpose', array_map(
+                static fn (ClassroomPurpose $p): string => $p->value,
+                ClassroomPurpose::teachCases(),
+            ))
+            ->whereHas('members', function ($query) use ($user): void {
+                $query->where('user_id', $user->getKey())
+                    ->where('status', MemberStatus::Active->value)
+                    ->whereIn('role_in_class', [MemberRole::Host->value, MemberRole::Cohost->value]);
+            });
 
         return view('classroom::teach.classes.index', [
             'classrooms' => $classrooms,
             'stats' => [
-                'total' => $classrooms->count(),
-                'live' => $liveNow,
-                'upcoming' => $upcoming,
+                'total' => (clone $baseQuery)->count(),
+                'live' => (clone $baseQuery)->whereHas('liveSession')->count(),
+                'upcoming' => (clone $baseQuery)->whereHas('upcomingSession')->count(),
             ],
         ]);
     }
@@ -83,20 +98,142 @@ final class TeachClassroomController extends Controller
     {
         $this->authorizeTeachClassroom($request, $classroom);
 
-        $classroom->load(['host', 'activeMembers.user', 'sessions', 'liveSession']);
+        $classroom->load(['host', 'liveSession'])->loadCount('activeMembers');
+
+        $upcomingSessions = $classroom->sessions()
+            ->where('status', LiveSessionStatus::Scheduled->value)
+            ->orderBy('scheduled_at')
+            ->limit(5)
+            ->get();
+
+        $pastSessions = $classroom->sessions()
+            ->whereIn('status', [LiveSessionStatus::Ended->value, LiveSessionStatus::Cancelled->value])
+            ->limit(5)
+            ->get();
+
+        $members = $classroom->activeMembers()
+            ->with('user')
+            ->latest('joined_at')
+            ->limit(50)
+            ->get();
 
         return view('classroom::teach.classes.show', [
             'classroom' => $classroom,
-            'upcomingSessions' => $classroom->sessions
-                ->where('status', LiveSessionStatus::Scheduled)
-                ->filter(fn ($session) => $session->scheduled_at === null || $session->scheduled_at->isFuture())
-                ->take(5)
-                ->values(),
-            'pastSessions' => $classroom->sessions
-                ->whereIn('status', [LiveSessionStatus::Ended, LiveSessionStatus::Cancelled])
-                ->take(5)
-                ->values(),
+            'upcomingSessions' => $upcomingSessions,
+            'pastSessions' => $pastSessions,
+            'members' => $members,
         ]);
+    }
+
+    public function destroy(Request $request, Classroom $classroom): RedirectResponse
+    {
+        $this->authorizeTeachClassroom($request, $classroom);
+        $this->authorize('manageLive', $classroom);
+        abort_if($classroom->liveSession()->exists(), 409, 'Hãy kết thúc buổi live trước khi xoá lớp.');
+
+        $classroom->delete();
+
+        return redirect()
+            ->route('teach.classes.index')
+            ->with('status', 'Đã xoá lớp: '.$classroom->title);
+    }
+
+    public function scheduleLive(ScheduleSessionRequest $request, Classroom $classroom, ScheduleLiveSessionAction $action): RedirectResponse
+    {
+        $this->authorizeTeachClassroom($request, $classroom);
+        $this->authorize('manageLive', $classroom);
+        $session = $action->handle($classroom, $request->sessionPayload());
+
+        return redirect()->route('teach.classes.show', $classroom)->with('status', 'Đã lên lịch buổi live: '.$session->title);
+    }
+
+    public function searchQuestions(Request $request, Classroom $classroom): JsonResponse
+    {
+        $this->authorizeTeachClassroom($request, $classroom);
+        $this->authorize('manageLive', $classroom);
+
+        $validated = $request->validate([
+            'q' => ['nullable', 'string', 'max:255'],
+        ]);
+        $search = trim((string) ($validated['q'] ?? ''));
+
+        // Chỉ trả về câu đã xuất bản và đúng quyền QBank của giảng viên.
+        $questions = Question::query()
+            ->with('topic:id,name')
+            ->where('status', QuestionStatus::Published)
+            ->when(
+                ! $request->user()->hasEntitlement(Entitlement::QbankFull->value),
+                fn ($query) => $query->where('is_free', true),
+            )
+            ->when($search !== '', function ($query) use ($search): void {
+                $pattern = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $search).'%';
+                $query->whereRaw("stem LIKE ? ESCAPE '!'", [$pattern]);
+            })
+            ->latest()
+            ->limit(30)
+            ->get(['id', 'stem', 'difficulty', 'topic_id']);
+
+        return ApiResponse::item([
+            'questions' => $questions->map(fn (Question $question): array => [
+                'id' => (string) $question->getKey(),
+                'stem' => trim(strip_tags(html_entity_decode($question->stem, ENT_QUOTES | ENT_HTML5, 'UTF-8'))),
+                'difficulty' => $question->difficulty->label(),
+                'topic' => $question->topic?->name ?? 'Tổng hợp',
+            ])->values(),
+        ]);
+    }
+
+    public function startLive(Request $request, Classroom $classroom, LiveSession $liveSession, StartLiveSessionAction $action): RedirectResponse
+    {
+        $this->authorizeTeachClassroom($request, $classroom);
+        // Instructors may test/host a pending classroom; learners remain blocked until approval.
+        $this->authorize('manageLive', $classroom);
+        $action->handle($classroom, $liveSession);
+
+        return redirect()->route('teach.classes.sessions.studio', [$classroom, $liveSession]);
+    }
+
+    public function studio(Request $request, Classroom $classroom, LiveSession $liveSession, LiveKitTokenService $tokens): View|RedirectResponse
+    {
+        $this->authorizeTeachClassroom($request, $classroom);
+        $this->authorize('manageLive', $classroom);
+        if ($liveSession->status === LiveSessionStatus::Ended) {
+            return redirect()
+                ->route('teach.classes.show', $classroom)
+                ->with('status', 'Buổi live đã kết thúc.');
+        }
+        abort_if($liveSession->status === LiveSessionStatus::Cancelled, 409, 'Buổi live đã bị hủy.');
+
+        $role = $classroom->roleFor($request->user()) ?? MemberRole::Host;
+        $liveSession->load([
+            'messages' => fn ($query) => $query
+                ->where('is_hidden', false)
+                ->with('user')
+                ->latest('created_at')
+                ->limit(100),
+            'recordings',
+        ]);
+
+        return view('classroom::teach.classes.studio', [
+            'classroom' => $classroom,
+            'session' => $liveSession,
+            'tokenPayload' => $tokens->issue($liveSession, $request->user(), $role),
+            'livekitConfigured' => $tokens->isConfigured(),
+            'messages' => $liveSession->messages->sortBy('created_at')->values(),
+            'role' => $role,
+            'canModerate' => true,
+            'canHostLive' => true,
+            'chatReadonly' => false,
+        ]);
+    }
+
+    public function endLive(Request $request, Classroom $classroom, LiveSession $liveSession, EndLiveSessionAction $action): RedirectResponse
+    {
+        $this->authorizeTeachClassroom($request, $classroom);
+        $this->authorize('manageLive', $classroom);
+        $action->handle($classroom, $liveSession);
+
+        return redirect()->route('teach.classes.show', $classroom)->with('status', 'Buổi live đã kết thúc.');
     }
 
     private function authorizeTeachClassroom(Request $request, Classroom $classroom): void

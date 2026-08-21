@@ -49,7 +49,7 @@ final class LiveQuestionController extends Controller
             $liveSession->refresh();
         }
 
-        $data = $panel->panel($liveSession, $request->user());
+        $data = $panel->panel($liveSession);
         event(new LiveQuestionChanged(
             $liveSession,
             $data['index'],

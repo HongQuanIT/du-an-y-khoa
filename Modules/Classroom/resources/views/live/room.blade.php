@@ -38,6 +38,9 @@
             data-lk-token="{{ $tokenPayload['token'] }}"
             data-lk-role="{{ $tokenPayload['role'] }}"
             data-lk-room="{{ $tokenPayload['room'] }}"
+            data-lk-can-audio="{{ ($tokenPayload['can_publish_audio'] ?? false) ? '1' : '0' }}"
+            data-lk-can-video="{{ ($tokenPayload['can_publish_video'] ?? false) ? '1' : '0' }}"
+            data-lk-can-screen="{{ ($tokenPayload['can_publish_screen'] ?? false) ? '1' : '0' }}"
             data-lk-exit-url="{{ route('classroom.show', $classroom) }}"
         @endif
         class="flex min-h-0 flex-1 flex-col lg:flex-row"

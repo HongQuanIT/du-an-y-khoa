@@ -13,7 +13,6 @@ use Modules\Classroom\Enums\MemberRole;
 use Modules\Classroom\Events\LiveSessionUpdated;
 use Modules\Classroom\Models\Classroom;
 use Modules\Classroom\Models\LiveSession;
-use Modules\Classroom\Services\LiveQuestionPanelService;
 
 final class LivePresenterController extends Controller
 {
@@ -27,13 +26,14 @@ final class LivePresenterController extends Controller
         abort_unless($liveSession->hasQuestionSet(), 404);
 
         $role = $classroom->roleFor($request->user()) ?? MemberRole::Member;
+        $teachPortal = $request->routeIs('teach.*');
 
         return view('classroom::live.presenter', [
             'classroom' => $classroom,
             'session' => $liveSession,
             'canModerate' => $role->canModerate(),
-            'bootstrapUrl' => route('classroom.live.api.bootstrap', [$classroom, $liveSession]),
-            'questionUrl' => route('classroom.live.api.question', [$classroom, $liveSession]),
+            'bootstrapUrl' => route($teachPortal ? 'teach.classes.sessions.studio.api.bootstrap' : 'classroom.live.api.bootstrap', [$classroom, $liveSession]),
+            'questionUrl' => route($teachPortal ? 'teach.classes.sessions.studio.api.question' : 'classroom.live.api.question', [$classroom, $liveSession]),
         ]);
     }
 

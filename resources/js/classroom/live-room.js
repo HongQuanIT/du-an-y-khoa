@@ -35,6 +35,7 @@ export function mountLiveRoom(root) {
 
     /** @type {Array<Record<string, unknown>>} */
     let hands = [];
+    let pollTimer = null;
 
     const csrf = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 
@@ -139,6 +140,11 @@ export function mountLiveRoom(root) {
         paintMessages();
     };
 
+    const removeMessage = (id) => {
+        allMessages = allMessages.filter((message) => message.id !== id);
+        paintMessages();
+    };
+
     const renderQuestionPanel = (panel) => {
         if (! panel || questionPanels.length === 0) {
             return;
@@ -171,7 +177,7 @@ export function mountLiveRoom(root) {
             }
 
             if (stem) {
-                stem.textContent = panel.question.stem;
+                stem.innerHTML = panel.question.stem ?? '';
             }
 
             if (options) {
@@ -180,14 +186,21 @@ export function mountLiveRoom(root) {
                     const li = document.createElement('li');
                     li.className = 'rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface'
                         + (opt.is_correct ? ' border-primary bg-primary/5 font-medium text-primary' : '');
-                    li.textContent = `${String.fromCharCode(65 + i)}. ${opt.content}`;
+                    const label = document.createElement('span');
+                    label.className = 'font-medium';
+                    label.textContent = `${String.fromCharCode(65 + i)}. `;
+
+                    const content = document.createElement('span');
+                    content.innerHTML = opt.content ?? '';
+
+                    li.append(label, content);
                     options.appendChild(li);
                 });
             }
 
             if (explanation) {
                 if (panel.show_answer && panel.question.explanation) {
-                    explanation.textContent = panel.question.explanation;
+                    explanation.innerHTML = panel.question.explanation;
                     explanation.classList.remove('hidden');
                 } else {
                     explanation.classList.add('hidden');
@@ -522,7 +535,7 @@ export function mountLiveRoom(root) {
 
     const subscribeEcho = () => {
         if (! window.Echo || ! config.session_uuid) {
-            return;
+            return false;
         }
 
         window.Echo.private(`live-session.${config.session_uuid}`)
@@ -543,6 +556,11 @@ export function mountLiveRoom(root) {
                 playReactionSound(e.type === 'like' ? 'like' : 'heart');
             })
             .listen('.session.ended', () => {
+                if (config.studio_mode && config.exit_url) {
+                    window.location.href = config.exit_url;
+
+                    return;
+                }
                 window.location.reload();
             })
             .listen('.question.changed', (e) => {
@@ -563,6 +581,9 @@ export function mountLiveRoom(root) {
                 }
                 if (e.changes?.focus === 'questions') {
                     switchToQuestionsTab();
+                }
+                if (Number(e.changes?.kicked_user_id) === currentUserId) {
+                    window.location.href = e.changes?.redirect_url ?? '/classes';
                 }
             });
 
@@ -591,6 +612,8 @@ export function mountLiveRoom(root) {
                     lkCount.textContent = `${n} người`;
                 }
             });
+
+        return true;
     };
 
     chatForms.forEach((chatForm) => {
@@ -608,8 +631,9 @@ export function mountLiveRoom(root) {
             }
 
             const type = chatType instanceof HTMLSelectElement ? chatType.value : 'chat';
+            const optimisticId = `tmp-${Date.now()}-${Math.random()}`;
             const optimistic = {
-                id: null,
+                id: optimisticId,
                 body,
                 type,
                 user: { name: 'Bạn' },
@@ -632,9 +656,16 @@ export function mountLiveRoom(root) {
                 body: JSON.stringify({ body, type }),
             });
 
-            if (! res.ok && chatError instanceof HTMLElement) {
-                chatError.textContent = 'Không gửi được tin nhắn.';
-                chatError.classList.remove('hidden');
+            if (res.ok) {
+                const json = await res.json();
+                removeMessage(optimisticId);
+                upsertMessage((json.data ?? json).message);
+            } else {
+                removeMessage(optimisticId);
+                if (chatError instanceof HTMLElement) {
+                    chatError.textContent = 'Không gửi được tin nhắn.';
+                    chatError.classList.remove('hidden');
+                }
             }
         });
     });
@@ -711,38 +742,54 @@ export function mountLiveRoom(root) {
 
     syncFilterButtons();
 
+    const applyBootstrap = (data) => {
+        apiUrls = data.urls ?? apiUrls;
+        if (data.session?.chat_muted !== undefined) {
+            applyChatMuted(data.session.chat_muted);
+        }
+        loadMessages(data.messages);
+        renderHands(data.hands ?? []);
+        renderQuestionPanel(data.question_panel);
+        if (data.recording?.playback_url) {
+            const hlsRoot = root.querySelector('[data-hls-root]');
+            if (hlsRoot instanceof HTMLElement) {
+                hlsRoot.dataset.hlsUrl = data.recording.playback_url;
+            }
+            mountHlsPlayers(root);
+        }
+    };
+
+    const pollBootstrap = async () => {
+        try {
+            applyBootstrap(await fetchBootstrap());
+        } catch (err) {
+            console.error('[LiveRoom] poll', err);
+        }
+    };
+
     (async () => {
         try {
-            const data = await fetchBootstrap();
-            apiUrls = data.urls ?? {};
-            if (data.session?.chat_muted !== undefined) {
-                applyChatMuted(data.session.chat_muted);
-            }
-            loadMessages(data.messages);
-            renderHands(data.hands ?? []);
-            renderQuestionPanel(data.question_panel);
-            if (data.recording?.playback_url) {
-                const hlsRoot = root.querySelector('[data-hls-root]');
-                if (hlsRoot instanceof HTMLElement) {
-                    hlsRoot.dataset.hlsUrl = data.recording.playback_url;
-                }
-                mountHlsPlayers(root);
-            }
-            subscribeEcho();
+            applyBootstrap(await fetchBootstrap());
         } catch (err) {
             console.error('[LiveRoom] bootstrap', err);
-            setInterval(async () => {
-                try {
-                    const data = await fetchBootstrap();
-                    loadMessages(data.messages);
-                } catch {
-                    // ignore poll errors
-                }
-            }, 10_000);
         }
+
+        const realtimeConnected = subscribeEcho();
+        // Reverb is primary. Polling guarantees convergence when WebSocket is
+        // disabled, blocked by a proxy, or temporarily disconnected.
+        pollTimer = window.setInterval(pollBootstrap, realtimeConnected ? 15_000 : 7_000);
     })();
 
     return () => {
+        if (pollTimer !== null) {
+            window.clearInterval(pollTimer);
+        }
+        if (window.Echo && config.session_uuid) {
+            window.Echo.leave(`live-session.${config.session_uuid}`);
+        }
+        if (window.Echo && config.classroom_uuid) {
+            window.Echo.leave(`classroom.${config.classroom_uuid}`);
+        }
         delete root.dataset.liveMounted;
     };
 }
