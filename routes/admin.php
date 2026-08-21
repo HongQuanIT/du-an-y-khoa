@@ -17,6 +17,7 @@ use Modules\Admin\Http\Controllers\EditorImageUploadController;
 use Modules\Admin\Http\Controllers\QuestionController;
 use Modules\Admin\Http\Controllers\RoleController;
 use Modules\Admin\Http\Controllers\SettingController;
+use Modules\Admin\Http\Controllers\SupportConversationController;
 use Modules\Admin\Http\Controllers\UserController;
 use Modules\Auth\Http\Controllers\AdminTwoFactorController;
 use Modules\Auth\Http\Controllers\AuthenticatedSessionController;
@@ -84,6 +85,13 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
         Route::middleware('permission:'.Permission::SystemManage->value)->group(function (): void {
             Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
             Route::post('/settings', [SettingController::class, 'update'])->name('settings.update');
+            Route::get('/support', [SupportConversationController::class, 'index'])->name('support.index');
+            Route::get('/support/badge', [SupportConversationController::class, 'badge'])->name('support.badge');
+            Route::get('/support/{conversation}', [SupportConversationController::class, 'show'])->name('support.show');
+            Route::post('/support/{conversation}/claim', [SupportConversationController::class, 'claim'])->name('support.claim');
+            Route::post('/support/{conversation}/seen', [SupportConversationController::class, 'seen'])->name('support.seen');
+            Route::post('/support/{conversation}/messages', [SupportConversationController::class, 'message'])->name('support.messages.store');
+            Route::post('/support/{conversation}/resolve', [SupportConversationController::class, 'resolve'])->name('support.resolve');
         });
 
         Route::middleware('permission:'.Permission::AuditView->value)->group(function (): void {

@@ -4,7 +4,7 @@
 
 ## 1. Mục đích tài liệu
 
-- Đặc tả đầy đủ hệ thống theo **44 module**, trong đó **43 module thuộc phạm vi hiện tại** và **1 module hoãn (Phase 2)**: từng trang, màn hình, popup, modal, drawer, wizard, tab, component, form, empty/loading/error state.
+- Đặc tả đầy đủ hệ thống theo **45 module**, trong đó **44 module thuộc phạm vi hiện tại** và **1 module hoãn (Phase 2)**: từng trang, màn hình, popup, modal, drawer, wizard, tab, component, form, empty/loading/error state.
 - 🔵 **Đã hoãn:** Module 32 — Organization (chưa đưa vào hệ thống ở giai đoạn này; tài liệu giữ lại để triển khai sau).
 - Module **44 — Classroom / Live Review** (B2C cộng đồng, LiveKit) **khác** Organization (B2B) — không phụ thuộc Module 32.
 - Chuẩn hóa **kiến trúc, mô hình dữ liệu, API, phân quyền, tracking, security, performance** dùng chung cho mọi module.
@@ -49,12 +49,13 @@ srs/
 │   ├── 10-erd.md                     ← ERD theo nhóm (Mermaid + ảnh SVG)
 │   ├── 11-erd-full.md                ← ERD đầy đủ toàn hệ thống (1 sơ đồ)
 │   └── erd-images/                   ← ảnh SVG dựng sẵn của ERD
-└── modules/                          ← 43 module hiện tại (+ 1 hoãn: Organization)
+└── modules/                          ← 44 module hiện tại (+ 1 hoãn: Organization)
     ├── 01-landing-page.md
     ├── 02-authentication.md
     ├── ...
     ├── 43-api.md
-    └── 44-classroom-live-review.md
+    ├── 44-classroom-live-review.md
+    └── 45-support-chat.md
 ```
 
 
@@ -108,6 +109,7 @@ srs/
 | 42 | CMS | Admin | `modules/42-cms.md` |
 | 43 | API | Platform | `modules/43-api.md` |
 | 44 | Classroom / Live Review | Community | `modules/44-classroom-live-review.md` |
+| 45 | Support Chat | System | `modules/45-support-chat.md` |
 
 ## 6. Trạng thái tài liệu
 

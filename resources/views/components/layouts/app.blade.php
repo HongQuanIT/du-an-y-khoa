@@ -192,12 +192,6 @@
 
         <div class="ml-2 flex shrink-0 items-center gap-6">
             <div class="flex items-center gap-3">
-                <button type="button"
-                    class="group relative cursor-pointer rounded-full p-2 transition-colors hover:bg-surface-container"
-                    aria-label="Tin nhắn">
-                    <span
-                        class="material-symbols-outlined text-[24px] leading-none text-on-surface-variant group-hover:text-primary">mail</span>
-                </button>
                 <div class="relative" @click.outside="notificationsOpen = false">
                     <button type="button" @click="notificationsOpen = !notificationsOpen; accountMenu = false"
                         class="group relative cursor-pointer rounded-full p-2 transition-colors hover:bg-surface-container"
@@ -444,7 +438,158 @@
         {{ $slot }}
     </main>
 
+    {{-- Persistent learner support entry point, intentionally separate from navigation. --}}
+    <button type="button" data-support-launcher
+        class="group fixed right-5 bottom-5 z-40 flex size-14 items-center justify-center rounded-full bg-primary text-on-primary shadow-lg ring-4 ring-surface transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary sm:right-7 sm:bottom-7"
+        aria-label="Mở chat hỗ trợ" title="Chat hỗ trợ">
+        <span class="material-symbols-outlined text-[28px] leading-none">support_agent</span>
+        <span class="pointer-events-none absolute right-[calc(100%+0.75rem)] whitespace-nowrap rounded-lg bg-inverse-surface px-3 py-2 text-sm font-medium text-inverse-on-surface opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+            Hỗ trợ trực tuyến
+        </span>
+    </button>
+
+    <dialog data-support-dialog class="fixed inset-auto right-6 bottom-24 m-0 h-[560px] w-[390px] max-w-none overflow-hidden rounded-2xl border border-outline-variant bg-surface p-0 text-on-surface shadow-[0_20px_60px_rgba(20,28,45,0.28)] backdrop:bg-transparent max-md:inset-0 max-md:m-0 max-md:h-[100dvh] max-md:w-full max-md:rounded-none max-md:border-0">
+        <div class="relative flex h-full min-h-0 flex-col">
+            <header class="flex shrink-0 items-center gap-3 bg-primary px-4 py-3.5 text-on-primary">
+                <span class="flex size-9 items-center justify-center rounded-xl bg-white/15"><span class="material-symbols-outlined text-[20px]">support_agent</span></span>
+                <div class="min-w-0 flex-1"><p class="font-title-sm font-bold">MedLearn Support</p><p class="mt-0.5 text-[11px] text-on-primary/80">Thường phản hồi trong vài phút</p></div>
+                <button type="button" data-support-history class="flex size-9 items-center justify-center rounded-lg text-on-primary/80 transition-colors hover:bg-white/15 hover:text-on-primary" aria-label="Lịch sử hội thoại"><span class="material-symbols-outlined text-[20px]">history</span></button>
+                <button type="button" data-support-close class="flex size-9 items-center justify-center rounded-lg text-on-primary/80 transition-colors hover:bg-white/15 hover:text-on-primary" aria-label="Đóng chat"><span class="material-symbols-outlined text-[20px]">close</span></button>
+            </header>
+            <section data-support-history-panel class="absolute inset-x-0 top-[64px] bottom-0 z-10 hidden flex flex-col bg-surface"><div class="flex shrink-0 items-center justify-between border-b border-outline-variant px-4 py-3"><p class="font-title-sm font-bold">Hội thoại</p><button type="button" data-support-new class="inline-flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1.5 text-xs font-semibold text-on-primary"><span class="material-symbols-outlined text-[16px]">add</span>Tạo mới</button></div><div data-support-list class="min-h-0 flex-1 overflow-y-auto p-2"></div></section>
+            <div data-support-empty class="m-auto max-w-[280px] p-6 text-center"><span class="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary-container text-primary"><span class="material-symbols-outlined text-[26px]">forum</span></span><h2 class="mt-4 font-title-md font-bold">Bạn cần hỗ trợ?</h2><p class="mt-2 text-sm leading-5 text-on-surface-variant">Trợ lý AI sẵn sàng hỗ trợ trước khi chuyển đến đội ngũ MedLearn.</p><button type="button" data-support-new class="mt-5 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary">Bắt đầu cuộc trò chuyện</button></div>
+            <form data-support-create class="hidden min-h-0 flex-1 space-y-3 overflow-y-auto p-5"><div><p class="font-title-md font-bold">Yêu cầu mới</p><p class="mt-1 text-xs text-on-surface-variant">Chọn chủ đề để hỗ trợ nhanh hơn.</p></div><label class="block text-xs font-semibold text-on-surface-variant">DANH MỤC<select name="category" class="mt-1.5 w-full rounded-lg border border-outline-variant bg-surface px-3 py-2.5 text-sm font-normal text-on-surface"><option value="account">Tài khoản</option><option value="billing">Thanh toán</option><option value="course">Khóa học</option><option value="system">Lỗi hệ thống</option><option value="other">Vấn đề khác</option></select></label><input name="subject" maxlength="160" class="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2.5 text-sm" placeholder="Tiêu đề (không bắt buộc)"><textarea name="message" required maxlength="4000" rows="5" class="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2.5 text-sm" placeholder="Mô tả vấn đề của bạn…"></textarea><p class="text-xs leading-5 text-on-surface-variant">Không gửi mật khẩu, OTP hoặc thông tin thẻ.</p><button class="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary">Gửi yêu cầu</button></form>
+            <div data-support-chat class="hidden flex min-h-0 flex-1 flex-col overflow-hidden"><div class="flex shrink-0 items-center gap-2 border-b border-outline-variant px-4 py-2.5"><span class="size-2 rounded-full bg-green-500"></span><p data-support-title class="min-w-0 flex-1 truncate text-xs font-semibold text-on-surface"></p></div><div data-support-messages class="min-h-0 flex-1 space-y-3 overflow-y-auto bg-surface-container-lowest px-4 py-4" role="log" aria-live="polite"></div><form data-support-message class="flex shrink-0 items-end gap-2 border-t border-outline-variant bg-surface p-3"><textarea name="message" required maxlength="4000" rows="1" class="min-w-0 flex-1 resize-none rounded-xl border border-outline-variant bg-surface-container-low px-3 py-2.5 text-sm" placeholder="Nhập tin nhắn…"></textarea><button type="submit" data-support-send class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-on-primary transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50" aria-label="Gửi tin nhắn"><span class="material-symbols-outlined text-[19px]">arrow_upward</span></button></form></div>
+        </div>
+    </dialog>
+
     @livewireScriptConfig
+    <script>
+        (() => {
+            const dialog = document.querySelector('[data-support-dialog]');
+            const launcher = document.querySelector('[data-support-launcher]');
+            const list = document.querySelector('[data-support-list]');
+            const empty = document.querySelector('[data-support-empty]');
+            const create = document.querySelector('[data-support-create]');
+            const chat = document.querySelector('[data-support-chat]');
+            const historyPanel = document.querySelector('[data-support-history-panel]');
+            const messages = document.querySelector('[data-support-messages]');
+            const title = document.querySelector('[data-support-title]');
+            const messageForm = document.querySelector('[data-support-message]');
+            const messageInput = messageForm?.querySelector('textarea[name="message"]');
+            const sendButton = messageForm?.querySelector('[data-support-send]');
+            const labels = { account: 'Tài khoản', billing: 'Thanh toán', course: 'Khóa học', system: 'Lỗi hệ thống', other: 'Vấn đề khác' };
+            const statuses = { ai_active: 'Trợ lý AI đang hỗ trợ', waiting_admin: 'Đang chờ quản trị viên', admin_active: 'Quản trị viên đang hỗ trợ', resolved: 'Đã giải quyết' };
+            let current = null, conversations = [], subscribedConversationId = null, sending = false;
+            let typingController = null;
+            const ensureTyping = () => {
+                if (typingController || !window.MedlearnSupportTyping || !messages) return typingController;
+                typingController = window.MedlearnSupportTyping.createSupportTypingController({ messagesEl: messages, selfSenderType: 'user', remoteLabel: 'Quản trị viên' });
+                typingController.bindInput(messageInput);
+                return typingController;
+            };
+            const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
+            const request = async (url, options = {}) => {
+                const response = await fetch(url, { credentials: 'same-origin', ...options, headers: { Accept: 'application/json', 'X-CSRF-TOKEN': csrf, ...(options.headers || {}) } });
+                if (!response.ok) throw new Error('support_request_failed');
+                return response.json();
+            };
+            const show = (element, visible) => element?.classList.toggle('hidden', !visible);
+            const scrollMessages = () => { messages.scrollTop = messages.scrollHeight; };
+            const renderMessages = () => {
+                messages.querySelectorAll('[data-message-row]').forEach((node) => node.remove());
+                (current?.messages || []).forEach((message) => {
+                    const row = document.createElement('div'); row.dataset.messageRow = 'true'; row.className = `flex ${message.sender_type === 'user' ? 'justify-end' : 'justify-start'}`;
+                    const bubble = document.createElement('div'); bubble.className = `max-w-[80%] rounded-2xl px-4 py-3 ${message.sender_type === 'user' ? 'bg-primary text-on-primary' : 'bg-surface-container text-on-surface'}`;
+                    const by = document.createElement('p'); by.className = 'mb-1 text-xs opacity-70'; by.textContent = message.sender_type === 'ai' ? 'Trợ lý AI' : (message.sender_type === 'admin' ? 'Quản trị viên' : 'Bạn');
+                    const body = document.createElement('p'); body.className = 'whitespace-pre-wrap'; body.textContent = message.body; bubble.append(by, body); row.append(bubble);
+                    messages.insertBefore(row, ensureTyping()?.getTypingNode() ?? null);
+                });
+                scrollMessages();
+            };
+            const render = () => {
+                list.replaceChildren(); conversations.forEach((conversation) => { const button = document.createElement('button'); button.type = 'button'; button.className = `mb-1 w-full rounded-lg p-3 text-left ${current?.id === conversation.id ? 'bg-primary-container' : 'hover:bg-surface-container'}`; const subject = document.createElement('p'); subject.className = 'truncate font-semibold'; subject.textContent = conversation.subject || labels[conversation.category]; const status = document.createElement('p'); status.className = 'mt-1 text-xs text-on-surface-variant'; status.textContent = statuses[conversation.status]; button.append(subject, status); button.addEventListener('click', () => { show(historyPanel, false); load(conversation.id); }); list.append(button); });
+                show(empty, !current && create.classList.contains('hidden')); show(chat, !!current); if (current) { show(empty, false); title.textContent = `${current.subject || labels[current.category]} · ${statuses[current.status]}`; renderMessages(); show(messageForm, current.status !== 'resolved'); }
+            };
+            const subscribe = () => {
+                ensureTyping();
+                if (!window.Echo || !current || subscribedConversationId === current.id) return;
+                if (subscribedConversationId) window.Echo.leave(`support-conversation.${subscribedConversationId}`);
+                subscribedConversationId = current.id;
+                const echoChannel = window.Echo.join(`support-conversation.${current.id}`);
+                echoChannel.listen('.message.created', () => load(current.id));
+                ensureTyping()?.bindChannel(echoChannel);
+            };
+            const load = async (id = null) => { const data = await request(`{{ route('support.index') }}${id ? `?conversation=${id}` : ''}`); conversations = data.conversations; current = data.conversation; show(create, false); render(); subscribe(); };
+            const setSending = (value) => { sending = value; if (sendButton) sendButton.disabled = value; if (messageInput) messageInput.disabled = value; };
+            launcher.addEventListener('click', async () => { ensureTyping(); dialog.showModal(); window.enableMedlearnRealtime?.().catch(() => null); try { await load(); } catch { show(create, true); show(empty, false); } });
+            document.querySelector('[data-support-close]').addEventListener('click', () => dialog.close());
+            document.querySelector('[data-support-history]').addEventListener('click', () => show(historyPanel, historyPanel.classList.contains('hidden')));
+            document.querySelectorAll('[data-support-new]').forEach((button) => button.addEventListener('click', () => { current = null; show(historyPanel, false); show(create, true); show(empty, false); show(chat, false); }));
+            create.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                if (sending) return;
+                setSending(true);
+                ensureTyping()?.setAiTyping(true);
+                show(create, false);
+                show(chat, true);
+                show(empty, false);
+                try {
+                    const data = await request('{{ route('support.store') }}', { method: 'POST', body: new FormData(create) });
+                    current = data.conversation;
+                    conversations.unshift(current);
+                    create.reset();
+                    render();
+                } catch {
+                    show(create, true);
+                    show(chat, false);
+                } finally {
+                    ensureTyping()?.setAiTyping(false);
+                    setSending(false);
+                }
+            });
+            messageForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                if (!current || current.status === 'resolved' || sending) return;
+                const text = messageInput.value.trim();
+                if (!text) return;
+                messageInput.value = '';
+                setSending(true);
+                const awaitingAi = current.status === 'ai_active';
+                const snapshot = current;
+                current = { ...current, messages: [...(current.messages || []), { sender_type: 'user', body: text }] };
+                renderMessages();
+                if (awaitingAi) ensureTyping()?.setAiTyping(true);
+                try {
+                    const form = new FormData();
+                    form.append('message', text);
+                    const data = await request(`{{ url('/support') }}/${snapshot.id}/messages`, { method: 'POST', body: form });
+                    current = data.conversation;
+                    conversations = conversations.map((item) => item.id === current.id ? current : item);
+                    render();
+                } catch {
+                    current = snapshot;
+                    renderMessages();
+                    messageInput.value = text;
+                } finally {
+                    ensureTyping()?.setAiTyping(false);
+                    setSending(false);
+                }
+            });
+            const bootRealtime = () => {
+                ensureTyping();
+                window.enableMedlearnRealtime?.().catch(() => null);
+            };
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', bootRealtime, { once: true });
+            } else {
+                bootRealtime();
+            }
+            window.addEventListener('medlearn:support-typing-ready', ensureTyping, { once: true });
+            window.addEventListener('medlearn:echo-ready', subscribe);
+        })();
+    </script>
+    @stack('scripts')
 </body>
 
 </html>
