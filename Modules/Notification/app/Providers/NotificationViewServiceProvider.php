@@ -12,6 +12,11 @@ final class NotificationViewServiceProvider extends ServiceProvider
 {
     public function boot(): void
     {
-        View::composer('components.layouts.app', HeaderNotificationsComposer::class);
+        View::composer([
+            'components.layouts.app',
+            'components.layouts.admin',
+            'components.layouts.teach',
+            'notification::partials.bell',
+        ], HeaderNotificationsComposer::class);
     }
 }

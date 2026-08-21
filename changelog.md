@@ -2,6 +2,15 @@
 
 ## 2026-08-21
 
+### Notification Center (Module 27)
+- Trung tâm thông báo in-app: chuông realtime (Reverb), trang `/notifications`, API đọc/xóa, category + deep link.
+- Nhắc live sắp bắt đầu, cảnh báo streak, broadcast hệ thống (admin), listener live/recording/support/duyệt lớp.
+- Mở rộng preference (classroom, support, billing); migration category/action_url + log dedup; test kèm theo.
+
+### Exam review & summary
+- Sửa nút «Làm lại» khi thiếu `exam_id` (fallback filters, ẩn nút nếu không có URL).
+- Đồng bộ token màu/prose dark mode trên màn xem lại kỳ thi và live review.
+
 ### Admin settings layout
 - Chuyển toàn bộ luồng settings tài khoản sang layout admin để dùng đúng sidebar và header quản trị.
 - Gỡ hai khối `Thông tin nghề nghiệp` và `Mục tiêu học tập` khỏi trang settings.

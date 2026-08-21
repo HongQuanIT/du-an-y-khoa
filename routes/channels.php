@@ -11,6 +11,10 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
 });
 
+Broadcast::channel('user.{id}', function ($user, $id) {
+    return (int) $user->id === (int) $id;
+});
+
 Broadcast::channel('support-conversation.{conversation}', function ($user, SupportConversation $conversation) {
     if (! $conversation->isOwnedBy($user) && ! Staff::isStaff($user)) {
         return false;

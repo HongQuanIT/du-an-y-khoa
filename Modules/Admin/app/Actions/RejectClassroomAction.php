@@ -10,6 +10,7 @@ use App\Support\Enums\Permission;
 use Modules\Admin\Support\Auditor;
 use Modules\Classroom\Enums\ClassroomStatus;
 use Modules\Classroom\Models\Classroom;
+use Modules\Notification\Actions\CreateUserNotificationAction;
 
 /** Admin oversight: reject a pending instructor classroom. */
 final class RejectClassroomAction
@@ -37,6 +38,18 @@ final class RejectClassroomAction
             before: $before,
             after: ['status' => ClassroomStatus::Archived->value],
         );
+
+        $host = $classroom->host;
+        if ($host !== null) {
+            CreateUserNotificationAction::run(
+                user: $host,
+                type: 'classroom.rejected',
+                title: 'Lớp chưa được duyệt',
+                body: sprintf('“%s” đã bị từ chối. Vui lòng chỉnh sửa và gửi lại.', $classroom->title),
+                data: ['classroom_id' => $classroom->getKey()],
+                actionUrl: route('teach.classes.show', $classroom),
+            );
+        }
 
         return $classroom->fresh() ?? $classroom;
     }

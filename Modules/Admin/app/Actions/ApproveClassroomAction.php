@@ -10,6 +10,7 @@ use App\Support\Enums\Permission;
 use Modules\Admin\Support\Auditor;
 use Modules\Classroom\Enums\ClassroomStatus;
 use Modules\Classroom\Models\Classroom;
+use Modules\Notification\Actions\CreateUserNotificationAction;
 
 /** Admin oversight: publish an instructor classroom to learners. */
 final class ApproveClassroomAction
@@ -41,6 +42,18 @@ final class ApproveClassroomAction
             before: $before,
             after: ['status' => ClassroomStatus::Active->value],
         );
+
+        $host = $classroom->host;
+        if ($host !== null) {
+            CreateUserNotificationAction::run(
+                user: $host,
+                type: 'classroom.approved',
+                title: 'Lớp đã được duyệt',
+                body: sprintf('“%s” đã được phê duyệt và hiện với học viên.', $classroom->title),
+                data: ['classroom_id' => $classroom->getKey()],
+                actionUrl: route('teach.classes.show', $classroom),
+            );
+        }
 
         return $classroom->fresh() ?? $classroom;
     }

@@ -2,32 +2,37 @@
 
 namespace Modules\Notification\Providers;
 
+use App\Events\SupportMessageCreated;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
+use Modules\Classroom\Events\LiveRecordingReady;
+use Modules\Classroom\Events\LiveSessionStarted;
+use Modules\Notification\Listeners\NotifyLiveRecordingReady;
+use Modules\Notification\Listeners\NotifyLiveSessionStarted;
 use Modules\Notification\Listeners\NotifySessionCompleted;
+use Modules\Notification\Listeners\NotifySupportMessage;
 use Modules\QuestionBank\Data\QuestionSessionProgressed;
 
 class EventServiceProvider extends ServiceProvider
 {
     /**
-     * The event handler mappings for the application.
-     *
      * @var array<string, array<int, string>>
      */
     protected $listen = [
         QuestionSessionProgressed::class => [
             NotifySessionCompleted::class,
         ],
+        LiveSessionStarted::class => [
+            NotifyLiveSessionStarted::class,
+        ],
+        LiveRecordingReady::class => [
+            NotifyLiveRecordingReady::class,
+        ],
+        SupportMessageCreated::class => [
+            NotifySupportMessage::class,
+        ],
     ];
 
-    /**
-     * Indicates if events should be discovered.
-     *
-     * @var bool
-     */
     protected static $shouldDiscoverEvents = true;
 
-    /**
-     * Configure the proper event listeners for email verification.
-     */
     protected function configureEmailVerification(): void {}
 }

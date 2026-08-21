@@ -192,61 +192,7 @@
 
         <div class="ml-2 flex shrink-0 items-center gap-6">
             <div class="flex items-center gap-3">
-                <div class="relative" @click.outside="notificationsOpen = false">
-                    <button type="button" @click="notificationsOpen = !notificationsOpen; accountMenu = false"
-                        class="group relative cursor-pointer rounded-full p-2 transition-colors hover:bg-surface-container"
-                        :aria-expanded="notificationsOpen" aria-label="Thông báo">
-                        <span
-                            class="material-symbols-outlined text-[24px] leading-none text-on-surface-variant group-hover:text-primary">notifications</span>
-                        @if (($headerUnreadCount ?? 0) > 0)
-                            <span class="absolute top-2 right-2 size-2 rounded-full border-2 border-surface bg-error"></span>
-                        @endif
-                    </button>
-
-                    <section x-show="notificationsOpen" x-cloak
-                        x-transition:enter="transition ease-out duration-150"
-                        x-transition:enter-start="translate-y-1 opacity-0"
-                        x-transition:enter-end="translate-y-0 opacity-100"
-                        class="absolute right-0 z-50 mt-2 w-[min(100vw-2rem,360px)] overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-lg">
-                        <div class="flex items-center justify-between border-b border-outline-variant px-4 py-3">
-                            <p class="font-label-md text-label-md font-semibold text-on-surface">Thông báo</p>
-                            @if (($headerUnreadCount ?? 0) > 0)
-                                <form method="post" action="{{ route('notifications.read-all') }}">
-                                    @csrf
-                                    <button type="submit" class="font-label-sm text-label-sm text-primary hover:underline">
-                                        Đánh dấu đã đọc
-                                    </button>
-                                </form>
-                            @endif
-                        </div>
-                        <div class="max-h-80 overflow-y-auto">
-                            @forelse ($headerNotifications ?? [] as $notification)
-                                <div @class([
-                                    'border-b border-outline-variant/60 px-4 py-3 last:border-0',
-                                    'bg-primary-fixed/15' => $notification->read_at === null,
-                                ])>
-                                    <p class="font-label-md text-label-md font-semibold text-on-surface">{{ $notification->title }}</p>
-                                    <p class="mt-0.5 font-body-sm text-body-sm text-on-surface-variant">{{ $notification->body }}</p>
-                                    <div class="mt-2 flex items-center justify-between gap-2">
-                                        <span class="font-label-sm text-label-sm text-on-surface-variant">
-                                            {{ $notification->created_at->diffForHumans() }}
-                                        </span>
-                                        @if ($notification->read_at === null)
-                                            <form method="post" action="{{ route('notifications.read', $notification) }}">
-                                                @csrf
-                                                <button type="submit" class="font-label-sm text-label-sm text-primary hover:underline">
-                                                    Đã đọc
-                                                </button>
-                                            </form>
-                                        @endif
-                                    </div>
-                                </div>
-                            @empty
-                                <p class="px-4 py-6 font-body-md text-body-md text-on-surface-variant">Chưa có thông báo.</p>
-                            @endforelse
-                        </div>
-                    </section>
-                </div>
+                @include('notification::partials.bell', ['indexRoute' => 'notifications.index'])
             </div>
 
             <div class="hidden h-8 w-px bg-outline-variant sm:block"></div>
