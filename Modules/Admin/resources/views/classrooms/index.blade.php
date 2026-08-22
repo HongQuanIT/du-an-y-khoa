@@ -1,6 +1,6 @@
 <x-layouts.admin title="Lớp học">
     <x-admin.page-header title="Lớp học (giám sát)"
-        description="Duyệt lớp giảng viên, force-end live hoặc lưu trữ khi cần." />
+        description="Duyệt lớp giảng viên, xem live đang dạy, force-end hoặc lưu trữ khi cần." />
 
     <x-admin.flash />
 
@@ -92,14 +92,32 @@
                             {{ $classroom->active_members_count }}
                         </td>
                         <td class="px-4 py-3">
-                            @if ($classroom->live_sessions_count > 0)
-                                <span class="font-label-sm text-label-sm font-semibold text-error">LIVE</span>
+                            @if ($classroom->liveSession)
+                                <div class="space-y-1">
+                                    <span class="font-label-sm text-label-sm font-semibold text-error">LIVE</span>
+                                    <div class="text-xs text-on-surface-variant">
+                                        {{ $classroom->liveSession->title }}
+                                    </div>
+                                    <div class="text-xs text-on-surface-variant">
+                                        GV: {{ $classroom->host?->name ?? '—' }}
+                                    </div>
+                                </div>
                             @else
                                 <span class="text-on-surface-variant">—</span>
                             @endif
                         </td>
                         <td class="px-4 py-3">
                             <div class="flex flex-wrap justify-end gap-2">
+                                <a href="{{ route('admin.classrooms.show', $classroom) }}"
+                                    class="rounded-lg bg-primary px-3 py-1.5 font-label-sm text-label-sm font-semibold text-on-primary hover:opacity-90">
+                                    Vào lớp
+                                </a>
+                                @if ($classroom->liveSession)
+                                    <a href="{{ route('admin.classrooms.live', [$classroom, $classroom->liveSession]) }}"
+                                        class="rounded-lg bg-error px-3 py-1.5 font-label-sm text-label-sm font-semibold text-white hover:opacity-90">
+                                        Xem live
+                                    </a>
+                                @endif
                                 @if ($classroom->status === \Modules\Classroom\Enums\ClassroomStatus::PendingApproval)
                                     <form method="post" action="{{ route('admin.classrooms.approve', $classroom) }}">
                                         @csrf

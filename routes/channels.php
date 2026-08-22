@@ -30,7 +30,7 @@ Broadcast::channel('support-admin', function ($user) {
 Broadcast::channel('classroom.{classroomUuid}', function ($user, string $classroomUuid) {
     $classroom = Classroom::query()->where('uuid', $classroomUuid)->first();
 
-    if ($classroom === null || ! $classroom->isActiveMember($user)) {
+    if ($classroom === null || ! $classroom->canWatchLive($user)) {
         return false;
     }
 
@@ -50,7 +50,7 @@ Broadcast::channel('live-session.{sessionUuid}', function ($user, string $sessio
 
     $classroom = $session->classroom;
 
-    if ($classroom === null || ! $classroom->isActiveMember($user)) {
+    if ($classroom === null || ! $classroom->canWatchLive($user)) {
         return false;
     }
 

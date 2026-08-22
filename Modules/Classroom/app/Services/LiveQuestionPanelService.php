@@ -31,7 +31,12 @@ final class LiveQuestionPanelService
             'total' => count($ids),
             'index' => $index,
             'show_answer' => (bool) $session->show_answer,
-            'question' => $currentId !== null ? $this->serializeQuestion($questions->get($currentId), $session->show_answer) : null,
+            'question' => $currentId !== null
+                ? $this->serializeQuestion(
+                    $questions->get($currentId),
+                    $session->revealedOptionIds(),
+                )
+                : null,
             'map' => collect($ids)->values()->map(
                 fn (string $id, int $i): array => [
                     'id' => $id,
@@ -60,25 +65,45 @@ final class LiveQuestionPanelService
             ->keyBy(fn (Question $q) => (string) $q->getKey());
     }
 
-    /** @return array<string, mixed>|null */
-    private function serializeQuestion(?Question $question, bool $showAnswer): ?array
+    /**
+     * @param  list<int>  $revealedOptionIds
+     * @return array<string, mixed>|null
+     */
+    private function serializeQuestion(?Question $question, array $revealedOptionIds): ?array
     {
         if ($question === null) {
             return null;
         }
 
+        $revealedLookup = array_fill_keys($revealedOptionIds, true);
+        $correctRevealed = false;
+
         $options = $question->options->sortBy('order')->values()->map(
-            fn ($opt): array => [
-                'id' => (int) $opt->getKey(),
-                'content' => SafeHtml::forDisplay((string) $opt->content),
-                'is_correct' => $showAnswer ? (bool) $opt->is_correct : null,
-            ],
+            function ($opt) use ($revealedLookup, &$correctRevealed): array {
+                $optionId = (int) $opt->getKey();
+                $revealed = isset($revealedLookup[$optionId]);
+                if ($revealed && $opt->is_correct) {
+                    $correctRevealed = true;
+                }
+
+                return [
+                    'id' => $optionId,
+                    'content' => SafeHtml::forDisplay((string) $opt->content),
+                    'is_correct' => $revealed ? (bool) $opt->is_correct : null,
+                    'explanation' => $revealed
+                        ? SafeHtml::forDisplay((string) ($opt->explanation ?? ''))
+                        : null,
+                ];
+            },
         )->all();
 
         return [
             'id' => (string) $question->getKey(),
             'stem' => SafeHtml::forDisplay((string) $question->stem),
-            'explanation' => $showAnswer ? SafeHtml::forDisplay((string) ($question->explanation ?? '')) : null,
+            'stem_image_url' => $question->stemImageUrl(),
+            'explanation' => $correctRevealed
+                ? SafeHtml::forDisplay((string) ($question->explanation ?? ''))
+                : null,
             'difficulty' => $question->difficulty->value,
             'options' => $options,
         ];

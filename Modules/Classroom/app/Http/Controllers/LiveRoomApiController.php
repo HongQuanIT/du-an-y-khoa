@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Classroom\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Support\Enums\Permission;
 use App\Support\Http\Responses\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -25,7 +26,12 @@ final class LiveRoomApiController extends Controller
         LiveQuestionPanelService $questions,
     ): JsonResponse {
         $this->authorize('view', $classroom);
-        abort_unless($classroom->isActiveMember($request->user()), 403);
+        abort_unless($classroom->canWatchLive($request->user()), 403);
+
+        $observer = $request->routeIs('admin.*');
+        if ($observer) {
+            abort_unless($request->user()->can(Permission::ClassroomOversee->value), 403);
+        }
 
         $liveSession->load([
             'messages' => fn ($q) => $q->where('is_hidden', false)->with('user')->orderBy('created_at')->limit(200),
@@ -34,15 +40,21 @@ final class LiveRoomApiController extends Controller
         ]);
 
         $teachPortal = $request->routeIs('teach.*');
-        $role = $this->effectiveRole($request, $classroom, $teachPortal);
+        $role = $this->effectiveRole($request, $classroom, $teachPortal, $observer);
         $tokenPayload = $liveSession->isLive()
-            ? $tokens->issue($liveSession, $request->user(), $role, $this->publishSources($classroom, $teachPortal))
+            ? $tokens->issue(
+                $liveSession,
+                $request->user(),
+                $role,
+                $this->publishSources($classroom, $teachPortal, $observer),
+            )
             : null;
 
         $recording = $liveSession->recordings->first();
-        $canHostLive = $teachPortal || ! $classroom->purpose->isTeachPurpose()
+        $canHostLive = ! $observer && ($teachPortal || ! $classroom->purpose->isTeachPurpose())
             ? $request->user()->can('manageLive', $classroom)
             : false;
+        $chatReadonly = $observer || ! $liveSession->allowsChatSend();
 
         return ApiResponse::item([
             'session' => [
@@ -50,7 +62,7 @@ final class LiveRoomApiController extends Controller
                 'title' => $liveSession->title,
                 'status' => $liveSession->status->value,
                 'chat_muted' => (bool) $liveSession->chat_muted,
-                'chat_readonly' => ! $liveSession->allowsChatSend(),
+                'chat_readonly' => $chatReadonly,
             ],
             'classroom' => [
                 'uuid' => $classroom->uuid,
@@ -63,7 +75,7 @@ final class LiveRoomApiController extends Controller
                 'can_publish_audio' => (bool) ($tokenPayload['can_publish_audio'] ?? false),
                 'can_publish_video' => (bool) ($tokenPayload['can_publish_video'] ?? false),
                 'can_publish_screen' => (bool) ($tokenPayload['can_publish_screen'] ?? false),
-                'can_moderate' => $role->canModerate(),
+                'can_moderate' => ! $observer && $role->canModerate(),
                 'can_host_live' => $canHostLive,
             ],
             'token' => $tokenPayload,
@@ -81,17 +93,7 @@ final class LiveRoomApiController extends Controller
                     ? route('classroom.live.recording', [$classroom, $liveSession])
                     : null,
             ] : null,
-            'urls' => [
-                'messages' => route($teachPortal ? 'teach.classes.sessions.studio.api.messages' : 'classroom.live.api.messages', [$classroom, $liveSession]),
-                'token_refresh' => route($teachPortal ? 'teach.classes.sessions.studio.api.token' : 'classroom.live.api.token', [$classroom, $liveSession]),
-                'question' => route($teachPortal ? 'teach.classes.sessions.studio.api.question' : 'classroom.live.api.question', [$classroom, $liveSession]),
-                'raise_hand' => route($teachPortal ? 'teach.classes.sessions.studio.api.raise-hand' : 'classroom.live.api.raise-hand', [$classroom, $liveSession]),
-                'react' => route($teachPortal ? 'teach.classes.sessions.studio.api.react' : 'classroom.live.api.react', [$classroom, $liveSession]),
-                'mute_chat' => route($teachPortal ? 'teach.classes.sessions.studio.api.mute-chat' : 'classroom.live.api.mute-chat', [$classroom, $liveSession]),
-                'focus_questions' => route($teachPortal ? 'teach.classes.sessions.studio.api.focus-questions' : 'classroom.live.api.focus-questions', [$classroom, $liveSession]),
-                'presenter' => route($teachPortal ? 'teach.classes.sessions.studio.presenter' : 'classroom.live.presenter', [$classroom, $liveSession]),
-                'exit' => route($teachPortal ? 'teach.classes.show' : 'classroom.show', $classroom),
-            ],
+            'urls' => $this->roomUrls($classroom, $liveSession, $teachPortal, $observer),
         ]);
     }
 
@@ -102,22 +104,28 @@ final class LiveRoomApiController extends Controller
         LiveKitTokenService $tokens,
     ): JsonResponse {
         $this->authorize('view', $classroom);
-        abort_unless($classroom->isActiveMember($request->user()), 403);
+        abort_unless($classroom->canWatchLive($request->user()), 403);
         abort_unless($liveSession->isLive(), 409, 'Session is not live.');
 
-        $role = $this->effectiveRole($request, $classroom, $request->routeIs('teach.*'));
+        $observer = $request->routeIs('admin.*');
+        if ($observer) {
+            abort_unless($request->user()->can(Permission::ClassroomOversee->value), 403);
+        }
+
+        $teachPortal = $request->routeIs('teach.*');
+        $role = $this->effectiveRole($request, $classroom, $teachPortal, $observer);
 
         return ApiResponse::item($tokens->issue(
             $liveSession,
             $request->user(),
             $role,
-            $this->publishSources($classroom, $request->routeIs('teach.*')),
+            $this->publishSources($classroom, $teachPortal, $observer),
         ));
     }
 
-    private function effectiveRole(Request $request, Classroom $classroom, bool $teachPortal): MemberRole
+    private function effectiveRole(Request $request, Classroom $classroom, bool $teachPortal, bool $observer = false): MemberRole
     {
-        if (! $teachPortal && $classroom->purpose->isTeachPurpose()) {
+        if ($observer || (! $teachPortal && $classroom->purpose->isTeachPurpose())) {
             return MemberRole::Member;
         }
 
@@ -125,13 +133,49 @@ final class LiveRoomApiController extends Controller
     }
 
     /** @return list<string>|null */
-    private function publishSources(Classroom $classroom, bool $teachPortal): ?array
+    private function publishSources(Classroom $classroom, bool $teachPortal, bool $observer = false): ?array
     {
+        if ($observer) {
+            return [];
+        }
+
         if (! $teachPortal && $classroom->purpose->isTeachPurpose()) {
             return ['microphone'];
         }
 
         return null;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function roomUrls(Classroom $classroom, LiveSession $liveSession, bool $teachPortal, bool $observer): array
+    {
+        if ($observer) {
+            return [
+                'messages' => route('admin.classrooms.live.api.bootstrap', [$classroom, $liveSession]),
+                'token_refresh' => route('admin.classrooms.live.api.token', [$classroom, $liveSession]),
+                'question' => route('admin.classrooms.live.api.bootstrap', [$classroom, $liveSession]),
+                'raise_hand' => route('admin.classrooms.live.api.bootstrap', [$classroom, $liveSession]),
+                'react' => route('admin.classrooms.live.api.bootstrap', [$classroom, $liveSession]),
+                'mute_chat' => route('admin.classrooms.live.api.bootstrap', [$classroom, $liveSession]),
+                'focus_questions' => route('admin.classrooms.live.api.bootstrap', [$classroom, $liveSession]),
+                'presenter' => route('admin.classrooms.live', [$classroom, $liveSession]),
+                'exit' => route('admin.classrooms.index'),
+            ];
+        }
+
+        return [
+            'messages' => route($teachPortal ? 'teach.classes.sessions.studio.api.messages' : 'classroom.live.api.messages', [$classroom, $liveSession]),
+            'token_refresh' => route($teachPortal ? 'teach.classes.sessions.studio.api.token' : 'classroom.live.api.token', [$classroom, $liveSession]),
+            'question' => route($teachPortal ? 'teach.classes.sessions.studio.api.question' : 'classroom.live.api.question', [$classroom, $liveSession]),
+            'raise_hand' => route($teachPortal ? 'teach.classes.sessions.studio.api.raise-hand' : 'classroom.live.api.raise-hand', [$classroom, $liveSession]),
+            'react' => route($teachPortal ? 'teach.classes.sessions.studio.api.react' : 'classroom.live.api.react', [$classroom, $liveSession]),
+            'mute_chat' => route($teachPortal ? 'teach.classes.sessions.studio.api.mute-chat' : 'classroom.live.api.mute-chat', [$classroom, $liveSession]),
+            'focus_questions' => route($teachPortal ? 'teach.classes.sessions.studio.api.focus-questions' : 'classroom.live.api.focus-questions', [$classroom, $liveSession]),
+            'presenter' => route($teachPortal ? 'teach.classes.sessions.studio.presenter' : 'classroom.live.presenter', [$classroom, $liveSession]),
+            'exit' => route($teachPortal ? 'teach.classes.show' : 'classroom.show', $classroom),
+        ];
     }
 
     /** @return array<string, mixed> */

@@ -14,6 +14,76 @@ use RuntimeException;
  */
 final class TopicTaxonomySeeder extends Seeder
 {
+    /**
+     * @var array<string, string>
+     */
+    private const SPECIALTY_TRANSLATIONS = [
+        'Accident and Emergency' => 'Cấp cứu',
+        'Anatomy' => 'Giải phẫu',
+        'Biochemistry' => 'Hóa sinh',
+        'Cardiology' => 'Tim mạch',
+        'Dermatology' => 'Da liễu',
+        'Endocrinology' => 'Nội tiết',
+        'Family Medicine' => 'Y học gia đình',
+        'Gastroenterology' => 'Tiêu hóa',
+        'Geriatrics' => 'Lão khoa',
+        'Hematology' => 'Huyết học',
+        'Infectious Diseases' => 'Truyền nhiễm',
+        'Internal Medicine' => 'Nội khoa',
+        'Laboratory Medicine' => 'Xét nghiệm',
+        'Nephrology' => 'Thận học',
+        'Neurology' => 'Thần kinh',
+        'Obstetrics and Gynecology' => 'Sản phụ khoa',
+        'Oncology' => 'Ung bướu',
+        'Ophthalmology' => 'Nhãn khoa',
+        'Orthopedics' => 'Chấn thương chỉnh hình',
+        'Otolaryngology' => 'Tai mũi họng',
+        'Pediatrics' => 'Nhi khoa',
+        'Pharmacology' => 'Dược lý',
+        'Psychiatry' => 'Tâm thần',
+        'Pulmonology' => 'Hô hấp',
+        'Radiology' => 'Chẩn đoán hình ảnh',
+        'Rheumatology' => 'Cơ xương khớp',
+        'Surgery' => 'Ngoại khoa',
+        'Toxicology' => 'Độc chất học',
+        'Urology' => 'Tiết niệu',
+    ];
+
+    /**
+     * @var array<string, string>
+     */
+    private const SYSTEM_TRANSLATIONS = [
+        'Accident and Emergency' => 'Cấp cứu',
+        'Anatomy' => 'Giải phẫu',
+        'Biochemistry' => 'Hóa sinh',
+        'Cardiology' => 'Tim mạch',
+        'Dermatology' => 'Da liễu',
+        'Endocrinology' => 'Nội tiết',
+        'Family Medicine' => 'Y học gia đình',
+        'Gastroenterology' => 'Tiêu hóa',
+        'Geriatrics' => 'Lão khoa',
+        'Hematology' => 'Huyết học',
+        'Infectious Diseases' => 'Truyền nhiễm',
+        'Internal Medicine' => 'Nội khoa',
+        'Laboratory Medicine' => 'Xét nghiệm',
+        'Nephrology' => 'Thận học',
+        'Neurology' => 'Thần kinh',
+        'Obstetrics and Gynecology' => 'Sản phụ khoa',
+        'Oncology' => 'Ung bướu',
+        'Ophthalmology' => 'Nhãn khoa',
+        'Orthopedics' => 'Chấn thương chỉnh hình',
+        'Otolaryngology' => 'Tai mũi họng',
+        'Pediatrics' => 'Nhi khoa',
+        'Pharmacology' => 'Dược lý',
+        'Psychiatry' => 'Tâm thần',
+        'Pulmonology' => 'Hô hấp',
+        'Radiology' => 'Chẩn đoán hình ảnh',
+        'Rheumatology' => 'Cơ xương khớp',
+        'Surgery' => 'Ngoại khoa',
+        'Toxicology' => 'Độc chất học',
+        'Urology' => 'Tiết niệu',
+    ];
+
     public function run(): void
     {
         $files = $this->datasetFiles();
@@ -64,7 +134,7 @@ final class TopicTaxonomySeeder extends Seeder
                     continue;
                 }
 
-                $specialtyName = trim((string) $medicalTopic[0]);
+                $specialtyName = $this->translate(trim((string) $medicalTopic[0]), self::SPECIALTY_TRANSLATIONS);
                 $specialtySlug = $this->topicSlug($specialtyName);
                 if ($specialtyName === '' || $specialtySlug === '') {
                     continue;
@@ -82,7 +152,7 @@ final class TopicTaxonomySeeder extends Seeder
                     );
                 }
 
-                $systemName = trim((string) ($medicalTopic[1] ?? ''));
+                $systemName = $this->translate(trim((string) ($medicalTopic[1] ?? '')), self::SYSTEM_TRANSLATIONS);
                 $systemSlug = $this->topicSlug($systemName);
                 if ($systemName === '' || $systemSlug === '') {
                     continue;
@@ -109,5 +179,13 @@ final class TopicTaxonomySeeder extends Seeder
     private function topicSlug(string $name): string
     {
         return Str::limit((string) Str::slug($name), 191, '');
+    }
+
+    /**
+     * @param array<string, string> $translations
+     */
+    private function translate(string $name, array $translations): string
+    {
+        return $translations[$name] ?? $name;
     }
 }

@@ -89,6 +89,31 @@ final class ContextualSearchTest extends TestCase
         $this->assertStringContainsString('<mark>pneumonia</mark>', (string) $items[0]['highlight']);
     }
 
+    public function test_database_search_matches_a_secondary_pivot_topic_without_duplicate_results(): void
+    {
+        $secondaryTopic = Topic::query()->create([
+            'name' => 'Truyền nhiễm',
+            'slug' => 'truyen-nhiem-contextual-search-test',
+            'type' => 'system',
+            'order' => 2,
+        ]);
+        $question = $this->question('Viêm phổi nhiễm khuẩn cần chọn kháng sinh', free: true);
+        $question->topics()->syncWithoutDetaching([$secondaryTopic->getKey()]);
+
+        $result = app(SearchScopeAction::class)->handle(new SearchQueryData(
+            scope: 'qbank',
+            query: 'viêm phổi',
+            filters: ['topic_id' => $secondaryTopic->getKey(), 'is_free' => true],
+        ), $this->user);
+
+        $this->assertCount(1, $result->items());
+        $this->assertSame((string) $question->getKey(), $result->items()[0]['id']);
+        $this->assertEqualsCanonicalizing(
+            [$this->topic->getKey(), $secondaryTopic->getKey()],
+            $result->items()[0]['attributes']['topic_ids'],
+        );
+    }
+
     public function test_qbank_query_renders_contextual_results_and_filters(): void
     {
         $this->question('Ca lâm sàng viêm phổi cộng đồng', free: true, difficulty: Difficulty::Hard);
@@ -132,7 +157,7 @@ final class ContextualSearchTest extends TestCase
         $settings = config('scout.meilisearch.index-settings.'.Question::class);
 
         $this->assertTrue((bool) config('scout.after_commit'));
-        $this->assertSame(['difficulty', 'topic_id', 'is_free'], $settings['filterableAttributes']);
+        $this->assertSame(['difficulty', 'topic_id', 'topic_ids', 'is_free'], $settings['filterableAttributes']);
         $this->assertContains('pneumonia', $settings['synonyms']['viêm phổi']);
         $this->assertSame(['stem'], $settings['searchableAttributes']);
     }

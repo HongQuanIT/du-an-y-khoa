@@ -37,6 +37,7 @@ class LiveSession extends Model
         'current_question_index',
         'chat_muted',
         'show_answer',
+        'revealed_option_ids',
     ];
 
     protected $casts = [
@@ -48,6 +49,7 @@ class LiveSession extends Model
         'current_question_index' => 'integer',
         'chat_muted' => 'boolean',
         'show_answer' => 'boolean',
+        'revealed_option_ids' => 'array',
     ];
 
     protected static function booted(): void
@@ -99,6 +101,15 @@ class LiveSession extends Model
     public function hasQuestionSet(): bool
     {
         return $this->questionIds() !== [];
+    }
+
+    /** @return list<int> */
+    public function revealedOptionIds(): array
+    {
+        return array_values(array_unique(array_map(
+            static fn (mixed $id): int => (int) $id,
+            $this->revealed_option_ids ?? [],
+        )));
     }
 
     public function isLive(): bool

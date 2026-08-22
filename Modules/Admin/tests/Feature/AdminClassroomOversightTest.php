@@ -49,7 +49,16 @@ final class AdminClassroomOversightTest extends TestCase
             ->get(route('admin.classrooms.index'))
             ->assertOk()
             ->assertSee('Lớp chữa Step 1', false)
-            ->assertSee('Chữa từ feedback', false);
+            ->assertSee('Chữa từ feedback', false)
+            ->assertSee('Vào lớp')
+            ->assertSee(route('admin.classrooms.show', $classroom), false);
+
+        $this->actingAs($admin)
+            ->withSession([TwoFactorSession::KEY => now()->timestamp])
+            ->get(route('admin.classrooms.show', $classroom))
+            ->assertOk()
+            ->assertSee('Lớp chữa Step 1')
+            ->assertSee($host->name);
 
         $this->actingAs($admin)
             ->withSession([TwoFactorSession::KEY => now()->timestamp])
@@ -95,6 +104,58 @@ final class AdminClassroomOversightTest extends TestCase
             'actor_id' => $admin->id,
             'action' => 'classroom.live.force_end',
         ]);
+    }
+
+    public function test_admin_can_watch_instructor_live_without_joining_class(): void
+    {
+        $admin = $this->staffWith2fa(Role::Admin);
+        $host = User::factory()->create(['name' => 'Giảng viên live']);
+        $host->assignRole(Role::Instructor->value);
+
+        $classroom = app(CreateClassroomAction::class)->handle($host, [
+            'title' => 'Lớp đang dạy',
+            'purpose' => ClassroomPurpose::ExamReview->value,
+        ]);
+
+        $session = LiveSession::query()->create([
+            'classroom_id' => $classroom->getKey(),
+            'title' => 'Buổi chữa đề',
+            'scheduled_at' => now()->subHour(),
+            'started_at' => now()->subMinutes(10),
+            'status' => LiveSessionStatus::Live,
+            'livekit_room_name' => 'admin-watch-room',
+        ]);
+
+        $this->actingAs($admin)
+            ->withSession([TwoFactorSession::KEY => now()->timestamp])
+            ->get(route('admin.classrooms.index'))
+            ->assertOk()
+            ->assertSee('Vào lớp')
+            ->assertSee('Xem live')
+            ->assertSee('Giảng viên live');
+
+        $this->actingAs($admin)
+            ->withSession([TwoFactorSession::KEY => now()->timestamp])
+            ->get(route('admin.classrooms.show', $classroom))
+            ->assertOk()
+            ->assertSee('Vào live đang dạy')
+            ->assertSee('Buổi chữa đề');
+
+        $this->actingAs($admin)
+            ->withSession([TwoFactorSession::KEY => now()->timestamp])
+            ->get(route('admin.classrooms.live', [$classroom, $session]))
+            ->assertOk()
+            ->assertSee('Đang xem với tư cách quản trị')
+            ->assertSee('Giảng viên live');
+
+        $this->actingAs($admin)
+            ->withSession([TwoFactorSession::KEY => now()->timestamp])
+            ->getJson(route('admin.classrooms.live.api.bootstrap', [$classroom, $session]))
+            ->assertOk()
+            ->assertJsonPath('data.permissions.can_moderate', false)
+            ->assertJsonPath('data.permissions.can_publish', false)
+            ->assertJsonPath('data.session.chat_readonly', true)
+            ->assertJsonPath('data.token.role', 'subscriber');
     }
 
     public function test_admin_can_approve_pending_classroom(): void

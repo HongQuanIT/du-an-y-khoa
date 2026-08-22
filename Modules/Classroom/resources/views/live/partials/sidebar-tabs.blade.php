@@ -109,7 +109,7 @@
 
     @if ($session->hasQuestionSet())
         <div data-live-question-panel
-            class="flex min-h-0 flex-1 flex-col"
+            class="flex min-h-0 flex-1 flex-col overflow-hidden"
             @unless($mobile) x-show="tab === 'questions'" @endunless
             @if($mobile) x-show="mobileTab === 'questions'" @endif
         >

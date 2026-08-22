@@ -11,9 +11,12 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Modules\Admin\Actions\RequestQuestionDeletionAction;
 use Modules\Admin\Actions\SaveAdminQuestionAction;
 use Modules\Admin\Actions\TransitionQuestionStatusAction;
+use Modules\Admin\Support\QuestionAccess;
 use Modules\QuestionBank\Enums\Difficulty;
+use Modules\QuestionBank\Enums\QuestionReviewAction;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\Topic;
@@ -24,7 +27,11 @@ final class QuestionController extends Controller
     {
         $this->authorizePermission(Permission::QuestionView);
 
-        $query = Question::query()->with('topic')->latest('updated_at');
+        $actor = $this->actor();
+        $query = QuestionAccess::scopeVisibleTo(
+            Question::query()->with(['topic', 'topics', 'creator:id,name', 'pendingReviewRequest.requester:id,name']),
+            $actor,
+        )->latest('updated_at');
 
         if ($search = trim((string) $request->query('q', ''))) {
             $query->where('stem', 'like', "%{$search}%");
@@ -39,8 +46,14 @@ final class QuestionController extends Controller
         }
 
         if ($topicId = $request->query('topic_id')) {
-            $query->where('topic_id', (int) $topicId);
+            $query->whereHas('topics', fn ($topicQuery) => $topicQuery->whereKey((int) $topicId));
         }
+
+        if ($request->query('review') === 'pending') {
+            $query->whereHas('pendingReviewRequest');
+        }
+
+        $statsQuery = QuestionAccess::scopeVisibleTo(Question::query(), $actor);
 
         return view('admin::questions.index', [
             'questions' => $query->paginate(20)->withQueryString(),
@@ -52,8 +65,16 @@ final class QuestionController extends Controller
                 'status' => $request->query('status'),
                 'difficulty' => $request->query('difficulty'),
                 'topic_id' => $request->query('topic_id'),
+                'review' => $request->query('review'),
             ],
-            'canCreate' => $this->actor()->can(Permission::QuestionCreate->value),
+            'stats' => [
+                'total' => (clone $statsQuery)->count(),
+                'published' => (clone $statsQuery)->where('status', QuestionStatus::Published->value)->count(),
+                'pending' => (clone $statsQuery)->whereHas('pendingReviewRequest')->count(),
+                'free' => (clone $statsQuery)->where('is_free', true)->count(),
+            ],
+            'canCreate' => $actor->can(Permission::QuestionCreate->value),
+            'isReviewer' => QuestionAccess::isReviewer($actor),
         ]);
     }
 
@@ -76,14 +97,23 @@ final class QuestionController extends Controller
 
         return redirect()
             ->route('admin.questions.edit', $question)
-            ->with('status', 'Đã tạo câu hỏi nháp.');
+            ->with('status', QuestionAccess::isReviewer($this->actor())
+                ? 'Đã tạo câu hỏi nháp.'
+                : 'Đã tạo câu hỏi và gửi admin duyệt.');
     }
 
     public function edit(Question $question): View
     {
         $this->authorizePermission(Permission::QuestionView);
+        QuestionAccess::authorizeView($this->actor(), $question);
 
-        $question->load(['options' => fn ($q) => $q->orderBy('order'), 'topic']);
+        $question->load([
+            'options' => fn ($q) => $q->orderBy('order'),
+            'topic',
+            'topics',
+            'creator:id,name,email',
+            'pendingReviewRequest.requester:id,name',
+        ]);
 
         return view('admin::questions.form', $this->formData($question));
     }
@@ -91,10 +121,29 @@ final class QuestionController extends Controller
     public function update(Request $request, Question $question, SaveAdminQuestionAction $action): RedirectResponse
     {
         $this->authorizePermission(Permission::QuestionUpdate);
+        QuestionAccess::authorizeView($this->actor(), $question);
 
         $action->handle($this->actor(), $question, $this->validatedPayload($request));
 
-        return back()->with('status', 'Đã lưu câu hỏi.');
+        return back()->with('status', QuestionAccess::isReviewer($this->actor())
+            ? 'Đã lưu câu hỏi.'
+            : ($question->status === QuestionStatus::Published
+                ? 'Đã gửi thay đổi để admin duyệt. Bản đang xuất bản chưa bị thay đổi.'
+                : 'Đã lưu nội dung và cập nhật yêu cầu chờ duyệt.'));
+    }
+
+    public function destroy(Question $question, RequestQuestionDeletionAction $action): RedirectResponse
+    {
+        $this->authorizePermission(Permission::QuestionDelete);
+        QuestionAccess::authorizeView($this->actor(), $question);
+
+        $reviewer = QuestionAccess::isReviewer($this->actor());
+        $action->handle($this->actor(), $question);
+
+        return redirect()->route('admin.questions.index')->with(
+            'status',
+            $reviewer ? 'Đã xóa câu hỏi.' : 'Đã gửi yêu cầu xóa để admin duyệt.',
+        );
     }
 
     public function transition(
@@ -102,6 +151,7 @@ final class QuestionController extends Controller
         Question $question,
         TransitionQuestionStatusAction $action,
     ): RedirectResponse {
+        QuestionAccess::authorizeView($this->actor(), $question);
         $data = $request->validate([
             'status' => ['required', 'string', Rule::in(QuestionStatus::values())],
         ]);
@@ -116,14 +166,23 @@ final class QuestionController extends Controller
      */
     private function formData(Question $question): array
     {
+        $pendingReview = $question->exists ? $question->pendingReviewRequest : null;
+        $isReviewer = QuestionAccess::isReviewer($this->actor());
+        $hasBlockingReview = $pendingReview !== null
+            && $pendingReview->action !== QuestionReviewAction::Create;
+
         return [
             'question' => $question,
             'statuses' => QuestionStatus::cases(),
             'difficulties' => Difficulty::cases(),
             'topics' => Topic::query()->orderBy('name')->get(['id', 'name', 'type']),
-            'canUpdate' => $this->actor()->can(Permission::QuestionUpdate->value)
-                || ($question->exists === false && $this->actor()->can(Permission::QuestionCreate->value)),
+            'canUpdate' => ($this->actor()->can(Permission::QuestionUpdate->value)
+                || ($question->exists === false && $this->actor()->can(Permission::QuestionCreate->value)))
+                && ($isReviewer || ! $hasBlockingReview),
             'canPublish' => $this->actor()->can(Permission::QuestionPublish->value),
+            'canDelete' => $question->exists && $this->actor()->can(Permission::QuestionDelete->value),
+            'isReviewer' => $isReviewer,
+            'pendingReview' => $pendingReview,
         ];
     }
 
@@ -135,7 +194,7 @@ final class QuestionController extends Controller
      *     key_info: array<int, string>,
      *     attending_tip: ?string,
      *     difficulty: string,
-     *     topic_id: int,
+     *     topic_ids: list<int>,
      *     is_free: bool,
      *     options: list<array{id?: int|null, content: string, is_correct: bool, explanation?: ?string}>
      * }
@@ -149,7 +208,8 @@ final class QuestionController extends Controller
             'key_info' => ['nullable', 'string'],
             'attending_tip' => ['nullable', 'string'],
             'difficulty' => ['required', Rule::in(Difficulty::values())],
-            'topic_id' => ['required', 'integer', 'exists:topics,id'],
+            'topic_ids' => ['required', 'array', 'min:1'],
+            'topic_ids.*' => ['required', 'integer', 'distinct', 'exists:topics,id'],
             'is_free' => ['sometimes', 'boolean'],
             'options' => ['required', 'array', 'min:2'],
             'options.*.id' => ['nullable', 'integer'],
@@ -158,7 +218,8 @@ final class QuestionController extends Controller
             'options.*.explanation' => ['nullable', 'string'],
         ], [
             'stem.required' => 'Vui lòng nhập nội dung câu hỏi.',
-            'topic_id.required' => 'Vui lòng chọn chủ đề.',
+            'topic_ids.required' => 'Vui lòng chọn ít nhất một chủ đề.',
+            'topic_ids.min' => 'Vui lòng chọn ít nhất một chủ đề.',
             'options.required' => 'Vui lòng thêm đáp án.',
             'options.min' => 'Cần ít nhất 2 đáp án.',
             'options.*.content.required' => 'Nội dung đáp án không được để trống.',
@@ -183,7 +244,7 @@ final class QuestionController extends Controller
             'key_info' => $this->parseKeyInfo($data['key_info'] ?? null),
             'attending_tip' => $data['attending_tip'] ?? null,
             'difficulty' => $data['difficulty'],
-            'topic_id' => (int) $data['topic_id'],
+            'topic_ids' => collect($data['topic_ids'])->map(fn ($id): int => (int) $id)->unique()->values()->all(),
             'is_free' => $request->boolean('is_free'),
             'options' => $options,
         ];

@@ -47,15 +47,22 @@ final class QuestionSessionInsights
             $question = $questions[(string) $questionId] ?? null;
             $attempt = $attempts[(string) $questionId] ?? null;
             $topic = $question instanceof Question ? $question->getRelation('topic') : null;
-            $topicName = $topic instanceof Topic ? (string) $topic->name : 'Tổng hợp';
-            $byTopic[$topicName] ??= [
-                'name' => $topicName,
-                'correct' => 0,
-                'wrong' => 0,
-                'skipped' => 0,
-                'total' => 0,
-            ];
-            $byTopic[$topicName]['total']++;
+            $topicNames = $question instanceof Question
+                ? $question->topics->pluck('name')->map(fn ($name): string => (string) $name)->all()
+                : [];
+            if ($topicNames === []) {
+                $topicNames = [$topic instanceof Topic ? (string) $topic->name : 'Tổng hợp'];
+            }
+            foreach ($topicNames as $topicName) {
+                $byTopic[$topicName] ??= [
+                    'name' => $topicName,
+                    'correct' => 0,
+                    'wrong' => 0,
+                    'skipped' => 0,
+                    'total' => 0,
+                ];
+                $byTopic[$topicName]['total']++;
+            }
 
             $annotation = ($session->annotations ?? [])[(string) $questionId] ?? [];
             if ((bool) ($annotation['flagged']
@@ -65,7 +72,9 @@ final class QuestionSessionInsights
 
             if ($attempt === null || $attempt->is_correct === null) {
                 $skipped++;
-                $byTopic[$topicName]['skipped']++;
+                foreach ($topicNames as $topicName) {
+                    $byTopic[$topicName]['skipped']++;
+                }
 
                 continue;
             }
@@ -74,10 +83,14 @@ final class QuestionSessionInsights
 
             if ($attempt->is_correct) {
                 $correct++;
-                $byTopic[$topicName]['correct']++;
+                foreach ($topicNames as $topicName) {
+                    $byTopic[$topicName]['correct']++;
+                }
             } else {
                 $wrong++;
-                $byTopic[$topicName]['wrong']++;
+                foreach ($topicNames as $topicName) {
+                    $byTopic[$topicName]['wrong']++;
+                }
             }
         }
 
@@ -155,7 +168,8 @@ final class QuestionSessionInsights
                 'question_id' => (string) $questionId,
                 'index' => $position,
                 'result' => $result,
-                'topic' => $topic instanceof Topic ? (string) $topic->name : 'Tổng hợp',
+                'topic' => $question->topics->pluck('name')->join(', ')
+                    ?: ($topic instanceof Topic ? (string) $topic->name : 'Tổng hợp'),
                 'excerpt' => Str::limit(strip_tags((string) $question->stem), 140),
                 'stem' => (string) $question->stem,
                 'stem_html' => (string) ($annotation['stem_html'] ?? SafeHtml::forDisplay((string) $question->stem)),

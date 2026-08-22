@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\StudyPlan\Services;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Modules\Personalization\Models\Bookmark;
 use Modules\QuestionBank\Enums\QuestionStatus;
@@ -173,7 +174,13 @@ final class PlanQuestionSelector
 
         return Question::query()
             ->where('status', QuestionStatus::Published)
-            ->when($topicIds !== [], fn ($query) => $query->whereIn('topic_id', $topicIds))
+            ->when(
+                $topicIds !== [],
+                fn ($query) => $query->whereHas(
+                    'topics',
+                    fn (Builder $topics) => $topics->whereIn('topics.id', $topicIds),
+                ),
+            )
             ->when($exclude !== [], fn ($query) => $query->whereNotIn('id', $exclude))
             ->when($eligible !== null, fn ($query) => $query->whereIn('id', $eligible))
             ->when($difficulties !== [], fn ($query) => $query->whereIn('difficulty', $difficulties))

@@ -3,7 +3,18 @@
     $existingOptions = $question->relationLoaded('options')
         ? $question->options
         : collect();
-    if ($existingOptions->isEmpty()) {
+    $oldOptions = old('options');
+
+    if (is_array($oldOptions) && $oldOptions !== []) {
+        $optionRows = collect($oldOptions)->map(fn ($row) => [
+            'id' => filled($row['id'] ?? null) ? (int) $row['id'] : null,
+            'content' => (string) ($row['content'] ?? ''),
+            'is_correct' => ($row['is_correct'] ?? false) === true
+                || ($row['is_correct'] ?? false) === 1
+                || ($row['is_correct'] ?? false) === '1',
+            'explanation' => (string) ($row['explanation'] ?? ''),
+        ])->values()->all();
+    } elseif ($existingOptions->isEmpty()) {
         $optionRows = [
             ['id' => null, 'content' => '', 'is_correct' => true,  'explanation' => ''],
             ['id' => null, 'content' => '', 'is_correct' => false, 'explanation' => ''],
@@ -31,6 +42,12 @@
     $stemImageUrl = filled($stemImagePath)
         ? \Illuminate\Support\Facades\Storage::disk('public')->url($stemImagePath)
         : null;
+    $selectedTopicIds = collect(old(
+        'topic_ids',
+        $question->relationLoaded('topics')
+            ? $question->topics->pluck('id')->all()
+            : array_filter([$question->topic_id]),
+    ))->map(fn ($id) => (int) $id)->unique()->values()->all();
 @endphp
 
 <x-layouts.admin :title="$isNew ? 'Tạo câu hỏi mới' : 'Chỉnh sửa câu hỏi'">
@@ -52,7 +69,12 @@
                             {{ $statusBadge['label'] }}
                         </span>
                         <span>·</span>
-                        <span>Phiên bản {{ $question->version }}</span>
+                        <a href="{{ route('admin.questions.versions.index', $question) }}"
+                            class="inline-flex items-center gap-0.5 font-semibold text-primary hover:underline"
+                            title="Xem lịch sử phiên bản">
+                            Phiên bản {{ $question->version }}
+                            <span class="material-symbols-outlined text-[15px]">history</span>
+                        </a>
                         <span>·</span>
                         <span>Cập nhật {{ $question->updated_at?->diffForHumans() }}</span>
                     </p>
@@ -107,11 +129,41 @@
                         </button>
                     </form>
                 @endif
+                @if ($canDelete && ! $pendingReview)
+                    <form method="post" action="{{ route('admin.questions.destroy', $question) }}">
+                        @csrf @method('DELETE')
+                        <button onclick="return confirm('{{ $isReviewer ? 'Xóa câu hỏi này?' : 'Gửi yêu cầu xóa câu hỏi này để admin duyệt?' }}')"
+                            class="inline-flex items-center gap-1.5 rounded-xl border border-rose-300 bg-rose-50 px-3 py-1.5 text-sm font-semibold text-rose-700 hover:bg-rose-100">
+                            <span class="material-symbols-outlined text-[16px]">delete</span>
+                            {{ $isReviewer ? 'Xóa' : 'Yêu cầu xóa' }}
+                        </button>
+                    </form>
+                @endif
             </div>
         @endif
     </div>
 
     <x-admin.flash />
+
+    @if ($pendingReview)
+        <div class="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-900">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined">pending_actions</span>
+                <p class="text-sm font-semibold">
+                    Yêu cầu {{ mb_strtolower($pendingReview->action->label()) }} đang chờ admin duyệt.
+                    @if (! $isReviewer && $pendingReview->action !== \Modules\QuestionBank\Enums\QuestionReviewAction::Create)
+                        Bạn chưa thể gửi thêm thay đổi cho đến khi yêu cầu này được xử lý.
+                    @endif
+                </p>
+            </div>
+            @if ($isReviewer)
+                <a href="{{ route('admin.questions.reviews.show', $pendingReview) }}"
+                    class="inline-flex whitespace-nowrap items-center gap-1 rounded-xl bg-amber-800 px-3 py-2 text-sm font-bold text-white hover:bg-amber-900">
+                    Xem và duyệt
+                </a>
+            @endif
+        </div>
+    @endif
 
     {{-- ── MAIN FORM ── --}}
     <form method="post"
@@ -120,6 +172,9 @@
           x-data='{
               options: @json($optionRows),
               correct: {{ (int) $correctIndex }},
+              selectedTopicIds: @json($selectedTopicIds),
+              topicPickerOpen: false,
+              topicSearch: "",
               add() { this.options.push({ id: null, content: "", is_correct: false, explanation: "" }); },
               remove(i) {
                   if (this.options.length <= 2) return;
@@ -241,19 +296,11 @@
                 <div class="rounded-2xl border border-outline-variant bg-surface p-5">
                     <h2 class="mb-4 font-label-lg font-semibold text-on-surface">Giải thích & Gợi ý</h2>
                     <div class="space-y-4">
-                        <div class="space-y-1.5">
-                            <label class="mb-1 block font-label-sm text-label-sm text-on-surface-variant" for="key_info">
-                                Ý chính cần gạch chân
-                            </label>
-                            <textarea id="key_info" name="key_info" rows="4"
-                                class="w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                                placeholder="Mỗi dòng 1 ý chính hoặc cụm từ cần gạch chân trong câu hỏi...">{{ old('key_info', implode("\n", (array) $question->key_info)) }}</textarea>
-                            <p class="text-[11px] leading-4 text-on-surface-variant">
-                                Những dòng này sẽ được dùng để gạch chân trong chế độ học tập của học viên.
-                            </p>
-                        </div>
+                        <x-admin.rich-editor name="explanation" label="Giải thích chung"
+                            :value="old('explanation', $question->explanation)"
+                            placeholder="Giải thích đáp án đúng và kiến thức liên quan..." />
 
-                        <x-admin.rich-editor name="attending_tip" label="Kiến thức"
+                        <x-admin.rich-editor name="attending_tip" label="Kiến thức / Gợi ý"
                             :value="old('attending_tip', $question->attending_tip)"
                             placeholder="Kiến thức bổ sung..." />
                     </div>
@@ -309,7 +356,7 @@
                         <button type="submit"
                                 class="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 font-label-md font-semibold text-on-primary transition-colors hover:bg-primary/90">
                             <span class="material-symbols-outlined text-[18px]">save</span>
-                            {{ $isNew ? 'Tạo bản nháp' : 'Lưu thay đổi' }}
+                            {{ $isReviewer ? ($isNew ? 'Tạo bản nháp' : 'Lưu thay đổi') : ($isNew ? 'Tạo và gửi duyệt' : 'Lưu và gửi duyệt') }}
                         </button>
                         <a href="{{ route('admin.questions.index') }}"
                            class="mt-2 flex w-full items-center justify-center rounded-xl border border-outline-variant py-2.5 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-low">
@@ -323,25 +370,62 @@
                     <h2 class="mb-3 font-label-md font-semibold text-on-surface-variant">Phân loại</h2>
                     <div class="space-y-3">
                         <div>
-                            <label class="mb-1 block text-xs font-semibold text-on-surface-variant" for="topic_id">Chủ đề *</label>
-                            <select id="topic_id" name="topic_id" required
-                                    class="w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
-                                <option value="">— Chọn chủ đề —</option>
+                            <label class="mb-1 block text-xs font-semibold text-on-surface-variant">Chủ đề *</label>
+                            <div class="relative" @click.outside="topicPickerOpen = false">
+                                <button type="button" @click="topicPickerOpen = ! topicPickerOpen"
+                                    class="flex min-h-11 w-full items-center justify-between gap-2 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2 text-left text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
+                                    <span x-text="selectedTopicIds.length ? `${selectedTopicIds.length} chủ đề đã chọn` : '— Chọn chủ đề —'"
+                                        :class="selectedTopicIds.length ? '' : 'text-on-surface-variant'"></span>
+                                    <span class="material-symbols-outlined text-[18px] text-on-surface-variant"
+                                        x-text="topicPickerOpen ? 'expand_less' : 'expand_more'"></span>
+                                </button>
+
+                                <div x-show="topicPickerOpen" x-cloak
+                                    class="absolute right-0 z-30 mt-2 w-full min-w-[280px] rounded-xl border border-outline-variant bg-surface p-2 shadow-xl">
+                                    <input type="search" x-model="topicSearch" placeholder="Tìm chủ đề..."
+                                        class="mb-2 h-10 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
+                                    <div class="max-h-60 space-y-1 overflow-y-auto">
+                                        @foreach ($topics as $topic)
+                                            <label x-show="@js(mb_strtolower($topic->name)).includes(topicSearch.toLocaleLowerCase())"
+                                                class="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-surface-container-low">
+                                                <input type="checkbox" value="{{ $topic->id }}" x-model.number="selectedTopicIds"
+                                                    class="size-4 rounded border-outline-variant text-primary focus:ring-primary">
+                                                <span class="min-w-0 flex-1 text-on-surface">{{ $topic->name }}</span>
+                                                <span class="text-[10px] uppercase text-on-surface-variant">{{ $topic->type }}</span>
+                                            </label>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-2 flex flex-wrap gap-1.5">
                                 @foreach ($topics as $topic)
-                                    <option value="{{ $topic->id }}" @selected((string) old('topic_id', $question->topic_id) === (string) $topic->id)>{{ $topic->name }}</option>
+                                    <span x-show="selectedTopicIds.includes({{ $topic->id }})" x-cloak
+                                        class="inline-flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
+                                        {{ $topic->name }}
+                                        <button type="button" @click="selectedTopicIds = selectedTopicIds.filter(id => id !== {{ $topic->id }})"
+                                            class="material-symbols-outlined text-[14px]" aria-label="Bỏ chủ đề {{ $topic->name }}">close</button>
+                                    </span>
                                 @endforeach
-                            </select>
+                            </div>
+
+                            <template x-for="topicId in selectedTopicIds" :key="topicId">
+                                <input type="hidden" name="topic_ids[]" :value="topicId">
+                            </template>
+                            @error('topic_ids')
+                                <p class="mt-1 text-xs text-error">{{ $message }}</p>
+                            @enderror
                         </div>
                         <div>
                             <label class="mb-1 block text-xs font-semibold text-on-surface-variant" for="difficulty">Độ khó *</label>
                             <select id="difficulty" name="difficulty" required
-                                    class="w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
+                                    class="h-11 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
                                 @foreach ($difficulties as $d)
                                     <option value="{{ $d->value }}" @selected(old('difficulty', $question->difficulty?->value) === $d->value)>{{ $d->label() }}</option>
                                 @endforeach
                             </select>
                         </div>
-                        <label class="flex cursor-pointer items-center gap-2 rounded-xl border border-outline-variant px-3 py-2.5 transition-colors hover:bg-surface-container-low">
+                        <label class="flex h-11 cursor-pointer items-center gap-2 rounded-xl border border-outline-variant px-3 transition-colors hover:bg-surface-container-low">
                             <input type="checkbox" name="is_free" value="1"
                                    @checked(old('is_free', $question->is_free))
                                    class="size-4 rounded text-primary focus:ring-primary">

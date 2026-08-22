@@ -10,13 +10,15 @@
         ->map(fn ($question) => [
             'id' => (string) $question->id,
             'text' => strip_tags($question->stem),
-            'topic' => $question->topic?->name,
+            'topic' => $question->topics->pluck('name')->join(', ') ?: $question->topic?->name,
+            'topics' => $question->topics->pluck('name')->values()->all(),
             'difficulty' => $question->difficulty?->label(),
         ])->values()->all();
     $availableQuestionsMapped = $availableQuestions->map(fn ($question) => [
         'id' => (string) $question->id,
         'text' => strip_tags($question->stem),
-        'topic' => $question->topic?->name,
+        'topic' => $question->topics->pluck('name')->join(', ') ?: $question->topic?->name,
+        'topics' => $question->topics->pluck('name')->values()->all(),
         'difficulty' => $question->difficulty?->label(),
     ])->values()->all();
     $questionsCount = (int) ($exam->questions_count ?? count($questionRows));
@@ -352,6 +354,7 @@
                         id: question.id, 
                         text: question.text,
                         topic: question.topic,
+                        topics: question.topics || [],
                         difficulty: question.difficulty
                     });
                 },

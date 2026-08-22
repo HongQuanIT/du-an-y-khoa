@@ -6,6 +6,7 @@ namespace Modules\QuestionBank\Repositories;
 
 use App\Support\Repositories\EloquentRepository;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Modules\QuestionBank\Data\ListQuestionsData;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
@@ -28,13 +29,20 @@ final class QuestionRepository extends EloquentRepository
     public function paginatePublished(ListQuestionsData $data): LengthAwarePaginator
     {
         return $this->query()
+            ->with('topics:id')
             ->where('status', QuestionStatus::Published)
             ->when($data->query, function ($query, string $search): void {
                 $pattern = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $search).'%';
                 $query->whereRaw("stem LIKE ? ESCAPE '!'", [$pattern]);
             })
             ->when($data->difficulty, fn ($q, $difficulty) => $q->where('difficulty', $difficulty))
-            ->when($data->topicId, fn ($q, $topicId) => $q->where('topic_id', $topicId))
+            ->when(
+                $data->topicId,
+                fn ($q, $topicId) => $q->whereHas(
+                    'topics',
+                    fn (Builder $topics) => $topics->where('topics.id', $topicId),
+                ),
+            )
             ->when(
                 $data->freeOnly !== null,
                 fn ($q) => $q->where('is_free', $data->freeOnly),

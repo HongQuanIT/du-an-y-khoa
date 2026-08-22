@@ -15,6 +15,7 @@ use Modules\Auth\Services\TotpService;
 use Modules\Exam\Enums\ExamStatus;
 use Modules\Exam\Models\Exam;
 use Modules\QuestionBank\Enums\Difficulty;
+use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\Topic;
 use Tests\TestCase;
@@ -174,7 +175,7 @@ final class AdminExamManagementTest extends TestCase
             ->create([
                 'stem' => $stem,
                 'difficulty' => Difficulty::Medium,
-                'status' => $published ? \Modules\QuestionBank\Enums\QuestionStatus::Published : \Modules\QuestionBank\Enums\QuestionStatus::Draft,
+                'status' => $published ? QuestionStatus::Published : QuestionStatus::Draft,
                 'topic_id' => $this->topic->getKey(),
             ]);
     }

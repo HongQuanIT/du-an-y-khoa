@@ -1,6 +1,6 @@
-<x-layouts.admin title="Ngân hàng câu hỏi">
-    <x-admin.page-header title="Ngân hàng câu hỏi"
-        description="Quản lý, tạo mới, kiểm duyệt và xuất bản các câu hỏi trong hệ thống.">
+<x-layouts.admin :title="$isReviewer ? 'Ngân hàng câu hỏi' : 'Câu hỏi của tôi'">
+    <x-admin.page-header :title="$isReviewer ? 'Ngân hàng câu hỏi' : 'Câu hỏi của tôi'"
+        :description="$isReviewer ? 'Quản lý, kiểm duyệt và xuất bản câu hỏi trong hệ thống.' : 'Bạn chỉ nhìn thấy các câu hỏi do chính mình tạo.'">
         <x-slot:actions>
             @if ($canCreate)
                 <a href="{{ route('admin.questions.create') }}"
@@ -23,7 +23,7 @@
                 </div>
                 <div>
                     <p class="text-label-sm font-medium text-on-surface-variant">Tổng số câu hỏi</p>
-                    <p class="text-headline-sm font-bold text-on-surface">{{ number_format($questions->total()) }}</p>
+                    <p class="text-headline-sm font-bold text-on-surface">{{ number_format($stats['total']) }}</p>
                 </div>
             </div>
         </div>
@@ -35,7 +35,7 @@
                 <div>
                     <p class="text-label-sm font-medium text-on-surface-variant">Đã xuất bản</p>
                     <p class="text-headline-sm font-bold text-on-surface">
-                        {{ number_format($questions->getCollection()->where('status', \Modules\QuestionBank\Enums\QuestionStatus::Published)->count()) }}
+                        {{ number_format($stats['published']) }}
                     </p>
                 </div>
             </div>
@@ -46,9 +46,9 @@
                     <span class="material-symbols-outlined text-[22px]">hourglass_empty</span>
                 </div>
                 <div>
-                    <p class="text-label-sm font-medium text-on-surface-variant">Chờ duyệt / Nháp</p>
+                    <p class="text-label-sm font-medium text-on-surface-variant">Đang chờ duyệt</p>
                     <p class="text-headline-sm font-bold text-on-surface">
-                        {{ number_format($questions->getCollection()->whereIn('status', [\Modules\QuestionBank\Enums\QuestionStatus::Draft, \Modules\QuestionBank\Enums\QuestionStatus::InReview])->count()) }}
+                        {{ number_format($stats['pending']) }}
                     </p>
                 </div>
             </div>
@@ -61,7 +61,7 @@
                 <div>
                     <p class="text-label-sm font-medium text-on-surface-variant">Miễn phí</p>
                     <p class="text-headline-sm font-bold text-on-surface">
-                        {{ number_format($questions->getCollection()->where('is_free', true)->count()) }}
+                        {{ number_format($stats['free']) }}
                     </p>
                 </div>
             </div>
@@ -70,19 +70,19 @@
 
     <!-- Filter Card -->
     <div class="mb-6 rounded-2xl border border-outline-variant bg-surface p-5 shadow-sm">
-        <form method="get" action="{{ route('admin.questions.index') }}" class="grid grid-cols-1 gap-4 sm:grid-cols-12 items-end">
-            <div class="sm:col-span-4">
+        <form method="get" action="{{ route('admin.questions.index') }}" class="grid grid-cols-1 items-end gap-4 sm:grid-cols-12">
+            <div class="sm:col-span-3">
                 <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant" for="q">Tìm kiếm từ khóa</label>
                 <div class="relative">
                     <span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant">search</span>
                     <input id="q" name="q" value="{{ $filters['q'] }}" type="search"
                         placeholder="Nhập nội dung câu hỏi..."
-                        class="w-full rounded-xl border border-outline-variant bg-surface-container-lowest py-2 pr-3 pl-9 font-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
+                        class="h-11 w-full rounded-xl border border-outline-variant bg-surface-container-lowest pr-3 pl-9 font-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
                 </div>
             </div>
-            <div class="sm:col-span-3">
+            <div class="sm:col-span-2">
                 <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant" for="topic_id">Chủ đề</label>
-                <select id="topic_id" name="topic_id" class="w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2 font-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
+                <select id="topic_id" name="topic_id" class="h-11 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 font-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
                     <option value="">Tất cả chủ đề</option>
                     @foreach ($topics as $topic)
                         <option value="{{ $topic->id }}" @selected((string) $filters['topic_id'] === (string) $topic->id)>{{ $topic->name }}</option>
@@ -91,7 +91,7 @@
             </div>
             <div class="sm:col-span-2">
                 <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant" for="status">Trạng thái</label>
-                <select id="status" name="status" class="w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2 font-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
+                <select id="status" name="status" class="h-11 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 font-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
                     <option value="">Tất cả trạng thái</option>
                     @foreach ($statuses as $status)
                         <option value="{{ $status->value }}" @selected($filters['status'] === $status->value)>{{ $status->label() }}</option>
@@ -99,8 +99,15 @@
                 </select>
             </div>
             <div class="sm:col-span-2">
+                <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant" for="review">Kiểm duyệt</label>
+                <select id="review" name="review" class="h-11 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 font-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
+                    <option value="">Tất cả</option>
+                    <option value="pending" @selected($filters['review'] === 'pending')>Đang chờ duyệt</option>
+                </select>
+            </div>
+            <div class="sm:col-span-2">
                 <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant" for="difficulty">Độ khó</label>
-                <select id="difficulty" name="difficulty" class="w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2 font-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
+                <select id="difficulty" name="difficulty" class="h-11 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 font-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
                     <option value="">Tất cả độ khó</option>
                     @foreach ($difficulties as $difficulty)
                         <option value="{{ $difficulty->value }}" @selected($filters['difficulty'] === $difficulty->value)>{{ $difficulty->label() }}</option>
@@ -108,7 +115,7 @@
                 </select>
             </div>
             <div class="sm:col-span-1 flex gap-2">
-                <button type="submit" class="inline-flex w-full items-center justify-center rounded-xl bg-primary py-2 font-label-md font-semibold text-on-primary hover:bg-primary/90">
+                <button type="submit" class="inline-flex h-11 w-full items-center justify-center rounded-xl bg-primary font-label-md font-semibold text-on-primary hover:bg-primary/90">
                     Lọc
                 </button>
             </div>
@@ -118,12 +125,14 @@
     <!-- Data Table Card -->
     <div class="overflow-hidden rounded-2xl border border-outline-variant bg-surface shadow-sm">
         <div class="overflow-x-auto">
-            <table class="w-full text-left font-body-sm text-on-surface">
+            <table class="min-w-[1100px] w-full text-left font-body-sm text-on-surface">
                 <thead class="border-b border-outline-variant bg-surface-container-low font-label-md text-on-surface-variant">
                     <tr>
                         <th class="px-5 py-3.5">Nội dung câu hỏi</th>
                         <th class="px-4 py-3.5">Chủ đề</th>
                         <th class="px-4 py-3.5">Độ khó</th>
+                        @if ($isReviewer)<th class="px-4 py-3.5">Người tạo</th>@endif
+                        <th class="px-4 py-3.5">Kiểm duyệt</th>
                         <th class="px-4 py-3.5">Trạng thái</th>
                         <th class="px-4 py-3.5">Loại quyền</th>
                         <th class="px-5 py-3.5 text-end">Thao tác</th>
@@ -142,11 +151,20 @@
                                     </p>
                                 </a>
                             </td>
-                            <td class="px-4 py-4 whitespace-nowrap">
-                                @if($question->topic)
-                                    <span class="inline-flex items-center rounded-lg bg-surface-container-high px-2.5 py-1 text-xs font-semibold text-on-surface">
-                                        {{ $question->topic->name }}
-                                    </span>
+                            <td class="px-4 py-4">
+                                @if($question->topics->isNotEmpty())
+                                    <div class="flex max-w-64 flex-wrap gap-1">
+                                        @foreach ($question->topics->take(2) as $topic)
+                                            <span class="inline-flex items-center whitespace-nowrap rounded-lg bg-surface-container-high px-2.5 py-1 text-xs font-semibold text-on-surface">
+                                                {{ $topic->name }}
+                                            </span>
+                                        @endforeach
+                                        @if ($question->topics->count() > 2)
+                                            <span class="inline-flex items-center rounded-lg bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">
+                                                +{{ $question->topics->count() - 2 }}
+                                            </span>
+                                        @endif
+                                    </div>
                                 @else
                                     <span class="text-on-surface-variant/60">—</span>
                                 @endif
@@ -155,6 +173,27 @@
                                 <span class="text-xs font-semibold text-on-surface-variant">
                                     {{ $question->difficulty->label() }}
                                 </span>
+                            </td>
+                            @if ($isReviewer)
+                                <td class="px-4 py-4 whitespace-nowrap">
+                                    <span class="font-medium">{{ $question->creator?->name ?? 'Dữ liệu hệ thống' }}</span>
+                                </td>
+                            @endif
+                            <td class="px-4 py-4 whitespace-nowrap">
+                                @if ($question->pendingReviewRequest)
+                                    @if ($isReviewer)
+                                        <a href="{{ route('admin.questions.reviews.show', $question->pendingReviewRequest) }}"
+                                            class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800 hover:bg-amber-200">
+                                            {{ $question->pendingReviewRequest->action->label() }} · Chờ duyệt
+                                        </a>
+                                    @else
+                                        <span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800">
+                                            {{ $question->pendingReviewRequest->action->label() }} · Chờ duyệt
+                                        </span>
+                                    @endif
+                                @else
+                                    <span class="text-on-surface-variant/60">—</span>
+                                @endif
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap">
                                 @php
@@ -190,7 +229,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-5 py-12 text-center">
+                            <td colspan="{{ $isReviewer ? 8 : 7 }}" class="px-5 py-12 text-center">
                                 <div class="mx-auto flex size-12 items-center justify-center rounded-full bg-surface-container-high text-on-surface-variant">
                                     <span class="material-symbols-outlined text-[28px]">search_off</span>
                                 </div>

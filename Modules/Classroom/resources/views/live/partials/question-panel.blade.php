@@ -13,8 +13,9 @@
     </div>
 </div>
 
-<div class="flex-1 overflow-y-auto p-4">
+<div class="min-h-0 flex-1 overflow-y-auto p-4">
     <div data-q-stem class="prose prose-sm max-w-none text-on-surface"></div>
+    <div data-q-stem-image class="mt-3 hidden"></div>
     <ul data-q-options class="mt-4 space-y-2"></ul>
     <div data-q-explanation class="mt-4 hidden rounded-lg bg-primary/10 p-3 text-sm text-primary"></div>
 </div>
@@ -25,10 +26,6 @@
             class="rounded-lg border border-outline-variant bg-surface px-3 py-1.5 text-sm text-on-surface hover:bg-surface-container-low">Trước</button>
         <button type="button" data-q-next
             class="rounded-lg border border-outline-variant bg-surface px-3 py-1.5 text-sm text-on-surface hover:bg-surface-container-low">Sau</button>
-        <button type="button" data-q-toggle-answer
-            class="ml-auto rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:opacity-90">
-            Hiện đáp án
-        </button>
     </div>
     <div data-q-map class="flex max-h-24 flex-wrap gap-1 overflow-y-auto border-t border-outline-variant p-3"></div>
 @endif

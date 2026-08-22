@@ -14,13 +14,19 @@ use Modules\Admin\Http\Controllers\Cms\FaqController;
 use Modules\Admin\Http\Controllers\Cms\MenuController;
 use Modules\Admin\Http\Controllers\Cms\PageController;
 use Modules\Admin\Http\Controllers\EditorImageUploadController;
+use Modules\Admin\Http\Controllers\ExamController;
 use Modules\Admin\Http\Controllers\QuestionController;
+use Modules\Admin\Http\Controllers\QuestionReviewController;
+use Modules\Admin\Http\Controllers\QuestionVersionController;
 use Modules\Admin\Http\Controllers\RoleController;
 use Modules\Admin\Http\Controllers\SettingController;
 use Modules\Admin\Http\Controllers\SupportConversationController;
+use Modules\Admin\Http\Controllers\TopicController;
 use Modules\Admin\Http\Controllers\UserController;
 use Modules\Auth\Http\Controllers\AdminTwoFactorController;
 use Modules\Auth\Http\Controllers\AuthenticatedSessionController;
+use Modules\Classroom\Http\Controllers\LiveRoomApiController;
+use Modules\Classroom\Http\Controllers\LiveRoomController;
 use Modules\Media\Http\Controllers\MediaController;
 
 /*
@@ -101,6 +107,17 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
 
         Route::middleware('permission:'.Permission::ClassroomOversee->value)->group(function (): void {
             Route::get('/classrooms', [ClassroomOversightController::class, 'index'])->name('classrooms.index');
+            Route::get('/classrooms/{classroom}', [ClassroomOversightController::class, 'show'])
+                ->name('classrooms.show');
+            Route::get('/classrooms/{classroom}/live/{liveSession}', [LiveRoomController::class, 'show'])
+                ->scopeBindings()
+                ->name('classrooms.live');
+            Route::get('/classrooms/{classroom}/live/{liveSession}/api/bootstrap', [LiveRoomApiController::class, 'bootstrap'])
+                ->scopeBindings()
+                ->name('classrooms.live.api.bootstrap');
+            Route::post('/classrooms/{classroom}/live/{liveSession}/api/token', [LiveRoomApiController::class, 'refreshToken'])
+                ->scopeBindings()
+                ->name('classrooms.live.api.token');
             Route::post('/classrooms/{classroom}/force-end', [ClassroomOversightController::class, 'forceEnd'])
                 ->name('classrooms.force-end');
             Route::post('/classrooms/{classroom}/approve', [ClassroomOversightController::class, 'approve'])
@@ -111,9 +128,21 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
                 ->name('classrooms.archive');
         });
 
+        Route::middleware('permission:'.Permission::TopicView->value)->group(function (): void {
+            Route::get('/topics', [TopicController::class, 'index'])->name('topics.index');
+            Route::get('/topics/{topic}/edit', [TopicController::class, 'edit'])->name('topics.edit');
+        });
+
         Route::middleware('permission:'.Permission::QuestionView->value)->group(function (): void {
             Route::get('/questions', [QuestionController::class, 'index'])->name('questions.index');
             Route::get('/questions/{question}/edit', [QuestionController::class, 'edit'])->name('questions.edit');
+            Route::get('/questions/{question}/versions', [QuestionVersionController::class, 'index'])
+                ->name('questions.versions.index');
+        });
+
+        Route::middleware('permission:'.Permission::TopicCreate->value)->group(function (): void {
+            Route::get('/topics/create', [TopicController::class, 'create'])->name('topics.create');
+            Route::post('/topics', [TopicController::class, 'store'])->name('topics.store');
         });
 
         Route::middleware('permission:'.Permission::QuestionCreate->value)->group(function (): void {
@@ -121,20 +150,45 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
             Route::post('/questions', [QuestionController::class, 'store'])->name('questions.store');
         });
 
+        Route::middleware('permission:'.Permission::TopicUpdate->value)->group(function (): void {
+            Route::put('/topics/{topic}', [TopicController::class, 'update'])->name('topics.update');
+        });
+
         Route::middleware('permission:'.Permission::QuestionUpdate->value)->group(function (): void {
             Route::put('/questions/{question}', [QuestionController::class, 'update'])->name('questions.update');
             Route::post('/questions/{question}/transition', [QuestionController::class, 'transition'])
                 ->name('questions.transition');
+            Route::post(
+                '/questions/{question}/versions/{version}/restore',
+                [QuestionVersionController::class, 'restore'],
+            )->scopeBindings()->name('questions.versions.restore');
         });
-        
+
+        Route::middleware('permission:'.Permission::QuestionPublish->value)->group(function (): void {
+            Route::get('/question-reviews/{reviewRequest}', [QuestionReviewController::class, 'show'])
+                ->name('questions.reviews.show');
+            Route::post('/question-reviews/{reviewRequest}/approve', [QuestionReviewController::class, 'approve'])
+                ->name('questions.reviews.approve');
+            Route::post('/question-reviews/{reviewRequest}/reject', [QuestionReviewController::class, 'reject'])
+                ->name('questions.reviews.reject');
+        });
+
+        Route::delete('/questions/{question}', [QuestionController::class, 'destroy'])
+            ->middleware('permission:'.Permission::QuestionDelete->value)
+            ->name('questions.destroy');
+
+        Route::delete('/topics/{topic}', [TopicController::class, 'destroy'])
+            ->middleware('permission:'.Permission::TopicDelete->value)
+            ->name('topics.destroy');
+
         // --- Exams ---
-        Route::get('/exams/questions/search', [\Modules\Admin\Http\Controllers\ExamController::class, 'searchQuestions'])->name('exams.questions.search');
-        Route::get('/exams', [\Modules\Admin\Http\Controllers\ExamController::class, 'index'])->name('exams.index');
-        Route::get('/exams/create', [\Modules\Admin\Http\Controllers\ExamController::class, 'create'])->name('exams.create');
-        Route::post('/exams', [\Modules\Admin\Http\Controllers\ExamController::class, 'store'])->name('exams.store');
-        Route::get('/exams/{exam}/edit', [\Modules\Admin\Http\Controllers\ExamController::class, 'edit'])->name('exams.edit');
-        Route::put('/exams/{exam}', [\Modules\Admin\Http\Controllers\ExamController::class, 'update'])->name('exams.update');
-        Route::delete('/exams/{exam}', [\Modules\Admin\Http\Controllers\ExamController::class, 'destroy'])->name('exams.destroy');
+        Route::get('/exams/questions/search', [ExamController::class, 'searchQuestions'])->name('exams.questions.search');
+        Route::get('/exams', [ExamController::class, 'index'])->name('exams.index');
+        Route::get('/exams/create', [ExamController::class, 'create'])->name('exams.create');
+        Route::post('/exams', [ExamController::class, 'store'])->name('exams.store');
+        Route::get('/exams/{exam}/edit', [ExamController::class, 'edit'])->name('exams.edit');
+        Route::put('/exams/{exam}', [ExamController::class, 'update'])->name('exams.update');
+        Route::delete('/exams/{exam}', [ExamController::class, 'destroy'])->name('exams.destroy');
 
         Route::post('/editor/images', EditorImageUploadController::class)
             ->middleware('throttle:30,1')

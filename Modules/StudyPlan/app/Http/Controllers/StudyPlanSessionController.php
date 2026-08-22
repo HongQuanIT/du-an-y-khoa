@@ -243,15 +243,23 @@ final class StudyPlanSessionController extends Controller
         foreach ($questionIds as $questionId) {
             $question = $questions[$questionId] ?? null;
             $attempt = $attempts->get($questionId);
-            $topicName = $question?->topic?->name ?? 'Tổng hợp';
-            $byTopic[$topicName] ??= [
-                'name' => $topicName,
-                'correct' => 0,
-                'wrong' => 0,
-                'skipped' => 0,
-                'total' => 0,
-            ];
-            $byTopic[$topicName]['total']++;
+            $topicNames = $question?->topics
+                ->pluck('name')
+                ->map(fn ($name): string => (string) $name)
+                ->all() ?? [];
+            if ($topicNames === []) {
+                $topicNames = [$question?->topic?->name ?? 'Tổng hợp'];
+            }
+            foreach ($topicNames as $topicName) {
+                $byTopic[$topicName] ??= [
+                    'name' => $topicName,
+                    'correct' => 0,
+                    'wrong' => 0,
+                    'skipped' => 0,
+                    'total' => 0,
+                ];
+                $byTopic[$topicName]['total']++;
+            }
 
             $annotation = ($session->annotations ?? [])[(string) $questionId] ?? [];
             $flagged = (bool) ($annotation['flagged'] ?? $attempt?->flagged ?? false);
@@ -262,7 +270,9 @@ final class StudyPlanSessionController extends Controller
 
             if ($attempt === null) {
                 $skippedCount++;
-                $byTopic[$topicName]['skipped']++;
+                foreach ($topicNames as $topicName) {
+                    $byTopic[$topicName]['skipped']++;
+                }
 
                 continue;
             }
@@ -271,10 +281,14 @@ final class StudyPlanSessionController extends Controller
 
             if ($attempt->is_correct) {
                 $correctCount++;
-                $byTopic[$topicName]['correct']++;
+                foreach ($topicNames as $topicName) {
+                    $byTopic[$topicName]['correct']++;
+                }
             } else {
                 $wrongCount++;
-                $byTopic[$topicName]['wrong']++;
+                foreach ($topicNames as $topicName) {
+                    $byTopic[$topicName]['wrong']++;
+                }
             }
         }
 
@@ -452,7 +466,8 @@ final class StudyPlanSessionController extends Controller
                     'wrong' => 'text-error',
                     default => 'text-outline',
                 },
-                'topic' => $question->topic?->name ?? 'Tổng hợp',
+                'topic' => $question->topics->pluck('name')->join(', ') ?: ($question->topic?->name ?? 'Tổng hợp'),
+                'topics' => $question->topics->pluck('name')->values()->all(),
                 'excerpt' => Str::limit(strip_tags($question->stem), 140),
                 'stem' => $question->stem,
                 'stemHtml' => $stemHtml,

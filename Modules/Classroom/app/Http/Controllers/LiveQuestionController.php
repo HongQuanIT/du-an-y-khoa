@@ -12,6 +12,7 @@ use Modules\Classroom\Events\LiveQuestionChanged;
 use Modules\Classroom\Models\Classroom;
 use Modules\Classroom\Models\LiveSession;
 use Modules\Classroom\Services\LiveQuestionPanelService;
+use Modules\QuestionBank\Models\QuestionOption;
 
 final class LiveQuestionController extends Controller
 {
@@ -25,23 +26,42 @@ final class LiveQuestionController extends Controller
 
         $validated = $request->validate([
             'index' => ['nullable', 'integer', 'min:0'],
-            'show_answer' => ['nullable', 'boolean'],
+            'option_id' => ['nullable', 'integer'],
         ]);
 
         $ids = $liveSession->questionIds();
         abort_if($ids === [], 422, 'Session has no question set.');
 
         $updates = [];
+        $targetIndex = (int) $liveSession->current_question_index;
 
         if (array_key_exists('index', $validated)) {
-            $updates['current_question_index'] = min(
+            $targetIndex = min(
                 max(0, (int) $validated['index']),
                 count($ids) - 1,
             );
+            $updates['current_question_index'] = $targetIndex;
         }
 
-        if (array_key_exists('show_answer', $validated)) {
-            $updates['show_answer'] = (bool) $validated['show_answer'];
+        if (array_key_exists('option_id', $validated) && $validated['option_id'] !== null) {
+            $optionId = (int) $validated['option_id'];
+            $questionId = $ids[$targetIndex] ?? null;
+            abort_if($questionId === null, 422, 'Session has no question set.');
+
+            $allowed = QuestionOption::query()
+                ->where('question_id', $questionId)
+                ->pluck('id')
+                ->map(static fn (mixed $id): int => (int) $id)
+                ->all();
+            abort_unless(in_array($optionId, $allowed, true), 422, 'Đáp án không thuộc câu đang chữa.');
+
+            $revealed = $liveSession->revealedOptionIds();
+            $revealed = in_array($optionId, $revealed, true)
+                ? array_values(array_filter($revealed, static fn (int $id): bool => $id !== $optionId))
+                : [...$revealed, $optionId];
+
+            $updates['revealed_option_ids'] = $revealed;
+            $updates['show_answer'] = false;
         }
 
         if ($updates !== []) {

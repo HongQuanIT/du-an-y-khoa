@@ -115,7 +115,7 @@
                 <p data-lk-error class="hidden shrink-0 border-t border-red-400/30 bg-red-500/20 px-4 py-2 text-xs text-red-100"></p>
             </div>
 
-            <aside class="flex h-[42vh] w-full shrink-0 flex-col border-t border-white/10 bg-surface text-on-surface lg:h-auto lg:w-[380px] lg:border-l lg:border-t-0 xl:w-[420px]">
+            <aside class="flex h-[42vh] w-full shrink-0 flex-col overflow-hidden border-t border-white/10 bg-surface text-on-surface lg:h-auto lg:min-h-0 lg:w-[380px] lg:border-l lg:border-t-0 xl:w-[420px]">
                 @include('classroom::live.partials.sidebar-tabs')
             </aside>
         </div>

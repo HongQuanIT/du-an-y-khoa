@@ -251,11 +251,26 @@ final class ClassroomFlowTest extends TestCase
             'order' => 1,
         ]);
 
-        $question = Question::factory()->create([
+        $question = Question::factory()->withOptions(2)->create([
             'topic_id' => $topic->id,
             'stem' => 'Câu hỏi test live',
+            'stem_image_path' => 'question-images/live-ecg.png',
             'is_free' => true,
         ]);
+        $question->options()->orderBy('order')->get()->each(function ($option, int $index): void {
+            $option->forceFill([
+                'explanation' => $index === 0
+                    ? 'Giải thích đáp án A trong live.'
+                    : 'Giải thích đáp án B trong live.',
+            ])->save();
+        });
+        $firstOption = $question->options()->orderBy('order')->firstOrFail();
+        $secondQuestion = Question::factory()->withOptions(2)->create([
+            'topic_id' => $topic->id,
+            'stem' => 'Câu hỏi live thứ hai',
+            'is_free' => true,
+        ]);
+        $secondQuestion->options()->update(['explanation' => 'Giải thích câu 2']);
 
         $classroom = app(CreateClassroomAction::class)->handle($host, [
             'title' => 'Lớp test',
@@ -265,7 +280,10 @@ final class ClassroomFlowTest extends TestCase
 
         $this->actingAs($host)->post(route('classroom.sessions.store', $classroom), [
             'title' => 'Buổi có đề',
-            'question_ids' => [(string) $question->getKey()],
+            'question_ids' => [
+                (string) $question->getKey(),
+                (string) $secondQuestion->getKey(),
+            ],
         ]);
 
         $session = $classroom->sessions()->firstOrFail();
@@ -274,10 +292,40 @@ final class ClassroomFlowTest extends TestCase
         $this->actingAs($host)->post(route('classroom.sessions.start', [$classroom, $session]));
 
         $this->actingAs($host)
+            ->getJson(route('classroom.live.api.bootstrap', [$classroom, $session]))
+            ->assertOk()
+            ->assertJsonPath('data.question_panel.question.options.0.explanation', null)
+            ->assertJsonPath('data.question_panel.question.options.1.explanation', null);
+
+        $response = $this->actingAs($host)
             ->patchJson(route('classroom.live.api.question', [$classroom, $session]), [
-                'show_answer' => true,
+                'option_id' => (int) $firstOption->getKey(),
             ])
             ->assertOk()
-            ->assertJsonPath('data.question.stem', 'Câu hỏi test live');
+            ->assertJsonPath('data.question.stem', 'Câu hỏi test live')
+            ->assertJsonPath('data.question.options.0.explanation', 'Giải thích đáp án A trong live.')
+            ->assertJsonPath('data.question.options.1.explanation', null)
+            ->assertJsonPath('data.question.options.0.is_correct', (bool) $firstOption->is_correct)
+            ->assertJsonPath('data.question.options.1.is_correct', null);
+
+        $this->actingAs($host)
+            ->patchJson(route('classroom.live.api.question', [$classroom, $session]), [
+                'index' => 1,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.question.stem', 'Câu hỏi live thứ hai')
+            ->assertJsonPath('data.question.options.0.explanation', null)
+            ->assertJsonPath('data.question.options.1.explanation', null);
+
+        $this->actingAs($host)
+            ->patchJson(route('classroom.live.api.question', [$classroom, $session]), [
+                'index' => 0,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.question.options.0.explanation', 'Giải thích đáp án A trong live.')
+            ->assertJsonPath('data.question.options.1.explanation', null);
+
+        $imageUrl = (string) $response->json('data.question.stem_image_url');
+        $this->assertStringContainsString('question-images/live-ecg.png', $imageUrl);
     }
 }

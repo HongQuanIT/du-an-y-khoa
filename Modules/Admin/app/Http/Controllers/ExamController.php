@@ -5,15 +5,15 @@ declare(strict_types=1);
 namespace Modules\Admin\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Modules\Exam\Enums\ExamStatus;
 use Modules\Exam\Models\Exam;
-use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Enums\Difficulty;
-use Illuminate\Http\JsonResponse;
+use Modules\QuestionBank\Models\Question;
 
 final class ExamController extends Controller
 {
@@ -29,7 +29,7 @@ final class ExamController extends Controller
 
     public function create(): View
     {
-        $exam = new Exam();
+        $exam = new Exam;
         $exam->duration_minutes = 90;
         $exam->status = ExamStatus::Draft;
         $exam->is_published = false;
@@ -84,10 +84,10 @@ final class ExamController extends Controller
     public function edit(Exam $exam): View
     {
         $exam->loadCount('questions');
-        $exam->load(['questions' => fn ($q) => $q->with('topic')->orderBy('exam_question.order')]);
-        
+        $exam->load(['questions' => fn ($q) => $q->with(['topic', 'topics'])->orderBy('exam_question.order')]);
+
         $availableQuestions = $this->availableQuestions();
-            
+
         return view('admin::exams.form', compact('exam', 'availableQuestions'));
     }
 
@@ -135,13 +135,14 @@ final class ExamController extends Controller
     public function destroy(Exam $exam): RedirectResponse
     {
         $exam->delete();
+
         return redirect()->route('admin.exams.index')->with('status', 'Đã xóa kỳ thi.');
     }
 
     private function availableQuestions()
     {
         return Question::query()
-            ->with('topic')
+            ->with(['topic', 'topics'])
             ->latest()
             ->limit(50) // Reduced initial load limit
             ->get();
@@ -150,14 +151,14 @@ final class ExamController extends Controller
     public function searchQuestions(Request $request): JsonResponse
     {
         $term = trim($request->input('q', ''));
-        
+
         $query = Question::query()
-            ->with('topic')
+            ->with(['topic', 'topics'])
             ->latest();
 
         if ($term !== '') {
             $termLower = mb_strtolower($term);
-            
+
             // Map term to difficulty values
             $difficulties = [];
             foreach (Difficulty::cases() as $case) {
@@ -168,11 +169,11 @@ final class ExamController extends Controller
 
             $query->where(function ($q) use ($term, $difficulties) {
                 $q->where('stem', 'LIKE', "%{$term}%")
-                  ->orWhereHas('topic', function ($q2) use ($term) {
-                      $q2->where('name', 'LIKE', "%{$term}%");
-                  });
-                  
-                if (!empty($difficulties)) {
+                    ->orWhereHas('topics', function ($q2) use ($term) {
+                        $q2->where('name', 'LIKE', "%{$term}%");
+                    });
+
+                if (! empty($difficulties)) {
                     $q->orWhereIn('difficulty', $difficulties);
                 }
             });
@@ -181,7 +182,8 @@ final class ExamController extends Controller
         $questions = $query->limit(50)->get()->map(fn ($question) => [
             'id' => (string) $question->id,
             'text' => strip_tags($question->stem),
-            'topic' => $question->topic?->name,
+            'topic' => $question->topics->pluck('name')->join(', ') ?: $question->topic?->name,
+            'topics' => $question->topics->pluck('name')->values()->all(),
             'difficulty' => $question->difficulty?->label(),
         ])->values()->all();
 
@@ -189,7 +191,7 @@ final class ExamController extends Controller
     }
 
     /**
-     * @param array<int, string> $questionIds
+     * @param  array<int, string>  $questionIds
      * @return array<string, array{order: int}>
      */
     private function questionSyncData(array $questionIds): array

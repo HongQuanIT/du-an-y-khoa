@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Classroom\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Support\Enums\Permission;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -27,7 +28,12 @@ final class LiveRoomController extends Controller
         $this->authorize('view', $classroom);
 
         $user = $request->user();
-        abort_unless($classroom->isActiveMember($user), 403, 'Hãy tham gia lớp trước khi vào phòng live.');
+        abort_unless($classroom->canWatchLive($user), 403, 'Hãy tham gia lớp trước khi vào phòng live.');
+
+        $observer = $request->routeIs('admin.*');
+        if ($observer) {
+            abort_unless($user->can(Permission::ClassroomOversee->value), 403);
+        }
 
         $classroom->load('host');
         $liveSession->load([
@@ -36,24 +42,38 @@ final class LiveRoomController extends Controller
         ]);
         $messages = $liveSession->messages->sortBy('created_at')->values();
 
-        $role = $classroom->purpose->isTeachPurpose()
+        $role = ($observer || $classroom->purpose->isTeachPurpose())
             ? MemberRole::Member
             : ($classroom->roleFor($user) ?? MemberRole::Member);
+        $publishSources = $observer
+            ? []
+            : ($classroom->purpose->isTeachPurpose() ? ['microphone'] : null);
         $tokenPayload = $liveSession->isLive()
-            ? $tokens->issue($liveSession, $user, $role, $classroom->purpose->isTeachPurpose() ? ['microphone'] : null)
+            ? $tokens->issue($liveSession, $user, $role, $publishSources)
             : null;
-        $canHostLive = ! $classroom->purpose->isTeachPurpose() && $user->can('manageLive', $classroom);
+        $canHostLive = ! $observer
+            && ! $classroom->purpose->isTeachPurpose()
+            && $user->can('manageLive', $classroom);
+        $exitUrl = $observer
+            ? route('admin.classrooms.index')
+            : route('classroom.show', $classroom);
+        $bootstrapUrl = $observer
+            ? route('admin.classrooms.live.api.bootstrap', [$classroom, $liveSession])
+            : route('classroom.live.api.bootstrap', [$classroom, $liveSession]);
 
         return view('classroom::live.room', [
             'classroom' => $classroom,
             'session' => $liveSession,
             'messages' => $messages,
             'role' => $role,
-            'canModerate' => $role->canModerate(),
+            'canModerate' => ! $observer && $role->canModerate(),
             'canHostLive' => $canHostLive,
             'tokenPayload' => $tokenPayload,
             'livekitConfigured' => $tokens->isConfigured(),
-            'chatReadonly' => ! $liveSession->allowsChatSend(),
+            'chatReadonly' => $observer || ! $liveSession->allowsChatSend(),
+            'isObserver' => $observer,
+            'exitUrl' => $exitUrl,
+            'bootstrapUrl' => $bootstrapUrl,
         ]);
     }
 

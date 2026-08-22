@@ -1,7 +1,10 @@
 @php
     use Modules\Classroom\Enums\LiveSessionStatus;
+    $bootstrapUrl = $bootstrapUrl ?? route('classroom.live.api.bootstrap', [$classroom, $session]);
+    $exitUrl = $exitUrl ?? route('classroom.show', $classroom);
+    $isObserver = $isObserver ?? false;
     $liveRoomConfig = [
-        'bootstrap_url' => route('classroom.live.api.bootstrap', [$classroom, $session]),
+        'bootstrap_url' => $bootstrapUrl,
         'classroom_uuid' => $classroom->uuid,
         'session_uuid' => $session->uuid,
         'status' => $session->status->value,
@@ -15,7 +18,7 @@
         'start_live_url' => $canHostLive && $session->status === LiveSessionStatus::Scheduled
             ? route('classroom.sessions.start', [$classroom, $session])
             : null,
-        'exit_url' => route('classroom.show', $classroom),
+        'exit_url' => $exitUrl,
         'has_questions' => $session->hasQuestionSet(),
         'user_id' => auth()->id(),
         'csrf' => csrf_token(),
@@ -27,7 +30,7 @@
     :classroom-title="$classroom->title"
     :session-title="$session->title"
     :is-live="$session->status === LiveSessionStatus::Live"
-    :exit-url="route('classroom.show', $classroom)"
+    :exit-url="$exitUrl"
 >
     <div
         data-live-room
@@ -41,7 +44,7 @@
             data-lk-can-audio="{{ ($tokenPayload['can_publish_audio'] ?? false) ? '1' : '0' }}"
             data-lk-can-video="{{ ($tokenPayload['can_publish_video'] ?? false) ? '1' : '0' }}"
             data-lk-can-screen="{{ ($tokenPayload['can_publish_screen'] ?? false) ? '1' : '0' }}"
-            data-lk-exit-url="{{ route('classroom.show', $classroom) }}"
+            data-lk-exit-url="{{ $exitUrl }}"
         @endif
         class="flex min-h-0 flex-1 flex-col lg:flex-row"
         x-data="{ mobileTab: 'video', sidebarTab: 'chat' }"
@@ -57,6 +60,11 @@
                         class="pointer-events-none absolute inset-x-0 top-0 z-20 hidden bg-teal-600/90 px-4 py-2 text-center text-xs text-white">
                         Chế độ chữa đề — học viên thấy tab <strong>Đề</strong> đồng bộ. Không cần share màn hình.
                     </div>
+                    @if ($isObserver)
+                        <div class="absolute inset-x-0 top-0 z-20 bg-amber-600/90 px-4 py-2 text-center text-xs text-white">
+                            Đang xem với tư cách quản trị — {{ $classroom->host?->name ? 'Giảng viên: '.$classroom->host->name : 'không điều khiển buổi live' }}.
+                        </div>
+                    @endif
                     <div data-lk-waiting
                         class="{{ ($tokenPayload['role'] ?? '') === 'publisher' ? 'hidden' : 'flex' }} absolute inset-0 items-center justify-center bg-black/60 text-sm text-white/70">
                         Đang chờ host chia sẻ nội dung…
@@ -118,7 +126,7 @@
         </div>
 
         {{-- Sidebar (desktop) — text-on-surface resets body text-white from live layout --}}
-        <aside class="hidden w-full max-w-md shrink-0 flex-col border-l border-white/10 bg-surface text-on-surface lg:flex lg:w-[380px] xl:w-[420px]">
+        <aside class="hidden w-full max-w-md shrink-0 flex-col overflow-hidden border-l border-white/10 bg-surface text-on-surface lg:flex lg:min-h-0 lg:w-[380px] xl:w-[420px]">
             @include('classroom::live.partials.sidebar-tabs')
         </aside>
 
