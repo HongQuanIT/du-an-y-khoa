@@ -85,7 +85,7 @@ final class QuestionBookmarkPageController extends Controller
             ->all();
 
         $questions = Question::query()
-            ->with(['topic:id,name', 'options' => fn ($query) => $query->orderBy('order')->orderBy('id')])
+            ->with(['topic:id,name', 'topics:id,name', 'options' => fn ($query) => $query->orderBy('order')->orderBy('id')])
             ->whereIn('id', $questionIds)
             ->get()
             ->keyBy(static fn (Question $question): string => (string) $question->getKey());
@@ -117,7 +117,8 @@ final class QuestionBookmarkPageController extends Controller
                     ? SafeHtml::forDisplay((string) ($question->explanation ?? ''))
                     : '',
                 'options' => $options,
-                'topic' => $question?->topic?->name,
+                'topic' => $question?->topics->pluck('name')->join(', ') ?: $question?->topic?->name,
+                'topics' => $question?->topics->pluck('name')->values()->all() ?? [],
                 'difficulty' => $question?->difficulty?->label(),
                 'saved_at' => $bookmark->created_at?->format('d/m/Y H:i') ?? '—',
                 'available' => $available,

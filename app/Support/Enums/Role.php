@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Support\Enums;
 
+use App\Models\User;
 use App\Support\Enums\Concerns\EnumValues;
 
 /**
@@ -24,7 +25,7 @@ enum Role: string
         return match ($this) {
             self::Student => 'Học viên',
             self::Instructor => 'Giảng viên',
-            self::ContentEditor => 'Content Editor',
+            self::ContentEditor => 'Content Creator',
             self::Admin => 'Admin',
             self::SuperAdmin => 'Super Admin',
         };
@@ -46,7 +47,7 @@ enum Role: string
      *
      * @return list<self>
      */
-    public static function assignableBy(\App\Models\User $actor): array
+    public static function assignableBy(User $actor): array
     {
         if ($actor->hasRole(self::SuperAdmin->value)) {
             return self::cases();

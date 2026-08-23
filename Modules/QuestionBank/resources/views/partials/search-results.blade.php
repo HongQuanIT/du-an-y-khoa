@@ -128,9 +128,10 @@
         @foreach ($searchItems as $item)
             @php
                 $attributes = $item['attributes'];
-                $topic = $searchTopics->get($attributes['topic_id']);
+                $topicIds = $attributes['topic_ids'] ?? array_filter([$attributes['topic_id']]);
+                $topics = $searchTopics->only($topicIds);
                 $sessionParams = array_filter([
-                    'topic_ids' => $attributes['topic_id'] ? [$attributes['topic_id']] : null,
+                    'topic_ids' => $topicIds ?: null,
                     'difficulties' => [$attributes['difficulty']],
                 ]);
             @endphp
@@ -141,8 +142,8 @@
                             <span class="rounded-full bg-primary/10 px-2.5 py-1 font-bold text-primary">
                                 {{ $difficultyLabels[$attributes['difficulty']] ?? $attributes['difficulty'] }}
                             </span>
-                            @if ($topic)
-                                <span class="rounded-full bg-surface-container px-2.5 py-1 text-on-surface-variant">{{ $topic->name }}</span>
+                            @if ($topics->isNotEmpty())
+                                <span class="rounded-full bg-surface-container px-2.5 py-1 text-on-surface-variant">{{ $topics->pluck('name')->join(', ') }}</span>
                             @endif
                             <span @class([
                                 'rounded-full px-2.5 py-1 font-bold',

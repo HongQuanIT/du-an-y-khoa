@@ -26,7 +26,7 @@ final class ClassroomOversightController extends Controller
         $this->authorizePermission(Permission::ClassroomOversee);
 
         $query = Classroom::query()
-            ->with(['host'])
+            ->with(['host', 'liveSession'])
             ->withCount([
                 'activeMembers',
                 'sessions as live_sessions_count' => fn ($q) => $q->where('status', LiveSessionStatus::Live->value),
@@ -69,6 +69,24 @@ final class ClassroomOversightController extends Controller
                 'purpose' => $request->query('purpose'),
                 'host_id' => $request->query('host_id'),
             ],
+        ]);
+    }
+
+    public function show(Classroom $classroom): View
+    {
+        $this->authorizePermission(Permission::ClassroomOversee);
+
+        $classroom->load([
+            'host',
+            'activeMembers.user',
+            'sessions' => fn ($query) => $query
+                ->with('recordings')
+                ->latest('scheduled_at')
+                ->limit(20),
+        ]);
+
+        return view('admin::classrooms.show', [
+            'classroom' => $classroom,
         ]);
     }
 

@@ -28,6 +28,8 @@ use Modules\Billing\Models\InstitutionMember;
 use Modules\Billing\Models\Invoice;
 use Modules\Billing\Models\Subscription;
 use Modules\Notification\Models\UserNotification;
+use Modules\QuestionBank\Models\Question;
+use Modules\QuestionBank\Models\QuestionReviewRequest;
 use Spatie\Permission\Traits\HasRoles;
 
 #[Fillable([
@@ -172,5 +174,17 @@ class User extends Authenticatable implements CanResetPasswordContract
     public function appNotifications(): HasMany
     {
         return $this->hasMany(UserNotification::class);
+    }
+
+    /** @return HasMany<Question, $this> */
+    public function createdQuestions(): HasMany
+    {
+        return $this->hasMany(Question::class, 'created_by');
+    }
+
+    /** @return HasMany<QuestionReviewRequest, $this> */
+    public function questionReviewRequests(): HasMany
+    {
+        return $this->hasMany(QuestionReviewRequest::class, 'requested_by');
     }
 }

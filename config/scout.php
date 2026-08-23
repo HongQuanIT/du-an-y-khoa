@@ -150,11 +150,13 @@ return [
                     'stem',
                     'difficulty',
                     'topic_id',
+                    'topic_ids',
                     'is_free',
                 ],
                 'filterableAttributes' => [
                     'difficulty',
                     'topic_id',
+                    'topic_ids',
                     'is_free',
                 ],
                 'synonyms' => [

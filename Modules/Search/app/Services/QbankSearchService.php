@@ -26,6 +26,9 @@ final class QbankSearchService implements ScopedSearchProvider
     /** @var list<string> */
     private const FACETS = ['difficulty', 'topic_id', 'is_free'];
 
+    /** @var list<string> */
+    private const INDEX_FACETS = ['difficulty', 'topic_ids', 'is_free'];
+
     public function search(SearchQueryData $data, User $user): ScopedSearchResult
     {
         if (config('scout.driver') !== 'meilisearch') {
@@ -67,7 +70,7 @@ final class QbankSearchService implements ScopedSearchProvider
         $options = [
             'page' => $data->page,
             'hitsPerPage' => $data->perPage,
-            'attributesToRetrieve' => ['id', 'stem', 'difficulty', 'topic_id', 'is_free'],
+            'attributesToRetrieve' => ['id', 'stem', 'difficulty', 'topic_id', 'topic_ids', 'is_free'],
             'attributesToHighlight' => ['stem'],
             'attributesToCrop' => ['stem:45'],
             'cropMarker' => '…',
@@ -76,13 +79,13 @@ final class QbankSearchService implements ScopedSearchProvider
         ];
 
         if ($withFacets) {
-            $options['facets'] = self::FACETS;
+            $options['facets'] = self::INDEX_FACETS;
         }
 
         $search = Question::search($data->query)->options($options);
 
         foreach ($filters as $field => $value) {
-            $search->where($field, $value);
+            $search->where($field === 'topic_id' ? 'topic_ids' : $field, $value);
         }
 
         /** @var array<string, mixed> $raw */
@@ -175,6 +178,7 @@ final class QbankSearchService implements ScopedSearchProvider
     private function accessibleQuestionQuery(array $filters): Builder
     {
         return Question::query()
+            ->with('topics:id')
             ->where('status', QuestionStatus::Published)
             ->when(
                 array_key_exists('difficulty', $filters),
@@ -182,7 +186,10 @@ final class QbankSearchService implements ScopedSearchProvider
             )
             ->when(
                 array_key_exists('topic_id', $filters),
-                fn (Builder $query) => $query->where('topic_id', $filters['topic_id']),
+                fn (Builder $query) => $query->whereHas(
+                    'topics',
+                    fn (Builder $topics) => $topics->where('topics.id', $filters['topic_id']),
+                ),
             )
             ->when(
                 array_key_exists('is_free', $filters),
@@ -222,13 +229,25 @@ final class QbankSearchService implements ScopedSearchProvider
         $facets = [];
 
         foreach (self::FACETS as $facet) {
-            $rows = (clone $matched)
-                ->reorder()
-                ->select($facet)
-                ->selectRaw('COUNT(*) as aggregate')
-                ->groupBy($facet)
-                ->orderByDesc('aggregate')
-                ->get();
+            if ($facet === 'topic_id') {
+                $rows = (clone $matched)
+                    ->withoutEagerLoads()
+                    ->reorder()
+                    ->join('question_topic', 'question_topic.question_id', '=', 'questions.id')
+                    ->selectRaw('question_topic.topic_id as topic_id, COUNT(DISTINCT questions.id) as aggregate')
+                    ->groupBy('question_topic.topic_id')
+                    ->orderByDesc('aggregate')
+                    ->get();
+            } else {
+                $rows = (clone $matched)
+                    ->withoutEagerLoads()
+                    ->reorder()
+                    ->select($facet)
+                    ->selectRaw('COUNT(*) as aggregate')
+                    ->groupBy($facet)
+                    ->orderByDesc('aggregate')
+                    ->get();
+            }
 
             $facets[$facet] = $rows
                 ->filter(fn (Question $row): bool => $row->getAttribute($facet) !== null)
@@ -292,7 +311,8 @@ final class QbankSearchService implements ScopedSearchProvider
         $facets = [];
 
         foreach (self::FACETS as $facet) {
-            $values = (array) ($raw[$facet] ?? []);
+            $indexFacet = $facet === 'topic_id' ? 'topic_ids' : $facet;
+            $values = (array) ($raw[$indexFacet] ?? []);
             $facets[$facet] = [];
 
             foreach ($values as $value => $count) {
@@ -321,6 +341,11 @@ final class QbankSearchService implements ScopedSearchProvider
             'attributes' => [
                 'difficulty' => $question->difficulty->value,
                 'topic_id' => $question->topic_id,
+                'topic_ids' => $question->topics
+                    ->pluck('id')
+                    ->map(fn ($id): int => (int) $id)
+                    ->values()
+                    ->all(),
                 'is_free' => (bool) $question->is_free,
             ],
         ];

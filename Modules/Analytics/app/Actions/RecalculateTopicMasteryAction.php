@@ -25,13 +25,12 @@ final class RecalculateTopicMasteryAction
     public function handle(int $userId): int
     {
         $rows = DB::table('question_attempts')
-            ->join('questions', 'questions.id', '=', 'question_attempts.question_id')
+            ->join('question_topic', 'question_topic.question_id', '=', 'question_attempts.question_id')
             ->where('question_attempts.user_id', $userId)
             ->whereNotNull('question_attempts.is_correct')
-            ->whereNotNull('questions.topic_id')
-            ->groupBy('questions.topic_id')
+            ->groupBy('question_topic.topic_id')
             ->get([
-                'questions.topic_id',
+                'question_topic.topic_id',
                 DB::raw('COUNT(*) as attempts'),
                 DB::raw('SUM(CASE WHEN question_attempts.is_correct THEN 1 ELSE 0 END) as correct'),
                 DB::raw('MAX(question_attempts.answered_at) as last_activity_at'),

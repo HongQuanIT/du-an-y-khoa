@@ -7,6 +7,7 @@ namespace Modules\QuestionBank\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Modules\QuestionBank\Database\Factories\TopicFactory;
@@ -57,6 +58,12 @@ class Topic extends Model
     public function questions(): HasMany
     {
         return $this->hasMany(Question::class, 'topic_id');
+    }
+
+    /** @return BelongsToMany<Question, $this> */
+    public function questionsMany(): BelongsToMany
+    {
+        return $this->belongsToMany(Question::class, 'question_topic')->withTimestamps();
     }
 
     protected static function newFactory(): TopicFactory

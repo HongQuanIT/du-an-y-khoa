@@ -6,6 +6,7 @@ namespace Modules\Auth\Actions;
 
 use App\Models\User;
 use App\Support\Concerns\AsAction;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Modules\Auth\Services\TotpService;
@@ -23,7 +24,13 @@ final class VerifyTwoFactorCodeAction
 
     public function handle(User $user, string $code): void
     {
-        $record = $user->twoFactorSecret;
+        try {
+            $record = $user->twoFactorSecret;
+        } catch (DecryptException) {
+            throw ValidationException::withMessages([
+                'code' => 'Dữ liệu 2FA không đọc được. Vui lòng thiết lập lại xác thực hai bước.',
+            ]);
+        }
 
         if ($record === null || ! $record->isConfirmed()) {
             throw ValidationException::withMessages([
@@ -31,12 +38,24 @@ final class VerifyTwoFactorCodeAction
             ]);
         }
 
-        if ($this->totp->verify($record->secret, preg_replace('/\D+/', '', $code) ?: '')) {
-            return;
+        try {
+            if ($this->totp->verify($record->secret, preg_replace('/\D+/', '', $code) ?: '')) {
+                return;
+            }
+        } catch (DecryptException) {
+            throw ValidationException::withMessages([
+                'code' => 'Dữ liệu 2FA không đọc được. Vui lòng thiết lập lại xác thực hai bước.',
+            ]);
         }
 
         $normalized = strtoupper(str_replace([' ', '-'], '', $code));
-        $hashes = $record->recovery_codes ?? [];
+        try {
+            $hashes = $record->recovery_codes ?? [];
+        } catch (DecryptException) {
+            throw ValidationException::withMessages([
+                'code' => 'Dữ liệu 2FA không đọc được. Vui lòng thiết lập lại xác thực hai bước.',
+            ]);
+        }
 
         foreach ($hashes as $index => $hash) {
             if ($normalized !== '' && Hash::check($normalized, $hash)) {

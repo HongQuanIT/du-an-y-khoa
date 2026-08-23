@@ -84,20 +84,28 @@ class VolumeLearningSeeder extends Seeder
         $ids = [];
         $questionRows = [];
         $optionRows = [];
+        $questionTopicRows = [];
 
         for ($i = 0; $i < $count; $i++) {
             $id = (string) Str::uuid();
             $ids[] = $id;
 
+            $topicId = $topicIds[$i % count($topicIds)];
             $questionRows[] = [
                 'id' => $id,
                 'stem' => "[vol] Câu hỏi hiệu năng #{$i} — ".Str::random(24).'?',
                 'explanation' => 'Giải thích tự sinh cho câu hỏi hiệu năng.',
                 'difficulty' => $difficulties[$i % count($difficulties)],
                 'status' => QuestionStatus::Published->value,
-                'topic_id' => $topicIds[$i % count($topicIds)],
+                'topic_id' => $topicId,
                 'is_free' => $i % 4 === 0,
                 'version' => 1,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+            $questionTopicRows[] = [
+                'question_id' => $id,
+                'topic_id' => $topicId,
                 'created_at' => $now,
                 'updated_at' => $now,
             ];
@@ -118,14 +126,17 @@ class VolumeLearningSeeder extends Seeder
 
             if (count($questionRows) >= self::CHUNK) {
                 DB::table('questions')->insert($questionRows);
+                DB::table('question_topic')->insert($questionTopicRows);
                 DB::table('question_options')->insert($optionRows);
                 $questionRows = [];
                 $optionRows = [];
+                $questionTopicRows = [];
             }
         }
 
         if ($questionRows !== []) {
             DB::table('questions')->insert($questionRows);
+            DB::table('question_topic')->insert($questionTopicRows);
             DB::table('question_options')->insert($optionRows);
         }
 

@@ -4,19 +4,23 @@ declare(strict_types=1);
 
 namespace Modules\QuestionBank\Models;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Scout\Searchable;
 use Modules\QuestionBank\Database\Factories\QuestionFactory;
 use Modules\QuestionBank\Enums\Difficulty;
+use Modules\QuestionBank\Enums\QuestionReviewStatus;
 use Modules\QuestionBank\Enums\QuestionStatus;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * A single QBank question (reference implementation of the module pattern).
@@ -32,6 +36,7 @@ use Illuminate\Support\Facades\Storage;
  * @property int|null $topic_id
  * @property bool $is_free
  * @property int $version
+ * @property int|null $created_by
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -54,6 +59,7 @@ class Question extends Model
         'status',
         'topic_id',
         'is_free',
+        'created_by',
     ];
 
     protected $casts = [
@@ -64,16 +70,57 @@ class Question extends Model
         'version' => 'integer',
     ];
 
+    protected static function booted(): void
+    {
+        static::saved(function (Question $question): void {
+            if ($question->topic_id !== null) {
+                $question->topics()->syncWithoutDetaching([(int) $question->topic_id]);
+            }
+        });
+    }
+
     /** @return BelongsTo<Topic, $this> */
     public function topic(): BelongsTo
     {
         return $this->belongsTo(Topic::class, 'topic_id');
     }
 
+    /** @return BelongsToMany<Topic, $this> */
+    public function topics(): BelongsToMany
+    {
+        return $this->belongsToMany(Topic::class, 'question_topic')->withTimestamps();
+    }
+
     /** @return HasMany<QuestionOption, $this> */
     public function options(): HasMany
     {
         return $this->hasMany(QuestionOption::class, 'question_id');
+    }
+
+    /** @return HasMany<QuestionVersion, $this> */
+    public function versions(): HasMany
+    {
+        return $this->hasMany(QuestionVersion::class)->latest('version');
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /** @return HasMany<QuestionReviewRequest, $this> */
+    public function reviewRequests(): HasMany
+    {
+        return $this->hasMany(QuestionReviewRequest::class);
+    }
+
+    /** @return HasOne<QuestionReviewRequest, $this> */
+    public function pendingReviewRequest(): HasOne
+    {
+        return $this->hasOne(QuestionReviewRequest::class)
+            ->where('status', QuestionReviewStatus::Pending->value)
+            ->latestOfMany();
     }
 
     public function stemImageUrl(): ?string
@@ -149,6 +196,11 @@ class Question extends Model
             'stem' => $plainStem,
             'difficulty' => $this->difficulty->value,
             'topic_id' => $this->topic_id,
+            'topic_ids' => ($this->relationLoaded('topics') ? $this->topics : $this->topics()->get())
+                ->pluck('id')
+                ->map(fn ($id): int => (int) $id)
+                ->values()
+                ->all(),
             'is_free' => $this->is_free,
         ];
     }

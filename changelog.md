@@ -1,5 +1,35 @@
 # Changelog
 
+## 2026-08-22
+
+### Content Creator và kiểm duyệt câu hỏi
+- Content Creator tạo/sửa/xóa câu hỏi qua luồng chờ admin duyệt; chỉ thấy câu hỏi do chính mình tạo.
+- Admin/Super Admin xem toàn bộ yêu cầu, phê duyệt/từ chối và xem chi tiết nội dung, đáp án, giải thích, kiến thức/gợi ý, hình ảnh.
+- Lịch sử phiên bản câu hỏi hiển thị đầy đủ nội dung và bỏ qua phiên bản chỉ phát sinh khi admin duyệt.
+
+### Quản lý chủ đề và dữ liệu seed
+- Thêm CRUD chủ đề trong admin, quyền riêng cho chủ đề và seeder 150 chủ đề tiếng Việt.
+- Cập nhật form câu hỏi để chọn nhiều chủ đề và giữ lại đáp án đã nhập khi validation lỗi.
+- Bổ sung tài khoản Content Creator seed và đổi nhãn role sang Content Creator.
+
+### Cấu hình và trải nghiệm quản trị
+- Đặt timezone mặc định `Asia/Ho_Chi_Minh` qua `APP_TIMEZONE`.
+- Cải thiện trang quản lý kỳ thi khi hiển thị câu hỏi thuộc nhiều chủ đề.
+
+### Lịch sử phiên bản câu hỏi
+- Nhấp **Phiên bản** trong màn hình chỉnh sửa để xem đầy đủ lịch sử nội dung, chủ đề và đáp án.
+- Cho phép khôi phục phiên bản cũ thành một phiên bản mới ở trạng thái Bản nháp; lịch sử cũ không bị ghi đè.
+
+### Câu hỏi thuộc nhiều chủ đề
+- Admin có thể tìm kiếm và chọn nhiều chủ đề khi tạo hoặc chỉnh sửa câu hỏi.
+- Bộ lọc Q-Bank, Study Plan, tìm kiếm, thống kê và snapshot phiên nhận diện tất cả chủ đề đã liên kết.
+- Dữ liệu `topic_id` cũ được backfill sang quan hệ nhiều-nhiều và tiếp tục giữ làm chủ đề chính để tương thích.
+
+### Admin vào lớp và xem live giảng viên
+- Trang `/admin/lớp`: mỗi lớp có nút **Vào lớp** để admin xem thông tin, thành viên và các buổi học.
+- Lớp đang LIVE hiện tên buổi, tên giảng viên và nút **Xem live**.
+- Admin vào phòng với tư cách giám sát (xem video/đề/chat, không điều khiển, không micro/camera).
+
 ## 2026-08-21
 
 ### Admin settings layout

@@ -57,34 +57,51 @@ export function mountLiveRoom(root) {
         .replace(/>/g, '&gt;');
 
     const buildMessageEl = (msg, optimistic = false) => {
-        const wrap = document.createElement('div');
-        wrap.dataset.messageId = String(msg.id ?? `tmp-${Date.now()}`);
-        wrap.dataset.messageType = String(msg.type ?? 'chat');
-        wrap.className = msg.type === 'system'
-            ? 'rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary'
-            : 'rounded-lg bg-surface-container-low px-3 py-2 text-sm';
+        const isOwnMessage = msg.type !== 'system'
+            && currentUserId !== null
+            && Number(msg.user?.id) === currentUserId;
+        const row = document.createElement('div');
+        row.dataset.messageId = String(msg.id ?? `tmp-${Date.now()}`);
+        row.dataset.messageType = String(msg.type ?? 'chat');
 
-        if (msg.type !== 'system') {
-            const meta = document.createElement('div');
-            meta.className = 'mb-0.5 flex items-center gap-2 text-xs text-on-surface-variant';
-            meta.innerHTML = `
-                <span class="font-medium text-on-surface">${escapeHtml(msg.user?.name ?? '—')}</span>
-                ${msg.type === 'question' ? '<span class="rounded bg-secondary/15 px-1 text-secondary">Hỏi</span>' : ''}
-                ${msg.is_pinned ? '<span class="rounded bg-amber-100 px-1 text-amber-800">Ghim</span>' : ''}
-            `;
-            wrap.appendChild(meta);
+        if (msg.type === 'system') {
+            row.className = 'flex justify-center';
+            const notice = document.createElement('div');
+            notice.className = 'max-w-[90%] rounded-lg bg-primary/10 px-3 py-2 text-[13px] text-primary';
+            notice.textContent = String(msg.body ?? '');
+            row.appendChild(notice);
+            return row;
         }
+
+        row.className = `flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`;
+
+        const bubble = document.createElement('div');
+        bubble.className = `max-w-[80%] rounded-2xl px-4 py-3 text-[13px] ${
+            isOwnMessage
+                ? 'bg-primary text-on-primary'
+                : 'bg-surface-container text-on-surface'
+        }`;
+
+        const meta = document.createElement('div');
+        meta.className = 'mb-1 flex items-center gap-1 text-[11px] opacity-70';
+        meta.innerHTML = `
+            <span>${escapeHtml(isOwnMessage ? 'Bạn' : (msg.user?.name ?? '—'))}</span>
+            ${msg.type === 'question' ? '<span class="rounded bg-secondary/15 px-1">Hỏi</span>' : ''}
+            ${msg.is_pinned ? '<span class="rounded bg-amber-100 px-1 text-amber-800">Ghim</span>' : ''}
+        `;
+        bubble.appendChild(meta);
 
         const body = document.createElement('p');
-        body.className = 'whitespace-pre-wrap text-on-surface';
+        body.className = 'whitespace-pre-wrap';
         body.textContent = String(msg.body ?? '');
-        wrap.appendChild(body);
+        bubble.appendChild(body);
+        row.appendChild(bubble);
 
         if (optimistic) {
-            wrap.classList.add('opacity-60');
+            row.classList.add('opacity-60');
         }
 
-        return wrap;
+        return row;
     };
 
     const visibleMessages = () => filterType === 'question'
@@ -145,6 +162,29 @@ export function mountLiveRoom(root) {
         paintMessages();
     };
 
+    const renderStemImage = (container, url) => {
+        if (! (container instanceof HTMLElement)) {
+            return;
+        }
+
+        container.innerHTML = '';
+        container.classList.add('hidden');
+
+        if (! url) {
+            return;
+        }
+
+        const aside = document.createElement('aside');
+        aside.className = 'overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest';
+        const img = document.createElement('img');
+        img.src = String(url);
+        img.alt = 'Ảnh minh họa câu hỏi';
+        img.className = 'mx-auto w-full max-h-[480px] object-contain';
+        aside.appendChild(img);
+        container.appendChild(aside);
+        container.classList.remove('hidden');
+    };
+
     const renderQuestionPanel = (panel) => {
         if (! panel || questionPanels.length === 0) {
             return;
@@ -153,11 +193,11 @@ export function mountLiveRoom(root) {
 
         questionPanels.forEach((questionPanel) => {
             const stem = questionPanel.querySelector('[data-q-stem]');
+            const stemImage = questionPanel.querySelector('[data-q-stem-image]');
             const options = questionPanel.querySelector('[data-q-options]');
             const explanation = questionPanel.querySelector('[data-q-explanation]');
             const label = questionPanel.querySelector('[data-q-index-label]');
             const map = questionPanel.querySelector('[data-q-map]');
-            const toggleAnswer = questionPanel.querySelector('[data-q-toggle-answer]');
 
             if (label) {
                 label.textContent = panel.total > 0
@@ -169,6 +209,7 @@ export function mountLiveRoom(root) {
                 if (stem) {
                     stem.textContent = 'Chưa có câu hỏi.';
                 }
+                renderStemImage(stemImage, null);
                 if (options) {
                     options.innerHTML = '';
                 }
@@ -179,27 +220,63 @@ export function mountLiveRoom(root) {
             if (stem) {
                 stem.innerHTML = panel.question.stem ?? '';
             }
+            renderStemImage(stemImage, panel.question.stem_image_url ?? null);
 
             if (options) {
                 options.innerHTML = '';
                 (panel.question.options ?? []).forEach((opt, i) => {
+                    const revealed = opt.is_correct !== null && opt.is_correct !== undefined;
+                    const isCorrect = revealed && opt.is_correct === true;
+                    const isWrong = revealed && opt.is_correct === false;
                     const li = document.createElement('li');
-                    li.className = 'rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface'
-                        + (opt.is_correct ? ' border-primary bg-primary/5 font-medium text-primary' : '');
+                    if (canModerate) {
+                        li.dataset.qOptionId = String(opt.id ?? '');
+                    }
+                    li.className = 'overflow-hidden rounded-lg border bg-surface text-left text-sm text-on-surface'
+                        + (isCorrect
+                            ? ' border-success bg-success/5 font-medium text-success'
+                            : isWrong
+                                ? ' border-error bg-error/5 text-error'
+                                : ' border-outline-variant')
+                        + (canModerate ? ' cursor-pointer hover:border-primary/60' : '');
+
+                    const row = document.createElement('div');
+                    row.className = 'flex items-start gap-2 px-3 py-2';
+
                     const label = document.createElement('span');
                     label.className = 'font-medium';
                     label.textContent = `${String.fromCharCode(65 + i)}. `;
 
-                    const content = document.createElement('span');
+                    const content = document.createElement('div');
+                    content.className = 'prose prose-sm min-w-0 flex-1 text-on-surface';
                     content.innerHTML = opt.content ?? '';
 
-                    li.append(label, content);
+                    row.append(label, content);
+
+                    if (isCorrect || isWrong) {
+                        const badge = document.createElement('span');
+                        badge.className = isCorrect
+                            ? 'shrink-0 text-xs font-bold text-success'
+                            : 'shrink-0 text-xs font-bold text-error';
+                        badge.textContent = isCorrect ? 'Đáp án đúng' : 'Đáp án sai';
+                        row.appendChild(badge);
+                    }
+
+                    li.appendChild(row);
+
+                    if (revealed && opt.explanation) {
+                        const note = document.createElement('div');
+                        note.className = 'border-t border-outline-variant/60 px-3 py-2 pl-8 text-xs leading-relaxed text-on-surface-variant';
+                        note.innerHTML = opt.explanation;
+                        li.appendChild(note);
+                    }
+
                     options.appendChild(li);
                 });
             }
 
             if (explanation) {
-                if (panel.show_answer && panel.question.explanation) {
+                if (panel.question.explanation) {
                     explanation.innerHTML = panel.question.explanation;
                     explanation.classList.remove('hidden');
                 } else {
@@ -207,29 +284,25 @@ export function mountLiveRoom(root) {
                 }
             }
 
-            if (toggleAnswer) {
-                toggleAnswer.textContent = panel.show_answer ? 'Ẩn đáp án' : 'Hiện đáp án';
-            }
-
             if (map && panel.map) {
                 map.innerHTML = '';
                 panel.map.forEach((item, i) => {
                     const btn = document.createElement('button');
                     btn.type = 'button';
+                    btn.dataset.qGoto = String(i);
                     btn.textContent = item.label;
                     btn.className = 'size-8 rounded text-xs '
                         + (i === panel.index ? 'bg-primary text-white' : 'bg-surface-container-low text-on-surface');
-                    btn.addEventListener('click', () => updateQuestion(i));
                     map.appendChild(btn);
                 });
             }
         });
     };
 
-    const updateQuestion = async (index, showAnswer = null) => {
+    const updateQuestion = async (index, { optionId = null } = {}) => {
         const body = { index };
-        if (showAnswer !== null) {
-            body.show_answer = showAnswer;
+        if (optionId !== null) {
+            body.option_id = optionId;
         }
         const res = await fetch(apiUrls.question ?? String(config.bootstrap_url).replace('/bootstrap', '/question'), {
             method: 'PATCH',
@@ -636,7 +709,7 @@ export function mountLiveRoom(root) {
                 id: optimisticId,
                 body,
                 type,
-                user: { name: 'Bạn' },
+                user: { id: currentUserId, name: 'Bạn' },
             };
             upsertMessage(optimistic, true);
             chatInput.value = '';
@@ -710,14 +783,32 @@ export function mountLiveRoom(root) {
             return;
         }
 
-        const qBtn = el.closest('[data-q-prev], [data-q-next], [data-q-toggle-answer]');
+        const gotoBtn = el.closest('[data-q-goto]');
+        if (gotoBtn instanceof HTMLElement && root.contains(gotoBtn) && panelState) {
+            const nextIndex = Number(gotoBtn.dataset.qGoto);
+            if (Number.isFinite(nextIndex)) {
+                updateQuestion(Math.max(0, Math.min(panelState.total - 1, nextIndex)));
+            }
+
+            return;
+        }
+
+        const qBtn = el.closest('[data-q-prev], [data-q-next]');
         if (qBtn && root.contains(qBtn) && panelState) {
             if (qBtn.matches('[data-q-prev]')) {
                 updateQuestion(Math.max(0, panelState.index - 1));
             } else if (qBtn.matches('[data-q-next]')) {
                 updateQuestion(Math.min(panelState.total - 1, panelState.index + 1));
-            } else if (qBtn.matches('[data-q-toggle-answer]')) {
-                updateQuestion(panelState.index, ! panelState.show_answer);
+            }
+
+            return;
+        }
+
+        const optionBtn = el.closest('[data-q-option-id]');
+        if (optionBtn instanceof HTMLElement && root.contains(optionBtn) && canModerate && panelState) {
+            const optionId = Number(optionBtn.dataset.qOptionId);
+            if (Number.isFinite(optionId) && optionId > 0) {
+                updateQuestion(panelState.index, { optionId });
             }
         }
     });

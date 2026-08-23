@@ -20,6 +20,10 @@ enum Permission: string
     case QuestionUpdate = 'question.update';
     case QuestionDelete = 'question.delete';
     case QuestionPublish = 'question.publish';
+    case TopicView = 'topic.view';
+    case TopicCreate = 'topic.create';
+    case TopicUpdate = 'topic.update';
+    case TopicDelete = 'topic.delete';
 
     // Sessions
     case SessionStart = 'session.start';

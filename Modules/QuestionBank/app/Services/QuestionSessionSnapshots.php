@@ -21,7 +21,7 @@ final class QuestionSessionSnapshots
     {
         $questionIds = array_values(array_map('strval', $session->question_ids ?? []));
         $questions = Question::query()
-            ->with(['options', 'topic'])
+            ->with(['options', 'topic', 'topics'])
             ->whereIn('id', $questionIds)
             ->get()
             ->keyBy(fn (Question $question): string => (string) $question->getKey());
@@ -59,7 +59,7 @@ final class QuestionSessionSnapshots
             ->values()
             ->all();
         $liveQuestions = Question::query()
-            ->with(['options', 'topic'])
+            ->with(['options', 'topic', 'topics'])
             ->whereIn('id', $missingIds)
             ->get()
             ->keyBy(fn (Question $question): string => (string) $question->getKey());
@@ -131,7 +131,7 @@ final class QuestionSessionSnapshots
 
         if ($missing !== []) {
             $liveQuestions = Question::withTrashed()
-                ->with(['options', 'topic'])
+                ->with(['options', 'topic', 'topics'])
                 ->whereIn('id', $missing)
                 ->get()
                 ->keyBy(fn (Question $question): string => (string) $question->getKey());
@@ -153,6 +153,7 @@ final class QuestionSessionSnapshots
     private function payload(Question $question, string $sessionKey): array
     {
         $topic = $question->topic;
+        $topics = $question->topics;
         $options = $question->optionsForSession($sessionKey);
 
         return [
@@ -165,6 +166,7 @@ final class QuestionSessionSnapshots
             'difficulty' => $question->difficulty->value,
             'status' => $question->status->value,
             'topic_id' => $question->topic_id,
+            'topic_ids' => $topics->pluck('id')->map(fn ($id): int => (int) $id)->values()->all(),
             'is_free' => (bool) $question->is_free,
             'version' => (int) $question->version,
             'topic' => $topic instanceof Topic ? [
@@ -173,6 +175,12 @@ final class QuestionSessionSnapshots
                 'slug' => (string) $topic->slug,
                 'type' => (string) $topic->type,
             ] : null,
+            'topics' => $topics->map(fn (Topic $topic): array => [
+                'id' => (int) $topic->getKey(),
+                'name' => (string) $topic->name,
+                'slug' => (string) $topic->slug,
+                'type' => (string) $topic->type,
+            ])->values()->all(),
             'options' => $options->map(fn (QuestionOption $option): array => [
                 'id' => (int) $option->getKey(),
                 'question_id' => (string) $question->getKey(),
@@ -219,6 +227,17 @@ final class QuestionSessionSnapshots
         } else {
             $question->setRelation('topic', null);
         }
+
+        $topicsData = $payload['topics'] ?? null;
+        if (! is_array($topicsData)) {
+            $topicsData = is_array($topicData) ? [$topicData] : [];
+        }
+        $question->setRelation('topics', collect($topicsData)->map(function (array $data): Topic {
+            $topic = new Topic;
+            $topic->forceFill($data);
+
+            return $topic;
+        })->values());
 
         return $question;
     }

@@ -10,6 +10,9 @@ use App\Support\Enums\Permission;
 use App\Support\Html\SafeHtml;
 use Illuminate\Validation\ValidationException;
 use Modules\Admin\Support\Auditor;
+use Modules\Admin\Support\QuestionAccess;
+use Modules\QuestionBank\Enums\QuestionReviewAction;
+use Modules\QuestionBank\Enums\QuestionReviewStatus;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
 
@@ -19,6 +22,10 @@ use Modules\QuestionBank\Models\Question;
 final class TransitionQuestionStatusAction
 {
     use AsAction;
+
+    public function __construct(
+        private readonly CaptureQuestionVersionAction $captureVersion,
+    ) {}
 
     public function handle(User $actor, Question $question, QuestionStatus $to): Question
     {
@@ -32,10 +39,25 @@ final class TransitionQuestionStatusAction
         $this->assertReadyForStatus($question, $to);
 
         $before = ['status' => $from->value];
+        $this->captureVersion->handle($question, null, 'baseline');
         $question->forceFill([
             'status' => $to,
             'version' => $question->version + 1,
         ])->save();
+
+        if ($to === QuestionStatus::Published && QuestionAccess::isReviewer($actor)) {
+            $question->reviewRequests()
+                ->where('status', QuestionReviewStatus::Pending->value)
+                ->where('action', QuestionReviewAction::Create->value)
+                ->update([
+                    'status' => QuestionReviewStatus::Approved->value,
+                    'reviewed_by' => $actor->getKey(),
+                    'reviewed_at' => now(),
+                    'updated_at' => now(),
+                ]);
+        }
+        $question->load(['options' => fn ($query) => $query->orderBy('order'), 'topics:id']);
+        $this->captureVersion->handle($question, $actor, 'status');
 
         Auditor::record(
             'admin.question.status_change',
@@ -93,7 +115,7 @@ final class TransitionQuestionStatusAction
             ]);
         }
 
-        if ($question->topic_id === null) {
+        if (! $question->topics()->exists()) {
             throw ValidationException::withMessages([
                 'status' => 'Cần chọn chủ đề.',
             ]);

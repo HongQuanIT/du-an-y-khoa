@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Modules\Personalization\Models\Bookmark;
+use Modules\Personalization\Models\BookmarkFolderItem;
 use Modules\QuestionBank\Data\CreateSessionData;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionScopeType;
@@ -134,7 +135,13 @@ final class SessionQuestionSelector
             ->select('id')
             ->where('status', QuestionStatus::Published)
             ->when(! $canUsePremium, fn ($query) => $query->where('is_free', true))
-            ->when($expandedTopicIds !== [], fn ($query) => $query->whereIn('topic_id', $expandedTopicIds));
+            ->when(
+                $expandedTopicIds !== [],
+                fn ($query) => $query->whereHas(
+                    'topics',
+                    fn (Builder $topics) => $topics->whereIn('topics.id', $expandedTopicIds),
+                ),
+            );
 
         $incorrect = UserQuestionStatusModel::query()
             ->where('user_id', $userId)
@@ -168,15 +175,14 @@ final class SessionQuestionSelector
     private function weakTopicIds(int $userId): array
     {
         return DB::table('question_attempts')
-            ->join('questions', 'questions.id', '=', 'question_attempts.question_id')
+            ->join('question_topic', 'question_topic.question_id', '=', 'question_attempts.question_id')
             ->where('question_attempts.user_id', $userId)
             ->whereNotNull('question_attempts.is_correct')
-            ->whereNotNull('questions.topic_id')
-            ->groupBy('questions.topic_id')
+            ->groupBy('question_topic.topic_id')
             ->havingRaw('COUNT(*) >= 3')
             ->orderByRaw('AVG(CASE WHEN question_attempts.is_correct = 1 THEN 1.0 ELSE 0.0 END)')
             ->limit(5)
-            ->pluck('questions.topic_id')
+            ->pluck('question_topic.topic_id')
             ->map(fn ($id) => (int) $id)
             ->all();
     }
@@ -274,7 +280,13 @@ final class SessionQuestionSelector
         $query = Question::query()
             ->where('status', QuestionStatus::Published)
             ->when(! $canUsePremium, fn ($query) => $query->where('is_free', true))
-            ->when($topicIds !== [], fn ($query) => $query->whereIn('topic_id', $topicIds))
+            ->when(
+                $topicIds !== [],
+                fn ($query) => $query->whereHas(
+                    'topics',
+                    fn (Builder $topics) => $topics->whereIn('topics.id', $topicIds),
+                ),
+            )
             ->when($exclude !== [], fn ($query) => $query->whereNotIn('id', $exclude))
             ->when($eligible !== null, fn ($query) => $query->whereIn('id', $eligible))
             ->when($difficulties !== [], fn ($query) => $query->whereIn('difficulty', $difficulties));
@@ -285,7 +297,7 @@ final class SessionQuestionSelector
 
         // Apply saved-only or specific folder filtering
         if ($data->folderId !== null && $userId !== null) {
-            $itemQuestionIds = \Modules\Personalization\Models\BookmarkFolderItem::query()
+            $itemQuestionIds = BookmarkFolderItem::query()
                 ->where('folder_id', $data->folderId)
                 ->pluck('question_id')
                 ->map(fn ($id) => (string) $id)

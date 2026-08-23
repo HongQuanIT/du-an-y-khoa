@@ -8,6 +8,8 @@ use App\Models\SupportConversation;
 use App\Models\User;
 use App\Support\Enums\Permission;
 use Illuminate\Support\Facades\Route;
+use Modules\QuestionBank\Enums\QuestionReviewStatus;
+use Modules\QuestionBank\Models\QuestionReviewRequest;
 
 /**
  * Admin sidebar items filtered by permission (and optional route readiness).
@@ -46,6 +48,13 @@ final class AdminMenu
                 'route' => 'admin.questions.index',
                 'permission' => Permission::QuestionView->value,
                 'match' => 'admin.questions.*',
+            ],
+            [
+                'label' => 'Chủ đề',
+                'icon' => 'account_tree',
+                'route' => 'admin.topics.index',
+                'permission' => Permission::TopicView->value,
+                'match' => 'admin.topics.*',
             ],
             [
                 'label' => 'Kỳ thi',
@@ -142,9 +151,13 @@ final class AdminMenu
                 'permission' => $item['permission'],
                 'match' => $item['match'],
                 'coming_soon' => ! $routeReady && $item['route'] !== 'admin.dashboard',
-                'badge' => $item['route'] === 'admin.support.index' && $user->can(Permission::SystemManage->value)
-                    ? SupportConversation::pendingAdminAttentionCountFor($user)
-                    : 0,
+                'badge' => match (true) {
+                    $item['route'] === 'admin.support.index' && $user->can(Permission::SystemManage->value) => SupportConversation::pendingAdminAttentionCountFor($user),
+                    $item['route'] === 'admin.questions.index' && QuestionAccess::isReviewer($user) => QuestionReviewRequest::query()
+                        ->where('status', QuestionReviewStatus::Pending->value)
+                        ->count(),
+                    default => 0,
+                },
             ];
         }
 

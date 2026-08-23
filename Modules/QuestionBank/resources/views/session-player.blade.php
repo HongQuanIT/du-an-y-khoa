@@ -253,7 +253,7 @@
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div class="flex items-center gap-2">
                         <span class="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
-                            {{ $question->topic?->name ?? 'Tổng hợp' }}
+                            {{ $question->topics->pluck('name')->join(', ') ?: ($question->topic?->name ?? 'Tổng hợp') }}
                         </span>
                         <span class="rounded-full bg-surface-container-high px-3 py-1 text-xs font-semibold text-on-surface-variant">
                             {{ $difficultyLabel }}

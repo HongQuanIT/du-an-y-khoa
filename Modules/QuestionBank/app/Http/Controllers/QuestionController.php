@@ -30,6 +30,7 @@ final class QuestionController extends Controller
     public function show(Question $question): JsonResponse
     {
         $this->authorize('view', $question);
+        $question->loadMissing('topics:id');
 
         return ApiResponse::item(new QuestionResource($question));
     }

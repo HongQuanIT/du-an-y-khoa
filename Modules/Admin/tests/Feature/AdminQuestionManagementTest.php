@@ -9,15 +9,19 @@ use App\Support\Auth\TwoFactorSession;
 use App\Support\Enums\Role;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Modules\Auth\Models\TwoFactorSecret;
 use Modules\Auth\Services\TotpService;
 use Modules\QuestionBank\Enums\Difficulty;
+use Modules\QuestionBank\Enums\QuestionReviewAction;
+use Modules\QuestionBank\Enums\QuestionReviewStatus;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
+use Modules\QuestionBank\Models\QuestionReviewRequest;
+use Modules\QuestionBank\Models\QuestionVersion;
 use Modules\QuestionBank\Models\Topic;
 use Tests\TestCase;
 
@@ -53,15 +57,258 @@ final class AdminQuestionManagementTest extends TestCase
         $response->assertRedirect(route('admin.questions.edit', $question));
 
         $this->assertSame(QuestionStatus::Draft, $question->status);
+        $this->assertSame($editor->id, $question->created_by);
+        $this->assertDatabaseHas('question_review_requests', [
+            'question_id' => $question->id,
+            'action' => QuestionReviewAction::Create->value,
+            'status' => QuestionReviewStatus::Pending->value,
+            'requested_by' => $editor->id,
+        ]);
         $this->assertCount(4, $question->options);
         $this->assertSame(1, $question->options()->where('is_correct', true)->count());
         $this->assertDatabaseHas('audit_logs', ['action' => 'admin.question.create']);
     }
 
+    public function test_editor_can_assign_multiple_topics_to_question(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+        $secondaryTopic = Topic::query()->create([
+            'name' => 'Chẩn đoán hình ảnh',
+            'slug' => 'chan-doan-hinh-anh-admin-test',
+            'type' => 'specialty',
+            'order' => 2,
+        ]);
+
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.store'), array_merge($this->payload(), [
+                'topic_ids' => [$this->topic->id, $secondaryTopic->id],
+            ]))
+            ->assertRedirect();
+
+        $question = Question::query()->firstOrFail();
+
+        $this->assertSame($this->topic->id, $question->topic_id);
+        $this->assertEqualsCanonicalizing(
+            [$this->topic->id, $secondaryTopic->id],
+            $question->topics()->pluck('topics.id')->all(),
+        );
+
+        $this->actingAsStaff($editor)
+            ->get(route('admin.questions.index', ['topic_id' => $secondaryTopic->id]))
+            ->assertOk()
+            ->assertSee('Bệnh nhân 55 tuổi đau ngực', false)
+            ->assertSee('Chẩn đoán hình ảnh');
+
+        $this->actingAsStaff($editor)
+            ->put(route('admin.questions.update', $question), array_merge($this->payload(), [
+                'topic_ids' => [$secondaryTopic->id],
+            ]))
+            ->assertRedirect();
+
+        $question->refresh();
+        $this->assertSame($secondaryTopic->id, $question->topic_id);
+        $this->assertSame(
+            [$secondaryTopic->id],
+            $question->topics()->pluck('topics.id')->all(),
+        );
+    }
+
+    public function test_question_form_and_admin_review_show_all_explanation_fields(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+        $admin = $this->staffUser(Role::Admin);
+
+        $this->actingAsStaff($editor)
+            ->get(route('admin.questions.create'))
+            ->assertOk()
+            ->assertSee('name="explanation"', false)
+            ->assertSee('Giải thích chung')
+            ->assertSee('Kiến thức / Gợi ý')
+            ->assertDontSee('Ý chính cần gạch chân');
+
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.store'), $this->payload())
+            ->assertRedirect();
+
+        $reviewRequest = QuestionReviewRequest::query()->firstOrFail();
+
+        $this->actingAsStaff($admin)
+            ->get(route('admin.questions.reviews.show', $reviewRequest))
+            ->assertOk()
+            ->assertSee('Giải thích lâm sàng đầy đủ.')
+            ->assertSee('Nhớ ECG sớm.')
+            ->assertSee('đau ngực')
+            ->assertSee('Giải thích:')
+            ->assertSee('Đúng');
+    }
+
+    public function test_question_form_keeps_entered_options_after_validation_error(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+
+        $payload = array_merge($this->payload(), [
+            'topic_ids' => [],
+            'options' => [
+                ['content' => 'Option typed A', 'is_correct' => '0', 'explanation' => 'Explanation typed A'],
+                ['content' => 'Option typed B', 'is_correct' => '1', 'explanation' => 'Explanation typed B'],
+                ['content' => 'Option typed C', 'is_correct' => '0'],
+            ],
+        ]);
+
+        $this->actingAsStaff($editor)
+            ->from(route('admin.questions.create'))
+            ->post(route('admin.questions.store'), $payload)
+            ->assertRedirect(route('admin.questions.create'))
+            ->assertSessionHasErrors('topic_ids');
+
+        $this->actingAsStaff($editor)
+            ->get(route('admin.questions.create'))
+            ->assertOk()
+            ->assertSee('Option typed A')
+            ->assertSee('Option typed B')
+            ->assertSee('Option typed C')
+            ->assertSee('Explanation typed A')
+            ->assertSee('Explanation typed B');
+    }
+
+    public function test_admin_can_approve_legacy_question_using_correct_option_explanation(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+        $admin = $this->staffUser(Role::Admin);
+        $payload = $this->payload();
+        unset($payload['explanation']);
+
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.store'), $payload)
+            ->assertRedirect();
+
+        $question = Question::query()->firstOrFail();
+        $this->assertSame('Đúng', strip_tags((string) $question->explanation));
+
+        // Simulate a request created before the general-explanation field existed.
+        $question->forceFill(['explanation' => null])->save();
+        $reviewRequest = QuestionReviewRequest::query()->firstOrFail();
+
+        $this->actingAsStaff($admin)
+            ->post(route('admin.questions.reviews.approve', $reviewRequest))
+            ->assertRedirect(route('admin.questions.edit', $question));
+
+        $question->refresh();
+        $this->assertSame(QuestionStatus::Published, $question->status);
+        $this->assertSame('Đúng', strip_tags((string) $question->explanation));
+    }
+
+    public function test_editor_version_history_shows_full_content_without_admin_approval_version(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+        $admin = $this->staffUser(Role::Admin);
+
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.store'), array_merge($this->payload(), [
+                'stem_image_path' => 'questions/stem-version.png',
+            ]))
+            ->assertRedirect();
+
+        $question = Question::query()->firstOrFail();
+        $reviewRequest = QuestionReviewRequest::query()->firstOrFail();
+
+        $this->actingAsStaff($admin)
+            ->post(route('admin.questions.reviews.approve', $reviewRequest))
+            ->assertRedirect(route('admin.questions.edit', $question));
+
+        $question->refresh();
+        $this->assertSame(2, $question->version);
+        $this->assertDatabaseHas('question_versions', [
+            'question_id' => $question->id,
+            'version' => 2,
+            'event' => 'status',
+        ]);
+
+        $this->actingAsStaff($editor)
+            ->get(route('admin.questions.versions.index', $question))
+            ->assertOk()
+            ->assertSee('Hiện tại: phiên bản 1')
+            ->assertSee('Hình ảnh')
+            ->assertSee('/storage/questions/stem-version.png')
+            ->assertSee('Giải thích lâm sàng đầy đủ.')
+            ->assertSee('Kiến thức / Gợi ý')
+            ->assertSee('Nhớ ECG sớm.')
+            ->assertSee('Đáp án đúng')
+            ->assertSee('Giải thích đáp án:')
+            ->assertSee('Đúng')
+            ->assertDontSee('Phiên bản 2')
+            ->assertDontSee('Đổi trạng thái');
+    }
+
+    public function test_editor_can_view_history_and_restore_an_old_question_version(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.store'), $this->payload())
+            ->assertRedirect();
+
+        $question = Question::query()->firstOrFail();
+        $originalVersion = $question->version;
+        $this->assertDatabaseHas('question_versions', [
+            'question_id' => $question->id,
+            'version' => $originalVersion,
+            'event' => 'save',
+        ]);
+
+        $this->actingAsStaff($editor)
+            ->put(route('admin.questions.update', $question), array_merge($this->payload(), [
+                'stem' => 'Nội dung đã chỉnh sửa ở phiên bản mới.',
+                'options' => [
+                    ['content' => 'Đáp án mới đúng', 'is_correct' => '1'],
+                    ['content' => 'Đáp án mới sai', 'is_correct' => '0'],
+                ],
+            ]))
+            ->assertRedirect();
+
+        $question->refresh();
+        $this->assertSame($originalVersion + 1, $question->version);
+
+        $this->actingAsStaff($editor)
+            ->get(route('admin.questions.versions.index', $question))
+            ->assertOk()
+            ->assertSee("Phiên bản {$originalVersion}")
+            ->assertSee("Phiên bản {$question->version}")
+            ->assertSee('Khôi phục');
+
+        $oldVersion = QuestionVersion::query()
+            ->where('question_id', $question->id)
+            ->where('version', $originalVersion)
+            ->firstOrFail();
+
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.versions.restore', [$question, $oldVersion]))
+            ->assertRedirect(route('admin.questions.edit', $question));
+
+        $restored = $question->fresh(['options', 'topics']);
+        $this->assertSame($originalVersion + 2, $restored->version);
+        $this->assertSame(QuestionStatus::Draft, $restored->status);
+        $this->assertSame(
+            'Bệnh nhân 55 tuổi đau ngực. Chẩn đoán nào phù hợp nhất?',
+            strip_tags($restored->stem),
+        );
+        $this->assertCount(4, $restored->options);
+        $this->assertDatabaseHas('question_versions', [
+            'question_id' => $question->id,
+            'version' => $restored->version,
+            'event' => 'restore',
+            'restored_from_version' => $originalVersion,
+        ]);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'admin.question.version_restore',
+            'auditable_id' => $question->id,
+        ]);
+    }
+
     public function test_editor_can_submit_for_review_but_cannot_publish(): void
     {
         $editor = $this->staffUser(Role::ContentEditor);
-        $question = $this->makeDraftQuestion();
+        $question = $this->makeDraftQuestion($editor);
 
         $this->actingAsStaff($editor)
             ->post(route('admin.questions.transition', $question), [
@@ -91,6 +338,77 @@ final class AdminQuestionManagementTest extends TestCase
 
         $this->assertSame(QuestionStatus::Published, $question->fresh()->status);
         $this->assertDatabaseHas('audit_logs', ['action' => 'admin.question.status_change']);
+    }
+
+    public function test_content_creator_only_sees_and_opens_own_questions(): void
+    {
+        $creatorA = $this->staffUser(Role::ContentEditor);
+        $creatorB = $this->staffUser(Role::ContentEditor);
+        $ownQuestion = $this->makePublishedQuestion(createdBy: $creatorA);
+        $foreignQuestion = $this->makePublishedQuestion(createdBy: $creatorB, stem: 'Câu hỏi bí mật của creator B');
+
+        $this->actingAsStaff($creatorA)
+            ->get(route('admin.questions.index'))
+            ->assertOk()
+            ->assertSee(strip_tags($ownQuestion->stem), false)
+            ->assertDontSee('Câu hỏi bí mật của creator B', false);
+
+        $this->actingAsStaff($creatorA)
+            ->get(route('admin.questions.edit', $foreignQuestion))
+            ->assertNotFound();
+
+        $admin = $this->staffUser(Role::Admin);
+        $this->actingAsStaff($admin)
+            ->get(route('admin.questions.index'))
+            ->assertOk()
+            ->assertSee('Câu hỏi bí mật của creator B', false);
+    }
+
+    public function test_creator_update_is_not_applied_until_admin_approves(): void
+    {
+        $creator = $this->staffUser(Role::ContentEditor);
+        $admin = $this->staffUser(Role::Admin);
+        $question = $this->makePublishedQuestion(createdBy: $creator);
+        $originalStem = strip_tags($question->stem);
+
+        $this->actingAsStaff($creator)
+            ->put(route('admin.questions.update', $question), array_merge($this->payload(), [
+                'stem' => 'Nội dung mới phải chờ admin duyệt.',
+            ]))
+            ->assertRedirect();
+
+        $this->assertSame($originalStem, strip_tags($question->fresh()->stem));
+        $reviewRequest = QuestionReviewRequest::query()->where('question_id', $question->id)->firstOrFail();
+        $this->assertSame(QuestionReviewAction::Update, $reviewRequest->action);
+        $this->assertSame(QuestionReviewStatus::Pending, $reviewRequest->status);
+
+        $this->actingAsStaff($admin)
+            ->post(route('admin.questions.reviews.approve', $reviewRequest))
+            ->assertRedirect(route('admin.questions.edit', $question));
+
+        $this->assertSame('Nội dung mới phải chờ admin duyệt.', strip_tags($question->fresh()->stem));
+        $this->assertSame(QuestionReviewStatus::Approved, $reviewRequest->fresh()->status);
+    }
+
+    public function test_creator_delete_is_soft_deleted_only_after_admin_approves(): void
+    {
+        $creator = $this->staffUser(Role::ContentEditor);
+        $admin = $this->staffUser(Role::Admin);
+        $question = $this->makePublishedQuestion(createdBy: $creator);
+
+        $this->actingAsStaff($creator)
+            ->delete(route('admin.questions.destroy', $question))
+            ->assertRedirect(route('admin.questions.index'));
+
+        $this->assertNotSoftDeleted('questions', ['id' => $question->id]);
+        $reviewRequest = QuestionReviewRequest::query()->where('question_id', $question->id)->firstOrFail();
+        $this->assertSame(QuestionReviewAction::Delete, $reviewRequest->action);
+
+        $this->actingAsStaff($admin)
+            ->post(route('admin.questions.reviews.approve', $reviewRequest))
+            ->assertRedirect(route('admin.questions.index'));
+
+        $this->assertSoftDeleted('questions', ['id' => $question->id]);
     }
 
     public function test_questions_index_filters_by_status(): void
@@ -125,7 +443,7 @@ final class AdminQuestionManagementTest extends TestCase
             ])
             ->assertRedirect();
 
-        $published = $question->fresh(['options', 'topic']);
+        $published = $question->fresh(['options', 'topic', 'topics']);
         $this->assertSame(QuestionStatus::Published, $published->status);
         $this->assertSame('Bệnh nhân 55 tuổi đau ngực. Chẩn đoán nào phù hợp nhất?', strip_tags($published->stem));
         $this->assertSame(['đau ngực', 'Chẩn đoán nào phù hợp nhất?'], array_values(array_map('strip_tags', $published->key_info ?? [])));
@@ -133,6 +451,7 @@ final class AdminQuestionManagementTest extends TestCase
         $this->assertSame('Nhớ ECG sớm.', strip_tags($published->attending_tip));
         $this->assertSame(Difficulty::Medium, $published->difficulty);
         $this->assertSame($this->topic->id, $published->topic_id);
+        $this->assertSame([$this->topic->id], $published->topics->pluck('id')->all());
         $this->assertTrue($published->is_free);
 
         $this->actingAs($student)
@@ -231,7 +550,7 @@ final class AdminQuestionManagementTest extends TestCase
             'explanation' => 'Giải thích lâm sàng đầy đủ.',
             'attending_tip' => 'Nhớ ECG sớm.',
             'difficulty' => Difficulty::Medium->value,
-            'topic_id' => $this->topic->id,
+            'topic_ids' => [$this->topic->id],
             'is_free' => '1',
             'options' => [
                 ['content' => 'ACS', 'is_correct' => '1', 'explanation' => 'Đúng'],
@@ -242,13 +561,14 @@ final class AdminQuestionManagementTest extends TestCase
         ];
     }
 
-    private function makeDraftQuestion(): Question
+    private function makeDraftQuestion(?User $createdBy = null): Question
     {
         $question = Question::factory()->draft()->create([
             'topic_id' => $this->topic->id,
             'stem' => 'Stem draft test',
             'explanation' => 'Explanation draft',
             'difficulty' => Difficulty::Easy,
+            'created_by' => $createdBy?->id,
         ]);
 
         foreach (['A đúng', 'B', 'C', 'D'] as $i => $content) {
@@ -263,17 +583,21 @@ final class AdminQuestionManagementTest extends TestCase
         return $question->fresh(['options']);
     }
 
-    private function makePublishedQuestion(bool $isFree = true): Question
-    {
+    private function makePublishedQuestion(
+        bool $isFree = true,
+        ?User $createdBy = null,
+        string $stem = 'Bệnh nhân 55 tuổi đau ngực. Chẩn đoán nào phù hợp nhất?',
+    ): Question {
         $question = Question::factory()->create([
             'topic_id' => $this->topic->id,
-            'stem' => 'Bệnh nhân 55 tuổi đau ngực. Chẩn đoán nào phù hợp nhất?',
+            'stem' => $stem,
             'key_info' => ['đau ngực', 'Chẩn đoán nào phù hợp nhất?'],
             'explanation' => 'Giải thích lâm sàng đầy đủ.',
             'attending_tip' => 'Nhớ ECG sớm.',
             'difficulty' => Difficulty::Medium,
             'status' => QuestionStatus::Published,
             'is_free' => $isFree,
+            'created_by' => $createdBy?->id,
         ]);
 
         foreach ([

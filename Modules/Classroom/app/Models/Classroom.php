@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Classroom\Models;
 
 use App\Models\User;
+use App\Support\Enums\Permission;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -164,6 +165,13 @@ class Classroom extends Model
         $member = $this->memberFor($user);
 
         return $member !== null && $member->status === MemberStatus::Active;
+    }
+
+    /** Members or classroom overseers (admin) may sit in the live room. */
+    public function canWatchLive(User $user): bool
+    {
+        return $this->isActiveMember($user)
+            || $user->can(Permission::ClassroomOversee->value);
     }
 
     public function roleFor(User $user): ?MemberRole
