@@ -39,7 +39,7 @@ final class ProfileController extends Controller
 
     public function show(Request $request): View
     {
-        $user = $request->user();
+        $user = User::query()->findOrFail($request->user()->getKey());
         $tab = $this->normalizeTab((string) $request->query('tab', 'career'), $user);
 
         $storedPrefs = array_key_exists('notification_prefs', $user->getAttributes())

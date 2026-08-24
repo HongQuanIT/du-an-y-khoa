@@ -18,7 +18,7 @@ final class ListWeakTopicsAction
     use AsAction;
 
     /**
-     * @return Collection<int, array{id: int, name: string, accuracy: int, incorrect: int}>
+     * @return Collection<int, array{id: int, name: string, accuracy: int, attempts: int, incorrect: int, practice_url: string}>
      */
     public function handle(User $user, int $limit = 3): Collection
     {
@@ -57,7 +57,12 @@ final class ListWeakTopicsAction
                 'id' => (int) $mastery->medical_taxonomy_node_id,
                 'name' => $mastery->medicalTaxonomyNode?->name ?? 'Không rõ',
                 'accuracy' => (int) round($mastery->correct_rate),
+                'attempts' => (int) $mastery->attempts,
                 'incorrect' => (int) $mastery->getAttribute('unresolved_incorrect'),
+                'practice_url' => route('qbank.create', [
+                    'source' => 'weak_topics',
+                    'medical_taxonomy_node_ids' => [$mastery->medical_taxonomy_node_id],
+                ]),
             ]);
     }
 }

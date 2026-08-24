@@ -7,6 +7,7 @@ namespace Modules\Analytics\Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Modules\QuestionBank\Enums\SessionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
@@ -21,6 +22,7 @@ final class DashboardLearningProgressTest extends TestCase
     {
         parent::setUp();
 
+        Cache::flush();
         Carbon::setTestNow('2026-08-25 12:00:00');
     }
 

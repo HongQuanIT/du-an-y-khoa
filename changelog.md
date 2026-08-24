@@ -32,8 +32,10 @@
 - Premium: thẻ trạng thái Premium (icon + Active + hạn/SKU), không hiện CTA nâng cấp.
 ### Hoàn thiện dashboard học viên
 - Thay số liệu, biểu đồ tiến trình, streak và hoạt động gần đây tĩnh bằng dữ liệu phiên học thực tế.
+- Thêm daily learning rollup, backfill dữ liệu cũ, cache ngắn hạn và tự cập nhật khi hoàn thành phiên.
 - Xác định chủ đề cần cải thiện từ câu trả lời sai và mở thẳng phiên luyện tập các câu tương ứng.
 - Hỗ trợ làm lại câu sai từ chế độ học và bài thi, đồng thời loại câu đã luyện xong khỏi danh sách cải thiện.
+- Đồng bộ gợi ý, trạng thái Premium, layout tài khoản và `noindex` cho khu vực cá nhân.
 
 ### Tối ưu lưu trữ Audit và theo dõi hoạt động
 - Bổ sung thiết bị, hệ điều hành và trình duyệt; bộ lọc người thực hiện hỗ trợ tên hoặc ID.

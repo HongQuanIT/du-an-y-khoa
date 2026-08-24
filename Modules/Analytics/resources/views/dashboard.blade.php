@@ -1,6 +1,4 @@
 @php
-    // Continue learning, today's tasks and weak topics come from the controller.
-    // Recommendations and activity feed are still placeholders from the HTML mockup.
     $hour = now()->hour;
     $greeting = match (true) {
         $hour < 11 => 'Chào buổi sáng',
@@ -11,18 +9,19 @@
 
     $firstName = Str::afterLast(auth()->user()->name, ' ');
 
-    $stats = [
-        ['icon' => 'fact_check', 'iconClass' => 'text-primary bg-primary-container/20', 'deltaClass' => 'text-primary', 'label' => 'Câu đã làm', ...$headlineStats['questions']],
-        ['icon' => 'analytics', 'iconClass' => 'text-secondary bg-secondary-fixed/20', 'deltaClass' => str_starts_with($headlineStats['accuracy']['delta'] ?? '', '-') ? 'text-error' : 'text-secondary', 'label' => 'Tỷ lệ đúng', ...$headlineStats['accuracy']],
-        ['icon' => 'schedule', 'iconClass' => 'text-tertiary bg-tertiary-fixed/20', 'deltaClass' => '', 'label' => 'Học tuần này', ...$headlineStats['weekly_time']],
-        ['icon' => 'local_fire_department', 'iconClass' => 'text-orange-500 bg-orange-100', 'deltaClass' => '', 'label' => 'Ngày Streak', ...$headlineStats['streak']],
-    ];
+    $formatDuration = function (int $minutes): string {
+        $hours = intdiv($minutes, 60);
+        $remainingMinutes = $minutes % 60;
 
-    $recommendations = [
-        ['topic' => 'Nội khoa', 'title' => 'Phân tích ECG nâng cao trong suy tim', 'duration' => '45m', 'rating' => '4.9', 'icon' => 'cardiology', 'pro' => true],
-        ['topic' => 'Ngoại khoa', 'title' => 'Kỹ thuật can thiệp mạch não tối thiểu', 'duration' => '1h 20m', 'rating' => '4.7', 'icon' => 'neurology', 'pro' => false],
-        ['topic' => 'Dược lý', 'title' => 'Cơ chế tác động của kháng sinh thế hệ mới', 'duration' => '30m', 'rating' => '4.8', 'icon' => 'medication', 'pro' => false],
-        ['topic' => 'Di truyền học', 'title' => 'Ứng dụng CRISPR trong điều trị ung thư', 'duration' => '55m', 'rating' => '5.0', 'icon' => 'genetics', 'pro' => true],
+        return $hours === 0
+            ? $minutes.' phút'
+            : ($remainingMinutes > 0 ? "{$hours}h {$remainingMinutes}m" : "{$hours}h");
+    };
+    $statCards = [
+        ['icon' => 'fact_check', 'iconClass' => 'text-primary bg-primary-container/20', 'delta' => $stats['questions_delta'], 'suffix' => '', 'value' => number_format($stats['questions_answered'], 0, ',', '.'), 'label' => 'Câu đã làm'],
+        ['icon' => 'analytics', 'iconClass' => 'text-secondary bg-secondary-fixed/20', 'delta' => $stats['correct_rate_delta'], 'suffix' => '%', 'value' => $stats['correct_rate'].'%', 'label' => 'Tỷ lệ đúng'],
+        ['icon' => 'schedule', 'iconClass' => 'text-tertiary bg-tertiary-fixed/20', 'delta' => null, 'suffix' => '', 'value' => $formatDuration($stats['study_minutes_this_week']), 'label' => 'Học tuần này'],
+        ['icon' => 'local_fire_department', 'iconClass' => 'text-orange-500 bg-orange-100', 'delta' => null, 'suffix' => '', 'value' => (string) $stats['streak_days'], 'label' => 'Ngày streak'],
     ];
 
 @endphp
@@ -49,7 +48,7 @@
                 class="flex items-center gap-2 rounded-full border border-tertiary-fixed-dim bg-tertiary-fixed px-4 py-2 shadow-sm">
                 <span class="material-symbols-outlined text-tertiary"
                     style="font-variation-settings: 'FILL' 1;">local_fire_department</span>
-                <span class="font-label-md text-label-md text-on-tertiary-fixed-variant">{{ $streakDays }} ngày học liên tục</span>
+                <span class="font-label-md text-label-md text-on-tertiary-fixed-variant">{{ $stats['streak_days'] }} ngày học liên tục</span>
             </div>
         </div>
 
@@ -97,14 +96,17 @@
 
             <!-- Stats Side Column -->
             <div class="col-span-12 grid grid-cols-2 gap-4 lg:col-span-4">
-                @foreach ($stats as $stat)
+                @foreach ($statCards as $stat)
                     <div class="flex flex-col justify-between rounded-xl border border-outline-variant bg-surface p-4">
                         <div class="flex items-start justify-between">
                             <span
                                 class="material-symbols-outlined rounded-lg p-2 {{ $stat['iconClass'] }}">{{ $stat['icon'] }}</span>
-                            @if ($stat['delta'])
-                                <span
-                                    class="text-label-sm font-bold {{ $stat['deltaClass'] }}">{{ $stat['delta'] }}</span>
+                            @if ($stat['delta'] !== null)
+                                <span @class([
+                                    'text-label-sm font-bold',
+                                    'text-primary' => $stat['delta'] >= 0,
+                                    'text-error' => $stat['delta'] < 0,
+                                ])>{{ $stat['delta'] > 0 ? '+' : '' }}{{ $stat['delta'] }}{{ $stat['suffix'] }}</span>
                             @endif
                         </div>
                         <div>
@@ -351,40 +353,31 @@
             <div class="col-span-12">
                 <div class="mb-4 flex items-center justify-between px-2">
                     <h3 class="font-headline-sm text-headline-sm text-on-surface">Gợi ý cho bạn</h3>
-                    <a href="#" class="flex items-center gap-1 text-body-sm font-semibold text-primary hover:underline">
+                    <a href="{{ route('qbank.create') }}" class="flex items-center gap-1 text-body-sm font-semibold text-primary hover:underline">
                         Xem tất cả
                         <span class="material-symbols-outlined text-body-sm">arrow_forward</span>
                     </a>
                 </div>
                 <div class="no-scrollbar -mx-2 flex gap-gutter overflow-x-auto px-2 pb-4">
-                    @foreach ($recommendations as $item)
-                        <div
+                    @forelse ($recommendations as $item)
+                        <a href="{{ $item['url'] }}"
                             class="group min-w-[280px] overflow-hidden rounded-xl border border-outline-variant bg-surface transition-all hover:shadow-lg">
                             <div class="relative flex h-32 items-center justify-center bg-surface-container">
                                 <span
                                     class="material-symbols-outlined text-6xl text-primary/30 transition-transform duration-500 group-hover:scale-110"
                                     style="font-variation-settings: 'FILL' 1;">{{ $item['icon'] }}</span>
-                                @if ($item['pro'])
-                                    <span
-                                        class="absolute top-2 right-2 rounded bg-primary px-2 py-1 text-label-sm font-bold text-white">PRO</span>
-                                @endif
                             </div>
                             <div class="space-y-2 p-4">
-                                <span class="text-label-sm font-bold text-primary uppercase">{{ $item['topic'] }}</span>
+                                <span class="text-label-sm font-bold text-primary uppercase">{{ $item['eyebrow'] }}</span>
                                 <h4 class="font-label-md text-label-md leading-tight">{{ $item['title'] }}</h4>
-                                <div class="flex items-center gap-3 text-label-sm text-on-surface-variant">
-                                    <span class="flex items-center gap-1">
-                                        <span class="material-symbols-outlined text-body-sm">schedule</span>
-                                        {{ $item['duration'] }}
-                                    </span>
-                                    <span class="flex items-center gap-1">
-                                        <span class="material-symbols-outlined text-body-sm">star</span>
-                                        {{ $item['rating'] }}
-                                    </span>
-                                </div>
+                                <p class="text-label-sm text-on-surface-variant">{{ $item['description'] }}</p>
                             </div>
+                        </a>
+                    @empty
+                        <div class="w-full rounded-lg bg-surface-container-low px-4 py-8 text-center text-on-surface-variant">
+                            Chưa có gợi ý phù hợp. Hãy hoàn thành thêm vài phiên luyện tập.
                         </div>
-                    @endforeach
+                    @endforelse
                 </div>
             </div>
 
@@ -396,8 +389,8 @@
                     @forelse ($recentActivities as $activity)
                         <div class="relative flex items-start justify-between pl-8">
                             <div
-                                class="absolute top-1.5 left-0 z-10 flex size-6 items-center justify-center rounded-full border-2 border-surface {{ $activity['circle'] }}">
-                                <span class="material-symbols-outlined text-label-sm {{ $activity['iconClass'] }}"
+                                class="absolute top-1.5 left-0 z-10 flex size-6 items-center justify-center rounded-full border-2 border-surface {{ $activity['tone'] === 'primary' ? 'bg-primary-container' : 'bg-secondary-fixed' }}">
+                                <span class="material-symbols-outlined text-label-sm {{ $activity['tone'] === 'primary' ? 'text-primary' : 'text-secondary' }}"
                                     style="font-variation-settings: 'FILL' 1;">{{ $activity['icon'] }}</span>
                             </div>
                             <div class="flex-1">
@@ -408,8 +401,7 @@
                                 <p class="text-label-sm font-label-sm text-on-surface-variant">
                                     {{ $activity['detail'] }}</p>
                             </div>
-                            <time datetime="{{ $activity['occurred_at'] }}"
-                                class="ml-4 text-label-sm whitespace-nowrap text-on-surface-variant">{{ $activity['time'] }}</time>
+                            <span class="ml-4 text-label-sm whitespace-nowrap text-on-surface-variant">{{ $activity['time'] }}</span>
                         </div>
                     @empty
                         <div class="pl-8 text-body-sm text-on-surface-variant">
@@ -419,22 +411,25 @@
                 </div>
             </div>
 
-            @php
-                $isFreePlan = (\Modules\Billing\Support\CurrentSubscription::for(auth()->user())['is_free'] ?? true);
-            @endphp
-            @if ($isFreePlan)
-                <!-- Premium Banner -->
+            @if (($dashboardSubscription['show_upgrade'] ?? false) || (\Modules\Billing\Support\CurrentSubscription::for(auth()->user())['is_free'] ?? true))
+                @php
+                    $isFreePlan = (\Modules\Billing\Support\CurrentSubscription::for(auth()->user())['is_free'] ?? true);
+                    $planName = $dashboardSubscription['plan_name'] ?? 'Premium';
+                    $features = $dashboardSubscription['features'] ?? ['Video giải phẫu 3D', 'Mentorship 1:1', 'Tài liệu offline'];
+                    $priceLabel = $dashboardSubscription['price_label'] ?? 'Chỉ từ gói tháng linh hoạt';
+                    $upgradeUrl = $dashboardSubscription['show_upgrade'] ?? false ? route('landing.pricing') : route('subscription.upgrade');
+                @endphp
                 <div
                     class="premium-gradient col-span-12 flex flex-col items-center justify-between gap-6 rounded-xl border border-white/20 p-8 text-white shadow-xl md:flex-row">
                     <div class="space-y-2 text-center md:text-left">
                         <h2 class="font-headline-lg text-headline-lg-mobile font-bold md:text-headline-lg">
-                            Nâng tầm kiến thức với Premium
+                            Nâng tầm kiến thức với {{ $isFreePlan ? 'Premium' : $planName }}
                         </h2>
                         <p class="text-body-md font-body-md opacity-90">
-                            Truy cập ngân hàng 10,000+ câu hỏi bản quyền và phân tích chuyên sâu AI.
+                            {{ $isFreePlan ? 'Truy cập ngân hàng 10,000+ câu hỏi bản quyền và phân tích chuyên sâu AI.' : 'Mở khóa toàn bộ nội dung và các công cụ học tập nâng cao.' }}
                         </p>
                         <div class="flex flex-wrap justify-center gap-4 pt-2 md:justify-start">
-                            @foreach (['Video giải phẫu 3D', 'Mentorship 1:1', 'Tài liệu offline'] as $perk)
+                            @foreach ($features as $perk)
                                 <span class="flex items-center gap-1 text-label-sm font-semibold">
                                     <span class="material-symbols-outlined text-body-sm">done_all</span>
                                     {{ $perk }}
@@ -443,13 +438,15 @@
                         </div>
                     </div>
                     <div class="flex min-w-[200px] flex-col gap-3">
-                        <a href="{{ route('subscription.upgrade') }}"
+                        <a href="{{ $upgradeUrl }}"
                             class="rounded-lg bg-white px-8 py-3 text-center font-bold text-[#FF5E62] shadow-lg transition-all hover:opacity-90 active:scale-95">
                             Nâng cấp Premium ngay
                         </a>
-                        <p class="text-center text-label-sm font-bold tracking-widest uppercase opacity-80">
-                            Chỉ từ gói tháng linh hoạt
-                        </p>
+                        @if ($priceLabel)
+                            <p class="text-center text-label-sm font-bold tracking-widest uppercase opacity-80">
+                                {{ $priceLabel }}
+                            </p>
+                        @endif
                     </div>
                 </div>
             @endif
