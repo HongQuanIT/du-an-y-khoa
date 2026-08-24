@@ -4,12 +4,15 @@
 
 @php
     $navItems = \Modules\Admin\Support\AdminMenu::for(auth()->user());
-    $supportBadgeCount = collect($navItems)->firstWhere('route', 'admin.support.index')['badge'] ?? 0;
     $canSupportInbox = auth()->user()?->can(\App\Support\Enums\Permission::SystemManage->value)
         && \Illuminate\Support\Facades\Route::has('admin.support.index');
+    $supportBadgeCount = $canSupportInbox
+        ? \App\Models\SupportConversation::pendingAdminAttentionCountFor(auth()->user())
+        : 0;
     $supportPendingIds = $canSupportInbox
         ? \App\Models\SupportConversation::pendingAdminAttentionIdsFor(auth()->user())
         : [];
+    $supportActive = request()->routeIs('admin.support.*');
 @endphp
 
 <!DOCTYPE html>
@@ -76,10 +79,7 @@
                         class="flex items-center gap-3 rounded-lg px-3 py-2.5 font-label-md text-label-md transition-colors {{ $active ? 'bg-primary-container text-on-primary-container' : 'text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface' }}">
                         <span class="material-symbols-outlined text-[22px] leading-none">{{ $item['icon'] }}</span>
                         <span class="flex-1">{{ $item['label'] }}</span>
-                        @if ($item['route'] === 'admin.support.index')
-                            <span data-support-menu-badge
-                                class="min-w-5 items-center justify-center rounded-full bg-error px-1.5 py-0.5 text-[11px] font-bold leading-none text-white {{ $supportBadgeCount > 0 ? 'inline-flex' : 'hidden' }}">@if ($supportBadgeCount > 0){{ $supportBadgeCount > 99 ? '99+' : $supportBadgeCount }}@endif</span>
-                        @elseif (($item['badge'] ?? 0) > 0)
+                        @if (($item['badge'] ?? 0) > 0)
                             <span class="inline-flex min-w-5 items-center justify-center rounded-full bg-error px-1.5 py-0.5 text-[11px] font-bold leading-none text-white">{{ ($item['badge'] ?? 0) > 99 ? '99+' : $item['badge'] }}</span>
                         @endif
                     </a>
@@ -127,10 +127,7 @@
                         class="flex items-center gap-3 rounded-lg px-3 py-2.5 font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-low">
                         <span class="material-symbols-outlined text-[22px] leading-none">{{ $item['icon'] }}</span>
                         <span class="flex-1">{{ $item['label'] }}</span>
-                        @if ($item['route'] === 'admin.support.index')
-                            <span data-support-menu-badge
-                                class="min-w-5 items-center justify-center rounded-full bg-error px-1.5 py-0.5 text-[11px] font-bold leading-none text-white {{ $supportBadgeCount > 0 ? 'inline-flex' : 'hidden' }}">@if ($supportBadgeCount > 0){{ $supportBadgeCount > 99 ? '99+' : $supportBadgeCount }}@endif</span>
-                        @elseif (($item['badge'] ?? 0) > 0)
+                        @if (($item['badge'] ?? 0) > 0)
                             <span class="inline-flex min-w-5 items-center justify-center rounded-full bg-error px-1.5 py-0.5 text-[11px] font-bold leading-none text-white">{{ ($item['badge'] ?? 0) > 99 ? '99+' : $item['badge'] }}</span>
                         @endif
                     </a>
@@ -150,6 +147,16 @@
             <h1 class="truncate font-headline-sm text-headline-sm text-on-surface">{{ $title ?? 'Tổng quan' }}</h1>
         </div>
         <div class="ml-2 flex shrink-0 items-center gap-3">
+            @if ($canSupportInbox)
+                <a href="{{ route('admin.support.index') }}"
+                    title="Hỗ trợ chat"
+                    aria-label="Hỗ trợ chat"
+                    class="group relative inline-flex size-10 cursor-pointer items-center justify-center rounded-full transition-colors hover:bg-surface-container {{ $supportActive ? 'bg-surface-container' : '' }}">
+                    <span class="material-symbols-outlined text-[24px] leading-none {{ $supportActive ? 'text-primary' : 'text-on-surface-variant group-hover:text-primary' }}">support_agent</span>
+                    <span data-support-menu-badge
+                        class="absolute top-1 right-1 min-w-4 items-center justify-center rounded-full bg-error px-1 text-[10px] font-bold leading-4 text-white {{ $supportBadgeCount > 0 ? 'inline-flex' : 'hidden' }}">@if ($supportBadgeCount > 0){{ $supportBadgeCount > 99 ? '99+' : $supportBadgeCount }}@endif</span>
+                </a>
+            @endif
             @include('notification::partials.bell', ['indexRoute' => 'admin.notifications.index'])
             <div class="relative" @click.outside="accountMenu = false">
                 <button type="button" @click="accountMenu = !accountMenu; notificationsOpen = false"

@@ -13,7 +13,7 @@
     @click.outside="notificationsOpen = false">
     <button type="button"
         @click="notificationsOpen = !notificationsOpen; {{ $closeAccountMenu ? 'accountMenu = false;' : '' }}"
-        class="group relative cursor-pointer rounded-full p-2 transition-colors hover:bg-surface-container"
+        class="group relative inline-flex size-10 cursor-pointer items-center justify-center rounded-full transition-colors hover:bg-surface-container"
         :aria-expanded="notificationsOpen" aria-label="Thông báo">
         <span
             class="material-symbols-outlined text-[24px] leading-none text-on-surface-variant group-hover:text-primary">notifications</span>

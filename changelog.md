@@ -2,6 +2,10 @@
 
 ## 2026-08-24
 
+### Admin — Hỗ trợ chat trên header
+- Chuyển mục Hỗ trợ chat từ sidebar sang icon trên header (cạnh chuông thông báo), tooltip “Hỗ trợ chat”.
+- Đồng bộ kích thước và hover tròn giữa icon hỗ trợ và chuông thông báo (`size-10`).
+
 ### Admin — cấu hình cổng thanh toán
 - Trang `/admin/billing/gateways`: bật/tắt, credential VNPay/Fake, lưu sẵn MoMo & ZaloPay (Phase 2).
 - Settings DB override env; secret field giữ giá trị cũ khi để trống; checkout chỉ dùng cổng “sẵn sàng”.

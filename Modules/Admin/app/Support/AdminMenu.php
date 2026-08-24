@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Admin\Support;
 
-use App\Models\SupportConversation;
 use App\Models\User;
 use App\Support\Enums\Permission;
 use Illuminate\Support\Facades\Route;
@@ -146,13 +145,6 @@ final class AdminMenu
                 'match' => 'admin.notifications.*',
             ],
             [
-                'label' => 'Hỗ trợ chat',
-                'icon' => 'support_agent',
-                'route' => 'admin.support.index',
-                'permission' => Permission::SystemManage->value,
-                'match' => 'admin.support.*',
-            ],
-            [
                 'label' => 'Cài đặt',
                 'icon' => 'settings',
                 'route' => 'admin.settings.index',
@@ -185,7 +177,6 @@ final class AdminMenu
                 'match' => $item['match'],
                 'coming_soon' => ! $routeReady && $item['route'] !== 'admin.dashboard',
                 'badge' => match (true) {
-                    $item['route'] === 'admin.support.index' && $user->can(Permission::SystemManage->value) => SupportConversation::pendingAdminAttentionCountFor($user),
                     $item['route'] === 'admin.questions.index' && QuestionAccess::isReviewer($user) => QuestionReviewRequest::query()
                         ->where('status', QuestionReviewStatus::Pending->value)
                         ->count(),
