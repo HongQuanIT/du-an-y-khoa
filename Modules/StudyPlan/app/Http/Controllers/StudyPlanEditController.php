@@ -7,7 +7,7 @@ namespace Modules\StudyPlan\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
-use Modules\QuestionBank\Models\Topic;
+use Modules\QuestionBank\Models\MedicalTaxonomyNode;
 use Modules\StudyPlan\Actions\DeleteStudyPlanAction;
 use Modules\StudyPlan\Actions\UpdateStudyPlanAction;
 use Modules\StudyPlan\Http\Requests\StudyPlanRequest;
@@ -31,12 +31,14 @@ final class StudyPlanEditController extends Controller
         return view('studyplan::edit', [
             'plan' => $plan,
             'exams' => TargetExams::selectable(),
-            'specialties' => Topic::query()
-                ->where('type', 'specialty')
-                ->orderBy('order')
+            'specialties' => MedicalTaxonomyNode::query()
+                ->where('node_type', 'specialty')
+                ->orderBy('sort_order')
+                ->orderBy('name')
                 ->get(),
-            'systems' => Topic::query()
-                ->where('type', 'system')
+            'systems' => MedicalTaxonomyNode::query()
+                ->where('node_type', 'system')
+                ->orderBy('sort_order')
                 ->orderBy('name')
                 ->get(),
         ]);

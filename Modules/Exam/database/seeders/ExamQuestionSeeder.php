@@ -12,19 +12,25 @@ use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionOption;
 use Modules\QuestionBank\Models\QuestionScope;
-use Modules\QuestionBank\Models\Topic;
+use Modules\QuestionBank\Models\MedicalTaxonomy;
+use Modules\QuestionBank\Models\MedicalTaxonomyNode;
 
 final class ExamQuestionSeeder extends Seeder
 {
     public function run(): void
     {
         Question::withoutSyncingToSearch(function (): void {
-            $topic = Topic::query()->updateOrCreate(
-                ['slug' => 'exam-mock-cases'],
+            $taxonomy = MedicalTaxonomy::query()->firstOrCreate(
+                ['code' => 'exam-demo'],
+                ['name' => 'Exam demo taxonomy', 'status' => 'active'],
+            );
+            $topic = MedicalTaxonomyNode::query()->firstOrCreate(
+                ['medical_taxonomy_id' => $taxonomy->id, 'slug' => 'exam-demo-system'],
                 [
-                    'name' => 'Kỳ thi mô phỏng',
-                    'type' => 'system',
-                    'order' => 999,
+                    'name' => 'Hệ Tim mạch (exam demo)',
+                    'node_type' => 'system',
+                    'sort_order' => 0,
+                    'status' => 'active',
                 ],
             );
 
@@ -100,8 +106,7 @@ final class ExamQuestionSeeder extends Seeder
                         'explanation' => $data['explanation'],
                         'difficulty' => $data['difficulty'],
                         'status' => QuestionStatus::Published,
-                        'topic_id' => $topic->getKey(),
-                        'is_free' => true,
+                                                'is_free' => true,
                     ],
                 );
 

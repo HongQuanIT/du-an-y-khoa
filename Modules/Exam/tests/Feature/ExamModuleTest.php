@@ -18,17 +18,19 @@ use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionScope;
 use Modules\QuestionBank\Models\QuestionSession;
 use Modules\QuestionBank\Models\QuestionSessionSnapshot;
-use Modules\QuestionBank\Models\Topic;
 use Spatie\Permission\Models\Role as RoleModel;
 use Tests\TestCase;
+use Tests\Support\CreatesMedicalTaxonomy;
+
 
 final class ExamModuleTest extends TestCase
 {
+    use CreatesMedicalTaxonomy;
     use RefreshDatabase;
 
     private User $user;
 
-    private Topic $topic;
+    private \Modules\QuestionBank\Models\MedicalTaxonomyNode $topic;
 
     protected function setUp(): void
     {
@@ -39,11 +41,11 @@ final class ExamModuleTest extends TestCase
 
         $this->user = User::factory()->create();
         $this->user->assignRole(Role::Student->value);
-        $this->topic = Topic::query()->create([
+        $this->topic = $this->makeMedicalNode([
             'name' => 'Nội tổng quát',
             'slug' => 'noi-tong-quat-exam-test',
-            'type' => 'system',
-            'order' => 1,
+            'node_type' => 'system',
+            'sort_order' => 1,
         ]);
     }
 
@@ -155,8 +157,7 @@ final class ExamModuleTest extends TestCase
             ->create([
                 'stem' => $stem,
                 'difficulty' => Difficulty::Medium,
-                'topic_id' => $this->topic->getKey(),
-            ]);
+                            ]);
 
         $exam = \Modules\Exam\Models\Exam::query()->firstOrCreate(
             ['title' => $examKey],

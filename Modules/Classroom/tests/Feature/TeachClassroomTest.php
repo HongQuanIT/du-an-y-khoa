@@ -125,7 +125,6 @@ final class TeachClassroomTest extends TestCase
         $classroom = $this->seedClassroom($instructor, ClassroomPurpose::ExamReview);
         $draft = Question::factory()->draft()->free()->create([
             'stem' => 'Câu hỏi nháp không được gắn',
-            'topic_id' => null,
         ]);
 
         $this->actingAs($instructor)
@@ -162,8 +161,8 @@ final class TeachClassroomTest extends TestCase
             ->free()
             ->withOptions()
             ->sequence(
-                ['stem' => 'Câu hỏi live về tăng huyết áp?', 'topic_id' => null],
-                ['stem' => 'Câu hỏi live về suy tim?', 'topic_id' => null],
+                ['stem' => 'Câu hỏi live về tăng huyết áp?'],
+                ['stem' => 'Câu hỏi live về suy tim?'],
             )
             ->create();
 
@@ -185,7 +184,6 @@ final class TeachClassroomTest extends TestCase
         $this->assertSame($questions->pluck('id')->all(), $session->questionIds());
         $premiumQuestion = Question::factory()->withOptions()->create([
             'stem' => '<p>Câu premium đã được host gắn hợp lệ?</p>',
-            'topic_id' => null,
             'is_free' => false,
         ]);
         $session->update([

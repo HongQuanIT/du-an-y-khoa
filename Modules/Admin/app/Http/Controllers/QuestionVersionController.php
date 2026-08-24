@@ -12,9 +12,9 @@ use Illuminate\View\View;
 use Modules\Admin\Actions\RestoreQuestionVersionAction;
 use Modules\Admin\Support\QuestionAccess;
 use Modules\QuestionBank\Enums\QuestionStatus;
+use Modules\QuestionBank\Models\MedicalTaxonomyNode;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionVersion;
-use Modules\QuestionBank\Models\Topic;
 
 final class QuestionVersionController extends Controller
 {
@@ -23,7 +23,7 @@ final class QuestionVersionController extends Controller
         abort_unless($this->actor()->can(Permission::QuestionView->value), 403);
         QuestionAccess::authorizeView($this->actor(), $question);
 
-        $question->load('topics:id,name');
+        $question->load('medicalTaxonomyNodes:id,name');
         $contentVersion = (int) ($question->versions()
             ->where('event', '!=', 'status')
             ->max('version') ?? $question->version);
@@ -31,13 +31,13 @@ final class QuestionVersionController extends Controller
             ->where('event', '!=', 'status')
             ->with('creator:id,name')
             ->paginate(15);
-        $topicNames = Topic::query()
+        $nodeNames = MedicalTaxonomyNode::query()
             ->whereIn(
                 'id',
                 $versions->getCollection()
                     ->flatMap(fn (QuestionVersion $version): array => array_map(
                         'intval',
-                        (array) ($version->snapshot['topic_ids'] ?? []),
+                        (array) ($version->snapshot['medical_taxonomy_node_ids'] ?? []),
                     ))
                     ->unique()
                     ->all(),
@@ -47,7 +47,7 @@ final class QuestionVersionController extends Controller
         return view('admin::questions.versions', [
             'question' => $question,
             'versions' => $versions,
-            'topicNames' => $topicNames,
+            'nodeNames' => $nodeNames,
             'contentVersion' => $contentVersion,
             'canRestore' => $this->actor()->can(Permission::QuestionUpdate->value)
                 && (QuestionAccess::isReviewer($this->actor()) || $question->status !== QuestionStatus::Published),

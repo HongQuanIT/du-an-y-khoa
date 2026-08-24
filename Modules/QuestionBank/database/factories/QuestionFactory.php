@@ -29,8 +29,8 @@ class QuestionFactory extends Factory
             'attending_tip' => null,
             'difficulty' => $this->faker->randomElement(Difficulty::cases()),
             'status' => QuestionStatus::Published,
-            'topic_id' => $this->faker->numberBetween(1, 50),
             'is_free' => $this->faker->boolean(30),
+            'version' => 0,
         ];
     }
 

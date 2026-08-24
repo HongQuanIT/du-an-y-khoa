@@ -20,7 +20,7 @@ Trình duyệt & bộ lọc câu hỏi để tạo phiên luyện tập. Ngườ
 
 | Thành phần | Chức năng | Hiển thị/Ẩn | Điều kiện | Responsive |
 |-----------|-----------|-------------|-----------|-----------|
-| **Filter panel** | Chọn chủ đề, hệ cơ quan, độ khó, trạng thái (unseen/incorrect/correct/marked/omitted), tag, nguồn | Luôn | — | Desktop bên trái; mobile: bottom sheet |
+| **Filter panel** | Chọn chủ đề (**tree phân cấp cha–con**), hệ cơ quan, độ khó, trạng thái (unseen/incorrect/correct/marked/omitted), tag, nguồn | Luôn | — | Desktop bên trái; mobile: bottom sheet |
 | **Count preview** | Hiển thị số câu khớp filter realtime | Luôn | Cập nhật khi đổi filter | — |
 | **Mode selector** | Study vs Exam | Luôn | — | Toggle |
 | **Config số câu** | Số câu / thời gian (exam) | Luôn | Exam mode hiện time | — |
@@ -76,7 +76,8 @@ Ngoại lệ:
 - **Trạng thái câu theo user:** unseen/incorrect/correct/omitted/marked (từ `question_status`).
 - **Gating:** Free chỉ `is_free` + quota/ngày; Premium full. Server enforce.
 - **Random/ordering:** shuffle hoặc theo độ khó tăng dần (tùy chọn).
-- **Exclude:** câu retired/deleted không đưa vào session.
+- **Exclude:** câu `retired`/`rejected`/`draft`/`in_review`/`private` (kể cả `exam_flag`); chỉ `published` + gating tier.
+- **Topic filter:** hỗ trợ chọn topic cha → đếm/lọc cả câu thuộc topic con (cây phân cấp).
 - **Saved filters:** lưu snapshot tiêu chí.
 - **Adaptive option (Premium):** hệ thống tự chọn câu theo weak topics + spaced repetition.
 

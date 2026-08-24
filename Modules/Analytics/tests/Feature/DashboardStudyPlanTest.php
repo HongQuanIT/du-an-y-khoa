@@ -15,32 +15,34 @@ use Modules\QuestionBank\Enums\SessionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionSession;
-use Modules\QuestionBank\Models\Topic;
 use Modules\StudyPlan\Models\StudyPlan;
 use Modules\StudyPlan\Models\StudyPlanTask;
 use Tests\TestCase;
+use Tests\Support\CreatesMedicalTaxonomy;
+
 
 /**
  * Phase 3: the dashboard reads real plan tasks, weak topics and resume state.
  */
 final class DashboardStudyPlanTest extends TestCase
 {
+    use CreatesMedicalTaxonomy;
     use RefreshDatabase;
 
     private User $user;
 
-    private Topic $topic;
+    private \Modules\QuestionBank\Models\MedicalTaxonomyNode $topic;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->user = User::factory()->create();
-        $this->topic = Topic::create([
+        $this->topic = $this->makeMedicalNode([
             'name' => 'Tim mạch',
             'slug' => 'tim-mach',
-            'type' => 'system',
-            'order' => 0,
+            'node_type' => 'system',
+            'sort_order' => 0,
         ]);
     }
 
@@ -120,9 +122,9 @@ final class DashboardStudyPlanTest extends TestCase
                 'stem' => "Câu hỏi #{$i}?",
                 'difficulty' => 'medium',
                 'status' => QuestionStatus::Published,
-                'topic_id' => $this->topic->id,
                 'is_free' => true,
             ]);
+            $question->medicalTaxonomyNodes()->sync([$this->topic->id]);
 
             QuestionAttempt::create([
                 'session_id' => $session->getKey(),

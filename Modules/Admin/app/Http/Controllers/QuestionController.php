@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Modules\Admin\Actions\RequestQuestionDeletionAction;
+use Modules\Admin\Actions\CloneQuestionAction;
 use Modules\Admin\Actions\SaveAdminQuestionAction;
 use Modules\Admin\Actions\TransitionQuestionStatusAction;
 use Modules\Admin\Support\QuestionAccess;
@@ -19,7 +20,6 @@ use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionReviewAction;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
-use Modules\QuestionBank\Models\Topic;
 
 final class QuestionController extends Controller
 {
@@ -29,12 +29,15 @@ final class QuestionController extends Controller
 
         $actor = $this->actor();
         $query = QuestionAccess::scopeVisibleTo(
-            Question::query()->with(['topic', 'topics', 'creator:id,name', 'pendingReviewRequest.requester:id,name']),
+            Question::query()->with(['medicalTaxonomyNodes', 'creator:id,name', 'pendingReviewRequest.requester:id,name']),
             $actor,
         )->latest('updated_at');
 
         if ($search = trim((string) $request->query('q', ''))) {
-            $query->where('stem', 'like', "%{$search}%");
+            $query->where(function ($builder) use ($search): void {
+                $builder->where('stem', 'like', "%{$search}%")
+                    ->orWhere('code', 'like', "%{$search}%");
+            });
         }
 
         if ($status = $request->query('status')) {
@@ -45,12 +48,31 @@ final class QuestionController extends Controller
             $query->where('difficulty', (string) $difficulty);
         }
 
-        if ($topicId = $request->query('topic_id')) {
-            $query->whereHas('topics', fn ($topicQuery) => $topicQuery->whereKey((int) $topicId));
+        if ($coreTopicId = $request->query('core_clinical_topic_id')) {
+            $query->whereHas('coreClinicalTopics', fn ($q) => $q->whereKey((int) $coreTopicId));
         }
 
-        if ($request->query('review') === 'pending') {
-            $query->whereHas('pendingReviewRequest');
+        if ($medicalNodeId = $request->query('medical_taxonomy_node_id')) {
+            $query->whereHas('medicalTaxonomyNodes', fn ($q) => $q->whereKey((int) $medicalNodeId));
+        }
+
+        if ($tagId = $request->query('tag_id')) {
+            $query->whereHas('tags', fn ($q) => $q->whereKey((int) $tagId));
+        }
+
+        // Legacy bookmark: ?review=pending → status in_review
+        if ($request->query('review') === 'pending' && ! $request->filled('status')) {
+            $query->where('status', QuestionStatus::InReview->value);
+        }
+
+        if ($request->query('is_free') === '1') {
+            $query->where('is_free', true);
+        } elseif ($request->query('is_free') === '0') {
+            $query->where('is_free', false);
+        }
+
+        if ($request->query('has_reports') === '1') {
+            $query->where('stats_cache->total_reports', '>', 0);
         }
 
         $statsQuery = QuestionAccess::scopeVisibleTo(Question::query(), $actor);
@@ -59,18 +81,19 @@ final class QuestionController extends Controller
             'questions' => $query->paginate(20)->withQueryString(),
             'statuses' => QuestionStatus::cases(),
             'difficulties' => Difficulty::cases(),
-            'topics' => Topic::query()->orderBy('name')->get(['id', 'name', 'type']),
             'filters' => [
                 'q' => $search,
-                'status' => $request->query('status'),
+                'status' => $request->query('status')
+                    ?: ($request->query('review') === 'pending' ? QuestionStatus::InReview->value : null),
                 'difficulty' => $request->query('difficulty'),
-                'topic_id' => $request->query('topic_id'),
-                'review' => $request->query('review'),
+                'medical_taxonomy_node_id' => $request->query('medical_taxonomy_node_id'),
+                'is_free' => $request->query('is_free'),
+                'has_reports' => $request->query('has_reports'),
             ],
             'stats' => [
                 'total' => (clone $statsQuery)->count(),
                 'published' => (clone $statsQuery)->where('status', QuestionStatus::Published->value)->count(),
-                'pending' => (clone $statsQuery)->whereHas('pendingReviewRequest')->count(),
+                'pending' => (clone $statsQuery)->where('status', QuestionStatus::InReview->value)->count(),
                 'free' => (clone $statsQuery)->where('is_free', true)->count(),
             ],
             'canCreate' => $actor->can(Permission::QuestionCreate->value),
@@ -109,13 +132,34 @@ final class QuestionController extends Controller
 
         $question->load([
             'options' => fn ($q) => $q->orderBy('order'),
-            'topic',
-            'topics',
+            'hints' => fn ($q) => $q->orderBy('sort_order'),
+            'coreClinicalTopics.section',
+            'medicalTaxonomyNodes',
+            'tags',
             'creator:id,name,email',
+            'reviewer:id,name',
             'pendingReviewRequest.requester:id,name',
         ]);
 
         return view('admin::questions.form', $this->formData($question));
+    }
+
+    public function stats(Question $question): View
+    {
+        $this->authorizePermission(Permission::QuestionView);
+        QuestionAccess::authorizeView($this->actor(), $question);
+
+        $question->load([
+            'medicalTaxonomyNodes',
+            'creator:id,name',
+            'reviewer:id,name',
+        ]);
+
+        return view('admin::questions.stats', [
+            'question' => $question,
+            'stats' => $question->detailStats(),
+            'isReviewer' => QuestionAccess::isReviewer($this->actor()),
+        ]);
     }
 
     public function update(Request $request, Question $question, SaveAdminQuestionAction $action): RedirectResponse
@@ -154,11 +198,30 @@ final class QuestionController extends Controller
         QuestionAccess::authorizeView($this->actor(), $question);
         $data = $request->validate([
             'status' => ['required', 'string', Rule::in(QuestionStatus::values())],
+            'rejection_reason' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        $action->handle($this->actor(), $question, QuestionStatus::from($data['status']));
+        $action->handle(
+            $this->actor(),
+            $question,
+            QuestionStatus::from($data['status']),
+            $data['rejection_reason'] ?? null,
+        );
 
         return back()->with('status', 'Đã cập nhật trạng thái: '.QuestionStatus::from($data['status'])->label());
+    }
+
+    public function clone(Request $request, Question $question, CloneQuestionAction $action): RedirectResponse
+    {
+        $this->authorizePermission(Permission::QuestionCreate);
+        QuestionAccess::authorizeView($this->actor(), $question);
+
+        $fromVersion = $request->filled('from_version') ? (int) $request->input('from_version') : null;
+        $clone = $action->handle($this->actor(), $question, $fromVersion);
+
+        return redirect()
+            ->route('admin.questions.edit', $clone)
+            ->with('status', 'Đã nhân bản câu hỏi thành bản nháp mới.');
     }
 
     /**
@@ -175,12 +238,12 @@ final class QuestionController extends Controller
             'question' => $question,
             'statuses' => QuestionStatus::cases(),
             'difficulties' => Difficulty::cases(),
-            'topics' => Topic::query()->orderBy('name')->get(['id', 'name', 'type']),
             'canUpdate' => ($this->actor()->can(Permission::QuestionUpdate->value)
                 || ($question->exists === false && $this->actor()->can(Permission::QuestionCreate->value)))
                 && ($isReviewer || ! $hasBlockingReview),
             'canPublish' => $this->actor()->can(Permission::QuestionPublish->value),
             'canDelete' => $question->exists && $this->actor()->can(Permission::QuestionDelete->value),
+            'canClone' => $question->exists && $this->actor()->can(Permission::QuestionCreate->value),
             'isReviewer' => $isReviewer,
             'pendingReview' => $pendingReview,
         ];
@@ -194,8 +257,9 @@ final class QuestionController extends Controller
      *     key_info: array<int, string>,
      *     attending_tip: ?string,
      *     difficulty: string,
-     *     topic_ids: list<int>,
+     *     medical_taxonomy_node_ids: list<int>,
      *     is_free: bool,
+     *     exam_flag: bool,
      *     options: list<array{id?: int|null, content: string, is_correct: bool, explanation?: ?string}>
      * }
      */
@@ -208,9 +272,17 @@ final class QuestionController extends Controller
             'key_info' => ['nullable', 'string'],
             'attending_tip' => ['nullable', 'string'],
             'difficulty' => ['required', Rule::in(Difficulty::values())],
-            'topic_ids' => ['required', 'array', 'min:1'],
-            'topic_ids.*' => ['required', 'integer', 'distinct', 'exists:topics,id'],
+            'core_clinical_topic_ids' => ['nullable', 'array'],
+            'core_clinical_topic_ids.*' => ['integer', 'distinct', 'exists:core_clinical_topics,id'],
+            'medical_taxonomy_node_ids' => ['required', 'array', 'min:1'],
+            'medical_taxonomy_node_ids.*' => ['required', 'integer', 'distinct', 'exists:medical_taxonomy_nodes,id'],
+            'tag_ids' => ['nullable', 'array'],
+            'tag_ids.*' => ['integer', 'distinct', 'exists:tags,id'],
+            'hints' => ['nullable', 'array'],
+            'hints.*.id' => ['nullable', 'integer'],
+            'hints.*.content' => ['nullable', 'string', 'max:2000'],
             'is_free' => ['sometimes', 'boolean'],
+            'exam_flag' => ['sometimes', 'boolean'],
             'options' => ['required', 'array', 'min:2'],
             'options.*.id' => ['nullable', 'integer'],
             'options.*.content' => ['required', 'string'],
@@ -218,8 +290,8 @@ final class QuestionController extends Controller
             'options.*.explanation' => ['nullable', 'string'],
         ], [
             'stem.required' => 'Vui lòng nhập nội dung câu hỏi.',
-            'topic_ids.required' => 'Vui lòng chọn ít nhất một chủ đề.',
-            'topic_ids.min' => 'Vui lòng chọn ít nhất một chủ đề.',
+            'medical_taxonomy_node_ids.required' => 'Vui lòng chọn ít nhất một mục danh mục y khoa.',
+            'medical_taxonomy_node_ids.min' => 'Vui lòng chọn ít nhất một mục danh mục y khoa.',
             'options.required' => 'Vui lòng thêm đáp án.',
             'options.min' => 'Cần ít nhất 2 đáp án.',
             'options.*.content.required' => 'Nội dung đáp án không được để trống.',
@@ -237,17 +309,37 @@ final class QuestionController extends Controller
             ];
         }
 
-        return [
+        $hints = [];
+        foreach ($data['hints'] ?? [] as $row) {
+            $hints[] = [
+                'id' => isset($row['id']) && $row['id'] !== '' ? (int) $row['id'] : null,
+                'content' => (string) ($row['content'] ?? ''),
+            ];
+        }
+
+        $payload = [
             'stem' => $data['stem'],
             'stem_image_path' => $data['stem_image_path'] ?? null,
             'explanation' => $data['explanation'] ?? null,
             'key_info' => $this->parseKeyInfo($data['key_info'] ?? null),
             'attending_tip' => $data['attending_tip'] ?? null,
             'difficulty' => $data['difficulty'],
-            'topic_ids' => collect($data['topic_ids'])->map(fn ($id): int => (int) $id)->unique()->values()->all(),
+            'core_clinical_topic_ids' => collect($data['core_clinical_topic_ids'] ?? [])
+                ->map(fn ($id): int => (int) $id)->unique()->values()->all(),
+            'medical_taxonomy_node_ids' => collect($data['medical_taxonomy_node_ids'] ?? [])
+                ->map(fn ($id): int => (int) $id)->unique()->values()->all(),
+            'tag_ids' => collect($data['tag_ids'] ?? [])
+                ->map(fn ($id): int => (int) $id)->unique()->values()->all(),
             'is_free' => $request->boolean('is_free'),
+            'exam_flag' => $request->boolean('exam_flag'),
             'options' => $options,
         ];
+
+        if ($request->exists('hints')) {
+            $payload['hints'] = $hints;
+        }
+
+        return $payload;
     }
 
     /**

@@ -25,8 +25,21 @@ final class QuestionResource extends JsonResource
                 'stem' => $this->stem,
                 'difficulty' => $this->difficulty->value,
                 'status' => $this->status->value,
-                'topic_id' => $this->topic_id,
-                'topic_ids' => ($this->relationLoaded('topics') ? $this->topics : $this->topics()->get())
+                'core_clinical_topic_ids' => ($this->relationLoaded('coreClinicalTopics')
+                    ? $this->coreClinicalTopics
+                    : $this->coreClinicalTopics()->get())
+                    ->pluck('id')
+                    ->map(fn ($id): int => (int) $id)
+                    ->values()
+                    ->all(),
+                'medical_taxonomy_node_ids' => ($this->relationLoaded('medicalTaxonomyNodes')
+                    ? $this->medicalTaxonomyNodes
+                    : $this->medicalTaxonomyNodes()->get())
+                    ->pluck('id')
+                    ->map(fn ($id): int => (int) $id)
+                    ->values()
+                    ->all(),
+                'tag_ids' => ($this->relationLoaded('tags') ? $this->tags : $this->tags()->get())
                     ->pluck('id')
                     ->map(fn ($id): int => (int) $id)
                     ->values()

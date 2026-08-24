@@ -7,34 +7,36 @@ namespace Modules\StudyPlan\Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
-use Modules\QuestionBank\Models\Topic;
 use Modules\StudyPlan\Enums\TaskStatus;
 use Modules\StudyPlan\Enums\TaskType;
 use Modules\StudyPlan\Models\StudyPlan;
 use Modules\StudyPlan\Models\StudyPlanTask;
 use Tests\TestCase;
+use Tests\Support\CreatesMedicalTaxonomy;
+
 
 /**
  * Phase 2: moving, skipping and editing a plan after it has been generated.
  */
 final class StudyPlanScheduleTest extends TestCase
 {
+    use CreatesMedicalTaxonomy;
     use RefreshDatabase;
 
     private User $user;
 
-    private Topic $topic;
+    private \Modules\QuestionBank\Models\MedicalTaxonomyNode $topic;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->user = User::factory()->create();
-        $this->topic = Topic::create([
+        $this->topic = $this->makeMedicalNode([
             'name' => 'Tim mạch',
             'slug' => 'tim-mach',
-            'type' => 'system',
-            'order' => 0,
+            'node_type' => 'system',
+            'sort_order' => 0,
         ]);
     }
 

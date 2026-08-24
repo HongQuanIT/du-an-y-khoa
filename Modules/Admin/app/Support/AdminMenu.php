@@ -50,11 +50,16 @@ final class AdminMenu
                 'match' => 'admin.questions.*',
             ],
             [
-                'label' => 'Chủ đề',
-                'icon' => 'account_tree',
-                'route' => 'admin.topics.index',
+                'label' => 'Phân loại',
+                'icon' => 'category',
+                'route' => 'admin.taxonomy.index',
                 'permission' => Permission::TopicView->value,
-                'match' => 'admin.topics.*',
+                'match' => [
+                    'admin.taxonomy.*',
+                    'admin.blueprints.*',
+                    'admin.medical-taxonomy.*',
+                    'admin.tags.*',
+                ],
             ],
             [
                 'label' => 'Kỳ thi',

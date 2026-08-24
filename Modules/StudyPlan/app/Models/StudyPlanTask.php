@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
-use Modules\QuestionBank\Models\Topic;
+use Modules\QuestionBank\Models\MedicalTaxonomyNode;
 use Modules\StudyPlan\Database\Factories\StudyPlanTaskFactory;
 use Modules\StudyPlan\Enums\TaskStatus;
 use Modules\StudyPlan\Enums\TaskType;
@@ -16,7 +16,7 @@ use Modules\StudyPlan\Enums\TaskType;
 /**
  * One day's piece of work inside a plan.
  *
- * `ref` carries the module payload: `{topic_ids, session_id, mode}` for
+ * `ref` carries the module payload: `{medical_taxonomy_node_ids, session_id, mode}` for
  * question/review tasks.
  *
  * @property int $id
@@ -98,11 +98,17 @@ class StudyPlanTask extends Model
     }
 
     /** @return array<int, int> */
-    public function topicIds(): array
+    public function medicalTaxonomyNodeIds(): array
     {
-        $ids = $this->ref['topic_ids'] ?? [];
+        $ids = $this->ref['medical_taxonomy_node_ids'] ?? $this->ref['topic_ids'] ?? [];
 
         return is_array($ids) ? array_values(array_map('intval', $ids)) : [];
+    }
+
+    /** @deprecated Use medicalTaxonomyNodeIds() */
+    public function topicIds(): array
+    {
+        return $this->medicalTaxonomyNodeIds();
     }
 
     /** Minutes budgeted for the task, using the ~2.25 min/question heuristic. */
@@ -137,7 +143,7 @@ class StudyPlanTask extends Model
      */
     private static function topicNames(): array
     {
-        return once(fn () => Topic::query()->pluck('name', 'id')->all());
+        return once(fn () => MedicalTaxonomyNode::query()->pluck('name', 'id')->all());
     }
 
     protected static function newFactory(): StudyPlanTaskFactory

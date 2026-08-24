@@ -25,7 +25,8 @@ use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionOption;
 use Modules\QuestionBank\Models\QuestionSession;
 use Modules\QuestionBank\Models\QuestionStatus as UserQuestionStatusModel;
-use Modules\QuestionBank\Models\Topic;
+use Modules\QuestionBank\Models\MedicalTaxonomy;
+use Modules\QuestionBank\Models\MedicalTaxonomyNode;
 use Modules\QuestionBank\Services\QuestionSessionSnapshots;
 use Spatie\Permission\Models\Role as RoleModel;
 
@@ -43,7 +44,7 @@ class DemoLearningSeeder extends Seeder
     public function run(): void
     {
         Question::withoutSyncingToSearch(function (): void {
-            $this->call(TopicTaxonomySeeder::class);
+            $this->call(MedicalKnowledgeTaxonomySeeder::class);
             $this->seedVm14kQuestions();
             $student = $this->resolveDemoStudent();
             $this->seedProgress($student);
@@ -55,7 +56,7 @@ class DemoLearningSeeder extends Seeder
     private function seedVm14kQuestions(): void
     {
         $flag = storage_path('app/questionbank_seed/vm14k.flag');
-        $topics = Topic::query()->get()->keyBy('slug');
+        $topics = MedicalTaxonomyNode::query()->get()->keyBy('slug');
 
         if (app()->environment('testing') || ! is_file($flag)) {
             $dir = base_path('Modules/QuestionBank/database/seeders/data/vm14k');
@@ -103,7 +104,6 @@ class DemoLearningSeeder extends Seeder
                             'explanation' => null,
                             'difficulty' => $difficulty,
                             'status' => QuestionStatus::Published,
-                            'topic_id' => $topic?->id,
                             'is_free' => $idx % 3 === 0,
                         ],
                     );
@@ -119,6 +119,10 @@ class DemoLearningSeeder extends Seeder
                             array_keys($rawOptions),
                         ));
                         $idx++;
+                    }
+
+                    if ($topic instanceof MedicalTaxonomyNode) {
+                        $question->medicalTaxonomyNodes()->syncWithoutDetaching([$topic->id]);
                     }
                 }
 
@@ -267,7 +271,7 @@ class DemoLearningSeeder extends Seeder
      * An unused generated placeholder is repurposed so re-running the demo seed
      * against an existing 200-question database does not increase the total.
      *
-     * @param  Collection<string, Topic>  $topics
+     * @param  Collection<string, MedicalTaxonomyNode>  $topics
      */
     private function seedLongFormLayoutQuestion(Collection $topics): void
     {
@@ -320,8 +324,7 @@ TEXT;
             'attending_tip' => 'Ho ra máu kết hợp tiểu máu, suy thận và IgG lắng đọng dạng đường thẳng dọc màng đáy cầu thận là bộ dấu hiệu điển hình của bệnh kháng màng đáy cầu thận (hội chứng Goodpasture).',
             'difficulty' => Difficulty::VeryHard,
             'status' => QuestionStatus::Published,
-            'topic_id' => ($topics['urology'] ?? $topics['nephrology'] ?? null)?->id,
-            'is_free' => true,
+                        'is_free' => true,
         ])->save();
 
         $hasExpectedOptions = $question->options()->count() === count($options)
@@ -334,6 +337,35 @@ TEXT;
             $question->options()->delete();
             $this->seedOptions($question, $options);
         }
+
+        $urology = $topics->get('urology');
+
+        if (! $urology instanceof MedicalTaxonomyNode) {
+            $taxonomy = MedicalTaxonomy::query()->firstOrCreate(
+                ['code' => 'medlearn-medical-taxonomy'],
+                [
+                    'name' => 'MedLearn Medical Taxonomy',
+                    'description' => null,
+                    'status' => \Modules\QuestionBank\Enums\TaxonomyStatus::Active,
+                ],
+            );
+            $urology = MedicalTaxonomyNode::query()->firstOrCreate(
+                [
+                    'medical_taxonomy_id' => $taxonomy->id,
+                    'slug' => 'urology',
+                ],
+                [
+                    'parent_id' => null,
+                    'name' => 'Tiết niệu',
+                    'node_type' => 'system',
+                    'description' => null,
+                    'sort_order' => 99,
+                    'status' => \Modules\QuestionBank\Enums\TaxonomyStatus::Active,
+                ],
+            );
+        }
+
+        $question->medicalTaxonomyNodes()->syncWithoutDetaching([$urology->id]);
     }
 
     /**

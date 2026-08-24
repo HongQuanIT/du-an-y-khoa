@@ -16,14 +16,17 @@ use Modules\Library\Database\Seeders\LibraryDatabaseSeeder;
 use Modules\Library\Models\Article;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
-use Modules\QuestionBank\Models\Topic;
 use Modules\Search\Database\Seeders\SearchDatabaseSeeder;
 use Modules\Search\Models\SearchDocument;
 use Spatie\Permission\Models\Role as RoleModel;
 use Tests\TestCase;
+use Modules\QuestionBank\Models\MedicalTaxonomyNode;
+use Tests\Support\CreatesMedicalTaxonomy;
+
 
 final class GlobalSearchTest extends TestCase
 {
+    use CreatesMedicalTaxonomy;
     use RefreshDatabase;
 
     private User $user;
@@ -36,23 +39,22 @@ final class GlobalSearchTest extends TestCase
         $this->user = User::factory()->create();
         $this->user->assignRole(Role::Student->value);
 
-        Topic::query()->create([
+        $this->makeMedicalNode([
             'name' => 'Hô hấp',
             'slug' => 'ho-hap-global-search-test',
-            'type' => 'system',
-            'order' => 1,
+            'node_type' => 'system',
+            'sort_order' => 1,
         ]);
     }
 
     public function test_global_search_returns_library_content_without_qbank_questions(): void
     {
-        $topic = Topic::query()->firstOrFail();
+        $topic = MedicalTaxonomyNode::query()->firstOrFail();
 
         Question::query()->create([
             'stem' => 'Viêm phổi cộng đồng cần điều trị thế nào?',
             'explanation' => 'Dùng kháng sinh theo mức độ nặng.',
-            'topic_id' => $topic->getKey(),
-            'difficulty' => 'easy',
+                        'difficulty' => 'easy',
             'status' => QuestionStatus::Published,
             'is_free' => true,
         ]);

@@ -9,7 +9,6 @@ use Illuminate\Support\Str;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionSession;
-use Modules\QuestionBank\Models\Topic;
 
 /**
  * Builds the immutable summary/review read model for a session.
@@ -46,12 +45,11 @@ final class QuestionSessionInsights
         foreach ($questionIds as $questionId) {
             $question = $questions[(string) $questionId] ?? null;
             $attempt = $attempts[(string) $questionId] ?? null;
-            $topic = $question instanceof Question ? $question->getRelation('topic') : null;
             $topicNames = $question instanceof Question
-                ? $question->topics->pluck('name')->map(fn ($name): string => (string) $name)->all()
+                ? $question->medicalTaxonomyNodes->pluck('name')->map(fn ($name): string => (string) $name)->all()
                 : [];
             if ($topicNames === []) {
-                $topicNames = [$topic instanceof Topic ? (string) $topic->name : 'Tổng hợp'];
+                $topicNames = ['Tổng hợp'];
             }
             foreach ($topicNames as $topicName) {
                 $byTopic[$topicName] ??= [
@@ -161,15 +159,13 @@ final class QuestionSessionInsights
                 default => 'wrong',
             };
             $annotation = ($session->annotations ?? [])[(string) $questionId] ?? [];
-            $topic = $question->getRelation('topic');
 
             $items[] = [
                 'id' => 'Q'.($position + 1),
                 'question_id' => (string) $questionId,
                 'index' => $position,
                 'result' => $result,
-                'topic' => $question->topics->pluck('name')->join(', ')
-                    ?: ($topic instanceof Topic ? (string) $topic->name : 'Tổng hợp'),
+                'topic' => $question->medicalTaxonomyNodes->pluck('name')->join(', ') ?: 'Tổng hợp',
                 'excerpt' => Str::limit(strip_tags((string) $question->stem), 140),
                 'stem' => (string) $question->stem,
                 'stem_html' => (string) ($annotation['stem_html'] ?? SafeHtml::forDisplay((string) $question->stem)),

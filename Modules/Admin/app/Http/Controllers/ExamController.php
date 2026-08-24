@@ -12,7 +12,10 @@ use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Modules\Exam\Enums\ExamStatus;
 use Modules\Exam\Models\Exam;
+use Modules\Exam\Models\ExamTopic;
 use Modules\QuestionBank\Enums\Difficulty;
+use Modules\QuestionBank\Enums\QuestionStatus;
+use Modules\QuestionBank\Models\CoreClinicalTopic;
 use Modules\QuestionBank\Models\Question;
 
 final class ExamController extends Controller
@@ -42,23 +45,13 @@ final class ExamController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'duration_minutes' => 'required|integer|min:1',
-            'icon' => 'nullable|file|image|max:2048',
-            'status' => ['required', 'string', Rule::in(ExamStatus::values())],
-            'questions' => 'nullable|array',
-            'questions.*' => 'exists:questions,id',
-        ]);
-
-        $syncData = $this->questionSyncData($validated['questions'] ?? []);
-
+        $validated = $this->validatedExam($request);
         $status = ExamStatus::from($validated['status']);
+        $examTopicsInput = $validated['exam_topics'] ?? [];
 
-        if ($status === ExamStatus::Published && count($syncData) === 0) {
+        if ($status === ExamStatus::Published && count($examTopicsInput) === 0 && count($validated['questions'] ?? []) === 0) {
             return back()
-                ->withErrors(['status' => 'Phải thêm ít nhất 1 câu hỏi trước khi xuất bản.'])
+                ->withErrors(['status' => 'Phải cấu hình chủ đề blueprint hoặc thêm ít nhất 1 câu hỏi trước khi xuất bản.'])
                 ->withInput();
         }
 
@@ -76,7 +69,20 @@ final class ExamController extends Controller
             'is_published' => $status === ExamStatus::Published,
         ]);
 
-        $exam->questions()->sync($syncData);
+        $this->syncExamTopics($exam, $examTopicsInput);
+
+        $syncResult = $this->resolveQuestionSync($exam, $validated['questions'] ?? [], $examTopicsInput);
+        if ($syncResult['errors'] !== []) {
+            return back()->withErrors(['exam_topics' => implode(' ', $syncResult['errors'])])->withInput();
+        }
+
+        if ($status === ExamStatus::Published && count($syncResult['sync']) === 0) {
+            return back()
+                ->withErrors(['status' => 'Phải có ít nhất 1 câu hỏi sau khi generate từ blueprint topics.'])
+                ->withInput();
+        }
+
+        $exam->questions()->sync($syncResult['sync']);
 
         return redirect()->route('admin.exams.edit', $exam)->with('status', 'Kỳ thi đã được tạo.');
     }
@@ -84,7 +90,10 @@ final class ExamController extends Controller
     public function edit(Exam $exam): View
     {
         $exam->loadCount('questions');
-        $exam->load(['questions' => fn ($q) => $q->with(['topic', 'topics'])->orderBy('exam_question.order')]);
+        $exam->load([
+            'questions' => fn ($q) => $q->with(['medicalTaxonomyNodes'])->orderBy('exam_question.order'),
+            'examTopics.coreClinicalTopic.section',
+        ]);
 
         $availableQuestions = $this->availableQuestions();
 
@@ -93,23 +102,13 @@ final class ExamController extends Controller
 
     public function update(Request $request, Exam $exam): RedirectResponse
     {
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'duration_minutes' => 'required|integer|min:1',
-            'icon' => 'nullable|file|image|max:2048',
-            'status' => ['required', 'string', Rule::in(ExamStatus::values())],
-            'questions' => 'nullable|array',
-            'questions.*' => 'exists:questions,id',
-        ]);
-
-        $syncData = $this->questionSyncData($validated['questions'] ?? []);
-
+        $validated = $this->validatedExam($request);
         $status = ExamStatus::from($validated['status']);
+        $examTopicsInput = $validated['exam_topics'] ?? [];
 
-        if ($status === ExamStatus::Published && count($syncData) === 0) {
+        if ($status === ExamStatus::Published && count($examTopicsInput) === 0 && count($validated['questions'] ?? []) === 0) {
             return back()
-                ->withErrors(['status' => 'Phải thêm ít nhất 1 câu hỏi trước khi xuất bản.'])
+                ->withErrors(['status' => 'Phải cấu hình chủ đề blueprint hoặc thêm ít nhất 1 câu hỏi trước khi xuất bản.'])
                 ->withInput();
         }
 
@@ -127,7 +126,20 @@ final class ExamController extends Controller
 
         $exam->update($data);
 
-        $exam->questions()->sync($syncData);
+        $this->syncExamTopics($exam, $examTopicsInput);
+
+        $syncResult = $this->resolveQuestionSync($exam, $validated['questions'] ?? [], $examTopicsInput);
+        if ($syncResult['errors'] !== []) {
+            return back()->withErrors(['exam_topics' => implode(' ', $syncResult['errors'])])->withInput();
+        }
+
+        if ($status === ExamStatus::Published && count($syncResult['sync']) === 0) {
+            return back()
+                ->withErrors(['status' => 'Phải có ít nhất 1 câu hỏi sau khi generate từ blueprint topics.'])
+                ->withInput();
+        }
+
+        $exam->questions()->sync($syncResult['sync']);
 
         return redirect()->route('admin.exams.index')->with('status', 'Đã cập nhật kỳ thi.');
     }
@@ -139,13 +151,20 @@ final class ExamController extends Controller
         return redirect()->route('admin.exams.index')->with('status', 'Đã xóa kỳ thi.');
     }
 
-    private function availableQuestions()
+    public function topicEligibility(Request $request): JsonResponse
     {
-        return Question::query()
-            ->with(['topic', 'topics'])
-            ->latest()
-            ->limit(50) // Reduced initial load limit
-            ->get();
+        $topicIds = collect($request->input('core_clinical_topic_ids', []))
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values();
+
+        $counts = [];
+        foreach ($topicIds as $topicId) {
+            $counts[$topicId] = $this->eligibleQuestionCount($topicId);
+        }
+
+        return response()->json(['data' => $counts]);
     }
 
     public function searchQuestions(Request $request): JsonResponse
@@ -153,13 +172,12 @@ final class ExamController extends Controller
         $term = trim($request->input('q', ''));
 
         $query = Question::query()
-            ->with(['topic', 'topics'])
+            ->with(['medicalTaxonomyNodes'])
             ->latest();
 
         if ($term !== '') {
             $termLower = mb_strtolower($term);
 
-            // Map term to difficulty values
             $difficulties = [];
             foreach (Difficulty::cases() as $case) {
                 if (str_contains(mb_strtolower($case->label()), $termLower)) {
@@ -169,7 +187,7 @@ final class ExamController extends Controller
 
             $query->where(function ($q) use ($term, $difficulties) {
                 $q->where('stem', 'LIKE', "%{$term}%")
-                    ->orWhereHas('topics', function ($q2) use ($term) {
+                    ->orWhereHas('medicalTaxonomyNodes', function ($q2) use ($term) {
                         $q2->where('name', 'LIKE', "%{$term}%");
                     });
 
@@ -182,12 +200,135 @@ final class ExamController extends Controller
         $questions = $query->limit(50)->get()->map(fn ($question) => [
             'id' => (string) $question->id,
             'text' => strip_tags($question->stem),
-            'topic' => $question->topics->pluck('name')->join(', ') ?: $question->topic?->name,
-            'topics' => $question->topics->pluck('name')->values()->all(),
+            'topic' => $question->medicalTaxonomyNodes->pluck('name')->join(', ') ?: 'Tổng hợp',
+            'topics' => $question->medicalTaxonomyNodes->pluck('name')->values()->all(),
             'difficulty' => $question->difficulty?->label(),
         ])->values()->all();
 
         return response()->json($questions);
+    }
+
+    private function availableQuestions()
+    {
+        return Question::query()
+            ->with(['medicalTaxonomyNodes'])
+            ->latest()
+            ->limit(50)
+            ->get();
+    }
+
+    /** @return array<string, mixed> */
+    private function validatedExam(Request $request): array
+    {
+        return $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'duration_minutes' => 'required|integer|min:1',
+            'icon' => 'nullable|file|image|max:2048',
+            'status' => ['required', 'string', Rule::in(ExamStatus::values())],
+            'questions' => 'nullable|array',
+            'questions.*' => 'exists:questions,id',
+            'exam_topics' => 'nullable|array',
+            'exam_topics.*.core_clinical_topic_id' => 'required_with:exam_topics|integer|exists:core_clinical_topics,id',
+            'exam_topics.*.question_count' => 'required_with:exam_topics|integer|min:1',
+            'exam_topics.*.sort_order' => 'nullable|integer|min:0',
+        ]);
+    }
+
+    /**
+     * @param  array<int, array{core_clinical_topic_id?: mixed, question_count?: mixed, sort_order?: mixed}>  $rows
+     */
+    private function syncExamTopics(Exam $exam, array $rows): void
+    {
+        $exam->examTopics()->delete();
+
+        foreach (array_values($rows) as $index => $row) {
+            $topicId = (int) ($row['core_clinical_topic_id'] ?? 0);
+            if ($topicId <= 0) {
+                continue;
+            }
+
+            ExamTopic::query()->create([
+                'exam_id' => $exam->id,
+                'core_clinical_topic_id' => $topicId,
+                'question_count' => max(1, (int) ($row['question_count'] ?? 1)),
+                'sort_order' => (int) ($row['sort_order'] ?? $index),
+            ]);
+        }
+    }
+
+    /**
+     * @param  array<int, string>  $manualQuestionIds
+     * @param  array<int, array<string, mixed>>  $examTopicsInput
+     * @return array{sync: array<string, array{order: int, core_clinical_topic_id?: int|null}>, errors: array<int, string>}
+     */
+    private function resolveQuestionSync(Exam $exam, array $manualQuestionIds, array $examTopicsInput): array
+    {
+        if ($examTopicsInput !== []) {
+            return $this->generateQuestionsFromExamTopics($exam);
+        }
+
+        return [
+            'sync' => $this->questionSyncData($manualQuestionIds),
+            'errors' => [],
+        ];
+    }
+
+    /**
+     * @return array{sync: array<string, array{order: int, core_clinical_topic_id?: int|null}>, errors: array<int, string>}
+     */
+    private function generateQuestionsFromExamTopics(Exam $exam): array
+    {
+        $exam->load('examTopics.coreClinicalTopic');
+        $usedQuestionIds = [];
+        $syncData = [];
+        $order = 1;
+        $errors = [];
+
+        foreach ($exam->examTopics as $examTopic) {
+            $needed = $examTopic->question_count;
+            $topicName = $examTopic->coreClinicalTopic?->name ?? ('#'.$examTopic->core_clinical_topic_id);
+
+            $questionIds = Question::query()
+                ->where('status', QuestionStatus::Private)
+                ->where('exam_flag', true)
+                ->whereHas('coreClinicalTopics', fn ($query) => $query->where('core_clinical_topics.id', $examTopic->core_clinical_topic_id))
+                ->whereNotIn('id', $usedQuestionIds)
+                ->orderByDesc('created_at')
+                ->limit($needed)
+                ->pluck('id');
+
+            if ($questionIds->count() < $needed) {
+                $missing = $needed - $questionIds->count();
+                $available = $this->eligibleQuestionCount($examTopic->core_clinical_topic_id);
+                $errors[] = sprintf(
+                    '%s cần %d câu nhưng chỉ có %d eligible (thiếu %d).',
+                    $topicName,
+                    $needed,
+                    $available,
+                    $missing,
+                );
+            }
+
+            foreach ($questionIds as $questionId) {
+                $syncData[(string) $questionId] = [
+                    'order' => $order++,
+                    'core_clinical_topic_id' => $examTopic->core_clinical_topic_id,
+                ];
+                $usedQuestionIds[] = (string) $questionId;
+            }
+        }
+
+        return ['sync' => $syncData, 'errors' => $errors];
+    }
+
+    private function eligibleQuestionCount(int $coreClinicalTopicId): int
+    {
+        return Question::query()
+            ->where('status', QuestionStatus::Private)
+            ->where('exam_flag', true)
+            ->whereHas('coreClinicalTopics', fn ($query) => $query->where('core_clinical_topics.id', $coreClinicalTopicId))
+            ->count();
     }
 
     /**

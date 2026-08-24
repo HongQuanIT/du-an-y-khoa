@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-08-24
+
+### Taxonomy y khoa & blueprint thay thế Topic cũ
+- Thay hệ thống Topic phẳng bằng Medical Taxonomy, Blueprint đề thi (core clinical topics) và Tags.
+- Admin: trang taxonomy/blueprint/tags; form câu hỏi gắn taxonomy đa chiều; bỏ CRUD Topic cũ.
+- QBank, Study Plan, Search, Exam, Analytics đồng bộ filter/seed theo taxonomy mới; migration gỡ legacy topics.
+
+### Danh sách & thống kê câu hỏi (Admin)
+- List `/admin/questions`: bỏ cột Kiểm duyệt riêng; đổi nhãn **Truy cập** (Miễn phí/Premium); chọn cột hiển thị (localStorage); sticky nội dung/thao tác.
+- Thêm `stats_cache` + trang `/admin/questions/{id}/stats` (lượt làm, % đúng, báo lỗi từ rollup).
+- Bộ lọc trạng thái/truy cập/báo lỗi; tìm theo mã câu hỏi.
+
 ## 2026-08-22
 
 ### Content Creator và kiểm duyệt câu hỏi

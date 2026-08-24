@@ -76,7 +76,7 @@ library.view, library.edit, library.publish
 user.view, user.manage, user.impersonate
 role.manage, permission.manage
 audit.view, report.export, cms.manage, media.view, media.manage, feature_flag.manage
-classroom.create, classroom.manage, classroom.join, classroom.moderate, classroom.oversee
+classroom.create, classroom.create_on_behalf, classroom.manage, classroom.join, classroom.moderate, classroom.oversee
 live.start, live.join, live.force_end, instructor.assign
 # 🔵 Phase 2 (Organization, chưa dùng): org.manage_members, org.manage_billing, org.view_reports
 ai.use, analytics.advanced, exam.take, exam.manage
@@ -85,6 +85,7 @@ ai.use, analytics.advanced, exam.take, exam.manage
 | Permission Classroom | Ai có | Ý nghĩa |
 |----------------------|-------|---------|
 | `classroom.create` / `classroom.manage` / `live.*` (lớp mình) | **Instructor** (tạo trên `/teach`; lớp mới `pending_approval`) | Vận hành lớp mình host/cohost sau admin duyệt |
+| `classroom.create_on_behalf` | Admin, Super Admin | Tạo lớp trên `/admin/classrooms/create`; **host_user_id** bắt buộc thuộc role `instructor` |
 | `classroom.oversee` / `live.force_end` | Admin, Super Admin | Giám sát, **duyệt/từ chối** lớp, force-end — **không** thay workspace `/teach` |
 | `instructor.assign` | Super Admin (Admin hạn chế) | Gán/thu hồi role `instructor` |
 

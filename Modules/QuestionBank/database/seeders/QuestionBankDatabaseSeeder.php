@@ -12,7 +12,9 @@ class QuestionBankDatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            TopicTaxonomySeeder::class,
+            MedicalLicensingExamBlueprintSeeder::class,
+            MedicalKnowledgeTaxonomySeeder::class,
+            QuestionDemoSeeder::class,
             DemoLearningSeeder::class,
             VolumeLearningSeeder::class, // no-op unless SEED_VOLUME=true
         ]);

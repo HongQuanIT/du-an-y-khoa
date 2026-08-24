@@ -149,14 +149,12 @@ return [
                     'id',
                     'stem',
                     'difficulty',
-                    'topic_id',
-                    'topic_ids',
+                    'medical_taxonomy_node_ids',
                     'is_free',
                 ],
                 'filterableAttributes' => [
                     'difficulty',
-                    'topic_id',
-                    'topic_ids',
+                    'medical_taxonomy_node_ids',
                     'is_free',
                 ],
                 'synonyms' => [

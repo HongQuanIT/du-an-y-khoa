@@ -91,14 +91,16 @@ Client/Server → dispatch TrackEventJob (queue) → tracking_events (MySQL, par
      → job rollup định kỳ (Scheduler):
          • DailyStat (per user/day)
          • TopicMastery (weak topics)
-         • stats_cache trên Question (correct rate)
+         • SyncQuestionStatsJob → stats_cache trên Question (list admin + detail)
          • aggregates cho Dashboard/Reports (Redis cache)
      → (tùy chọn) sink ra kho phân tích (BigQuery/ClickHouse) cho BI
 ```
 
 ## 6. Learning analytics — công thức lõi
 
-- **Correct rate (topic)** = `correct / attempts` trên các attempt hợp lệ (không tính skip).
+- **Correct rate (question)** = `correct_attempts / total_attempts * 100` (toàn hệ thống; không chia 0).
+- **Question usage:** `study_mode_attempts` vs `exam_mode_attempts` từ `question_sessions.mode` join `question_attempts`.
+- **Question reports:** `total_reports` = COUNT `question_reports` by `question_id`; breakdown theo `reason`.
 - **Mastery level (0–5)**: hàm theo correct rate gần đây + số lượng attempt + độ khó câu (câu khó đúng → cộng nhiều hơn). Có decay theo thời gian không hoạt động.
 - **Weak topic**: topic có mastery thấp và/hoặc correct rate < ngưỡng và đủ số attempt tối thiểu.
 - **Percentile / peer compare**: so với phân phối của cohort (cùng exam target / cùng org).

@@ -24,10 +24,10 @@ final class QbankSearchService implements ScopedSearchProvider
     private const HIGHLIGHT_END = '__MEDLEARN_SEARCH_HIGHLIGHT_END__';
 
     /** @var list<string> */
-    private const FACETS = ['difficulty', 'topic_id', 'is_free'];
+    private const FACETS = ['difficulty', 'medical_taxonomy_node_id', 'is_free'];
 
     /** @var list<string> */
-    private const INDEX_FACETS = ['difficulty', 'topic_ids', 'is_free'];
+    private const INDEX_FACETS = ['difficulty', 'medical_taxonomy_node_ids', 'is_free'];
 
     public function search(SearchQueryData $data, User $user): ScopedSearchResult
     {
@@ -62,7 +62,7 @@ final class QbankSearchService implements ScopedSearchProvider
     }
 
     /**
-     * @param  array{difficulty?: string, topic_id?: int, is_free?: bool}  $filters
+     * @param  array{difficulty?: string, medical_taxonomy_node_id?: int, is_free?: bool}  $filters
      * @return array<string, mixed>
      */
     private function meilisearchRaw(SearchQueryData $data, array $filters, bool $withFacets): array
@@ -70,7 +70,7 @@ final class QbankSearchService implements ScopedSearchProvider
         $options = [
             'page' => $data->page,
             'hitsPerPage' => $data->perPage,
-            'attributesToRetrieve' => ['id', 'stem', 'difficulty', 'topic_id', 'topic_ids', 'is_free'],
+            'attributesToRetrieve' => ['id', 'stem', 'difficulty', 'medical_taxonomy_node_ids', 'is_free'],
             'attributesToHighlight' => ['stem'],
             'attributesToCrop' => ['stem:45'],
             'cropMarker' => '…',
@@ -85,7 +85,7 @@ final class QbankSearchService implements ScopedSearchProvider
         $search = Question::search($data->query)->options($options);
 
         foreach ($filters as $field => $value) {
-            $search->where($field === 'topic_id' ? 'topic_ids' : $field, $value);
+            $search->where($field === 'medical_taxonomy_node_id' ? 'medical_taxonomy_node_ids' : $field, $value);
         }
 
         /** @var array<string, mixed> $raw */
@@ -99,7 +99,7 @@ final class QbankSearchService implements ScopedSearchProvider
      * from the index filters because queued indexes are eventually consistent.
      *
      * @param  array<int, array<string, mixed>>  $hits
-     * @param  array{difficulty?: string, topic_id?: int, is_free?: bool}  $filters
+     * @param  array{difficulty?: string, medical_taxonomy_node_id?: int, is_free?: bool}  $filters
      * @return array<int, array<string, mixed>>
      */
     private function safeItemsFromHits(array $hits, array $filters, string $query): array
@@ -116,7 +116,7 @@ final class QbankSearchService implements ScopedSearchProvider
 
         $questions = $this->accessibleQuestionQuery($filters)
             ->whereIn('id', $ids)
-            ->get(['id', 'stem', 'difficulty', 'topic_id', 'is_free'])
+            ->get(['id', 'stem', 'difficulty', 'is_free'])
             ->keyBy(fn (Question $question): string => (string) $question->getKey());
 
         $items = [];
@@ -151,7 +151,7 @@ final class QbankSearchService implements ScopedSearchProvider
         $facets = $this->databaseFacets($matched);
         $paginator = $matched
             ->orderByDesc('created_at')
-            ->paginate($data->perPage, ['id', 'stem', 'difficulty', 'topic_id', 'is_free'], 'page', $data->page);
+            ->paginate($data->perPage, ['id', 'stem', 'difficulty', 'is_free'], 'page', $data->page);
 
         $paginator->setCollection($paginator->getCollection()->map(function (Question $question) use ($data): array {
             $title = $this->plainText((string) $question->stem);
@@ -172,23 +172,23 @@ final class QbankSearchService implements ScopedSearchProvider
     }
 
     /**
-     * @param  array{difficulty?: string, topic_id?: int, is_free?: bool}  $filters
+     * @param  array{difficulty?: string, medical_taxonomy_node_id?: int, is_free?: bool}  $filters
      * @return Builder<Question>
      */
     private function accessibleQuestionQuery(array $filters): Builder
     {
         return Question::query()
-            ->with('topics:id')
+            ->with('medicalTaxonomyNodes:id')
             ->where('status', QuestionStatus::Published)
             ->when(
                 array_key_exists('difficulty', $filters),
                 fn (Builder $query) => $query->where('difficulty', $filters['difficulty']),
             )
             ->when(
-                array_key_exists('topic_id', $filters),
+                array_key_exists('medical_taxonomy_node_id', $filters),
                 fn (Builder $query) => $query->whereHas(
-                    'topics',
-                    fn (Builder $topics) => $topics->where('topics.id', $filters['topic_id']),
+                    'medicalTaxonomyNodes',
+                    fn (Builder $nodes) => $nodes->where('medical_taxonomy_nodes.id', $filters['medical_taxonomy_node_id']),
                 ),
             )
             ->when(
@@ -198,7 +198,7 @@ final class QbankSearchService implements ScopedSearchProvider
     }
 
     /**
-     * @param  array{difficulty?: string, topic_id?: int, is_free?: bool}  $filters
+     * @param  array{difficulty?: string, medical_taxonomy_node_id?: int, is_free?: bool}  $filters
      * @return Builder<Question>
      */
     private function matchedDatabaseQuery(string $query, array $filters): Builder
@@ -229,14 +229,15 @@ final class QbankSearchService implements ScopedSearchProvider
         $facets = [];
 
         foreach (self::FACETS as $facet) {
-            if ($facet === 'topic_id') {
+            if ($facet === 'medical_taxonomy_node_id') {
                 $rows = (clone $matched)
                     ->withoutEagerLoads()
                     ->reorder()
-                    ->join('question_topic', 'question_topic.question_id', '=', 'questions.id')
-                    ->selectRaw('question_topic.topic_id as topic_id, COUNT(DISTINCT questions.id) as aggregate')
-                    ->groupBy('question_topic.topic_id')
+                    ->join('question_medical_topics', 'question_medical_topics.question_id', '=', 'questions.id')
+                    ->selectRaw('question_medical_topics.medical_taxonomy_node_id as medical_taxonomy_node_id, COUNT(DISTINCT questions.id) as aggregate')
+                    ->groupBy('question_medical_topics.medical_taxonomy_node_id')
                     ->orderByDesc('aggregate')
+                    ->limit(20)
                     ->get();
             } else {
                 $rows = (clone $matched)
@@ -253,7 +254,7 @@ final class QbankSearchService implements ScopedSearchProvider
                 ->filter(fn (Question $row): bool => $row->getAttribute($facet) !== null)
                 ->map(fn (Question $row): array => [
                     'value' => match ($facet) {
-                        'topic_id' => (int) $row->getAttribute($facet),
+                        'medical_taxonomy_node_id' => (int) $row->getAttribute($facet),
                         'is_free' => (bool) $row->getAttribute($facet),
                         default => $row->getAttribute($facet) instanceof \BackedEnum
                             ? $row->getAttribute($facet)->value
@@ -269,7 +270,7 @@ final class QbankSearchService implements ScopedSearchProvider
     }
 
     /**
-     * @return array{difficulty?: string, topic_id?: int, is_free?: bool}
+     * @return array{difficulty?: string, medical_taxonomy_node_id?: int, is_free?: bool}
      */
     private function effectiveFilters(SearchQueryData $data, User $user): array
     {
@@ -311,14 +312,14 @@ final class QbankSearchService implements ScopedSearchProvider
         $facets = [];
 
         foreach (self::FACETS as $facet) {
-            $indexFacet = $facet === 'topic_id' ? 'topic_ids' : $facet;
+            $indexFacet = $facet === 'medical_taxonomy_node_id' ? 'medical_taxonomy_node_ids' : $facet;
             $values = (array) ($raw[$indexFacet] ?? []);
             $facets[$facet] = [];
 
             foreach ($values as $value => $count) {
                 $facets[$facet][] = [
                     'value' => match ($facet) {
-                        'topic_id' => (int) $value,
+                        'medical_taxonomy_node_id' => (int) $value,
                         'is_free' => filter_var($value, FILTER_VALIDATE_BOOL),
                         default => (string) $value,
                     },
@@ -340,8 +341,7 @@ final class QbankSearchService implements ScopedSearchProvider
             'highlight' => $highlight,
             'attributes' => [
                 'difficulty' => $question->difficulty->value,
-                'topic_id' => $question->topic_id,
-                'topic_ids' => $question->topics
+                'medical_taxonomy_node_ids' => $question->medicalTaxonomyNodes
                     ->pluck('id')
                     ->map(fn ($id): int => (int) $id)
                     ->values()

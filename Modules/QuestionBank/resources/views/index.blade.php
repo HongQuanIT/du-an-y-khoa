@@ -96,7 +96,7 @@
             ? round((int) $session->correct_count / $answered * 100, 1)
             : 0.0;
         $details = [];
-        $topicCount = count($filters['topic_ids'] ?? []);
+        $topicCount = count($filters['medical_taxonomy_node_ids'] ?? $filters['topic_ids'] ?? []);
 
         if ($topicCount > 0) {
             $details[] = $topicCount . ' chủ đề';

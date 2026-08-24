@@ -145,9 +145,13 @@ class StudyPlan extends Model
      *
      * @return array<int, int>
      */
-    public function scopeTopicIds(): array
+    public function scopeMedicalTaxonomyNodeIds(): array
     {
         $scope = $this->topic_scope ?? [];
+
+        if (isset($scope['medical_taxonomy_node_ids']) && is_array($scope['medical_taxonomy_node_ids'])) {
+            return array_values(array_map('intval', $scope['medical_taxonomy_node_ids']));
+        }
 
         if (isset($scope['topic_ids']) && is_array($scope['topic_ids'])) {
             return array_values(array_map('intval', $scope['topic_ids']));
@@ -158,6 +162,12 @@ class StudyPlan extends Model
         }
 
         return array_map('intval', $scope);
+    }
+
+    /** @deprecated Use scopeMedicalTaxonomyNodeIds() */
+    public function scopeTopicIds(): array
+    {
+        return $this->scopeMedicalTaxonomyNodeIds();
     }
 
     /**
@@ -179,6 +189,7 @@ class StudyPlan extends Model
     {
         $scope = $this->topic_scope ?? [];
         $defaults = [
+            'medical_taxonomy_node_ids' => [],
             'topic_ids' => [],
             'exam_tags' => [],
             'articles' => [],
@@ -190,9 +201,10 @@ class StudyPlan extends Model
             'question_status_mode' => 'latest',
         ];
 
-        if (isset($scope['topic_ids']) || isset($scope['exam_tags'])) {
+        if (isset($scope['medical_taxonomy_node_ids']) || isset($scope['topic_ids']) || isset($scope['exam_tags'])) {
             $filters = array_merge($defaults, array_intersect_key($scope, $defaults), [
-                'topic_ids' => $this->scopeTopicIds(),
+                'medical_taxonomy_node_ids' => $this->scopeMedicalTaxonomyNodeIds(),
+                'topic_ids' => $this->scopeMedicalTaxonomyNodeIds(),
                 'saved_only' => (bool) ($scope['saved_only'] ?? false),
             ]);
 
@@ -213,7 +225,7 @@ class StudyPlan extends Model
             return $filters;
         }
 
-        return array_merge($defaults, ['topic_ids' => $this->scopeTopicIds()]);
+        return array_merge($defaults, ['medical_taxonomy_node_ids' => $this->scopeMedicalTaxonomyNodeIds(), 'topic_ids' => $this->scopeMedicalTaxonomyNodeIds()]);
     }
 
     /** @return array<int, int> ISO weekdays; empty scope means every day. */

@@ -6,16 +6,20 @@ namespace Modules\QuestionBank\Repositories;
 
 use App\Support\Repositories\EloquentRepository;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Database\Eloquent\Builder;
 use Modules\QuestionBank\Data\ListQuestionsData;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
+use Modules\QuestionBank\Support\QuestionFilterBuilder;
 
 /**
  * @extends EloquentRepository<Question>
  */
 final class QuestionRepository extends EloquentRepository
 {
+    public function __construct(
+        private readonly QuestionFilterBuilder $filters,
+    ) {}
+
     protected function model(): string
     {
         return Question::class;
@@ -28,26 +32,33 @@ final class QuestionRepository extends EloquentRepository
      */
     public function paginatePublished(ListQuestionsData $data): LengthAwarePaginator
     {
-        return $this->query()
-            ->with('topics:id')
-            ->where('status', QuestionStatus::Published)
-            ->when($data->query, function ($query, string $search): void {
-                $pattern = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $search).'%';
-                $query->whereRaw("stem LIKE ? ESCAPE '!'", [$pattern]);
-            })
-            ->when($data->difficulty, fn ($q, $difficulty) => $q->where('difficulty', $difficulty))
-            ->when(
-                $data->topicId,
-                fn ($q, $topicId) => $q->whereHas(
-                    'topics',
-                    fn (Builder $topics) => $topics->where('topics.id', $topicId),
-                ),
-            )
-            ->when(
-                $data->freeOnly !== null,
-                fn ($q) => $q->where('is_free', $data->freeOnly),
-            )
-            ->orderByDesc('created_at')
-            ->paginate($data->perPage);
+        $query = $this->query()
+            ->with([
+                'coreClinicalTopics:id,name',
+                'medicalTaxonomyNodes:id,name',
+                'tags:id,name',
+            ])
+            ->where('status', QuestionStatus::Published);
+
+        if ($data->query) {
+            $pattern = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $data->query).'%';
+            $query->whereRaw("stem LIKE ? ESCAPE '!'", [$pattern]);
+        }
+
+        $this->filters->apply(
+            $query,
+            blueprintId: $data->blueprintId,
+            blueprintSectionId: $data->blueprintSectionId,
+            coreClinicalTopicIds: $data->coreClinicalTopicIds,
+            medicalTaxonomyNodeIds: $data->medicalTaxonomyNodeIds,
+            tagIds: $data->tagIds,
+                        difficulty: $data->difficulty,
+        );
+
+        if ($data->freeOnly !== null) {
+            $query->where('is_free', $data->freeOnly);
+        }
+
+        return $query->orderByDesc('created_at')->paginate($data->perPage);
     }
 }

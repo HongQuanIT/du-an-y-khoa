@@ -11,8 +11,8 @@ use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Modules\Admin\Actions\ReviewQuestionChangeAction;
 use Modules\Admin\Support\QuestionAccess;
+use Modules\QuestionBank\Models\MedicalTaxonomyNode;
 use Modules\QuestionBank\Models\QuestionReviewRequest;
-use Modules\QuestionBank\Models\Topic;
 
 final class QuestionReviewController extends Controller
 {
@@ -20,12 +20,16 @@ final class QuestionReviewController extends Controller
     {
         abort_unless(QuestionAccess::isReviewer($this->actor()), 403);
 
-        $reviewRequest->load(['question.options', 'question.topics:id,name', 'requester:id,name,email']);
-        $topicNames = Topic::query()
-            ->whereIn('id', array_map('intval', (array) ($reviewRequest->payload['topic_ids'] ?? [])))
+        $reviewRequest->load([
+            'question.options',
+            'question.medicalTaxonomyNodes:id,name',
+            'requester:id,name,email',
+        ]);
+        $nodeNames = MedicalTaxonomyNode::query()
+            ->whereIn('id', array_map('intval', (array) ($reviewRequest->payload['medical_taxonomy_node_ids'] ?? [])))
             ->pluck('name', 'id');
 
-        return view('admin::questions.review', compact('reviewRequest', 'topicNames'));
+        return view('admin::questions.review', compact('reviewRequest', 'nodeNames'));
     }
 
     public function approve(

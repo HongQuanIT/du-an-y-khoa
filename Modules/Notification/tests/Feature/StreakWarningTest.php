@@ -18,14 +18,16 @@ use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionSession;
-use Modules\QuestionBank\Models\Topic;
 use Tests\TestCase;
+use Tests\Support\CreatesMedicalTaxonomy;
+
 
 final class StreakWarningTest extends TestCase
 {
+    use CreatesMedicalTaxonomy;
     use RefreshDatabase;
 
-    private Topic $topic;
+    private \Modules\QuestionBank\Models\MedicalTaxonomyNode $topic;
 
     private Question $question;
 
@@ -39,11 +41,11 @@ final class StreakWarningTest extends TestCase
             'notification.streak.warn_after_hour' => 18,
         ]);
 
-        $this->topic = Topic::query()->create([
+        $this->topic = $this->makeMedicalNode([
             'name' => 'Streak Topic',
             'slug' => 'streak-topic-test',
-            'type' => 'system',
-            'order' => 1,
+            'node_type' => 'system',
+            'sort_order' => 1,
         ]);
 
         $this->question = Question::query()->create([
@@ -52,8 +54,7 @@ final class StreakWarningTest extends TestCase
             'key_info' => [],
             'difficulty' => Difficulty::Easy,
             'status' => QuestionStatus::Published,
-            'topic_id' => $this->topic->getKey(),
-            'is_free' => true,
+                        'is_free' => true,
         ]);
     }
 

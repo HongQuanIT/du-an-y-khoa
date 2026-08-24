@@ -10,7 +10,9 @@ use Modules\QuestionBank\Enums\SessionSource;
 /**
  * Input bag for creating a custom / exam / weak-topics Q-Bank session.
  *
- * @property-read array<int, int> $topicIds
+ * @property-read array<int, int> $coreClinicalTopicIds
+ * @property-read array<int, int> $medicalTaxonomyNodeIds
+ * @property-read array<int, int> $tagIds
  * @property-read array<int, string> $difficulties
  * @property-read array<int, string> $questionStatuses
  * @property-read array<int, string> $articles
@@ -19,7 +21,9 @@ use Modules\QuestionBank\Enums\SessionSource;
 final class CreateSessionData
 {
     /**
-     * @param  array<int, int>  $topicIds
+     * @param  array<int, int>  $coreClinicalTopicIds
+     * @param  array<int, int>  $medicalTaxonomyNodeIds
+     * @param  array<int, int>  $tagIds
      * @param  array<int, string>  $difficulties
      * @param  array<int, string>  $questionStatuses
      * @param  array<int, string>  $articles
@@ -29,7 +33,11 @@ final class CreateSessionData
         public readonly SessionMode $mode = SessionMode::Study,
         public readonly SessionSource $source = SessionSource::Custom,
         public readonly int $count = 10,
-        public readonly array $topicIds = [],
+        public readonly ?int $blueprintId = null,
+        public readonly ?int $blueprintSectionId = null,
+        public readonly array $coreClinicalTopicIds = [],
+        public readonly array $medicalTaxonomyNodeIds = [],
+        public readonly array $tagIds = [],
         public readonly array $difficulties = [],
         public readonly array $questionStatuses = [],
         public readonly string $questionStatusMode = 'latest',
@@ -49,7 +57,11 @@ final class CreateSessionData
     public function filtersPayload(): array
     {
         return [
-            'topic_ids' => array_values($this->topicIds),
+            'blueprint_id' => $this->blueprintId,
+            'blueprint_section_id' => $this->blueprintSectionId,
+            'core_clinical_topic_ids' => array_values($this->coreClinicalTopicIds),
+            'medical_taxonomy_node_ids' => array_values($this->medicalTaxonomyNodeIds),
+            'tag_ids' => array_values($this->tagIds),
             'difficulties' => array_values($this->difficulties),
             'difficulty' => count($this->difficulties) === 1 ? $this->difficulties[0] : null,
             'question_statuses' => array_values($this->questionStatuses),

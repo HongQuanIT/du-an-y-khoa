@@ -159,7 +159,7 @@ final class TeachClassroomController extends Controller
 
         // Chỉ trả về câu đã xuất bản và đúng quyền QBank của giảng viên.
         $questions = Question::query()
-            ->with(['topic:id,name', 'topics:id,name'])
+            ->with(['medicalTaxonomyNodes:id,name'])
             ->where('status', QuestionStatus::Published)
             ->when(
                 ! $request->user()->hasEntitlement(Entitlement::QbankFull->value),
@@ -171,23 +171,24 @@ final class TeachClassroomController extends Controller
                     $questions
                         ->whereRaw("stem LIKE ? ESCAPE '!'", [$pattern])
                         ->orWhereHas(
-                            'topics',
-                            fn ($topics) => $topics->whereRaw("name LIKE ? ESCAPE '!'", [$pattern]),
+                            'medicalTaxonomyNodes',
+                            fn ($nodes) => $nodes->whereRaw("name LIKE ? ESCAPE '!'", [$pattern]),
                         );
                 });
             })
             ->latest()
             ->limit(30)
-            ->get(['id', 'stem', 'difficulty', 'topic_id']);
+            ->get(['id', 'stem', 'difficulty']);
 
         return ApiResponse::item([
             'questions' => $questions->map(fn (Question $question): array => [
                 'id' => (string) $question->getKey(),
                 'stem' => trim(strip_tags(html_entity_decode($question->stem, ENT_QUOTES | ENT_HTML5, 'UTF-8'))),
                 'difficulty' => $question->difficulty->label(),
-                'topic' => $question->topics->pluck('name')->join(', ') ?: ($question->topic?->name ?? 'Tổng hợp'),
-                'topics' => $question->topics->pluck('name')->values(),
-                'topic_ids' => $question->topics->pluck('id')->map(fn ($id): int => (int) $id)->values(),
+                'topic' => $question->medicalTaxonomyNodes->pluck('name')->join(', ') ?: 'Tổng hợp',
+                'topics' => $question->medicalTaxonomyNodes->pluck('name')->values(),
+                'medical_taxonomy_node_ids' => $question->medicalTaxonomyNodes->pluck('id')->map(fn ($id): int => (int) $id)->values(),
+                'topic_ids' => $question->medicalTaxonomyNodes->pluck('id')->map(fn ($id): int => (int) $id)->values(),
             ])->values(),
         ]);
     }

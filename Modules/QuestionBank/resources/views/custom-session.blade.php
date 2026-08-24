@@ -1,7 +1,7 @@
 @php
     /**
-     * @var \Illuminate\Support\Collection<int, \Modules\QuestionBank\Models\Topic> $specialties
-     * @var \Illuminate\Support\Collection<int, \Modules\QuestionBank\Models\Topic> $systems
+     * @var \Illuminate\Support\Collection<int, \Modules\QuestionBank\Models\MedicalTaxonomyNode> $specialties
+     * @var \Illuminate\Support\Collection<int, \Modules\QuestionBank\Models\MedicalTaxonomyNode> $systems
      * @var array<string, array{title: string, icon: string, hint: string}> $exams
      * @var array<int, array{id: string, name: string}> $articles
      * @var array<int, array{id: string, name: string}> $symptoms
@@ -15,12 +15,17 @@
     );
     $initialDifficulties = array_values(array_filter((array) $initialDifficultyInput));
     $initialStatuses = array_values((array) old('question_statuses', request('question_statuses', [])));
-    $initialTopics = array_map('intval', (array) old('topic_ids', request('topic_ids', [])));
+    $initialTopics = array_map('intval', (array) old('medical_taxonomy_node_ids', request('medical_taxonomy_node_ids', [])));
     $initialStatusMode = old('question_status_mode', request('question_status_mode', 'latest'));
     $initialSavedOnly = (bool) old('saved_only', request()->boolean('saved_only'));
     $initialExam = (string) old('exam_key', request('exam_key', ''));
     $initialArticles = array_values((array) old('articles', request('articles', [])));
     $initialSymptoms = array_values((array) old('symptoms', request('symptoms', [])));
+    $initialBlueprintId = old('blueprint_id', request('blueprint_id'));
+    $initialBlueprintSectionId = old('blueprint_section_id', request('blueprint_section_id'));
+    $initialCoreClinicalTopicIds = array_map('intval', (array) old('core_clinical_topic_ids', request('core_clinical_topic_ids', [])));
+    $initialMedicalNodeIds = array_map('intval', (array) old('medical_taxonomy_node_ids', request('medical_taxonomy_node_ids', [])));
+    $initialTagIds = array_map('intval', (array) old('tag_ids', request('tag_ids', [])));
     $sessionName = 'Phiên tùy chỉnh từ ' . now()->translatedFormat('j M, H:i');
 
     $statusOptions = [
@@ -62,6 +67,28 @@
             articleTitles: {{ Illuminate\Support\Js::from($articleTitles)->toHtml() }},
             symptoms: {{ Illuminate\Support\Js::from($initialSymptoms)->toHtml() }},
             symptomTitles: {{ Illuminate\Support\Js::from($symptomTitles)->toHtml() }},
+            blueprintId: {{ Illuminate\Support\Js::from($initialBlueprintId ? (int) $initialBlueprintId : null)->toHtml() }},
+            blueprintName: '',
+            blueprintSectionId: {{ Illuminate\Support\Js::from($initialBlueprintSectionId ? (int) $initialBlueprintSectionId : null)->toHtml() }},
+            blueprintSectionName: '',
+            coreClinicalTopicIds: {{ Illuminate\Support\Js::from($initialCoreClinicalTopicIds)->toHtml() }},
+            coreClinicalTopicLabels: {},
+            medicalTaxonomyNodeIds: {{ Illuminate\Support\Js::from($initialMedicalNodeIds)->toHtml() }},
+            medicalNodeLabels: {},
+            tagIds: {{ Illuminate\Support\Js::from($initialTagIds)->toHtml() }},
+            tagLabels: {},
+            taxonomySearch: '',
+            blueprintResults: [],
+            blueprintSectionResults: [],
+            coreTopicResults: [],
+            medicalNodeResults: [],
+            tagResults: [],
+            taxonomyUrls: {
+                blueprints: {{ Illuminate\Support\Js::from(route('qbank.taxonomy.lookups.blueprints', absolute: false))->toHtml() }},
+                coreTopicsSearch: {{ Illuminate\Support\Js::from(route('qbank.taxonomy.lookups.core-topics.search', absolute: false))->toHtml() }},
+                medicalNodes: {{ Illuminate\Support\Js::from(route('qbank.taxonomy.lookups.medical-nodes', absolute: false))->toHtml() }},
+                tags: {{ Illuminate\Support\Js::from(route('qbank.taxonomy.lookups.tags', absolute: false))->toHtml() }},
+            },
             folderId: null,
             folderName: '',
             foldersModalOpen: false,
@@ -120,6 +147,135 @@
             openFilter(filter) {
                 this.activeFilter = filter;
                 this.filterSearch = '';
+                this.taxonomySearch = '';
+                if (filter === 'blueprint') this.fetchBlueprints();
+                if (filter === 'blueprintSection' && this.blueprintId) this.fetchBlueprintSections();
+                if (filter === 'coreTopics') this.fetchCoreTopics();
+                if (filter === 'medicalNodes') this.fetchMedicalNodes();
+                if (filter === 'tags') this.fetchTags();
+            },
+            async fetchBlueprints() {
+                const q = this.taxonomySearch.trim();
+                const url = q ? `${this.taxonomyUrls.blueprints}?q=${encodeURIComponent(q)}` : this.taxonomyUrls.blueprints;
+                const res = await fetch(url, { headers: { Accept: 'application/json' } });
+                const json = await res.json();
+                this.blueprintResults = json.data ?? [];
+            },
+            async fetchBlueprintSections() {
+                if (!this.blueprintId) return;
+                const q = this.taxonomySearch.trim();
+                const base = this.taxonomyUrls.blueprints + '/' + this.blueprintId + '/sections';
+                const url = q ? `${base}?q=${encodeURIComponent(q)}` : base;
+                const res = await fetch(url, { headers: { Accept: 'application/json' } });
+                const json = await res.json();
+                this.blueprintSectionResults = json.data ?? [];
+            },
+            async fetchCoreTopics() {
+                const params = new URLSearchParams();
+                if (this.blueprintId) params.set('blueprint_id', String(this.blueprintId));
+                if (this.blueprintSectionId) params.set('blueprint_section_id', String(this.blueprintSectionId));
+                const q = this.taxonomySearch.trim();
+                if (q.length >= 2) params.set('q', q);
+                else if (!this.blueprintSectionId) {
+                    this.coreTopicResults = [];
+                    return;
+                }
+                const res = await fetch(`${this.taxonomyUrls.coreTopicsSearch}?${params}`, { headers: { Accept: 'application/json' } });
+                const json = await res.json();
+                this.coreTopicResults = json.data ?? [];
+            },
+            async fetchMedicalNodes() {
+                const q = this.taxonomySearch.trim();
+                const url = q.length >= 2
+                    ? `${this.taxonomyUrls.medicalNodes}?q=${encodeURIComponent(q)}`
+                    : this.taxonomyUrls.medicalNodes;
+                const res = await fetch(url, { headers: { Accept: 'application/json' } });
+                const json = await res.json();
+                this.medicalNodeResults = json.data ?? [];
+            },
+            async fetchTags() {
+                const q = this.taxonomySearch.trim();
+                const url = q ? `${this.taxonomyUrls.tags}?q=${encodeURIComponent(q)}` : this.taxonomyUrls.tags;
+                const res = await fetch(url, { headers: { Accept: 'application/json' } });
+                const json = await res.json();
+                this.tagResults = json.data ?? [];
+            },
+            selectBlueprint(item) {
+                this.blueprintId = item.id;
+                this.blueprintName = item.name;
+                this.blueprintSectionId = null;
+                this.blueprintSectionName = '';
+                this.$nextTick(() => this.refreshCount());
+            },
+            clearBlueprint() {
+                this.blueprintId = null;
+                this.blueprintName = '';
+                this.clearBlueprintSection();
+            },
+            selectBlueprintSection(item) {
+                this.blueprintSectionId = item.id;
+                this.blueprintSectionName = item.name;
+                this.$nextTick(() => this.refreshCount());
+            },
+            clearBlueprintSection() {
+                this.blueprintSectionId = null;
+                this.blueprintSectionName = '';
+                this.$nextTick(() => this.refreshCount());
+            },
+            toggleCoreTopic(item) {
+                const idx = this.coreClinicalTopicIds.indexOf(item.id);
+                if (idx >= 0) {
+                    this.coreClinicalTopicIds.splice(idx, 1);
+                    delete this.coreClinicalTopicLabels[item.id];
+                } else {
+                    this.coreClinicalTopicIds.push(item.id);
+                    this.coreClinicalTopicLabels[item.id] = item.name;
+                }
+                this.$nextTick(() => this.refreshCount());
+            },
+            toggleMedicalNode(item) {
+                const idx = this.medicalTaxonomyNodeIds.indexOf(item.id);
+                if (idx >= 0) {
+                    this.medicalTaxonomyNodeIds.splice(idx, 1);
+                    delete this.medicalNodeLabels[item.id];
+                } else {
+                    this.medicalTaxonomyNodeIds.push(item.id);
+                    this.medicalNodeLabels[item.id] = item.name;
+                }
+                this.$nextTick(() => this.refreshCount());
+            },
+            toggleTag(item) {
+                const idx = this.tagIds.indexOf(item.id);
+                if (idx >= 0) {
+                    this.tagIds.splice(idx, 1);
+                    delete this.tagLabels[item.id];
+                } else {
+                    this.tagIds.push(item.id);
+                    this.tagLabels[item.id] = item.name;
+                }
+                this.$nextTick(() => this.refreshCount());
+            },
+            blueprintLabel() {
+                return this.blueprintName || (this.blueprintId ? 'Đã chọn' : 'Tất cả');
+            },
+            blueprintSectionLabel() {
+                return this.blueprintSectionName || (this.blueprintSectionId ? 'Đã chọn' : 'Tất cả');
+            },
+            coreTopicLabel() {
+                if (!this.coreClinicalTopicIds.length) return 'Tất cả';
+                if (this.coreClinicalTopicIds.length === 1) {
+                    const id = this.coreClinicalTopicIds[0];
+                    return this.coreClinicalTopicLabels[id] || '1 đã chọn';
+                }
+                return this.coreClinicalTopicIds.length + ' đã chọn';
+            },
+            medicalNodeLabel() {
+                if (!this.medicalTaxonomyNodeIds.length) return 'Tất cả';
+                return this.medicalTaxonomyNodeIds.length + ' đã chọn';
+            },
+            tagLabel() {
+                if (!this.tagIds.length) return 'Tất cả';
+                return this.tagIds.length + ' đã chọn';
             },
             selectedCount(ids) {
                 return this.selectedTopics.filter((id) => ids.includes(String(id))).length;
@@ -189,6 +345,16 @@
                 this.examKey = '';
                 this.articles = [];
                 this.symptoms = [];
+                this.blueprintId = null;
+                this.blueprintName = '';
+                this.blueprintSectionId = null;
+                this.blueprintSectionName = '';
+                this.coreClinicalTopicIds = [];
+                this.coreClinicalTopicLabels = {};
+                this.medicalTaxonomyNodeIds = [];
+                this.medicalNodeLabels = {};
+                this.tagIds = [];
+                this.tagLabels = {};
                 this.activeFilter = null;
                 this.showAdvanced = false;
                 this.$nextTick(() => this.refreshCount());
@@ -209,6 +375,17 @@
         <input type="hidden" name="question_status_mode" value="{{ $initialStatusMode }}">
         <input type="hidden" name="saved_only" :value="savedOnly ? '1' : '0'">
         <input type="hidden" name="folder_id" :value="folderId ?? ''">
+        <input type="hidden" name="blueprint_id" :value="blueprintId ?? ''" :disabled="!blueprintId">
+        <input type="hidden" name="blueprint_section_id" :value="blueprintSectionId ?? ''" :disabled="!blueprintSectionId">
+        <template x-for="id in coreClinicalTopicIds" :key="'core-' + id">
+            <input type="hidden" name="core_clinical_topic_ids[]" :value="id">
+        </template>
+        <template x-for="id in medicalTaxonomyNodeIds" :key="'med-' + id">
+            <input type="hidden" name="medical_taxonomy_node_ids[]" :value="id">
+        </template>
+        <template x-for="id in tagIds" :key="'tag-' + id">
+            <input type="hidden" name="tag_ids[]" :value="id">
+        </template>
 
         <div class="mx-auto w-full max-w-[1440px] flex-1 overflow-y-auto p-4 pb-8 md:p-8">
             <div class="mb-8 flex items-center justify-between gap-4">
@@ -340,6 +517,8 @@
                                     <span class="rounded bg-secondary-fixed px-3 py-1 text-[12px] font-medium text-on-secondary-fixed"
                                         x-text="symptomLabel()"></span>
                                 </button>
+
+                                @include('questionbank::partials.taxonomy-session-filter-rows')
 
                                 <button type="button" @click="foldersModalOpen = true"
                                     :disabled="source === 'weak_topics'"
@@ -552,7 +731,20 @@
                 :class="activeFilter === 'exams' ? 'max-w-3xl' : 'max-w-md'">
                 <div class="flex items-center justify-between border-b border-outline-variant p-4">
                     <h3 class="font-headline-sm text-on-surface"
-                        x-text="activeFilter === 'exams' ? 'Chọn kỳ thi' : activeFilter === 'articles' ? 'Bài viết' : activeFilter === 'symptoms' ? 'Triệu chứng' : activeFilter === 'systems' ? 'Hệ cơ quan' : activeFilter === 'specialties' ? 'Chuyên khoa' : activeFilter === 'difficulty' ? 'Độ khó' : 'Trạng thái'"></h3>
+                        x-text="({
+                            exams: 'Chọn kỳ thi',
+                            articles: 'Bài viết',
+                            symptoms: 'Triệu chứng',
+                            systems: 'Hệ cơ quan',
+                            specialties: 'Chuyên khoa',
+                            difficulty: 'Độ khó',
+                            statuses: 'Trạng thái',
+                            blueprint: 'Ma trận đề thi',
+                            blueprintSection: 'Phần ma trận',
+                            coreTopics: 'Chủ đề lâm sàng',
+                            medicalNodes: 'Danh mục y khoa',
+                            tags: 'Tags',
+                        })[activeFilter] || 'Bộ lọc'"></h3>
                     <button type="button" @click="activeFilter = null"
                         class="rounded-full p-2 transition-colors hover:bg-surface-container" aria-label="Đóng">
                         <span class="material-symbols-outlined">close</span>
@@ -645,7 +837,7 @@
                                 <label data-search="{{ Str::lower($topic->name) }}"
                                     x-show="$el.dataset.search.includes(filterSearch.toLocaleLowerCase())"
                                     class="flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-surface-container-low">
-                                    <input type="checkbox" name="topic_ids[]" value="{{ $topic->id }}" x-model="selectedTopics"
+                                    <input type="checkbox" name="medical_taxonomy_node_ids[]" value="{{ $topic->id }}" x-model="selectedTopics"
                                         :disabled="source === 'weak_topics'"
                                         class="size-5 rounded border-outline-variant text-primary focus:ring-primary">
                                     <span class="text-sm">{{ $topic->name }}</span>
@@ -660,7 +852,7 @@
                                 <label data-search="{{ Str::lower($topic->name) }}"
                                     x-show="$el.dataset.search.includes(filterSearch.toLocaleLowerCase())"
                                     class="flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-surface-container-low">
-                                    <input type="checkbox" name="topic_ids[]" value="{{ $topic->id }}" x-model="selectedTopics"
+                                    <input type="checkbox" name="medical_taxonomy_node_ids[]" value="{{ $topic->id }}" x-model="selectedTopics"
                                         :disabled="source === 'weak_topics'"
                                         class="size-5 rounded border-outline-variant text-primary focus:ring-primary">
                                     <span class="text-sm">{{ $topic->name }}</span>
@@ -700,6 +892,8 @@
                             </label>
                         @endforeach
                     </div>
+
+                    @include('questionbank::partials.taxonomy-session-filter-modals')
                 </div>
 
                 <div class="flex items-center justify-between border-t border-outline-variant bg-surface-container-lowest p-4">

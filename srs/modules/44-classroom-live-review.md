@@ -16,7 +16,8 @@ Không gian **lớp chữa đề** với **livestream LiveKit (WebRTC)**: **gi�
 | `/classes/{id}/live/{session}` | Phòng live (viewer) hoặc host studio | Member + session live/ended (VOD) |
 | `/classes/{id}/live/{session}/host` | Host studio (publish cam/mic/screen) | Host / cohost |
 | `/teach/classes/create` | Tạo lớp (giảng viên) | Role `instructor` |
-| `/admin/classrooms` | Giám sát + **duyệt/từ chối** lớp chờ | `classroom.oversee` |
+| `/admin/classrooms` | Giám sát + **duyệt/từ chối** lớp chờ + **tạo lớp thay giảng viên** | `classroom.oversee` / `classroom.create_on_behalf` |
+| `/admin/classrooms/create` | Admin tạo lớp → **chọn Host (bắt buộc)** từ danh sách `instructor` | `classroom.create_on_behalf` |
 
 Không bao gồm: quản lý tổ chức/ghế B2B (32), CMS marketing (42), thư viện video bài giảng tĩnh (14 — chỉ **tái dùng player** cho VOD).
 
@@ -127,9 +128,10 @@ flowchart LR
 
 ## 5. Business Logic
 
-- **Tạo lớp (đã chốt 2026-08-14):**
-  - **Chỉ giảng viên** (`instructor`) tạo trên `/teach/classes/create`.
-  - Lớp mới: `status = pending_approval` — **chưa** hiện catalog học viên, **chưa** join public, **chưa** start live.
+- **Tạo lớp (đã chốt 2026-08-14, bổ sung 2026-08-23):**
+  - **Giảng viên** (`instructor`) tạo trên `/teach/classes/create`.
+  - **Admin** có thể tạo lớp trên `/admin/classrooms/create` — **bắt buộc chọn Host** từ danh sách user có role `instructor` (không cho user không phải giảng viên).
+  - Lớp mới: `status = pending_approval` (trừ khi admin bật auto-approve nội bộ) — **chưa** hiện catalog học viên, **chưa** join public, **chưa** start live.
   - Admin duyệt → `active`; từ chối → `archived`.
   - Học viên Premium host cộng đồng trên `/classes`: **tắt tạm** (Phase sau có thể bật lại).
 - **Host entitlement (legacy):**
@@ -168,6 +170,7 @@ Tham chiếu nhóm Classroom trong `04-mo-hinh-du-lieu.md`.
 |--------|-----|---------|----------|-------|
 | GET | `/api/v1/classrooms` | filter | list | Auth |
 | POST | `/api/v1/classrooms` | title, visibility… | classroom | Role `instructor` (portal teach) |
+| POST | `/api/v1/admin/classrooms` | title, visibility, **`host_user_id`** (instructor) | classroom | `classroom.create_on_behalf` |
 | GET/PATCH | `/api/v1/classrooms/{id}` | — / update | classroom | view / `classroom.manage` |
 | POST | `/api/v1/classrooms/{id}/join` | `{code?}` | membership | Auth + visibility |
 | POST | `/api/v1/classrooms/{id}/leave` | — | ok | Member |
@@ -201,9 +204,9 @@ Tham chiếu nhóm Classroom trong `04-mo-hinh-du-lieu.md`.
 | **Premium** | ~~Host lớp cộng đồng trên `/classes`~~ **tắt tạm** |
 | **Instructor** | Portal **`/teach`**: tạo lớp (chờ duyệt), chạy buổi chữa sau duyệt; gắn đề feedback/exam |
 | **Content Editor** | Không host mặc định |
-| **Admin / Super Admin** | **Oversight** (`classroom.oversee`): duyệt/từ chối lớp, xem mọi lớp, force-end, archive — **không** thay giảng viên chữa đề hàng ngày |
+| **Admin / Super Admin** | **Oversight** (`classroom.oversee`): duyệt/từ chối lớp, xem mọi lớp, force-end, archive; **tạo lớp** gán host instructor (`classroom.create_on_behalf`) — **không** thay giảng viên chữa đề hàng ngày |
 
-Permissions: `classroom.create` (instructor), `classroom.manage`, `classroom.join`, `classroom.moderate`, `classroom.oversee`, `live.start`, `live.join`, `live.force_end`. Entitlement `classroom.host` = Premium cộng đồng (legacy); Instructor host bằng **role**.
+Permissions: `classroom.create` (instructor), `classroom.create_on_behalf` (admin), `classroom.manage`, `classroom.join`, `classroom.moderate`, `classroom.oversee`, `live.start`, `live.join`, `live.force_end`. Entitlement `classroom.host` = Premium cộng đồng (legacy); Instructor host bằng **role**.
 
 ## 10. Edge Cases
 

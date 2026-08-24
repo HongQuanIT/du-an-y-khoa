@@ -59,6 +59,7 @@ final class StudyPlanData extends DataTransferObject
     public function topicScopePayload(): array
     {
         return [
+            'medical_taxonomy_node_ids' => array_values($this->topicIds),
             'topic_ids' => array_values($this->topicIds),
             'exam_tags' => array_values($this->examTags),
             'articles' => array_values($this->articles),

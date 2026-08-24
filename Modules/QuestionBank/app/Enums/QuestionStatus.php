@@ -13,6 +13,8 @@ enum QuestionStatus: string
     case Draft = 'draft';
     case InReview = 'in_review';
     case Published = 'published';
+    case Rejected = 'rejected';
+    case Private = 'private';
     case Retired = 'retired';
 
     public function label(): string
@@ -21,6 +23,8 @@ enum QuestionStatus: string
             self::Draft => 'Nháp',
             self::InReview => 'Chờ duyệt',
             self::Published => 'Đã xuất bản',
+            self::Rejected => 'Từ chối',
+            self::Private => 'Riêng tư (exam)',
             self::Retired => 'Ngừng dùng',
         };
     }

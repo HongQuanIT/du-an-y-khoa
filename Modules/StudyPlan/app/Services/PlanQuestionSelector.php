@@ -12,7 +12,7 @@ use Modules\QuestionBank\Enums\UserQuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionStatus as UserQuestionStatusModel;
-use Modules\QuestionBank\Models\Topic;
+use Modules\QuestionBank\Models\MedicalTaxonomyNode;
 use Modules\StudyPlan\Enums\TaskType;
 use Modules\StudyPlan\Models\StudyPlanTask;
 
@@ -37,8 +37,8 @@ final class PlanQuestionSelector
             return $this->reviewQuestions($userId, $task, $limit);
         }
 
-        $topicIds = $this->expandTopics($task->topicIds());
-        $planTopicIds = $this->expandTopics($task->plan->scopeTopicIds());
+        $topicIds = $this->expandNodes($task->medicalTaxonomyNodeIds());
+        $planTopicIds = $this->expandNodes($task->plan->scopeMedicalTaxonomyNodeIds());
         $statuses = $filters['question_statuses'];
         $difficulties = $filters['difficulties'];
         $eligible = $statuses === []
@@ -108,7 +108,7 @@ final class PlanQuestionSelector
         $topUp = $this->topUp(
             $incorrect,
             $limit,
-            $this->expandTopics($task->plan->scopeTopicIds()),
+            $this->expandNodes($task->plan->scopeMedicalTaxonomyNodeIds()),
             $savedForUserId === null ? $this->answeredQuestionIds($userId) : [],
             null,
             $difficulties,
@@ -177,8 +177,8 @@ final class PlanQuestionSelector
             ->when(
                 $topicIds !== [],
                 fn ($query) => $query->whereHas(
-                    'topics',
-                    fn (Builder $topics) => $topics->whereIn('topics.id', $topicIds),
+                    'medicalTaxonomyNodes',
+                    fn (Builder $nodes) => $nodes->whereIn('medical_taxonomy_nodes.id', $topicIds),
                 ),
             )
             ->when($exclude !== [], fn ($query) => $query->whereNotIn('id', $exclude))
@@ -199,13 +199,13 @@ final class PlanQuestionSelector
      * @param  array<int, int>  $topicIds
      * @return array<int, int>
      */
-    private function expandTopics(array $topicIds): array
+    private function expandNodes(array $topicIds): array
     {
         if ($topicIds === []) {
             return [];
         }
 
-        $children = Topic::query()
+        $children = MedicalTaxonomyNode::query()
             ->whereIn('parent_id', $topicIds)
             ->pluck('id')
             ->all();

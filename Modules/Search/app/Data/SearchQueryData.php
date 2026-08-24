@@ -7,7 +7,7 @@ namespace Modules\Search\Data;
 final class SearchQueryData
 {
     /**
-     * @param  array{difficulty?: string, topic_id?: int, is_free?: bool}  $filters
+     * @param  array{difficulty?: string, medical_taxonomy_node_id?: int, is_free?: bool}  $filters
      */
     public function __construct(
         public readonly string $scope,

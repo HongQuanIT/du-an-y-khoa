@@ -34,7 +34,7 @@ final class QuestionBookmarkTest extends TestCase
 
     public function test_student_can_save_and_remove_a_question_bookmark(): void
     {
-        $question = Question::factory()->free()->create(['topic_id' => null]);
+        $question = Question::factory()->free()->create([]);
 
         $this->actingAs($this->user)
             ->postJson(route('bookmarks.questions.set', $question), ['bookmarked' => true])
@@ -59,7 +59,7 @@ final class QuestionBookmarkTest extends TestCase
 
     public function test_student_can_manage_bookmark_folders_and_toggle_items(): void
     {
-        $question = Question::factory()->free()->create(['topic_id' => null]);
+        $question = Question::factory()->free()->create([]);
 
         // Fetch folders -> auto creates default folder "câu hỏi lưu"
         $this->actingAs($this->user)
@@ -94,8 +94,8 @@ final class QuestionBookmarkTest extends TestCase
 
     public function test_qbank_saved_only_uses_bookmarks(): void
     {
-        $saved = Question::factory()->free()->create(['topic_id' => null]);
-        Question::factory()->free()->create(['topic_id' => null]);
+        $saved = Question::factory()->free()->create([]);
+        Question::factory()->free()->create([]);
         $this->bookmark($saved);
 
         $ids = app(SessionQuestionSelector::class)->forSession(
@@ -108,8 +108,8 @@ final class QuestionBookmarkTest extends TestCase
 
     public function test_study_plan_saved_only_uses_bookmarks(): void
     {
-        $saved = Question::factory()->create(['topic_id' => null]);
-        Question::factory()->create(['topic_id' => null]);
+        $saved = Question::factory()->create([]);
+        Question::factory()->create([]);
         $this->bookmark($saved);
 
         $plan = StudyPlan::factory()->create([
@@ -135,7 +135,6 @@ final class QuestionBookmarkTest extends TestCase
     public function test_qbank_bookmarks_page_lists_saved_questions(): void
     {
         $saved = Question::factory()->free()->create([
-            'topic_id' => null,
             'stem' => 'Bệnh nhân ho ra máu và suy thận cấp nên nghĩ đến gì?',
         ]);
         $this->bookmark($saved);
@@ -150,7 +149,6 @@ final class QuestionBookmarkTest extends TestCase
     public function test_qbank_bookmarks_page_includes_question_and_answers(): void
     {
         $saved = Question::factory()->free()->create([
-            'topic_id' => null,
             'stem' => 'Câu hỏi bookmark để xem đáp án?',
             'explanation' => 'Giải thích dành cho câu đã lưu.',
         ]);
@@ -180,7 +178,7 @@ final class QuestionBookmarkTest extends TestCase
 
     public function test_student_can_remove_bookmark_from_qbank_list(): void
     {
-        $saved = Question::factory()->free()->create(['topic_id' => null]);
+        $saved = Question::factory()->free()->create([]);
         $this->bookmark($saved);
 
         $this->actingAs($this->user)
@@ -193,9 +191,9 @@ final class QuestionBookmarkTest extends TestCase
 
     public function test_student_can_start_session_from_selected_bookmarks(): void
     {
-        $first = Question::factory()->free()->withOptions()->create(['topic_id' => null]);
-        $second = Question::factory()->free()->withOptions()->create(['topic_id' => null]);
-        Question::factory()->free()->withOptions()->create(['topic_id' => null]);
+        $first = Question::factory()->free()->withOptions()->create([]);
+        $second = Question::factory()->free()->withOptions()->create([]);
+        Question::factory()->free()->withOptions()->create([]);
         $this->bookmark($first);
         $this->bookmark($second);
 
@@ -215,8 +213,8 @@ final class QuestionBookmarkTest extends TestCase
 
     public function test_session_from_bookmarks_ignores_questions_not_saved_by_user(): void
     {
-        $owned = Question::factory()->free()->withOptions()->create(['topic_id' => null]);
-        $foreign = Question::factory()->free()->withOptions()->create(['topic_id' => null]);
+        $owned = Question::factory()->free()->withOptions()->create([]);
+        $foreign = Question::factory()->free()->withOptions()->create([]);
         $this->bookmark($owned);
 
         $this->actingAs($this->user)

@@ -30,7 +30,7 @@ class QuestionSessionFactory extends Factory
             'user_id' => User::factory(),
             'mode' => SessionMode::Study,
             'status' => SessionStatus::Completed,
-            'filters' => ['difficulty' => null, 'topic_id' => null],
+            'filters' => ['difficulty' => null],
             'question_ids' => [],
             'total' => $total,
             'answered_count' => $answered,
