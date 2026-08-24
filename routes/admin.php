@@ -98,7 +98,15 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
             Route::post('/support/{conversation}/seen', [SupportConversationController::class, 'seen'])->name('support.seen');
             Route::post('/support/{conversation}/messages', [SupportConversationController::class, 'message'])->name('support.messages.store');
             Route::post('/support/{conversation}/resolve', [SupportConversationController::class, 'resolve'])->name('support.resolve');
+
+            Route::get('/notifications/broadcast', [\Modules\Notification\Http\Controllers\AdminBroadcastController::class, 'create'])
+                ->name('notifications.broadcast');
+            Route::post('/notifications/broadcast', [\Modules\Notification\Http\Controllers\AdminBroadcastController::class, 'store'])
+                ->name('notifications.broadcast.store');
         });
+
+        Route::get('/notifications', [\Modules\Notification\Http\Controllers\NotificationController::class, 'index'])
+            ->name('notifications.index');
 
         Route::middleware('permission:'.Permission::AuditView->value)->group(function (): void {
             Route::get('/audit', [AuditLogController::class, 'index'])->name('audit.index');

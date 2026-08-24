@@ -15,7 +15,7 @@
 @endphp
 
 <x-layouts.app title="Xem lại kỳ thi">
-    <div class="flex h-[calc(100vh-var(--spacing-header-height))] overflow-hidden bg-white"
+    <div class="flex h-[calc(100vh-var(--spacing-header-height))] overflow-hidden bg-surface"
         x-data="{
             items: @js($items),
             filter: @js($initialFilter),
@@ -76,15 +76,15 @@
             optionClass(option) {
                 if (option.state === 'correct_selected' || option.state === 'correct') return 'border-success bg-success/5';
                 if (option.state === 'wrong_selected') return 'border-error bg-error/5';
-                return 'border-outline-variant bg-white opacity-70';
+                return 'border-outline-variant bg-surface-container-low opacity-80';
             },
             optionBadgeClass(option) {
-                if (option.state === 'correct_selected' || option.state === 'correct') return 'border-success bg-success text-white';
-                if (option.state === 'wrong_selected') return 'border-error bg-error text-white';
-                return 'border-outline-variant text-on-surface-variant';
+                if (option.state === 'correct_selected' || option.state === 'correct') return 'border-success bg-success text-on-primary';
+                if (option.state === 'wrong_selected') return 'border-error bg-error text-on-primary';
+                return 'border-outline-variant bg-surface text-on-surface-variant';
             },
         }" @keydown.escape.window="detailOpen = false; notesOpen = false">
-        <aside class="z-10 w-full shrink-0 flex-col border-r border-outline-variant bg-white md:flex md:w-[400px] lg:w-[440px]"
+        <aside class="z-10 w-full shrink-0 flex-col border-r border-outline-variant bg-surface md:flex md:w-[400px] lg:w-[440px]"
             :class="detailOpen ? 'hidden md:flex' : 'flex'">
             <div class="border-b border-outline-variant bg-surface-container-lowest p-4 md:p-5">
                 <div class="mb-4 flex items-start justify-between gap-3">
@@ -105,24 +105,24 @@
                         <button type="button" @click="setFilter('{{ $filter['value'] }}')"
                             class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-xs font-bold transition-colors"
                             :class="filter === '{{ $filter['value'] }}'
-                                ? 'bg-primary text-white shadow-sm'
+                                ? 'bg-primary text-on-primary shadow-sm'
                                 : 'bg-surface-container-high text-on-surface-variant hover:bg-outline-variant/50'">
                             {{ $filter['label'] }}
                             <span class="rounded-full px-1.5 py-0.5 text-[10px]"
-                                :class="filter === '{{ $filter['value'] }}' ? 'bg-white/20' : 'bg-white'"
+                                :class="filter === '{{ $filter['value'] }}' ? 'bg-on-primary/20' : 'bg-surface-container-lowest'"
                                 x-text="count('{{ $filter['value'] }}')"></span>
                         </button>
                     @endforeach
                 </div>
             </div>
 
-            <div class="custom-scrollbar flex-1 overflow-y-auto">
+            <div class="custom-scrollbar flex-1 overflow-y-auto bg-surface">
                 <template x-if="filtered.length === 0">
                     <div class="flex h-full flex-col items-center justify-center p-8 text-center">
                         <span class="material-symbols-outlined text-6xl text-outline-variant">filter_alt_off</span>
                         <h2 class="mt-4 font-headline-sm text-headline-sm text-on-surface">Không có câu phù hợp</h2>
                         <p class="mt-2 text-body-sm text-on-surface-variant">Hãy chọn một bộ lọc khác để tiếp tục xem lại.</p>
-                        <button type="button" @click="setFilter('all')" class="mt-5 rounded-lg bg-primary px-5 py-2.5 font-bold text-white">Xem tất cả</button>
+                        <button type="button" @click="setFilter('all')" class="mt-5 rounded-lg bg-primary px-5 py-2.5 font-bold text-on-primary">Xem tất cả</button>
                     </div>
                 </template>
 
@@ -156,11 +156,11 @@
             </div>
         </aside>
 
-        <main class="custom-scrollbar min-w-0 flex-1 flex-col overflow-y-auto bg-white"
+        <main class="custom-scrollbar min-w-0 flex-1 flex-col overflow-y-auto bg-surface-container-lowest"
             :class="detailOpen ? 'flex' : 'hidden md:flex'">
             <template x-if="current">
                 <article class="flex min-h-full flex-col">
-                    <header class="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-outline-variant bg-white/95 px-4 py-3 backdrop-blur md:px-6">
+                    <header class="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-outline-variant bg-surface/95 px-4 py-3 backdrop-blur md:px-6">
                         <button type="button" @click="detailOpen = false"
                             class="inline-flex items-center gap-1 rounded-lg px-2 py-2 font-bold text-primary hover:bg-primary/5 md:hidden">
                             <span class="material-symbols-outlined">arrow_back</span> Danh sách
@@ -171,7 +171,7 @@
                             <span class="text-sm font-semibold text-on-surface-variant" x-text="current.topic"></span>
                         </div>
                         <div class="ml-auto flex items-center gap-2">
-                            <span x-show="current.flagged" class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
+                            <span x-show="current.flagged" class="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-3 py-1 text-xs font-bold text-amber-600 dark:text-amber-400">
                                 <span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">flag</span>
                                 Gắn cờ
                             </span>
@@ -186,11 +186,11 @@
                                 <span class="font-bold text-primary" x-text="current.id"></span>
                                 <span class="text-sm text-on-surface-variant" x-text="current.topic"></span>
                             </div>
-                            <div class="rounded-2xl border border-outline-variant bg-white p-5 text-body-lg leading-relaxed text-on-surface shadow-sm md:p-6"
+                            <div class="prose prose-lg max-w-none rounded-2xl border border-outline-variant bg-surface p-5 text-body-lg leading-relaxed text-on-surface shadow-sm md:p-6 dark:prose-invert"
                                 x-html="current.stem_html"></div>
                             <div class="flex flex-wrap items-center gap-2">
                                 <button type="button" @click="notesOpen = true"
-                                    class="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant px-3 py-1.5 text-label-sm text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-primary">
+                                    class="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant bg-surface px-3 py-1.5 text-label-sm text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-primary">
                                     <span class="material-symbols-outlined text-[18px]">description</span>
                                     <span x-text="current.note ? 'Xem ghi chú' : 'Ghi chú'"></span>
                                 </button>
@@ -212,15 +212,15 @@
                                             <p class="text-body-md text-on-surface" x-text="option.text"></p>
                                             <div class="mt-2 flex flex-wrap gap-2">
                                                 <span x-show="option.correct"
-                                                    class="rounded bg-success px-2 py-0.5 text-[10px] font-bold text-white uppercase">Đáp án đúng</span>
+                                                    class="rounded bg-success px-2 py-0.5 text-[10px] font-bold text-on-primary uppercase">Đáp án đúng</span>
                                                 <span x-show="option.selected"
                                                     class="rounded px-2 py-0.5 text-[10px] font-bold uppercase"
-                                                    :class="option.correct ? 'bg-primary/10 text-primary' : 'bg-error text-white'">
+                                                    :class="option.correct ? 'bg-primary/10 text-primary' : 'bg-error text-on-primary'">
                                                     Bạn đã chọn
                                                 </span>
                                             </div>
                                             <div x-show="option.explanation"
-                                                class="prose prose-sm mt-3 max-w-none text-body-sm leading-relaxed text-on-surface-variant"
+                                                class="prose prose-sm mt-3 max-w-none text-body-sm leading-relaxed text-on-surface-variant dark:prose-invert"
                                                 x-html="option.explanation"></div>
                                         </div>
                                         <span x-show="option.correct" class="material-symbols-outlined text-success">check_circle</span>
@@ -230,31 +230,56 @@
                             </template>
                         </section>
                     </div>
+
+                    <footer class="sticky bottom-0 z-20 flex items-center justify-between gap-3 border-t border-outline-variant bg-surface/95 px-4 py-3 backdrop-blur md:px-6">
+                        <button type="button" @click="move(-1)" :disabled="!canMove(-1)"
+                            class="inline-flex items-center gap-1 rounded-lg px-3 py-2 font-bold text-on-surface-variant hover:bg-surface-container-low disabled:cursor-not-allowed disabled:opacity-30">
+                            <span class="material-symbols-outlined">chevron_left</span>
+                            <span class="hidden sm:inline">Câu trước</span>
+                        </button>
+                        <a href="{{ route('exam.summary', $session) }}"
+                            class="hidden rounded-lg border border-outline-variant bg-surface px-4 py-2 text-sm font-bold text-primary hover:bg-primary/5 sm:inline-flex">
+                            Về tổng kết
+                        </a>
+                        <button type="button" @click="move(1)" :disabled="!canMove(1)"
+                            class="inline-flex items-center gap-1 rounded-lg bg-primary px-4 py-2 font-bold text-on-primary disabled:cursor-not-allowed disabled:opacity-30">
+                            <span class="hidden sm:inline">Câu tiếp theo</span>
+                            <span class="material-symbols-outlined">chevron_right</span>
+                        </button>
+                    </footer>
                 </article>
+            </template>
+
+            <template x-if="!current">
+                <div class="flex h-full flex-col items-center justify-center p-8 text-center">
+                    <span class="material-symbols-outlined text-6xl text-outline-variant">quiz</span>
+                    <h2 class="mt-4 font-headline-sm text-headline-sm text-on-surface">Không có câu để xem lại</h2>
+                    <a href="{{ route('exam.summary', $session) }}" class="mt-5 rounded-lg bg-primary px-5 py-2.5 font-bold text-on-primary">Quay lại tổng kết</a>
+                </div>
             </template>
         </main>
 
         <div x-show="notesOpen && current" x-cloak x-transition.opacity
             class="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <div class="absolute inset-0 bg-on-background/40 backdrop-blur-sm" @click="notesOpen = false"></div>
-            <div class="relative flex w-full max-w-lg flex-col overflow-hidden rounded-xl bg-white shadow-lg"
+            <div class="relative flex w-full max-w-lg flex-col overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-lg"
                 @click.outside="notesOpen = false">
                 <div class="flex items-center justify-between border-b border-outline-variant px-6 py-4">
                     <h3 class="font-headline-sm text-headline-sm text-on-surface">Ghi chú cá nhân</h3>
                     <button type="button" @click="notesOpen = false"
-                        class="flex size-8 items-center justify-center rounded-full transition-colors hover:bg-surface-container-high">
-                        <span class="material-symbols-outlined text-outline">close</span>
+                        class="flex size-8 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-surface-container-high">
+                        <span class="material-symbols-outlined">close</span>
                     </button>
                 </div>
                 <div class="space-y-3 p-6">
                     <p class="text-label-sm text-on-surface-variant"
                         x-text="'Câu ' + ((current?.index ?? 0) + 1)"></p>
-                    <div class="prose prose-sm min-h-[160px] max-w-none rounded-lg border border-outline-variant bg-surface-container-lowest p-4 text-body-md text-on-surface"
+                    <div class="prose prose-sm min-h-[160px] max-w-none rounded-lg border border-outline-variant bg-surface-container-lowest p-4 text-body-md text-on-surface dark:prose-invert"
                         x-html="current?.note_html || current?.note || 'Chưa có ghi chú cho câu hỏi này.'"></div>
                 </div>
                 <div class="flex justify-end border-t border-outline-variant px-6 py-4">
                     <button type="button" @click="notesOpen = false"
-                        class="rounded-lg bg-primary-container px-4 py-2 font-label-md text-white transition-opacity hover:opacity-90">
+                        class="rounded-lg bg-primary px-4 py-2 font-label-md text-on-primary transition-opacity hover:opacity-90">
                         Đóng
                     </button>
                 </div>

@@ -33,6 +33,9 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroyTeach'])
 Route::middleware(['auth', 'instructor'])->group(function (): void {
     Route::view('/', 'classroom::teach.dashboard')->name('dashboard');
 
+    Route::get('/notifications', [\Modules\Notification\Http\Controllers\NotificationController::class, 'index'])
+        ->name('notifications.index');
+
     Route::get('/classes', [TeachClassroomController::class, 'index'])->name('classes.index');
     Route::get('/classes/create', [TeachClassroomController::class, 'create'])->name('classes.create');
     Route::post('/classes', [TeachClassroomController::class, 'store'])->name('classes.store');

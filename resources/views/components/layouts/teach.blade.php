@@ -17,6 +17,12 @@
             'match' => 'teach.classes.*',
         ],
         [
+            'label' => 'Thông báo',
+            'icon' => 'notifications',
+            'route' => 'teach.notifications.index',
+            'match' => 'teach.notifications.*',
+        ],
+        [
             'label' => 'Hàng chờ chữa',
             'icon' => 'queue',
             'route' => null,
@@ -44,6 +50,7 @@
     x-data="{
         menu: false,
         accountMenu: false,
+        notificationsOpen: false,
         theme: 'light',
         initTheme() {
             this.theme = window.MedlearnTheme?.getStoredTheme?.() ?? 'system';
@@ -56,7 +63,7 @@
         },
     }"
     x-init="initTheme()"
-    @keydown.escape.window="menu = false; accountMenu = false">
+    @keydown.escape.window="menu = false; accountMenu = false; notificationsOpen = false">
     <aside
         class="fixed top-0 left-0 z-50 hidden h-screen w-sidebar-width flex-col border-r border-outline-variant bg-surface p-4 md:flex">
         <div class="mb-6 px-2">
@@ -142,8 +149,10 @@
             <h1 class="truncate font-headline-sm text-headline-sm text-on-surface">{{ $title ?? 'Tổng quan' }}</h1>
         </div>
 
-        <div class="relative ml-2 flex shrink-0 items-center" @click.outside="accountMenu = false">
-            <button type="button" @click="accountMenu = !accountMenu"
+        <div class="relative ml-2 flex shrink-0 items-center gap-3">
+            @include('notification::partials.bell', ['indexRoute' => 'teach.notifications.index'])
+            <div class="relative" @click.outside="accountMenu = false">
+            <button type="button" @click="accountMenu = !accountMenu; notificationsOpen = false"
                 class="flex items-center gap-3 rounded-xl p-1.5 text-left transition-colors hover:bg-surface-container-low focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 :aria-expanded="accountMenu" aria-haspopup="dialog" aria-label="Mở menu tài khoản">
                 <div class="hidden text-right sm:block">
@@ -201,6 +210,7 @@
                     </button>
                 </form>
             </section>
+            </div>
         </div>
     </header>
 

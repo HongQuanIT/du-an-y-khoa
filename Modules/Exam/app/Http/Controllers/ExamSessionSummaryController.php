@@ -67,6 +67,11 @@ final class ExamSessionSummaryController extends Controller
             ->values()
             ->all();
         $modeLabel = $session->mode->value === 'exam' ? 'Phiên thi' : 'Phiên học tập';
+        $examId = $session->exam_id
+            ?? (is_array($session->filters) ? ($session->filters['exam_id'] ?? null) : null);
+        $retryUrl = $examId !== null && $examId !== ''
+            ? route('exam.start', $examId)
+            : null;
 
         return view('studyplan::session-summary', [
             'session' => $session,
@@ -100,7 +105,7 @@ final class ExamSessionSummaryController extends Controller
                 'back_icon' => 'assignment',
                 'progress_label' => $summary['answered'].'/'.$summary['total'].' câu đã trả lời',
                 'context_message' => 'Kết quả đã được lưu vào lịch sử Kỳ thi.',
-                'retry_url' => route('exam.start', $session->exam_id),
+                'retry_url' => $retryUrl,
             ],
         ]);
     }

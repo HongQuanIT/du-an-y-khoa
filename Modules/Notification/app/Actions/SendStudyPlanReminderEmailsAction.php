@@ -34,7 +34,7 @@ final class SendStudyPlanReminderEmailsAction
 
         foreach ($userIds as $userId) {
             $user = User::query()->find($userId);
-            if ($user === null || ! $this->wantsPlanEmail($user)) {
+            if ($user === null) {
                 continue;
             }
 
@@ -47,7 +47,27 @@ final class SendStudyPlanReminderEmailsAction
                 continue;
             }
 
-            Mail::to($user)->send(new StudyPlanReminderMail($user, $tasks, $date));
+            $emailed = false;
+            if ($this->wantsPlanEmail($user)) {
+                Mail::to($user)->send(new StudyPlanReminderMail($user, $tasks, $date));
+                $emailed = true;
+            }
+
+            $inApp = CreateUserNotificationAction::run(
+                user: $user,
+                type: 'study_plan.reminder',
+                title: 'Nhắc kế hoạch học',
+                body: sprintf('Bạn còn %d nhiệm vụ đến hạn hôm nay.', $tasks->count()),
+                data: [
+                    'reminder_date' => $date->toDateString(),
+                    'task_count' => $tasks->count(),
+                ],
+                actionUrl: route('study-plan.index'),
+            );
+
+            if (! $emailed && $inApp === null) {
+                continue;
+            }
 
             StudyPlanReminderLog::query()->create([
                 'user_id' => $user->getKey(),

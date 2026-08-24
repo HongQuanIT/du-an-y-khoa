@@ -455,7 +455,7 @@
                     <span class="material-symbols-outlined">{{ $summaryConfig['back_icon'] }}</span>
                     {{ $summaryConfig['back_label'] }}
                 </a>
-                @if (isset($summaryConfig['retry_url']))
+                @if (! empty($summaryConfig['retry_url']))
                     <form method="POST" action="{{ $summaryConfig['retry_url'] }}" class="w-full sm:w-auto">
                         @csrf
                         <button type="submit"

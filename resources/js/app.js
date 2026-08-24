@@ -9,6 +9,7 @@ import './support-typing';
 import { bootAdminSupportInbox } from './admin/support-inbox';
 import { bootAdminSupportThread } from './admin/support-thread';
 import { bootUserSupportThread } from './support-user-thread';
+import { bootNotifications } from './notifications';
 
 bootstrapTheme();
 bootstrapCookieConsent();
@@ -40,6 +41,7 @@ const bootSupportUi = () => {
     bootAdminSupportInbox();
     bootAdminSupportThread();
     bootUserSupportThread();
+    bootNotifications();
 };
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', bootSupportUi, { once: true });

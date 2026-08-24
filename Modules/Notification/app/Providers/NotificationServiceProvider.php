@@ -24,6 +24,8 @@ class NotificationServiceProvider extends ModuleServiceProvider
      */
     protected array $commands = [
         \Modules\Notification\Console\SendStudyPlanRemindersCommand::class,
+        \Modules\Notification\Console\SendLiveUpcomingRemindersCommand::class,
+        \Modules\Notification\Console\SendStreakWarningsCommand::class,
     ];
 
     /**
@@ -46,6 +48,14 @@ class NotificationServiceProvider extends ModuleServiceProvider
     {
         $schedule->command('notification:study-plan-reminders')
             ->dailyAt('08:00')
+            ->withoutOverlapping();
+
+        $schedule->command('notification:live-upcoming')
+            ->everyFiveMinutes()
+            ->withoutOverlapping();
+
+        $schedule->command('notification:streak-warnings')
+            ->hourly()
             ->withoutOverlapping();
     }
 }

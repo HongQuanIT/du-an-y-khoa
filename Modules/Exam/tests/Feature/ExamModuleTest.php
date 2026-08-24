@@ -96,6 +96,57 @@ final class ExamModuleTest extends TestCase
         $this->assertSame(0, QuestionSession::query()->count());
     }
 
+    public function test_exam_summary_renders_when_exam_id_is_missing(): void
+    {
+        $question = $this->examQuestion('Resident first', 'Resident');
+
+        $session = QuestionSession::factory()->create([
+            'user_id' => $this->user->getKey(),
+            'mode' => SessionMode::Exam,
+            'source' => SessionSource::Exam,
+            'status' => \Modules\QuestionBank\Enums\SessionStatus::Completed,
+            'exam_id' => null,
+            'filters' => ['exam_id' => null],
+            'question_ids' => [$question->getKey()],
+            'total' => 1,
+            'answered_count' => 1,
+            'correct_count' => 1,
+        ]);
+
+        app(\Modules\QuestionBank\Services\QuestionSessionSnapshots::class)->capture($session);
+
+        $this->actingAs($this->user)
+            ->get(route('exam.summary', $session))
+            ->assertOk()
+            ->assertDontSee('Làm lại');
+    }
+
+    public function test_exam_summary_retry_uses_exam_id_when_present(): void
+    {
+        $question = $this->examQuestion('Resident first', 'Resident');
+        $exam = \Modules\Exam\Models\Exam::query()->where('title', 'Resident')->firstOrFail();
+
+        $session = QuestionSession::factory()->create([
+            'user_id' => $this->user->getKey(),
+            'mode' => SessionMode::Exam,
+            'source' => SessionSource::Exam,
+            'status' => \Modules\QuestionBank\Enums\SessionStatus::Completed,
+            'exam_id' => $exam->getKey(),
+            'question_ids' => [$question->getKey()],
+            'total' => 1,
+            'answered_count' => 1,
+            'correct_count' => 1,
+        ]);
+
+        app(\Modules\QuestionBank\Services\QuestionSessionSnapshots::class)->capture($session);
+
+        $this->actingAs($this->user)
+            ->get(route('exam.summary', $session))
+            ->assertOk()
+            ->assertSee('Làm lại')
+            ->assertSee(route('exam.start', $exam->getKey()), false);
+    }
+
     private function examQuestion(string $stem, string $examKey): Question
     {
         $question = Question::factory()

@@ -9,6 +9,7 @@ use Illuminate\Validation\ValidationException;
 use Modules\Classroom\Enums\LiveSessionStatus;
 use Modules\Classroom\Enums\MessageType;
 use Modules\Classroom\Enums\RecordingStatus;
+use Modules\Classroom\Events\LiveSessionStarted;
 use Modules\Classroom\Models\LiveRecording;
 use Modules\Classroom\Models\Classroom;
 use Modules\Classroom\Models\LiveSession;
@@ -78,6 +79,9 @@ final class StartLiveSessionAction
             }
         }
 
-        return $session->fresh() ?? $session;
+        $fresh = $session->fresh() ?? $session;
+        event(new LiveSessionStarted($fresh));
+
+        return $fresh;
     }
 }

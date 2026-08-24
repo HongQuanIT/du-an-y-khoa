@@ -39,12 +39,10 @@ final class ProfileController extends Controller
         $user = $request->user();
         $tab = $this->normalizeTab((string) $request->query('tab', 'career'), $user);
 
-        $prefs = $user->notification_prefs ?? [
-            'email_session' => true,
-            'email_plan' => true,
-            'email_product' => false,
-            'push_reminders' => true,
-        ];
+        $prefs = array_merge(
+            \Modules\Notification\Support\NotificationCatalog::defaultPreferences(),
+            is_array($user->notification_prefs) ? $user->notification_prefs : [],
+        );
 
         $orgMembers = InstitutionMember::query()
             ->with('institution')
@@ -180,6 +178,9 @@ final class ProfileController extends Controller
             'email_plan' => ['nullable', 'boolean'],
             'email_product' => ['nullable', 'boolean'],
             'push_reminders' => ['nullable', 'boolean'],
+            'push_classroom' => ['nullable', 'boolean'],
+            'push_support' => ['nullable', 'boolean'],
+            'push_billing' => ['nullable', 'boolean'],
         ]);
 
         $request->user()->forceFill([
@@ -188,6 +189,9 @@ final class ProfileController extends Controller
                 'email_plan' => $request->boolean('email_plan'),
                 'email_product' => $request->boolean('email_product'),
                 'push_reminders' => $request->boolean('push_reminders'),
+                'push_classroom' => $request->boolean('push_classroom'),
+                'push_support' => $request->boolean('push_support'),
+                'push_billing' => $request->boolean('push_billing'),
             ],
         ])->save();
 

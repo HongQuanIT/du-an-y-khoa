@@ -30,6 +30,10 @@ final class NotifySessionCompleted
         $total = $session?->total ?? 0;
         $correct = $session?->correct_count ?? 0;
 
+        $actionUrl = $session !== null
+            ? route('qbank.review', $session)
+            : null;
+
         $this->notify->handle(
             user: $user,
             type: 'session.completed',
@@ -41,6 +45,7 @@ final class NotifySessionCompleted
                 'total' => $total,
                 'correct' => $correct,
             ],
+            actionUrl: $actionUrl,
         );
     }
 }

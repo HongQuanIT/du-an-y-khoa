@@ -113,6 +113,13 @@ final class AdminMenu
                 'match' => 'admin.roles.*',
             ],
             [
+                'label' => 'Thông báo',
+                'icon' => 'notifications',
+                'route' => 'admin.notifications.index',
+                'permission' => null,
+                'match' => 'admin.notifications.*',
+            ],
+            [
                 'label' => 'Hỗ trợ chat',
                 'icon' => 'support_agent',
                 'route' => 'admin.support.index',

@@ -46,12 +46,43 @@ final class StudyPlanReminderTest extends TestCase
         );
     }
 
-    public function test_skips_when_email_plan_disabled(): void
+    public function test_skips_email_but_creates_in_app_when_email_plan_disabled(): void
     {
         Mail::fake();
 
         $user = User::factory()->create([
-            'notification_prefs' => ['email_plan' => false],
+            'notification_prefs' => [
+                'email_plan' => false,
+                'push_reminders' => true,
+            ],
+        ]);
+        $plan = StudyPlan::factory()->for($user)->create(['status' => PlanStatus::Active]);
+        StudyPlanTask::factory()->for($plan, 'plan')->create([
+            'date' => now()->toDateString(),
+            'status' => TaskStatus::Pending,
+        ]);
+
+        $sent = SendStudyPlanReminderEmailsAction::run();
+
+        $this->assertSame(1, $sent);
+        Mail::assertNothingQueued();
+        $this->assertTrue(
+            \Modules\Notification\Models\UserNotification::query()
+                ->where('user_id', $user->getKey())
+                ->where('type', 'study_plan.reminder')
+                ->exists()
+        );
+    }
+
+    public function test_skips_when_email_and_push_disabled(): void
+    {
+        Mail::fake();
+
+        $user = User::factory()->create([
+            'notification_prefs' => [
+                'email_plan' => false,
+                'push_reminders' => false,
+            ],
         ]);
         $plan = StudyPlan::factory()->for($user)->create(['status' => PlanStatus::Active]);
         StudyPlanTask::factory()->for($plan, 'plan')->create([
