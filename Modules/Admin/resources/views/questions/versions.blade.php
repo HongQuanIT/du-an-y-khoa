@@ -47,8 +47,8 @@
                     : null;
                 $status = QuestionStatus::tryFrom((string) ($snapshot['status'] ?? ''));
                 $difficulty = Difficulty::tryFrom((string) ($snapshot['difficulty'] ?? ''));
-                $versionTopicNames = collect((array) ($snapshot['topic_ids'] ?? []))
-                    ->map(fn ($id) => $topicNames->get((int) $id, "Chủ đề #{$id}"))
+                $versionNodeNames = collect((array) ($snapshot['medical_taxonomy_node_ids'] ?? []))
+                    ->map(fn ($id) => $nodeNames->get((int) $id, "Node #{$id}"))
                     ->values();
                 $isCurrent = (int) $version->version === (int) $contentVersion;
             @endphp
@@ -106,8 +106,8 @@
                         @if ($stemImageUrl)
                             <span class="rounded-lg bg-surface-container px-2 py-1">Có hình ảnh</span>
                         @endif
-                        @foreach ($versionTopicNames as $topicName)
-                            <span class="rounded-lg bg-primary/10 px-2 py-1 text-primary">{{ $topicName }}</span>
+                        @foreach ($versionNodeNames as $nodeName)
+                            <span class="rounded-lg bg-primary/10 px-2 py-1 text-primary">{{ $nodeName }}</span>
                         @endforeach
                     </div>
                 </div>

@@ -14,7 +14,6 @@ use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionOption;
 use Modules\QuestionBank\Models\QuestionSession;
-use Modules\QuestionBank\Models\Topic;
 use Modules\StudyPlan\Actions\CompletePlanTaskAction;
 use Modules\StudyPlan\Enums\PlanStatus;
 use Modules\StudyPlan\Enums\TaskStatus;
@@ -23,6 +22,8 @@ use Modules\StudyPlan\Models\StudyPlan;
 use Modules\StudyPlan\Models\StudyPlanTask;
 use Spatie\Permission\Models\Role as RoleModel;
 use Tests\TestCase;
+use Tests\Support\CreatesMedicalTaxonomy;
+
 
 /**
  * The Phase 1 vertical slice: create a plan, see today's task, answer its
@@ -30,11 +31,12 @@ use Tests\TestCase;
  */
 final class StudyPlanFlowTest extends TestCase
 {
+    use CreatesMedicalTaxonomy;
     use RefreshDatabase;
 
     private User $user;
 
-    private Topic $topic;
+    private \Modules\QuestionBank\Models\MedicalTaxonomyNode $topic;
 
     protected function setUp(): void
     {
@@ -45,11 +47,11 @@ final class StudyPlanFlowTest extends TestCase
         $this->user = User::factory()->create();
         $this->user->assignRole(Role::Student->value);
 
-        $this->topic = Topic::create([
+        $this->topic = $this->makeMedicalNode([
             'name' => 'Tim mạch',
             'slug' => 'tim-mach',
-            'type' => 'system',
-            'order' => 0,
+            'node_type' => 'system',
+            'sort_order' => 0,
         ]);
 
         $this->seedQuestions(12);
@@ -548,8 +550,7 @@ final class StudyPlanFlowTest extends TestCase
                 'attending_tip' => "Kiến thức kiểm thử #{$i}.",
                 'difficulty' => 'medium',
                 'status' => QuestionStatus::Published,
-                'topic_id' => $this->topic->id,
-                'is_free' => true,
+                                'is_free' => true,
             ]);
 
             foreach (['A', 'B', 'C', 'D'] as $index => $label) {
@@ -561,6 +562,8 @@ final class StudyPlanFlowTest extends TestCase
                     'order' => $index,
                 ]);
             }
+
+            $question->medicalTaxonomyNodes()->sync([$this->topic->id]);
         }
     }
 }

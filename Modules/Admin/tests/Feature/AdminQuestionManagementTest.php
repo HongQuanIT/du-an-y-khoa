@@ -22,14 +22,16 @@ use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionReviewRequest;
 use Modules\QuestionBank\Models\QuestionVersion;
-use Modules\QuestionBank\Models\Topic;
 use Tests\TestCase;
+use Tests\Support\CreatesMedicalTaxonomy;
+
 
 final class AdminQuestionManagementTest extends TestCase
 {
+    use CreatesMedicalTaxonomy;
     use RefreshDatabase;
 
-    private Topic $topic;
+    private \Modules\QuestionBank\Models\MedicalTaxonomyNode $topic;
 
     protected function setUp(): void
     {
@@ -37,11 +39,11 @@ final class AdminQuestionManagementTest extends TestCase
 
         $this->seed(RolePermissionSeeder::class);
 
-        $this->topic = Topic::query()->create([
+        $this->topic = $this->makeMedicalNode([
             'name' => 'Tim mạch',
             'slug' => 'tim-mach-admin-test',
-            'type' => 'specialty',
-            'order' => 1,
+            'node_type' => 'specialty',
+            'sort_order' => 1,
         ]);
     }
 
@@ -72,44 +74,42 @@ final class AdminQuestionManagementTest extends TestCase
     public function test_editor_can_assign_multiple_topics_to_question(): void
     {
         $editor = $this->staffUser(Role::ContentEditor);
-        $secondaryTopic = Topic::query()->create([
+        $secondaryTopic = $this->makeMedicalNode([
             'name' => 'Chẩn đoán hình ảnh',
             'slug' => 'chan-doan-hinh-anh-admin-test',
-            'type' => 'specialty',
-            'order' => 2,
+            'node_type' => 'specialty',
+            'sort_order' => 2,
         ]);
 
         $this->actingAsStaff($editor)
             ->post(route('admin.questions.store'), array_merge($this->payload(), [
-                'topic_ids' => [$this->topic->id, $secondaryTopic->id],
+                'medical_taxonomy_node_ids' => [$this->topic->id, $secondaryTopic->id],
             ]))
             ->assertRedirect();
 
         $question = Question::query()->firstOrFail();
 
-        $this->assertSame($this->topic->id, $question->topic_id);
-        $this->assertEqualsCanonicalizing(
+                $this->assertEqualsCanonicalizing(
             [$this->topic->id, $secondaryTopic->id],
-            $question->topics()->pluck('topics.id')->all(),
+            $question->medicalTaxonomyNodes()->pluck('medical_taxonomy_nodes.id')->all(),
         );
 
         $this->actingAsStaff($editor)
-            ->get(route('admin.questions.index', ['topic_id' => $secondaryTopic->id]))
+            ->get(route('admin.questions.index', ['medical_taxonomy_node_id' => $secondaryTopic->id]))
             ->assertOk()
             ->assertSee('Bệnh nhân 55 tuổi đau ngực', false)
             ->assertSee('Chẩn đoán hình ảnh');
 
         $this->actingAsStaff($editor)
             ->put(route('admin.questions.update', $question), array_merge($this->payload(), [
-                'topic_ids' => [$secondaryTopic->id],
+                'medical_taxonomy_node_ids' => [$secondaryTopic->id],
             ]))
             ->assertRedirect();
 
         $question->refresh();
-        $this->assertSame($secondaryTopic->id, $question->topic_id);
-        $this->assertSame(
+                $this->assertSame(
             [$secondaryTopic->id],
-            $question->topics()->pluck('topics.id')->all(),
+            $question->medicalTaxonomyNodes()->pluck('medical_taxonomy_nodes.id')->all(),
         );
     }
 
@@ -147,7 +147,7 @@ final class AdminQuestionManagementTest extends TestCase
         $editor = $this->staffUser(Role::ContentEditor);
 
         $payload = array_merge($this->payload(), [
-            'topic_ids' => [],
+            'medical_taxonomy_node_ids' => [],
             'options' => [
                 ['content' => 'Option typed A', 'is_correct' => '0', 'explanation' => 'Explanation typed A'],
                 ['content' => 'Option typed B', 'is_correct' => '1', 'explanation' => 'Explanation typed B'],
@@ -159,7 +159,7 @@ final class AdminQuestionManagementTest extends TestCase
             ->from(route('admin.questions.create'))
             ->post(route('admin.questions.store'), $payload)
             ->assertRedirect(route('admin.questions.create'))
-            ->assertSessionHasErrors('topic_ids');
+            ->assertSessionHasErrors('medical_taxonomy_node_ids');
 
         $this->actingAsStaff($editor)
             ->get(route('admin.questions.create'))
@@ -285,7 +285,7 @@ final class AdminQuestionManagementTest extends TestCase
             ->post(route('admin.questions.versions.restore', [$question, $oldVersion]))
             ->assertRedirect(route('admin.questions.edit', $question));
 
-        $restored = $question->fresh(['options', 'topics']);
+        $restored = $question->fresh(['options', 'medicalTaxonomyNodes']);
         $this->assertSame($originalVersion + 2, $restored->version);
         $this->assertSame(QuestionStatus::Draft, $restored->status);
         $this->assertSame(
@@ -336,8 +336,83 @@ final class AdminQuestionManagementTest extends TestCase
             ])
             ->assertRedirect();
 
-        $this->assertSame(QuestionStatus::Published, $question->fresh()->status);
+        $question->refresh();
+        $this->assertSame(QuestionStatus::Published, $question->status);
+        $this->assertSame($admin->id, $question->reviewer_id);
+        $this->assertGreaterThan(0, $question->version);
+        $this->assertDatabaseHas('question_versions', [
+            'question_id' => $question->id,
+            'version' => $question->version,
+            'event' => 'status',
+        ]);
         $this->assertDatabaseHas('audit_logs', ['action' => 'admin.question.status_change']);
+    }
+
+    public function test_admin_can_reject_question_in_review(): void
+    {
+        $admin = $this->staffUser(Role::Admin);
+        $question = $this->makeDraftQuestion();
+        $question->forceFill(['status' => QuestionStatus::InReview])->save();
+
+        $this->actingAsStaff($admin)
+            ->post(route('admin.questions.transition', $question), [
+                'status' => QuestionStatus::Rejected->value,
+                'rejection_reason' => 'Thiếu giải thích cho đáp án sai.',
+            ])
+            ->assertRedirect();
+
+        $question->refresh();
+        $this->assertSame(QuestionStatus::Rejected, $question->status);
+        $this->assertSame($admin->id, $question->reviewer_id);
+        $this->assertSame('Thiếu giải thích cho đáp án sai.', $question->rejection_reason);
+    }
+
+    public function test_rejected_question_cannot_be_edited_until_back_to_draft(): void
+    {
+        $admin = $this->staffUser(Role::Admin);
+        $question = $this->makeDraftQuestion();
+        $question->forceFill([
+            'status' => QuestionStatus::Rejected,
+            'rejection_reason' => 'Cần bổ sung guideline.',
+        ])->save();
+
+        $this->actingAsStaff($admin)
+            ->put(route('admin.questions.update', $question), $this->payload())
+            ->assertSessionHasErrors('status');
+
+        $this->actingAsStaff($admin)
+            ->post(route('admin.questions.transition', $question), [
+                'status' => QuestionStatus::Draft->value,
+            ])
+            ->assertRedirect();
+
+        $this->actingAsStaff($admin)
+            ->put(route('admin.questions.update', $question), array_merge($this->payload(), [
+                'stem' => 'Nội dung đã sửa sau khi từ chối.',
+            ]))
+            ->assertRedirect();
+
+        $this->assertSame('Nội dung đã sửa sau khi từ chối.', strip_tags($question->fresh()->stem));
+    }
+
+    public function test_admin_can_clone_question(): void
+    {
+        $admin = $this->staffUser(Role::Admin);
+        $question = $this->makePublishedQuestion();
+
+        $this->actingAsStaff($admin)
+            ->post(route('admin.questions.clone', $question))
+            ->assertRedirect();
+
+        $clone = Question::query()->where('cloned_from_id', $question->id)->firstOrFail();
+        $this->assertSame(QuestionStatus::Draft, $clone->status);
+        $this->assertSame($question->version, $clone->cloned_from_version);
+        $this->assertSame($admin->id, $clone->created_by);
+        $this->assertCount(4, $clone->options);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'admin.question.clone',
+            'auditable_id' => $clone->id,
+        ]);
     }
 
     public function test_content_creator_only_sees_and_opens_own_questions(): void
@@ -422,6 +497,44 @@ final class AdminQuestionManagementTest extends TestCase
             ->assertSee('Nháp');
     }
 
+    public function test_admin_can_view_question_stats_page(): void
+    {
+        $admin = $this->staffUser(Role::Admin);
+        $question = $this->makePublishedQuestion();
+        $question->forceFill([
+            'stats_cache' => [
+                'total_attempts' => 40,
+                'study_mode_attempts' => 25,
+                'exam_mode_attempts' => 15,
+                'correct_attempts' => 28,
+                'incorrect_attempts' => 12,
+                'correct_rate' => 0.7,
+                'total_reports' => 2,
+                'reports_by_reason' => ['wrong_answer' => 1, 'unclear' => 1],
+            ],
+            'stats_updated_at' => now(),
+        ])->save();
+
+        $this->actingAsStaff($admin)
+            ->get(route('admin.questions.stats', $question))
+            ->assertOk()
+            ->assertSee('Thống kê câu hỏi', false)
+            ->assertSee('70.0%', false)
+            ->assertSee('Study mode', false)
+            ->assertSee('wrong_answer', false);
+    }
+
+    public function test_content_creator_cannot_view_foreign_question_stats(): void
+    {
+        $creatorA = $this->staffUser(Role::ContentEditor);
+        $creatorB = $this->staffUser(Role::ContentEditor);
+        $foreignQuestion = $this->makePublishedQuestion(createdBy: $creatorB);
+
+        $this->actingAsStaff($creatorA)
+            ->get(route('admin.questions.stats', $foreignQuestion))
+            ->assertNotFound();
+    }
+
     public function test_admin_create_publish_and_student_can_find_question_in_qbank(): void
     {
         $editor = $this->staffUser(Role::ContentEditor);
@@ -443,15 +556,14 @@ final class AdminQuestionManagementTest extends TestCase
             ])
             ->assertRedirect();
 
-        $published = $question->fresh(['options', 'topic', 'topics']);
+        $published = $question->fresh(['options', 'medicalTaxonomyNodes']);
         $this->assertSame(QuestionStatus::Published, $published->status);
         $this->assertSame('Bệnh nhân 55 tuổi đau ngực. Chẩn đoán nào phù hợp nhất?', strip_tags($published->stem));
         $this->assertSame(['đau ngực', 'Chẩn đoán nào phù hợp nhất?'], array_values(array_map('strip_tags', $published->key_info ?? [])));
         $this->assertSame('Giải thích lâm sàng đầy đủ.', strip_tags($published->explanation));
         $this->assertSame('Nhớ ECG sớm.', strip_tags($published->attending_tip));
         $this->assertSame(Difficulty::Medium, $published->difficulty);
-        $this->assertSame($this->topic->id, $published->topic_id);
-        $this->assertSame([$this->topic->id], $published->topics->pluck('id')->all());
+                $this->assertSame([$this->topic->id], $published->medicalTaxonomyNodes->pluck('id')->all());
         $this->assertTrue($published->is_free);
 
         $this->actingAs($student)
@@ -478,7 +590,7 @@ final class AdminQuestionManagementTest extends TestCase
             ]))
             ->assertRedirect();
 
-        $updated = $question->fresh(['options', 'topic']);
+        $updated = $question->fresh(['options', 'medicalTaxonomyNodes']);
         $this->assertSame(QuestionStatus::Published, $updated->status);
         $this->assertSame(
             'Bệnh nhân 55 tuổi đau ngực, khó thở tăng dần. Chẩn đoán nào phù hợp nhất?',
@@ -550,7 +662,7 @@ final class AdminQuestionManagementTest extends TestCase
             'explanation' => 'Giải thích lâm sàng đầy đủ.',
             'attending_tip' => 'Nhớ ECG sớm.',
             'difficulty' => Difficulty::Medium->value,
-            'topic_ids' => [$this->topic->id],
+            'medical_taxonomy_node_ids' => [$this->topic->id],
             'is_free' => '1',
             'options' => [
                 ['content' => 'ACS', 'is_correct' => '1', 'explanation' => 'Đúng'],
@@ -564,12 +676,12 @@ final class AdminQuestionManagementTest extends TestCase
     private function makeDraftQuestion(?User $createdBy = null): Question
     {
         $question = Question::factory()->draft()->create([
-            'topic_id' => $this->topic->id,
             'stem' => 'Stem draft test',
             'explanation' => 'Explanation draft',
             'difficulty' => Difficulty::Easy,
             'created_by' => $createdBy?->id,
         ]);
+        $question->medicalTaxonomyNodes()->sync([$this->topic->id]);
 
         foreach (['A đúng', 'B', 'C', 'D'] as $i => $content) {
             $question->options()->create([
@@ -580,7 +692,7 @@ final class AdminQuestionManagementTest extends TestCase
             ]);
         }
 
-        return $question->fresh(['options']);
+        return $question->fresh(['options', 'medicalTaxonomyNodes']);
     }
 
     private function makePublishedQuestion(
@@ -589,7 +701,6 @@ final class AdminQuestionManagementTest extends TestCase
         string $stem = 'Bệnh nhân 55 tuổi đau ngực. Chẩn đoán nào phù hợp nhất?',
     ): Question {
         $question = Question::factory()->create([
-            'topic_id' => $this->topic->id,
             'stem' => $stem,
             'key_info' => ['đau ngực', 'Chẩn đoán nào phù hợp nhất?'],
             'explanation' => 'Giải thích lâm sàng đầy đủ.',
@@ -599,6 +710,7 @@ final class AdminQuestionManagementTest extends TestCase
             'is_free' => $isFree,
             'created_by' => $createdBy?->id,
         ]);
+        $question->medicalTaxonomyNodes()->sync([$this->topic->id]);
 
         foreach ([
             ['ACS', true],
@@ -614,7 +726,7 @@ final class AdminQuestionManagementTest extends TestCase
             ]);
         }
 
-        return $question->fresh(['options', 'topic']);
+        return $question->fresh(['options', 'medicalTaxonomyNodes']);
     }
 
     private function staffUser(Role $role): User

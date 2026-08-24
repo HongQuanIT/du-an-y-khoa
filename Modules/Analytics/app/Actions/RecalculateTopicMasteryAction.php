@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Modules\Analytics\Models\TopicMastery;
 
 /**
- * Use case: rebuild a learner's per-topic accuracy from their attempts.
+ * Use case: rebuild a learner's per-node accuracy from their attempts.
  *
  * Rebuilding (rather than incrementing) keeps the rollup correct even when
  * attempts are backfilled by seeders or imports.
@@ -19,18 +19,18 @@ final class RecalculateTopicMasteryAction
 {
     use AsAction;
 
-    /** Below this many attempts a topic is not rated yet. */
+    /** Below this many attempts a node is not rated yet. */
     private const MIN_ATTEMPTS = 5;
 
     public function handle(int $userId): int
     {
         $rows = DB::table('question_attempts')
-            ->join('question_topic', 'question_topic.question_id', '=', 'question_attempts.question_id')
+            ->join('question_medical_topics', 'question_medical_topics.question_id', '=', 'question_attempts.question_id')
             ->where('question_attempts.user_id', $userId)
             ->whereNotNull('question_attempts.is_correct')
-            ->groupBy('question_topic.topic_id')
+            ->groupBy('question_medical_topics.medical_taxonomy_node_id')
             ->get([
-                'question_topic.topic_id',
+                'question_medical_topics.medical_taxonomy_node_id',
                 DB::raw('COUNT(*) as attempts'),
                 DB::raw('SUM(CASE WHEN question_attempts.is_correct THEN 1 ELSE 0 END) as correct'),
                 DB::raw('MAX(question_attempts.answered_at) as last_activity_at'),
@@ -42,7 +42,10 @@ final class RecalculateTopicMasteryAction
             $rate = $attempts > 0 ? round($correct / $attempts * 100, 2) : 0.0;
 
             TopicMastery::updateOrCreate(
-                ['user_id' => $userId, 'topic_id' => (int) $row->topic_id],
+                [
+                    'user_id' => $userId,
+                    'medical_taxonomy_node_id' => (int) $row->medical_taxonomy_node_id,
+                ],
                 [
                     'attempts' => $attempts,
                     'correct' => $correct,

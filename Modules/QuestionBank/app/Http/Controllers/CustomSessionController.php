@@ -14,7 +14,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Validation\ValidationException;
 use Modules\QuestionBank\Actions\CreateQuestionSessionAction;
 use Modules\QuestionBank\Http\Requests\CreateQuestionSessionRequest;
-use Modules\QuestionBank\Models\Topic;
+use Modules\QuestionBank\Models\MedicalTaxonomyNode;
 use Modules\QuestionBank\Services\SessionQuestionSelector;
 use RuntimeException;
 
@@ -38,8 +38,8 @@ final class CustomSessionController extends Controller
             : collect();
 
         return view('questionbank::custom-session', [
-            'specialties' => Topic::query()->where('type', 'specialty')->orderBy('order')->get(),
-            'systems' => Topic::query()->where('type', 'system')->orderBy('name')->get(),
+            'specialties' => MedicalTaxonomyNode::query()->where('node_type', 'specialty')->orderBy('sort_order')->orderBy('name')->get(),
+            'systems' => MedicalTaxonomyNode::query()->where('node_type', 'system')->orderBy('sort_order')->orderBy('name')->get(),
             'exams' => TargetExams::selectable(),
             'articles' => ScopeFilters::articles(),
             'symptoms' => ScopeFilters::symptoms(),

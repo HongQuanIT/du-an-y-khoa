@@ -10,7 +10,7 @@
     $plan = $plan ?? null;
     $systems = $systems ?? collect();
     $filters = $plan?->scopeFilters() ?? [
-        'topic_ids' => [],
+        'medical_taxonomy_node_ids' => [],
         'exam_tags' => [],
         'articles' => [],
         'symptoms' => [],
@@ -21,7 +21,7 @@
         'question_status_mode' => 'latest',
     ];
 
-    $selectedTopicIds = array_map('intval', old('topic_ids', $filters['topic_ids']));
+    $selectedTopicIds = array_map('intval', old('medical_taxonomy_node_ids', $filters['medical_taxonomy_node_ids'] ?? $filters['topic_ids'] ?? []));
     $specialtyIds = $specialties->pluck('id')->all();
     $systemIdList = $systems->pluck('id')->all();
     $defaultExam = old('exam_key', $plan?->exam_key ?? array_key_first($exams));
@@ -218,7 +218,7 @@
     </template>
     <input type="hidden" name="question_status_mode" :value="questionStatusMode">
     <template x-for="id in topicIds()" :key="'topic-' + id">
-        <input type="hidden" name="topic_ids[]" :value="id">
+        <input type="hidden" name="medical_taxonomy_node_ids[]" :value="id">
     </template>
     <template x-for="tag in examTags" :key="'exam-tag-' + tag">
         <input type="hidden" name="exam_tags[]" :value="tag">

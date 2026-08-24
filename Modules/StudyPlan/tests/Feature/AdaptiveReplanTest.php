@@ -8,12 +8,13 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Modules\Analytics\Models\TopicMastery;
-use Modules\QuestionBank\Models\Topic;
 use Modules\StudyPlan\Enums\TaskStatus;
 use Modules\StudyPlan\Jobs\ReplanActivePlansJob;
 use Modules\StudyPlan\Models\StudyPlan;
 use Modules\StudyPlan\Models\StudyPlanTask;
 use Tests\TestCase;
+use Tests\Support\CreatesMedicalTaxonomy;
+
 
 /**
  * Phase 4: the nightly job folds missed days into upcoming ones and steers
@@ -21,6 +22,7 @@ use Tests\TestCase;
  */
 final class AdaptiveReplanTest extends TestCase
 {
+    use CreatesMedicalTaxonomy;
     use RefreshDatabase;
 
     private User $user;
@@ -78,8 +80,8 @@ final class AdaptiveReplanTest extends TestCase
 
     public function test_upcoming_tasks_target_the_weakest_topic(): void
     {
-        $strong = Topic::create(['name' => 'Hô hấp', 'slug' => 'ho-hap', 'type' => 'system', 'order' => 0]);
-        $weak = Topic::create(['name' => 'Tim mạch', 'slug' => 'tim-mach', 'type' => 'system', 'order' => 1]);
+        $strong = $this->makeMedicalNode(['name' => 'Hô hấp', 'slug' => 'ho-hap', 'node_type' => 'system', 'sort_order' => 0]);
+        $weak = $this->makeMedicalNode(['name' => 'Tim mạch', 'slug' => 'tim-mach', 'node_type' => 'system', 'sort_order' => 1]);
 
         $plan = StudyPlan::factory()->adaptive()->for($this->user)->create([
             'topic_scope' => [$strong->id, $weak->id],
@@ -92,7 +94,7 @@ final class AdaptiveReplanTest extends TestCase
 
         TopicMastery::create([
             'user_id' => $this->user->id,
-            'topic_id' => $strong->id,
+            'medical_taxonomy_node_id' => $strong->id,
             'attempts' => 10,
             'correct' => 9,
             'correct_rate' => 90,
@@ -100,7 +102,7 @@ final class AdaptiveReplanTest extends TestCase
         ]);
         TopicMastery::create([
             'user_id' => $this->user->id,
-            'topic_id' => $weak->id,
+            'medical_taxonomy_node_id' => $weak->id,
             'attempts' => 10,
             'correct' => 3,
             'correct_rate' => 30,

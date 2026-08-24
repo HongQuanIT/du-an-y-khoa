@@ -10,21 +10,33 @@
         ->map(fn ($question) => [
             'id' => (string) $question->id,
             'text' => strip_tags($question->stem),
-            'topic' => $question->topics->pluck('name')->join(', ') ?: $question->topic?->name,
-            'topics' => $question->topics->pluck('name')->values()->all(),
+            'topic' => $question->medicalTaxonomyNodes->pluck('name')->join(', ') ?: 'Tổng hợp',
+            'topics' => $question->medicalTaxonomyNodes->pluck('name')->values()->all(),
             'difficulty' => $question->difficulty?->label(),
         ])->values()->all();
     $availableQuestionsMapped = $availableQuestions->map(fn ($question) => [
         'id' => (string) $question->id,
         'text' => strip_tags($question->stem),
-        'topic' => $question->topics->pluck('name')->join(', ') ?: $question->topic?->name,
-        'topics' => $question->topics->pluck('name')->values()->all(),
+        'topic' => $question->medicalTaxonomyNodes->pluck('name')->join(', ') ?: 'Tổng hợp',
+        'topics' => $question->medicalTaxonomyNodes->pluck('name')->values()->all(),
         'difficulty' => $question->difficulty?->label(),
     ])->values()->all();
     $questionsCount = (int) ($exam->questions_count ?? count($questionRows));
     $statusValue = old('status', $exam->status?->value ?? 'draft');
     $published = $statusValue === 'published';
     $duration = (int) old('duration_minutes', $exam->duration_minutes ?? 90);
+    $initialExamTopics = old('exam_topics');
+    if (! is_array($initialExamTopics)) {
+        $initialExamTopics = $exam->exists && $exam->relationLoaded('examTopics')
+            ? $exam->examTopics->map(fn ($row) => [
+                'core_clinical_topic_id' => $row->core_clinical_topic_id,
+                'question_count' => $row->question_count,
+                'sort_order' => $row->sort_order,
+                'topic_name' => $row->coreClinicalTopic?->name,
+                'section_name' => $row->coreClinicalTopic?->section?->name,
+            ])->values()->all()
+            : [];
+    }
 @endphp
 
 <x-layouts.admin :title="$isNew ? 'Tạo kỳ thi' : 'Sửa kỳ thi'">
@@ -183,9 +195,85 @@
                 </section>
 
                 <section class="overflow-hidden rounded-lg border border-outline-variant bg-surface">
+                    <div class="border-b border-outline-variant px-5 py-4">
+                        <h2 class="font-label-lg text-on-surface">Phân bổ theo ma trận đề thi</h2>
+                        <p class="mt-1 font-label-sm text-on-surface-variant">
+                            Cấu hình số câu theo chủ đề lâm sàng — hệ thống tự lấy từ exam pool (<code>private</code> + <code>exam_flag</code>).
+                        </p>
+                    </div>
+                    <div class="space-y-4 p-5">
+                        @error('exam_topics')
+                            <p class="rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-sm text-error">{{ $message }}</p>
+                        @enderror
+
+                        <div class="overflow-x-auto rounded-lg border border-outline-variant">
+                            <table class="min-w-full text-sm">
+                                <thead class="bg-surface-container-low text-left text-xs uppercase text-on-surface-variant">
+                                    <tr>
+                                        <th class="px-3 py-2">Chủ đề</th>
+                                        <th class="px-3 py-2 w-28">Số câu</th>
+                                        <th class="px-3 py-2 w-28">Eligible</th>
+                                        <th class="px-3 py-2 w-16"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="(row, index) in examTopics" :key="'topic-row-' + index">
+                                        <tr class="border-t border-outline-variant/60">
+                                            <td class="px-3 py-2">
+                                                <input type="hidden" :name="'exam_topics[' + index + '][core_clinical_topic_id]'" :value="row.core_clinical_topic_id || ''">
+                                                <input type="hidden" :name="'exam_topics[' + index + '][sort_order]'" :value="index">
+                                                <div class="relative">
+                                                    <input type="search" x-model="row.topicSearch" @focus="row.showPicker = true"
+                                                        @input.debounce.300ms="searchExamTopic(index)"
+                                                        :placeholder="row.topic_name || 'Tìm core clinical topic...'"
+                                                        class="w-full rounded-lg bg-surface-container-low px-3 py-2 text-sm">
+                                                    <div x-show="row.showPicker" @click.outside="row.showPicker = false"
+                                                        class="absolute z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-outline-variant bg-white shadow-lg">
+                                                        <template x-for="item in row.topicResults" :key="item.id">
+                                                            <button type="button" @click="selectExamTopic(index, item)"
+                                                                class="block w-full px-3 py-2 text-left text-sm hover:bg-surface-container-low">
+                                                                <span x-text="item.name"></span>
+                                                                <span x-show="item.section_name" class="ml-1 text-xs text-on-surface-variant" x-text="'(' + item.section_name + ')'"></span>
+                                                            </button>
+                                                        </template>
+                                                    </div>
+                                                </div>
+                                                <p x-show="row.section_name" class="mt-1 text-xs text-on-surface-variant" x-text="row.section_name"></p>
+                                            </td>
+                                            <td class="px-3 py-2">
+                                                <input type="number" min="1" :name="'exam_topics[' + index + '][question_count]'"
+                                                    x-model.number="row.question_count" @change="refreshEligibility()"
+                                                    class="w-full rounded-lg bg-surface-container-low px-2 py-2 text-center">
+                                            </td>
+                                            <td class="px-3 py-2 text-center font-semibold"
+                                                :class="row.eligible !== null && row.question_count > row.eligible ? 'text-error' : 'text-on-surface'"
+                                                x-text="row.eligible ?? '…'"></td>
+                                            <td class="px-3 py-2 text-center">
+                                                <button type="button" @click="removeExamTopic(index)" class="text-error hover:underline">Xóa</button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="flex flex-wrap items-center justify-between gap-3">
+                            <button type="button" @click="addExamTopic()"
+                                class="inline-flex items-center gap-1 rounded-lg border border-outline-variant px-3 py-2 text-sm font-semibold hover:bg-surface-container-low">
+                                <span class="material-symbols-outlined text-[18px]">add</span>
+                                Thêm chủ đề
+                            </button>
+                            <p class="text-sm text-on-surface-variant">
+                                Tổng cấu hình: <strong x-text="examTopics.reduce((sum, row) => sum + (Number(row.question_count) || 0), 0)"></strong> câu
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="overflow-hidden rounded-lg border border-outline-variant bg-surface">
                         <div class="flex flex-col gap-3 border-b border-outline-variant px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
                             <div>
-                                <h2 class="font-label-lg text-on-surface">Đề thi</h2>
+                                <h2 class="font-label-lg text-on-surface">Đề thi (chọn thủ công — tùy chọn)</h2>
                                 <p class="mt-1 font-label-sm text-on-surface-variant">
                                     Đã chọn <span x-text="selected.length">{{ $questionsCount }}</span> câu.
                                 </p>
@@ -318,6 +406,19 @@
             return {
                 available: @json($availableQuestionsMapped),
                 selected: @json($questionRows),
+                examTopics: @json($initialExamTopics).map((row) => ({
+                    core_clinical_topic_id: row.core_clinical_topic_id ?? null,
+                    question_count: row.question_count ?? 1,
+                    sort_order: row.sort_order ?? 0,
+                    topic_name: row.topic_name ?? '',
+                    section_name: row.section_name ?? '',
+                    topicSearch: row.topic_name ?? '',
+                    topicResults: [],
+                    showPicker: false,
+                    eligible: null,
+                })),
+                topicSearchUrl: @json(route('admin.taxonomy.lookups.core-topics.search')),
+                eligibilityUrl: @json(route('admin.exams.topic-eligibility')),
                 search: '',
                 duration: @json($duration),
                 draggingIndex: null,
@@ -326,6 +427,63 @@
                 init() {
                     this.$watch('search', (value) => {
                         this.fetchQuestions(value);
+                    });
+                    this.refreshEligibility();
+                },
+                addExamTopic() {
+                    this.examTopics.push({
+                        core_clinical_topic_id: null,
+                        question_count: 1,
+                        sort_order: this.examTopics.length,
+                        topic_name: '',
+                        section_name: '',
+                        topicSearch: '',
+                        topicResults: [],
+                        showPicker: false,
+                        eligible: null,
+                    });
+                },
+                removeExamTopic(index) {
+                    this.examTopics.splice(index, 1);
+                    this.refreshEligibility();
+                },
+                async searchExamTopic(index) {
+                    const row = this.examTopics[index];
+                    const q = (row.topicSearch || '').trim();
+                    if (q.length < 2) {
+                        row.topicResults = [];
+                        return;
+                    }
+                    const res = await fetch(`${this.topicSearchUrl}?q=${encodeURIComponent(q)}`);
+                    const json = await res.json();
+                    row.topicResults = json.data ?? [];
+                    row.showPicker = true;
+                },
+                selectExamTopic(index, item) {
+                    const row = this.examTopics[index];
+                    row.core_clinical_topic_id = item.id;
+                    row.topic_name = item.name;
+                    row.section_name = item.section_name || '';
+                    row.topicSearch = item.name;
+                    row.showPicker = false;
+                    this.refreshEligibility();
+                },
+                async refreshEligibility() {
+                    const ids = this.examTopics
+                        .map((row) => Number(row.core_clinical_topic_id))
+                        .filter((id) => id > 0);
+                    if (!ids.length) {
+                        this.examTopics.forEach((row) => { row.eligible = null; });
+                        return;
+                    }
+                    const params = new URLSearchParams();
+                    ids.forEach((id) => params.append('core_clinical_topic_ids[]', String(id)));
+                    const res = await fetch(`${this.eligibilityUrl}?${params}`);
+                    const json = await res.json();
+                    const counts = json.data ?? {};
+                    this.examTopics.forEach((row) => {
+                        const id = Number(row.core_clinical_topic_id);
+                        row.eligible = id > 0 ? (counts[id] ?? 0) : null;
                     });
                 },
                 fetchQuestions(term) {

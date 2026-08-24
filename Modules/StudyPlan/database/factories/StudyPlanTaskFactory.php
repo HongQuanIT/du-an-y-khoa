@@ -29,7 +29,7 @@ class StudyPlanTaskFactory extends Factory
             'target' => 20,
             'done' => 0,
             'status' => TaskStatus::Pending,
-            'ref' => ['topic_ids' => [], 'session_id' => null, 'mode' => 'study'],
+            'ref' => ['medical_taxonomy_node_ids' => [], 'topic_ids' => [], 'session_id' => null, 'mode' => 'study'],
         ];
     }
 

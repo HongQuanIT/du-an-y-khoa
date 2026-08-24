@@ -68,24 +68,37 @@ Chuẩn RBAC: `roles(id,name,slug)`, `permissions(id,name,slug)`, `permission_ro
 | lead_in | TEXT | câu hỏi dẫn ("Chẩn đoán phù hợp nhất?") |
 | type | VARCHAR | single_best/multi/matching |
 | difficulty | VARCHAR | easy/medium/hard (hoặc 1–5) |
-| status | VARCHAR | draft/in_review/published/retired |
+| status | VARCHAR | draft / in_review / published / rejected / private / retired |
+| exam_flag | BOOL default false | `true` = câu dành cho exam pool (kèm `private`) |
 | is_free | BOOL | dùng cho preview free tier |
 | explanation | LONGTEXT | giải thích tổng |
 | references | JSON | nguồn (guideline, sách) |
 | lab_values | JSON | chỉ số tham chiếu kèm câu |
 | media_ids | JSON | ảnh/video đính kèm |
-| version | INT | quản lý phiên bản |
-| stats_cache | JSON | tỉ lệ đúng, độ khó thực nghiệm |
-| created_by, updated_by | | |
+| version | INT | số version hiện tại (denormalized; chi tiết ở `question_versions`) |
+| reviewer_id | FK null | người duyệt/từ chối gần nhất |
+| rejection_reason | TEXT null | khi status = rejected |
+| stats_cache | JSON | attempts, correct_rate, reports… — **rollup job**; list admin chỉ đọc field này |
+| stats_updated_at | TIMESTAMP null | lần rollup gần nhất |
+| cloned_from_id | FK null | câu nguồn khi clone |
+| cloned_from_version | INT null | version snapshot nguồn (optional) |
+| created_by, updated_by | | creator_id / editor gần nhất |
 | timestamps, soft delete | | |
 
-Index: `status`, `difficulty`, `is_free`. Full-text → Meilisearch.
+Index: `status`, `exam_flag`, `(status, exam_flag, created_at)`, `difficulty`, `is_free`. Full-text → Meilisearch (chỉ `published`).
+
+### QuestionVersion
+`id, question_id FK, version_number INT, reviewer_id FK, snapshot JSON, created_at`. Unique `(question_id, version_number)`. Tạo khi **reviewer approve/publish** — không tạo khi edit draft/in_review.
 
 ### QuestionOption
 `id, question_id FK, label(A/B/...), content TEXT, is_correct BOOL, explanation TEXT (vì sao đúng/sai), order INT, timestamps`.
 
-### Topic (chuyên ngành/chủ đề — phân cấp)
-`id, parent_id FK null, name, slug, type(specialty/system/subtopic), order, icon, timestamps`. Ví dụ 18 chuyên ngành: Nội, Ngoại, Sản, Nhi, Dược...
+### Topic (chuyên ngành/chủ đề — **phân cấp cha–con**)
+`id, parent_id FK null, name, slug, type(specialty/system/subtopic), order, icon, depth INT null, timestamps`.
+- Cây không giới hạn độ sâu (khuyến nghị 2–3 cấp: chuyên ngành → hệ → subtopic).
+- Index: `parent_id`, `(parent_id, order)`.
+- Filter Qbank/exam: chọn topic **cha** → bao gồm mọi **topic con** (descendants).
+- Ví dụ: Nội → Tiêu hóa → Viêm gan.
 
 ### QuestionTopic (pivot)
 `question_id, topic_id, is_primary BOOL`.
@@ -256,7 +269,13 @@ Index: `host_user_id`, `visibility`, `status`, `join_code`.
 ## 9. Nhóm Thi cử
 
 ### Exam (đề mẫu/kỳ thi)
-`id, uuid, title, type(mock/self_assessment/org_exam), description, question_ids JSON hoặc rule JSON, duration_minutes, pass_score, available_from/to, is_premium, status, created_by, timestamps, soft delete`.
+`id, uuid, title, type(mock/self_assessment/org_exam), description, duration_minutes, pass_score, available_from/to, access_type, is_premium, status(draft/published/archived), created_by, timestamps, soft delete`.
+
+### ExamTopic (phân bổ câu theo chủ đề — admin config)
+`id, exam_id FK, topic_id FK, question_count INT, sort_order INT`. Unique `(exam_id, topic_id)`.
+
+### ExamQuestion (câu đã generate — snapshot cố định)
+`id, exam_id FK, question_id FK, topic_id FK, sort_order INT`. Unique `(exam_id, question_id)`.
 
 ### ExamAttempt
 `id, uuid, exam_id, user_id, session_id FK, score, percentile, status(scheduled/in_progress/submitted/graded), started_at, submitted_at, timestamps`.
@@ -321,7 +340,7 @@ Article/Drug/Procedure/Media ─< ContentLink >─ (poly bất kỳ)
 
 | Bảng | Vấn đề | Giải pháp |
 |------|--------|-----------|
-| question_attempts | ghi rất nhiều, query analytics | index `(user_id, question_id)`, partition theo tháng, rollup sang DailyStat/TopicMastery qua job |
+| question_attempts | ghi rất nhiều, query analytics | index `(user_id, question_id)`, partition theo tháng, rollup → DailyStat/TopicMastery + **`stats_cache` trên questions** (`SyncQuestionStatsJob`); admin list **không** COUNT trực tiếp |
 | tracking_events | ghi cực lớn | insert-only, partition, batch insert qua queue, TTL/archival |
 | live_session_messages | chat đồng thời cao khi live | index `(live_session_id, created_at)`, rate-limit, paginate |
 | questions/articles | tìm kiếm full-text | đồng bộ sang Meilisearch |

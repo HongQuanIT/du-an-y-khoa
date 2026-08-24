@@ -379,7 +379,7 @@
                             <div class="flex flex-wrap items-center gap-3">
                                 <span class="rounded bg-primary px-3 py-1 text-label-sm tracking-wider text-white uppercase">Lâm sàng</span>
                                 <span class="font-label-sm text-on-surface-variant">
-                                    {{ $question->topics->pluck('name')->join(', ') ?: ($question->topic?->name ?? 'Tổng hợp') }} / {{ $question->difficulty->label() }}
+                                    {{ $question->medicalTaxonomyNodes->pluck('name')->join(', ') ?: 'Tổng hợp' }} / {{ $question->difficulty->label() }}
                                 </span>
                             </div>
                             <div class="space-y-5">

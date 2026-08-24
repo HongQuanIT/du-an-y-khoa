@@ -66,7 +66,9 @@
         <nav class="flex flex-1 flex-col gap-1 overflow-y-auto" aria-label="Menu quản trị">
             @foreach ($navItems as $item)
                 @php
-                    $active = $item['match'] && request()->routeIs($item['match']);
+                    $active = is_array($item['match'])
+                        ? request()->routeIs($item['match'])
+                        : ($item['match'] && request()->routeIs($item['match']));
                     $href = $item['route'] ? route($item['route']) : null;
                 @endphp
                 @if ($href)

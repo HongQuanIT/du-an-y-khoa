@@ -9,7 +9,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Modules\QuestionBank\Models\Topic;
+use Modules\QuestionBank\Models\MedicalTaxonomyNode;
 use Modules\StudyPlan\Actions\CreateStudyPlanAction;
 use Modules\StudyPlan\Http\Requests\StudyPlanRequest;
 use Modules\StudyPlan\Support\TargetExams;
@@ -42,27 +42,25 @@ final class StudyPlanCreateController extends Controller
     }
 
     /**
-     * Specialty roots for the Chuyên khoa picker.
-     *
-     * @return Collection<int, Topic>
+     * @return Collection<int, MedicalTaxonomyNode>
      */
     private function specialties()
     {
-        return Topic::query()
-            ->where('type', 'specialty')
-            ->orderBy('order')
+        return MedicalTaxonomyNode::query()
+            ->where('node_type', 'specialty')
+            ->orderBy('sort_order')
+            ->orderBy('name')
             ->get();
     }
 
     /**
-     * Organ systems for the Hệ cơ quan picker.
-     *
-     * @return Collection<int, Topic>
+     * @return Collection<int, MedicalTaxonomyNode>
      */
     private function systems()
     {
-        return Topic::query()
-            ->where('type', 'system')
+        return MedicalTaxonomyNode::query()
+            ->where('node_type', 'system')
+            ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
     }

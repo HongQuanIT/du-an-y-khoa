@@ -243,12 +243,12 @@ final class StudyPlanSessionController extends Controller
         foreach ($questionIds as $questionId) {
             $question = $questions[$questionId] ?? null;
             $attempt = $attempts->get($questionId);
-            $topicNames = $question?->topics
+            $topicNames = $question?->medicalTaxonomyNodes
                 ->pluck('name')
                 ->map(fn ($name): string => (string) $name)
                 ->all() ?? [];
             if ($topicNames === []) {
-                $topicNames = [$question?->topic?->name ?? 'Tổng hợp'];
+                $topicNames = ['Tổng hợp'];
             }
             foreach ($topicNames as $topicName) {
                 $byTopic[$topicName] ??= [
@@ -466,8 +466,8 @@ final class StudyPlanSessionController extends Controller
                     'wrong' => 'text-error',
                     default => 'text-outline',
                 },
-                'topic' => $question->topics->pluck('name')->join(', ') ?: ($question->topic?->name ?? 'Tổng hợp'),
-                'topics' => $question->topics->pluck('name')->values()->all(),
+                'topic' => $question->medicalTaxonomyNodes->pluck('name')->join(', ') ?: 'Tổng hợp',
+                'topics' => $question->medicalTaxonomyNodes->pluck('name')->values()->all(),
                 'excerpt' => Str::limit(strip_tags($question->stem), 140),
                 'stem' => $question->stem,
                 'stemHtml' => $stemHtml,

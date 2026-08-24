@@ -12,12 +12,14 @@ use Modules\Classroom\Enums\ClassroomStatus;
 use Modules\Classroom\Enums\LiveSessionStatus;
 use Modules\Classroom\Models\Classroom;
 use Modules\QuestionBank\Models\Question;
-use Modules\QuestionBank\Models\Topic;
 use Spatie\Permission\Models\Role as SpatieRole;
 use Tests\TestCase;
+use Tests\Support\CreatesMedicalTaxonomy;
+
 
 final class ClassroomFlowTest extends TestCase
 {
+    use CreatesMedicalTaxonomy;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -244,16 +246,15 @@ final class ClassroomFlowTest extends TestCase
         $host = User::factory()->create();
         $host->assignRole(Role::Student->value);
 
-        $topic = Topic::create([
+        $topic = $this->makeMedicalNode([
             'name' => 'Test',
             'slug' => 'test-topic',
-            'type' => 'system',
-            'order' => 1,
+            'node_type' => 'system',
+            'sort_order' => 1,
         ]);
 
         $question = Question::factory()->withOptions(2)->create([
-            'topic_id' => $topic->id,
-            'stem' => 'Câu hỏi test live',
+                        'stem' => 'Câu hỏi test live',
             'stem_image_path' => 'question-images/live-ecg.png',
             'is_free' => true,
         ]);
@@ -266,8 +267,7 @@ final class ClassroomFlowTest extends TestCase
         });
         $firstOption = $question->options()->orderBy('order')->firstOrFail();
         $secondQuestion = Question::factory()->withOptions(2)->create([
-            'topic_id' => $topic->id,
-            'stem' => 'Câu hỏi live thứ hai',
+                        'stem' => 'Câu hỏi live thứ hai',
             'is_free' => true,
         ]);
         $secondQuestion->options()->update(['explanation' => 'Giải thích câu 2']);

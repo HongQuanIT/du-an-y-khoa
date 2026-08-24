@@ -21,13 +21,16 @@ use Modules\QuestionBank\Enums\UserQuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionStatus as UserQuestionStatusModel;
-use Modules\QuestionBank\Models\Topic;
+use Modules\QuestionBank\Support\QuestionFilterBuilder;
 
 /**
  * Picks published questions for a custom / exam / weak-topics session.
  */
 final class SessionQuestionSelector
 {
+    public function __construct(
+        private readonly QuestionFilterBuilder $filters,
+    ) {}
     /**
      * @return array<int, string>
      */
@@ -49,7 +52,7 @@ final class SessionQuestionSelector
                 ->all();
         }
 
-        $topicIds = $this->expandTopics($data->topicIds);
+        $nodeIds = $this->filters->expandMedicalTaxonomyNodes($data->medicalTaxonomyNodeIds);
         $eligible = $this->eligibleForData($userId, $data, $canUsePremium);
 
         $difficulties = $this->parseDifficulties($data->difficulties);
@@ -58,7 +61,7 @@ final class SessionQuestionSelector
         // preferable to silently pulling unrelated material from other topics.
         $picked = $this->pick(
             $data->count,
-            $topicIds,
+            $nodeIds,
             [],
             $eligible,
             $difficulties,
@@ -77,10 +80,10 @@ final class SessionQuestionSelector
         $canUsePremium = $user->hasEntitlement(Entitlement::QbankFull->value);
 
         if ($data->source === SessionSource::WeakTopics) {
-            $topicIds = $this->expandTopics($this->weakTopicIds($userId));
+            $nodeIds = $this->filters->expandMedicalTaxonomyNodes($this->weakNodeIds($userId));
 
             return $this->questionQuery(
-                $topicIds,
+                $nodeIds,
                 [],
                 null,
                 [],
@@ -93,7 +96,7 @@ final class SessionQuestionSelector
         }
 
         return $this->questionQuery(
-            $this->expandTopics($data->topicIds),
+            $this->filters->expandMedicalTaxonomyNodes($data->medicalTaxonomyNodeIds),
             [],
             $this->eligibleForData($userId, $data, $canUsePremium),
             $this->parseDifficulties($data->difficulties),
@@ -128,18 +131,17 @@ final class SessionQuestionSelector
      */
     private function weakTopicQuestions(int $userId, int $limit, bool $canUsePremium): array
     {
-        $weakTopicIds = $this->weakTopicIds($userId);
-        $expandedTopicIds = $this->expandTopics($weakTopicIds);
+        $expandedNodeIds = $this->filters->expandMedicalTaxonomyNodes($this->weakNodeIds($userId));
 
         $accessibleQuestions = Question::query()
             ->select('id')
             ->where('status', QuestionStatus::Published)
             ->when(! $canUsePremium, fn ($query) => $query->where('is_free', true))
             ->when(
-                $expandedTopicIds !== [],
+                $expandedNodeIds !== [],
                 fn ($query) => $query->whereHas(
-                    'topics',
-                    fn (Builder $topics) => $topics->whereIn('topics.id', $expandedTopicIds),
+                    'medicalTaxonomyNodes',
+                    fn (Builder $nodes) => $nodes->whereIn('medical_taxonomy_nodes.id', $expandedNodeIds),
                 ),
             );
 
@@ -158,7 +160,7 @@ final class SessionQuestionSelector
         return $this->topUp(
             $incorrect,
             $limit,
-            $expandedTopicIds,
+            $expandedNodeIds,
             [],
             null,
             [],
@@ -172,17 +174,17 @@ final class SessionQuestionSelector
      *
      * @return array<int, int>
      */
-    private function weakTopicIds(int $userId): array
+    private function weakNodeIds(int $userId): array
     {
         return DB::table('question_attempts')
-            ->join('question_topic', 'question_topic.question_id', '=', 'question_attempts.question_id')
+            ->join('question_medical_topics', 'question_medical_topics.question_id', '=', 'question_attempts.question_id')
             ->where('question_attempts.user_id', $userId)
             ->whereNotNull('question_attempts.is_correct')
-            ->groupBy('question_topic.topic_id')
+            ->groupBy('question_medical_topics.medical_taxonomy_node_id')
             ->havingRaw('COUNT(*) >= 3')
             ->orderByRaw('AVG(CASE WHEN question_attempts.is_correct = 1 THEN 1.0 ELSE 0.0 END)')
             ->limit(5)
-            ->pluck('question_topic.topic_id')
+            ->pluck('question_medical_topics.medical_taxonomy_node_id')
             ->map(fn ($id) => (int) $id)
             ->all();
     }
@@ -283,8 +285,8 @@ final class SessionQuestionSelector
             ->when(
                 $topicIds !== [],
                 fn ($query) => $query->whereHas(
-                    'topics',
-                    fn (Builder $topics) => $topics->whereIn('topics.id', $topicIds),
+                    'medicalTaxonomyNodes',
+                    fn (Builder $nodes) => $nodes->whereIn('medical_taxonomy_nodes.id', $topicIds),
                 ),
             )
             ->when($exclude !== [], fn ($query) => $query->whereNotIn('id', $exclude))
@@ -294,6 +296,17 @@ final class SessionQuestionSelector
         if (! $data instanceof CreateSessionData) {
             return $query;
         }
+
+        $this->filters->apply(
+            $query,
+            blueprintId: $data->blueprintId,
+            blueprintSectionId: $data->blueprintSectionId,
+            coreClinicalTopicIds: $data->coreClinicalTopicIds,
+            medicalTaxonomyNodeIds: $data->medicalTaxonomyNodeIds !== []
+                ? $data->medicalTaxonomyNodeIds
+                : $topicIds,
+            tagIds: $data->tagIds,
+        );
 
         // Apply saved-only or specific folder filtering
         if ($data->folderId !== null && $userId !== null) {
@@ -343,23 +356,6 @@ final class SessionQuestionSelector
         );
     }
 
-    /**
-     * @param  array<int, int>  $topicIds
-     * @return array<int, int>
-     */
-    private function expandTopics(array $topicIds): array
-    {
-        if ($topicIds === []) {
-            return [];
-        }
-
-        $children = Topic::query()
-            ->whereIn('parent_id', $topicIds)
-            ->pluck('id')
-            ->all();
-
-        return array_values(array_unique(array_merge($topicIds, $children)));
-    }
 
     /**
      * @param  array<int, string>  $statuses

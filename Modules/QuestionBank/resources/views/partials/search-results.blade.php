@@ -1,7 +1,7 @@
 @php
     $pagination = $searchResult->pagination();
     $difficultyCounts = collect($searchResult->facets['difficulty'] ?? [])->keyBy('value');
-    $topicCounts = collect($searchResult->facets['topic_id'] ?? [])->keyBy('value');
+    $topicCounts = collect($searchResult->facets['medical_taxonomy_node_id'] ?? [])->keyBy('value');
     $accessCounts = collect($searchResult->facets['is_free'] ?? [])->keyBy(
         fn (array $facet): string => $facet['value'] ? 'free' : 'premium',
     );
@@ -59,14 +59,14 @@
 
         <label class="block">
             <span class="mb-1.5 block text-xs font-bold text-on-surface-variant">Chủ đề</span>
-            <select name="filter[topic_id]"
+            <select name="filter[medical_taxonomy_node_id]"
                 class="w-full rounded-xl border border-outline-variant bg-surface px-3 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary">
                 <option value="">Tất cả</option>
                 @foreach ($searchTopics as $topic)
                     @php
                         $count = (int) data_get($topicCounts->get($topic->id), 'count', 0);
                     @endphp
-                    <option value="{{ $topic->id }}" @selected(($searchFilters['topic_id'] ?? null) === $topic->id)>
+                    <option value="{{ $topic->id }}" @selected(($searchFilters['medical_taxonomy_node_id'] ?? null) === $topic->id)>
                         {{ $topic->name }}{{ $count > 0 ? ' · '.$count : '' }}
                     </option>
                 @endforeach
@@ -128,10 +128,12 @@
         @foreach ($searchItems as $item)
             @php
                 $attributes = $item['attributes'];
-                $topicIds = $attributes['topic_ids'] ?? array_filter([$attributes['topic_id']]);
+                $topicIds = $attributes['medical_taxonomy_node_ids']
+                    ?? $attributes['topic_ids']
+                    ?? array_values(array_filter([(int) ($attributes['medical_taxonomy_node_id'] ?? 0)]));
                 $topics = $searchTopics->only($topicIds);
                 $sessionParams = array_filter([
-                    'topic_ids' => $topicIds ?: null,
+                    'medical_taxonomy_node_ids' => $topicIds ?: null,
                     'difficulties' => [$attributes['difficulty']],
                 ]);
             @endphp

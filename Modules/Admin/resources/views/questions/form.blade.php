@@ -32,9 +32,34 @@
     $correctIndex = collect($optionRows)->search(fn ($row) => $row['is_correct'] === true);
     if ($correctIndex === false) { $correctIndex = 0; }
 
+    $existingHints = $question->relationLoaded('hints') ? $question->hints : collect();
+    $oldHints = old('hints');
+    if (is_array($oldHints)) {
+        $hintRows = collect($oldHints)->map(fn ($row) => [
+            'id' => filled($row['id'] ?? null) ? (int) $row['id'] : null,
+            'content' => (string) ($row['content'] ?? ''),
+        ])->values()->all();
+    } elseif ($existingHints->isNotEmpty()) {
+        $hintRows = $existingHints->map(fn ($h) => [
+            'id' => $h->id,
+            'content' => $h->content,
+        ])->values()->all();
+    } elseif (! empty($question->key_info)) {
+        $hintRows = collect($question->key_info)->map(fn ($content) => [
+            'id' => null,
+            'content' => (string) $content,
+        ])->values()->all();
+    } else {
+        $hintRows = [
+            ['id' => null, 'content' => ''],
+        ];
+    }
+
     $statusBadge = ! $isNew ? match($question->status) {
         \Modules\QuestionBank\Enums\QuestionStatus::Published => ['label' => 'Đã xuất bản', 'class' => 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'],
         \Modules\QuestionBank\Enums\QuestionStatus::InReview  => ['label' => 'Chờ duyệt',   'class' => 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'],
+        \Modules\QuestionBank\Enums\QuestionStatus::Rejected  => ['label' => 'Từ chối',     'class' => 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'],
+        \Modules\QuestionBank\Enums\QuestionStatus::Private   => ['label' => 'Riêng tư',    'class' => 'bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300'],
         \Modules\QuestionBank\Enums\QuestionStatus::Retired   => ['label' => 'Ngừng dùng',  'class' => 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'],
         default                                               => ['label' => 'Bản nháp',    'class' => 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'],
     } : null;
@@ -42,12 +67,6 @@
     $stemImageUrl = filled($stemImagePath)
         ? \Illuminate\Support\Facades\Storage::disk('public')->url($stemImagePath)
         : null;
-    $selectedTopicIds = collect(old(
-        'topic_ids',
-        $question->relationLoaded('topics')
-            ? $question->topics->pluck('id')->all()
-            : array_filter([$question->topic_id]),
-    ))->map(fn ($id) => (int) $id)->unique()->values()->all();
 @endphp
 
 <x-layouts.admin :title="$isNew ? 'Tạo câu hỏi mới' : 'Chỉnh sửa câu hỏi'">
@@ -76,6 +95,13 @@
                             <span class="material-symbols-outlined text-[15px]">history</span>
                         </a>
                         <span>·</span>
+                        <a href="{{ route('admin.questions.stats', $question) }}"
+                            class="inline-flex items-center gap-0.5 font-semibold text-primary hover:underline"
+                            title="Thống kê chi tiết">
+                            Thống kê
+                            <span class="material-symbols-outlined text-[15px]">analytics</span>
+                        </a>
+                        <span>·</span>
                         <span>Cập nhật {{ $question->updated_at?->diffForHumans() }}</span>
                     </p>
                 @else
@@ -100,6 +126,26 @@
                         @csrf <input type="hidden" name="status" value="draft">
                         <button class="inline-flex items-center gap-1.5 rounded-xl border border-outline-variant bg-surface px-3 py-1.5 text-sm font-semibold text-on-surface hover:bg-surface-container-low">
                             <span class="material-symbols-outlined text-[16px]">undo</span>Trả về nháp
+                        </button>
+                    </form>
+                @endif
+                @if ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::InReview && $canPublish)
+                    <form method="post" action="{{ route('admin.questions.transition', $question) }}" class="inline-flex items-center gap-2">
+                        @csrf
+                        <input type="hidden" name="status" value="rejected">
+                        <input type="text" name="rejection_reason" required maxlength="2000" placeholder="Lý do từ chối…"
+                               class="w-48 rounded-xl border border-outline-variant bg-surface px-2 py-1.5 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
+                        <button onclick="return confirm('Từ chối câu hỏi này?')"
+                                class="inline-flex items-center gap-1.5 rounded-xl border border-red-300 bg-red-50 px-3 py-1.5 text-sm font-semibold text-red-700 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-300">
+                            <span class="material-symbols-outlined text-[16px]">cancel</span>Từ chối
+                        </button>
+                    </form>
+                @endif
+                @if ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::Rejected && $canUpdate)
+                    <form method="post" action="{{ route('admin.questions.transition', $question) }}">
+                        @csrf <input type="hidden" name="status" value="draft">
+                        <button class="inline-flex items-center gap-1.5 rounded-xl border border-outline-variant bg-surface px-3 py-1.5 text-sm font-semibold text-on-surface hover:bg-surface-container-low">
+                            <span class="material-symbols-outlined text-[16px]">edit</span>Sửa lại (về nháp)
                         </button>
                     </form>
                 @endif
@@ -171,15 +217,21 @@
           class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_300px] lg:items-start"
           x-data='{
               options: @json($optionRows),
+              hints: @json($hintRows),
               correct: {{ (int) $correctIndex }},
-              selectedTopicIds: @json($selectedTopicIds),
-              topicPickerOpen: false,
-              topicSearch: "",
               add() { this.options.push({ id: null, content: "", is_correct: false, explanation: "" }); },
               remove(i) {
                   if (this.options.length <= 2) return;
                   this.options.splice(i, 1);
                   if (this.correct >= this.options.length) this.correct = 0;
+              },
+              addHint() { this.hints.push({ id: null, content: "" }); },
+              removeHint(i) {
+                  if (this.hints.length <= 1) {
+                      this.hints = [{ id: null, content: "" }];
+                      return;
+                  }
+                  this.hints.splice(i, 1);
               }
           }'>
         @csrf
@@ -292,13 +344,41 @@
                     </div>
                 </div>
 
-                {{-- Giải thích --}}
+                {{-- Giải thích & Hints --}}
                 <div class="rounded-2xl border border-outline-variant bg-surface p-5">
                     <h2 class="mb-4 font-label-lg font-semibold text-on-surface">Giải thích & Gợi ý</h2>
                     <div class="space-y-4">
                         <x-admin.rich-editor name="explanation" label="Giải thích chung"
                             :value="old('explanation', $question->explanation)"
                             placeholder="Giải thích đáp án đúng và kiến thức liên quan..." />
+
+                        <div>
+                            <div class="mb-2 flex items-center justify-between">
+                                <label class="text-sm font-semibold text-on-surface">Hints (theo thứ tự)</label>
+                                <button type="button" @click="addHint()"
+                                        class="inline-flex items-center gap-1 rounded-lg border border-outline-variant px-2.5 py-1 text-xs font-semibold text-on-surface hover:bg-surface-container-low">
+                                    <span class="material-symbols-outlined text-[14px]">add</span>Add Hint
+                                </button>
+                            </div>
+                            <p class="mb-3 text-[11px] leading-4 text-on-surface-variant">
+                                Hint hiển thị lần lượt — không hiện hint 2 trước hint 1. Không lấy từ Concept.
+                            </p>
+                            <div class="space-y-2">
+                                <template x-for="(hint, index) in hints" :key="'hint-'+index">
+                                    <div class="rounded-xl border border-outline-variant bg-surface-container-lowest p-3">
+                                        <div class="mb-2 flex items-center justify-between">
+                                            <span class="text-xs font-bold text-on-surface-variant" x-text="'Hint ' + (index + 1)"></span>
+                                            <button type="button" @click="removeHint(index)"
+                                                    class="text-xs font-medium text-error hover:underline">Xóa</button>
+                                        </div>
+                                        <input type="hidden" :name="'hints['+index+'][id]'" :value="hint.id || ''">
+                                        <textarea :name="'hints['+index+'][content]'" x-model="hint.content" rows="2"
+                                                  class="w-full resize-none rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                                                  :placeholder="'Nội dung hint ' + (index + 1)"></textarea>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
 
                         <x-admin.rich-editor name="attending_tip" label="Kiến thức / Gợi ý"
                             :value="old('attending_tip', $question->attending_tip)"
@@ -369,53 +449,8 @@
                 <div class="rounded-2xl border border-outline-variant bg-surface p-4">
                     <h2 class="mb-3 font-label-md font-semibold text-on-surface-variant">Phân loại</h2>
                     <div class="space-y-3">
-                        <div>
-                            <label class="mb-1 block text-xs font-semibold text-on-surface-variant">Chủ đề *</label>
-                            <div class="relative" @click.outside="topicPickerOpen = false">
-                                <button type="button" @click="topicPickerOpen = ! topicPickerOpen"
-                                    class="flex min-h-11 w-full items-center justify-between gap-2 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2 text-left text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
-                                    <span x-text="selectedTopicIds.length ? `${selectedTopicIds.length} chủ đề đã chọn` : '— Chọn chủ đề —'"
-                                        :class="selectedTopicIds.length ? '' : 'text-on-surface-variant'"></span>
-                                    <span class="material-symbols-outlined text-[18px] text-on-surface-variant"
-                                        x-text="topicPickerOpen ? 'expand_less' : 'expand_more'"></span>
-                                </button>
+                        @include('admin::questions.partials.taxonomy-fields')
 
-                                <div x-show="topicPickerOpen" x-cloak
-                                    class="absolute right-0 z-30 mt-2 w-full min-w-[280px] rounded-xl border border-outline-variant bg-surface p-2 shadow-xl">
-                                    <input type="search" x-model="topicSearch" placeholder="Tìm chủ đề..."
-                                        class="mb-2 h-10 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
-                                    <div class="max-h-60 space-y-1 overflow-y-auto">
-                                        @foreach ($topics as $topic)
-                                            <label x-show="@js(mb_strtolower($topic->name)).includes(topicSearch.toLocaleLowerCase())"
-                                                class="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-surface-container-low">
-                                                <input type="checkbox" value="{{ $topic->id }}" x-model.number="selectedTopicIds"
-                                                    class="size-4 rounded border-outline-variant text-primary focus:ring-primary">
-                                                <span class="min-w-0 flex-1 text-on-surface">{{ $topic->name }}</span>
-                                                <span class="text-[10px] uppercase text-on-surface-variant">{{ $topic->type }}</span>
-                                            </label>
-                                        @endforeach
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="mt-2 flex flex-wrap gap-1.5">
-                                @foreach ($topics as $topic)
-                                    <span x-show="selectedTopicIds.includes({{ $topic->id }})" x-cloak
-                                        class="inline-flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
-                                        {{ $topic->name }}
-                                        <button type="button" @click="selectedTopicIds = selectedTopicIds.filter(id => id !== {{ $topic->id }})"
-                                            class="material-symbols-outlined text-[14px]" aria-label="Bỏ chủ đề {{ $topic->name }}">close</button>
-                                    </span>
-                                @endforeach
-                            </div>
-
-                            <template x-for="topicId in selectedTopicIds" :key="topicId">
-                                <input type="hidden" name="topic_ids[]" :value="topicId">
-                            </template>
-                            @error('topic_ids')
-                                <p class="mt-1 text-xs text-error">{{ $message }}</p>
-                            @enderror
-                        </div>
                         <div>
                             <label class="mb-1 block text-xs font-semibold text-on-surface-variant" for="difficulty">Độ khó *</label>
                             <select id="difficulty" name="difficulty" required
@@ -425,12 +460,23 @@
                                 @endforeach
                             </select>
                         </div>
-                        <label class="flex h-11 cursor-pointer items-center gap-2 rounded-xl border border-outline-variant px-3 transition-colors hover:bg-surface-container-low">
-                            <input type="checkbox" name="is_free" value="1"
-                                   @checked(old('is_free', $question->is_free))
-                                   class="size-4 rounded text-primary focus:ring-primary">
-                            <span class="text-sm font-semibold text-on-surface">Câu miễn phí (Free)</span>
-                        </label>
+                        <div>
+                            <p class="mb-1.5 text-xs font-semibold text-on-surface-variant">Truy cập</p>
+                            <label class="flex h-11 cursor-pointer items-center gap-2 rounded-xl border border-outline-variant px-3 transition-colors hover:bg-surface-container-low">
+                                <input type="checkbox" name="is_free" value="1"
+                                       @checked(old('is_free', $question->is_free))
+                                       class="size-4 rounded text-primary focus:ring-primary">
+                                <span class="text-sm font-semibold text-on-surface">Miễn phí (không cần Premium)</span>
+                            </label>
+                        </div>
+                        @if ($canPublish)
+                            <label class="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-outline-variant px-3 py-2 transition-colors hover:bg-surface-container-low">
+                                <input type="checkbox" name="exam_flag" value="1"
+                                       @checked(old('exam_flag', $question->exam_flag))
+                                       class="size-4 rounded text-primary focus:ring-primary">
+                                <span class="text-sm font-semibold text-on-surface">Câu dành cho exam pool</span>
+                            </label>
+                        @endif
                     </div>
                 </div>
 
@@ -440,19 +486,46 @@
                         <h2 class="mb-3 font-label-md font-semibold text-on-surface-variant">Thông tin</h2>
                         <dl class="space-y-2 text-sm">
                             <div class="flex justify-between">
+                                <dt class="text-on-surface-variant">Người tạo</dt>
+                                <dd class="font-semibold text-on-surface">{{ $question->creator?->name ?? '—' }}</dd>
+                            </div>
+                            <div class="flex justify-between">
+                                <dt class="text-on-surface-variant">Người duyệt</dt>
+                                <dd class="font-semibold text-on-surface">{{ $question->reviewer?->name ?? '—' }}</dd>
+                            </div>
+                            <div class="flex justify-between">
                                 <dt class="text-on-surface-variant">Phiên bản</dt>
                                 <dd class="font-semibold text-on-surface">{{ $question->version }}</dd>
                             </div>
                             <div class="flex justify-between">
                                 <dt class="text-on-surface-variant">Tạo lúc</dt>
-                                <dd class="font-semibold text-on-surface">{{ $question->created_at?->format('d/m/Y') }}</dd>
+                                <dd class="font-semibold text-on-surface">{{ $question->created_at?->format('d/m/Y H:i') }}</dd>
                             </div>
                             <div class="flex justify-between">
                                 <dt class="text-on-surface-variant">Cập nhật</dt>
                                 <dd class="font-semibold text-on-surface">{{ $question->updated_at?->diffForHumans() }}</dd>
                             </div>
                         </dl>
+                        @if ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::Rejected && filled($question->rejection_reason))
+                            <div class="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
+                                <p class="font-semibold">Lý do từ chối</p>
+                                <p class="mt-1">{{ $question->rejection_reason }}</p>
+                            </div>
+                        @endif
                     </div>
+                    @if ($canClone ?? false)
+                        <div class="rounded-2xl border border-outline-variant bg-surface p-4">
+                            <h2 class="mb-3 font-label-md font-semibold text-on-surface-variant">Nhân bản</h2>
+                            <form method="post" action="{{ route('admin.questions.clone', $question) }}">
+                                @csrf
+                                <button type="submit" onclick="return confirm('Tạo bản sao mới từ câu hỏi này?')"
+                                        class="flex w-full items-center justify-center gap-2 rounded-xl border border-outline-variant py-2.5 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-low">
+                                    <span class="material-symbols-outlined text-[18px]">content_copy</span>
+                                    Clone câu hỏi
+                                </button>
+                            </form>
+                        </div>
+                    @endif
                 @endif
 
             </div>

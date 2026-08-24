@@ -18,7 +18,9 @@ final class CaptureQuestionVersionAction
         ?int $restoredFromVersion = null,
     ): QuestionVersion {
         $question->loadMissing([
-            'topics:id',
+            'medicalTaxonomyNodes:id',
+            'coreClinicalTopics:id',
+            'tags:id',
             'options' => fn ($query) => $query->orderBy('order'),
         ]);
 
@@ -48,8 +50,11 @@ final class CaptureQuestionVersionAction
             'attending_tip' => $question->attending_tip,
             'difficulty' => $question->difficulty->value,
             'status' => $question->status->value,
-            'topic_ids' => $question->topics->pluck('id')->map(fn ($id): int => (int) $id)->values()->all(),
+            'medical_taxonomy_node_ids' => $question->medicalTaxonomyNodes->pluck('id')->map(fn ($id): int => (int) $id)->values()->all(),
+            'core_clinical_topic_ids' => $question->coreClinicalTopics->pluck('id')->map(fn ($id): int => (int) $id)->values()->all(),
+            'tag_ids' => $question->tags->pluck('id')->map(fn ($id): int => (int) $id)->values()->all(),
             'is_free' => (bool) $question->is_free,
+            'exam_flag' => (bool) $question->exam_flag,
             'options' => $question->options->map(fn (QuestionOption $option): array => [
                 'label' => (string) $option->label,
                 'content' => (string) $option->content,

@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\QuestionBank\Services;
 
+use Modules\QuestionBank\Models\MedicalTaxonomyNode;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionOption;
 use Modules\QuestionBank\Models\QuestionSession;
 use Modules\QuestionBank\Models\QuestionSessionSnapshot;
-use Modules\QuestionBank\Models\Topic;
 use RuntimeException;
 
 /** Capture and rehydrate immutable question content for session runtime/review. */
@@ -21,7 +21,7 @@ final class QuestionSessionSnapshots
     {
         $questionIds = array_values(array_map('strval', $session->question_ids ?? []));
         $questions = Question::query()
-            ->with(['options', 'topic', 'topics'])
+            ->with(['options', 'medicalTaxonomyNodes'])
             ->whereIn('id', $questionIds)
             ->get()
             ->keyBy(fn (Question $question): string => (string) $question->getKey());
@@ -59,7 +59,7 @@ final class QuestionSessionSnapshots
             ->values()
             ->all();
         $liveQuestions = Question::query()
-            ->with(['options', 'topic', 'topics'])
+            ->with(['options', 'medicalTaxonomyNodes'])
             ->whereIn('id', $missingIds)
             ->get()
             ->keyBy(fn (Question $question): string => (string) $question->getKey());
@@ -131,7 +131,7 @@ final class QuestionSessionSnapshots
 
         if ($missing !== []) {
             $liveQuestions = Question::withTrashed()
-                ->with(['options', 'topic', 'topics'])
+                ->with(['options', 'medicalTaxonomyNodes'])
                 ->whereIn('id', $missing)
                 ->get()
                 ->keyBy(fn (Question $question): string => (string) $question->getKey());
@@ -152,8 +152,7 @@ final class QuestionSessionSnapshots
     /** @return array<string, mixed> */
     private function payload(Question $question, string $sessionKey): array
     {
-        $topic = $question->topic;
-        $topics = $question->topics;
+        $nodes = $question->medicalTaxonomyNodes;
         $options = $question->optionsForSession($sessionKey);
 
         return [
@@ -165,21 +164,21 @@ final class QuestionSessionSnapshots
             'attending_tip' => $question->attending_tip,
             'difficulty' => $question->difficulty->value,
             'status' => $question->status->value,
-            'topic_id' => $question->topic_id,
-            'topic_ids' => $topics->pluck('id')->map(fn ($id): int => (int) $id)->values()->all(),
+            'medical_taxonomy_node_ids' => $nodes->pluck('id')->map(fn ($id): int => (int) $id)->values()->all(),
             'is_free' => (bool) $question->is_free,
             'version' => (int) $question->version,
-            'topic' => $topic instanceof Topic ? [
-                'id' => (int) $topic->getKey(),
-                'name' => (string) $topic->name,
-                'slug' => (string) $topic->slug,
-                'type' => (string) $topic->type,
-            ] : null,
-            'topics' => $topics->map(fn (Topic $topic): array => [
-                'id' => (int) $topic->getKey(),
-                'name' => (string) $topic->name,
-                'slug' => (string) $topic->slug,
-                'type' => (string) $topic->type,
+            'medical_taxonomy_nodes' => $nodes->map(fn (MedicalTaxonomyNode $node): array => [
+                'id' => (int) $node->getKey(),
+                'name' => (string) $node->name,
+                'slug' => (string) $node->slug,
+                'node_type' => (string) ($node->node_type ?? ''),
+            ])->values()->all(),
+            // Backward-compatible keys for older review UIs.
+            'topics' => $nodes->map(fn (MedicalTaxonomyNode $node): array => [
+                'id' => (int) $node->getKey(),
+                'name' => (string) $node->name,
+                'slug' => (string) $node->slug,
+                'type' => (string) ($node->node_type ?? ''),
             ])->values()->all(),
             'options' => $options->map(fn (QuestionOption $option): array => [
                 'id' => (int) $option->getKey(),
@@ -206,7 +205,6 @@ final class QuestionSessionSnapshots
             'attending_tip' => $payload['attending_tip'] ?? null,
             'difficulty' => (string) $payload['difficulty'],
             'status' => (string) $payload['status'],
-            'topic_id' => $payload['topic_id'] ?? null,
             'is_free' => (bool) ($payload['is_free'] ?? false),
             'version' => (int) ($payload['version'] ?? 1),
         ]);
@@ -219,25 +217,24 @@ final class QuestionSessionSnapshots
         });
         $question->setRelation('options', $options);
 
-        $topicData = $payload['topic'] ?? null;
-        if (is_array($topicData)) {
-            $topic = new Topic;
-            $topic->forceFill($topicData);
-            $question->setRelation('topic', $topic);
-        } else {
-            $question->setRelation('topic', null);
+        $nodesData = $payload['medical_taxonomy_nodes'] ?? $payload['topics'] ?? [];
+        if (! is_array($nodesData)) {
+            $nodesData = [];
         }
 
-        $topicsData = $payload['topics'] ?? null;
-        if (! is_array($topicsData)) {
-            $topicsData = is_array($topicData) ? [$topicData] : [];
-        }
-        $question->setRelation('topics', collect($topicsData)->map(function (array $data): Topic {
-            $topic = new Topic;
-            $topic->forceFill($data);
+        $nodes = collect($nodesData)->map(function (array $data): MedicalTaxonomyNode {
+            $node = new MedicalTaxonomyNode;
+            $node->forceFill([
+                'id' => $data['id'] ?? null,
+                'name' => $data['name'] ?? '',
+                'slug' => $data['slug'] ?? '',
+                'node_type' => $data['node_type'] ?? $data['type'] ?? null,
+            ]);
 
-            return $topic;
-        })->values());
+            return $node;
+        })->values();
+
+        $question->setRelation('medicalTaxonomyNodes', $nodes);
 
         return $question;
     }

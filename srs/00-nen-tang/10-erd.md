@@ -188,9 +188,10 @@ erDiagram
     QUESTION_VERSION {
         bigint id PK
         bigint question_id FK
-        int version
+        int version_number
         json snapshot
-        bigint created_by FK
+        bigint reviewer_id FK
+        timestamp created_at
     }
     QUESTION_SESSION {
         bigint id PK
@@ -501,8 +502,12 @@ erDiagram
 
 ```mermaid
 erDiagram
+    EXAM ||--o{ EXAM_TOPIC : "phan bo"
+    EXAM ||--o{ EXAM_QUESTION : "snapshot cau"
+    EXAM_TOPIC }o--|| TOPIC : "topic_id"
+    EXAM_QUESTION }o--|| QUESTION : "question_id"
     EXAM ||--o{ EXAM_ATTEMPT : "sinh ra"
-    USER ||--o{ EXAM_ATTEMPT : "thực hiện"
+    USER ||--o{ EXAM_ATTEMPT : "thuc hien"
     EXAM_ATTEMPT ||--|| QUESTION_SESSION : "dung engine"
 
     EXAM {
@@ -511,15 +516,28 @@ erDiagram
         string title
         string type "mock/self_assessment/org_exam"
         text description
-        json question_ids
-        json rule
         int duration_minutes
         int pass_score
         timestamp available_from
         timestamp available_to
+        string access_type
         bool is_premium
-        string status
+        string status "draft/published/archived"
         timestamp deleted_at
+    }
+    EXAM_TOPIC {
+        bigint id PK
+        bigint exam_id FK
+        bigint topic_id FK
+        int question_count
+        int sort_order
+    }
+    EXAM_QUESTION {
+        bigint id PK
+        bigint exam_id FK
+        bigint question_id FK
+        bigint topic_id FK
+        int sort_order
     }
     EXAM_ATTEMPT {
         bigint id PK

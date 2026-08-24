@@ -21,7 +21,11 @@ use Modules\Admin\Http\Controllers\QuestionVersionController;
 use Modules\Admin\Http\Controllers\RoleController;
 use Modules\Admin\Http\Controllers\SettingController;
 use Modules\Admin\Http\Controllers\SupportConversationController;
-use Modules\Admin\Http\Controllers\TopicController;
+use Modules\Admin\Http\Controllers\BlueprintController;
+use Modules\Admin\Http\Controllers\MedicalTaxonomyController;
+use Modules\Admin\Http\Controllers\TagController;
+use Modules\Admin\Http\Controllers\TaxonomyController;
+use Modules\QuestionBank\Http\Controllers\TaxonomyLookupController;
 use Modules\Admin\Http\Controllers\UserController;
 use Modules\Auth\Http\Controllers\AdminTwoFactorController;
 use Modules\Auth\Http\Controllers\AuthenticatedSessionController;
@@ -136,30 +140,18 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
                 ->name('classrooms.archive');
         });
 
-        Route::middleware('permission:'.Permission::TopicView->value)->group(function (): void {
-            Route::get('/topics', [TopicController::class, 'index'])->name('topics.index');
-            Route::get('/topics/{topic}/edit', [TopicController::class, 'edit'])->name('topics.edit');
-        });
-
         Route::middleware('permission:'.Permission::QuestionView->value)->group(function (): void {
             Route::get('/questions', [QuestionController::class, 'index'])->name('questions.index');
             Route::get('/questions/{question}/edit', [QuestionController::class, 'edit'])->name('questions.edit');
+            Route::get('/questions/{question}/stats', [QuestionController::class, 'stats'])->name('questions.stats');
             Route::get('/questions/{question}/versions', [QuestionVersionController::class, 'index'])
                 ->name('questions.versions.index');
-        });
-
-        Route::middleware('permission:'.Permission::TopicCreate->value)->group(function (): void {
-            Route::get('/topics/create', [TopicController::class, 'create'])->name('topics.create');
-            Route::post('/topics', [TopicController::class, 'store'])->name('topics.store');
         });
 
         Route::middleware('permission:'.Permission::QuestionCreate->value)->group(function (): void {
             Route::get('/questions/create', [QuestionController::class, 'create'])->name('questions.create');
             Route::post('/questions', [QuestionController::class, 'store'])->name('questions.store');
-        });
-
-        Route::middleware('permission:'.Permission::TopicUpdate->value)->group(function (): void {
-            Route::put('/topics/{topic}', [TopicController::class, 'update'])->name('topics.update');
+            Route::post('/questions/{question}/clone', [QuestionController::class, 'clone'])->name('questions.clone');
         });
 
         Route::middleware('permission:'.Permission::QuestionUpdate->value)->group(function (): void {
@@ -185,12 +177,49 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
             ->middleware('permission:'.Permission::QuestionDelete->value)
             ->name('questions.destroy');
 
-        Route::delete('/topics/{topic}', [TopicController::class, 'destroy'])
+        Route::middleware('permission:'.Permission::TopicView->value)->group(function (): void {
+            Route::get('/taxonomy', [TaxonomyController::class, 'index'])->name('taxonomy.index');
+            Route::get('/blueprints', [BlueprintController::class, 'index'])->name('blueprints.index');
+            Route::get('/blueprints/{blueprint}/edit', [BlueprintController::class, 'edit'])->name('blueprints.edit');
+            Route::get('/medical-taxonomy', [MedicalTaxonomyController::class, 'index'])->name('medical-taxonomy.index');
+            Route::get('/tags', [TagController::class, 'index'])->name('tags.index');
+            Route::get('/tags/{tag}/edit', [TagController::class, 'edit'])->name('tags.edit');
+            Route::get('/taxonomy/lookups/blueprints', [TaxonomyLookupController::class, 'blueprints'])->name('taxonomy.lookups.blueprints');
+            Route::get('/taxonomy/lookups/blueprints/{blueprint}/sections', [TaxonomyLookupController::class, 'blueprintSections'])->name('taxonomy.lookups.sections');
+            Route::get('/taxonomy/lookups/sections/{section}/core-topics', [TaxonomyLookupController::class, 'coreClinicalTopics'])->name('taxonomy.lookups.core-topics');
+            Route::get('/taxonomy/lookups/core-topics/search', [TaxonomyLookupController::class, 'searchCoreClinicalTopics'])->name('taxonomy.lookups.core-topics.search');
+            Route::get('/taxonomy/lookups/medical-nodes', [TaxonomyLookupController::class, 'medicalTaxonomyNodes'])->name('taxonomy.lookups.medical-nodes');
+            Route::get('/taxonomy/lookups/tags', [TaxonomyLookupController::class, 'tags'])->name('taxonomy.lookups.tags');
+        });
+
+        Route::middleware('permission:'.Permission::TopicCreate->value)->group(function (): void {
+            Route::get('/blueprints/create', [BlueprintController::class, 'create'])->name('blueprints.create');
+            Route::post('/blueprints', [BlueprintController::class, 'store'])->name('blueprints.store');
+            Route::post('/blueprints/{blueprint}/sections', [BlueprintController::class, 'storeSection'])->name('blueprints.sections.store');
+            Route::post('/blueprint-sections/{section}/core-topics', [BlueprintController::class, 'storeCoreTopic'])->name('blueprint-sections.core-topics.store');
+            Route::put('/core-clinical-topics/{topic}/medical-nodes', [BlueprintController::class, 'syncCoreTopicMedicalNodes'])->name('core-clinical-topics.medical-nodes.sync');
+            Route::post('/medical-taxonomy/nodes', [MedicalTaxonomyController::class, 'storeNode'])->name('medical-taxonomy.nodes.store');
+            Route::get('/tags/create', [TagController::class, 'create'])->name('tags.create');
+            Route::post('/tags', [TagController::class, 'store'])->name('tags.store');
+        });
+
+        Route::middleware('permission:'.Permission::TopicUpdate->value)->group(function (): void {
+            Route::put('/blueprints/{blueprint}', [BlueprintController::class, 'update'])->name('blueprints.update');
+            Route::put('/medical-taxonomy/nodes/{node}', [MedicalTaxonomyController::class, 'updateNode'])->name('medical-taxonomy.nodes.update');
+            Route::put('/tags/{tag}', [TagController::class, 'update'])->name('tags.update');
+        });
+
+        Route::delete('/blueprints/{blueprint}', [BlueprintController::class, 'destroy'])
             ->middleware('permission:'.Permission::TopicDelete->value)
-            ->name('topics.destroy');
+            ->name('blueprints.destroy');
+
+        Route::delete('/tags/{tag}', [TagController::class, 'destroy'])
+            ->middleware('permission:'.Permission::TopicDelete->value)
+            ->name('tags.destroy');
 
         // --- Exams ---
         Route::get('/exams/questions/search', [ExamController::class, 'searchQuestions'])->name('exams.questions.search');
+        Route::get('/exams/topic-eligibility', [ExamController::class, 'topicEligibility'])->name('exams.topic-eligibility');
         Route::get('/exams', [ExamController::class, 'index'])->name('exams.index');
         Route::get('/exams/create', [ExamController::class, 'create'])->name('exams.create');
         Route::post('/exams', [ExamController::class, 'store'])->name('exams.store');

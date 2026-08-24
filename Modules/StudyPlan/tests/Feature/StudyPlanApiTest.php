@@ -11,13 +11,14 @@ use Illuminate\Support\Facades\Event;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionOption;
-use Modules\QuestionBank\Models\Topic;
 use Modules\StudyPlan\Actions\CompletePlanTaskAction;
 use Modules\StudyPlan\Enums\TaskType;
 use Modules\StudyPlan\Events\StudyPlanActivity;
 use Modules\StudyPlan\Models\StudyPlan;
 use Modules\StudyPlan\Models\StudyPlanTask;
 use Tests\TestCase;
+use Tests\Support\CreatesMedicalTaxonomy;
+
 
 /**
  * Phase 5: REST endpoints reuse the same actions, and the funnel emits its
@@ -25,22 +26,23 @@ use Tests\TestCase;
  */
 final class StudyPlanApiTest extends TestCase
 {
+    use CreatesMedicalTaxonomy;
     use RefreshDatabase;
 
     private User $user;
 
-    private Topic $topic;
+    private \Modules\QuestionBank\Models\MedicalTaxonomyNode $topic;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->user = User::factory()->create();
-        $this->topic = Topic::create([
+        $this->topic = $this->makeMedicalNode([
             'name' => 'Tim mạch',
             'slug' => 'tim-mach',
-            'type' => 'system',
-            'order' => 0,
+            'node_type' => 'system',
+            'sort_order' => 0,
         ]);
     }
 
@@ -185,8 +187,7 @@ final class StudyPlanApiTest extends TestCase
                 'stem' => "Câu hỏi #{$i}?",
                 'difficulty' => 'medium',
                 'status' => QuestionStatus::Published,
-                'topic_id' => $this->topic->id,
-                'is_free' => true,
+                                'is_free' => true,
             ]);
 
             QuestionOption::create([
@@ -196,6 +197,15 @@ final class StudyPlanApiTest extends TestCase
                 'is_correct' => true,
                 'order' => 0,
             ]);
+            QuestionOption::create([
+                'question_id' => $question->getKey(),
+                'label' => 'B',
+                'content' => 'Phương án B',
+                'is_correct' => false,
+                'order' => 1,
+            ]);
+
+            $question->medicalTaxonomyNodes()->sync([$this->topic->id]);
         }
     }
 }

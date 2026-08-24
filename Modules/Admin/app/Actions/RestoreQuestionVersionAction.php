@@ -9,9 +9,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Modules\Admin\Support\Auditor;
 use Modules\QuestionBank\Enums\QuestionStatus;
+use Modules\QuestionBank\Models\MedicalTaxonomyNode;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionVersion;
-use Modules\QuestionBank\Models\Topic;
 
 final class RestoreQuestionVersionAction
 {
@@ -33,16 +33,16 @@ final class RestoreQuestionVersionAction
             }
 
             $snapshot = $version->snapshot;
-            $topicIds = Topic::query()
-                ->whereIn('id', array_map('intval', (array) ($snapshot['topic_ids'] ?? [])))
+            $medicalNodeIds = MedicalTaxonomyNode::query()
+                ->whereIn('id', array_map('intval', (array) ($snapshot['medical_taxonomy_node_ids'] ?? [])))
                 ->pluck('id')
                 ->map(fn ($id): int => (int) $id)
                 ->values()
                 ->all();
 
-            if ($topicIds === []) {
+            if ($medicalNodeIds === []) {
                 throw ValidationException::withMessages([
-                    'version' => 'Không thể khôi phục vì các chủ đề của phiên bản này không còn tồn tại.',
+                    'version' => 'Không thể khôi phục vì danh mục y khoa của phiên bản này không còn tồn tại.',
                 ]);
             }
 
@@ -55,12 +55,11 @@ final class RestoreQuestionVersionAction
                 'attending_tip' => $snapshot['attending_tip'] ?? null,
                 'difficulty' => (string) ($snapshot['difficulty'] ?? 'medium'),
                 'status' => QuestionStatus::Draft,
-                'topic_id' => $topicIds[0],
                 'is_free' => (bool) ($snapshot['is_free'] ?? false),
                 'version' => $beforeVersion + 1,
             ])->save();
 
-            $question->topics()->sync($topicIds);
+            $question->medicalTaxonomyNodes()->sync($medicalNodeIds);
             $question->options()->delete();
 
             foreach (array_values((array) ($snapshot['options'] ?? [])) as $index => $option) {
@@ -78,8 +77,7 @@ final class RestoreQuestionVersionAction
             }
 
             $question->load([
-                'topic',
-                'topics:id',
+                'medicalTaxonomyNodes:id',
                 'options' => fn ($query) => $query->orderBy('order'),
             ]);
             $this->captureVersion->handle(

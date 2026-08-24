@@ -15,7 +15,10 @@ use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionReviewAction;
 use Modules\QuestionBank\Enums\QuestionReviewStatus;
 use Modules\QuestionBank\Enums\QuestionStatus;
+use Modules\QuestionBank\Enums\TaxonomyStatus;
+use Modules\QuestionBank\Models\MedicalTaxonomyNode;
 use Modules\QuestionBank\Models\Question;
+use Modules\QuestionBank\Models\QuestionHint;
 use Modules\QuestionBank\Models\QuestionOption;
 use Modules\QuestionBank\Models\QuestionReviewRequest;
 
@@ -38,18 +41,23 @@ final class SaveAdminQuestionAction
      *     key_info: array<int, string>,
      *     attending_tip: ?string,
      *     difficulty: string,
-     *     topic_ids: list<int>,
+     *     core_clinical_topic_ids?: list<int>,
+     *     medical_taxonomy_node_ids?: list<int>,
+     *     medical_taxonomy_links?: list<array{id: int, relationship_type?: ?string, is_primary?: ?bool}>,
+     *     tag_ids?: list<int>,
+     *     hints?: list<array{id?: int|null, content: string, sort_order?: int}>,
      *     is_free: bool,
+     *     exam_flag?: bool,
      *     options: list<array{id?: int|null, content: string, is_correct: bool, explanation?: ?string}>
      * }  $data
      */
     public function handle(User $actor, ?Question $question, array $data): Question
     {
         $options = $data['options'];
-        $topicIds = collect($data['topic_ids'])->map(fn ($id): int => (int) $id)->unique()->values()->all();
         $this->assertOptionsValid($options);
+        $this->assertMedicalTaxonomyPresent($data);
 
-        return DB::transaction(function () use ($actor, $question, $data, $options, $topicIds): Question {
+        return DB::transaction(function () use ($actor, $question, $data, $options): Question {
             $before = $question ? $this->snapshot($question) : null;
             $isReviewer = QuestionAccess::isReviewer($actor);
 
@@ -61,11 +69,24 @@ final class SaveAdminQuestionAction
                 if (! $isReviewer && $question->status === QuestionStatus::Published) {
                     $this->queueUpdate($actor, $question, $data);
 
-                    return $question->fresh(['options', 'topic', 'topics', 'pendingReviewRequest']);
+                    return $question->fresh(['options', 'hints', 'medicalTaxonomyNodes', 'pendingReviewRequest']);
                 }
 
                 $this->captureVersion->handle($question, null, 'baseline');
             }
+
+            if ($question->status === QuestionStatus::Rejected) {
+                throw ValidationException::withMessages([
+                    'status' => 'Câu đã bị từ chối. Chuyển về nháp trước khi chỉnh sửa.',
+                ]);
+            }
+
+            $hints = array_key_exists('hints', $data)
+                ? $this->normalizeHints($data['hints'] ?? [])
+                : null;
+            $keyInfo = $hints !== null
+                ? array_values(array_map(fn (array $hint): string => $hint['content'], $hints))
+                : $this->resolveKeyInfo($question, $data['key_info'] ?? []);
 
             $question->fill([
                 'stem' => SafeHtml::fromEditor($data['stem']),
@@ -73,15 +94,19 @@ final class SaveAdminQuestionAction
                 'explanation' => SafeHtml::fromEditor(
                     $this->generalExplanation($data['explanation'] ?? null, $options),
                 ) ?: null,
-                'key_info' => $this->resolveKeyInfo($question, $data['key_info'] ?? []),
+                'key_info' => $keyInfo,
                 'attending_tip' => SafeHtml::fromEditor($data['attending_tip'] ?? null) ?: null,
                 'difficulty' => Difficulty::from($data['difficulty']),
-                'topic_id' => $topicIds[0],
                 'is_free' => $data['is_free'],
+                'exam_flag' => (bool) ($data['exam_flag'] ?? false),
+                'updated_by' => $actor->getKey(),
             ]);
             $question->version = ($question->version ?: 0) + 1;
             $question->save();
-            $question->topics()->sync($topicIds);
+            $this->syncTaxonomyRelations($question, $data);
+            if ($hints !== null) {
+                $this->syncHints($question, $hints);
+            }
 
             if (SafeHtml::isBlank($question->stem)) {
                 throw ValidationException::withMessages([
@@ -90,7 +115,7 @@ final class SaveAdminQuestionAction
             }
             $this->syncOptions($question, $options);
 
-            $question->load('options', 'topic', 'topics');
+            $question->load('options', 'hints', 'coreClinicalTopics', 'medicalTaxonomyNodes', 'tags');
             $this->captureVersion->handle($question, $actor);
 
             if (! $isReviewer) {
@@ -107,6 +132,18 @@ final class SaveAdminQuestionAction
 
             return $question;
         });
+    }
+
+    /** @param array<string, mixed> $data */
+    private function assertMedicalTaxonomyPresent(array $data): void
+    {
+        $sync = $this->buildMedicalNodeSyncPayload($data);
+
+        if ($sync === []) {
+            throw ValidationException::withMessages([
+                'medical_taxonomy_node_ids' => 'Vui lòng chọn ít nhất một mục danh mục y khoa.',
+            ]);
+        }
     }
 
     /** @param array<string, mixed> $data */
@@ -175,18 +212,15 @@ final class SaveAdminQuestionAction
         $parsed = parse_url($path, PHP_URL_PATH) ?: $path;
 
         if (str_starts_with($parsed, '/storage/')) {
-            $parsed = substr($parsed, 9); // strlen('/storage/')
+            $parsed = substr($parsed, 9);
         } elseif (str_starts_with($parsed, 'storage/')) {
-            $parsed = substr($parsed, 8); // strlen('storage/')
+            $parsed = substr($parsed, 8);
         }
 
         return $parsed !== '' ? $parsed : null;
     }
 
     /**
-     * Older editor forms only submitted explanations for individual options.
-     * Preserve that useful content as the general explanation when needed.
-     *
      * @param  list<array{id?: int|null, content: string, is_correct: bool, explanation?: ?string}>  $options
      */
     private function generalExplanation(?string $explanation, array $options): ?string
@@ -219,8 +253,6 @@ final class SaveAdminQuestionAction
     }
 
     /**
-     * Keep existing key info when the editor no longer posts that field.
-     *
      * @param  array<int, string>  $keyInfo
      * @return array<int, string>
      */
@@ -295,21 +327,192 @@ final class SaveAdminQuestionAction
         $question->options()->whereNotIn('id', $keepIds)->delete();
     }
 
+    /** @param  array<string, mixed>  $data */
+    private function syncTaxonomyRelations(Question $question, array $data): void
+    {
+        if (array_key_exists('core_clinical_topic_ids', $data)) {
+            $coreIds = collect($data['core_clinical_topic_ids'])
+                ->map(fn ($id): int => (int) $id)
+                ->filter(fn (int $id): bool => $id > 0)
+                ->unique()
+                ->values()
+                ->all();
+            $question->coreClinicalTopics()->sync($coreIds);
+        }
+
+        $question->medicalTaxonomyNodes()->sync($this->buildMedicalNodeSyncPayload($data));
+
+        if (array_key_exists('tag_ids', $data)) {
+            $tagIds = collect($data['tag_ids'])
+                ->map(fn ($id): int => (int) $id)
+                ->filter(fn (int $id): bool => $id > 0)
+                ->unique()
+                ->values()
+                ->all();
+            $question->tags()->sync($tagIds);
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<int, array{relationship_type: ?string, is_primary: ?bool}>
+     */
+    private function buildMedicalNodeSyncPayload(array $data): array
+    {
+        /** @var array<int, array{relationship_type: ?string, is_primary: ?bool}> $sync */
+        $sync = [];
+
+        $links = $data['medical_taxonomy_links'] ?? null;
+        if (is_array($links) && $links !== []) {
+            foreach ($links as $link) {
+                $id = (int) ($link['id'] ?? 0);
+                if ($id <= 0) {
+                    continue;
+                }
+                $sync[$id] = [
+                    'relationship_type' => isset($link['relationship_type']) ? (string) $link['relationship_type'] : null,
+                    'is_primary' => array_key_exists('is_primary', $link) ? (bool) $link['is_primary'] : null,
+                ];
+            }
+
+            return $sync;
+        }
+
+        $ids = collect($data['medical_taxonomy_node_ids'] ?? [])
+            ->map(fn ($id): int => (int) $id)
+            ->filter(fn (int $id): bool => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($ids === []) {
+            return [];
+        }
+
+        $nodes = MedicalTaxonomyNode::query()
+            ->whereIn('id', $ids)
+            ->get(['id', 'node_type'])
+            ->keyBy('id');
+
+        $primaryAssigned = false;
+
+        foreach ($ids as $id) {
+            $nodeType = (string) ($nodes->get($id)?->node_type ?? '');
+            [$relationshipType, $isPrimary] = $this->relationshipForNodeType($nodeType, $primaryAssigned);
+            if ($isPrimary === true) {
+                $primaryAssigned = true;
+            }
+
+            $sync[$id] = [
+                'relationship_type' => $relationshipType,
+                'is_primary' => $isPrimary,
+            ];
+        }
+
+        return $sync;
+    }
+
+    /**
+     * @return array{0: string, 1: ?bool}
+     */
+    private function relationshipForNodeType(string $nodeType, bool $primaryAssigned): array
+    {
+        return match ($nodeType) {
+            'disease', 'condition' => $primaryAssigned
+                ? ['related', false]
+                : ['primary', true],
+            'concept' => ['tested', false],
+            'symptom', 'sign', 'clinical_finding', 'lab_finding', 'imaging_finding' => ['related', false],
+            default => ['contextual', false],
+        };
+    }
+
+    /**
+     * @param  list<array{id?: int|null, content: string, sort_order?: int}>|null  $hints
+     * @return list<array{id: ?int, content: string, sort_order: int}>
+     */
+    private function normalizeHints(?array $hints): array
+    {
+        if ($hints === null) {
+            return [];
+        }
+
+        $normalized = [];
+        $order = 1;
+
+        foreach ($hints as $hint) {
+            $content = trim(strip_tags((string) ($hint['content'] ?? '')));
+            if ($content === '') {
+                continue;
+            }
+
+            $normalized[] = [
+                'id' => isset($hint['id']) && $hint['id'] !== null && $hint['id'] !== ''
+                    ? (int) $hint['id']
+                    : null,
+                'content' => $content,
+                'sort_order' => $order,
+            ];
+            $order++;
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @param  list<array{id: ?int, content: string, sort_order: int}>  $hints
+     */
+    private function syncHints(Question $question, array $hints): void
+    {
+        $keepIds = [];
+
+        foreach ($hints as $hint) {
+            $payload = [
+                'content' => $hint['content'],
+                'sort_order' => $hint['sort_order'],
+                'status' => TaxonomyStatus::Active,
+            ];
+
+            if ($hint['id']) {
+                $existing = QuestionHint::query()
+                    ->where('question_id', $question->id)
+                    ->whereKey($hint['id'])
+                    ->first();
+
+                if ($existing) {
+                    $existing->fill($payload)->save();
+                    $keepIds[] = $existing->id;
+
+                    continue;
+                }
+            }
+
+            $created = $question->hints()->create($payload);
+            $keepIds[] = $created->id;
+        }
+
+        $question->hints()->whereNotIn('id', $keepIds)->delete();
+    }
+
     /**
      * @return array<string, mixed>
      */
     private function snapshot(Question $question): array
     {
-        $question->loadMissing('options', 'topics');
+        $question->loadMissing('options', 'hints', 'coreClinicalTopics', 'medicalTaxonomyNodes', 'tags');
 
         return [
             'id' => $question->id,
+            'code' => $question->code,
             'stem' => mb_substr(SafeHtml::plainText($question->stem), 0, 200),
             'status' => $question->status->value,
             'difficulty' => $question->difficulty->value,
-            'topic_id' => $question->topic_id,
-            'topic_ids' => $question->topics->pluck('id')->map(fn ($id): int => (int) $id)->values()->all(),
+            'core_clinical_topic_ids' => $question->coreClinicalTopics->pluck('id')->map(fn ($id): int => (int) $id)->values()->all(),
+            'medical_taxonomy_node_ids' => $question->medicalTaxonomyNodes->pluck('id')->map(fn ($id): int => (int) $id)->values()->all(),
+            'tag_ids' => $question->tags->pluck('id')->map(fn ($id): int => (int) $id)->values()->all(),
+            'hints_count' => $question->hints->count(),
             'is_free' => $question->is_free,
+            'exam_flag' => $question->exam_flag,
             'version' => $question->version,
             'options_count' => $question->options->count(),
             'correct_option_ids' => $question->options->where('is_correct', true)->pluck('id')->all(),

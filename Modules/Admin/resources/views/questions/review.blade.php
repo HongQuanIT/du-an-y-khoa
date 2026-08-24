@@ -7,13 +7,15 @@
     $proposedKeyInfo = collect($isUpdate ? ($payload['key_info'] ?? []) : ($question->key_info ?? []));
     $proposedAttendingTip = $isUpdate ? ($payload['attending_tip'] ?? '') : $question->attending_tip;
     $proposedOptions = $isUpdate ? collect($payload['options'] ?? []) : $question->options;
-    $proposedTopicIds = $isUpdate ? collect($payload['topic_ids'] ?? []) : $question->topics->pluck('id');
+    $proposedTopicIds = $isUpdate
+        ? collect($payload['medical_taxonomy_node_ids'] ?? [])
+        : $question->medicalTaxonomyNodes->pluck('id');
 @endphp
 
 <x-layouts.admin title="Kiểm duyệt câu hỏi">
     <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div class="flex items-center gap-3">
-            <a href="{{ route('admin.questions.index', ['review' => 'pending']) }}"
+            <a href="{{ route('admin.questions.index', ['status' => 'in_review']) }}"
                 class="flex size-9 items-center justify-center rounded-xl border border-outline-variant text-on-surface-variant hover:bg-surface-container-low">
                 <span class="material-symbols-outlined text-[20px]">arrow_back</span>
             </a>
@@ -105,9 +107,9 @@
             <p class="whitespace-pre-wrap text-sm leading-6 text-on-surface">{{ strip_tags((string) $proposedStem) }}</p>
 
             <div class="mt-5 flex flex-wrap gap-2">
-                @foreach ($proposedTopicIds as $topicId)
+                @foreach ($proposedTopicIds as $nodeId)
                     <span class="inline-flex whitespace-nowrap rounded-lg bg-surface-container-high px-2.5 py-1 text-xs font-semibold">
-                        {{ $topicNames[(int) $topicId] ?? $question->topics->firstWhere('id', (int) $topicId)?->name ?? "Chủ đề #{$topicId}" }}
+                        {{ $nodeNames[(int) $nodeId] ?? $question->medicalTaxonomyNodes->firstWhere('id', (int) $nodeId)?->name ?? "Node #{$nodeId}" }}
                     </span>
                 @endforeach
             </div>

@@ -17,14 +17,16 @@ use Modules\Exam\Models\Exam;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
-use Modules\QuestionBank\Models\Topic;
 use Tests\TestCase;
+use Tests\Support\CreatesMedicalTaxonomy;
+
 
 final class AdminExamManagementTest extends TestCase
 {
+    use CreatesMedicalTaxonomy;
     use RefreshDatabase;
 
-    private Topic $topic;
+    private \Modules\QuestionBank\Models\MedicalTaxonomyNode $topic;
 
     protected function setUp(): void
     {
@@ -32,11 +34,11 @@ final class AdminExamManagementTest extends TestCase
 
         $this->seed(RolePermissionSeeder::class);
 
-        $this->topic = Topic::query()->create([
+        $this->topic = $this->makeMedicalNode([
             'name' => 'Nội tim mạch',
             'slug' => 'noi-tim-mach-exam-test',
-            'type' => 'specialty',
-            'order' => 1,
+            'node_type' => 'specialty',
+            'sort_order' => 1,
         ]);
     }
 
@@ -176,8 +178,7 @@ final class AdminExamManagementTest extends TestCase
                 'stem' => $stem,
                 'difficulty' => Difficulty::Medium,
                 'status' => $published ? QuestionStatus::Published : QuestionStatus::Draft,
-                'topic_id' => $this->topic->getKey(),
-            ]);
+                            ]);
     }
 
     private function staffUser(Role $role): User

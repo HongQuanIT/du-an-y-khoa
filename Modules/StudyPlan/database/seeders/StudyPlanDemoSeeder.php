@@ -8,7 +8,8 @@ use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Modules\Analytics\Actions\RecalculateTopicMasteryAction;
-use Modules\QuestionBank\Models\Topic;
+use Modules\QuestionBank\Models\MedicalTaxonomy;
+use Modules\QuestionBank\Models\MedicalTaxonomyNode;
 use Modules\StudyPlan\Actions\GenerateFixedTasksAction;
 use Modules\StudyPlan\Actions\RecalculatePlanProgressAction;
 use Modules\StudyPlan\Enums\PlanStatus;
@@ -78,7 +79,7 @@ class StudyPlanDemoSeeder extends Seeder
      */
     private function scopeTopicIds(): array
     {
-        return Topic::query()
+        return MedicalTaxonomyNode::query()
             ->whereIn('slug', ['tim-mach', 'ho-hap', 'khang-sinh'])
             ->pluck('id')
             ->all();

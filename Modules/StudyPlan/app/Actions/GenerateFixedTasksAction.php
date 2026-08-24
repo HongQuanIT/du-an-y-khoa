@@ -62,6 +62,7 @@ final class GenerateFixedTasksAction
                     'done' => 0,
                     'status' => TaskStatus::Pending->value,
                     'ref' => json_encode([
+                        'medical_taxonomy_node_ids' => $this->topicsForDay($topics, $index),
                         'topic_ids' => $this->topicsForDay($topics, $index),
                         'session_id' => null,
                         'mode' => 'study',
@@ -79,6 +80,7 @@ final class GenerateFixedTasksAction
                         'done' => 0,
                         'status' => TaskStatus::Pending->value,
                         'ref' => json_encode([
+                            'medical_taxonomy_node_ids' => $topics,
                             'topic_ids' => $topics,
                             'session_id' => null,
                             'mode' => 'study',

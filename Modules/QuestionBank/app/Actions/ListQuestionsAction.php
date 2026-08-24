@@ -13,6 +13,7 @@ use Modules\QuestionBank\Data\ListQuestionsData;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Repositories\QuestionRepository;
+use Modules\QuestionBank\Support\QuestionFilterBuilder;
 use Throwable;
 
 /**
@@ -25,7 +26,10 @@ final class ListQuestionsAction
 {
     use AsAction;
 
-    public function __construct(private readonly QuestionRepository $questions) {}
+    public function __construct(
+        private readonly QuestionRepository $questions,
+        private readonly QuestionFilterBuilder $filters,
+    ) {}
 
     /**
      * @return LengthAwarePaginator<int, Question>
@@ -36,7 +40,11 @@ final class ListQuestionsAction
             $data = new ListQuestionsData(
                 query: $data->query,
                 difficulty: $data->difficulty,
-                topicId: $data->topicId,
+                blueprintId: $data->blueprintId,
+                blueprintSectionId: $data->blueprintSectionId,
+                coreClinicalTopicIds: $data->coreClinicalTopicIds,
+                medicalTaxonomyNodeIds: $data->medicalTaxonomyNodeIds,
+                tagIds: $data->tagIds,
                 freeOnly: true,
                 perPage: $data->perPage,
             );
@@ -50,27 +58,38 @@ final class ListQuestionsAction
             try {
                 $paginator = Question::search($data->query)
                     ->when($data->difficulty, fn ($search) => $search->where('difficulty', $data->difficulty))
-                    ->when($data->topicId, fn ($search) => $search->where('topic_ids', $data->topicId))
+                                        ->when(
+                        $data->coreClinicalTopicIds !== [],
+                        fn ($search) => $search->whereIn('core_clinical_topic_ids', $data->coreClinicalTopicIds),
+                    )
+                    ->when(
+                        $data->medicalTaxonomyNodeIds !== [],
+                        fn ($search) => $search->whereIn('medical_taxonomy_node_ids', $data->medicalTaxonomyNodeIds),
+                    )
+                    ->when(
+                        $data->tagIds !== [],
+                        fn ($search) => $search->whereIn('tag_ids', $data->tagIds),
+                    )
                     ->when(
                         $data->freeOnly !== null,
                         fn ($search) => $search->where('is_free', $data->freeOnly),
                     )
-                    // Search-index values are eventually consistent. Re-apply
-                    // access boundaries to current DB rows before serialising.
-                    ->query(fn (EloquentBuilder $query) => $query
-                        ->with('topics:id')
-                        ->where('status', QuestionStatus::Published)
-                        ->when(
-                            $data->topicId,
-                            fn (EloquentBuilder $query) => $query->whereHas(
-                                'topics',
-                                fn (EloquentBuilder $topics) => $topics->where('topics.id', $data->topicId),
-                            ),
-                        )
-                        ->when(
-                            $data->freeOnly !== null,
-                            fn (EloquentBuilder $query) => $query->where('is_free', $data->freeOnly),
-                        ))
+                    ->query(fn (EloquentBuilder $query) => $this->filters->apply(
+                        $query->with([
+                            'coreClinicalTopics:id',
+                            'medicalTaxonomyNodes:id',
+                            'tags:id',
+                        ])->where('status', QuestionStatus::Published),
+                        blueprintId: $data->blueprintId,
+                        blueprintSectionId: $data->blueprintSectionId,
+                        coreClinicalTopicIds: $data->coreClinicalTopicIds,
+                        medicalTaxonomyNodeIds: $data->medicalTaxonomyNodeIds,
+                        tagIds: $data->tagIds,
+                                                difficulty: $data->difficulty,
+                    )->when(
+                        $data->freeOnly !== null,
+                        fn (EloquentBuilder $query) => $query->where('is_free', $data->freeOnly),
+                    ))
                     ->paginate($data->perPage);
 
                 if ($paginator->count() === 0) {

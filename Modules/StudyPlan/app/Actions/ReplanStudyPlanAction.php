@@ -133,12 +133,12 @@ final class ReplanStudyPlanAction
             ->where('user_id', $plan->user_id)
             ->when(
                 $plan->scopeTopicIds() !== [],
-                fn ($query) => $query->whereIn('topic_id', $plan->scopeTopicIds()),
+                fn ($query) => $query->whereIn('medical_taxonomy_node_id', $plan->scopeMedicalTaxonomyNodeIds()),
             )
             ->where('attempts', '>', 0)
             ->orderBy('correct_rate')
             ->limit(3)
-            ->pluck('topic_id')
+            ->pluck('medical_taxonomy_node_id')
             ->all();
 
         if ($weakTopics === []) {
@@ -147,7 +147,7 @@ final class ReplanStudyPlanAction
 
         foreach ($upcoming->take(count($weakTopics))->values() as $index => $task) {
             $task->forceFill([
-                'ref' => array_merge($task->ref ?? [], ['topic_ids' => [$weakTopics[$index]]]),
+                'ref' => array_merge($task->ref ?? [], ['medical_taxonomy_node_ids' => [$weakTopics[$index]], 'topic_ids' => [$weakTopics[$index]]]),
             ])->save();
         }
     }

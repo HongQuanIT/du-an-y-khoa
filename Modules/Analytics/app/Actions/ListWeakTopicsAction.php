@@ -10,13 +10,13 @@ use Illuminate\Support\Collection;
 use Modules\Analytics\Models\TopicMastery;
 
 /**
- * Use case: the topics a learner is weakest at (srs/modules/20).
+ * Use case: the taxonomy nodes a learner is weakest at (srs/modules/20).
  */
 final class ListWeakTopicsAction
 {
     use AsAction;
 
-    /** Ignore topics with too little history to judge. */
+    /** Ignore nodes with too little history to judge. */
     private const MIN_ATTEMPTS = 3;
 
     /**
@@ -25,14 +25,14 @@ final class ListWeakTopicsAction
     public function handle(User $user, int $limit = 3): Collection
     {
         return TopicMastery::query()
-            ->with('topic')
+            ->with('medicalTaxonomyNode')
             ->where('user_id', $user->getKey())
             ->where('attempts', '>=', self::MIN_ATTEMPTS)
             ->orderBy('correct_rate')
             ->limit($limit)
             ->get()
             ->map(fn (TopicMastery $mastery) => [
-                'name' => $mastery->topic->name,
+                'name' => $mastery->medicalTaxonomyNode?->name ?? 'Không rõ',
                 'accuracy' => (int) round($mastery->correct_rate),
             ]);
     }

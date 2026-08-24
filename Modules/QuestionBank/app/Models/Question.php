@@ -26,6 +26,7 @@ use Modules\QuestionBank\Enums\QuestionStatus;
  * A single QBank question (reference implementation of the module pattern).
  *
  * @property string $id
+ * @property string|null $code
  * @property string $stem
  * @property string|null $stem_image_path
  * @property string|null $explanation
@@ -33,10 +34,17 @@ use Modules\QuestionBank\Enums\QuestionStatus;
  * @property string|null $attending_tip
  * @property Difficulty $difficulty
  * @property QuestionStatus $status
- * @property int|null $topic_id
  * @property bool $is_free
+ * @property bool $exam_flag
  * @property int $version
  * @property int|null $created_by
+ * @property int|null $updated_by
+ * @property int|null $reviewer_id
+ * @property string|null $rejection_reason
+ * @property string|null $cloned_from_id
+ * @property int|null $cloned_from_version
+ * @property array<string, mixed>|null $stats_cache
+ * @property Carbon|null $stats_updated_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -50,6 +58,7 @@ class Question extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'code',
         'stem',
         'stem_image_path',
         'explanation',
@@ -57,9 +66,16 @@ class Question extends Model
         'attending_tip',
         'difficulty',
         'status',
-        'topic_id',
         'is_free',
+        'exam_flag',
         'created_by',
+        'updated_by',
+        'reviewer_id',
+        'rejection_reason',
+        'cloned_from_id',
+        'cloned_from_version',
+        'stats_cache',
+        'stats_updated_at',
     ];
 
     protected $casts = [
@@ -67,28 +83,117 @@ class Question extends Model
         'status' => QuestionStatus::class,
         'key_info' => 'array',
         'is_free' => 'boolean',
+        'exam_flag' => 'boolean',
         'version' => 'integer',
+        'cloned_from_version' => 'integer',
+        'stats_cache' => 'array',
+        'stats_updated_at' => 'datetime',
     ];
 
-    protected static function booted(): void
+    /**
+     * Admin list analytics — only read this rollup, never COUNT attempts live.
+     *
+     * @return array{
+     *     total_attempts: int,
+     *     correct_rate: float|null,
+     *     total_reports: int
+     * }
+     */
+    public function listStats(): array
     {
-        static::saved(function (Question $question): void {
-            if ($question->topic_id !== null) {
-                $question->topics()->syncWithoutDetaching([(int) $question->topic_id]);
-            }
-        });
+        $detail = $this->detailStats();
+
+        return [
+            'total_attempts' => $detail['total_attempts'],
+            'correct_rate' => $detail['correct_rate'],
+            'total_reports' => $detail['total_reports'],
+        ];
     }
 
-    /** @return BelongsTo<Topic, $this> */
-    public function topic(): BelongsTo
+    /**
+     * Full rollup for the question analytics detail page (SRS §5.4).
+     *
+     * @return array{
+     *     total_attempts: int,
+     *     study_mode_attempts: int,
+     *     exam_mode_attempts: int,
+     *     correct_attempts: int,
+     *     incorrect_attempts: int,
+     *     correct_rate: float|null,
+     *     average_score: float|null,
+     *     total_reports: int,
+     *     reports_by_reason: array<string, int>,
+     *     quality_hint: string|null
+     * }
+     */
+    public function detailStats(): array
     {
-        return $this->belongsTo(Topic::class, 'topic_id');
+        $cache = $this->stats_cache ?? [];
+
+        $totalAttempts = (int) ($cache['total_attempts'] ?? 0);
+        $correctAttempts = (int) ($cache['correct_attempts'] ?? 0);
+        $incorrectAttempts = (int) ($cache['incorrect_attempts'] ?? max(0, $totalAttempts - $correctAttempts));
+        $correctRate = array_key_exists('correct_rate', $cache) && $cache['correct_rate'] !== null
+            ? (float) $cache['correct_rate']
+            : ($totalAttempts > 0 ? $correctAttempts / $totalAttempts : null);
+        $averageScore = array_key_exists('average_score', $cache) && $cache['average_score'] !== null
+            ? (float) $cache['average_score']
+            : null;
+        $reportsByReason = is_array($cache['reports_by_reason'] ?? null)
+            ? array_map('intval', $cache['reports_by_reason'])
+            : [];
+
+        return [
+            'total_attempts' => $totalAttempts,
+            'study_mode_attempts' => (int) ($cache['study_mode_attempts'] ?? 0),
+            'exam_mode_attempts' => (int) ($cache['exam_mode_attempts'] ?? 0),
+            'correct_attempts' => $correctAttempts,
+            'incorrect_attempts' => $incorrectAttempts,
+            'correct_rate' => $correctRate,
+            'average_score' => $averageScore,
+            'total_reports' => (int) ($cache['total_reports'] ?? 0),
+            'reports_by_reason' => $reportsByReason,
+            'quality_hint' => $this->qualityHintFromRate($correctRate, $totalAttempts),
+        ];
     }
 
-    /** @return BelongsToMany<Topic, $this> */
-    public function topics(): BelongsToMany
+    private function qualityHintFromRate(?float $correctRate, int $totalAttempts): ?string
     {
-        return $this->belongsToMany(Topic::class, 'question_topic')->withTimestamps();
+        if ($correctRate === null || $totalAttempts < 20) {
+            return null;
+        }
+
+        return match (true) {
+            $correctRate >= 0.9 => 'Có thể quá dễ — cân nhắc tăng độ khó hoặc siết đáp án nhiễu.',
+            $correctRate <= 0.25 => 'Có thể quá khó hoặc mơ hồ — kiểm tra stem/đáp án/giải thích.',
+            default => null,
+        };
+    }
+
+    /** @return BelongsToMany<CoreClinicalTopic, $this> */
+    public function coreClinicalTopics(): BelongsToMany
+    {
+        return $this->belongsToMany(CoreClinicalTopic::class, 'question_blueprint_topics')->withTimestamps();
+    }
+
+    /** @return BelongsToMany<MedicalTaxonomyNode, $this> */
+    public function medicalTaxonomyNodes(): BelongsToMany
+    {
+        return $this->belongsToMany(MedicalTaxonomyNode::class, 'question_medical_topics')
+            ->withPivot(['relationship_type', 'is_primary'])
+            ->withTimestamps();
+    }
+
+    /** @return BelongsToMany<Tag, $this> */
+    public function tags(): BelongsToMany
+    {
+        return $this->belongsToMany(Tag::class, 'question_tags')->withTimestamps();
+    }
+
+    /** @return HasMany<QuestionHint, $this> */
+    public function hints(): HasMany
+    {
+        return $this->hasMany(QuestionHint::class, 'question_id')->orderBy('sort_order');
     }
 
     /** @return HasMany<QuestionOption, $this> */
@@ -107,6 +212,24 @@ class Question extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function updater(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function reviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reviewer_id');
+    }
+
+    /** @return BelongsTo<Question, $this> */
+    public function clonedFrom(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'cloned_from_id');
     }
 
     /** @return HasMany<QuestionReviewRequest, $this> */
@@ -191,16 +314,35 @@ class Question extends Model
         ));
         $plainStem = trim(preg_replace('/\s+/u', ' ', $plainStem) ?? $plainStem);
 
+        $coreClinicalTopicIds = ($this->relationLoaded('coreClinicalTopics')
+            ? $this->coreClinicalTopics
+            : $this->coreClinicalTopics()->get())
+            ->pluck('id')
+            ->map(fn ($id): int => (int) $id)
+            ->values()
+            ->all();
+
+        $medicalTaxonomyNodeIds = ($this->relationLoaded('medicalTaxonomyNodes')
+            ? $this->medicalTaxonomyNodes
+            : $this->medicalTaxonomyNodes()->get())
+            ->pluck('id')
+            ->map(fn ($id): int => (int) $id)
+            ->values()
+            ->all();
+
+        $tagIds = ($this->relationLoaded('tags') ? $this->tags : $this->tags()->get())
+            ->pluck('id')
+            ->map(fn ($id): int => (int) $id)
+            ->values()
+            ->all();
+
         return [
             'id' => $this->getKey(),
             'stem' => $plainStem,
             'difficulty' => $this->difficulty->value,
-            'topic_id' => $this->topic_id,
-            'topic_ids' => ($this->relationLoaded('topics') ? $this->topics : $this->topics()->get())
-                ->pluck('id')
-                ->map(fn ($id): int => (int) $id)
-                ->values()
-                ->all(),
+            'core_clinical_topic_ids' => $coreClinicalTopicIds,
+            'medical_taxonomy_node_ids' => $medicalTaxonomyNodeIds,
+            'tag_ids' => $tagIds,
             'is_free' => $this->is_free,
         ];
     }
@@ -209,6 +351,11 @@ class Question extends Model
     public function shouldBeSearchable(): bool
     {
         return $this->status === QuestionStatus::Published;
+    }
+
+    public function isExamPool(): bool
+    {
+        return $this->exam_flag && $this->status === QuestionStatus::Private;
     }
 
     protected static function newFactory(): QuestionFactory

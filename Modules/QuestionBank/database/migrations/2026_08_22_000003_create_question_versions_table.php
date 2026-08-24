@@ -48,7 +48,7 @@ return new class extends Migration
                         ->pluck('topic_id')
                         ->map(fn ($id): int => (int) $id)
                         ->all();
-                    if ($topicIds === [] && $question->topic_id !== null) {
+                    if ($topicIds === [] && Schema::hasColumn('questions', 'topic_id') && $question->topic_id !== null) {
                         $topicIds = [(int) $question->topic_id];
                     }
 

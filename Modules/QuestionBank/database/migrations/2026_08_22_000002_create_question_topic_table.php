@@ -11,6 +11,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('question_topic')) {
+            return;
+        }
+
         Schema::create('question_topic', function (Blueprint $table): void {
             $table->uuid('question_id');
             $table->unsignedBigInteger('topic_id');
@@ -21,6 +25,10 @@ return new class extends Migration
             $table->foreign('question_id')->references('id')->on('questions')->cascadeOnDelete();
             $table->foreign('topic_id')->references('id')->on('topics')->cascadeOnDelete();
         });
+
+        if (! Schema::hasColumn('questions', 'topic_id')) {
+            return;
+        }
 
         DB::table('questions')
             ->whereNotNull('topic_id')
