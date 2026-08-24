@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
+use Modules\Billing\Actions\InvalidateEntitlementCacheAction;
 
 /**
  * @property int $id
@@ -32,6 +33,16 @@ class InstitutionMember extends Model
     protected $casts = [
         'verified_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        $invalidate = static function (self $member): void {
+            InvalidateEntitlementCacheAction::run((int) $member->user_id);
+        };
+
+        static::saved($invalidate);
+        static::deleted($invalidate);
+    }
 
     /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo

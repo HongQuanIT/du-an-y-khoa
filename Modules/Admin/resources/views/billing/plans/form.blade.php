@@ -13,6 +13,8 @@
         </x-slot:actions>
     </x-admin.page-header>
 
+    @include('admin::billing._nav')
+
     <x-admin.flash />
 
     <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">

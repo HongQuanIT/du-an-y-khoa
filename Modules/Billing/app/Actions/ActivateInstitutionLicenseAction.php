@@ -89,6 +89,8 @@ final class ActivateInstitutionLicenseAction
                 }
             }
 
+            InvalidateEntitlementCacheAction::run((int) $user->getKey());
+
             return [
                 'member' => $member->load('institution'),
                 'subscription' => $subscription?->load('plan'),

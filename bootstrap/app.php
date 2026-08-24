@@ -77,6 +77,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // JS-owned consent cookie must not be encrypted / stripped by Laravel.
         $middleware->encryptCookies(except: ['cookie_consent']);
 
+        $middleware->validateCsrfTokens(except: [
+            'webhooks/billing/*',
+            'webhooks/livekit',
+        ]);
+
         // Route middleware aliases.
         $middleware->alias([
             'learner' => EnsureLearner::class,

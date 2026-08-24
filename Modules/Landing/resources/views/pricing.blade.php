@@ -20,7 +20,7 @@
             return ['label' => $defaultLabel, 'disabled' => false, 'href' => route('register')];
         }
 
-        return ['label' => $defaultLabel, 'disabled' => false, 'href' => route('subscription.show')];
+        return ['label' => $defaultLabel, 'disabled' => false, 'href' => route('subscription.upgrade')];
     };
 
     $freeCta = $ctaForTier('free', $free?->prices->first()?->cta_label ?? 'Bắt đầu ngay');
@@ -172,7 +172,7 @@
                             Gói của bạn
                         </span>
                     @else
-                        <a href="{{ $isAuthenticated ? route('subscription.show') : route('register') }}"
+                        <a href="{{ $isAuthenticated ? route('subscription.upgrade') : route('register') }}"
                             class="w-full py-3 px-4 bg-primary text-on-primary font-label-md text-label-md rounded-xl hover:opacity-90 transition-opacity text-center"
                             x-text="plan?.cta ?? 'Mua gói'">
                         </a>

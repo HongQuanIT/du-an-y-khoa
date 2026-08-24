@@ -93,7 +93,7 @@ final class ExamModuleTest extends TestCase
 
         $this->actingAs($this->user)
             ->post(route('exam.start', $exam->id), ['count' => 1])
-            ->assertRedirect(route('billing.plans'));
+            ->assertRedirect(route('subscription.upgrade'));
 
         $this->assertSame(0, QuestionSession::query()->count());
     }

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Admin\Support;
 
-use App\Models\SupportConversation;
 use App\Models\User;
 use App\Support\Enums\Permission;
 use Illuminate\Support\Facades\Route;
@@ -104,11 +103,32 @@ final class AdminMenu
                 'match' => 'admin.reports.*',
             ],
             [
-                'label' => 'Bảng giá',
-                'icon' => 'payments',
+                'label' => 'Gói & bảng giá',
+                'icon' => 'sell',
                 'route' => 'admin.billing.plans.index',
                 'permission' => Permission::BillingManage->value,
-                'match' => 'admin.billing.*',
+                'match' => ['admin.billing.plans.*', 'admin.billing.plan-prices.*'],
+            ],
+            [
+                'label' => 'Lịch sử Premium',
+                'icon' => 'workspace_premium',
+                'route' => 'admin.billing.subscriptions.index',
+                'permission' => Permission::BillingManage->value,
+                'match' => 'admin.billing.subscriptions.*',
+            ],
+            [
+                'label' => 'Thanh toán',
+                'icon' => 'payments',
+                'route' => 'admin.billing.payments.index',
+                'permission' => Permission::BillingManage->value,
+                'match' => 'admin.billing.payments.*',
+            ],
+            [
+                'label' => 'Cổng thanh toán',
+                'icon' => 'account_balance',
+                'route' => 'admin.billing.gateways.index',
+                'permission' => Permission::BillingManage->value,
+                'match' => 'admin.billing.gateways.*',
             ],
             [
                 'label' => 'Phân quyền',
@@ -123,13 +143,6 @@ final class AdminMenu
                 'route' => 'admin.notifications.index',
                 'permission' => null,
                 'match' => 'admin.notifications.*',
-            ],
-            [
-                'label' => 'Hỗ trợ chat',
-                'icon' => 'support_agent',
-                'route' => 'admin.support.index',
-                'permission' => Permission::SystemManage->value,
-                'match' => 'admin.support.*',
             ],
             [
                 'label' => 'Cài đặt',
@@ -164,7 +177,6 @@ final class AdminMenu
                 'match' => $item['match'],
                 'coming_soon' => ! $routeReady && $item['route'] !== 'admin.dashboard',
                 'badge' => match (true) {
-                    $item['route'] === 'admin.support.index' && $user->can(Permission::SystemManage->value) => SupportConversation::pendingAdminAttentionCountFor($user),
                     $item['route'] === 'admin.questions.index' && QuestionAccess::isReviewer($user) => QuestionReviewRequest::query()
                         ->where('status', QuestionReviewStatus::Pending->value)
                         ->count(),

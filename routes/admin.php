@@ -6,6 +6,8 @@ use App\Support\Enums\Permission;
 use App\Support\Enums\Role;
 use Illuminate\Support\Facades\Route;
 use Modules\Admin\Http\Controllers\AuditLogController;
+use Modules\Admin\Http\Controllers\BillingGatewayController;
+use Modules\Admin\Http\Controllers\BillingPaymentController;
 use Modules\Admin\Http\Controllers\BillingPlanController;
 use Modules\Admin\Http\Controllers\BillingSubscriptionController;
 use Modules\Admin\Http\Controllers\ClassroomOversightController;
@@ -275,6 +277,9 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
         Route::middleware('permission:'.Permission::BillingManage->value)->group(function (): void {
             Route::get('/billing/plans', [BillingPlanController::class, 'index'])->name('billing.plans.index');
             Route::get('/billing/subscriptions', [BillingSubscriptionController::class, 'index'])->name('billing.subscriptions.index');
+            Route::get('/billing/payments', [BillingPaymentController::class, 'index'])->name('billing.payments.index');
+            Route::get('/billing/gateways', [BillingGatewayController::class, 'index'])->name('billing.gateways.index');
+            Route::put('/billing/gateways', [BillingGatewayController::class, 'update'])->name('billing.gateways.update');
             Route::get('/billing/plans/{plan}/edit', [BillingPlanController::class, 'edit'])->name('billing.plans.edit');
             Route::put('/billing/plans/{plan}', [BillingPlanController::class, 'update'])->name('billing.plans.update');
             Route::get('/billing/plans/{plan}/prices/create', [BillingPlanController::class, 'createPrice'])->name('billing.plans.prices.create');

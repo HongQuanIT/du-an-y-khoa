@@ -1,17 +1,17 @@
+@php
+    use Modules\Billing\Support\MoneyFormatter;
+@endphp
+
 <x-layouts.admin title="Gói & bảng giá">
     <x-admin.page-header title="Gói & bảng giá"
-        description="Thống kê học viên theo gói Free (mặc định) và Premium (theo SKU).">
-        <x-slot:actions>
-            <a href="{{ route('admin.billing.subscriptions.index') }}"
-                class="rounded-lg border border-outline-variant px-4 py-2 font-label-md text-on-surface hover:bg-surface-container-low">
-                Lịch sử Premium
-            </a>
-        </x-slot:actions>
+        description="Cấu hình gói Free/Premium, quyền lợi, và các mức giá (SKU) hiển thị trên /pricing.">
     </x-admin.page-header>
+
+    @include('admin::billing._nav')
 
     <x-admin.flash />
 
-    <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div class="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <x-admin.kpi-card label="Tổng học viên" :value="number_format($overview['total_students'])"
             hint="Tài khoản role Học viên" icon="school" />
         <x-admin.kpi-card label="Học viên Free" :value="number_format($overview['free_students'])"
@@ -22,69 +22,130 @@
             hint="Hết hạn trong 30 ngày tới" icon="schedule" />
     </div>
 
-    <div class="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        @foreach ($plans as $plan)
-            @php
-                $planStat = $stats['plans'][$plan->id] ?? ['learners' => 0, 'history' => 0];
-            @endphp
-            <div class="rounded-xl border border-outline-variant bg-surface p-5">
-                <div class="mb-4 flex items-start justify-between gap-3">
-                    <div>
-                        <div class="flex flex-wrap items-center gap-2">
-                            <h2 class="font-title-md text-on-surface">{{ $plan->name }}</h2>
-                            @if ($plan->isFree())
-                                <span class="rounded-full bg-surface-container-high px-2 py-0.5 font-label-sm text-on-surface-variant">Mặc định</span>
-                            @else
-                                <span class="rounded-full bg-primary/10 px-2 py-0.5 font-label-sm text-primary">Trả phí</span>
-                            @endif
-                            @if ($plan->is_active)
-                                <span class="rounded-full bg-primary/10 px-2 py-0.5 font-label-sm text-primary">Đang bán</span>
-                            @else
-                                <span class="rounded-full bg-surface-container-high px-2 py-0.5 font-label-sm text-on-surface-variant">Ẩn</span>
-                            @endif
-                        </div>
-                        <p class="mt-1 font-body-sm text-on-surface-variant">{{ $plan->description }}</p>
-                        <p class="mt-1 font-mono text-xs text-on-surface-variant">{{ $plan->slug }}</p>
-                    </div>
-                    @if ($canManage)
-                        <a href="{{ route('admin.billing.plans.edit', $plan) }}"
-                            class="shrink-0 font-label-md text-primary hover:underline">Cấu hình</a>
-                    @endif
-                </div>
-
-                <div class="flex items-end justify-between gap-4 rounded-lg bg-surface-container-lowest px-4 py-3">
-                    <div>
-                        <p class="font-label-sm text-on-surface-variant">Học viên đang dùng</p>
-                        <p class="font-headline-sm text-on-surface">{{ number_format($planStat['learners']) }}</p>
-                    </div>
-                    @if (! $plan->isFree())
-                        <a href="{{ route('admin.billing.subscriptions.index', ['plan' => $plan->id, 'status' => 'active']) }}"
-                            class="font-label-sm text-primary hover:underline">
-                            Xem lịch sử →
-                        </a>
-                    @endif
-                </div>
-
-                @if ($plan->isFree())
-                    <p class="mt-3 font-body-sm text-on-surface-variant">
-                        Học viên mới đăng ký tự động dùng Free — không tạo bản ghi subscription.
-                    </p>
-                @else
-                    <p class="mt-3 font-body-sm text-on-surface-variant">
-                        {{ $plan->prices_count }} SKU · {{ number_format($planStat['history']) }} lần kích hoạt Premium (lịch sử)
-                    </p>
-                @endif
+    <section class="mb-8">
+        <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+            <div>
+                <h2 class="font-title-md text-on-surface">Cấu hình gói</h2>
+                <p class="mt-1 font-body-sm text-on-surface-variant">
+                    Sửa tên, quyền lợi (entitlements), tính năng hiển thị và mức giá bán.
+                </p>
             </div>
-        @endforeach
-    </div>
+        </div>
+
+        @if ($plans->isEmpty())
+            <div class="rounded-xl border border-dashed border-outline-variant bg-surface-container-lowest px-6 py-10 text-center">
+                <span class="material-symbols-outlined mb-3 text-[40px] text-on-surface-variant">sell</span>
+                <h3 class="font-title-md text-on-surface">Chưa có gói nào trong hệ thống</h3>
+                <p class="mx-auto mt-2 max-w-lg font-body-sm text-on-surface-variant">
+                    Database chưa được seed gói Free/Premium. Chạy seeder Billing rồi tải lại trang
+                    để cấu hình bảng giá và SKU.
+                </p>
+                <pre class="mx-auto mt-4 max-w-xl overflow-x-auto rounded-lg bg-surface px-4 py-3 text-left font-mono text-xs text-on-surface">php artisan db:seed --class="Modules\Billing\Database\Seeders\BillingDatabaseSeeder"</pre>
+            </div>
+        @else
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            @foreach ($plans as $plan)
+                @php
+                    $planStat = $stats['plans'][$plan->id] ?? ['learners' => 0, 'history' => 0];
+                @endphp
+                <article class="rounded-xl border border-outline-variant bg-surface p-5 shadow-sm">
+                    <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <h3 class="font-headline-sm text-headline-sm text-on-surface">{{ $plan->name }}</h3>
+                                @if ($plan->isFree())
+                                    <span class="rounded-full bg-surface-container-high px-2 py-0.5 font-label-sm text-on-surface-variant">Miễn phí</span>
+                                @else
+                                    <span class="rounded-full bg-primary/10 px-2 py-0.5 font-label-sm text-primary">Trả phí</span>
+                                @endif
+                                @if ($plan->is_active)
+                                    <span class="rounded-full bg-primary/10 px-2 py-0.5 font-label-sm text-primary">Đang bán</span>
+                                @else
+                                    <span class="rounded-full bg-surface-container-high px-2 py-0.5 font-label-sm text-on-surface-variant">Ẩn</span>
+                                @endif
+                            </div>
+                            <p class="mt-1 font-body-sm text-on-surface-variant">{{ $plan->description ?: 'Chưa có mô tả' }}</p>
+                            <p class="mt-1 font-mono text-xs text-on-surface-variant">slug: {{ $plan->slug }}</p>
+                        </div>
+                    </div>
+
+                    <dl class="mb-4 grid grid-cols-2 gap-3 rounded-lg bg-surface-container-lowest px-4 py-3 font-body-sm">
+                        <div>
+                            <dt class="text-on-surface-variant">Học viên đang dùng</dt>
+                            <dd class="font-title-md text-on-surface">{{ number_format($planStat['learners']) }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-on-surface-variant">Số mức giá (SKU)</dt>
+                            <dd class="font-title-md text-on-surface">{{ number_format($plan->prices_count) }}</dd>
+                        </div>
+                    </dl>
+
+                    @if ($plan->prices->isNotEmpty())
+                        <ul class="mb-4 divide-y divide-outline-variant/50 rounded-lg border border-outline-variant">
+                            @foreach ($plan->prices->take(4) as $price)
+                                <li class="flex items-center justify-between gap-3 px-3 py-2 font-body-sm">
+                                    <span class="text-on-surface">
+                                        {{ $price->label }}
+                                        <span class="text-on-surface-variant">
+                                            · {{ MoneyFormatter::vnd((int) $price->price_cents) }}
+                                        </span>
+                                    </span>
+                                    <a href="{{ route('admin.billing.plan-prices.edit', $price) }}"
+                                        class="shrink-0 font-label-sm font-semibold text-primary hover:underline">
+                                        Sửa giá
+                                    </a>
+                                </li>
+                            @endforeach
+                            @if ($plan->prices->count() > 4)
+                                <li class="px-3 py-2 font-label-sm text-on-surface-variant">
+                                    +{{ $plan->prices->count() - 4 }} mức giá khác…
+                                </li>
+                            @endif
+                        </ul>
+                    @else
+                        <p class="mb-4 rounded-lg border border-dashed border-outline-variant px-3 py-3 font-body-sm text-on-surface-variant">
+                            Chưa có mức giá. Thêm SKU để bán trên bảng giá công khai.
+                        </p>
+                    @endif
+
+                    <div class="flex flex-wrap gap-2">
+                        <a href="{{ route('admin.billing.plans.edit', $plan) }}"
+                            class="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 font-label-md font-semibold text-on-primary hover:opacity-90">
+                            <span class="material-symbols-outlined text-[18px]">tune</span>
+                            Cấu hình gói
+                        </a>
+                        <a href="{{ route('admin.billing.plans.prices.create', $plan) }}"
+                            class="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant px-4 py-2.5 font-label-md text-on-surface hover:bg-surface-container-low">
+                            <span class="material-symbols-outlined text-[18px]">add</span>
+                            Thêm mức giá
+                        </a>
+                        @if (! $plan->isFree())
+                            <a href="{{ route('admin.billing.subscriptions.index', ['plan' => $plan->id, 'status' => 'active']) }}"
+                                class="inline-flex items-center gap-1.5 rounded-lg px-3 py-2.5 font-label-md text-primary hover:underline">
+                                Xem học viên →
+                            </a>
+                        @endif
+                    </div>
+                </article>
+            @endforeach
+        </div>
+        @endif
+    </section>
 
     @if ($premiumPlan !== null)
         <section class="rounded-xl border border-outline-variant bg-surface">
-            <div class="border-b border-outline-variant px-5 py-4">
-                <h2 class="font-title-md text-on-surface">Phân bổ Premium theo SKU</h2>
-                <p class="mt-1 font-body-sm text-on-surface-variant">
-                    Số học viên đang active trên từng mức giá (1 tháng, 1 năm, 2 năm…).
-                </p>
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant px-5 py-4">
+                <div>
+                    <h2 class="font-title-md text-on-surface">Bảng giá Premium (SKU)</h2>
+                    <p class="mt-1 font-body-sm text-on-surface-variant">
+                        Sửa giá, thời hạn, badge — hoặc thêm mức giá mới.
+                    </p>
+                </div>
+                <a href="{{ route('admin.billing.plans.prices.create', $premiumPlan) }}"
+                    class="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 font-label-md font-semibold text-on-primary hover:opacity-90">
+                    <span class="material-symbols-outlined text-[18px]">add</span>
+                    Thêm SKU
+                </a>
             </div>
 
             <div class="overflow-x-auto">
@@ -95,8 +156,8 @@
                             <th class="px-5 py-3">Thời hạn</th>
                             <th class="px-5 py-3 text-right">Giá</th>
                             <th class="px-5 py-3 text-right">Học viên</th>
-                            <th class="px-5 py-3">Tỷ lệ</th>
-                            <th class="px-5 py-3"></th>
+                            <th class="px-5 py-3">Công khai</th>
+                            <th class="px-5 py-3 text-right">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-outline-variant/60">
@@ -109,16 +170,20 @@
                                 <td class="px-5 py-3">
                                     <p class="font-label-md text-on-surface">{{ $price->label }}</p>
                                     <p class="font-mono text-xs text-on-surface-variant">{{ $price->slug }}</p>
+                                    @if ($price->badge_label)
+                                        <span class="mt-1 inline-block font-label-sm text-primary">{{ $price->badge_label }}</span>
+                                    @endif
                                 </td>
                                 <td class="px-5 py-3 text-on-surface-variant">
                                     @if ($price->duration_days)
                                         {{ $price->duration_days }} ngày
+                                        <span class="text-on-surface-variant/80">({{ $price->billing_type }})</span>
                                     @else
                                         —
                                     @endif
                                 </td>
-                                <td class="px-5 py-3 text-right text-on-surface">
-                                    {{ number_format($price->price_cents, 0, ',', '.') }}₫
+                                <td class="px-5 py-3 text-right font-label-md text-on-surface">
+                                    {{ MoneyFormatter::vnd((int) $price->price_cents) }}
                                 </td>
                                 <td class="px-5 py-3 text-right">
                                     <a href="{{ route('admin.billing.subscriptions.index', ['plan' => $premiumPlan->id, 'sku' => $price->id, 'status' => 'active']) }}"
@@ -127,24 +192,26 @@
                                     </a>
                                 </td>
                                 <td class="px-5 py-3">
-                                    <div class="flex min-w-[120px] items-center gap-2">
-                                        <div class="h-2 flex-1 overflow-hidden rounded-full bg-surface-container-high">
-                                            <div class="h-full rounded-full bg-primary"
-                                                style="width: {{ min(100, $row['share_percent']) }}%"></div>
-                                        </div>
-                                        <span class="w-10 text-right font-label-sm text-on-surface-variant">{{ $row['share_percent'] }}%</span>
-                                    </div>
+                                    @if ($price->is_public)
+                                        <span class="rounded-full bg-primary/10 px-2 py-0.5 font-label-sm text-primary">Hiện</span>
+                                    @else
+                                        <span class="rounded-full bg-surface-container-high px-2 py-0.5 font-label-sm text-on-surface-variant">Ẩn</span>
+                                    @endif
                                 </td>
                                 <td class="px-5 py-3 text-right">
-                                    @if ($canManage)
-                                        <a href="{{ route('admin.billing.plan-prices.edit', $price) }}"
-                                            class="font-label-sm text-primary hover:underline">Sửa SKU</a>
-                                    @endif
+                                    <a href="{{ route('admin.billing.plan-prices.edit', $price) }}"
+                                        class="inline-flex items-center gap-1 rounded-lg border border-outline-variant px-3 py-1.5 font-label-sm font-semibold text-on-surface hover:bg-surface-container-low">
+                                        <span class="material-symbols-outlined text-[16px]">edit</span>
+                                        Sửa
+                                    </a>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="px-5 py-8 text-center text-on-surface-variant">Chưa có SKU Premium.</td>
+                                <td colspan="6" class="px-5 py-8 text-center text-on-surface-variant">
+                                    Chưa có SKU Premium.
+                                    <a href="{{ route('admin.billing.plans.prices.create', $premiumPlan) }}" class="text-primary hover:underline">Thêm mức giá</a>
+                                </td>
                             </tr>
                         @endforelse
 

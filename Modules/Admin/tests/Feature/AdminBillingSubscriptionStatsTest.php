@@ -54,7 +54,8 @@ final class AdminBillingSubscriptionStatsTest extends TestCase
             ->assertSee('Tổng học viên')
             ->assertSee('Học viên Free')
             ->assertSee('Học viên Premium')
-            ->assertSee('Phân bổ Premium theo SKU')
+            ->assertSee('Bảng giá Premium (SKU)')
+            ->assertSee('Cấu hình gói')
             ->assertSee('2', false)
             ->assertSee('1', false);
     }
