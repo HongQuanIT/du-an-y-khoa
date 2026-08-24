@@ -7,6 +7,7 @@ namespace Modules\Billing\Actions;
 use App\Models\User;
 use App\Support\Concerns\AsAction;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Modules\Billing\Models\InstitutionMember;
 use Modules\Billing\Models\Subscription;
 
@@ -17,8 +18,29 @@ final class ResolveUserEntitlementsAction
 {
     use AsAction;
 
+    public function __construct(
+        private readonly InvalidateEntitlementCacheAction $cacheKeys,
+    ) {}
+
     /** @return list<string> */
     public function handle(User $user): array
+    {
+        $ttl = (int) config('billing.entitlement_cache_ttl', 300);
+
+        if ($ttl <= 0) {
+            return $this->resolve($user);
+        }
+
+        $key = $this->cacheKeys->cacheKey((int) $user->getKey());
+
+        /** @var list<string> $entitlements */
+        $entitlements = Cache::remember($key, $ttl, fn (): array => $this->resolve($user));
+
+        return $entitlements;
+    }
+
+    /** @return list<string> */
+    private function resolve(User $user): array
     {
         $entitlements = [];
 

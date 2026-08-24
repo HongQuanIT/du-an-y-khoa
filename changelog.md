@@ -2,6 +2,16 @@
 
 ## 2026-08-24
 
+### Admin — cấu hình cổng thanh toán
+- Trang `/admin/billing/gateways`: bật/tắt, credential VNPay/Fake, lưu sẵn MoMo & ZaloPay (Phase 2).
+- Settings DB override env; secret field giữ giá trị cũ khi để trống; checkout chỉ dùng cổng “sẵn sàng”.
+
+### Billing Phase 1 — checkout & thanh toán online
+- Thiết kế: `docs/billing-subscription-redesign.md` (prepaid-first, VNPay + Fake, webhook idempotent).
+- Checkout session, payments, webhook events; kích hoạt Premium sau thanh toán; Redis entitlement cache.
+- UI: `/subscription/upgrade`, confirmation, Fake pay (local); Paywall overlay; admin `/admin/billing/payments`.
+- API: `POST /api/v1/subscription/checkout` + `Idempotency-Key`.
+
 ### Taxonomy y khoa & blueprint thay thế Topic cũ
 - Thay hệ thống Topic phẳng bằng Medical Taxonomy, Blueprint đề thi (core clinical topics) và Tags.
 - Admin: trang taxonomy/blueprint/tags; form câu hỏi gắn taxonomy đa chiều; bỏ CRUD Topic cũ.

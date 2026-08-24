@@ -91,8 +91,11 @@ final class RedeemCodeAction
                     'status' => 'paid',
                     'description' => 'Đổi mã: '.$redeemCode->code,
                     'issued_at' => $startsAt,
+                    'paid_at' => $startsAt,
                 ]);
             }
+
+            InvalidateEntitlementCacheAction::run((int) $user->getKey());
 
             return $subscription->load('plan');
         });

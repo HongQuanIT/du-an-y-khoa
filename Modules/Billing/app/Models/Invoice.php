@@ -27,17 +27,25 @@ class Invoice extends Model
     protected $fillable = [
         'user_id',
         'subscription_id',
+        'checkout_session_id',
         'number',
         'amount_cents',
+        'tax_cents',
+        'discount_cents',
         'currency',
         'status',
         'description',
         'issued_at',
+        'paid_at',
+        'provider_invoice_id',
     ];
 
     protected $casts = [
         'amount_cents' => 'integer',
+        'tax_cents' => 'integer',
+        'discount_cents' => 'integer',
         'issued_at' => 'datetime',
+        'paid_at' => 'datetime',
     ];
 
     /** @return BelongsTo<User, $this> */
@@ -50,5 +58,11 @@ class Invoice extends Model
     public function subscription(): BelongsTo
     {
         return $this->belongsTo(Subscription::class, 'subscription_id');
+    }
+
+    /** @return BelongsTo<CheckoutSession, $this> */
+    public function checkoutSession(): BelongsTo
+    {
+        return $this->belongsTo(CheckoutSession::class, 'checkout_session_id');
     }
 }

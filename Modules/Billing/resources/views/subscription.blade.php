@@ -62,10 +62,14 @@
                 @endif
 
                 <div class="flex flex-wrap gap-3 border-t border-outline-variant pt-4">
-                    <a href="{{ route('landing.pricing') }}"
+                    <a href="{{ route('subscription.upgrade') }}"
                         class="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 font-label-md text-label-md font-semibold text-on-primary hover:opacity-90">
                         <span class="material-symbols-outlined text-[18px]">stars</span>
-                        {{ $current['is_free'] ? 'Nâng cấp Premium' : 'Xem bảng giá' }}
+                        {{ $current['is_free'] ? 'Nâng cấp Premium' : 'Gia hạn / Đổi gói' }}
+                    </a>
+                    <a href="{{ route('landing.pricing') }}"
+                        class="inline-flex items-center gap-2 rounded-lg border border-outline-variant px-5 py-2.5 font-label-md text-label-md text-on-surface hover:bg-surface-container-low">
+                        Xem bảng giá
                     </a>
                     <a href="{{ route('profile.show', ['tab' => 'membership']) }}"
                         class="inline-flex items-center gap-2 rounded-lg border border-outline-variant px-5 py-2.5 font-label-md text-label-md text-on-surface hover:bg-surface-container-low">
@@ -113,10 +117,5 @@
                 </div>
             </section>
         @endif
-
-        <p class="mt-6 text-center font-body-sm text-body-sm text-on-surface-variant">
-            Thanh toán trực tuyến sẽ có trong bản cập nhật tiếp theo. Hiện tại bạn có thể
-            <a href="{{ route('profile.show', ['tab' => 'redeem']) }}" class="text-primary hover:underline">đổi mã kích hoạt</a>.
-        </p>
     </div>
 </x-layouts.app>

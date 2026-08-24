@@ -1,13 +1,9 @@
 <x-layouts.admin title="Lịch sử Premium">
     <x-admin.page-header title="Lịch sử Premium"
         description="Các lần kích hoạt gói trả phí của học viên — theo SKU và nguồn.">
-        <x-slot:actions>
-            <a href="{{ route('admin.billing.plans.index') }}"
-                class="rounded-lg border border-outline-variant px-4 py-2 font-label-md text-on-surface-variant hover:bg-surface-container-low">
-                Gói & bảng giá
-            </a>
-        </x-slot:actions>
     </x-admin.page-header>
+
+    @include('admin::billing._nav')
 
     <x-admin.flash />
 

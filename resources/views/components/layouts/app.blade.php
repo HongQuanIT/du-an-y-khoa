@@ -536,6 +536,7 @@
         })();
     </script>
     @stack('scripts')
+    <x-billing::paywall-overlay />
 </body>
 
 </html>

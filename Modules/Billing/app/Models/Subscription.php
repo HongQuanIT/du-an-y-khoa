@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
+use Modules\Billing\Actions\InvalidateEntitlementCacheAction;
 
 /**
  * @property int $id
@@ -30,16 +31,33 @@ class Subscription extends Model
         'user_id',
         'plan_id',
         'plan_price_id',
+        'checkout_session_id',
         'status',
         'source',
         'starts_at',
         'ends_at',
+        'cancel_at_period_end',
+        'canceled_at',
+        'provider',
+        'provider_subscription_id',
     ];
 
     protected $casts = [
         'starts_at' => 'datetime',
         'ends_at' => 'datetime',
+        'canceled_at' => 'datetime',
+        'cancel_at_period_end' => 'boolean',
     ];
+
+    protected static function booted(): void
+    {
+        $invalidate = static function (self $subscription): void {
+            InvalidateEntitlementCacheAction::run((int) $subscription->user_id);
+        };
+
+        static::saved($invalidate);
+        static::deleted($invalidate);
+    }
 
     /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
@@ -57,6 +75,12 @@ class Subscription extends Model
     public function planPrice(): BelongsTo
     {
         return $this->belongsTo(PlanPrice::class, 'plan_price_id');
+    }
+
+    /** @return BelongsTo<CheckoutSession, $this> */
+    public function checkoutSession(): BelongsTo
+    {
+        return $this->belongsTo(CheckoutSession::class, 'checkout_session_id');
     }
 
     /** @return HasMany<Invoice, $this> */

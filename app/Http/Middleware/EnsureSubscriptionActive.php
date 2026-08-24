@@ -32,8 +32,9 @@ final class EnsureSubscriptionActive
                 );
             }
 
-            return redirect()->route('billing.plans')
-                ->with('paywall', $entitlement);
+            return redirect()->route('subscription.upgrade')
+                ->with('paywall', $entitlement)
+                ->with('error', 'Tính năng này yêu cầu gói Premium.');
         }
 
         return $next($request);
