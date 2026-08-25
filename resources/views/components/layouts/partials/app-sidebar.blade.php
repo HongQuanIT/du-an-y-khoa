@@ -1,5 +1,20 @@
 @php
+    use Modules\Billing\Support\CurrentSubscription;
+
     $closeOnNavigate = $closeOnNavigate ?? false;
+    $subscription = $subscription ?? CurrentSubscription::for(auth()->user());
+    $isPremium = ! ($subscription['is_free'] ?? true);
+    $planName = $isPremium
+        ? ($subscription['plan_name'] ?: 'Premium')
+        : 'Free';
+    $premiumDetail = null;
+    if ($isPremium && filled($subscription['price_label'] ?? null)) {
+        $premiumDetail = $subscription['price_label'];
+    }
+    if ($isPremium && ($subscription['ends_at'] ?? null)?->isFuture()) {
+        $daysLeft = (int) now()->diffInDays($subscription['ends_at']);
+        $premiumDetail = trim(($premiumDetail ? $premiumDetail.' · ' : '').'còn '.$daysLeft.' ngày');
+    }
 @endphp
 
 <a href="{{ route('dashboard') }}" class="mb-8 flex items-center gap-3 px-2"
@@ -34,12 +49,41 @@
     @endforeach
 </nav>
 
-<div class="space-y-1 border-t border-outline-variant pt-4">
-    <a href="{{ route('landing.pricing') }}"
-        class="premium-gradient flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-body-sm font-semibold text-white shadow-md transition-opacity hover:opacity-90">
-        <span class="material-symbols-outlined text-body-sm">stars</span>
-        Nâng cấp tài khoản
-    </a>
+<div class="space-y-2 border-t border-outline-variant pt-4">
+    @if ($isPremium)
+        <a href="{{ route('subscription.show') }}"
+            @if ($closeOnNavigate) @click="menu = false" @endif
+            class="group relative block overflow-hidden rounded-xl border border-amber-500/25 bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 p-3 shadow-sm transition-all hover:border-amber-500/40 hover:shadow-md dark:border-amber-400/20 dark:from-amber-950/40 dark:via-orange-950/30 dark:to-rose-950/20">
+            <div class="flex items-start gap-2.5">
+                <span
+                    class="premium-badge flex size-9 shrink-0 items-center justify-center rounded-lg text-white shadow-sm">
+                    <span class="material-symbols-outlined text-[20px]"
+                        style="font-variation-settings: 'FILL' 1;">workspace_premium</span>
+                </span>
+                <div class="min-w-0 flex-1">
+                    <div class="flex flex-wrap items-center gap-1.5">
+                        <span class="font-label-md text-label-md font-bold text-on-surface">{{ $planName }}</span>
+                        <span
+                            class="inline-flex items-center rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
+                            Đang dùng
+                        </span>
+                    </div>
+                    <p class="mt-0.5 font-label-sm text-label-sm text-on-surface-variant">
+                        {{ $premiumDetail ?: 'Đang mở khóa toàn bộ tính năng' }}
+                    </p>
+                </div>
+            </div>
+        </a>
+    @else
+        <a href="{{ route('subscription.upgrade') }}"
+            @if ($closeOnNavigate) @click="menu = false" @endif
+            class="premium-gradient flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 font-label-md text-label-md font-semibold text-white shadow-md transition-opacity hover:opacity-90">
+            <span class="material-symbols-outlined text-[18px]"
+                style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+            Nâng cấp Premium
+        </a>
+    @endif
+
     <a href="{{ route('profile.show') }}"
         @if ($closeOnNavigate) @click="menu = false" @endif
         @class([

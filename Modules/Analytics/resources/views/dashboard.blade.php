@@ -317,35 +317,40 @@
                 </div>
             </div>
 
-            <!-- Premium Banner -->
-            <div
-                class="premium-gradient col-span-12 flex flex-col items-center justify-between gap-6 rounded-xl border border-white/20 p-8 text-white shadow-xl md:flex-row">
-                <div class="space-y-2 text-center md:text-left">
-                    <h2 class="font-headline-lg text-headline-lg-mobile font-bold md:text-headline-lg">
-                        Nâng tầm kiến thức với Premium
-                    </h2>
-                    <p class="text-body-md font-body-md opacity-90">
-                        Truy cập ngân hàng 10,000+ câu hỏi bản quyền và phân tích chuyên sâu AI.
-                    </p>
-                    <div class="flex flex-wrap justify-center gap-4 pt-2 md:justify-start">
-                        @foreach (['Video giải phẫu 3D', 'Mentorship 1:1', 'Tài liệu offline'] as $perk)
-                            <span class="flex items-center gap-1 text-label-sm font-semibold">
-                                <span class="material-symbols-outlined text-body-sm">done_all</span>
-                                {{ $perk }}
-                            </span>
-                        @endforeach
+            @php
+                $isFreePlan = (\Modules\Billing\Support\CurrentSubscription::for(auth()->user())['is_free'] ?? true);
+            @endphp
+            @if ($isFreePlan)
+                <!-- Premium Banner -->
+                <div
+                    class="premium-gradient col-span-12 flex flex-col items-center justify-between gap-6 rounded-xl border border-white/20 p-8 text-white shadow-xl md:flex-row">
+                    <div class="space-y-2 text-center md:text-left">
+                        <h2 class="font-headline-lg text-headline-lg-mobile font-bold md:text-headline-lg">
+                            Nâng tầm kiến thức với Premium
+                        </h2>
+                        <p class="text-body-md font-body-md opacity-90">
+                            Truy cập ngân hàng 10,000+ câu hỏi bản quyền và phân tích chuyên sâu AI.
+                        </p>
+                        <div class="flex flex-wrap justify-center gap-4 pt-2 md:justify-start">
+                            @foreach (['Video giải phẫu 3D', 'Mentorship 1:1', 'Tài liệu offline'] as $perk)
+                                <span class="flex items-center gap-1 text-label-sm font-semibold">
+                                    <span class="material-symbols-outlined text-body-sm">done_all</span>
+                                    {{ $perk }}
+                                </span>
+                            @endforeach
+                        </div>
+                    </div>
+                    <div class="flex min-w-[200px] flex-col gap-3">
+                        <a href="{{ route('subscription.upgrade') }}"
+                            class="rounded-lg bg-white px-8 py-3 text-center font-bold text-[#FF5E62] shadow-lg transition-all hover:opacity-90 active:scale-95">
+                            Nâng cấp Premium ngay
+                        </a>
+                        <p class="text-center text-label-sm font-bold tracking-widest uppercase opacity-80">
+                            Chỉ từ gói tháng linh hoạt
+                        </p>
                     </div>
                 </div>
-                <div class="flex min-w-[200px] flex-col gap-3">
-                    <a href="{{ route('landing.pricing') }}"
-                        class="rounded-lg bg-white px-8 py-3 text-center font-bold text-[#FF5E62] shadow-lg transition-all hover:opacity-90 active:scale-95">
-                        Nâng cấp Premium ngay
-                    </a>
-                    <p class="text-center text-label-sm font-bold tracking-widest uppercase opacity-80">
-                        Chỉ 99k / tháng
-                    </p>
-                </div>
-            </div>
+            @endif
         </div>
     </div>
 </x-layouts.app>

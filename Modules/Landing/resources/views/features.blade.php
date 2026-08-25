@@ -9,8 +9,10 @@
             {{ $c['hero']['subtitle'] }}
         </p>
         <div class="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6">
-            <a href="{{ route('register') }}"
-                class="bg-primary text-on-primary px-8 md:px-10 py-4 md:py-5 rounded-xl font-headline-sm text-headline-sm hover:shadow-xl hover:shadow-primary/20 transition-all text-center">{{ $c['hero']['primary_cta_label'] }}</a>
+            <x-public.auth-cta
+                :guest-label="$c['hero']['primary_cta_label']"
+                auth-label="Tạo phiên học"
+                class="bg-primary text-on-primary px-8 md:px-10 py-4 md:py-5 rounded-xl font-headline-sm text-headline-sm hover:shadow-xl hover:shadow-primary/20 transition-all text-center" />
             <a href="{{ $c['hero']['video_url'] }}"
                 class="bg-white border border-border text-on-surface px-8 md:px-10 py-4 md:py-5 rounded-xl font-headline-sm text-headline-sm hover:bg-surface-container-low transition-all text-center">{{ $c['hero']['secondary_cta_label'] }}</a>
         </div>
@@ -110,8 +112,10 @@
                         </div>
                         <h3 class="font-headline-md text-headline-md mb-4">{{ $b['ai_tutor']['title'] }}</h3>
                         <p class="opacity-90 mb-10 text-body-lg leading-relaxed">{{ $b['ai_tutor']['body'] }}</p>
-                        <a href="{{ route('register') }}"
-                            class="inline-block bg-white text-primary px-8 py-3.5 rounded-xl font-label-md hover:bg-opacity-95 transition-all shadow-lg">{{ $b['ai_tutor']['cta_label'] }}</a>
+                        <x-public.auth-cta
+                            :guest-label="$b['ai_tutor']['cta_label']"
+                            auth-label="Tạo phiên học"
+                            class="inline-block bg-white text-primary px-8 py-3.5 rounded-xl font-label-md hover:bg-opacity-95 transition-all shadow-lg" />
                     </div>
                     <div
                         class="flex-1 w-full h-64 md:h-[280px] bg-black/10 rounded-2xl overflow-hidden border border-white/10 backdrop-blur-sm self-center">
@@ -202,8 +206,10 @@
             <h2 class="font-headline-lg text-3xl md:text-display text-on-surface mb-6">{{ $c['cta']['title'] }}</h2>
             <p class="text-body-lg text-text-secondary mb-12">{{ $c['cta']['subtitle'] }}</p>
             <div class="flex flex-col sm:flex-row justify-center gap-4">
-                <a href="{{ route('register') }}"
-                    class="bg-primary text-white px-12 py-5 rounded-xl font-headline-sm hover:shadow-2xl hover:shadow-primary/30 transition-all hover:-translate-y-1 text-center">{{ $c['cta']['primary_label'] }}</a>
+                <x-public.auth-cta
+                    :guest-label="$c['cta']['primary_label']"
+                    auth-label="Tạo phiên học"
+                    class="bg-primary text-white px-12 py-5 rounded-xl font-headline-sm hover:shadow-2xl hover:shadow-primary/30 transition-all hover:-translate-y-1 text-center" />
             </div>
             <p class="mt-6 text-label-sm text-text-secondary flex items-center justify-center gap-2">
                 <span class="material-symbols-outlined text-[16px] text-success">verified</span>

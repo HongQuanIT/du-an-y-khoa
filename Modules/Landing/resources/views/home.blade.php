@@ -35,11 +35,12 @@
                         {{ $c['hero']['subtitle'] }}
                     </p>
                     <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                        <a href="{{ route('register') }}"
+                        <x-public.auth-cta
+                            :guest-label="$c['hero']['primary_cta_label']"
+                            auth-label="Tạo phiên học"
                             class="bg-primary-container text-on-primary-container px-8 py-4 rounded-xl font-label-md text-label-md shadow-lg shadow-primary-container/20 hover:shadow-xl transition-all flex items-center justify-center gap-2">
-                            {{ $c['hero']['primary_cta_label'] }}
                             <span class="material-symbols-outlined">arrow_forward</span>
-                        </a>
+                        </x-public.auth-cta>
                         <a href="#sample-question"
                             class="border border-border bg-surface text-on-surface px-8 py-4 rounded-xl font-label-md text-label-md hover:bg-surface-container-low transition-colors flex items-center justify-center gap-2">
                             {{ $c['hero']['secondary_cta_label'] }}
@@ -368,8 +369,10 @@
                             </li>
                         @endforeach
                     </ul>
-                    <a href="{{ route('register') }}"
-                        class="w-full py-3 px-4 border border-border text-on-surface font-label-md text-label-md rounded-xl hover:bg-surface-container-low transition-colors text-center">{{ $c['pricing']['free']['cta_label'] }}</a>
+                    <x-public.auth-cta
+                        :guest-label="$c['pricing']['free']['cta_label']"
+                        auth-label="Tạo phiên học"
+                        class="w-full py-3 px-4 border border-border text-on-surface font-label-md text-label-md rounded-xl hover:bg-surface-container-low transition-colors text-center" />
                 </div>
 
                 <!-- Premium yearly -->
@@ -410,7 +413,7 @@
                             </li>
                         @endforeach
                     </ul>
-                    <a href="{{ route('register') }}"
+                    <a href="{{ auth()->check() ? route('subscription.upgrade') : route('register') }}"
                         class="w-full py-3 px-4 bg-primary text-on-primary font-label-md text-label-md rounded-xl hover:opacity-90 transition-opacity text-center">
                         {{ $c['pricing']['premium_yearly']['cta_label_prefix'] }} <span x-text="plan.label"></span>
                     </a>
@@ -437,7 +440,7 @@
                             </li>
                         @endforeach
                     </ul>
-                    <a href="{{ route('register') }}"
+                    <a href="{{ auth()->check() ? route('subscription.upgrade') : route('register') }}"
                         class="w-full py-3 px-4 bg-primary-container text-on-primary-container font-label-md text-label-md rounded-xl hover:opacity-90 transition-opacity text-center">{{ $c['pricing']['premium_monthly']['cta_label'] }}</a>
                 </div>
             </div>
@@ -488,8 +491,10 @@
             </h2>
             <p class="font-body-lg text-body-lg text-on-primary-container/80 max-w-2xl mx-auto relative">{{ $c['cta']['subtitle'] }}</p>
             <div class="flex flex-col sm:flex-row gap-4 justify-center relative">
-                <a href="{{ route('register') }}"
-                    class="bg-white text-primary px-8 py-4 rounded-xl font-label-md text-label-md shadow-lg hover:bg-primary-fixed transition-all">{{ $c['cta']['primary_label'] }}</a>
+                <x-public.auth-cta
+                    :guest-label="$c['cta']['primary_label']"
+                    auth-label="Tạo phiên học"
+                    class="bg-white text-primary px-8 py-4 rounded-xl font-label-md text-label-md shadow-lg hover:bg-primary-fixed transition-all" />
                 <a href="{{ route('landing.contact') }}"
                     class="bg-white/10 text-white border border-white/20 px-8 py-4 rounded-xl font-label-md text-label-md hover:bg-white/20 transition-all">{{ $c['cta']['secondary_label'] }}</a>
             </div>

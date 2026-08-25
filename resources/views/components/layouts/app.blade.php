@@ -30,7 +30,7 @@
     }
 
     $membershipChipLabel = implode(' · ', $membershipChipParts);
-    $isStudent = auth()->user()->getRoleNames()->first() === 'student';
+    $isStudent = auth()->user()->hasRole(\App\Support\Enums\Role::Student->value);
     $searchHistory = DB::table('search_histories')
         ->select('query')
         ->where('user_id', auth()->id())
@@ -143,7 +143,10 @@
     <!-- SideNavBar (desktop) -->
     <aside
         class="fixed top-0 left-0 z-50 hidden h-screen w-sidebar-width flex-col border-r border-outline-variant bg-surface p-4 md:flex">
-        @include('components.layouts.partials.app-sidebar', ['navItems' => $navItems])
+        @include('components.layouts.partials.app-sidebar', [
+            'navItems' => $navItems,
+            'subscription' => $headerSubscription,
+        ])
     </aside>
 
     <!-- Mobile sidebar drawer -->
@@ -163,7 +166,11 @@
                 <span class="material-symbols-outlined text-[24px] leading-none">close</span>
             </button>
         </div>
-        @include('components.layouts.partials.app-sidebar', ['navItems' => $navItems, 'closeOnNavigate' => true])
+        @include('components.layouts.partials.app-sidebar', [
+            'navItems' => $navItems,
+            'closeOnNavigate' => true,
+            'subscription' => $headerSubscription,
+        ])
     </aside>
 
     <!-- TopAppBar -->
@@ -238,9 +245,10 @@
                             @class([
                                 'inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-label-sm font-semibold transition-opacity hover:opacity-90',
                                 'bg-surface-container-high text-on-surface-variant' => $headerSubscription['is_free'],
-                                'bg-primary/15 text-primary' => ! $headerSubscription['is_free'],
+                                'premium-badge text-white shadow-sm' => ! $headerSubscription['is_free'],
                             ])>
-                            <span class="material-symbols-outlined text-[16px]">workspace_premium</span>
+                            <span class="material-symbols-outlined text-[16px]"
+                                @if (! $headerSubscription['is_free']) style="font-variation-settings: 'FILL' 1;" @endif>workspace_premium</span>
                             {{ $membershipChipLabel }}
                         </a>
 
@@ -250,9 +258,9 @@
                         </a>
 
                         @if ($headerSubscription['is_free'])
-                            <a href="{{ route('landing.pricing') }}" @click="accountMenu = false"
-                                class="block text-center font-label-sm text-primary hover:underline">
-                                Nâng cấp gói
+                            <a href="{{ route('subscription.upgrade') }}" @click="accountMenu = false"
+                                class="block text-center font-label-sm font-semibold text-primary hover:underline">
+                                Nâng cấp Premium
                             </a>
                         @endif
                     </div>
