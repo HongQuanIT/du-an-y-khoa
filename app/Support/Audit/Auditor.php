@@ -75,7 +75,7 @@ final class Auditor
 
             return null;
         }
-
+        
         return AuditLog::query()->create($attributes);
     }
 
