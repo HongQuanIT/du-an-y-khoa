@@ -120,9 +120,8 @@ final class ActivatePurchaseSubscriptionAction
                 ])->save();
             }
 
-            Payment::query()->create([
+            $paymentAttrs = [
                 'invoice_id' => $invoice?->getKey(),
-                'checkout_session_id' => $locked->getKey(),
                 'amount_cents' => $locked->totalCents(),
                 'currency' => $locked->currency,
                 'method' => $locked->gateway,
@@ -131,7 +130,22 @@ final class ActivatePurchaseSubscriptionAction
                 'provider_payment_id' => $providerPaymentId,
                 'metadata' => $metadata !== [] ? $metadata : null,
                 'paid_at' => $now,
-            ]);
+            ];
+
+            $pendingPayment = Payment::query()
+                ->where('checkout_session_id', $locked->getKey())
+                ->where('status', 'pending')
+                ->orderByDesc('id')
+                ->lockForUpdate()
+                ->first();
+
+            if ($pendingPayment !== null) {
+                $pendingPayment->forceFill($paymentAttrs)->save();
+            } else {
+                Payment::query()->create(array_merge($paymentAttrs, [
+                    'checkout_session_id' => $locked->getKey(),
+                ]));
+            }
 
             $locked->forceFill([
                 'status' => 'completed',

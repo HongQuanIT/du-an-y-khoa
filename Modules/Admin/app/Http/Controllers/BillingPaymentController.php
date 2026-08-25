@@ -9,16 +9,20 @@ use App\Models\User;
 use App\Support\Enums\Permission;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
-use Modules\Billing\Models\Payment;
+use Modules\Billing\Actions\ExpireStaleCheckoutSessionsAction;
+use Modules\Billing\Models\CheckoutSession;
 
 final class BillingPaymentController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request, ExpireStaleCheckoutSessionsAction $expire): View
     {
         $this->authorizePermission(Permission::BillingManage);
 
-        $query = Payment::query()
-            ->with(['checkoutSession.user', 'invoice'])
+        // Keep admin list accurate even if the scheduler is idle locally.
+        $expire->handle();
+
+        $query = CheckoutSession::query()
+            ->with(['user', 'planPrice.plan', 'payments' => fn ($q) => $q->latest('id')])
             ->latest('id');
 
         if ($status = $request->query('status')) {
@@ -26,14 +30,20 @@ final class BillingPaymentController extends Controller
         }
 
         if ($provider = $request->query('provider')) {
-            $query->where('provider', (string) $provider);
+            $query->where('gateway', (string) $provider);
         }
 
         return view('admin::billing.payments.index', [
-            'payments' => $query->paginate(25)->withQueryString(),
+            'sessions' => $query->paginate(25)->withQueryString(),
             'filters' => [
                 'status' => $request->query('status'),
                 'provider' => $request->query('provider'),
+            ],
+            'statusLabels' => [
+                'pending' => 'Chờ thanh toán',
+                'completed' => 'Thành công',
+                'failed' => 'Thất bại',
+                'expired' => 'Hết hạn',
             ],
         ]);
     }

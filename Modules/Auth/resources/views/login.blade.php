@@ -8,10 +8,19 @@
             </div>
         @endif
 
+        @if (! empty($planPriceId))
+            <div class="mb-6 rounded-lg border border-primary/25 bg-primary-fixed/25 px-4 py-3 font-body-sm text-body-sm text-on-surface">
+                Sau khi đăng nhập, bạn sẽ được chuyển tới trang xác nhận gói để thanh toán.
+            </div>
+        @endif
+
         <x-auth.errors />
 
-        <form class="space-y-5" action="{{ route('login') }}" method="post">
+        <form class="space-y-5" action="{{ route('login', \Modules\Billing\Support\CheckoutIntent::authQuery($planPriceId ?? null)) }}" method="post">
             @csrf
+            @if (! empty($planPriceId))
+                <input type="hidden" name="plan_price_id" value="{{ $planPriceId }}">
+            @endif
 
             <x-auth.input name="email" label="Email" type="email" placeholder="bacsi@mebpro.vn" required autofocus
                 autocomplete="email" />
@@ -36,7 +45,8 @@
 
         <p class="mt-8 text-center text-body-sm font-body-sm text-on-surface-variant">
             Chưa có tài khoản?
-            <a class="text-primary font-label-md hover:underline" href="{{ route('register') }}">Đăng ký ngay</a>
+            <a class="text-primary font-label-md hover:underline"
+                href="{{ \Modules\Billing\Support\CheckoutIntent::registerUrl($planPriceId ?? null) }}">Đăng ký ngay</a>
         </p>
     </x-auth.shell>
 </x-layouts.auth>

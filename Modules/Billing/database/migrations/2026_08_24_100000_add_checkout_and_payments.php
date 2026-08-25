@@ -24,7 +24,7 @@ return new class extends Migration
             $table->string('idempotency_key')->unique();
             $table->string('gateway', 30);
             $table->string('gateway_order_id')->nullable()->index();
-            $table->string('redirect_url')->nullable();
+            $table->text('redirect_url')->nullable();
             $table->timestamp('expires_at');
             $table->timestamp('completed_at')->nullable();
             $table->timestamps();

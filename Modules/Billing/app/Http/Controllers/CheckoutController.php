@@ -15,6 +15,7 @@ use Modules\Billing\Actions\ListPublicPlansAction;
 use Modules\Billing\Actions\ProcessPaymentWebhookAction;
 use Modules\Billing\DTO\WebhookPayload;
 use Modules\Billing\Models\CheckoutSession;
+use Modules\Billing\Support\CheckoutIntent;
 use Modules\Billing\Support\CurrentSubscription;
 use Modules\Billing\Support\GatewayResolver;
 use Modules\Billing\Support\GatewaySettings;
@@ -36,10 +37,19 @@ final class CheckoutController extends Controller
             $default = $available[0] ?? 'fake';
         }
 
+        $selectedPlanPriceId = CheckoutIntent::resolveSelectedPriceId($request);
+        if (
+            $selectedPlanPriceId !== null
+            && ! $prices->contains(fn ($price): bool => (int) $price->id === $selectedPlanPriceId)
+        ) {
+            $selectedPlanPriceId = null;
+        }
+
         return view('billing::upgrade', [
             'current' => CurrentSubscription::for($request->user()),
             'premium' => $premium,
             'prices' => $prices,
+            'selectedPlanPriceId' => $selectedPlanPriceId,
             'gateways' => $available,
             'defaultGateway' => $default,
             'idempotencyKey' => (string) Str::uuid(),

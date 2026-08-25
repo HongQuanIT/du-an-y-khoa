@@ -36,13 +36,21 @@ final class StudentTwoFactorController extends Controller
         }
 
         if (! $user->hasTwoFactorEnabled()) {
-            return redirect()->to(HomePath::for($user));
+            return PortalRedirect::afterLogin(
+                $request,
+                HomePath::for($user),
+                LoginPortal::Student,
+            );
         }
 
         if (TwoFactorSession::isConfirmed($request) || StudentTwoFactorDevice::isTrusted($request, $user)) {
             TwoFactorSession::confirm($request);
 
-            return redirect()->to(HomePath::for($user));
+            return PortalRedirect::afterLogin(
+                $request,
+                HomePath::for($user),
+                LoginPortal::Student,
+            );
         }
 
         return view('auth::two-factor-challenge');

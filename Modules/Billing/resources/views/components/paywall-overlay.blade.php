@@ -5,7 +5,13 @@
 ])
 
 @php
+    use Modules\Billing\Support\CheckoutIntent;
+
     $entitlement = $feature ?? session('paywall');
+    $featuredPriceId = CheckoutIntent::featuredPremiumPriceId();
+    $upgradeHref = auth()->check()
+        ? CheckoutIntent::upgradeUrl($featuredPriceId)
+        : CheckoutIntent::registerUrl($featuredPriceId);
 @endphp
 
 @if ($entitlement)
@@ -23,7 +29,7 @@
                 <p class="mt-2 font-label-sm text-label-sm text-on-surface-variant">Yêu cầu: {{ $entitlement }}</p>
             @endif
             <div class="mt-6 flex flex-col gap-2 sm:flex-row">
-                <a href="{{ auth()->check() ? route('subscription.upgrade') : route('register') }}"
+                <a href="{{ $upgradeHref }}"
                     class="inline-flex flex-1 items-center justify-center rounded-lg bg-primary px-4 py-2.5 font-label-md font-semibold text-on-primary hover:opacity-90">
                     Nâng cấp ngay
                 </a>

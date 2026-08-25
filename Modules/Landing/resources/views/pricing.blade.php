@@ -1,4 +1,5 @@
 @php
+    use Modules\Billing\Support\CheckoutIntent;
     use Modules\Billing\Support\MoneyFormatter;
 
     $freeFeatures = $free?->features ?? ['20 câu hỏi/ngày', 'Thư viện giới hạn'];
@@ -9,7 +10,7 @@
     $isCurrentFree = $current['is_free'] ?? true;
     $isCurrentPremium = ! ($current['is_free'] ?? true) && ($current['plan_slug'] ?? 'free') === 'premium';
 
-    $ctaForTier = function (string $tierSlug, string $defaultLabel) use ($isAuthenticated, $isCurrentFree, $isCurrentPremium): array {
+    $ctaForTier = function (string $tierSlug, string $defaultLabel, ?int $planPriceId = null) use ($isAuthenticated, $isCurrentFree, $isCurrentPremium): array {
         if ($tierSlug === 'free' && $isCurrentFree) {
             return ['label' => 'Gói của bạn', 'disabled' => true, 'href' => null];
         }
@@ -17,14 +18,30 @@
             return ['label' => 'Gói của bạn', 'disabled' => true, 'href' => null];
         }
         if (! $isAuthenticated) {
-            return ['label' => $defaultLabel, 'disabled' => false, 'href' => route('register')];
+            return [
+                'label' => $defaultLabel,
+                'disabled' => false,
+                'href' => $tierSlug === 'free'
+                    ? CheckoutIntent::registerUrl()
+                    : CheckoutIntent::registerUrl($planPriceId),
+            ];
         }
 
-        return ['label' => $defaultLabel, 'disabled' => false, 'href' => route('subscription.upgrade')];
+        return [
+            'label' => $defaultLabel,
+            'disabled' => false,
+            'href' => $tierSlug === 'free'
+                ? route('dashboard')
+                : CheckoutIntent::upgradeUrl($planPriceId),
+        ];
     };
 
     $freeCta = $ctaForTier('free', $free?->prices->first()?->cta_label ?? 'Bắt đầu ngay');
-    $monthlyCta = $ctaForTier('premium', $monthlyPrice?->cta_label ?? 'Nâng cấp theo tháng');
+    $monthlyCta = $ctaForTier(
+        'premium',
+        $monthlyPrice?->cta_label ?? 'Nâng cấp theo tháng',
+        $monthlyPrice?->id,
+    );
 @endphp
 
 <x-layouts.public :seo="$seo">
@@ -33,6 +50,10 @@
             years: {{ $defaultYears }},
             plans: @js($yearlyForAlpine),
             monthlyPrice: {{ $monthlyAmount }},
+            isAuthenticated: @js($isAuthenticated),
+            isCurrentPremium: @js($isCurrentPremium),
+            registerBase: @js(route('register')),
+            upgradeBase: @js(route('subscription.upgrade')),
             format(n) {
                 return new Intl.NumberFormat('vi-VN').format(n) + '₫';
             },
@@ -41,6 +62,17 @@
             },
             listPrice() {
                 return this.plan?.listPrice ?? 0;
+            },
+            planCtaHref() {
+                if (this.isCurrentPremium) {
+                    return null;
+                }
+                const id = this.plan?.id;
+                const base = this.isAuthenticated ? this.upgradeBase : this.registerBase;
+                if (! id) {
+                    return base;
+                }
+                return base + '?plan_price_id=' + id;
             },
         }">
         @if ($isAuthenticated && ! $isCurrentFree)
@@ -172,7 +204,7 @@
                             Gói của bạn
                         </span>
                     @else
-                        <a href="{{ $isAuthenticated ? route('subscription.upgrade') : route('register') }}"
+                        <a :href="planCtaHref()"
                             class="w-full py-3 px-4 bg-primary text-on-primary font-label-md text-label-md rounded-xl hover:opacity-90 transition-opacity text-center"
                             x-text="plan?.cta ?? 'Mua gói'">
                         </a>
