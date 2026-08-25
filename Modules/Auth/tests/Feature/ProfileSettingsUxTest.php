@@ -122,6 +122,10 @@ final class ProfileSettingsUxTest extends TestCase
             ->assertSee('Học viên', false)
             ->assertSee('Quân Đặng', false)
             ->assertDontSee('>Quản trị viên<', false);
+            ->assertSee('Dashboard')
+            ->assertSee('Ngân hàng câu hỏi')
+            ->assertSee('Học viên', false)
+            ->assertDontSee('Quản trị hệ thống');
     }
 
     public function test_admin_profile_keeps_admin_shell(): void
@@ -134,5 +138,8 @@ final class ProfileSettingsUxTest extends TestCase
             ->assertOk()
             ->assertSee('Quản trị viên', false)
             ->assertSee('Admin Test', false);
+            ->assertSee('Quản trị hệ thống')
+            ->assertSee('Quản trị viên')
+            ->assertDontSee('Ngân hàng câu hỏi');
     }
 }

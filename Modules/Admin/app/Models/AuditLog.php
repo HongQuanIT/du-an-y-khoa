@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Admin\Models;
 
-use App\Models\User;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
+use App\Support\Audit\Enums\AuditAction as PlatformAuditAction;
+use Illuminate\Database\Eloquent\Builder;
+use Modules\Admin\Enums\AuditAction;
 
 /**
  * Insert-only admin audit trail (srs module 40).
@@ -19,43 +18,38 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  * @property string|null $auditable_id
  * @property array<string, mixed>|null $before
  * @property array<string, mixed>|null $after
+ * @property array<string, mixed>|null $metadata
  * @property string|null $ip
  * @property string|null $user_agent
+ * @property string|null $device_type
+ * @property string|null $device_name
+ * @property string|null $operating_system
+ * @property string|null $browser
  * @property string|null $request_id
  */
-class AuditLog extends Model
+class AuditLog extends \App\Models\AuditLog
 {
-    public $timestamps = false;
-
-    protected $fillable = [
-        'actor_id',
-        'action',
-        'auditable_type',
-        'auditable_id',
-        'before',
-        'after',
-        'ip',
-        'user_agent',
-        'request_id',
-        'created_at',
-    ];
-
-    protected function casts(): array
+    /** @param Builder<self> $query */
+    public function scopeVisibleToAdmin(Builder $query): Builder
     {
-        return [
-            'before' => 'array',
-            'after' => 'array',
-            'created_at' => 'datetime',
-        ];
+        return $query->whereNotIn('action', PlatformAuditAction::hiddenLearningDetailValues());
     }
 
-    public function actor(): BelongsTo
+    public function actionLabel(): string
     {
-        return $this->belongsTo(User::class, 'actor_id');
+        return AuditAction::tryFrom($this->action)?->label()
+            ?? PlatformAuditAction::tryFrom($this->action)?->label()
+            ?? $this->action;
     }
 
-    public function auditable(): MorphTo
+    public function deviceTypeLabel(): string
     {
-        return $this->morphTo();
+        return match ($this->device_type) {
+            'desktop' => 'Máy tính',
+            'mobile' => 'Điện thoại',
+            'tablet' => 'Máy tính bảng',
+            'bot' => 'Bot',
+            default => 'Không xác định',
+        };
     }
 }

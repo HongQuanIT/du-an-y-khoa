@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\Auth\Actions;
 
 use App\Models\User;
+use App\Support\Audit\Auditor;
+use App\Support\Audit\Enums\AuditAction;
 use App\Support\Concerns\AsAction;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -56,6 +58,8 @@ final class ConfirmTwoFactorSetupAction
             'recovery_codes' => $hashed,
             'confirmed_at' => now(),
         ])->save();
+
+        Auditor::record(AuditAction::AuthTwoFactorEnabled, $user, $user);
 
         return $plainCodes;
     }

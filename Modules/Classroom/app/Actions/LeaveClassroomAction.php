@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\Classroom\Actions;
 
 use App\Models\User;
+use App\Support\Audit\Auditor;
+use App\Support\Audit\Enums\AuditAction;
 use App\Support\Concerns\AsAction;
 use Modules\Classroom\Enums\MemberRole;
 use Modules\Classroom\Enums\MemberStatus;
@@ -23,5 +25,11 @@ final class LeaveClassroomAction
         }
 
         $member->update(['status' => MemberStatus::Left]);
+        Auditor::record(
+            AuditAction::ClassroomLeft,
+            $user,
+            $classroom,
+            metadata: ['classroom_member_id' => $member->getKey()],
+        );
     }
 }

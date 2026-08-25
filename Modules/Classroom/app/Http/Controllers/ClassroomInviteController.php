@@ -6,6 +6,8 @@ namespace Modules\Classroom\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\Audit\Auditor;
+use App\Support\Audit\Enums\AuditAction;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Modules\Classroom\Enums\MemberRole;
@@ -29,7 +31,7 @@ final class ClassroomInviteController extends Controller
             return back()->withErrors(['email' => 'Không tìm thấy tài khoản với email này.']);
         }
 
-        ClassroomMember::query()->updateOrCreate(
+        $member = ClassroomMember::query()->updateOrCreate(
             [
                 'classroom_id' => $classroom->getKey(),
                 'user_id' => $user->getKey(),
@@ -38,6 +40,15 @@ final class ClassroomInviteController extends Controller
                 'role_in_class' => MemberRole::Member,
                 'status' => MemberStatus::Invited,
                 'joined_at' => null,
+            ],
+        );
+        Auditor::record(
+            AuditAction::ClassroomInviteCreated,
+            $request->user(),
+            $classroom,
+            metadata: [
+                'target_user_id' => $user->getKey(),
+                'classroom_member_id' => $member->getKey(),
             ],
         );
 

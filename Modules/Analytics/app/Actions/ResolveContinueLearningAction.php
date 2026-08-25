@@ -6,6 +6,8 @@ namespace Modules\Analytics\Actions;
 
 use App\Models\User;
 use App\Support\Concerns\AsAction;
+use Modules\Analytics\Models\TopicMastery;
+use Modules\QuestionBank\Enums\SessionMode;
 use Modules\QuestionBank\Enums\SessionStatus;
 use Modules\QuestionBank\Models\QuestionSession;
 use Modules\StudyPlan\Actions\ListTodayTasksAction;
@@ -15,8 +17,8 @@ use Modules\StudyPlan\Repositories\StudyPlanRepository;
 /**
  * Use case: what the dashboard's "Continue learning" card should point at.
  *
- * Priority per srs/modules/03: an unfinished session first, then today's plan
- * task, otherwise nothing to resume.
+ * Priority per srs/modules/03: unfinished session, today's plan task, weakest
+ * topic, then a safe default practice action.
  *
  * @phpstan-type ContinueCard array{label: string, title: string, hint: string, progress: int, url: string}
  */
@@ -30,11 +32,14 @@ final class ResolveContinueLearningAction
     ) {}
 
     /**
-     * @return ContinueCard|null
+     * @return ContinueCard
      */
     public function handle(User $user): ?array
     {
-        return $this->fromPausedSession($user) ?? $this->fromPlanTask($user);
+        return $this->fromPausedSession($user)
+            ?? $this->fromPlanTask($user)
+            ?? $this->fromWeakTopic($user)
+            ?? $this->defaultPractice();
     }
 
     /**
@@ -62,14 +67,17 @@ final class ResolveContinueLearningAction
                 'Câu %d/%d · Chế độ %s',
                 $session->answered_count + 1,
                 $session->total,
-                $session->mode->value,
+                $session->mode === SessionMode::Exam ? 'Thi thử' : 'Học tập',
             ),
             'progress' => $session->total > 0
                 ? (int) round($session->answered_count / $session->total * 100)
                 : 0,
             'url' => $task !== null
                 ? route('study-plan.session', [$task->study_plan_id, $task])
-                : route('qbank.session', $session),
+                : route(
+                    $session->mode === SessionMode::Exam ? 'exam.session' : 'qbank.session',
+                    $session,
+                ),
         ];
     }
 
@@ -104,6 +112,51 @@ final class ResolveContinueLearningAction
     {
         $taskId = $session->filters['study_plan_task_id'] ?? null;
 
-        return is_numeric($taskId) ? StudyPlanTask::find((int) $taskId) : null;
+        if (! is_numeric($taskId)) {
+            return null;
+        }
+
+        return StudyPlanTask::query()
+            ->whereKey((int) $taskId)
+            ->whereHas('plan', fn ($query) => $query->where('user_id', $session->user_id))
+            ->first();
+    }
+
+    /** @return ContinueCard|null */
+    private function fromWeakTopic(User $user): ?array
+    {
+        $mastery = TopicMastery::query()
+            ->with('medicalTaxonomyNode:id,name')
+            ->where('user_id', $user->getKey())
+            ->where('attempts', '>=', 3)
+            ->orderBy('correct_rate')
+            ->first();
+
+        if ($mastery === null) {
+            return null;
+        }
+
+        return [
+            'label' => 'Gợi ý tiếp theo',
+            'title' => 'Củng cố '.($mastery->medicalTaxonomyNode?->name ?? 'chủ đề còn yếu'),
+            'hint' => sprintf('%d lượt làm · chính xác %d%%', $mastery->attempts, (int) round($mastery->correct_rate)),
+            'progress' => (int) round($mastery->correct_rate),
+            'url' => route('qbank.create', [
+                'source' => 'weak_topics',
+                'medical_taxonomy_node_ids' => [$mastery->medical_taxonomy_node_id],
+            ]),
+        ];
+    }
+
+    /** @return ContinueCard */
+    private function defaultPractice(): array
+    {
+        return [
+            'label' => 'Bắt đầu học',
+            'title' => 'Tạo phiên luyện tập của bạn',
+            'hint' => 'Chọn chủ đề, độ khó và số câu phù hợp với mục tiêu hôm nay.',
+            'progress' => 0,
+            'url' => route('qbank.create'),
+        ];
     }
 }

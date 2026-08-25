@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\Personalization\Actions;
 
 use App\Models\User;
+use App\Support\Audit\Auditor;
+use App\Support\Audit\Enums\AuditAction;
 use App\Support\Concerns\AsAction;
 use Modules\Personalization\Models\Bookmark;
 use Modules\Personalization\Models\BookmarkFolder;
@@ -47,6 +49,16 @@ final class CreateBookmarkFolderAction
                 'bookmarkable_id' => $questionId,
             ]);
         }
+
+        Auditor::record(
+            AuditAction::LearningBookmarkFolderCreated,
+            $user,
+            $folder,
+            metadata: [
+                'question_id' => $questionId,
+                'created' => $folder->wasRecentlyCreated,
+            ],
+        );
 
         return $this->getFolders->handle($user, $questionId ?? '');
     }

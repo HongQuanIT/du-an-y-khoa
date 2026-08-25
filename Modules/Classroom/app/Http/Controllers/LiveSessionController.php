@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace Modules\Classroom\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
+use App\Support\Audit\AuditContext;
+use App\Support\Audit\Auditor;
+use App\Support\Audit\Enums\AuditAction;
 use Illuminate\Http\RedirectResponse;
 use Modules\Classroom\Actions\EndLiveSessionAction;
 use Modules\Classroom\Actions\ScheduleLiveSessionAction;
@@ -23,6 +27,7 @@ final class LiveSessionController extends Controller
         $this->authorize('manageLive', $classroom);
 
         $session = $action->handle($classroom, $request->sessionPayload());
+        $this->audit($request->user(), AuditAction::ClassroomLiveScheduled, $classroom, $session);
 
         return redirect()
             ->route('classroom.show', $classroom)
@@ -36,7 +41,8 @@ final class LiveSessionController extends Controller
     ): RedirectResponse {
         $this->authorize('startLive', $classroom);
 
-        $action->handle($classroom, $liveSession);
+        $session = $action->handle($classroom, $liveSession);
+        $this->audit(auth()->user(), AuditAction::ClassroomLiveStarted, $classroom, $session);
 
         return redirect()
             ->route('classroom.live', [$classroom, $liveSession])
@@ -50,10 +56,22 @@ final class LiveSessionController extends Controller
     ): RedirectResponse {
         $this->authorize('manageLive', $classroom);
 
-        $action->handle($classroom, $liveSession);
+        $session = $action->handle($classroom, $liveSession);
+        $this->audit(auth()->user(), AuditAction::ClassroomLiveEnded, $classroom, $session);
 
         return redirect()
             ->route('classroom.live', [$classroom, $liveSession])
             ->with('success', 'Buổi live đã kết thúc.');
+    }
+
+    private function audit(?User $actor, AuditAction $action, Classroom $classroom, LiveSession $session): void
+    {
+        Auditor::record(
+            $action,
+            $actor,
+            $session,
+            metadata: ['classroom_id' => $classroom->getKey(), 'live_session_id' => $session->getKey()],
+            context: new AuditContext(sessionId: (string) $session->getKey()),
+        );
     }
 }

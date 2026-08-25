@@ -94,6 +94,15 @@
                             Phiên bản {{ $question->version }}
                             <span class="material-symbols-outlined text-[15px]">history</span>
                         </a>
+                        @if ($canViewAudit)
+                            <span>·</span>
+                            <a href="{{ route('admin.audit.index', ['subject_type' => 'question', 'subject_id' => $question->id]) }}"
+                                class="inline-flex items-center gap-0.5 font-semibold text-primary hover:underline"
+                                title="Xem nhật ký audit">
+                                Audit
+                                <span class="material-symbols-outlined text-[15px]">policy</span>
+                            </a>
+                        @endif
                         <span>·</span>
                         <a href="{{ route('admin.questions.stats', $question) }}"
                             class="inline-flex items-center gap-0.5 font-semibold text-primary hover:underline"

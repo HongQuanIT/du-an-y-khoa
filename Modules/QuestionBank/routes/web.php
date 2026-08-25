@@ -11,6 +11,7 @@ use Modules\QuestionBank\Http\Controllers\SessionHistoryController;
 use Modules\QuestionBank\Http\Controllers\SessionSummaryController;
 use Modules\QuestionBank\Http\Controllers\StudySessionController;
 use Modules\QuestionBank\Http\Controllers\TaxonomyLookupController;
+use Modules\QuestionBank\Http\Controllers\WeakTopicSessionController;
 
 /*
 | Web (Blade/Livewire) routes for the QuestionBank module.
@@ -27,6 +28,8 @@ Route::middleware(['auth', 'learner'])->group(function (): void {
     Route::get('/qbank/create', [CustomSessionController::class, 'create'])->name('qbank.create');
     Route::post('/qbank/create', [CustomSessionController::class, 'store'])->name('qbank.store');
     Route::post('/qbank/create/count', [CustomSessionController::class, 'count'])->name('qbank.count');
+    Route::post('/qbank/weak-topics/{medicalTaxonomyNode}/session', WeakTopicSessionController::class)
+        ->name('qbank.weak-topics.session');
 
     Route::prefix('qbank/taxonomy/lookups')->name('qbank.taxonomy.lookups.')->group(function (): void {
         Route::get('/blueprints', [TaxonomyLookupController::class, 'blueprints'])->name('blueprints');

@@ -6,6 +6,9 @@ namespace Modules\Classroom\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\Audit\AuditContext;
+use App\Support\Audit\Auditor;
+use App\Support\Audit\Enums\AuditAction;
 use App\Support\Http\Responses\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -135,8 +138,18 @@ final class LiveModerationController extends Controller
     ): JsonResponse {
         $this->authorize('update', $classroom);
 
+        $before = (bool) $liveSession->chat_muted;
         $liveSession->update(['chat_muted' => ! $liveSession->chat_muted]);
         event(new LiveSessionUpdated($liveSession, ['chat_muted' => $liveSession->chat_muted]));
+        Auditor::record(
+            AuditAction::ClassroomChatToggled,
+            $request->user(),
+            $liveSession,
+            ['chat_muted' => $before],
+            ['chat_muted' => (bool) $liveSession->chat_muted],
+            metadata: ['classroom_id' => $classroom->getKey(), 'live_session_id' => $liveSession->getKey()],
+            context: new AuditContext(sessionId: (string) $liveSession->getKey()),
+        );
 
         return ApiResponse::item(['chat_muted' => $liveSession->chat_muted]);
     }
@@ -155,6 +168,7 @@ final class LiveModerationController extends Controller
             ->update(['status' => MemberStatus::Banned->value]);
 
         $this->broadcastKick($classroom, $user);
+        $this->auditMemberRemoval($request, $classroom, $user, true);
 
         return ApiResponse::item(['banned' => true]);
     }
@@ -169,6 +183,7 @@ final class LiveModerationController extends Controller
         abort_unless($classroom->isActiveMember($user), 404);
 
         $this->broadcastKick($classroom, $user);
+        $this->auditMemberRemoval($request, $classroom, $user, false);
 
         return ApiResponse::item(['kicked' => true]);
     }
@@ -182,5 +197,21 @@ final class LiveModerationController extends Controller
                 'redirect_url' => route('classroom.index'),
             ]));
         }
+    }
+
+    private function auditMemberRemoval(Request $request, Classroom $classroom, User $target, bool $banned): void
+    {
+        $liveSession = $classroom->liveSession()->first();
+        Auditor::record(
+            AuditAction::ClassroomMemberKicked,
+            $request->user(),
+            $classroom,
+            metadata: [
+                'target_user_id' => $target->getKey(),
+                'banned' => $banned,
+                'live_session_id' => $liveSession?->getKey(),
+            ],
+            context: new AuditContext(sessionId: $liveSession !== null ? (string) $liveSession->getKey() : null),
+        );
     }
 }

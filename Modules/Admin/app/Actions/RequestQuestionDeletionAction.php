@@ -7,7 +7,9 @@ namespace Modules\Admin\Actions;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Modules\Admin\Enums\AuditAction;
 use Modules\Admin\Support\Auditor;
+use Modules\Admin\Support\AuditSnapshot;
 use Modules\Admin\Support\QuestionAccess;
 use Modules\QuestionBank\Enums\QuestionReviewAction;
 use Modules\QuestionBank\Enums\QuestionReviewStatus;
@@ -20,9 +22,10 @@ final class RequestQuestionDeletionAction
     {
         DB::transaction(function () use ($actor, $question): void {
             $question = Question::query()->lockForUpdate()->findOrFail($question->getKey());
+            $before = AuditSnapshot::question($question);
 
             if (QuestionAccess::isReviewer($actor)) {
-                Auditor::record('admin.question.delete', $actor, $question);
+                Auditor::record(AuditAction::QuestionDeleted, $actor, $question, $before, null);
                 $question->delete();
 
                 return;
@@ -34,7 +37,7 @@ final class RequestQuestionDeletionAction
                 ]);
             }
 
-            QuestionReviewRequest::query()->create([
+            $reviewRequest = QuestionReviewRequest::query()->create([
                 'question_id' => $question->getKey(),
                 'action' => QuestionReviewAction::Delete,
                 'status' => QuestionReviewStatus::Pending,
@@ -42,11 +45,15 @@ final class RequestQuestionDeletionAction
             ]);
 
             Auditor::record(
-                'admin.question.delete_requested',
+                AuditAction::QuestionDeleteRequested,
                 $actor,
                 $question,
-                null,
-                ['review_action' => QuestionReviewAction::Delete->value],
+                $before,
+                $before,
+                metadata: [
+                    'review_request_id' => $reviewRequest->getKey(),
+                    'review_action' => QuestionReviewAction::Delete->value,
+                ],
             );
         });
     }

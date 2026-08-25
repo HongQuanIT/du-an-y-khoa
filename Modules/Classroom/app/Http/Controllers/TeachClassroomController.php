@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace Modules\Classroom\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Support\Audit\AuditContext;
+use App\Support\Audit\Auditor;
+use App\Support\Audit\Enums\AuditAction;
+use App\Support\Audit\Enums\AuditPortal;
 use App\Support\Enums\Entitlement;
 use App\Support\Enums\Role;
 use App\Support\Http\Responses\ApiResponse;
@@ -131,6 +135,13 @@ final class TeachClassroomController extends Controller
         $this->authorize('manageLive', $classroom);
         abort_if($classroom->liveSession()->exists(), 409, 'Hãy kết thúc buổi live trước khi xoá lớp.');
 
+        Auditor::record(
+            AuditAction::ClassroomDeleted,
+            $request->user(),
+            $classroom,
+            before: ['title' => $classroom->title, 'status' => $classroom->status->value],
+            context: new AuditContext(portal: AuditPortal::Teach),
+        );
         $classroom->delete();
 
         return redirect()
@@ -143,6 +154,7 @@ final class TeachClassroomController extends Controller
         $this->authorizeTeachClassroom($request, $classroom);
         $this->authorize('manageLive', $classroom);
         $session = $action->handle($classroom, $request->sessionPayload());
+        $this->auditLive($request, AuditAction::ClassroomLiveScheduled, $classroom, $session);
 
         return redirect()->route('teach.classes.show', $classroom)->with('status', 'Đã lên lịch buổi live: '.$session->title);
     }
@@ -199,6 +211,7 @@ final class TeachClassroomController extends Controller
         // Instructors may test/host a pending classroom; learners remain blocked until approval.
         $this->authorize('manageLive', $classroom);
         $action->handle($classroom, $liveSession);
+        $this->auditLive($request, AuditAction::ClassroomLiveStarted, $classroom, $liveSession->fresh() ?? $liveSession);
 
         return redirect()->route('teach.classes.sessions.studio', [$classroom, $liveSession]);
     }
@@ -242,6 +255,7 @@ final class TeachClassroomController extends Controller
         $this->authorizeTeachClassroom($request, $classroom);
         $this->authorize('manageLive', $classroom);
         $action->handle($classroom, $liveSession);
+        $this->auditLive($request, AuditAction::ClassroomLiveEnded, $classroom, $liveSession->fresh() ?? $liveSession);
 
         return redirect()->route('teach.classes.show', $classroom)->with('status', 'Buổi live đã kết thúc.');
     }
@@ -255,6 +269,24 @@ final class TeachClassroomController extends Controller
         abort_unless(
             $classroom->isHostOrCohost($user) || $user->hasAnyRole([Role::Admin->value, Role::SuperAdmin->value]),
             403,
+        );
+    }
+
+    private function auditLive(Request $request, AuditAction $action, Classroom $classroom, LiveSession $session): void
+    {
+        Auditor::record(
+            $action,
+            $request->user(),
+            $session,
+            metadata: [
+                'classroom_id' => $classroom->getKey(),
+                'live_session_id' => $session->getKey(),
+                'status' => $session->status->value,
+            ],
+            context: new AuditContext(
+                portal: AuditPortal::Teach,
+                sessionId: (string) $session->getKey(),
+            ),
         );
     }
 }

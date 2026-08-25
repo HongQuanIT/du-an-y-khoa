@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\StudyPlan\Actions;
 
+use App\Models\User;
+use App\Support\Audit\Auditor;
+use App\Support\Audit\Enums\AuditAction;
 use App\Support\Concerns\AsAction;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -28,6 +31,7 @@ final class UpdateStudyPlanAction
 
     public function handle(StudyPlan $plan, StudyPlanData $data): StudyPlan
     {
+        $before = $this->snapshot($plan);
         DB::transaction(function () use ($plan, $data): void {
             $plan->fill([
                 'name' => $data->name,
@@ -43,6 +47,29 @@ final class UpdateStudyPlanAction
             $this->generateTasks->handle($plan->refresh(), Carbon::tomorrow());
         });
 
-        return $this->recalculateProgress->handle($plan->refresh());
+        $plan = $this->recalculateProgress->handle($plan->refresh());
+        $actor = $plan->user()->first();
+        Auditor::record(
+            AuditAction::LearningPlanUpdated,
+            $actor instanceof User ? $actor : null,
+            $plan,
+            $before,
+            $this->snapshot($plan),
+        );
+
+        return $plan;
+    }
+
+    /** @return array<string, mixed> */
+    private function snapshot(StudyPlan $plan): array
+    {
+        return [
+            'status' => $plan->status->value,
+            'strategy' => $plan->strategy->value,
+            'exam_target_date' => $plan->exam_target_date->toDateString(),
+            'daily_goal_questions' => $plan->daily_goal_questions,
+            'daily_goal_minutes' => $plan->daily_goal_minutes,
+            'study_days' => $plan->study_days,
+        ];
     }
 }

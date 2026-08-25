@@ -4,6 +4,7 @@ namespace Modules\Analytics\Providers;
 
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 use Modules\Analytics\Listeners\RecalculateTopicMastery;
+use Modules\Analytics\Listeners\UpdateDailyLearningStats;
 use Modules\QuestionBank\Data\QuestionSessionProgressed;
 
 class EventServiceProvider extends ServiceProvider
@@ -16,6 +17,7 @@ class EventServiceProvider extends ServiceProvider
     protected $listen = [
         QuestionSessionProgressed::class => [
             RecalculateTopicMastery::class,
+            UpdateDailyLearningStats::class,
         ],
     ];
 

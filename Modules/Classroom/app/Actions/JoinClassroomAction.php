@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\Classroom\Actions;
 
 use App\Models\User;
+use App\Support\Audit\Auditor;
+use App\Support\Audit\Enums\AuditAction;
 use App\Support\Concerns\AsAction;
 use Illuminate\Validation\ValidationException;
 use Modules\Classroom\Enums\ClassroomVisibility;
@@ -71,15 +73,35 @@ final class JoinClassroomAction
                 'joined_at' => $existing->joined_at ?? now(),
             ]);
 
-            return $existing->fresh() ?? $existing;
+            $member = $existing->fresh() ?? $existing;
+            $this->audit($user, $classroom, $member);
+
+            return $member;
         }
 
-        return ClassroomMember::create([
+        $member = ClassroomMember::create([
             'classroom_id' => $classroom->getKey(),
             'user_id' => $user->getKey(),
             'role_in_class' => MemberRole::Member,
             'status' => MemberStatus::Active,
             'joined_at' => now(),
         ]);
+
+        $this->audit($user, $classroom, $member);
+
+        return $member;
+    }
+
+    private function audit(User $user, Classroom $classroom, ClassroomMember $member): void
+    {
+        Auditor::record(
+            AuditAction::ClassroomJoined,
+            $user,
+            $classroom,
+            metadata: [
+                'classroom_member_id' => $member->getKey(),
+                'role_in_class' => $member->role_in_class->value,
+            ],
+        );
     }
 }

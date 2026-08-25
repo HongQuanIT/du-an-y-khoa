@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\StudyPlan\Actions;
 
+use App\Models\User;
+use App\Support\Audit\Auditor;
+use App\Support\Audit\Enums\AuditAction;
 use App\Support\Concerns\AsAction;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -86,6 +89,14 @@ final class ReplanStudyPlanAction
         $this->recalculateProgress->handle($plan->refresh());
 
         event(StudyPlanActivity::replanned($plan, $moved));
+
+        $actor = $plan->user()->first();
+        Auditor::record(
+            AuditAction::LearningPlanReplanned,
+            $actor instanceof User ? $actor : null,
+            $plan,
+            metadata: ['moved_tasks' => $moved],
+        );
 
         return $moved;
     }

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\Billing\Actions;
 
 use App\Models\User;
+use App\Support\Audit\Auditor;
+use App\Support\Audit\Enums\AuditAction;
 use App\Support\Concerns\AsAction;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -67,7 +69,16 @@ final class RenewInstitutionLicenseAction
                 );
             }
 
-            return $member->fresh(['institution']);
+            $member = $member->fresh(['institution']);
+            Auditor::record(
+                AuditAction::BillingLicenseRenewed,
+                $user,
+                $member,
+                after: ['status' => $member->status, 'verified' => $member->verified_at !== null],
+                metadata: ['institution_id' => $institution->getKey()],
+            );
+
+            return $member;
         });
     }
 }

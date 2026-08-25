@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\ActivityHeartbeatController;
 use App\Http\Controllers\HealthController;
 use Illuminate\Support\Facades\Route;
 
@@ -17,6 +18,10 @@ use Illuminate\Support\Facades\Route;
 */
 Route::get('/health', [HealthController::class, 'live'])->name('health.live');
 Route::get('/health/ready', [HealthController::class, 'ready'])->name('health.ready');
+
+Route::post('/activity/heartbeat', ActivityHeartbeatController::class)
+    ->middleware(['auth', 'throttle:activity-heartbeat'])
+    ->name('activity.heartbeat');
 
 /*
 |--------------------------------------------------------------------------

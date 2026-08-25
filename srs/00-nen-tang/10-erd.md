@@ -684,12 +684,19 @@ erDiagram
     AUDIT_LOG {
         bigint id PK
         bigint actor_id FK
+        string actor_role
+        string portal
+        string category
+        string result
+        string session_id
         string action
         string auditable_type "poly"
-        bigint auditable_id "poly"
+        string auditable_id "poly: bigint/UUID"
         json before
         json after
+        json metadata
         string ip
+        string user_agent
         string request_id
         timestamp created_at
     }

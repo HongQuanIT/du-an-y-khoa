@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\Auth\Actions;
 
 use App\Models\User;
+use App\Support\Audit\Auditor;
+use App\Support\Audit\Enums\AuditAction;
 use App\Support\Concerns\AsAction;
 use App\Support\Enums\Role;
 use Illuminate\Auth\Events\Registered;
@@ -39,6 +41,7 @@ final class RegisterUserAction
         });
 
         event(new Registered($user));
+        Auditor::record(AuditAction::AuthRegistered, $user, $user);
 
         return $user;
     }

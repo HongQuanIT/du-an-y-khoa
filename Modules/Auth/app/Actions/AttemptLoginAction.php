@@ -5,6 +5,12 @@ declare(strict_types=1);
 namespace Modules\Auth\Actions;
 
 use App\Models\User;
+use App\Support\Audit\AuditContext;
+use App\Support\Audit\Auditor;
+use App\Support\Audit\Enums\AuditAction;
+use App\Support\Audit\Enums\AuditCategory;
+use App\Support\Audit\Enums\AuditPortal;
+use App\Support\Audit\Enums\AuditResult;
 use App\Support\Auth\Instructor;
 use App\Support\Auth\Staff;
 use App\Support\Concerns\AsAction;
@@ -36,6 +42,7 @@ final class AttemptLoginAction
         $key = $data->throttleKey();
 
         if (RateLimiter::tooManyAttempts($key, self::MAX_ATTEMPTS)) {
+            $this->auditFailure($portal, AuditResult::Denied, 'rate_limited');
             throw ValidationException::withMessages([
                 'email' => 'Bạn đã thử quá nhiều lần. Vui lòng thử lại sau '
                     .RateLimiter::availableIn($key).' giây.',
@@ -47,6 +54,7 @@ final class AttemptLoginAction
 
         if (! Auth::attempt($credentials, $remember)) {
             RateLimiter::hit($key, self::DECAY_SECONDS);
+            $this->auditFailure($portal, AuditResult::Failed, 'invalid_credentials');
 
             throw ValidationException::withMessages([
                 'email' => 'Email hoặc mật khẩu không đúng.',
@@ -57,6 +65,7 @@ final class AttemptLoginAction
         $user = Auth::user();
 
         if ($user->isSuspendedOrBanned()) {
+            $this->auditFailure($portal, AuditResult::Denied, 'account_blocked', $user);
             Auth::logout();
             RateLimiter::hit($key, self::DECAY_SECONDS);
 
@@ -73,6 +82,17 @@ final class AttemptLoginAction
 
         RateLimiter::clear($key);
 
+        Auditor::record(
+            AuditAction::AuthLogin,
+            $user,
+            $user,
+            metadata: ['login_portal' => $portal->value],
+            context: new AuditContext(
+                portal: $this->auditPortal($portal),
+                category: AuditCategory::Auth,
+            ),
+        );
+
         return $user;
     }
 
@@ -82,7 +102,7 @@ final class AttemptLoginAction
     private function assertStaffPortal(User $user, string $key): void
     {
         if (! Staff::isStaff($user)) {
-            $this->rejectPortalMismatch($key);
+            $this->rejectPortalMismatch($key, $user, LoginPortal::Admin);
         }
     }
 
@@ -92,7 +112,7 @@ final class AttemptLoginAction
     private function assertInstructorPortal(User $user, string $key): void
     {
         if (! Instructor::is($user)) {
-            $this->rejectPortalMismatch($key);
+            $this->rejectPortalMismatch($key, $user, LoginPortal::Instructor);
         }
     }
 
@@ -102,6 +122,7 @@ final class AttemptLoginAction
     private function assertStudentPortal(User $user, string $key): void
     {
         if (Staff::isStaff($user)) {
+            $this->auditFailure(LoginPortal::Student, AuditResult::Denied, 'portal_mismatch', $user);
             Auth::logout();
             RateLimiter::hit($key, self::DECAY_SECONDS);
 
@@ -111,6 +132,7 @@ final class AttemptLoginAction
         }
 
         if (Instructor::is($user)) {
+            $this->auditFailure(LoginPortal::Student, AuditResult::Denied, 'portal_mismatch', $user);
             Auth::logout();
             RateLimiter::hit($key, self::DECAY_SECONDS);
 
@@ -123,13 +145,42 @@ final class AttemptLoginAction
     /**
      * @throws ValidationException
      */
-    private function rejectPortalMismatch(string $key): never
+    private function rejectPortalMismatch(string $key, User $user, LoginPortal $portal): never
     {
+        $this->auditFailure($portal, AuditResult::Denied, 'portal_mismatch', $user);
         Auth::logout();
         RateLimiter::hit($key, self::DECAY_SECONDS);
 
         throw ValidationException::withMessages([
             'email' => 'Email hoặc mật khẩu không đúng.',
         ]);
+    }
+
+    private function auditFailure(
+        LoginPortal $portal,
+        AuditResult $result,
+        string $reason,
+        ?User $user = null,
+    ): void {
+        Auditor::record(
+            AuditAction::AuthLoginFailed,
+            $user,
+            $user,
+            metadata: ['login_portal' => $portal->value, 'reason' => $reason],
+            context: new AuditContext(
+                portal: $this->auditPortal($portal),
+                category: AuditCategory::Auth,
+                result: $result,
+            ),
+        );
+    }
+
+    private function auditPortal(LoginPortal $portal): AuditPortal
+    {
+        return match ($portal) {
+            LoginPortal::Admin => AuditPortal::Admin,
+            LoginPortal::Instructor => AuditPortal::Teach,
+            LoginPortal::Student => AuditPortal::Student,
+        };
     }
 }

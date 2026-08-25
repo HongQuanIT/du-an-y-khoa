@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Modules\Classroom\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Support\Audit\AuditContext;
+use App\Support\Audit\Auditor;
+use App\Support\Audit\Enums\AuditAction;
 use App\Support\Http\Responses\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -34,6 +37,11 @@ final class LiveQuestionController extends Controller
 
         $updates = [];
         $targetIndex = (int) $liveSession->current_question_index;
+        $before = [
+            'current_question_index' => $targetIndex,
+            'revealed_option_ids' => $liveSession->revealedOptionIds(),
+            'show_answer' => (bool) $liveSession->show_answer,
+        ];
 
         if (array_key_exists('index', $validated)) {
             $targetIndex = min(
@@ -76,6 +84,22 @@ final class LiveQuestionController extends Controller
             $data['show_answer'],
             $data['question'],
         ));
+
+        if ($updates !== []) {
+            Auditor::record(
+                AuditAction::ClassroomQuestionChanged,
+                $request->user(),
+                $liveSession,
+                $before,
+                [
+                    'current_question_index' => (int) $liveSession->current_question_index,
+                    'revealed_option_ids' => $liveSession->revealedOptionIds(),
+                    'show_answer' => (bool) $liveSession->show_answer,
+                ],
+                metadata: ['classroom_id' => $classroom->getKey(), 'live_session_id' => $liveSession->getKey()],
+                context: new AuditContext(sessionId: (string) $liveSession->getKey()),
+            );
+        }
 
         return ApiResponse::item($data);
     }

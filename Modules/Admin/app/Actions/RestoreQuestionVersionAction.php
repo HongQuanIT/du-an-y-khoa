@@ -7,7 +7,9 @@ namespace Modules\Admin\Actions;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Modules\Admin\Enums\AuditAction;
 use Modules\Admin\Support\Auditor;
+use Modules\Admin\Support\AuditSnapshot;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\MedicalTaxonomyNode;
 use Modules\QuestionBank\Models\Question;
@@ -25,6 +27,7 @@ final class RestoreQuestionVersionAction
 
         return DB::transaction(function () use ($actor, $question, $version): Question {
             $question = Question::query()->lockForUpdate()->findOrFail($question->getKey());
+            $before = AuditSnapshot::question($question);
 
             if ((int) $version->version === (int) $question->version) {
                 throw ValidationException::withMessages([
@@ -88,14 +91,13 @@ final class RestoreQuestionVersionAction
             );
 
             Auditor::record(
-                'admin.question.version_restore',
+                AuditAction::QuestionVersionRestored,
                 $actor,
                 $question,
-                ['version' => $beforeVersion],
-                [
-                    'version' => (int) $question->version,
+                $before,
+                AuditSnapshot::question($question),
+                metadata: [
                     'restored_from_version' => (int) $version->version,
-                    'status' => QuestionStatus::Draft->value,
                 ],
             );
 

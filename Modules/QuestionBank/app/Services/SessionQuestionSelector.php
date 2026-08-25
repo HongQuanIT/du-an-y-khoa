@@ -31,6 +31,7 @@ final class SessionQuestionSelector
     public function __construct(
         private readonly QuestionFilterBuilder $filters,
     ) {}
+
     /**
      * @return array<int, string>
      */
@@ -40,7 +41,12 @@ final class SessionQuestionSelector
         $canUsePremium = $user->hasEntitlement(Entitlement::QbankFull->value);
 
         if ($data->source === SessionSource::WeakTopics) {
-            return $this->weakTopicQuestions($userId, $data->count, $canUsePremium);
+            return $this->weakTopicQuestions(
+                $userId,
+                $data->count,
+                $canUsePremium,
+                $data->medicalTaxonomyNodeIds,
+            );
         }
 
         if ($data->examId !== null) {
@@ -80,7 +86,11 @@ final class SessionQuestionSelector
         $canUsePremium = $user->hasEntitlement(Entitlement::QbankFull->value);
 
         if ($data->source === SessionSource::WeakTopics) {
-            $nodeIds = $this->filters->expandMedicalTaxonomyNodes($this->weakNodeIds($userId));
+            $nodeIds = $this->filters->expandMedicalTaxonomyNodes(
+                $data->medicalTaxonomyNodeIds !== []
+                    ? $data->medicalTaxonomyNodeIds
+                    : $this->weakNodeIds($userId),
+            );
 
             return $this->questionQuery(
                 $nodeIds,
@@ -129,9 +139,15 @@ final class SessionQuestionSelector
     /**
      * @return array<int, string>
      */
-    private function weakTopicQuestions(int $userId, int $limit, bool $canUsePremium): array
-    {
-        $expandedNodeIds = $this->filters->expandMedicalTaxonomyNodes($this->weakNodeIds($userId));
+    private function weakTopicQuestions(
+        int $userId,
+        int $limit,
+        bool $canUsePremium,
+        array $selectedNodeIds = [],
+    ): array {
+        $expandedNodeIds = $this->filters->expandMedicalTaxonomyNodes(
+            $selectedNodeIds !== [] ? $selectedNodeIds : $this->weakNodeIds($userId),
+        );
 
         $accessibleQuestions = Question::query()
             ->select('id')
@@ -145,27 +161,58 @@ final class SessionQuestionSelector
                 ),
             );
 
-        $incorrect = UserQuestionStatusModel::query()
+        $incorrect = QuestionAttempt::query()
+            ->select('question_id')
+            ->selectRaw('COUNT(*) as incorrect_count')
+            ->selectRaw('MAX(COALESCE(answered_at, created_at)) as last_incorrect_at')
             ->where('user_id', $userId)
-            ->where('status', UserQuestionStatus::Incorrect)
-            ->whereIn('question_id', $accessibleQuestions)
-            ->inRandomOrder()
+            ->where('is_correct', false)
+            ->whereIn('question_id', (clone $accessibleQuestions))
+            ->whereIn(
+                'question_id',
+                UserQuestionStatusModel::query()
+                    ->select('question_id')
+                    ->where('user_id', $userId)
+                    ->where('status', UserQuestionStatus::Incorrect),
+            )
+            ->groupBy('question_id')
+            ->orderByDesc('incorrect_count')
+            ->orderByDesc('last_incorrect_at')
             ->limit($limit)
             ->pluck('question_id');
 
         if ($incorrect->count() >= $limit) {
-            return $incorrect->shuffle()->values()->all();
+            return $incorrect->values()->all();
         }
 
+        // A dashboard topic drill is intentionally restricted to questions
+        // this learner answered incorrectly in the selected topic.
+        if ($selectedNodeIds !== []) {
+            return $incorrect->values()->all();
+        }
+
+        $unseen = (clone $accessibleQuestions)
+            ->whereNotIn('id', $incorrect->all())
+            ->whereNotIn(
+                'id',
+                QuestionAttempt::query()
+                    ->select('question_id')
+                    ->where('user_id', $userId),
+            )
+            ->inRandomOrder()
+            ->limit($limit - $incorrect->count())
+            ->pluck('id');
+        $picked = $incorrect->concat($unseen)->unique()->values();
+
         return $this->topUp(
-            $incorrect,
+            $picked,
             $limit,
             $expandedNodeIds,
             [],
             null,
             [],
             $canUsePremium,
-        )->shuffle()->values()->all();
+        )->values()->all();
     }
 
     /**
@@ -355,7 +402,6 @@ final class SessionQuestionSelector
                 ->whereIn('scope_key', array_values(array_unique($keys))),
         );
     }
-
 
     /**
      * @param  array<int, string>  $statuses

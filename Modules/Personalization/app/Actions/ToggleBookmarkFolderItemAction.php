@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace Modules\Personalization\Actions;
 
 use App\Models\User;
+use App\Support\Audit\Auditor;
+use App\Support\Audit\Enums\AuditAction;
 use App\Support\Concerns\AsAction;
 use Modules\Personalization\Models\Bookmark;
 use Modules\Personalization\Models\BookmarkFolder;
 use Modules\Personalization\Models\BookmarkFolderItem;
-use Modules\QuestionBank\Models\Question;
 
 final class ToggleBookmarkFolderItemAction
 {
@@ -64,6 +65,17 @@ final class ToggleBookmarkFolderItemAction
         } else {
             Bookmark::query()->where($target)->delete();
         }
+
+        Auditor::record(
+            AuditAction::LearningBookmarkChanged,
+            $user,
+            $folder,
+            metadata: [
+                'question_id' => $questionId,
+                'in_folder' => $shouldBeInFolder,
+                'bookmarked' => $isInAnyFolder,
+            ],
+        );
 
         return $this->getFolders->handle($user, $questionId);
     }

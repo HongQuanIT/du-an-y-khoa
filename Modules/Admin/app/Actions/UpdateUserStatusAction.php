@@ -7,7 +7,9 @@ namespace Modules\Admin\Actions;
 use App\Models\User;
 use App\Support\Concerns\AsAction;
 use App\Support\Enums\UserStatus;
+use Modules\Admin\Enums\AuditAction;
 use Modules\Admin\Support\Auditor;
+use Modules\Admin\Support\AuditSnapshot;
 use Modules\Admin\Support\StaffGuard;
 
 final class UpdateUserStatusAction
@@ -18,19 +20,17 @@ final class UpdateUserStatusAction
     {
         StaffGuard::assertCanManage($actor, $target);
 
-        $before = ['status' => $target->status?->value ?? UserStatus::Active->value];
+        $before = AuditSnapshot::user($target);
 
         $target->forceFill(['status' => $status])->save();
 
         Auditor::record(
-            'admin.user.status_change',
+            AuditAction::UserStatusChanged,
             $actor,
             $target,
             $before,
-            [
-                'status' => $status->value,
-                'reason' => $reason,
-            ],
+            AuditSnapshot::user($target),
+            metadata: ['reason' => $reason],
         );
 
         return $target->refresh();
