@@ -1,7 +1,6 @@
 @php
     // Continue learning, today's tasks and weak topics come from the controller.
-    // The streak, chart, recommendations and activity feed are still placeholders
-    // from html/pc-dashboard.html until Analytics ships its rollups.
+    // Recommendations and activity feed are still placeholders from the HTML mockup.
     $hour = now()->hour;
     $greeting = match (true) {
         $hour < 11 => 'Chào buổi sáng',
@@ -13,13 +12,11 @@
     $firstName = Str::afterLast(auth()->user()->name, ' ');
 
     $stats = [
-        ['icon' => 'fact_check', 'iconClass' => 'text-primary bg-primary-container/20', 'delta' => '+45', 'deltaClass' => 'text-primary', 'value' => '1.240', 'label' => 'Câu đã làm'],
-        ['icon' => 'analytics', 'iconClass' => 'text-secondary bg-secondary-fixed/20', 'delta' => '+3%', 'deltaClass' => 'text-secondary', 'value' => '72%', 'label' => 'Tỷ lệ đúng'],
-        ['icon' => 'schedule', 'iconClass' => 'text-tertiary bg-tertiary-fixed/20', 'delta' => null, 'deltaClass' => '', 'value' => '6h 20m', 'label' => 'Học tuần này'],
-        ['icon' => 'local_fire_department', 'iconClass' => 'text-orange-500 bg-orange-100', 'delta' => null, 'deltaClass' => '', 'value' => '15', 'label' => 'Ngày Streak'],
+        ['icon' => 'fact_check', 'iconClass' => 'text-primary bg-primary-container/20', 'deltaClass' => 'text-primary', 'label' => 'Câu đã làm', ...$headlineStats['questions']],
+        ['icon' => 'analytics', 'iconClass' => 'text-secondary bg-secondary-fixed/20', 'deltaClass' => str_starts_with($headlineStats['accuracy']['delta'] ?? '', '-') ? 'text-error' : 'text-secondary', 'label' => 'Tỷ lệ đúng', ...$headlineStats['accuracy']],
+        ['icon' => 'schedule', 'iconClass' => 'text-tertiary bg-tertiary-fixed/20', 'deltaClass' => '', 'label' => 'Học tuần này', ...$headlineStats['weekly_time']],
+        ['icon' => 'local_fire_department', 'iconClass' => 'text-orange-500 bg-orange-100', 'deltaClass' => '', 'label' => 'Ngày Streak', ...$headlineStats['streak']],
     ];
-
-    $chartHeights = [40, 55, 35, 60, 80, 45, 90, 50, 30, 65, 40, 85, 55, 100];
 
     $recommendations = [
         ['topic' => 'Nội khoa', 'title' => 'Phân tích ECG nâng cao trong suy tim', 'duration' => '45m', 'rating' => '4.9', 'icon' => 'cardiology', 'pro' => true],
@@ -28,11 +25,6 @@
         ['topic' => 'Di truyền học', 'title' => 'Ứng dụng CRISPR trong điều trị ung thư', 'duration' => '55m', 'rating' => '5.0', 'icon' => 'genetics', 'pro' => true],
     ];
 
-    $activities = [
-        ['icon' => 'quiz', 'circle' => 'bg-primary-container', 'iconClass' => 'text-primary', 'title' => 'Hoàn thành bài kiểm tra Tim mạch', 'detail' => 'Bạn đã đạt 85% tỉ lệ đúng trong 20 phút.', 'time' => '15 phút trước'],
-        ['icon' => 'style', 'circle' => 'bg-secondary-fixed', 'iconClass' => 'text-secondary', 'title' => 'Đã ôn 10 thẻ Flashcard Thần kinh', 'detail' => 'Ghi nhớ thành công 8 thẻ mới.', 'time' => '2 giờ trước'],
-        ['icon' => 'stars', 'circle' => 'bg-tertiary-fixed', 'iconClass' => 'text-tertiary', 'title' => 'Đã đạt danh hiệu "Chiến binh bền bỉ"', 'detail' => 'Vượt qua mốc 15 ngày học tập liên tiếp.', 'time' => 'Hôm qua'],
-    ];
 @endphp
 
 <x-layouts.app title="Trang chủ học tập">
@@ -57,7 +49,7 @@
                 class="flex items-center gap-2 rounded-full border border-tertiary-fixed-dim bg-tertiary-fixed px-4 py-2 shadow-sm">
                 <span class="material-symbols-outlined text-tertiary"
                     style="font-variation-settings: 'FILL' 1;">local_fire_department</span>
-                <span class="font-label-md text-label-md text-on-tertiary-fixed-variant">15 ngày học liên tục</span>
+                <span class="font-label-md text-label-md text-on-tertiary-fixed-variant">{{ $streakDays }} ngày học liên tục</span>
             </div>
         </div>
 
@@ -124,50 +116,139 @@
             </div>
 
             <!-- Chart Section -->
-            <div class="col-span-12 rounded-xl border border-outline-variant bg-surface p-6">
-                <div class="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+            <section class="col-span-12 rounded-xl border border-outline-variant bg-surface p-4 sm:p-6"
+                aria-labelledby="learning-progress-heading">
+                <div class="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
                     <div>
-                        <h3 class="font-headline-sm text-headline-sm text-on-surface">Tiến trình 30 ngày</h3>
+                        <h3 id="learning-progress-heading" class="font-headline-sm text-headline-sm text-on-surface">
+                            Tiến trình học tập
+                        </h3>
                         <p class="text-body-sm font-body-sm text-on-surface-variant">
-                            Theo dõi số lượng câu hỏi hoàn thành hàng ngày
+                            Tỷ lệ trả lời đúng trong
+                            {{ $progressRange === '7d' ? '7 ngày gần nhất' : ($progressRange === 'all' ? 'toàn bộ thời gian' : '30 ngày gần nhất') }}.
                         </p>
                     </div>
-                    <div class="flex rounded-lg bg-surface-container-low p-1">
-                        <button type="button"
-                            class="rounded-md px-4 py-1.5 text-label-sm font-semibold transition-colors hover:bg-surface-container">7
-                            ngày</button>
-                        <button type="button"
-                            class="rounded-md bg-surface px-4 py-1.5 text-label-sm font-semibold text-primary shadow-sm">30
-                            ngày</button>
-                        <button type="button"
-                            class="rounded-md px-4 py-1.5 text-label-sm font-semibold transition-colors hover:bg-surface-container">Tất
-                            cả</button>
-                    </div>
+                    <nav class="grid w-full grid-cols-3 rounded-lg bg-surface-container-low p-1 sm:w-auto"
+                        aria-label="Chọn khoảng thời gian">
+                        @foreach (['7d' => '7 ngày', '30d' => '30 ngày', 'all' => 'Tất cả'] as $range => $rangeLabel)
+                            <a href="{{ route('dashboard', ['range' => $range]) }}"
+                                @if ($progressRange === $range) aria-current="page" @endif
+                                @class([
+                                    'rounded-md px-4 py-2 text-center text-label-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                                    'bg-surface text-primary shadow-sm' => $progressRange === $range,
+                                    'text-on-surface-variant hover:bg-surface-container' => $progressRange !== $range,
+                                ])>
+                                {{ $rangeLabel }}
+                            </a>
+                        @endforeach
+                    </nav>
                 </div>
 
-                <div class="relative flex h-48 w-full items-end gap-2 border-b border-outline-variant px-2">
-                    <div class="pointer-events-none absolute inset-0 flex flex-col justify-between py-2 opacity-20">
-                        <div class="border-t border-outline"></div>
-                        <div class="border-t border-outline"></div>
-                        <div class="border-t border-outline"></div>
-                        <div class="border-t border-outline"></div>
+                @if ($progressSummary['questions'] === 0)
+                    <div class="flex min-h-64 flex-col items-center justify-center rounded-xl border border-dashed border-outline-variant bg-surface-container-lowest px-6 text-center"
+                        role="status">
+                        <span class="material-symbols-outlined mb-2 text-4xl text-on-surface-variant">bar_chart</span>
+                        <p class="font-semibold text-on-surface">Chưa có dữ liệu học tập</p>
+                        <p class="mt-1 text-body-sm text-on-surface-variant">Hoàn thành một phiên luyện để xem tỷ lệ đúng tại đây.</p>
+                        <a href="{{ route('qbank.create') }}"
+                            class="mt-4 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+                            Bắt đầu luyện tập
+                        </a>
                     </div>
-                    @foreach ($chartHeights as $height)
-                        @php $isToday = $loop->last; @endphp
-                        <div @class([
-                            'flex-1 rounded-t transition-all hover:bg-primary-container',
-                            'border-x-2 border-primary bg-primary-container/60' => $isToday,
-                            'bg-primary-container/20' => !$isToday,
-                        ]) style="height: {{ $height }}%"></div>
-                    @endforeach
-                </div>
-                <div class="mt-2 flex justify-between text-label-sm font-medium text-on-surface-variant">
-                    <span>01 May</span>
-                    <span>10 May</span>
-                    <span>20 May</span>
-                    <span>Hôm nay</span>
-                </div>
-            </div>
+                @else
+                    @php
+                        $barCount = count($chartBars);
+                        $chartMinWidth = max(280, $barCount * 52);
+                    @endphp
+
+                    <dl class="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3" aria-label="Tổng quan tiến trình học tập">
+                        <div class="rounded-lg bg-surface-container-low p-4">
+                            <dt class="text-label-sm text-on-surface-variant">Tỷ lệ đúng trung bình</dt>
+                            <dd class="mt-1 text-xl font-bold text-on-surface">{{ $progressSummary['rate'] }}%</dd>
+                        </div>
+                        <div class="rounded-lg bg-surface-container-low p-4">
+                            <dt class="text-label-sm text-on-surface-variant">Tổng số câu đã làm</dt>
+                            <dd class="mt-1 text-xl font-bold text-on-surface">{{ number_format($progressSummary['questions']) }}</dd>
+                        </div>
+                        <div class="rounded-lg bg-surface-container-low p-4">
+                            <dt class="text-label-sm text-on-surface-variant">Số ngày có hoạt động</dt>
+                            <dd class="mt-1 text-xl font-bold text-on-surface">{{ $progressSummary['active_days'] }}</dd>
+                        </div>
+                    </dl>
+
+                    <figure class="rounded-xl border border-outline-variant bg-surface-container-lowest p-4"
+                        aria-describedby="learning-progress-caption">
+                        <div class="overflow-x-auto overscroll-x-contain" data-testid="dashboard-progress-chart-scroll">
+                            <div class="grid h-72 w-full gap-3 px-2 pt-4"
+                                style="min-width: {{ $chartMinWidth }}px; grid-template-columns: repeat({{ $barCount }}, minmax(36px, 1fr));">
+                                @foreach ($chartBars as $bar)
+                                    @php $isToday = $bar['date'] === now()->toDateString(); @endphp
+                                    <div class="group flex min-w-0 flex-col items-center" tabindex="0"
+                                        title="{{ $bar['display_date'] }}: {{ $bar['correct'] }}/{{ $bar['questions'] }} câu đúng ({{ $bar['rate'] }}%)"
+                                        aria-label="{{ $bar['display_date'] }}: đúng {{ $bar['correct'] }} trên {{ $bar['questions'] }} câu, tỷ lệ {{ $bar['rate'] }} phần trăm">
+                                        <span @class([
+                                            'flex h-7 items-start text-xs font-bold',
+                                            'text-primary' => $isToday,
+                                            'text-on-surface-variant' => ! $isToday,
+                                        ])>{{ $bar['rate'] }}%</span>
+                                        <div class="flex min-h-0 w-full flex-1 items-end justify-center border-b border-outline-variant">
+                                            @if ($bar['questions'] > 0)
+                                                <div @class([
+                                                    'w-full max-w-[64px] rounded-t-lg transition-all duration-300 group-hover:brightness-110',
+                                                    'bg-primary' => $isToday,
+                                                    'bg-primary-container' => ! $isToday,
+                                                ]) style="height: {{ max(4, $bar['rate']) }}%"></div>
+                                            @endif
+                                        </div>
+                                        <time datetime="{{ $bar['date'] }}" @class([
+                                            'flex h-12 w-full items-start justify-center overflow-hidden px-1 pt-2 text-center text-[10px] leading-tight font-medium break-words md:text-xs',
+                                            'font-bold text-primary' => $isToday,
+                                            'text-on-surface-variant' => ! $isToday,
+                                        ]) title="{{ $bar['display_date'] }}">{{ $bar['label'] }}</time>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+
+                        <figcaption id="learning-progress-caption" class="mt-2 text-xs text-on-surface-variant">
+                            Tỷ lệ đúng theo ngày (%). Di chuột hoặc dùng phím Tab để xem số câu đúng và tổng số câu.
+                        </figcaption>
+                    </figure>
+
+                    <details class="mt-4 rounded-lg border border-outline-variant">
+                        <summary class="cursor-pointer px-4 py-3 text-sm font-semibold text-on-surface focus-visible:outline-2 focus-visible:outline-primary">
+                            Xem dữ liệu chi tiết
+                        </summary>
+                        <div class="overflow-x-auto border-t border-outline-variant">
+                            <table class="w-full border-collapse text-left text-sm">
+                                <caption class="sr-only">Dữ liệu chi tiết tiến trình học tập theo ngày</caption>
+                                <thead class="bg-surface-container-low text-on-surface-variant">
+                                    <tr>
+                                        <th scope="col" class="px-4 py-3 font-semibold">Ngày</th>
+                                        <th scope="col" class="px-4 py-3 text-right font-semibold">Đã làm</th>
+                                        <th scope="col" class="px-4 py-3 text-right font-semibold">Đúng</th>
+                                        <th scope="col" class="px-4 py-3 text-right font-semibold">Tỷ lệ</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-outline-variant">
+                                    @foreach ($chartBars as $bar)
+                                        @if ($bar['questions'] > 0)
+                                            <tr>
+                                                <th scope="row" class="px-4 py-3 font-medium text-on-surface">
+                                                    <time datetime="{{ $bar['date'] }}">{{ $bar['display_date'] }}</time>
+                                                </th>
+                                                <td class="px-4 py-3 text-right">{{ $bar['questions'] }}</td>
+                                                <td class="px-4 py-3 text-right">{{ $bar['correct'] }}</td>
+                                                <td class="px-4 py-3 text-right font-semibold">{{ $bar['rate'] }}%</td>
+                                            </tr>
+                                        @endif
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </details>
+                @endif
+            </section>
 
             <!-- Weak Subjects -->
             <div class="col-span-12 rounded-xl border border-outline-variant bg-surface p-6 md:col-span-6">
@@ -184,7 +265,7 @@
                                 default => ['text-orange-500', 'bg-orange-500'],
                             };
                         @endphp
-                        <div class="space-y-2">
+                        <div class="space-y-3 rounded-lg border border-outline-variant p-3">
                             <div class="flex justify-between text-body-sm font-body-sm">
                                 <span class="font-medium">{{ $topic['name'] }}</span>
                                 <span class="font-bold {{ $tone[0] }}">{{ $topic['accuracy'] }}%</span>
@@ -193,6 +274,19 @@
                                 <div class="h-full rounded-full {{ $tone[1] }}" style="width: {{ $topic['accuracy'] }}%">
                                 </div>
                             </div>
+                            <div class="flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
+                                <p class="text-label-sm text-on-surface-variant">
+                                    {{ $topic['incorrect'] }} lượt trả lời sai được ghi nhận.
+                                </p>
+                                <form method="POST" action="{{ route('qbank.weak-topics.session', $topic['id']) }}">
+                                    @csrf
+                                    <input type="hidden" name="count" value="10">
+                                    <button type="submit"
+                                        class="rounded-lg border border-primary px-3 py-1.5 text-label-sm font-semibold text-primary transition-colors hover:bg-primary/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+                                        Luyện tập ngay
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                     @empty
                         <p class="text-body-sm text-on-surface-variant">
@@ -200,10 +294,11 @@
                         </p>
                     @endforelse
                 </div>
-                <a href="{{ route('qbank.create') }}"
-                    class="mt-8 block w-full rounded-lg bg-surface-container py-2.5 text-center font-semibold text-on-surface transition-all hover:bg-outline-variant/20">
-                    Luyện tập ngay
-                </a>
+                @error('weak_topic')
+                    <p class="mt-4 rounded-lg bg-error-container px-3 py-2 text-body-sm text-on-error-container" role="alert">
+                        {{ $message }}
+                    </p>
+                @enderror
             </div>
 
             <!-- Today's Tasks -->
@@ -298,7 +393,7 @@
                 <h3 class="mb-6 font-headline-sm text-headline-sm text-on-surface">Hoạt động gần đây</h3>
                 <div
                     class="relative space-y-6 before:absolute before:top-2 before:bottom-0 before:left-[11px] before:w-[2px] before:bg-surface-container-high">
-                    @foreach ($activities as $activity)
+                    @forelse ($recentActivities as $activity)
                         <div class="relative flex items-start justify-between pl-8">
                             <div
                                 class="absolute top-1.5 left-0 z-10 flex size-6 items-center justify-center rounded-full border-2 border-surface {{ $activity['circle'] }}">
@@ -306,14 +401,21 @@
                                     style="font-variation-settings: 'FILL' 1;">{{ $activity['icon'] }}</span>
                             </div>
                             <div class="flex-1">
-                                <p class="text-body-sm font-semibold text-on-surface">{{ $activity['title'] }}</p>
+                                <a href="{{ $activity['url'] }}"
+                                    class="text-body-sm font-semibold text-on-surface hover:text-primary hover:underline">
+                                    {{ $activity['title'] }}
+                                </a>
                                 <p class="text-label-sm font-label-sm text-on-surface-variant">
                                     {{ $activity['detail'] }}</p>
                             </div>
-                            <span
-                                class="ml-4 text-label-sm whitespace-nowrap text-on-surface-variant">{{ $activity['time'] }}</span>
+                            <time datetime="{{ $activity['occurred_at'] }}"
+                                class="ml-4 text-label-sm whitespace-nowrap text-on-surface-variant">{{ $activity['time'] }}</time>
                         </div>
-                    @endforeach
+                    @empty
+                        <div class="pl-8 text-body-sm text-on-surface-variant">
+                            Chưa có hoạt động học tập. Hoàn thành một phiên luyện để bắt đầu ghi nhận tiến trình.
+                        </div>
+                    @endforelse
                 </div>
             </div>
 

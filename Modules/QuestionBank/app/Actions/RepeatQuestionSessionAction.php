@@ -23,9 +23,21 @@ final class RepeatQuestionSessionAction
     public function __construct(private readonly QuestionSessionSnapshots $snapshots) {}
 
     /** @param array<int, string> $statuses */
-    public function handle(User $user, QuestionSession $original, array $statuses, int $count): QuestionSession
-    {
+    public function handle(
+        User $user,
+        QuestionSession $original,
+        array $statuses,
+        int $count,
+        ?array $allowedQuestionIds = null,
+    ): QuestionSession {
         $selectedIds = $original->questionIdsForRepeat($statuses);
+        if ($allowedQuestionIds !== null) {
+            $allowedLookup = array_fill_keys(array_map('strval', $allowedQuestionIds), true);
+            $selectedIds = array_values(array_filter(
+                $selectedIds,
+                static fn (string $id): bool => isset($allowedLookup[$id]),
+            ));
+        }
         $existingIds = Question::query()
             ->whereIn('id', $selectedIds)
             ->pluck('id')

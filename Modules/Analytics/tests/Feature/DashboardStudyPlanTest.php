@@ -12,14 +12,16 @@ use Modules\Analytics\Models\TopicMastery;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Enums\SessionMode;
 use Modules\QuestionBank\Enums\SessionStatus;
+use Modules\QuestionBank\Enums\UserQuestionStatus;
+use Modules\QuestionBank\Models\MedicalTaxonomyNode;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionSession;
+use Modules\QuestionBank\Models\QuestionStatus as UserQuestionStatusModel;
 use Modules\StudyPlan\Models\StudyPlan;
 use Modules\StudyPlan\Models\StudyPlanTask;
-use Tests\TestCase;
 use Tests\Support\CreatesMedicalTaxonomy;
-
+use Tests\TestCase;
 
 /**
  * Phase 3: the dashboard reads real plan tasks, weak topics and resume state.
@@ -31,7 +33,7 @@ final class DashboardStudyPlanTest extends TestCase
 
     private User $user;
 
-    private \Modules\QuestionBank\Models\MedicalTaxonomyNode $topic;
+    private MedicalTaxonomyNode $topic;
 
     protected function setUp(): void
     {
@@ -92,18 +94,31 @@ final class DashboardStudyPlanTest extends TestCase
 
     public function test_weak_topics_come_from_the_mastery_rollup(): void
     {
-        $this->recordAttempts(correct: 1, incorrect: 4);
+        $this->recordAttempts(correct: 1, incorrect: 1);
 
         app(RecalculateTopicMasteryAction::class)->handle($this->user->id);
 
         $mastery = TopicMastery::firstOrFail();
-        $this->assertSame(20.0, $mastery->correct_rate);
+        $this->assertSame(50.0, $mastery->correct_rate);
 
         $this->actingAs($this->user)
             ->get(route('dashboard'))
             ->assertOk()
             ->assertSee('Tim mạch')
-            ->assertSee('20%');
+            ->assertSee('50%');
+
+        UserQuestionStatusModel::query()
+            ->where('user_id', $this->user->id)
+            ->where('status', UserQuestionStatus::Incorrect)
+            ->update([
+                'status' => UserQuestionStatus::Correct->value,
+                'last_correct_at' => Carbon::now(),
+            ]);
+
+        $this->actingAs($this->user)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertDontSee('Tim mạch');
     }
 
     private function recordAttempts(int $correct, int $incorrect): void
@@ -134,6 +149,14 @@ final class DashboardStudyPlanTest extends TestCase
                 'is_correct' => $i < $correct,
                 'time_spent_seconds' => 30,
                 'answered_at' => Carbon::now(),
+            ]);
+            UserQuestionStatusModel::query()->create([
+                'user_id' => $this->user->id,
+                'question_id' => $question->getKey(),
+                'status' => $i < $correct ? UserQuestionStatus::Correct : UserQuestionStatus::Incorrect,
+                'attempts_count' => 1,
+                'last_attempt_at' => Carbon::now(),
+                'last_correct_at' => $i < $correct ? Carbon::now() : null,
             ]);
         }
     }

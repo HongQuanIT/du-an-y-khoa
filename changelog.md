@@ -30,6 +30,11 @@
 ### App sidebar — Free vs Premium
 - Free: nút **Nâng cấp Premium** (thay “Nâng cấp tài khoản”).
 - Premium: thẻ trạng thái Premium (icon + Active + hạn/SKU), không hiện CTA nâng cấp.
+### Hoàn thiện dashboard học viên
+- Thay số liệu, biểu đồ tiến trình, streak và hoạt động gần đây tĩnh bằng dữ liệu phiên học thực tế.
+- Xác định chủ đề cần cải thiện từ câu trả lời sai và mở thẳng phiên luyện tập các câu tương ứng.
+- Hỗ trợ làm lại câu sai từ chế độ học và bài thi, đồng thời loại câu đã luyện xong khỏi danh sách cải thiện.
+
 ### Tối ưu lưu trữ Audit và theo dõi hoạt động
 - Bổ sung thiết bị, hệ điều hành và trình duyệt; bộ lọc người thực hiện hỗ trợ tên hoặc ID.
 - Phân tầng Audit đồng bộ/queue, chống trùng bằng event ID và chỉ ghi ngay các thao tác nhạy cảm.
