@@ -26,7 +26,7 @@ enum Role: string
             self::Student => 'Học viên',
             self::Instructor => 'Giảng viên',
             self::ContentEditor => 'Content Creator',
-            self::Admin => 'Admin',
+            self::Admin => 'Quản trị viên',
             self::SuperAdmin => 'Super Admin',
         };
     }
