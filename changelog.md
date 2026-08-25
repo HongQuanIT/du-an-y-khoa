@@ -1,5 +1,36 @@
 # Changelog
 
+## 2026-08-25
+
+### Admin — menu Horizon
+- Thêm mục **Horizon** trên sidebar quản trị (`/horizon`), chỉ hiện với quyền `system.manage` (Admin / Super Admin).
+- Siết gate `viewHorizon`: học viên, giảng viên, content editor và guest không truy cập được (kể cả môi trường local).
+
+### Billing — Guest chọn gói từ `/pricing` (biến thể A)
+- CTA Premium mang `plan_price_id` → `/register` hoặc `/login`, giữ intent trong session + `url.intended`.
+- Sau auth → `/subscription/upgrade?plan_price_id=` (preselect SKU, user xác nhận rồi thanh toán).
+- Paywall overlay và link đăng ký/đăng nhập chéo cũng giữ intent; 2FA learner tôn trọng intended URL.
+
+### Billing — `redirect_url` đủ dài cho VNPay
+- Đổi `billing_checkout_sessions.redirect_url` từ `VARCHAR(255)` sang `TEXT` (SecureHash VNPay vượt 255 ký tự).
+
+### Auth — `/profile` học viên không còn badge Quản trị viên
+- `account-layout` dùng `layouts.app` cho learner, `layouts.admin` chỉ cho staff.
+- Layout admin hiển thị nhãn role thật (không hardcode “Quản trị viên”).
+
+### Admin — danh sách thanh toán gồm chờ / fail
+- `/admin/billing/payments` liệt kê mọi **checkout session** (pending, completed, failed, expired).
+- Tạo `Payment` status `pending` khi mở checkout; webhook cập nhật thành succeeded/failed.
+- Tự chuyển phiên quá `expires_at` sang **Hết hạn** (khi mở admin + job 5 phút); đồng bộ payment/invoice.
+- UI badge trạng thái dạng pill SaaS (dot + màu ổn định, không wrap vỡ layout).
+
+### Landing — header khi đã đăng nhập
+- Ẩn Đăng nhập / Đăng ký; hiện tên user, badge gói (Free / Premium nổi bật), CTA **Tạo phiên học** → QBank.
+
+### App sidebar — Free vs Premium
+- Free: nút **Nâng cấp Premium** (thay “Nâng cấp tài khoản”).
+- Premium: thẻ trạng thái Premium (icon + Active + hạn/SKU), không hiện CTA nâng cấp.
+
 ## 2026-08-24
 
 ### Admin — Hỗ trợ chat trên header

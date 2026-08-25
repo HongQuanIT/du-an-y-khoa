@@ -75,9 +75,8 @@ final class ProcessPaymentWebhookAction
                 if ($session->status === 'pending') {
                     $session->forceFill(['status' => 'failed'])->save();
 
-                    Payment::query()->create([
+                    $paymentAttrs = [
                         'invoice_id' => $session->invoice?->getKey(),
-                        'checkout_session_id' => $session->getKey(),
                         'amount_cents' => $session->totalCents(),
                         'currency' => $session->currency,
                         'method' => $provider,
@@ -85,7 +84,22 @@ final class ProcessPaymentWebhookAction
                         'provider' => $provider,
                         'provider_payment_id' => $payload->providerPaymentId,
                         'metadata' => $payload->raw,
-                    ]);
+                    ];
+
+                    $pendingPayment = Payment::query()
+                        ->where('checkout_session_id', $session->getKey())
+                        ->where('status', 'pending')
+                        ->orderByDesc('id')
+                        ->lockForUpdate()
+                        ->first();
+
+                    if ($pendingPayment !== null) {
+                        $pendingPayment->forceFill($paymentAttrs)->save();
+                    } else {
+                        Payment::query()->create(array_merge($paymentAttrs, [
+                            'checkout_session_id' => $session->getKey(),
+                        ]));
+                    }
 
                     $session->invoice?->forceFill(['status' => 'void'])->save();
                 }

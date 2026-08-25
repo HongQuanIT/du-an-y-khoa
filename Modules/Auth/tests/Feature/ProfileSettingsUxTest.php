@@ -110,4 +110,29 @@ final class ProfileSettingsUxTest extends TestCase
         $this->assertStringContainsString('Giấy phép tổ chức', $nav);
         $this->assertStringContainsString('Ghi chú cá nhân', $nav);
     }
+
+    public function test_student_profile_uses_learner_layout_not_admin_badge(): void
+    {
+        $student = User::factory()->create(['name' => 'Quân Đặng']);
+        $student->assignRole(Role::Student->value);
+
+        $this->actingAs($student)
+            ->get(route('profile.show'))
+            ->assertOk()
+            ->assertSee('Học viên', false)
+            ->assertSee('Quân Đặng', false)
+            ->assertDontSee('>Quản trị viên<', false);
+    }
+
+    public function test_admin_profile_keeps_admin_shell(): void
+    {
+        $admin = User::factory()->create(['name' => 'Admin Test']);
+        $admin->assignRole(Role::Admin->value);
+
+        $this->actingAs($admin)
+            ->get(route('profile.show'))
+            ->assertOk()
+            ->assertSee('Quản trị viên', false)
+            ->assertSee('Admin Test', false);
+    }
 }

@@ -13,6 +13,12 @@
         ? \App\Models\SupportConversation::pendingAdminAttentionIdsFor(auth()->user())
         : [];
     $supportActive = request()->routeIs('admin.support.*');
+    $staffRoleLabel = auth()->user()?->getRoleNames()
+        ->map(fn (string $name): ?\App\Support\Enums\Role => \App\Support\Enums\Role::tryFromName($name))
+        ->filter()
+        ->sortByDesc(fn (\App\Support\Enums\Role $role): int => $role->rank())
+        ->first()
+        ?->label() ?? 'Nhân sự';
 @endphp
 
 <!DOCTYPE html>
@@ -69,16 +75,25 @@
         <nav class="flex flex-1 flex-col gap-1 overflow-y-auto" aria-label="Menu quản trị">
             @foreach ($navItems as $item)
                 @php
-                    $active = is_array($item['match'])
-                        ? request()->routeIs($item['match'])
-                        : ($item['match'] && request()->routeIs($item['match']));
-                    $href = $item['route'] ? route($item['route']) : null;
+                    $active = isset($item['path'])
+                        ? request()->is($item['path'])
+                        : (is_array($item['match'])
+                            ? request()->routeIs($item['match'])
+                            : ($item['match'] && request()->routeIs($item['match'])));
+                    $href = $item['route']
+                        ? route($item['route'])
+                        : ($item['url'] ?? null);
+                    $external = (bool) ($item['external'] ?? false);
                 @endphp
                 @if ($href)
                     <a href="{{ $href }}"
+                        @if ($external) target="_blank" rel="noopener noreferrer" @endif
                         class="flex items-center gap-3 rounded-lg px-3 py-2.5 font-label-md text-label-md transition-colors {{ $active ? 'bg-primary-container text-on-primary-container' : 'text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface' }}">
                         <span class="material-symbols-outlined text-[22px] leading-none">{{ $item['icon'] }}</span>
                         <span class="flex-1">{{ $item['label'] }}</span>
+                        @if ($external)
+                            <span class="material-symbols-outlined text-[16px] leading-none opacity-60" aria-hidden="true">open_in_new</span>
+                        @endif
                         @if (($item['badge'] ?? 0) > 0)
                             <span class="inline-flex min-w-5 items-center justify-center rounded-full bg-error px-1.5 py-0.5 text-[11px] font-bold leading-none text-white">{{ ($item['badge'] ?? 0) > 99 ? '99+' : $item['badge'] }}</span>
                         @endif
@@ -121,12 +136,21 @@
         </div>
         <nav class="flex flex-1 flex-col gap-1">
             @foreach ($navItems as $item)
-                @php $href = $item['route'] ? route($item['route']) : null; @endphp
+                @php
+                    $href = $item['route']
+                        ? route($item['route'])
+                        : ($item['url'] ?? null);
+                    $external = (bool) ($item['external'] ?? false);
+                @endphp
                 @if ($href)
                     <a href="{{ $href }}" @click="menu = false"
+                        @if ($external) target="_blank" rel="noopener noreferrer" @endif
                         class="flex items-center gap-3 rounded-lg px-3 py-2.5 font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-low">
                         <span class="material-symbols-outlined text-[22px] leading-none">{{ $item['icon'] }}</span>
                         <span class="flex-1">{{ $item['label'] }}</span>
+                        @if ($external)
+                            <span class="material-symbols-outlined text-[16px] leading-none opacity-60" aria-hidden="true">open_in_new</span>
+                        @endif
                         @if (($item['badge'] ?? 0) > 0)
                             <span class="inline-flex min-w-5 items-center justify-center rounded-full bg-error px-1.5 py-0.5 text-[11px] font-bold leading-none text-white">{{ ($item['badge'] ?? 0) > 99 ? '99+' : $item['badge'] }}</span>
                         @endif
@@ -164,7 +188,7 @@
                     :aria-expanded="accountMenu" aria-haspopup="dialog" aria-label="Mở menu tài khoản">
                 <div class="hidden text-right sm:block">
                     <p class="font-label-md text-label-md text-on-surface">{{ auth()->user()->name }}</p>
-                    <p class="font-label-sm text-label-sm text-on-surface-variant">Quản trị viên</p>
+                    <p class="font-label-sm text-label-sm text-on-surface-variant">{{ $staffRoleLabel }}</p>
                 </div>
                 <span
                     class="flex size-10 items-center justify-center overflow-hidden rounded-full border border-outline-variant bg-primary-container font-bold text-body-md text-on-primary-container">
@@ -188,7 +212,7 @@
                     <div class="space-y-3 bg-primary-container/40 p-4">
                         <div>
                             <p class="font-title-md text-title-md font-bold text-on-surface">{{ auth()->user()->name }}</p>
-                            <p class="font-body-md text-body-md text-on-surface-variant">Quản trị viên</p>
+                            <p class="font-body-md text-body-md text-on-surface-variant">{{ $staffRoleLabel }}</p>
                         </div>
 
                         <a href="{{ route('profile.show') }}" @click="accountMenu = false"

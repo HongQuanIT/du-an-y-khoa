@@ -31,6 +31,18 @@ class UserFactory extends Factory
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
             'status' => 'active',
+            'locale' => 'vi',
+            'theme' => 'system',
+            'headline' => null,
+            'specialty' => null,
+            'institution' => null,
+            'career_role' => null,
+            'graduation_year' => null,
+            'country' => null,
+            'study_objective' => null,
+            'avatar_path' => null,
+            'notification_prefs' => [],
+            'account_notes' => null,
         ];
     }
 

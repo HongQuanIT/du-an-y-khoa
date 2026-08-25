@@ -33,6 +33,6 @@ class BillingServiceProvider extends ModuleServiceProvider
      */
     protected function configureSchedules(Schedule $schedule): void
     {
-        $schedule->job(new ReconcilePendingCheckoutsJob)->hourly();
+        $schedule->job(new ReconcilePendingCheckoutsJob)->everyFiveMinutes();
     }
 }

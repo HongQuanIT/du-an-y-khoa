@@ -17,7 +17,7 @@ use App\Http\Controllers\SupportChatController;
 */
 
 Route::middleware('guest')->group(function (): void {
-    Route::view('/login', 'auth::login')->name('login');
+    Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
     Route::post('/login', [AuthenticatedSessionController::class, 'store'])
         ->middleware('throttle:auth');
 

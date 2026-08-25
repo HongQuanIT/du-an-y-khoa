@@ -6,9 +6,15 @@
                 hôm nay.</p>
         </div>
 
+        @if (! empty($planPriceId))
+            <div class="mb-6 rounded-lg border border-primary/25 bg-primary-fixed/25 px-4 py-3 font-body-sm text-body-sm text-on-surface">
+                Sau khi đăng ký, bạn sẽ được chuyển tới trang xác nhận gói để thanh toán.
+            </div>
+        @endif
+
         <x-auth.errors />
 
-        <form class="space-y-5" action="{{ route('register') }}" method="post"
+        <form class="space-y-5" action="{{ route('register', \Modules\Billing\Support\CheckoutIntent::authQuery($planPriceId ?? null)) }}" method="post"
             x-data="{
                 password: '',
                 get score() {
@@ -31,6 +37,9 @@
                 },
             }">
             @csrf
+            @if (! empty($planPriceId))
+                <input type="hidden" name="plan_price_id" value="{{ $planPriceId }}">
+            @endif
 
             <x-auth.input name="name" label="Họ và tên" placeholder="Nguyễn Văn An" required autofocus
                 autocomplete="name" />
@@ -75,7 +84,9 @@
         <x-auth.social-providers />
 
         <p class="mt-8 text-center text-body-sm font-body-sm text-on-surface-variant">
-            Đã có tài khoản? <a class="text-primary font-bold hover:underline" href="{{ route('login') }}">Đăng nhập</a>
+            Đã có tài khoản?
+            <a class="text-primary font-bold hover:underline"
+                href="{{ \Modules\Billing\Support\CheckoutIntent::loginUrl($planPriceId ?? null) }}">Đăng nhập</a>
         </p>
     </x-auth.shell>
 </x-layouts.auth>

@@ -20,6 +20,13 @@
             </div>
         @endif
 
+        @if ($selectedPlanPriceId)
+            <div class="mb-6 rounded-xl border border-primary/25 bg-primary/5 px-5 py-4 font-body-sm text-on-surface">
+                Bạn đã chọn gói từ bảng giá.
+                Xác nhận bên dưới rồi bấm <strong>Thanh toán</strong> để tiếp tục.
+            </div>
+        @endif
+
         @if ($current['is_free'] === false)
             <div class="mb-6 rounded-xl border border-primary/20 bg-primary/5 px-5 py-4 font-body-sm text-on-surface">
                 Đang dùng <strong>{{ $current['plan_name'] }}</strong>
@@ -32,8 +39,13 @@
 
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             @foreach ($prices as $price)
+                @php
+                    $isSelected = $selectedPlanPriceId !== null && (int) $price->id === (int) $selectedPlanPriceId;
+                    $isHighlighted = $isSelected || ($selectedPlanPriceId === null && $price->is_featured);
+                @endphp
                 <form method="post" action="{{ route('billing.checkout.store') }}"
-                    class="flex flex-col rounded-xl border {{ $price->is_featured ? 'border-primary ring-1 ring-primary' : 'border-outline-variant' }} bg-surface p-5 shadow-sm">
+                    class="flex flex-col rounded-xl border {{ $isHighlighted ? 'border-primary ring-1 ring-primary' : 'border-outline-variant' }} bg-surface p-5 shadow-sm"
+                    @if ($isSelected) id="selected-plan" @endif>
                     @csrf
                     <input type="hidden" name="plan_price_id" value="{{ $price->id }}">
                     <input type="hidden" name="idempotency_key" value="{{ $idempotencyKey }}-{{ $price->id }}">
@@ -44,6 +56,9 @@
                             <h2 class="font-title-md text-title-md text-on-surface">{{ $price->label }}</h2>
                             @if ($price->badge_label)
                                 <span class="mt-1 inline-block font-label-sm text-label-sm text-primary">{{ $price->badge_label }}</span>
+                            @endif
+                            @if ($isSelected)
+                                <span class="mt-1 block font-label-sm text-label-sm font-semibold text-primary">Đã chọn</span>
                             @endif
                         </div>
                         @if ($price->displaySavingsPercent())
@@ -63,7 +78,7 @@
                     @endif
 
                     <button type="submit"
-                        class="mt-auto pt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 font-label-md text-label-md font-semibold text-on-primary hover:opacity-90">
+                        class="mt-auto pt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg {{ $isSelected ? 'bg-primary text-on-primary' : 'bg-primary px-4 py-2.5 text-on-primary' }} px-4 py-2.5 font-label-md text-label-md font-semibold hover:opacity-90">
                         {{ $price->cta_label ?: 'Thanh toán' }}
                     </button>
                 </form>
@@ -76,4 +91,10 @@
             · Cổng: {{ strtoupper($defaultGateway) }}
         </p>
     </div>
+
+    @if ($selectedPlanPriceId)
+        <script>
+            document.getElementById('selected-plan')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        </script>
+    @endif
 </x-layouts.app>

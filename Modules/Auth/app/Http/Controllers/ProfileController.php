@@ -39,9 +39,13 @@ final class ProfileController extends Controller
         $user = $request->user();
         $tab = $this->normalizeTab((string) $request->query('tab', 'career'), $user);
 
+        $storedPrefs = array_key_exists('notification_prefs', $user->getAttributes())
+            ? $user->notification_prefs
+            : null;
+
         $prefs = array_merge(
             \Modules\Notification\Support\NotificationCatalog::defaultPreferences(),
-            is_array($user->notification_prefs) ? $user->notification_prefs : [],
+            is_array($storedPrefs) ? $storedPrefs : [],
         );
 
         $orgMembers = InstitutionMember::query()

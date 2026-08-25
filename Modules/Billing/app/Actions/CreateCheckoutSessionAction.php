@@ -13,6 +13,7 @@ use Illuminate\Validation\ValidationException;
 use Modules\Billing\DTO\CheckoutRequest;
 use Modules\Billing\Models\CheckoutSession;
 use Modules\Billing\Models\Invoice;
+use Modules\Billing\Models\Payment;
 use Modules\Billing\Models\PlanPrice;
 use Modules\Billing\Support\GatewayResolver;
 use Modules\Billing\Support\GatewaySettings;
@@ -115,7 +116,7 @@ final class CreateCheckoutSessionAction
                 'expires_at' => Carbon::now()->addMinutes($ttl),
             ]);
 
-            Invoice::query()->create([
+            $invoice = Invoice::query()->create([
                 'user_id' => $user->getKey(),
                 'checkout_session_id' => $session->getKey(),
                 'number' => $this->nextInvoiceNumber(),
@@ -130,6 +131,16 @@ final class CreateCheckoutSessionAction
                     $planPrice->label,
                 ),
                 'issued_at' => Carbon::now(),
+            ]);
+
+            Payment::query()->create([
+                'invoice_id' => $invoice->getKey(),
+                'checkout_session_id' => $session->getKey(),
+                'amount_cents' => $session->totalCents(),
+                'currency' => $session->currency,
+                'method' => $gatewayName,
+                'status' => 'pending',
+                'provider' => $gatewayName,
             ]);
 
             $result = $adapter->createCheckout(new CheckoutRequest(

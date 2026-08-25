@@ -12,17 +12,30 @@ use App\Support\Auth\TwoFactorSession;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\View\View;
 use Modules\Auth\Actions\AttemptLoginAction;
 use Modules\Auth\Enums\LoginPortal;
 use Modules\Auth\Http\Requests\LoginRequest;
+use Modules\Billing\Support\CheckoutIntent;
 
 /**
  * Session lifecycle for the `web` guard: student, instructor, admin portals.
  */
 final class AuthenticatedSessionController extends Controller
 {
+    public function create(Request $request): View
+    {
+        CheckoutIntent::capture($request);
+
+        return view('auth::login', [
+            'planPriceId' => CheckoutIntent::peek($request),
+        ]);
+    }
+
     public function store(LoginRequest $request, AttemptLoginAction $action): RedirectResponse
     {
+        CheckoutIntent::capture($request);
+
         $user = $action->handle($request->toData(), LoginPortal::Student);
 
         $request->session()->regenerate();

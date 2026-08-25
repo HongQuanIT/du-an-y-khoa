@@ -58,6 +58,10 @@ final class CheckoutFlowTest extends TestCase
         $session = CheckoutSession::query()->where('idempotency_key', 'test-key-1')->first();
         $this->assertNotNull($session);
         $this->assertSame('pending', $session->status);
+        $this->assertDatabaseHas('billing_payments', [
+            'checkout_session_id' => $session->id,
+            'status' => 'pending',
+        ]);
 
         $response->assertRedirect(route('billing.fake-pay.show', $session->uuid));
     }
@@ -105,6 +109,7 @@ final class CheckoutFlowTest extends TestCase
             'checkout_session_id' => $session->id,
             'status' => 'succeeded',
         ]);
+        $this->assertSame(1, Payment::query()->where('checkout_session_id', $session->id)->count());
         $this->assertTrue(
             Subscription::query()->where('user_id', $user->id)->active()->exists(),
         );

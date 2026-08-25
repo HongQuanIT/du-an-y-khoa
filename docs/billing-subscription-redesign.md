@@ -56,11 +56,18 @@ interface PaymentGatewayInterface
 
 ### Mua prepaid
 
-1. User chọn SKU trên `/subscription/upgrade`.
+1. User chọn SKU trên `/subscription/upgrade` (hoặc guest từ `/pricing` → auth → upgrade).
 2. `POST` tạo `billing_checkout_sessions` (pending) + `billing_invoices` (open).
 3. Redirect cổng (VNPay hoặc Fake ở local).
 4. Webhook/IPN verify → payment succeeded → subscription `active` + invoice `paid`.
 5. Invalidate Redis entitlement cache; hiển thị confirmation.
+
+### Guest từ `/pricing` (biến thể A — Confirm)
+
+1. Guest chọn SKU → CTA `/register?plan_price_id=` (hoặc `/login` cùng param).
+2. `CheckoutIntent` lưu session + `url.intended` → `/subscription/upgrade?plan_price_id=`.
+3. Sau đăng ký/đăng nhập → trang upgrade **preselect** SKU; user bấm Thanh toán.
+4. Tiếp tục luồng prepaid phía trên.
 
 ### Quy tắc
 
