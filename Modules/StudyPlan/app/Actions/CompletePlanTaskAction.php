@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\StudyPlan\Actions;
 
+use App\Models\User;
+use App\Support\Audit\AuditContext;
+use App\Support\Audit\Auditor;
+use App\Support\Audit\Enums\AuditAction;
 use App\Support\Concerns\AsAction;
 use Illuminate\Support\Facades\DB;
 use Modules\QuestionBank\Enums\SessionStatus;
@@ -49,6 +53,17 @@ final class CompletePlanTaskAction
         $this->recalculateProgress->handle($task->plan);
 
         event(StudyPlanActivity::taskCompleted($task));
+
+        $actor = $task->plan->user()->first();
+        Auditor::record(
+            AuditAction::LearningTaskCompleted,
+            $actor instanceof User ? $actor : null,
+            $task,
+            ['status' => TaskStatus::Pending->value],
+            ['status' => TaskStatus::Done->value, 'done' => $task->done],
+            metadata: ['study_plan_id' => $task->study_plan_id, 'question_session_id' => $task->sessionId()],
+            context: new AuditContext(sessionId: $task->sessionId()),
+        );
 
         return $task;
     }

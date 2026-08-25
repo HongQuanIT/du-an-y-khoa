@@ -92,7 +92,7 @@
         <div class="mb-3 flex items-center justify-between gap-2">
             <h3 class="font-headline-sm text-headline-sm text-on-surface">Audit gần đây</h3>
             @can('audit.view')
-                <a href="{{ route('admin.audit.index', ['actor_id' => '']) }}" class="font-label-md text-label-md text-primary hover:underline">Mở Audit</a>
+                <a href="{{ route('admin.audit.index', ['related_user_id' => $user->id]) }}" class="font-label-md text-label-md text-primary hover:underline">Mở toàn bộ Audit</a>
             @endcan
         </div>
         <div class="overflow-x-auto">
@@ -101,6 +101,7 @@
                     <tr>
                         <th class="py-2 pe-4">Thời gian</th>
                         <th class="py-2 pe-4">Action</th>
+                        <th class="py-2 pe-4">Quan hệ</th>
                         <th class="py-2">Chi tiết</th>
                     </tr>
                 </thead>
@@ -109,10 +110,11 @@
                         <tr class="border-b border-outline-variant/50">
                             <td class="py-2 pe-4 whitespace-nowrap text-on-surface-variant">{{ $log->created_at?->format('d/m/Y H:i') }}</td>
                             <td class="py-2 pe-4"><a href="{{ route('admin.audit.show', $log) }}" class="text-primary hover:underline">{{ $log->action }}</a></td>
+                            <td class="whitespace-nowrap py-2 pe-4 text-on-surface-variant">{{ (int) $log->actor_id === (int) $user->id ? 'Tài khoản thực hiện' : 'Bị tác động' }}</td>
                             <td class="py-2 text-on-surface-variant truncate max-w-xs">{{ $log->ip }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="3" class="py-6 text-on-surface-variant">Chưa có nhật ký trên user này.</td></tr>
+                        <tr><td colspan="4" class="py-6 text-on-surface-variant">Chưa có nhật ký liên quan đến user này.</td></tr>
                     @endforelse
                 </tbody>
             </table>

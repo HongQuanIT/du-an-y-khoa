@@ -6,7 +6,9 @@ namespace Modules\Admin\Actions;
 
 use App\Models\User;
 use App\Support\Concerns\AsAction;
+use Modules\Admin\Enums\AuditAction;
 use Modules\Admin\Support\Auditor;
+use Modules\Admin\Support\AuditSnapshot;
 use Modules\Admin\Support\StaffGuard;
 
 final class VerifyUserEmailAction
@@ -21,14 +23,15 @@ final class VerifyUserEmailAction
             return $target;
         }
 
+        $before = AuditSnapshot::user($target);
         $target->forceFill(['email_verified_at' => now()])->save();
 
         Auditor::record(
-            'admin.user.email_verified',
+            AuditAction::UserEmailVerified,
             $actor,
             $target,
-            ['email_verified_at' => null],
-            ['email_verified_at' => $target->email_verified_at?->toIso8601String()],
+            $before,
+            AuditSnapshot::user($target),
         );
 
         return $target->refresh();

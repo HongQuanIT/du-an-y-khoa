@@ -9,7 +9,9 @@ use App\Support\Concerns\AsAction;
 use App\Support\Enums\Permission;
 use App\Support\Html\SafeHtml;
 use Illuminate\Validation\ValidationException;
+use Modules\Admin\Enums\AuditAction;
 use Modules\Admin\Support\Auditor;
+use Modules\Admin\Support\AuditSnapshot;
 use Modules\Admin\Support\QuestionAccess;
 use Modules\QuestionBank\Enums\QuestionReviewAction;
 use Modules\QuestionBank\Enums\QuestionReviewStatus;
@@ -42,11 +44,7 @@ final class TransitionQuestionStatusAction
         $this->assertTransitionAllowed($actor, $from, $to);
         $this->assertReadyForStatus($question, $to);
 
-        $before = [
-            'status' => $from->value,
-            'reviewer_id' => $question->reviewer_id,
-            'rejection_reason' => $question->rejection_reason,
-        ];
+        $before = AuditSnapshot::question($question);
 
         if ($to === QuestionStatus::Rejected) {
             if (blank($rejectionReason)) {
@@ -63,13 +61,14 @@ final class TransitionQuestionStatusAction
             ])->save();
 
             Auditor::record(
-                'admin.question.status_change',
+                AuditAction::QuestionStatusChanged,
                 $actor,
                 $question,
                 $before,
-                [
-                    'status' => $to->value,
-                    'rejection_reason' => $question->rejection_reason,
+                AuditSnapshot::question($question),
+                metadata: [
+                    'from_status' => $from->value,
+                    'to_status' => $to->value,
                 ],
             );
 
@@ -84,11 +83,15 @@ final class TransitionQuestionStatusAction
             ])->save();
 
             Auditor::record(
-                'admin.question.status_change',
+                AuditAction::QuestionStatusChanged,
                 $actor,
                 $question,
                 $before,
-                ['status' => $to->value],
+                AuditSnapshot::question($question),
+                metadata: [
+                    'from_status' => $from->value,
+                    'to_status' => $to->value,
+                ],
             );
 
             return $question->refresh();
@@ -123,14 +126,14 @@ final class TransitionQuestionStatusAction
         $this->captureVersion->handle($question, $actor, 'status');
 
         Auditor::record(
-            'admin.question.status_change',
+            AuditAction::QuestionStatusChanged,
             $actor,
             $question,
             $before,
-            [
-                'status' => $to->value,
-                'version' => $question->version,
-                'reviewer_id' => $question->reviewer_id,
+            AuditSnapshot::question($question),
+            metadata: [
+                'from_status' => $from->value,
+                'to_status' => $to->value,
             ],
         );
 

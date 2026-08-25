@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\Auth\Actions;
 
 use App\Models\User;
+use App\Support\Audit\Auditor;
+use App\Support\Audit\Enums\AuditAction;
 use App\Support\Auth\StudentTwoFactorDevice;
 use App\Support\Auth\TwoFactorSession;
 use App\Support\Concerns\AsAction;
@@ -38,5 +40,6 @@ final class DisableTwoFactorAction
 
         TwoFactorSession::clear($request);
         StudentTwoFactorDevice::forget();
+        Auditor::record(AuditAction::AuthTwoFactorDisabled, $user, $user, request: $request);
     }
 }

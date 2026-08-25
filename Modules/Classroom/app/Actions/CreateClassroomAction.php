@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\Classroom\Actions;
 
 use App\Models\User;
+use App\Support\Audit\Auditor;
+use App\Support\Audit\Enums\AuditAction;
 use App\Support\Concerns\AsAction;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -49,7 +51,15 @@ final class CreateClassroomAction
                 'joined_at' => now(),
             ]);
 
-            return $classroom->fresh(['host', 'activeMembers']) ?? $classroom;
+            $classroom = $classroom->fresh(['host', 'activeMembers']) ?? $classroom;
+            Auditor::record(
+                AuditAction::ClassroomCreated,
+                $host,
+                $classroom,
+                after: $this->snapshot($classroom),
+            );
+
+            return $classroom;
         });
     }
 
@@ -60,5 +70,19 @@ final class CreateClassroomAction
         } while (Classroom::query()->where('join_code', $code)->exists());
 
         return $code;
+    }
+
+    /** @return array<string, mixed> */
+    private function snapshot(Classroom $classroom): array
+    {
+        return [
+            'id' => $classroom->getKey(),
+            'title' => $classroom->title,
+            'status' => $classroom->status->value,
+            'visibility' => $classroom->visibility->value,
+            'purpose' => $classroom->purpose->value,
+            'host_user_id' => $classroom->host_user_id,
+            'max_members' => $classroom->max_members,
+        ];
     }
 }

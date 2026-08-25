@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\StudyPlan\Actions;
 
 use App\Models\User;
+use App\Support\Audit\Auditor;
+use App\Support\Audit\Enums\AuditAction;
 use App\Support\Concerns\AsAction;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -59,6 +61,19 @@ final class CreateStudyPlanAction
 
         event(StudyPlanActivity::created($plan));
 
-        return $plan->refresh();
+        $plan = $plan->refresh();
+        Auditor::record(
+            AuditAction::LearningPlanCreated,
+            $user,
+            $plan,
+            after: [
+                'status' => $plan->status->value,
+                'strategy' => $plan->strategy->value,
+                'exam_target_date' => $plan->exam_target_date->toDateString(),
+                'daily_goal_questions' => $plan->daily_goal_questions,
+            ],
+        );
+
+        return $plan;
     }
 }

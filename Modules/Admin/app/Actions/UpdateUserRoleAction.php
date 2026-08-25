@@ -7,7 +7,9 @@ namespace Modules\Admin\Actions;
 use App\Models\User;
 use App\Support\Concerns\AsAction;
 use App\Support\Enums\Role;
+use Modules\Admin\Enums\AuditAction;
 use Modules\Admin\Support\Auditor;
+use Modules\Admin\Support\AuditSnapshot;
 use Modules\Admin\Support\StaffGuard;
 use Spatie\Permission\PermissionRegistrar;
 
@@ -20,17 +22,17 @@ final class UpdateUserRoleAction
         StaffGuard::assertCanManage($actor, $target);
         StaffGuard::assertCanAssignRole($actor, $role);
 
-        $before = ['role' => $target->primaryRoleName()];
+        $before = AuditSnapshot::user($target);
 
         $target->syncRoles([$role->value]);
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         Auditor::record(
-            'admin.user.role_change',
+            AuditAction::UserRoleChanged,
             $actor,
             $target,
             $before,
-            ['role' => $role->value],
+            AuditSnapshot::user($target),
         );
 
         return $target->refresh();

@@ -35,13 +35,15 @@ Nghi ngờ đổi quyền bất thường → /admin/audit filter action=permiss
 
 ## 5. Business Logic
 - **Ghi tự động** qua middleware/observer cho hành vi nhạy cảm: login admin, đổi role/permission, CRUD publish nội dung, thao tác billing/refund, impersonate, xóa dữ liệu, thay đổi cấu hình/feature flag.
-- **Bất biến:** insert-only; không update/delete (retention theo chính sách, có thể archive).
+- **Bất biến:** insert-only trong thời gian lưu nóng; chỉ lệnh archive hệ thống được xóa theo lô sau khi file nén và checksum đã lưu thành công.
 - **Before/after** snapshot cho mutate.
 - **Correlation id** liên kết chuỗi hành động.
 - **Không chứa secret/PII thô** (mask).
 
 ## 6. Database
-- `audit_logs` (mục 10 data model): `actor_id, action, auditable_type/id, before JSON, after JSON, ip, user_agent, request_id, created_at`. Index `(auditable_type,auditable_id)`, `(actor_id)`, `(action)`, `(created_at)`. Partition theo tháng; archive lạnh.
+- `audit_logs`: thêm `event_id` duy nhất để queue retry không ghi trùng; lưu actor/context/snapshot/IP/User-Agent và thông tin thiết bị đã chuẩn hóa.
+- `user_activity_sessions`: dữ liệu presence đã gom theo user, browser session và khu vực; không trộn heartbeat vào Audit Log.
+- `audit_archives`: manifest file JSONL gzip gồm phạm vi thời gian/ID, số dòng, disk/path và SHA-256.
 
 ## 7. API
 | Method | URL | Query | Response | Quyền |
@@ -72,20 +74,23 @@ Không có POST/PUT/DELETE sửa log (ghi qua hệ thống nội bộ).
 - Bất biến (chống chỉnh sửa); append-only; hạn chế quyền xem; mask secret/PII; toàn vẹn (hash chain tùy chọn); truy cập audit cũng bị audit; lưu trữ an toàn.
 
 ## 14. Performance
-- Insert-only nhẹ (ghi async qua queue để không chặn); partition; index filter; archive lạnh; export queue.
+- Sự kiện bảo mật, billing và quản trị ghi đồng bộ; sự kiện học tập/hồ sơ/lớp ít rủi ro vào Redis queue sau transaction commit.
+- Heartbeat tối đa mỗi 120 giây khi tab hiển thị, chỉ cập nhật Redis; sau 300 giây idle scheduler gom thành một `user_activity_sessions`.
+- MySQL giữ log nóng mặc định 180 ngày. `audit:archive` nén JSONL gzip, lưu SHA-256 và chỉ sau đó mới xóa theo batch. Disk/path và thời gian giữ được cấu hình bằng biến môi trường.
+- Snapshot allow-list có giới hạn kích thước; danh sách dùng cursor pagination và chỉ eager-load actor cần hiển thị.
 
 ## 15. Đề xuất cải tiến
 - Hash chain/ký số đảm bảo toàn vẹn (tamper-evident); cảnh báo bất thường (nhiều thay đổi quyền); SIEM integration; giữ log theo yêu cầu pháp lý; diff trực quan đẹp hơn.
 
 ## 16. Phạm vi triển khai & hạng mục hoãn
 
-**Đã có:** tra cứu audit UI (`/admin/audit`), filter action/actor/IP, chi tiết before/after.
+**Đã có:** lõi Audit dùng chung cho Admin/Giảng viên/Học viên; phân tầng immediate/queued; idempotency bằng `event_id`; action chuẩn theo nghiệp vụ; snapshot allow-list và mask secret/PII; actor role/portal/category/result/session; nhận diện thiết bị/OS/trình duyệt; UI `/admin/audit`; Activity heartbeat được gom qua Redis; archive lạnh theo batch có checksum. Phiên làm câu hỏi của học viên chỉ audit lúc bắt đầu và kết thúc, còn chi tiết đáp án nằm trong `question_attempts`.
 
 **Hoãn — chưa làm ngay:**
 
 | Hạng mục | Mục đích | Ghi chú |
 |----------|----------|---------|
 | **Export CSV** | Mang log ra ngoài cho điều tra/legal/sec; filter thời gian bắt buộc; job async nếu lớn; audit chính việc export | Ưu tiên hơn User CSV khi cần bằng chứng |
-| **Timeline theo entity** (API/UI chuyên sâu) | Lịch sử đầy đủ một user/question từ mọi action | User detail đã có “audit gần đây” rút gọn |
+| **Timeline theo entity** (API chuyên sâu) | Endpoint timeline riêng cho tích hợp ngoài UI | UI đã lọc trực tiếp theo User/Question và User detail có “audit gần đây” |
 
 Ưu tiên sản phẩm hiện tại: **Phase 2 Question Management (module 35)** trước các export/CSKH nâng cao.

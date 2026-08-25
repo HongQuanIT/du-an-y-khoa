@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace Modules\Classroom\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Support\Audit\AuditContext;
+use App\Support\Audit\Auditor;
+use App\Support\Audit\Enums\AuditAction;
+use App\Support\Audit\Enums\AuditPortal;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -44,7 +48,9 @@ final class TeachProfileController extends Controller
             'headline' => 'giới thiệu ngắn',
         ]);
 
-        $request->user()->forceFill($validated)->save();
+        $user = $request->user();
+        $user->forceFill($validated)->save();
+        $this->audit($request, AuditAction::AccountProfileUpdated, array_keys($validated));
 
         return redirect()
             ->route('teach.profile.show')
@@ -60,6 +66,7 @@ final class TeachProfileController extends Controller
         ]);
 
         $request->user()->forceFill($validated)->save();
+        $this->audit($request, AuditAction::AccountProfileUpdated, array_keys($validated));
 
         return redirect()
             ->route('teach.profile.show', ['tab' => 'contact'])
@@ -85,6 +92,7 @@ final class TeachProfileController extends Controller
         $request->user()->forceFill([
             'password' => $validator->validated()['password'],
         ])->save();
+        $this->audit($request, AuditAction::AuthPasswordChanged);
 
         return redirect()
             ->route('teach.profile.show', ['tab' => 'security'])
@@ -111,6 +119,7 @@ final class TeachProfileController extends Controller
 
         $path = $request->file('avatar')->store('avatars/'.$user->getKey(), 'public');
         $user->forceFill(['avatar_path' => $path])->save();
+        $this->audit($request, AuditAction::AccountAvatarUpdated, ['avatar_path']);
 
         return redirect()
             ->route('teach.profile.show')
@@ -123,6 +132,7 @@ final class TeachProfileController extends Controller
         $previousPath = $user?->getRawOriginal('avatar_path');
         $this->deleteAvatarFile(is_string($previousPath) ? $previousPath : null);
         $user?->forceFill(['avatar_path' => null])->save();
+        $this->audit($request, AuditAction::AccountAvatarDeleted, ['avatar_path']);
 
         return redirect()
             ->route('teach.profile.show')
@@ -139,5 +149,17 @@ final class TeachProfileController extends Controller
         if ($path !== null && $path !== '' && Storage::disk('public')->exists($path)) {
             Storage::disk('public')->delete($path);
         }
+    }
+
+    /** @param list<string> $changedFields */
+    private function audit(Request $request, AuditAction $action, array $changedFields = []): void
+    {
+        Auditor::record(
+            $action,
+            $request->user(),
+            $request->user(),
+            metadata: ['changed_fields' => $changedFields],
+            context: new AuditContext(portal: AuditPortal::Teach),
+        );
     }
 }

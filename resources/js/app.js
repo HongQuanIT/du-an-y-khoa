@@ -10,6 +10,7 @@ import { bootAdminSupportInbox } from './admin/support-inbox';
 import { bootAdminSupportThread } from './admin/support-thread';
 import { bootUserSupportThread } from './support-user-thread';
 import { bootNotifications } from './notifications';
+import { bootActivityHeartbeat } from './activity-heartbeat';
 
 bootstrapTheme();
 bootstrapCookieConsent();
@@ -42,6 +43,7 @@ const bootSupportUi = () => {
     bootAdminSupportThread();
     bootUserSupportThread();
     bootNotifications();
+    bootActivityHeartbeat();
 };
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', bootSupportUi, { once: true });

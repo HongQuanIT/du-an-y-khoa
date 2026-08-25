@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Modules\QuestionBank\Actions;
 
 use App\Models\User;
+use App\Support\Audit\AuditContext;
+use App\Support\Audit\Auditor;
+use App\Support\Audit\Enums\AuditAction;
 use App\Support\Concerns\AsAction;
 use Illuminate\Support\Facades\DB;
 use Modules\QuestionBank\Data\CreateSessionData;
@@ -95,6 +98,20 @@ final class CreateQuestionSessionAction
                 'exam_id' => $data->examId,
             ]);
             $this->snapshots->capture($session);
+            Auditor::record(
+                $data->mode === SessionMode::Exam ? AuditAction::ExamStarted : AuditAction::LearningSessionCreated,
+                $user,
+                $session,
+                after: [
+                    'mode' => $session->mode->value,
+                    'source' => $session->source->value,
+                    'status' => $session->status->value,
+                    'total' => $session->total,
+                    'exam_id' => $session->exam_id,
+                ],
+                metadata: ['question_session_id' => $session->getKey()],
+                context: new AuditContext(sessionId: (string) $session->getKey()),
+            );
 
             return $session;
         });

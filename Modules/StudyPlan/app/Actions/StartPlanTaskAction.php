@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\StudyPlan\Actions;
 
+use App\Models\User;
+use App\Support\Audit\AuditContext;
+use App\Support\Audit\Auditor;
+use App\Support\Audit\Enums\AuditAction;
 use App\Support\Concerns\AsAction;
 use Illuminate\Support\Facades\DB;
 use Modules\QuestionBank\Enums\SessionMode;
@@ -73,6 +77,19 @@ final class StartPlanTaskAction
         });
 
         event(StudyPlanActivity::taskStarted($task, $session->getKey()));
+
+        $actor = $task->plan->user()->first();
+        Auditor::record(
+            AuditAction::LearningTaskStarted,
+            $actor instanceof User ? $actor : null,
+            $task,
+            metadata: [
+                'study_plan_id' => $task->study_plan_id,
+                'question_session_id' => $session->getKey(),
+                'target' => $task->target,
+            ],
+            context: new AuditContext(sessionId: (string) $session->getKey()),
+        );
 
         return $session;
     }

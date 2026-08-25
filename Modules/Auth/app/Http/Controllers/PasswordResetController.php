@@ -6,6 +6,8 @@ namespace Modules\Auth\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\Audit\Auditor;
+use App\Support\Audit\Enums\AuditAction;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -48,6 +50,7 @@ final class PasswordResetController extends Controller
                 ])->save();
 
                 event(new PasswordReset($user));
+                Auditor::record(AuditAction::AuthPasswordReset, $user, $user);
             },
         );
 

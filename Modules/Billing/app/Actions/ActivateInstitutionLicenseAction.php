@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\Billing\Actions;
 
 use App\Models\User;
+use App\Support\Audit\Auditor;
+use App\Support\Audit\Enums\AuditAction;
 use App\Support\Concerns\AsAction;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -90,6 +92,17 @@ final class ActivateInstitutionLicenseAction
             }
 
             InvalidateEntitlementCacheAction::run((int) $user->getKey());
+
+            Auditor::record(
+                AuditAction::BillingLicenseActivated,
+                $user,
+                $member,
+                after: ['status' => $member->status, 'verified' => $member->verified_at !== null],
+                metadata: [
+                    'institution_id' => $institution->getKey(),
+                    'subscription_id' => $subscription?->getKey(),
+                ],
+            );
 
             return [
                 'member' => $member->load('institution'),

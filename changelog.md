@@ -30,6 +30,11 @@
 ### App sidebar — Free vs Premium
 - Free: nút **Nâng cấp Premium** (thay “Nâng cấp tài khoản”).
 - Premium: thẻ trạng thái Premium (icon + Active + hạn/SKU), không hiện CTA nâng cấp.
+### Tối ưu lưu trữ Audit và theo dõi hoạt động
+- Bổ sung thiết bị, hệ điều hành và trình duyệt; bộ lọc người thực hiện hỗ trợ tên hoặc ID.
+- Phân tầng Audit đồng bộ/queue, chống trùng bằng event ID và chỉ ghi ngay các thao tác nhạy cảm.
+- Gom heartbeat 2 phút qua Redis thành phiên hoạt động; không ghi từng request vào Audit Log.
+- Archive log cũ thành JSONL gzip có checksum trước khi dọn dữ liệu nóng khỏi MySQL.
 
 ## 2026-08-24
 
@@ -56,6 +61,14 @@
 - List `/admin/questions`: bỏ cột Kiểm duyệt riêng; đổi nhãn **Truy cập** (Miễn phí/Premium); chọn cột hiển thị (localStorage); sticky nội dung/thao tác.
 - Thêm `stats_cache` + trang `/admin/questions/{id}/stats` (lượt làm, % đúng, báo lỗi từ rollup).
 - Bộ lọc trạng thái/truy cập/báo lỗi; tìm theo mã câu hỏi.
+
+### Chuẩn hóa Audit toàn hệ thống
+- Tách lõi Audit dùng chung khỏi giao diện Admin; ghi lại actor role, portal Admin/Teach/Student, nhóm nghiệp vụ, kết quả và session liên quan.
+- Nối Audit vào thao tác của Admin, Content Creator, Giảng viên và Học viên trong Auth, Classroom/Live, Question Session, Study Plan, Bookmark và Billing.
+- Chuẩn hóa snapshot before/after, metadata và cơ chế tự che password, token, secret, email cùng dữ liệu cá nhân nhạy cảm.
+- Tinh gọn trang Audit với bộ lọc hành động, người thực hiện, vai trò và IP; giữ liên kết trực tiếp theo User/Question cùng timeline User hai chiều.
+- Audit phiên làm câu hỏi của học viên chỉ ghi hai mốc bắt đầu và kết thúc; chi tiết từng đáp án tiếp tục lưu tại `question_attempts`.
+- Bổ sung index truy vấn, cursor pagination và test cho context, snapshot, lọc đối tượng, bất biến dữ liệu và redaction.
 
 ## 2026-08-22
 

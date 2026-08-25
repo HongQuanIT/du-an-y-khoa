@@ -9,7 +9,9 @@ use App\Support\Concerns\AsAction;
 use App\Support\Html\SafeHtml;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Modules\Admin\Enums\AuditAction;
 use Modules\Admin\Support\Auditor;
+use Modules\Admin\Support\AuditSnapshot;
 use Modules\Admin\Support\QuestionAccess;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionReviewAction;
@@ -58,8 +60,9 @@ final class SaveAdminQuestionAction
         $this->assertMedicalTaxonomyPresent($data);
 
         return DB::transaction(function () use ($actor, $question, $data, $options): Question {
-            $before = $question ? $this->snapshot($question) : null;
+            $before = $question ? AuditSnapshot::question($question) : null;
             $isReviewer = QuestionAccess::isReviewer($actor);
+            $reviewRequest = null;
 
             if ($question === null) {
                 $question = new Question;
@@ -119,15 +122,19 @@ final class SaveAdminQuestionAction
             $this->captureVersion->handle($question, $actor);
 
             if (! $isReviewer) {
-                $this->queueCreationReview($actor, $question);
+                $reviewRequest = $this->queueCreationReview($actor, $question);
             }
 
             Auditor::record(
-                $before === null ? 'admin.question.create' : 'admin.question.update',
+                $before === null ? AuditAction::QuestionCreated : AuditAction::QuestionUpdated,
                 $actor,
                 $question,
                 $before,
-                $this->snapshot($question),
+                AuditSnapshot::question($question),
+                metadata: $reviewRequest !== null ? [
+                    'review_request_id' => $reviewRequest->getKey(),
+                    'review_action' => $reviewRequest->action->value,
+                ] : null,
             );
 
             return $question;
@@ -157,7 +164,7 @@ final class SaveAdminQuestionAction
             ]);
         }
 
-        QuestionReviewRequest::query()->create([
+        $reviewRequest = QuestionReviewRequest::query()->create([
             'question_id' => $question->getKey(),
             'action' => QuestionReviewAction::Update,
             'payload' => $data,
@@ -166,15 +173,19 @@ final class SaveAdminQuestionAction
         ]);
 
         Auditor::record(
-            'admin.question.update_requested',
+            AuditAction::QuestionUpdateRequested,
             $actor,
             $question,
-            null,
-            ['review_action' => QuestionReviewAction::Update->value],
+            AuditSnapshot::question($question),
+            AuditSnapshot::questionPayload($data),
+            metadata: [
+                'review_request_id' => $reviewRequest->getKey(),
+                'review_action' => QuestionReviewAction::Update->value,
+            ],
         );
     }
 
-    private function queueCreationReview(User $actor, Question $question): void
+    private function queueCreationReview(User $actor, Question $question): QuestionReviewRequest
     {
         $pending = $question->reviewRequests()
             ->where('status', QuestionReviewStatus::Pending->value)
@@ -190,10 +201,10 @@ final class SaveAdminQuestionAction
 
             $pending->forceFill(['updated_at' => now()])->save();
 
-            return;
+            return $pending;
         }
 
-        QuestionReviewRequest::query()->create([
+        return QuestionReviewRequest::query()->create([
             'question_id' => $question->getKey(),
             'action' => QuestionReviewAction::Create,
             'status' => QuestionReviewStatus::Pending,
@@ -492,30 +503,5 @@ final class SaveAdminQuestionAction
         }
 
         $question->hints()->whereNotIn('id', $keepIds)->delete();
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function snapshot(Question $question): array
-    {
-        $question->loadMissing('options', 'hints', 'coreClinicalTopics', 'medicalTaxonomyNodes', 'tags');
-
-        return [
-            'id' => $question->id,
-            'code' => $question->code,
-            'stem' => mb_substr(SafeHtml::plainText($question->stem), 0, 200),
-            'status' => $question->status->value,
-            'difficulty' => $question->difficulty->value,
-            'core_clinical_topic_ids' => $question->coreClinicalTopics->pluck('id')->map(fn ($id): int => (int) $id)->values()->all(),
-            'medical_taxonomy_node_ids' => $question->medicalTaxonomyNodes->pluck('id')->map(fn ($id): int => (int) $id)->values()->all(),
-            'tag_ids' => $question->tags->pluck('id')->map(fn ($id): int => (int) $id)->values()->all(),
-            'hints_count' => $question->hints->count(),
-            'is_free' => $question->is_free,
-            'exam_flag' => $question->exam_flag,
-            'version' => $question->version,
-            'options_count' => $question->options->count(),
-            'correct_option_ids' => $question->options->where('is_correct', true)->pluck('id')->all(),
-        ];
     }
 }

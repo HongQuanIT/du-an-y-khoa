@@ -8,7 +8,9 @@ use App\Models\User;
 use App\Support\Html\SafeHtml;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Modules\Admin\Enums\AuditAction;
 use Modules\Admin\Support\Auditor;
+use Modules\Admin\Support\AuditSnapshot;
 use Modules\Admin\Support\QuestionAccess;
 use Modules\QuestionBank\Enums\QuestionReviewAction;
 use Modules\QuestionBank\Enums\QuestionReviewStatus;
@@ -32,6 +34,7 @@ final class ReviewQuestionChangeAction
             $this->assertPending($reviewRequest);
 
             $question = Question::withTrashed()->lockForUpdate()->findOrFail($reviewRequest->question_id);
+            $before = AuditSnapshot::question($question);
 
             match ($reviewRequest->action) {
                 QuestionReviewAction::Create => $this->approveCreation($reviewer, $question),
@@ -47,11 +50,16 @@ final class ReviewQuestionChangeAction
             ])->save();
 
             Auditor::record(
-                'admin.question.review_approved',
+                AuditAction::QuestionReviewApproved,
                 $reviewer,
                 $question,
-                ['review_request_id' => $reviewRequest->getKey()],
-                ['action' => $reviewRequest->action->value],
+                $before,
+                AuditSnapshot::question($question),
+                metadata: [
+                    'review_request_id' => $reviewRequest->getKey(),
+                    'review_action' => $reviewRequest->action->value,
+                    'review_note' => $this->cleanNote($note),
+                ],
             );
 
             return $question;
@@ -67,6 +75,7 @@ final class ReviewQuestionChangeAction
             $this->assertPending($reviewRequest);
 
             $question = Question::withTrashed()->lockForUpdate()->findOrFail($reviewRequest->question_id);
+            $before = AuditSnapshot::question($question);
 
             if ($reviewRequest->action === QuestionReviewAction::Create && $question->status === QuestionStatus::InReview) {
                 $question->forceFill(['status' => QuestionStatus::Draft])->save();
@@ -80,11 +89,16 @@ final class ReviewQuestionChangeAction
             ])->save();
 
             Auditor::record(
-                'admin.question.review_rejected',
+                AuditAction::QuestionReviewRejected,
                 $reviewer,
                 $question,
-                ['review_request_id' => $reviewRequest->getKey()],
-                ['action' => $reviewRequest->action->value, 'note' => $this->cleanNote($note)],
+                $before,
+                AuditSnapshot::question($question),
+                metadata: [
+                    'review_request_id' => $reviewRequest->getKey(),
+                    'review_action' => $reviewRequest->action->value,
+                    'review_note' => $this->cleanNote($note),
+                ],
             );
 
             return $question;
@@ -131,7 +145,14 @@ final class ReviewQuestionChangeAction
 
     private function approveDeletion(User $reviewer, Question $question): void
     {
-        Auditor::record('admin.question.delete', $reviewer, $question);
+        Auditor::record(
+            AuditAction::QuestionDeleted,
+            $reviewer,
+            $question,
+            AuditSnapshot::question($question),
+            null,
+            metadata: ['source' => 'review_approval'],
+        );
         $question->delete();
     }
 

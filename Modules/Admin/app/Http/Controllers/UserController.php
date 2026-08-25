@@ -62,8 +62,15 @@ final class UserController extends Controller
         $user->load('roles');
 
         $audits = AuditLog::query()
-            ->where('auditable_type', $user->getMorphClass())
-            ->where('auditable_id', $user->id)
+            ->visibleToAdmin()
+            ->where(function ($query) use ($user): void {
+                $query->where('actor_id', $user->getKey())
+                    ->orWhere(function ($subject) use ($user): void {
+                        $subject->where('auditable_type', $user->getMorphClass())
+                            ->where('auditable_id', (string) $user->getKey());
+                    });
+            })
+            ->with('actor:id,name')
             ->latest('id')
             ->limit(20)
             ->get();

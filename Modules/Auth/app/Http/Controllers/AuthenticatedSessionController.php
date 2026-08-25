@@ -5,6 +5,11 @@ declare(strict_types=1);
 namespace Modules\Auth\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
+use App\Support\Audit\AuditContext;
+use App\Support\Audit\Auditor;
+use App\Support\Audit\Enums\AuditAction;
+use App\Support\Audit\Enums\AuditPortal;
 use App\Support\Auth\HomePath;
 use App\Support\Auth\PortalRedirect;
 use App\Support\Auth\StudentTwoFactorDevice;
@@ -86,6 +91,8 @@ final class AuthenticatedSessionController extends Controller
 
     public function destroy(Request $request): RedirectResponse
     {
+        $user = $request->user();
+        $this->auditLogout($user, AuditPortal::Student);
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();
@@ -96,6 +103,8 @@ final class AuthenticatedSessionController extends Controller
 
     public function destroyTeach(Request $request): RedirectResponse
     {
+        $user = $request->user();
+        $this->auditLogout($user, AuditPortal::Teach);
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();
@@ -106,11 +115,27 @@ final class AuthenticatedSessionController extends Controller
 
     public function destroyAdmin(Request $request): RedirectResponse
     {
+        $user = $request->user();
+        $this->auditLogout($user, AuditPortal::Admin);
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
         return redirect()->route('admin.login');
+    }
+
+    private function auditLogout(?User $user, AuditPortal $portal): void
+    {
+        if ($user === null) {
+            return;
+        }
+
+        Auditor::record(
+            AuditAction::AuthLogout,
+            $user,
+            $user,
+            context: new AuditContext(portal: $portal),
+        );
     }
 }

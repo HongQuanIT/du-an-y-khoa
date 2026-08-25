@@ -7,9 +7,11 @@ namespace Modules\Admin\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Support\Enums\Permission;
+use App\Support\Enums\Role;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Modules\Admin\Models\AuditLog;
+use Modules\QuestionBank\Models\Question;
 
 final class AuditLogController extends Controller
 {
@@ -17,29 +19,73 @@ final class AuditLogController extends Controller
     {
         $this->authorizePermission(Permission::AuditView);
 
-        $query = AuditLog::query()->with('actor')->latest('id');
+        $query = AuditLog::query()
+            ->visibleToAdmin()
+            ->with('actor:id,name')
+            ->latest('id');
 
         if ($action = trim((string) $request->query('action', ''))) {
-            $query->where('action', 'like', "%{$action}%");
+            $query->where('action', 'like', "{$action}%");
         }
 
-        if ($actorId = $request->query('actor_id')) {
-            $query->where('actor_id', (int) $actorId);
+        $actor = trim((string) $request->query('actor', $request->query('actor_id', '')));
+        if ($actor !== '') {
+            if (ctype_digit($actor) && (int) $actor > 0) {
+                $query->where('actor_id', (int) $actor);
+            } else {
+                $actorName = mb_substr($actor, 0, 100);
+                $query->whereHas('actor', function ($users) use ($actorName): void {
+                    $users->where('name', 'like', '%'.$actorName.'%');
+                });
+            }
+        }
+
+        if ($relatedUserId = $request->integer('related_user_id')) {
+            $userMorphClass = (new User)->getMorphClass();
+            $query->where(function ($related) use ($relatedUserId, $userMorphClass): void {
+                $related->where('actor_id', $relatedUserId)
+                    ->orWhere(function ($subject) use ($relatedUserId, $userMorphClass): void {
+                        $subject->where('auditable_type', $userMorphClass)
+                            ->where('auditable_id', (string) $relatedUserId);
+                    });
+            });
+        }
+
+        if ($actorRole = Role::tryFrom((string) $request->query('actor_role', ''))) {
+            $query->where('actor_role', $actorRole->value);
+        }
+
+        $subjectTypes = [
+            'user' => (new User)->getMorphClass(),
+            'question' => (new Question)->getMorphClass(),
+        ];
+
+        $subjectType = (string) $request->query('subject_type', '');
+        if (isset($subjectTypes[$subjectType])) {
+            $query->where('auditable_type', $subjectTypes[$subjectType]);
+        }
+
+        if ($subjectId = trim((string) $request->query('subject_id', ''))) {
+            $query->where('auditable_id', mb_substr($subjectId, 0, 36));
         }
 
         if ($ip = trim((string) $request->query('ip', ''))) {
-            $query->where('ip', 'like', "%{$ip}%");
+            $query->where('ip', mb_substr($ip, 0, 45));
         }
 
-        $logs = $query->paginate(30)->withQueryString();
+        $logs = $query->cursorPaginate(30)->withQueryString();
 
         return view('admin::audit.index', [
             'logs' => $logs,
             'filters' => [
                 'action' => $request->query('action'),
-                'actor_id' => $request->query('actor_id'),
+                'actor' => $actor,
+                'actor_role' => $request->query('actor_role'),
                 'ip' => $request->query('ip'),
             ],
+            'roles' => Role::cases(),
+            'userMorphClass' => $subjectTypes['user'],
+            'questionMorphClass' => $subjectTypes['question'],
         ]);
     }
 
@@ -47,7 +93,7 @@ final class AuditLogController extends Controller
     {
         $this->authorizePermission(Permission::AuditView);
 
-        $audit->load('actor');
+        $audit->load(['actor', 'auditable']);
 
         return view('admin::audit.show', [
             'log' => $audit,

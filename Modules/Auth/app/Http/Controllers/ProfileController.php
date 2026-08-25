@@ -6,6 +6,8 @@ namespace Modules\Auth\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\Audit\Auditor;
+use App\Support\Audit\Enums\AuditAction;
 use App\Support\Enums\Role;
 use App\Support\TargetExams;
 use Illuminate\Contracts\View\View;
@@ -24,6 +26,7 @@ use Modules\Billing\Models\InstitutionMember;
 use Modules\Billing\Models\Invoice;
 use Modules\Billing\Support\CurrentSubscription;
 use Modules\Billing\Support\MembershipSummary;
+use Modules\Notification\Support\NotificationCatalog;
 
 /** Unified account hub at `/profile` (profile + settings tabs). */
 final class ProfileController extends Controller
@@ -44,8 +47,8 @@ final class ProfileController extends Controller
             : null;
 
         $prefs = array_merge(
-            \Modules\Notification\Support\NotificationCatalog::defaultPreferences(),
-            is_array($storedPrefs) ? $storedPrefs : [],
+            NotificationCatalog::defaultPreferences(),
+            $this->notificationPreferences($user),
         );
 
         $orgMembers = InstitutionMember::query()
@@ -103,7 +106,17 @@ final class ProfileController extends Controller
             unset($validated['name']);
         }
 
-        $request->user()->forceFill($validated)->save();
+        $user = $request->user();
+        $before = $this->auditSnapshot($user);
+        $user->forceFill($validated)->save();
+        Auditor::record(
+            AuditAction::AccountProfileUpdated,
+            $user,
+            $user,
+            $before,
+            $this->auditSnapshot($user),
+            metadata: ['changed_fields' => array_keys($validated)],
+        );
 
         return redirect()
             ->route('profile.show')
@@ -118,7 +131,17 @@ final class ProfileController extends Controller
             'study_objective' => 'mục tiêu học',
         ]);
 
-        $request->user()->forceFill($validated)->save();
+        $user = $request->user();
+        $before = $this->auditSnapshot($user);
+        $user->forceFill($validated)->save();
+        Auditor::record(
+            AuditAction::AccountPreferencesUpdated,
+            $user,
+            $user,
+            $before,
+            $this->auditSnapshot($user),
+            metadata: ['changed_fields' => array_keys($validated)],
+        );
 
         return redirect()
             ->route('profile.show')
@@ -146,6 +169,7 @@ final class ProfileController extends Controller
         $request->user()->forceFill([
             'password' => $validated['password'],
         ])->save();
+        Auditor::record(AuditAction::AuthPasswordChanged, $request->user(), $request->user());
 
         return redirect()
             ->route('profile.show', $this->tabRouteParams('security'))
@@ -160,9 +184,12 @@ final class ProfileController extends Controller
             'theme' => 'giao diện',
         ]);
 
-        $request->user()->forceFill([
+        $user = $request->user();
+        $before = ['theme' => $user->theme];
+        $user->forceFill([
             'theme' => $validated['theme'],
         ])->save();
+        Auditor::record(AuditAction::AccountPreferencesUpdated, $user, $user, $before, ['theme' => $user->theme]);
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -187,17 +214,27 @@ final class ProfileController extends Controller
             'push_billing' => ['nullable', 'boolean'],
         ]);
 
-        $request->user()->forceFill([
-            'notification_prefs' => [
-                'email_session' => $request->boolean('email_session'),
-                'email_plan' => $request->boolean('email_plan'),
-                'email_product' => $request->boolean('email_product'),
-                'push_reminders' => $request->boolean('push_reminders'),
-                'push_classroom' => $request->boolean('push_classroom'),
-                'push_support' => $request->boolean('push_support'),
-                'push_billing' => $request->boolean('push_billing'),
-            ],
+        $user = $request->user();
+        $before = ['notification_prefs' => $this->notificationPreferences($user)];
+        $notificationPreferences = [
+            'email_session' => $request->boolean('email_session'),
+            'email_plan' => $request->boolean('email_plan'),
+            'email_product' => $request->boolean('email_product'),
+            'push_reminders' => $request->boolean('push_reminders'),
+            'push_classroom' => $request->boolean('push_classroom'),
+            'push_support' => $request->boolean('push_support'),
+            'push_billing' => $request->boolean('push_billing'),
+        ];
+        $user->forceFill([
+            'notification_prefs' => $notificationPreferences,
         ])->save();
+        Auditor::record(
+            AuditAction::AccountPreferencesUpdated,
+            $user,
+            $user,
+            $before,
+            ['notification_prefs' => $notificationPreferences],
+        );
 
         return redirect()
             ->route('profile.show', $this->tabRouteParams('notifications'))
@@ -224,6 +261,13 @@ final class ProfileController extends Controller
 
         $path = $request->file('avatar')->store('avatars/'.$user->getKey(), 'public');
         $user->forceFill(['avatar_path' => $path])->save();
+        Auditor::record(
+            AuditAction::AccountAvatarUpdated,
+            $user,
+            $user,
+            ['has_avatar' => $previousPath !== null],
+            ['has_avatar' => true],
+        );
 
         return redirect()
             ->route('profile.show')
@@ -236,6 +280,15 @@ final class ProfileController extends Controller
         $previousPath = $user?->getRawOriginal('avatar_path');
         $this->deleteAvatarFile(is_string($previousPath) ? $previousPath : null);
         $user?->forceFill(['avatar_path' => null])->save();
+        if ($user !== null) {
+            Auditor::record(
+                AuditAction::AccountAvatarDeleted,
+                $user,
+                $user,
+                ['has_avatar' => $previousPath !== null],
+                ['has_avatar' => false],
+            );
+        }
 
         return redirect()
             ->route('profile.show')
@@ -354,6 +407,36 @@ final class ProfileController extends Controller
         if ($path !== null && $path !== '' && Storage::disk('public')->exists($path)) {
             Storage::disk('public')->delete($path);
         }
+    }
+
+    /** @return array<string, mixed> */
+    private function auditSnapshot(User $user): array
+    {
+        $profileFields = [
+            'name', 'career_role', 'graduation_year', 'country',
+            'institution', 'specialty', 'headline',
+        ];
+
+        return [
+            'profile_fields_set' => collect($profileFields)
+                ->filter(fn (string $field): bool => filled($user->getAttribute($field)))
+                ->values()
+                ->all(),
+            'study_objective' => $user->study_objective,
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function notificationPreferences(User $user): array
+    {
+        $preferences = array_key_exists('notification_prefs', $user->getAttributes())
+            ? $user->getAttribute('notification_prefs')
+            : User::query()
+                ->whereKey($user->getKey())
+                ->first(['id', 'notification_prefs'])
+                ?->notification_prefs;
+
+        return is_array($preferences) ? $preferences : [];
     }
 
     private function isAdminAccount(?User $user): bool

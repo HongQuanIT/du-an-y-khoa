@@ -8,7 +8,9 @@ use App\Models\User;
 use App\Support\Concerns\AsAction;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\ValidationException;
+use Modules\Admin\Enums\AuditAction;
 use Modules\Admin\Support\Auditor;
+use Modules\Admin\Support\AuditSnapshot;
 use Modules\Admin\Support\StaffGuard;
 
 final class SendUserPasswordResetAction
@@ -28,11 +30,12 @@ final class SendUserPasswordResetAction
         }
 
         Auditor::record(
-            'admin.user.password_reset',
+            AuditAction::UserPasswordResetRequested,
             $actor,
             $target,
-            null,
-            ['email' => $target->email],
+            AuditSnapshot::user($target),
+            AuditSnapshot::user($target),
+            metadata: ['delivery_channel' => 'email'],
         );
     }
 }

@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Modules\Classroom\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Support\Audit\AuditContext;
+use App\Support\Audit\Auditor;
+use App\Support\Audit\Enums\AuditAction;
 use App\Support\Http\Responses\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -88,6 +91,19 @@ final class LiveMessageApiController extends Controller
         abort_unless($message->live_session_id === $liveSession->getKey(), 404);
 
         $message->update(['is_hidden' => true]);
+        Auditor::record(
+            AuditAction::ClassroomMessageDeleted,
+            $request->user(),
+            $message,
+            ['is_hidden' => false],
+            ['is_hidden' => true],
+            metadata: [
+                'classroom_id' => $classroom->getKey(),
+                'live_session_id' => $liveSession->getKey(),
+                'message_owner_id' => $message->user_id,
+            ],
+            context: new AuditContext(sessionId: (string) $liveSession->getKey()),
+        );
 
         return ApiResponse::item(['deleted' => true]);
     }

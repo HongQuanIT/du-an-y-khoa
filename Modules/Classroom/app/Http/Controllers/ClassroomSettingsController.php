@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\Classroom\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Support\Audit\Auditor;
+use App\Support\Audit\Enums\AuditAction;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -35,6 +37,11 @@ final class ClassroomSettingsController extends Controller
             'status' => ['nullable', 'in:active,archived'],
         ]);
 
+        $before = [
+            'visibility' => $classroom->visibility->value,
+            'max_members' => $classroom->max_members,
+            'status' => $classroom->status->value,
+        ];
         $classroom->update([
             'title' => $validated['title'],
             'description' => $validated['description'] ?? null,
@@ -44,6 +51,18 @@ final class ClassroomSettingsController extends Controller
                 ? ClassroomStatus::from($validated['status'])
                 : $classroom->status,
         ]);
+        Auditor::record(
+            AuditAction::ClassroomUpdated,
+            $request->user(),
+            $classroom,
+            $before,
+            [
+                'visibility' => $classroom->visibility->value,
+                'max_members' => $classroom->max_members,
+                'status' => $classroom->status->value,
+            ],
+            metadata: ['changed_fields' => array_keys($validated)],
+        );
 
         return redirect()
             ->route('classroom.settings', $classroom)

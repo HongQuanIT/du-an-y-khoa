@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\QuestionBank\Actions;
 
+use App\Models\User;
+use App\Support\Audit\AuditContext;
+use App\Support\Audit\Auditor;
+use App\Support\Audit\Enums\AuditAction;
 use App\Support\Concerns\AsAction;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -143,6 +147,27 @@ final class CompleteQuestionSessionAction
                 sessionId: (string) $completedSession->getKey(),
                 completed: true,
             ));
+
+            $actor = $completedSession->user()->first();
+            Auditor::record(
+                $completedSession->mode === SessionMode::Exam
+                    ? AuditAction::ExamCompleted
+                    : AuditAction::LearningSessionCompleted,
+                $actor instanceof User ? $actor : null,
+                $completedSession,
+                ['status' => SessionStatus::Active->value],
+                [
+                    'status' => SessionStatus::Completed->value,
+                    'total' => $completedSession->total,
+                    'answered_count' => $completedSession->answered_count,
+                    'correct_count' => $completedSession->correct_count,
+                ],
+                metadata: [
+                    'question_session_id' => $completedSession->getKey(),
+                    'exam_id' => $completedSession->exam_id,
+                ],
+                context: new AuditContext(sessionId: (string) $completedSession->getKey()),
+            );
         }
 
         return $completedSession;

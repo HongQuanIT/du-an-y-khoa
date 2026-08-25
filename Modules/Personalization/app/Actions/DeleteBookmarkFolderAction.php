@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\Personalization\Actions;
 
 use App\Models\User;
+use App\Support\Audit\Auditor;
+use App\Support\Audit\Enums\AuditAction;
 use App\Support\Concerns\AsAction;
 use Modules\Personalization\Models\Bookmark;
 use Modules\Personalization\Models\BookmarkFolder;
@@ -23,6 +25,13 @@ final class DeleteBookmarkFolderAction
             ->where('folder_id', $folder->id)
             ->pluck('question_id')
             ->all();
+
+        Auditor::record(
+            AuditAction::LearningBookmarkFolderDeleted,
+            $user,
+            $folder,
+            before: ['items_count' => count($questionIds)],
+        );
 
         BookmarkFolderItem::query()->where('folder_id', $folder->id)->delete();
         $folder->delete();

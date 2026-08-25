@@ -246,6 +246,7 @@ final class QuestionController extends Controller
             'canClone' => $question->exists && $this->actor()->can(Permission::QuestionCreate->value),
             'isReviewer' => $isReviewer,
             'pendingReview' => $pendingReview,
+            'canViewAudit' => $this->actor()->can(Permission::AuditView->value),
         ];
     }
 

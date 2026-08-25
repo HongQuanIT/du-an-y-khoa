@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\StudyPlan\Actions;
 
+use App\Models\User;
+use App\Support\Audit\Auditor;
+use App\Support\Audit\Enums\AuditAction;
 use App\Support\Concerns\AsAction;
 use Illuminate\Support\Carbon;
 use Modules\StudyPlan\Events\StudyPlanActivity;
@@ -27,6 +30,16 @@ final class RescheduleTaskAction
         $this->recalculateProgress->handle($task->plan);
 
         event(StudyPlanActivity::rescheduled($task, $from, $date->toDateString()));
+
+        $actor = $task->plan->user()->first();
+        Auditor::record(
+            AuditAction::LearningTaskRescheduled,
+            $actor instanceof User ? $actor : null,
+            $task,
+            ['date' => $from],
+            ['date' => $date->toDateString()],
+            metadata: ['study_plan_id' => $task->study_plan_id],
+        );
 
         return $task;
     }

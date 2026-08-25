@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\Billing\Actions;
 
 use App\Models\User;
+use App\Support\Audit\Auditor;
+use App\Support\Audit\Enums\AuditAction;
 use App\Support\Concerns\AsAction;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -95,9 +97,24 @@ final class RedeemCodeAction
                 ]);
             }
 
+            $subscription->load('plan');
+
             InvalidateEntitlementCacheAction::run((int) $user->getKey());
 
-            return $subscription->load('plan');
+            Auditor::record(
+                AuditAction::BillingCodeRedeemed,
+                $user,
+                $subscription,
+                after: [
+                    'plan_id' => $subscription->plan_id,
+                    'status' => $subscription->status,
+                    'source' => $subscription->source,
+                    'ends_at' => $subscription->ends_at?->toIso8601String(),
+                ],
+                metadata: ['redeem_code_id' => $redeemCode->getKey()],
+            );
+
+            return $subscription;
         });
     }
 

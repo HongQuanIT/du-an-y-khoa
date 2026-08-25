@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\QuestionBank\Tests\Feature;
 
+use App\Models\AuditLog;
 use App\Models\User;
+use App\Support\Audit\Enums\AuditAction;
 use App\Support\Enums\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -378,6 +380,10 @@ final class QuestionBankFlowTest extends TestCase
             ->where('session_id', $session->getKey())
             ->where('question_id', $second->getKey())
             ->value('used_hint'));
+        $this->assertDatabaseMissing('audit_logs', [
+            'actor_id' => $this->user->getKey(),
+            'action' => AuditAction::LearningQuestionAnswered->value,
+        ]);
 
         $this->assertSame(SessionStatus::Active, $session->refresh()->status);
         $this->assertSame(2, $session->answered_count);
@@ -393,6 +399,17 @@ final class QuestionBankFlowTest extends TestCase
             ->post(route('qbank.session.finish', $session))
             ->assertRedirect(route('qbank.summary', $session));
         $this->assertSame(SessionStatus::Completed, $session->refresh()->status);
+        $this->assertEqualsCanonicalizing(
+            [
+                AuditAction::LearningSessionCreated->value,
+                AuditAction::LearningSessionCompleted->value,
+            ],
+            AuditLog::query()
+                ->where('actor_id', $this->user->getKey())
+                ->where('session_id', (string) $session->getKey())
+                ->pluck('action')
+                ->all(),
+        );
 
         $peer = User::factory()->create();
         $peerSession = QuestionSession::factory()->create([

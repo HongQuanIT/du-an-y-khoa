@@ -29,6 +29,7 @@
     <x-theme-init />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <x-activity-heartbeat />
     @if (Route::has('admin.media.items'))
         <meta name="media-items-url" content="{{ route('admin.media.items') }}">
         <meta name="media-upload-url" content="{{ route('admin.media.store') }}">

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\QuestionBank\Models;
 
+use App\Models\AuditLog;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -236,6 +238,12 @@ class Question extends Model
     public function reviewRequests(): HasMany
     {
         return $this->hasMany(QuestionReviewRequest::class);
+    }
+
+    /** @return MorphMany<AuditLog, $this> */
+    public function auditLogs(): MorphMany
+    {
+        return $this->morphMany(AuditLog::class, 'auditable');
     }
 
     /** @return HasOne<QuestionReviewRequest, $this> */
