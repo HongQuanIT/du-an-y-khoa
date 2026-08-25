@@ -245,11 +245,11 @@
 
                         <a href="{{ route('profile.show', ['tab' => 'membership']) }}" @click="accountMenu = false"
                             @class([
-                                'inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-label-sm font-semibold transition-opacity hover:opacity-90',
+                                'inline-flex max-w-full items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1 font-label-sm text-[14px] leading-none font-semibold transition-opacity hover:opacity-90',
                                 'bg-surface-container-high text-on-surface-variant' => $headerSubscription['is_free'],
                                 'premium-badge text-white shadow-sm' => ! $headerSubscription['is_free'],
                             ])>
-                            <span class="material-symbols-outlined text-[16px]"
+                            <span class="material-symbols-outlined shrink-0 text-[14px] leading-none"
                                 @if (! $headerSubscription['is_free']) style="font-variation-settings: 'FILL' 1;" @endif>workspace_premium</span>
                             {{ $membershipChipLabel }}
                         </a>
