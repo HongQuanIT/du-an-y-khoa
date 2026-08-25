@@ -13,7 +13,17 @@ use Modules\QuestionBank\Models\QuestionReviewRequest;
 /**
  * Admin sidebar items filtered by permission (and optional route readiness).
  *
- * @phpstan-type MenuItem array{label: string, icon: string, route: ?string, permission: ?string, match: ?string, badge?: int}
+ * @phpstan-type MenuItem array{
+ *     label: string,
+ *     icon: string,
+ *     route: ?string,
+ *     url?: ?string,
+ *     permission: ?string,
+ *     match: null|string|list<string>,
+ *     path?: string,
+ *     external?: bool,
+ *     badge?: int
+ * }
  */
 final class AdminMenu
 {
@@ -158,6 +168,16 @@ final class AdminMenu
                 'permission' => Permission::AuditView->value,
                 'match' => 'admin.audit.*',
             ],
+            [
+                'label' => 'Horizon',
+                'icon' => 'monitoring',
+                'route' => 'horizon.index',
+                'url' => '/horizon',
+                'permission' => Permission::SystemManage->value,
+                'match' => null,
+                'path' => 'horizon*',
+                'external' => true,
+            ],
         ];
 
         $visible = [];
@@ -168,14 +188,19 @@ final class AdminMenu
             }
 
             $routeReady = $item['route'] !== null && Route::has($item['route']);
+            $url = $item['url'] ?? null;
+            $hrefReady = $routeReady || is_string($url);
 
             $visible[] = [
                 'label' => $item['label'],
                 'icon' => $item['icon'],
                 'route' => $routeReady ? $item['route'] : null,
+                'url' => $routeReady ? null : $url,
                 'permission' => $item['permission'],
                 'match' => $item['match'],
-                'coming_soon' => ! $routeReady && $item['route'] !== 'admin.dashboard',
+                'path' => $item['path'] ?? null,
+                'external' => (bool) ($item['external'] ?? false),
+                'coming_soon' => ! $hrefReady && $item['route'] !== 'admin.dashboard',
                 'badge' => match (true) {
                     $item['route'] === 'admin.questions.index' && QuestionAccess::isReviewer($user) => QuestionReviewRequest::query()
                         ->where('status', QuestionReviewStatus::Pending->value)
