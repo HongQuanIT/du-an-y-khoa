@@ -393,7 +393,7 @@
                                     <td class="px-4 py-3 font-mono text-body-sm">{{ $invoice->number }}</td>
                                     <td class="px-4 py-3">{{ $invoice->description }}</td>
                                     <td class="px-4 py-3">{{ $invoice->issued_at->locale('vi')->isoFormat('D/M/YYYY') }}</td>
-                                    <td class="px-4 py-3">{{ number_format($invoice->amount_cents / 100, 0, ',', '.') }} {{ $invoice->currency }}</td>
+                                    <td class="px-4 py-3">{{ \Modules\Billing\Support\MoneyFormatter::vnd((int) $invoice->amount_cents) }}</td>
                                     <td class="px-4 py-3">
                                         @if ($invoice->status === 'paid')
                                             <span class="inline-flex rounded-full bg-primary/10 px-2.5 py-0.5 font-label-sm text-label-sm font-medium text-primary">

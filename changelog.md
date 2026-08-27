@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-08-27
+
+### Fix — số tiền hóa đơn trên `/profile?tab=invoices`
+- `amount_cents` lưu VND nguyên (không phải cents USD); bỏ chia `/100`, format bằng `MoneyFormatter::vnd`.
+- Sửa lỗi cú pháp chuỗi assert trong `ProfileSettingsUxTest`.
+
 ## 2026-08-25
 
 ### Admin — menu Horizon
