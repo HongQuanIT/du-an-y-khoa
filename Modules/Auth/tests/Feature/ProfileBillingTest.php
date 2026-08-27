@@ -41,6 +41,27 @@ final class ProfileBillingTest extends TestCase
         );
     }
 
+    public function test_invoices_tab_shows_vnd_amount_without_dividing_by_100(): void
+    {
+        $user = User::factory()->create();
+
+        Invoice::query()->create([
+            'user_id' => $user->getKey(),
+            'number' => 'INV-2026-TEST',
+            'description' => 'Premium 1 tháng',
+            'amount_cents' => 199_000,
+            'currency' => 'VND',
+            'status' => 'paid',
+            'issued_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('profile.show', ['tab' => 'invoices']))
+            ->assertOk()
+            ->assertSee('199.000₫', false)
+            ->assertDontSee('1.990₫', false);
+    }
+
     public function test_redeem_rejects_invalid_code(): void
     {
         $user = User::factory()->create();
