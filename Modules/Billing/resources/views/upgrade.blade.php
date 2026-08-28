@@ -43,14 +43,9 @@
                     $isSelected = $selectedPlanPriceId !== null && (int) $price->id === (int) $selectedPlanPriceId;
                     $isHighlighted = $isSelected || ($selectedPlanPriceId === null && $price->is_featured);
                 @endphp
-                <form method="post" action="{{ route('billing.checkout.store') }}"
+                <article
                     class="flex flex-col rounded-xl border {{ $isHighlighted ? 'border-primary ring-1 ring-primary' : 'border-outline-variant' }} bg-surface p-5 shadow-sm"
                     @if ($isSelected) id="selected-plan" @endif>
-                    @csrf
-                    <input type="hidden" name="plan_price_id" value="{{ $price->id }}">
-                    <input type="hidden" name="idempotency_key" value="{{ $idempotencyKey }}-{{ $price->id }}">
-                    <input type="hidden" name="gateway" value="{{ $defaultGateway }}">
-
                     <div class="mb-4 flex items-start justify-between gap-2">
                         <div>
                             <h2 class="font-title-md text-title-md text-on-surface">{{ $price->label }}</h2>
@@ -77,18 +72,17 @@
                         </p>
                     @endif
 
-                    <button type="submit"
+                    <a href="{{ route('billing.payment-methods', $price) }}"
                         class="mt-auto pt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg {{ $isSelected ? 'bg-primary text-on-primary' : 'bg-primary px-4 py-2.5 text-on-primary' }} px-4 py-2.5 font-label-md text-label-md font-semibold hover:opacity-90">
-                        {{ $price->cta_label ?: 'Thanh toán' }}
-                    </button>
-                </form>
+                        Đăng ký gói
+                    </a>
+                </article>
             @endforeach
         </div>
 
         <p class="mt-8 text-center font-body-sm text-body-sm text-on-surface-variant">
             Có mã kích hoạt?
             <a href="{{ route('profile.show', ['tab' => 'redeem']) }}" class="text-primary hover:underline">Đổi mã</a>
-            · Cổng: {{ strtoupper($defaultGateway) }}
         </p>
     </div>
 
