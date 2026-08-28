@@ -1,4 +1,7 @@
-@props(['title' => null])
+@props([
+    'title' => null,
+    'description' => null,
+])
 
 @php
     use Illuminate\Support\Facades\DB;
@@ -52,6 +55,9 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <x-activity-heartbeat />
     <meta name="robots" content="noindex, nofollow">
+    @if ($description)
+        <meta name="description" content="{{ $description }}">
+    @endif
     <title>{{ $title ? $title . ' - ' . config('app.name') : config('app.name') }}</title>
 
     @fonts

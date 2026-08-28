@@ -9,6 +9,8 @@ use App\Support\Concerns\AsAction;
 use App\Support\Enums\Permission;
 use Modules\Admin\Support\Auditor;
 use Modules\Classroom\Enums\ClassroomStatus;
+use Modules\Classroom\Enums\ClassroomApprovalStatus;
+use Modules\Classroom\Enums\ClassroomLifecycleStatus;
 use Modules\Classroom\Models\Classroom;
 use Modules\Notification\Actions\CreateUserNotificationAction;
 
@@ -21,26 +23,31 @@ final class ApproveClassroomAction
     {
         abort_unless($actor->can(Permission::ClassroomOversee->value), 403);
 
-        if ($classroom->status === ClassroomStatus::Active) {
+        if ($classroom->approval_status === ClassroomApprovalStatus::Approved
+            && $classroom->lifecycle_status === ClassroomLifecycleStatus::Active) {
             return $classroom;
         }
 
         abort_unless(
-            $classroom->status === ClassroomStatus::PendingApproval,
+            $classroom->approval_status === ClassroomApprovalStatus::Pending,
             422,
             'Chỉ duyệt lớp đang chờ duyệt.',
         );
 
-        $before = ['status' => $classroom->status->value];
+        $before = ['approval_status' => $classroom->approval_status->value, 'lifecycle_status' => $classroom->lifecycle_status->value];
 
-        $classroom->update(['status' => ClassroomStatus::Active]);
+        $classroom->update([
+            'status' => ClassroomStatus::Active,
+            'approval_status' => ClassroomApprovalStatus::Approved,
+            'lifecycle_status' => ClassroomLifecycleStatus::Active,
+        ]);
 
         Auditor::record(
             action: 'classroom.approve',
             actor: $actor,
             auditable: $classroom,
             before: $before,
-            after: ['status' => ClassroomStatus::Active->value],
+            after: ['approval_status' => ClassroomApprovalStatus::Approved->value, 'lifecycle_status' => ClassroomLifecycleStatus::Active->value],
         );
 
         $host = $classroom->host;

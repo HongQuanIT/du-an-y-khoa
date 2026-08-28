@@ -24,6 +24,7 @@ final class ScheduleSessionRequest extends FormRequest
         return [
             'title' => ['required', 'string', 'max:200'],
             'scheduled_at' => ['nullable', 'date'],
+            'expected_duration_minutes' => ['nullable', 'integer', 'min:15', 'max:480'],
             'qbank_session_id' => [
                 'nullable',
                 'uuid',
@@ -68,6 +69,11 @@ final class ScheduleSessionRequest extends FormRequest
         }
 
         unset($data['qbank_session_id'], $data['question_ids']);
+
+        if (isset($data['expected_duration_minutes'])) {
+            $data['expected_duration_seconds'] = (int) $data['expected_duration_minutes'] * 60;
+            unset($data['expected_duration_minutes']);
+        }
 
         return $data;
     }

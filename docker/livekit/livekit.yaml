@@ -8,15 +8,22 @@
 port: 7880
 log_level: info
 
+# LiveKit Server and Egress must share the same Redis instance.
+redis:
+  address: redis:6379
+
+# Deliver recording completion/failure events back to Laravel through nginx.
+webhook:
+  urls:
+    - http://web/webhooks/livekit
+
 rtc:
   tcp_port: 7881
   udp_port: 7882
   use_external_ip: false
-  node_ip: 127.0.0.1
+  # node_ip is supplied by docker-compose from LIVEKIT_NODE_IP so it can be
+  # changed per developer machine without editing this shared file.
   # Keep TCP fallback so join still works if UDP is blocked; prefer UDP when possible.
   allow_tcp_fallback: true
   # Slightly larger write buffer helps screen-share bursts on constrained links.
   packet_buffer_size: 500
-
-keys:
-  medlearn_dev_key: "medlearn_dev_secret_change_me"

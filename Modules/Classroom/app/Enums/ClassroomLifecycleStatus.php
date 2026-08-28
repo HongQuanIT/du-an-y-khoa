@@ -6,12 +6,10 @@ namespace Modules\Classroom\Enums;
 
 use App\Support\Enums\Concerns\EnumValues;
 
-enum ClassroomStatus: string
+enum ClassroomLifecycleStatus: string
 {
     use EnumValues;
 
-    case Draft = 'draft';
-    case PendingApproval = 'pending_approval';
     case Active = 'active';
     case Closed = 'closed';
     case Archived = 'archived';
@@ -19,16 +17,9 @@ enum ClassroomStatus: string
     public function label(): string
     {
         return match ($this) {
-            self::Draft => 'Nháp',
-            self::PendingApproval => 'Chờ duyệt',
             self::Active => 'Đang hoạt động',
             self::Closed => 'Đã đóng',
             self::Archived => 'Đã lưu trữ',
         };
-    }
-
-    public function isVisibleToLearners(): bool
-    {
-        return $this === self::Active;
     }
 }

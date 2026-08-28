@@ -5,12 +5,11 @@
 
     $isLive = $classroom->liveSession !== null;
     $upcoming = $classroom->upcomingSession;
-    $replay = $classroom->replaySession;
     $coverUrl = $classroom->catalogCoverUrl();
     $purpose = $classroom->purpose;
     $memberCount = $classroom->active_members_count ?? $classroom->activeMembers()->count();
 
-    $featuredSession = $isLive ? $classroom->liveSession : ($upcoming ?? $replay);
+    $featuredSession = $isLive ? $classroom->liveSession : $upcoming;
     $questionCount = $featuredSession?->hasQuestionSet() ? count($featuredSession->questionIds()) : null;
 
     $cardUrl = route('classroom.show', $classroom);
@@ -22,11 +21,6 @@
         $ctaLabel = 'Vào ngay';
     } elseif ($isLive) {
         $ctaLabel = 'Xem live';
-    } elseif ($replay && $isMember) {
-        $ctaUrl = route('classroom.live', [$classroom, $replay]);
-        $ctaLabel = 'Xem lại';
-    } elseif ($replay) {
-        $ctaLabel = 'Có recording';
     }
 
     $scheduleLabel = null;
@@ -59,10 +53,6 @@
             <span class="absolute top-3 right-3 inline-flex items-center gap-1.5 rounded-full bg-error px-2.5 py-1 text-xs font-bold text-white shadow">
                 <span class="size-1.5 rounded-full bg-white animate-pulse"></span>
                 LIVE
-            </span>
-        @elseif ($replay)
-            <span class="absolute top-3 right-3 rounded-full bg-surface/90 px-2.5 py-1 text-xs font-semibold text-on-surface shadow">
-                Có VOD
             </span>
         @elseif ($upcoming)
             <span class="absolute top-3 right-3 rounded-full bg-primary/90 px-2.5 py-1 text-xs font-semibold text-on-primary shadow">
@@ -153,8 +143,6 @@
                 ])>
                 @if ($isLive)
                     <span class="material-symbols-outlined text-[18px]">sensors</span>
-                @elseif ($replay && $isMember)
-                    <span class="material-symbols-outlined text-[18px]">play_circle</span>
                 @endif
                 {{ $ctaLabel }}
             </a>

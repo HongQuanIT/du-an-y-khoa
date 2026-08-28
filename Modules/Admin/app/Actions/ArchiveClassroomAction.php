@@ -9,6 +9,7 @@ use App\Support\Concerns\AsAction;
 use App\Support\Enums\Permission;
 use Modules\Admin\Support\Auditor;
 use Modules\Classroom\Enums\ClassroomStatus;
+use Modules\Classroom\Enums\ClassroomLifecycleStatus;
 use Modules\Classroom\Models\Classroom;
 
 /**
@@ -22,20 +23,20 @@ final class ArchiveClassroomAction
     {
         abort_unless($actor->can(Permission::ClassroomOversee->value), 403);
 
-        if ($classroom->status === ClassroomStatus::Archived) {
+        if ($classroom->lifecycle_status === ClassroomLifecycleStatus::Archived) {
             return $classroom;
         }
 
-        $before = ['status' => $classroom->status->value];
+        $before = ['lifecycle_status' => $classroom->lifecycle_status->value];
 
-        $classroom->update(['status' => ClassroomStatus::Archived]);
+        $classroom->update(['status' => ClassroomStatus::Archived, 'lifecycle_status' => ClassroomLifecycleStatus::Archived]);
 
         Auditor::record(
             action: 'classroom.archive',
             actor: $actor,
             auditable: $classroom,
             before: $before,
-            after: ['status' => ClassroomStatus::Archived->value],
+            after: ['lifecycle_status' => ClassroomLifecycleStatus::Archived->value],
         );
 
         return $classroom->fresh() ?? $classroom;

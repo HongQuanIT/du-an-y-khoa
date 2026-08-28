@@ -22,6 +22,8 @@ enum AuditAction: string
 
     case ClassroomCreated = 'classroom.created';
     case ClassroomUpdated = 'classroom.updated';
+    case ClassroomClosed = 'classroom.closed';
+    case ClassroomReopened = 'classroom.reopened';
     case ClassroomDeleted = 'classroom.deleted';
     case ClassroomJoined = 'classroom.joined';
     case ClassroomLeft = 'classroom.left';
@@ -29,6 +31,8 @@ enum AuditAction: string
     case ClassroomLiveScheduled = 'classroom.live.scheduled';
     case ClassroomLiveStarted = 'classroom.live.started';
     case ClassroomLiveEnded = 'classroom.live.ended';
+    case ClassroomRecordingStarted = 'classroom.recording.started';
+    case ClassroomRecordingStopped = 'classroom.recording.stopped';
     case ClassroomMemberKicked = 'classroom.member.kicked';
     case ClassroomChatToggled = 'classroom.chat.toggled';
     case ClassroomQuestionChanged = 'classroom.question.changed';
@@ -92,6 +96,8 @@ enum AuditAction: string
             self::AccountAvatarDeleted => 'Xóa ảnh đại diện',
             self::ClassroomCreated => 'Tạo lớp học',
             self::ClassroomUpdated => 'Cập nhật lớp học',
+            self::ClassroomClosed => 'Đóng lớp học',
+            self::ClassroomReopened => 'Mở lại lớp học',
             self::ClassroomDeleted => 'Xóa lớp học',
             self::ClassroomJoined => 'Tham gia lớp học',
             self::ClassroomLeft => 'Rời lớp học',
@@ -99,6 +105,8 @@ enum AuditAction: string
             self::ClassroomLiveScheduled => 'Lên lịch buổi live',
             self::ClassroomLiveStarted => 'Bắt đầu buổi live',
             self::ClassroomLiveEnded => 'Kết thúc buổi live',
+            self::ClassroomRecordingStarted => 'Bắt đầu ghi hình buổi live',
+            self::ClassroomRecordingStopped => 'Dừng ghi hình buổi live',
             self::ClassroomMemberKicked => 'Mời học viên khỏi live',
             self::ClassroomChatToggled => 'Thay đổi trạng thái chat',
             self::ClassroomQuestionChanged => 'Thay đổi câu hỏi live',

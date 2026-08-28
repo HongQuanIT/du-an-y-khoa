@@ -16,17 +16,22 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Modules\Classroom\Actions\CloseClassroomAction;
 use Modules\Classroom\Actions\CreateClassroomAction;
 use Modules\Classroom\Actions\EndLiveSessionAction;
+use Modules\Classroom\Actions\ReopenClassroomAction;
 use Modules\Classroom\Actions\ScheduleLiveSessionAction;
 use Modules\Classroom\Actions\StartLiveSessionAction;
+use Modules\Classroom\Actions\UpdateTeachClassroomAction;
 use Modules\Classroom\Enums\ClassroomPurpose;
+use Modules\Classroom\Enums\ClassroomStatus;
 use Modules\Classroom\Enums\ClassroomVisibility;
 use Modules\Classroom\Enums\LiveSessionStatus;
 use Modules\Classroom\Enums\MemberRole;
 use Modules\Classroom\Enums\MemberStatus;
 use Modules\Classroom\Http\Requests\ScheduleSessionRequest;
 use Modules\Classroom\Http\Requests\StoreTeachClassroomRequest;
+use Modules\Classroom\Http\Requests\UpdateTeachClassroomRequest;
 use Modules\Classroom\Models\Classroom;
 use Modules\Classroom\Models\LiveSession;
 use Modules\Classroom\Services\LiveKitTokenService;
@@ -98,6 +103,38 @@ final class TeachClassroomController extends Controller
             ->with('status', 'Đã gửi lớp chờ duyệt. Admin sẽ duyệt trước khi hiển thị cho học viên.');
     }
 
+    public function edit(Request $request, Classroom $classroom): View
+    {
+        $this->authorizeTeachClassroom($request, $classroom);
+        $this->authorize('update', $classroom);
+
+        return view('classroom::teach.classes.edit', [
+            'classroom' => $classroom,
+            'purposes' => ClassroomPurpose::teachCases(),
+            'visibilities' => ClassroomVisibility::cases(),
+        ]);
+    }
+
+    public function update(
+        UpdateTeachClassroomRequest $request,
+        Classroom $classroom,
+        UpdateTeachClassroomAction $action,
+    ): RedirectResponse {
+        $this->authorizeTeachClassroom($request, $classroom);
+        $this->authorize('update', $classroom);
+
+        $previousStatus = $classroom->status;
+        $classroom = $action->handle($request->user(), $classroom, $request->validated());
+        $requiresApproval = $previousStatus !== ClassroomStatus::PendingApproval
+            && $classroom->status === ClassroomStatus::PendingApproval;
+
+        return redirect()
+            ->route('teach.classes.show', $classroom)
+            ->with('status', $requiresApproval
+                ? 'Đã cập nhật nội dung quan trọng. Lớp được chuyển về chờ admin duyệt lại.'
+                : 'Đã cập nhật thông tin lớp.');
+    }
+
     public function show(Request $request, Classroom $classroom): View
     {
         $this->authorizeTeachClassroom($request, $classroom);
@@ -126,6 +163,9 @@ final class TeachClassroomController extends Controller
             'upcomingSessions' => $upcomingSessions,
             'pastSessions' => $pastSessions,
             'members' => $members,
+            'canCloseClassroom' => $classroom->status === ClassroomStatus::Active
+                && $classroom->liveSession === null
+                && $classroom->sessions()->where('status', LiveSessionStatus::Ended->value)->exists(),
         ]);
     }
 
@@ -149,10 +189,33 @@ final class TeachClassroomController extends Controller
             ->with('status', 'Đã xoá lớp: '.$classroom->title);
     }
 
+    public function close(Request $request, Classroom $classroom, CloseClassroomAction $action): RedirectResponse
+    {
+        $this->authorizeTeachClassroom($request, $classroom);
+        $this->authorize('manageLive', $classroom);
+        $action->handle($request->user(), $classroom);
+
+        return redirect()
+            ->route('teach.classes.show', $classroom)
+            ->with('status', 'Đã đóng lớp. Học viên không thể tham gia hoặc vào buổi live mới.');
+    }
+
+    public function reopen(Request $request, Classroom $classroom, ReopenClassroomAction $action): RedirectResponse
+    {
+        $this->authorizeTeachClassroom($request, $classroom);
+        $this->authorize('manageLive', $classroom);
+        $action->handle($request->user(), $classroom);
+
+        return redirect()
+            ->route('teach.classes.show', $classroom)
+            ->with('status', 'Đã mở lại lớp. Phê duyệt trước đó được giữ nguyên và học viên có thể truy cập lại.');
+    }
+
     public function scheduleLive(ScheduleSessionRequest $request, Classroom $classroom, ScheduleLiveSessionAction $action): RedirectResponse
     {
         $this->authorizeTeachClassroom($request, $classroom);
         $this->authorize('manageLive', $classroom);
+        abort_if($classroom->status === ClassroomStatus::Closed, 409, 'Lớp đã đóng. Không thể lên lịch buổi live mới.');
         $session = $action->handle($classroom, $request->sessionPayload());
         $this->auditLive($request, AuditAction::ClassroomLiveScheduled, $classroom, $session);
 
@@ -210,7 +273,8 @@ final class TeachClassroomController extends Controller
         $this->authorizeTeachClassroom($request, $classroom);
         // Instructors may test/host a pending classroom; learners remain blocked until approval.
         $this->authorize('manageLive', $classroom);
-        $action->handle($classroom, $liveSession);
+        abort_if($classroom->status === ClassroomStatus::Closed, 409, 'Lớp đã đóng. Không thể bắt đầu buổi live.');
+        $action->handle($classroom, $liveSession, allowReopen: true);
         $this->auditLive($request, AuditAction::ClassroomLiveStarted, $classroom, $liveSession->fresh() ?? $liveSession);
 
         return redirect()->route('teach.classes.sessions.studio', [$classroom, $liveSession]);
@@ -234,7 +298,6 @@ final class TeachClassroomController extends Controller
                 ->with('user')
                 ->latest('created_at')
                 ->limit(100),
-            'recordings',
         ]);
 
         return view('classroom::teach.classes.studio', [

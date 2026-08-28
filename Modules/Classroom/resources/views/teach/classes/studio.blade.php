@@ -100,7 +100,8 @@
                                 </button>
                             </form>
                         @elseif ($session->status === LiveSessionStatus::Live)
-                            <form method="post" action="{{ route('teach.classes.sessions.end', [$classroom, $session]) }}">
+                            <form method="post" data-live-end-form action="{{ route('teach.classes.sessions.end', [$classroom, $session]) }}"
+                                onsubmit="return confirm('Bạn chắc chắn muốn kết thúc buổi live? Học viên sẽ bị ngắt khỏi phòng.')">
                                 @csrf
                                 <button type="submit"
                                     class="inline-flex h-10 items-center gap-2 rounded-lg bg-error px-3 font-label-sm font-semibold text-white hover:opacity-90">

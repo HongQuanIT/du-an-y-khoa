@@ -38,7 +38,6 @@ final class LiveRoomController extends Controller
         $classroom->load('host');
         $liveSession->load([
             'messages' => fn ($q) => $q->where('is_hidden', false)->with('user')->latest('created_at')->limit(100),
-            'recordings',
         ]);
         $messages = $liveSession->messages->sortBy('created_at')->values();
 

@@ -151,42 +151,6 @@ final class ClassroomCatalogTest extends TestCase
             ->assertSee(route('classroom.live', [$classroom, $session]), false);
     }
 
-    public function test_recording_filter_lists_classrooms_with_ready_vod(): void
-    {
-        $host = User::factory()->create();
-        $host->assignRole(Role::Instructor->value);
-
-        $withRecording = $this->approvedClassroom($host, [
-            'title' => 'Lớp có VOD',
-            'visibility' => 'public',
-        ]);
-
-        $session = LiveSession::query()->create([
-            'classroom_id' => $withRecording->getKey(),
-            'title' => 'Buổi đã kết thúc',
-            'status' => LiveSessionStatus::Ended,
-            'ended_at' => now()->subHour(),
-        ]);
-
-        LiveRecording::query()->create([
-            'live_session_id' => $session->getKey(),
-            'status' => RecordingStatus::Ready,
-        ]);
-
-        $this->approvedClassroom($host, [
-            'title' => 'Lớp không VOD',
-            'visibility' => 'public',
-        ]);
-
-        $learner = User::factory()->create();
-        $learner->assignRole(Role::Student->value);
-
-        $this->actingAs($learner)
-            ->get(route('classroom.index', ['filter' => 'recording']))
-            ->assertOk()
-            ->assertSee('Lớp có VOD')
-            ->assertDontSee('Lớp không VOD');
-    }
 
     /** @param  array<string, mixed>  $data */
     private function approvedClassroom(User $host, array $data): Classroom

@@ -25,7 +25,7 @@ final class ClassroomIndexController extends Controller
 
         $filter = (string) $request->query('filter', '');
 
-        $catalogRelations = ['host', 'liveSession', 'upcomingSession', 'replaySession'];
+        $catalogRelations = ['host', 'liveSession', 'upcomingSession'];
 
         $mine = $this->memberClassroomsQuery($user->getKey(), $catalogRelations)->get();
 
@@ -111,7 +111,6 @@ final class ClassroomIndexController extends Controller
                 fn (Builder $sessionQuery) => $sessionQuery->where('status', LiveSessionStatus::Live->value),
             ),
             'upcoming' => $query->whereHas('upcomingSession'),
-            'recording' => $query->whereHas('replaySession'),
             default => null,
         };
     }

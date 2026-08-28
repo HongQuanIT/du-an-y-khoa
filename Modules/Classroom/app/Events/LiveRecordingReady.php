@@ -41,10 +41,7 @@ final class LiveRecordingReady implements ShouldBroadcastNow
     {
         return [
             'status' => $this->recording->status->value,
-            'playback_url' => route('classroom.live.recording', [
-                'classroom' => $this->session->classroom,
-                'liveSession' => $this->session,
-            ]),
+            'playback_url' => null,
         ];
     }
 }

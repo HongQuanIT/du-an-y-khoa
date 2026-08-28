@@ -141,9 +141,6 @@
                                             @if ($sess->hasQuestionSet())
                                                 · {{ count($sess->questionIds()) }} câu
                                             @endif
-                                            @if ($sess->recordings->isNotEmpty())
-                                                · Recording: {{ $sess->recordings->first()->status->value }}
-                                            @endif
                                         </p>
                                     </div>
                                     <div class="flex flex-wrap gap-2">

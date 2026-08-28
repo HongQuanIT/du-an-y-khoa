@@ -35,7 +35,6 @@ final class LiveRoomApiController extends Controller
 
         $liveSession->load([
             'messages' => fn ($q) => $q->where('is_hidden', false)->with('user')->orderBy('created_at')->limit(200),
-            'recordings',
             'hands' => fn ($q) => $q->whereNull('acknowledged_at')->with('user'),
         ]);
 
@@ -50,7 +49,6 @@ final class LiveRoomApiController extends Controller
             )
             : null;
 
-        $recording = $liveSession->recordings->first();
         $canHostLive = ! $observer && ($teachPortal || ! $classroom->purpose->isTeachPurpose())
             ? $request->user()->can('manageLive', $classroom)
             : false;
@@ -87,12 +85,6 @@ final class LiveRoomApiController extends Controller
                 'raised_at' => $h->raised_at?->toIso8601String(),
             ])->values(),
             'question_panel' => $questions->panel($liveSession),
-            'recording' => $recording ? [
-                'status' => $recording->status->value,
-                'playback_url' => $recording->status->value === 'ready'
-                    ? route('classroom.live.recording', [$classroom, $liveSession])
-                    : null,
-            ] : null,
             'urls' => $this->roomUrls($classroom, $liveSession, $teachPortal, $observer),
         ]);
     }
