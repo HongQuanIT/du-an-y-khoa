@@ -9,7 +9,7 @@
 
 <x-layouts.admin title="Cổng thanh toán">
     <x-admin.page-header title="Cổng thanh toán"
-        description="Bật/tắt và cấu hình VNPay, Fake, MoMo, ZaloPay. Giá trị lưu trong settings; env dùng làm mặc định khi chưa lưu.">
+        description="Bật/tắt và cấu hình VNPay (mặc định), MoMo, ZaloPay. Giá trị lưu trong settings; env dùng làm mặc định khi chưa lưu.">
     </x-admin.page-header>
 
     @include('admin::billing._nav')

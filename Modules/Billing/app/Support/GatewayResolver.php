@@ -21,7 +21,7 @@ final class GatewayResolver
 
         if (! $this->settings->isReady($name)) {
             $available = $this->available();
-            $name = $available[0] ?? 'fake';
+            $name = $available[0] ?? 'vnpay';
         }
 
         return $this->resolve($name);

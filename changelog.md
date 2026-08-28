@@ -2,6 +2,10 @@
 
 ## 2026-08-28
 
+### Billing — Admin cổng thanh toán: VNPay mặc định, bỏ Fake
+- Gỡ Fake Gateway khỏi `/admin/billing/gateways`; cổng mặc định `vnpay` (config + `.env.example`).
+- Setting legacy `fake` tự map về VNPay; FakeGateway chỉ còn trong PHPUnit khi bật `BILLING_FAKE_GATEWAY`.
+
 ### Fix — autoload blueprint seed trên Linux
 - Chuyển `MedicalLicensingExamBlueprint` khỏi `seeders/data/` lên cạnh seeder (PSR-4), tránh lỗi class not found khi filesystem phân biệt hoa/thường.
 

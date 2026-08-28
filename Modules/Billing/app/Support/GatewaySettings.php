@@ -31,21 +31,6 @@ final class GatewaySettings
     public function catalog(): array
     {
         return [
-            'fake' => [
-                'label' => 'Fake Gateway',
-                'description' => 'Cổng giả lập cho local/test — không gọi cổng thật.',
-                'phase' => 1,
-                'implemented' => true,
-                'icon' => 'science',
-                'fields' => [
-                    'enabled' => [
-                        'label' => 'Bật cổng Fake',
-                        'type' => 'boolean',
-                        'default' => (bool) config('billing.gateways.fake.enabled', true),
-                        'rules' => ['sometimes', 'boolean'],
-                    ],
-                ],
-            ],
             'vnpay' => [
                 'label' => 'VNPay',
                 'description' => 'Thanh toán prepaid QR/ATM/Visa qua VNPay (sandbox hoặc production).',
@@ -177,11 +162,16 @@ final class GatewaySettings
     public function defaultGateway(): string
     {
         $stored = $this->settings->get(self::GROUP.'.default_gateway');
-        if (is_string($stored) && $stored !== '') {
-            return $stored;
+        $value = (is_string($stored) && $stored !== '')
+            ? $stored
+            : (string) config('billing.default_gateway', 'vnpay');
+
+        // Drop legacy "fake" (removed from admin catalog) and any unknown key.
+        if (! in_array($value, $this->implementedKeys(), true)) {
+            return 'vnpay';
         }
 
-        return (string) config('billing.default_gateway', 'fake');
+        return $value;
     }
 
     /**
@@ -227,7 +217,6 @@ final class GatewaySettings
         }
 
         return match ($gateway) {
-            'fake' => true,
             'vnpay' => $this->stringFilled($gateway, 'tmn_code')
                 && $this->stringFilled($gateway, 'hash_secret')
                 && $this->stringFilled($gateway, 'url'),
@@ -245,7 +234,12 @@ final class GatewaySettings
             }
         }
 
-        return $ready;
+        // FakeGateway is not in the admin catalog; keep it for automated tests only.
+        if (app()->environment('testing') && (bool) config('billing.gateways.fake.enabled', false)) {
+            $ready[] = 'fake';
+        }
+
+        return array_values(array_unique($ready));
     }
 
     /**
@@ -286,7 +280,7 @@ final class GatewaySettings
         $implemented = $this->implementedKeys();
 
         if (! in_array($default, $implemented, true)) {
-            $default = 'fake';
+            $default = 'vnpay';
         }
 
         $this->settings->set(self::GROUP.'.default_gateway', $default, 'string');
