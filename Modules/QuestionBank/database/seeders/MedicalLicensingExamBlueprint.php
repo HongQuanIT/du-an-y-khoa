@@ -2,12 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Modules\QuestionBank\Database\Seeders\Data;
+namespace Modules\QuestionBank\Database\Seeders;
 
 /**
  * 17 blueprint sections for the national medical licensing exam.
  *
  * 128 core clinical topics are defined in data/blueprint/core_clinical_topics.php.
+ *
+ * Lives next to seeders (not under data/) so PSR-4 autoload works on
+ * case-sensitive filesystems (Linux staging/production).
  */
 final class MedicalLicensingExamBlueprint
 {

@@ -7,7 +7,6 @@ namespace Modules\QuestionBank\Database\Seeders;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use Modules\QuestionBank\Database\Seeders\Data\MedicalLicensingExamBlueprint;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
 
 final class MedicalLicensingExamBlueprintSeeder extends Seeder
