@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-08-28
+
+### Classroom — vòng đời lớp, điểm danh live và ghi hình
+- Tách `approval_status` và `lifecycle_status`; giảng viên đóng/mở lại lớp và sửa thông tin lớp.
+- Điểm danh live qua webhook LiveKit; buổi live có grace period và thời lượng dự kiến.
+- Ghi hình thủ công trong Live Studio; bỏ auto-start egress khi kết thúc live.
+- Cập nhật LiveKit Docker (v1.13.6, Redis, webhook), `LIVEKIT_NODE_IP` và tài liệu triển khai local.
+
+### Học viên chọn phương thức thanh toán
+- Bấm **Đăng ký gói** mở trang cổng thanh toán riêng với MoMo, VNPay, ZaloPay và QR ngân hàng.
+- Chỉ VNPay có luồng checkout hoạt động; các phương thức còn lại hiển thị mô phỏng và bị vô hiệu hóa.
+
+### Tìm kiếm thông minh Audit log
+- Ô **Hành động** gợi ý mã và tên hiển thị khi nhập; lọc theo nhãn tiếng Việt.
+
 ## 2026-08-27
 
 ### Fix — số tiền hóa đơn trên `/profile?tab=invoices`

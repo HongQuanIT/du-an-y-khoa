@@ -42,11 +42,9 @@ final class GlobalSearchService
                 $title = SearchText::normalize(SearchText::plain((string) $exam->title), 255);
                 $description = SearchText::plain((string) ($exam->description ?? ''));
 
-                SearchDocument::query()->updateOrCreate(
-                    [
-                        'source_type' => Exam::class,
-                        'source_id' => $exam->getKey(),
-                    ],
+                SearchDocument::syncSource(
+                    Exam::class,
+                    $exam->getKey(),
                     [
                         'scope' => 'exam',
                         'type' => 'exam',
@@ -57,7 +55,7 @@ final class GlobalSearchService
                         'is_free' => false,
                         'is_published' => true,
                         'published_at' => $exam->updated_at ?? $now,
-                    ]
+                    ],
                 );
             })
             ->pluck('id')
@@ -76,11 +74,9 @@ final class GlobalSearchService
                 $title = SearchText::normalize(SearchText::plain((string) $classroom->title), 255);
                 $description = SearchText::plain((string) ($classroom->description ?? ''));
 
-                SearchDocument::query()->updateOrCreate(
-                    [
-                        'source_type' => Classroom::class,
-                        'source_id' => $classroom->getKey(),
-                    ],
+                SearchDocument::syncSource(
+                    Classroom::class,
+                    $classroom->getKey(),
                     [
                         'scope' => 'classroom',
                         'type' => 'classroom',
@@ -91,7 +87,7 @@ final class GlobalSearchService
                         'is_free' => true,
                         'is_published' => true,
                         'published_at' => $classroom->updated_at ?? $now,
-                    ]
+                    ],
                 );
             })
             ->pluck('id')

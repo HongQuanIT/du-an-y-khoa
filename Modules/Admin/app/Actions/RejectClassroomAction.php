@@ -9,6 +9,7 @@ use App\Support\Concerns\AsAction;
 use App\Support\Enums\Permission;
 use Modules\Admin\Support\Auditor;
 use Modules\Classroom\Enums\ClassroomStatus;
+use Modules\Classroom\Enums\ClassroomApprovalStatus;
 use Modules\Classroom\Models\Classroom;
 use Modules\Notification\Actions\CreateUserNotificationAction;
 
@@ -22,21 +23,24 @@ final class RejectClassroomAction
         abort_unless($actor->can(Permission::ClassroomOversee->value), 403);
 
         abort_unless(
-            $classroom->status === ClassroomStatus::PendingApproval,
+            $classroom->approval_status === ClassroomApprovalStatus::Pending,
             422,
             'Chỉ từ chối lớp đang chờ duyệt.',
         );
 
-        $before = ['status' => $classroom->status->value];
+        $before = ['approval_status' => $classroom->approval_status->value, 'lifecycle_status' => $classroom->lifecycle_status->value];
 
-        $classroom->update(['status' => ClassroomStatus::Archived]);
+        $classroom->update([
+            'status' => ClassroomStatus::Archived,
+            'approval_status' => ClassroomApprovalStatus::Rejected,
+        ]);
 
         Auditor::record(
             action: 'classroom.reject',
             actor: $actor,
             auditable: $classroom,
             before: $before,
-            after: ['status' => ClassroomStatus::Archived->value],
+            after: ['approval_status' => ClassroomApprovalStatus::Rejected->value, 'lifecycle_status' => $classroom->lifecycle_status->value],
         );
 
         $host = $classroom->host;

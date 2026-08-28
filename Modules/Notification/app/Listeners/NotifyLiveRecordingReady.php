@@ -9,7 +9,7 @@ use Modules\Classroom\Enums\MemberStatus;
 use Modules\Classroom\Events\LiveRecordingReady;
 use Modules\Notification\Actions\CreateUserNotificationAction;
 
-/** Notify host + active members when VOD recording is ready. */
+/** Keep legacy recording notifications pointed to the class page. */
 final class NotifyLiveRecordingReady
 {
     public function __construct(private readonly CreateUserNotificationAction $notify) {}
@@ -29,10 +29,6 @@ final class NotifyLiveRecordingReady
             ->unique()
             ->filter();
 
-        $learnerUrl = route('classroom.live.recording', [
-            'classroom' => $classroom,
-            'liveSession' => $session,
-        ]);
         $hostUrl = route('teach.classes.show', $classroom);
 
         foreach (User::query()->whereIn('id', $userIds)->cursor() as $user) {
@@ -48,7 +44,7 @@ final class NotifyLiveRecordingReady
                     'session_id' => $session->getKey(),
                     'recording_id' => $event->recording->getKey(),
                 ],
-                actionUrl: $isHost ? $hostUrl : $learnerUrl,
+                actionUrl: $hostUrl,
             );
         }
     }

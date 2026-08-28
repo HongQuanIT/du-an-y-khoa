@@ -39,6 +39,7 @@ final class AdminAuditArchitectureTest extends TestCase
         parent::setUp();
 
         $this->seed(RolePermissionSeeder::class);
+        config()->set('audit.queue_enabled', false);
     }
 
     public function test_user_changes_store_standard_snapshots_metadata_and_relations(): void
@@ -233,8 +234,9 @@ final class AdminAuditArchitectureTest extends TestCase
         $secondActor = $this->staffUser(Role::ContentEditor);
         $secondActor->forceFill(['name' => 'Biên tập viên Trần Bình'])->save();
 
-        Auditor::record(PlatformAuditAction::ClassroomLiveStarted, $firstActor, $firstActor);
+        $firstLog = Auditor::record(PlatformAuditAction::ClassroomLiveStarted, $firstActor, $firstActor);
         Auditor::record(AuditAction::QuestionCreated, $secondActor, $secondActor);
+        $this->assertNotNull($firstLog);
 
         $this->actingAsStaff($admin)
             ->get(route('admin.audit.index', ['actor' => 'Nguyễn An']))
@@ -246,6 +248,19 @@ final class AdminAuditArchitectureTest extends TestCase
             ->assertOk()
             ->assertViewHas('logs', fn ($logs): bool => $logs->count() === 1
                 && $logs->first()->actor_id === $secondActor->id);
+
+        $this->get(route('admin.audit.index', ['action' => 'Nguyễn An']))
+            ->assertOk()
+            ->assertViewHas('logs', fn ($logs): bool => $logs->count() === 0)
+            ->assertViewHas('actionSuggestions', fn (array $suggestions): bool => collect($suggestions)
+                ->contains(fn (array $item): bool => $item['value'] === PlatformAuditAction::ClassroomLiveStarted->value)
+                && collect($suggestions)->doesntContain(fn (array $item): bool => $item['value'] === 'Giảng viên Nguyễn An'));
+
+        $this->get(route('admin.audit.index', ['action' => 'Bắt đầu buổi live']))
+            ->assertOk()
+            ->assertViewHas('logs', fn ($logs): bool => $logs->count() === 1
+                && $logs->first()->id === $firstLog->id);
+
     }
 
     public function test_admin_can_view_instructor_and_student_activity_context(): void

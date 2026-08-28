@@ -40,7 +40,27 @@ final class CheckoutFlowTest extends TestCase
             ->get(route('subscription.upgrade'))
             ->assertOk()
             ->assertSee('Nâng cấp Premium')
+            ->assertSee('Đăng ký gói')
             ->assertSee('1 năm');
+    }
+
+    public function test_selecting_plan_opens_gateway_page_with_only_vnpay_runnable(): void
+    {
+        $user = User::factory()->create();
+        $price = PlanPrice::query()->where('slug', 'premium-1y')->firstOrFail();
+
+        $this->actingAs($user)
+            ->get(route('billing.payment-methods', $price))
+            ->assertOk()
+            ->assertSee('Cổng thanh toán MedLearn')
+            ->assertSee('Ví MoMo')
+            ->assertSee('VNPay')
+            ->assertSee('ZaloPay')
+            ->assertSee('QR ngân hàng')
+            ->assertSee('value="vnpay"', false)
+            ->assertDontSee('value="momo"', false)
+            ->assertDontSee('value="zalopay"', false)
+            ->assertDontSee('value="bank_qr"', false);
     }
 
     public function test_checkout_creates_session_and_redirects_to_fake_pay(): void

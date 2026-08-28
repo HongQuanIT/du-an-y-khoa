@@ -15,6 +15,7 @@ use Modules\Billing\Actions\ListPublicPlansAction;
 use Modules\Billing\Actions\ProcessPaymentWebhookAction;
 use Modules\Billing\DTO\WebhookPayload;
 use Modules\Billing\Models\CheckoutSession;
+use Modules\Billing\Models\PlanPrice;
 use Modules\Billing\Support\CheckoutIntent;
 use Modules\Billing\Support\CurrentSubscription;
 use Modules\Billing\Support\GatewayResolver;
@@ -23,19 +24,13 @@ use Modules\Billing\Support\MoneyFormatter;
 
 final class CheckoutController extends Controller
 {
-    public function upgrade(Request $request, ListPublicPlansAction $list, GatewayResolver $gateways, GatewaySettings $gatewaySettings): View
+    public function upgrade(Request $request, ListPublicPlansAction $list): View
     {
         $catalog = $list->handle();
         $premium = $catalog['premium'];
         $prices = $premium
             ? $premium->prices()->public()->ordered()->where('price_cents', '>', 0)->get()
             : collect();
-
-        $available = $gateways->available();
-        $default = $gatewaySettings->defaultGateway();
-        if (! in_array($default, $available, true)) {
-            $default = $available[0] ?? 'fake';
-        }
 
         $selectedPlanPriceId = CheckoutIntent::resolveSelectedPriceId($request);
         if (
@@ -50,8 +45,16 @@ final class CheckoutController extends Controller
             'premium' => $premium,
             'prices' => $prices,
             'selectedPlanPriceId' => $selectedPlanPriceId,
-            'gateways' => $available,
-            'defaultGateway' => $default,
+        ]);
+    }
+
+    public function paymentMethods(PlanPrice $planPrice, GatewaySettings $gatewaySettings): View
+    {
+        abort_unless($planPrice->is_public && $planPrice->price_cents > 0, 404);
+
+        return view('billing::payment-methods', [
+            'price' => $planPrice->load('plan'),
+            'vnpayReady' => $gatewaySettings->isReady('vnpay'),
             'idempotencyKey' => (string) Str::uuid(),
         ]);
     }

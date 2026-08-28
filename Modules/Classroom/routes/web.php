@@ -13,7 +13,6 @@ use Modules\Classroom\Http\Controllers\LiveMessageApiController;
 use Modules\Classroom\Http\Controllers\LiveModerationController;
 use Modules\Classroom\Http\Controllers\LivePresenterController;
 use Modules\Classroom\Http\Controllers\LiveQuestionController;
-use Modules\Classroom\Http\Controllers\LiveRecordingPlaybackController;
 use Modules\Classroom\Http\Controllers\LiveRoomApiController;
 use Modules\Classroom\Http\Controllers\LiveRoomController;
 use Modules\Classroom\Http\Controllers\LiveSessionController;
@@ -65,6 +64,4 @@ Route::middleware(['auth', 'learner'])
         Route::post('/{classroom}/members/{user}/ban', [LiveModerationController::class, 'banMember'])
             ->name('members.ban');
 
-        Route::get('/{classroom}/live/{liveSession}/recording', LiveRecordingPlaybackController::class)
-            ->name('live.recording');
     });

@@ -37,6 +37,32 @@ class SearchDocument extends Model
         'published_at' => 'datetime',
     ];
 
+    /**
+     * Update a source document or restore its soft-deleted row.
+     *
+     * The database unique key includes source_type and source_id, so a normal
+     * updateOrCreate() cannot recreate a document hidden by SoftDeletes.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    public static function syncSource(string $sourceType, int|string|null $sourceId, array $attributes): self
+    {
+        $document = self::withTrashed()->firstOrNew([
+            'source_type' => $sourceType,
+            'source_id' => $sourceId,
+        ]);
+
+        $document->fill($attributes);
+
+        if ($document->exists && $document->trashed()) {
+            $document->restore();
+        } else {
+            $document->save();
+        }
+
+        return $document->refresh();
+    }
+
     public function searchableAs(): string
     {
         return 'global-search';

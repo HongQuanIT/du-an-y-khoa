@@ -14,6 +14,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Modules\Classroom\Enums\ClassroomPurpose;
+use Modules\Classroom\Enums\ClassroomApprovalStatus;
+use Modules\Classroom\Enums\ClassroomLifecycleStatus;
 use Modules\Classroom\Enums\ClassroomStatus;
 use Modules\Classroom\Enums\ClassroomVisibility;
 use Modules\Classroom\Enums\LiveSessionStatus;
@@ -48,6 +50,8 @@ class Classroom extends Model
         'visibility',
         'join_code',
         'status',
+        'approval_status',
+        'lifecycle_status',
         'max_members',
         'cover_media_id',
         'meta',
@@ -57,6 +61,8 @@ class Classroom extends Model
         'purpose' => ClassroomPurpose::class,
         'visibility' => ClassroomVisibility::class,
         'status' => ClassroomStatus::class,
+        'approval_status' => ClassroomApprovalStatus::class,
+        'lifecycle_status' => ClassroomLifecycleStatus::class,
         'max_members' => 'integer',
         'meta' => 'array',
     ];
@@ -68,6 +74,27 @@ class Classroom extends Model
                 $classroom->uuid = (string) Str::ulid();
             }
         });
+    }
+
+    /**
+     * Keep legacy writes to `status` synchronized during the migration period.
+     * New code should write approval_status and lifecycle_status explicitly.
+     */
+    public function setStatusAttribute(ClassroomStatus|string $value): void
+    {
+        $status = $value instanceof ClassroomStatus ? $value : ClassroomStatus::from($value);
+        $this->attributes['status'] = $status->value;
+
+        [$approval, $lifecycle] = match ($status) {
+            ClassroomStatus::Draft => [ClassroomApprovalStatus::Draft, ClassroomLifecycleStatus::Active],
+            ClassroomStatus::PendingApproval => [ClassroomApprovalStatus::Pending, ClassroomLifecycleStatus::Active],
+            ClassroomStatus::Active => [ClassroomApprovalStatus::Approved, ClassroomLifecycleStatus::Active],
+            ClassroomStatus::Closed => [ClassroomApprovalStatus::Approved, ClassroomLifecycleStatus::Closed],
+            ClassroomStatus::Archived => [ClassroomApprovalStatus::Approved, ClassroomLifecycleStatus::Archived],
+        };
+
+        $this->attributes['approval_status'] = $approval->value;
+        $this->attributes['lifecycle_status'] = $lifecycle->value;
     }
 
     public function getRouteKeyName(): string
@@ -153,6 +180,12 @@ class Classroom extends Model
         return $this->relationLoaded('liveSession')
             ? $this->liveSession !== null
             : $this->liveSession()->exists();
+    }
+
+    public function isVisibleToLearners(): bool
+    {
+        return $this->approval_status === ClassroomApprovalStatus::Approved
+            && $this->lifecycle_status === ClassroomLifecycleStatus::Active;
     }
 
     public function memberFor(User $user): ?ClassroomMember

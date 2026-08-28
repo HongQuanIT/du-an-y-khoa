@@ -11,6 +11,7 @@ use Modules\Classroom\Http\Controllers\LiveQuestionController;
 use Modules\Classroom\Http\Controllers\LiveRoomApiController;
 use Modules\Classroom\Http\Controllers\TeachClassroomController;
 use Modules\Classroom\Http\Controllers\TeachProfileController;
+use Modules\Notification\Http\Controllers\NotificationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -33,13 +34,17 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroyTeach'])
 Route::middleware(['auth', 'instructor'])->group(function (): void {
     Route::view('/', 'classroom::teach.dashboard')->name('dashboard');
 
-    Route::get('/notifications', [\Modules\Notification\Http\Controllers\NotificationController::class, 'index'])
+    Route::get('/notifications', [NotificationController::class, 'index'])
         ->name('notifications.index');
 
     Route::get('/classes', [TeachClassroomController::class, 'index'])->name('classes.index');
     Route::get('/classes/create', [TeachClassroomController::class, 'create'])->name('classes.create');
     Route::post('/classes', [TeachClassroomController::class, 'store'])->name('classes.store');
+    Route::get('/classes/{classroom}/edit', [TeachClassroomController::class, 'edit'])->name('classes.edit');
+    Route::put('/classes/{classroom}', [TeachClassroomController::class, 'update'])->name('classes.update');
     Route::get('/classes/{classroom}', [TeachClassroomController::class, 'show'])->name('classes.show');
+    Route::post('/classes/{classroom}/close', [TeachClassroomController::class, 'close'])->name('classes.close');
+    Route::post('/classes/{classroom}/reopen', [TeachClassroomController::class, 'reopen'])->name('classes.reopen');
     Route::delete('/classes/{classroom}', [TeachClassroomController::class, 'destroy'])->name('classes.destroy');
     Route::get('/classes/{classroom}/questions/search', [TeachClassroomController::class, 'searchQuestions'])
         ->name('classes.questions.search');

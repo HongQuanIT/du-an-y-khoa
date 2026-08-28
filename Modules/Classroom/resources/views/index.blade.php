@@ -9,7 +9,6 @@
         '' => 'Tất cả',
         'live' => 'Đang live',
         'upcoming' => 'Sắp diễn ra',
-        'recording' => 'Có recording',
     ];
 @endphp
 
@@ -47,7 +46,7 @@
             @endforeach
         </div>
 
-        @if ($liveNow->isNotEmpty() && ($filter ?? '') !== 'upcoming' && ($filter ?? '') !== 'recording')
+        @if ($liveNow->isNotEmpty() && ($filter ?? '') !== 'upcoming')
             <section>
                 <h2 class="mb-4 flex items-center gap-2 font-headline-sm text-headline-sm text-on-surface">
                     <span class="inline-flex size-2 rounded-full bg-error animate-pulse"></span>
@@ -109,8 +108,6 @@
                     Lớp đang live
                 @elseif (($filter ?? '') === 'upcoming')
                     Lớp sắp diễn ra
-                @elseif (($filter ?? '') === 'recording')
-                    Lớp có recording
                 @else
                     Lớp công khai
                 @endif

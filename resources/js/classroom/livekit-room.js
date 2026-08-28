@@ -166,6 +166,17 @@ export function mountLivekitRoom(root) {
     let disposed = false;
     let hasRemoteVideo = false;
     let mainVideoPriority = 0;
+    let connectRetryTimer = null;
+    let connecting = false;
+    let leaving = false;
+
+    const MAX_CONNECT_ATTEMPTS = 4;
+
+    const isRoomUsable = () => ! disposed && room?.state === 'connected';
+
+    const isClosedSocketError = (error) => String(error?.message ?? error ?? '')
+        .toLowerCase()
+        .includes('websocket is already in closing or closed state');
 
     const csrf = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
         ?? String(liveConfig.csrf ?? '');
@@ -212,10 +223,18 @@ export function mountLivekitRoom(root) {
 
     const leaveRoom = (urlTo = exitUrl) => {
         disposed = true;
-        try {
-            room?.disconnect();
-        } catch {
-            // ignore
+        leaving = true;
+        if (connectRetryTimer !== null) {
+            window.clearTimeout(connectRetryTimer);
+            connectRetryTimer = null;
+        }
+        // Do not request leave while the SDK is automatically reconnecting.
+        if (room?.state === 'connected') {
+            try {
+                room.disconnect();
+            } catch {
+                // Navigation still proceeds.
+            }
         }
         window.location.href = urlTo;
     };
@@ -266,7 +285,7 @@ export function mountLivekitRoom(root) {
 
     const kickParticipant = async (userId, identity, button) => {
         const template = String(liveConfig.kick_member_url_template ?? liveConfig.ban_member_url_template ?? '');
-        if (! template || ! userId || ! room) {
+        if (! template || ! userId || ! isRoomUsable()) {
             return;
         }
 
@@ -292,14 +311,19 @@ export function mountLivekitRoom(root) {
                 user_id: userId,
                 redirect_url: String(liveConfig.exit_url ?? '/classes'),
             });
-            await room.localParticipant.publishData(new TextEncoder().encode(payload), {
-                reliable: true,
-                topic: 'moderation',
-                destinationIdentities: [identity],
-            });
+            if (isRoomUsable()) {
+                await room.localParticipant.publishData(new TextEncoder().encode(payload), {
+                    reliable: true,
+                    topic: 'moderation',
+                    destinationIdentities: [identity],
+                });
+            }
 
             button.textContent = 'Đã kick';
         } catch (e) {
+            if (isClosedSocketError(e)) {
+                return;
+            }
             console.error('[LiveKit] kick participant', e);
             button.disabled = false;
             button.textContent = 'Kick';
@@ -447,8 +471,53 @@ export function mountLivekitRoom(root) {
         }
     };
 
-    const connect = async () => {
-        if (disposed) {
+    const ensureLocalMedia = async (targetRoom) => {
+        if (disposed || targetRoom?.state !== 'connected') {
+            return;
+        }
+
+        if (canPublishVideo) {
+            try {
+                await targetRoom.localParticipant.setCameraEnabled(
+                    true,
+                    profile.cameraCapture,
+                    profile.cameraPublish,
+                );
+                camOn = true;
+                const camPub = targetRoom.localParticipant.getTrackPublication(Track.Source.Camera);
+                if (camPub?.track) {
+                    attachTrack(camPub.track, 'local', true);
+                }
+            } catch (e) {
+                if (! isClosedSocketError(e) && ! disposed) {
+                    console.error('[LiveKit] camera', e);
+                    setError(e instanceof Error ? e.message : 'Không bật được camera');
+                }
+            }
+        }
+
+        if (canPublishAudio && (canPublishVideo || studioMode || Boolean(liveConfig.can_moderate))) {
+            try {
+                await targetRoom.localParticipant.setMicrophoneEnabled(true);
+                micOn = true;
+            } catch (e) {
+                if (! isClosedSocketError(e) && ! disposed) {
+                    console.error('[LiveKit] mic', e);
+                    setError(e instanceof Error ? e.message : 'Không bật được micro');
+                }
+            }
+        }
+
+        syncButtons();
+    };
+
+    const connect = async (attempt = 1) => {
+        if (disposed || connecting) {
+            return;
+        }
+
+        const currentState = String(room?.state ?? 'disconnected');
+        if (currentState === 'connected' || currentState === 'connecting' || currentState === 'reconnecting') {
             return;
         }
 
@@ -459,7 +528,8 @@ export function mountLivekitRoom(root) {
             return;
         }
 
-        setStatus('Đang kết nối…', 'connecting');
+        connecting = true;
+        setStatus(attempt > 1 ? `Đang kết nối lại (${attempt}/${MAX_CONNECT_ATTEMPTS})…` : 'Đang kết nối…', 'connecting');
         setError('');
 
         const next = new Room(profile.room);
@@ -472,7 +542,7 @@ export function mountLivekitRoom(root) {
                 syncButtons();
             })
             .on(RoomEvent.Disconnected, () => {
-                if (disposed) {
+                if (disposed || leaving) {
                     return;
                 }
                 setStatus('Đã ngắt', 'error');
@@ -480,11 +550,20 @@ export function mountLivekitRoom(root) {
                 micOn = false;
                 screenOn = false;
                 syncButtons();
+
+                if (room === next && connectRetryTimer === null) {
+                    room = null;
+                    connectRetryTimer = window.setTimeout(() => {
+                        connectRetryTimer = null;
+                        connect(1);
+                    }, 1_000);
+                }
             })
             .on(RoomEvent.Reconnecting, () => setStatus('Đang kết nối lại…', 'connecting'))
             .on(RoomEvent.Reconnected, () => {
                 setStatus('Đã kết nối', 'connected');
                 syncButtons();
+                void ensureLocalMedia(next);
             })
             .on(RoomEvent.ParticipantConnected, () => {
                 refreshCount();
@@ -542,7 +621,9 @@ export function mountLivekitRoom(root) {
         try {
             await next.connect(url, token, { peerConnectionTimeout: 45_000 });
             if (disposed) {
-                next.disconnect();
+                if (next.state === 'connected') {
+                    next.disconnect();
+                }
 
                 return;
             }
@@ -559,46 +640,35 @@ export function mountLivekitRoom(root) {
                 }
             }
 
-            if (canPublishVideo) {
-                try {
-                    await next.localParticipant.setCameraEnabled(
-                        true,
-                        profile.cameraCapture,
-                        profile.cameraPublish,
-                    );
-                    camOn = true;
-                    const camPub = next.localParticipant.getTrackPublication(Track.Source.Camera);
-                    if (camPub?.track) {
-                        attachTrack(camPub.track, 'local', true);
-                    }
-                } catch (e) {
-                    console.error('[LiveKit] camera', e);
-                    setError(e instanceof Error ? e.message : 'Không bật được camera');
-                }
-            }
-
-            if (canPublishAudio && (canPublishVideo || studioMode || Boolean(liveConfig.can_moderate))) {
-                try {
-                    await next.localParticipant.setMicrophoneEnabled(true);
-                    micOn = true;
-                } catch (e) {
-                    console.error('[LiveKit] mic', e);
-                    setError(e instanceof Error ? e.message : 'Không bật được micro');
-                }
-            }
-
-            syncButtons();
+            await ensureLocalMedia(next);
         } catch (e) {
             console.error('[LiveKit] connect', e);
-            setStatus('Lỗi kết nối', 'error');
-            setError(e instanceof Error ? e.message : 'Không kết nối được LiveKit');
-            room = null;
+            // The SDK may have entered its own reconnect cycle. Calling
+            // disconnect here sends a leave request to an already-closing socket.
+            if (room === next && String(next.state) === 'disconnected') {
+                room = null;
+            }
+
+            if (! disposed && String(next.state) === 'disconnected' && attempt < MAX_CONNECT_ATTEMPTS) {
+                const delay = Math.min(1_000 * (2 ** (attempt - 1)), 5_000);
+                setStatus('LiveKit đang khởi động…', 'connecting');
+                setError(`Chưa kết nối được phòng live. Hệ thống sẽ thử lại sau ${delay / 1_000} giây.`);
+                connectRetryTimer = window.setTimeout(() => {
+                    connectRetryTimer = null;
+                    connect(attempt + 1);
+                }, delay);
+            } else if (! disposed) {
+                setStatus('Lỗi kết nối', 'error');
+                setError('Không kết nối được máy chủ phòng live. Vui lòng tải lại trang sau ít phút.');
+            }
             syncButtons();
+        } finally {
+            connecting = false;
         }
     };
 
     const onMic = async () => {
-        if (! room || ! canPublishAudio) {
+        if (! isRoomUsable() || ! canPublishAudio) {
             return;
         }
         try {
@@ -608,13 +678,16 @@ export function mountLivekitRoom(root) {
             setError('');
             syncButtons();
         } catch (e) {
+            if (isClosedSocketError(e)) {
+                return;
+            }
             console.error('[LiveKit] mic toggle', e);
             setError(e instanceof Error ? e.message : 'Lỗi micro');
         }
     };
 
     const onCam = async () => {
-        if (! room || ! canPublishVideo) {
+        if (! isRoomUsable() || ! canPublishVideo) {
             return;
         }
         try {
@@ -640,13 +713,16 @@ export function mountLivekitRoom(root) {
             setError('');
             syncButtons();
         } catch (e) {
+            if (isClosedSocketError(e)) {
+                return;
+            }
             console.error('[LiveKit] cam toggle', e);
             setError(e instanceof Error ? e.message : 'Lỗi camera');
         }
     };
 
     const onScreen = async () => {
-        if (! room || ! canPublishScreen) {
+        if (! isRoomUsable() || ! canPublishScreen) {
             return;
         }
         try {
@@ -677,6 +753,9 @@ export function mountLivekitRoom(root) {
             }
             syncButtons();
         } catch (e) {
+            if (isClosedSocketError(e)) {
+                return;
+            }
             console.error('[LiveKit] screen', e);
             setError(e instanceof Error ? e.message : 'Lỗi chia sẻ màn hình');
             screenOn = false;
@@ -702,14 +781,21 @@ export function mountLivekitRoom(root) {
             return;
         }
         disposed = true;
+        leaving = true;
+        if (connectRetryTimer !== null) {
+            window.clearTimeout(connectRetryTimer);
+            connectRetryTimer = null;
+        }
         btnMic?.removeEventListener('click', onMic);
         btnCam?.removeEventListener('click', onCam);
         btnScreen?.removeEventListener('click', onScreen);
         btnLeave?.removeEventListener('click', onLeave);
-        try {
-            room?.disconnect();
-        } catch {
-            // ignore
+        if (room?.state === 'connected') {
+            try {
+                room.disconnect();
+            } catch {
+                // Ignore an already-closing transport.
+            }
         }
         room = null;
         delete root.dataset.lkMounted;

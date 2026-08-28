@@ -82,17 +82,10 @@
                 <p data-lk-error class="hidden border-t border-red-400/30 bg-red-500/20 px-4 py-2 text-xs text-red-100"></p>
             @elseif ($session->status === LiveSessionStatus::Ended)
                 <div class="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
-                    <div data-hls-root class="hidden aspect-video w-full max-w-3xl overflow-hidden rounded-xl bg-black"></div>
-                    <div data-vod-placeholder class="space-y-2">
+                    <div class="space-y-2">
                         <span class="material-symbols-outlined text-5xl text-white/60">replay</span>
                         <p class="text-lg font-semibold">Buổi live đã kết thúc</p>
-                        <p data-recording-status class="text-sm text-white/60">
-                            @if ($session->recordings->isNotEmpty())
-                                Recording: {{ $session->recordings->first()->status->value }}
-                            @else
-                                Không có bản ghi.
-                            @endif
-                        </p>
+                        <p class="text-sm text-white/60">Nội dung ghi hình không khả dụng.</p>
                     </div>
                 </div>
             @elseif ($session->status === LiveSessionStatus::Scheduled)

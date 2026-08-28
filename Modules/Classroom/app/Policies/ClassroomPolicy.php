@@ -29,7 +29,7 @@ final class ClassroomPolicy
             return true;
         }
 
-        if (! $classroom->status->isVisibleToLearners()) {
+        if (! $classroom->isVisibleToLearners()) {
             return false;
         }
 
@@ -54,7 +54,7 @@ final class ClassroomPolicy
 
     public function join(User $user, Classroom $classroom): bool
     {
-        if (! $classroom->status->isVisibleToLearners()) {
+        if (! $classroom->isVisibleToLearners()) {
             return false;
         }
 
@@ -84,6 +84,6 @@ final class ClassroomPolicy
     public function startLive(User $user, Classroom $classroom): bool
     {
         return $this->manageLive($user, $classroom)
-            && $classroom->status->isVisibleToLearners();
+            && $classroom->isVisibleToLearners();
     }
 }

@@ -11,6 +11,8 @@ use App\Support\Concerns\AsAction;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Modules\Classroom\Enums\ClassroomPurpose;
+use Modules\Classroom\Enums\ClassroomApprovalStatus;
+use Modules\Classroom\Enums\ClassroomLifecycleStatus;
 use Modules\Classroom\Enums\ClassroomStatus;
 use Modules\Classroom\Enums\ClassroomVisibility;
 use Modules\Classroom\Enums\MemberRole;
@@ -40,6 +42,8 @@ final class CreateClassroomAction
                 'visibility' => $visibility,
                 'join_code' => $this->makeJoinCode(),
                 'status' => ClassroomStatus::PendingApproval,
+                'approval_status' => ClassroomApprovalStatus::Pending,
+                'lifecycle_status' => ClassroomLifecycleStatus::Active,
                 'max_members' => $data['max_members'] ?? null,
             ]);
 

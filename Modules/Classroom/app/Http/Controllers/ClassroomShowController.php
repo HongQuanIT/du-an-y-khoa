@@ -21,7 +21,7 @@ final class ClassroomShowController extends Controller
 
         $classroom->load([
             'host',
-            'sessions' => fn ($q) => $q->with('recordings')->limit(20),
+            'sessions' => fn ($q) => $q->limit(20),
             'activeMembers.user',
         ]);
 

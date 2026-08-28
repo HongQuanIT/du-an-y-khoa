@@ -21,11 +21,9 @@ final class ClassroomSearchObserver
             $title = SearchText::normalize(SearchText::plain((string) $classroom->title), 255);
             $description = SearchText::plain((string) ($classroom->description ?? ''));
 
-            SearchDocument::query()->updateOrCreate(
-                [
-                    'source_type' => Classroom::class,
-                    'source_id' => $classroom->getKey(),
-                ],
+            SearchDocument::syncSource(
+                Classroom::class,
+                $classroom->getKey(),
                 [
                     'scope' => 'classroom',
                     'type' => 'classroom',
@@ -36,7 +34,7 @@ final class ClassroomSearchObserver
                     'is_free' => true,
                     'is_published' => true,
                     'published_at' => $classroom->updated_at ?? now(),
-                ]
+                ],
             );
         } else {
             SearchDocument::query()

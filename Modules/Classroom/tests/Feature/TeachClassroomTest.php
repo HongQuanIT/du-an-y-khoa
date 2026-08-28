@@ -8,16 +8,24 @@ use App\Models\User;
 use App\Support\Enums\Role;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Modules\Classroom\Enums\ClassroomPurpose;
 use Modules\Classroom\Enums\ClassroomStatus;
 use Modules\Classroom\Enums\ClassroomVisibility;
 use Modules\Classroom\Enums\LiveSessionStatus;
 use Modules\Classroom\Enums\MemberRole;
 use Modules\Classroom\Enums\MemberStatus;
+use Modules\Classroom\Enums\RecordingStatus;
+use Modules\Classroom\Jobs\StartLiveRecordingJob;
+use Modules\Classroom\Jobs\StopLiveRecordingJob;
 use Modules\Classroom\Models\Classroom;
 use Modules\Classroom\Models\ClassroomMember;
+use Modules\Classroom\Models\LiveRecording;
 use Modules\Classroom\Models\LiveSession;
+use Modules\Classroom\Services\LiveKitEgressService;
 use Modules\QuestionBank\Models\Question;
+use Modules\Search\Models\SearchDocument;
 use Tests\TestCase;
 
 final class TeachClassroomTest extends TestCase
@@ -264,6 +272,32 @@ final class TeachClassroomTest extends TestCase
         $this->actingAs($instructor)
             ->get(route('teach.classes.sessions.studio', [$classroom, $session]))
             ->assertRedirect(route('teach.classes.show', $classroom));
+
+        $this->actingAs($instructor)
+            ->get(route('teach.classes.show', $classroom))
+            ->assertOk()
+            ->assertSee('Mở lại buổi live')
+            ->assertSee(route('teach.classes.sessions.start', [$classroom, $session]), false);
+
+        $originalStartedAt = $session->fresh()->started_at;
+
+        $this->actingAs($instructor)
+            ->post(route('teach.classes.sessions.start', [$classroom, $session]))
+            ->assertRedirect(route('teach.classes.sessions.studio', [$classroom, $session]));
+
+        $reopened = $session->fresh();
+        $this->assertSame(LiveSessionStatus::Live, $reopened->status);
+        $this->assertNull($reopened->ended_at);
+        $this->assertTrue($reopened->started_at?->equalTo($originalStartedAt) ?? false);
+        $this->assertDatabaseHas('live_session_messages', [
+            'live_session_id' => $session->id,
+            'body' => 'Buổi live đã được mở lại.',
+        ]);
+
+        $this->actingAs($instructor)
+            ->get(route('teach.classes.sessions.studio', [$classroom, $session]))
+            ->assertOk()
+            ->assertSee('Live Studio');
     }
 
     public function test_instructor_can_start_live_before_classroom_approval(): void
@@ -294,6 +328,137 @@ final class TeachClassroomTest extends TestCase
             ->assertRedirect(route('teach.classes.sessions.studio', [$classroom, $session]));
 
         $this->assertSame(LiveSessionStatus::Live, $session->fresh()->status);
+    }
+
+    public function test_instructor_can_close_active_classroom_after_live_has_ended(): void
+    {
+        $instructor = $this->instructor(['email' => 'close-classroom@example.com']);
+        $classroom = $this->seedClassroom($instructor, ClassroomPurpose::FeedbackReview);
+        $classroom->update(['status' => ClassroomStatus::Active]);
+
+        $session = LiveSession::query()->create([
+            'classroom_id' => $classroom->id,
+            'title' => 'Buổi live đã hoàn thành',
+            'status' => LiveSessionStatus::Ended,
+            'started_at' => now()->subHour(),
+            'ended_at' => now(),
+        ]);
+
+        $this->actingAs($instructor)
+            ->get(route('teach.classes.show', $classroom))
+            ->assertOk()
+            ->assertSee('Đóng lớp')
+            ->assertSee(route('teach.classes.close', $classroom), false);
+
+        $this->actingAs($instructor)
+            ->post(route('teach.classes.close', $classroom))
+            ->assertRedirect(route('teach.classes.show', $classroom));
+
+        $this->assertSame(ClassroomStatus::Closed, $classroom->fresh()->status);
+
+        $this->actingAs($instructor)
+            ->get(route('teach.classes.show', $classroom))
+            ->assertOk()
+            ->assertSee('Lớp đã đóng')
+            ->assertDontSee(route('teach.classes.sessions.start', [$classroom, $session]), false);
+
+        $this->actingAs($instructor)
+            ->post(route('teach.classes.sessions.start', [$classroom, $session]))
+            ->assertStatus(409);
+
+        $this->actingAs($instructor)
+            ->post(route('teach.classes.sessions.store', $classroom), [
+                'title' => 'Không được lên lịch thêm',
+            ])
+            ->assertStatus(409);
+    }
+
+    public function test_instructor_can_reopen_previously_approved_closed_classroom(): void
+    {
+        config(['audit.queue_enabled' => false]);
+        $instructor = $this->instructor(['email' => 'reopen-classroom@example.com']);
+        $classroom = $this->seedClassroom($instructor, ClassroomPurpose::FeedbackReview);
+        $classroom->update([
+            'status' => ClassroomStatus::Active,
+            'visibility' => ClassroomVisibility::Public,
+        ]);
+        $searchDocumentId = SearchDocument::query()
+            ->where('source_type', Classroom::class)
+            ->where('source_id', $classroom->getKey())
+            ->value('id');
+        $this->assertNotNull($searchDocumentId);
+
+        $classroom->update(['status' => ClassroomStatus::Closed]);
+        $this->assertSoftDeleted('search_documents', ['id' => $searchDocumentId]);
+
+        $this->actingAs($instructor)
+            ->get(route('teach.classes.show', $classroom))
+            ->assertOk()
+            ->assertSee('Mở lại lớp')
+            ->assertSee(route('teach.classes.reopen', $classroom), false);
+
+        $this->actingAs($instructor)
+            ->post(route('teach.classes.reopen', $classroom))
+            ->assertRedirect(route('teach.classes.show', $classroom));
+
+        $this->assertSame(ClassroomStatus::Active, $classroom->fresh()->status);
+        $this->assertDatabaseHas('search_documents', [
+            'id' => $searchDocumentId,
+            'source_type' => Classroom::class,
+            'source_id' => $classroom->getKey(),
+            'deleted_at' => null,
+        ]);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'classroom.reopened',
+            'actor_id' => $instructor->id,
+        ]);
+    }
+
+    public function test_significant_edit_requires_admin_approval_again(): void
+    {
+        config(['audit.queue_enabled' => false]);
+        $instructor = $this->instructor(['email' => 'edit-approved-classroom@example.com']);
+        $classroom = $this->seedClassroom($instructor, ClassroomPurpose::FeedbackReview);
+        $classroom->update(['status' => ClassroomStatus::Active]);
+
+        $this->actingAs($instructor)
+            ->put(route('teach.classes.update', $classroom), [
+                'title' => 'Tên lớp đã thay đổi đáng kể',
+                'description' => $classroom->description,
+                'purpose' => $classroom->purpose->value,
+                'visibility' => $classroom->visibility->value,
+                'max_members' => $classroom->max_members,
+            ])
+            ->assertRedirect(route('teach.classes.show', $classroom));
+
+        $classroom->refresh();
+        $this->assertSame('Tên lớp đã thay đổi đáng kể', $classroom->title);
+        $this->assertSame(ClassroomStatus::PendingApproval, $classroom->status);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'classroom.updated',
+            'actor_id' => $instructor->id,
+        ]);
+    }
+
+    public function test_operational_edit_keeps_existing_approval_status(): void
+    {
+        $instructor = $this->instructor(['email' => 'resize-approved-classroom@example.com']);
+        $classroom = $this->seedClassroom($instructor, ClassroomPurpose::ExamReview);
+        $classroom->update(['status' => ClassroomStatus::Active, 'max_members' => 50]);
+
+        $this->actingAs($instructor)
+            ->put(route('teach.classes.update', $classroom), [
+                'title' => $classroom->title,
+                'description' => $classroom->description,
+                'purpose' => $classroom->purpose->value,
+                'visibility' => $classroom->visibility->value,
+                'max_members' => 80,
+            ])
+            ->assertRedirect(route('teach.classes.show', $classroom));
+
+        $classroom->refresh();
+        $this->assertSame(80, $classroom->max_members);
+        $this->assertSame(ClassroomStatus::Active, $classroom->status);
     }
 
     public function test_instructor_cannot_manage_live_for_foreign_teach_classroom(): void

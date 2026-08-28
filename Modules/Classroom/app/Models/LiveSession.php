@@ -30,6 +30,8 @@ class LiveSession extends Model
         'scheduled_at',
         'started_at',
         'ended_at',
+        'host_grace_until',
+        'expected_duration_seconds',
         'status',
         'livekit_room_name',
         'linked_exam_id',
@@ -44,6 +46,8 @@ class LiveSession extends Model
         'scheduled_at' => 'datetime',
         'started_at' => 'datetime',
         'ended_at' => 'datetime',
+        'host_grace_until' => 'datetime',
+        'expected_duration_seconds' => 'integer',
         'status' => LiveSessionStatus::class,
         'question_set' => 'array',
         'current_question_index' => 'integer',
@@ -82,6 +86,12 @@ class LiveSession extends Model
     public function recordings(): HasMany
     {
         return $this->hasMany(LiveRecording::class);
+    }
+
+    /** @return HasMany<LiveSessionAttendanceSegment, $this> */
+    public function attendanceSegments(): HasMany
+    {
+        return $this->hasMany(LiveSessionAttendanceSegment::class);
     }
 
     /** @return HasMany<LiveSessionHand, $this> */

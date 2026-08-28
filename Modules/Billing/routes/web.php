@@ -16,6 +16,8 @@ Route::get('/billing/return/{gateway}', BillingReturnController::class)->name('b
 Route::middleware('auth')->group(function (): void {
     Route::get('/subscription', [SubscriptionController::class, 'show'])->name('subscription.show');
     Route::get('/subscription/upgrade', [CheckoutController::class, 'upgrade'])->name('subscription.upgrade');
+    Route::get('/subscription/payment/{planPrice}', [CheckoutController::class, 'paymentMethods'])
+        ->name('billing.payment-methods');
 
     Route::post('/billing/checkout', [CheckoutController::class, 'store'])->name('billing.checkout.store');
     Route::get('/billing/checkout/{uuid}', [CheckoutController::class, 'show'])->name('billing.checkout.show');
