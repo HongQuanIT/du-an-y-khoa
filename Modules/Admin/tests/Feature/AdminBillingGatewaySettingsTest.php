@@ -40,7 +40,7 @@ final class AdminBillingGatewaySettingsTest extends TestCase
             ->assertSee('VNPay')
             ->assertSee('MoMo')
             ->assertSee('ZaloPay')
-            ->assertSee('Fake Gateway');
+            ->assertDontSee('Fake Gateway');
     }
 
     public function test_admin_can_update_vnpay_and_default_gateway(): void
@@ -51,7 +51,6 @@ final class AdminBillingGatewaySettingsTest extends TestCase
             ->put(route('admin.billing.gateways.update'), [
                 'default_gateway' => 'vnpay',
                 'gateways' => [
-                    'fake' => ['enabled' => '1'],
                     'vnpay' => [
                         'enabled' => '1',
                         'tmn_code' => 'DEMO_TMN',
@@ -97,9 +96,8 @@ final class AdminBillingGatewaySettingsTest extends TestCase
 
         $this->actingAsStaff($admin)
             ->put(route('admin.billing.gateways.update'), [
-                'default_gateway' => 'fake',
+                'default_gateway' => 'vnpay',
                 'gateways' => [
-                    'fake' => ['enabled' => '1'],
                     'vnpay' => [
                         'enabled' => '1',
                         'tmn_code' => 'CODE1',

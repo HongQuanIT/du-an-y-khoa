@@ -58,7 +58,7 @@ interface PaymentGatewayInterface
 
 1. User chọn SKU trên `/subscription/upgrade` (hoặc guest từ `/pricing` → auth → upgrade).
 2. `POST` tạo `billing_checkout_sessions` (pending) + `billing_invoices` (open).
-3. Redirect cổng (VNPay hoặc Fake ở local).
+3. Redirect cổng (VNPay).
 4. Webhook/IPN verify → payment succeeded → subscription `active` + invoice `paid`.
 5. Invalidate Redis entitlement cache; hiển thị confirmation.
 
@@ -91,7 +91,7 @@ interface PaymentGatewayInterface
 
 | Phase | Cổng | Ghi chú |
 |-------|------|---------|
-| **1** | VNPay + Fake (local/test) | Prepaid QR/ATM/Visa |
+| **1** | VNPay (mặc định) | Prepaid QR/ATM/Visa; Fake chỉ còn trong PHPUnit |
 | 2 | MoMo, ZaloPay | Wallet |
 | 3 | Stripe | Thẻ quốc tế + recurring |
 
@@ -102,14 +102,14 @@ interface PaymentGatewayInterface
 ### Phase 1 — MVP Monetization ✅ (đang triển khai)
 
 - Migration checkout/payments/webhooks
-- Gateway adapter + VNPay + Fake
+- Gateway adapter + VNPay (Fake chỉ dùng trong test)
 - CheckoutService + ActivatePurchase
 - Webhook idempotent + queue
 - UI: upgrade, checkout, confirmation
 - Entitlement Redis cache
 - PaywallOverlay
 - Admin: danh sách payments
-- Admin: cấu hình cổng thanh toán (VNPay / Fake / MoMo+ZaloPay credential)
+- Admin: cấu hình cổng thanh toán (VNPay mặc định / MoMo+ZaloPay credential; không còn Fake trên UI)
 - Tests cơ bản
 
 ### Phase 2 — Lifecycle
@@ -143,7 +143,8 @@ interface PaymentGatewayInterface
 ## 9. Env
 
 ```env
-BILLING_DEFAULT_GATEWAY=fake   # local: fake | production: vnpay
+BILLING_DEFAULT_GATEWAY=vnpay
+BILLING_FAKE_GATEWAY=false     # chỉ bật trong PHPUnit nếu cần
 BILLING_CURRENCY=VND
 BILLING_TAX_RATE=0
 BILLING_CHECKOUT_TTL_MINUTES=60

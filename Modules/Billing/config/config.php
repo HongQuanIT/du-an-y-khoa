@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'name' => 'Billing',
 
-    'default_gateway' => env('BILLING_DEFAULT_GATEWAY', 'fake'),
+    'default_gateway' => env('BILLING_DEFAULT_GATEWAY', 'vnpay'),
     'currency' => env('BILLING_CURRENCY', 'VND'),
     'tax_rate' => (float) env('BILLING_TAX_RATE', 0),
     'checkout_ttl_minutes' => (int) env('BILLING_CHECKOUT_TTL_MINUTES', 60),
@@ -13,7 +13,7 @@ return [
 
     'gateways' => [
         'fake' => [
-            'enabled' => env('BILLING_FAKE_GATEWAY', true),
+            'enabled' => env('BILLING_FAKE_GATEWAY', false),
         ],
         'vnpay' => [
             'tmn_code' => env('VNPAY_TMN_CODE', ''),

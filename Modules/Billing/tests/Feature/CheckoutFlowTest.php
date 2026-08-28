@@ -29,7 +29,10 @@ final class CheckoutFlowTest extends TestCase
         $this->seed(RolePermissionSeeder::class);
         $this->seed(BillingDatabaseSeeder::class);
 
-        config(['billing.default_gateway' => 'fake']);
+        config([
+            'billing.default_gateway' => 'fake',
+            'billing.gateways.fake.enabled' => true,
+        ]);
     }
 
     public function test_upgrade_page_lists_paid_skus(): void
