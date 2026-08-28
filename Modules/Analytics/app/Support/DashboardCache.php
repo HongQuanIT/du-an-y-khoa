@@ -10,7 +10,7 @@ final class DashboardCache
 {
     public const TTL_SECONDS = 120;
 
-    private const VERSION = 4;
+    private const VERSION = 5;
 
     public static function key(int $userId, string $range): string
     {

@@ -54,23 +54,23 @@
          },
      })">
     <p class="text-[11px] leading-4 text-on-surface-variant">
-        Phân loại độc lập: ma trận đề thi (17 đề mục / 128 vấn đề), medical taxonomy, và tags.
+        Phân loại độc lập: ma trận đề thi (17 đề mục / 128 vấn đề), phân loại y khoa, và thẻ.
     </p>
 
     {{-- Blueprint core clinical topics --}}
     <div>
-        <label class="mb-1 block text-xs font-semibold text-on-surface-variant">Chủ đề lâm sàng (Blueprint) *</label>
+        <label class="mb-1 block text-xs font-semibold text-on-surface-variant">Chủ đề lâm sàng (Ma trận đề thi) *</label>
         <div class="mb-2 grid grid-cols-1 gap-2">
             <select x-model="blueprintId" @change="loadSections()"
                     class="h-10 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm">
-                <option value="">— Chọn kỳ thi / blueprint —</option>
+                <option value="">— Chọn kỳ thi / ma trận đề thi —</option>
                 <template x-for="bp in blueprints" :key="bp.id">
                     <option :value="bp.id" x-text="bp.name"></option>
                 </template>
             </select>
             <select x-model="sectionId" @change="loadSectionTopics()" :disabled="!blueprintId"
                     class="h-10 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm disabled:opacity-50">
-                <option value="">— Chọn đề mục (section) —</option>
+                <option value="">— Chọn đề mục —</option>
                 <template x-for="sec in sections" :key="sec.id">
                     <option :value="sec.id" x-text="sec.name"></option>
                 </template>
@@ -132,9 +132,9 @@
     </template>
 
     <div>
-        <label class="mb-1 block text-xs font-semibold text-on-surface-variant">Medical taxonomy (khác)</label>
+        <label class="mb-1 block text-xs font-semibold text-on-surface-variant">Phân loại y khoa (khác)</label>
         <input type="search" x-model="generalNodeSearch" @input.debounce.300ms="searchGeneralNodes()"
-               placeholder="Tìm node (specialty, system, procedure…)"
+               placeholder="Tìm danh mục (chuyên khoa, hệ cơ quan, thủ thuật…)"
                class="mb-2 h-10 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm">
         <div class="max-h-28 space-y-1 overflow-y-auto rounded-lg border border-outline-variant p-2">
             <template x-for="node in generalNodeResults" :key="'gen-'+node.id">

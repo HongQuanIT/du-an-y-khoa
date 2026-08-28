@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Classroom\Actions;
 
+use App\Support\Enums\Permission;
 use App\Models\User;
 use App\Support\Concerns\AsAction;
 use Illuminate\Validation\ValidationException;
@@ -24,15 +25,21 @@ final class SendLiveMessageAction
             ]);
         }
 
-        $member = $session->classroom->memberFor($user);
+        $isOverseer = $user->can(Permission::ClassroomOversee->value);
 
-        if ($member === null || $member->status !== MemberStatus::Active) {
-            throw ValidationException::withMessages([
-                'body' => 'Bạn cần là thành viên lớp để chat.',
-            ]);
+        if (! $isOverseer) {
+            $member = $session->classroom->memberFor($user);
+
+            if ($member === null || $member->status !== MemberStatus::Active) {
+                throw ValidationException::withMessages([
+                    'body' => 'Bạn cần là thành viên lớp để chat.',
+                ]);
+            }
         }
 
-        if ($session->chat_muted && ! ($session->classroom->roleFor($user)?->canModerate() ?? false)) {
+        $canModerate = $isOverseer || ($session->classroom->roleFor($user)?->canModerate() ?? false);
+
+        if ($session->chat_muted && ! $canModerate) {
             throw ValidationException::withMessages([
                 'body' => 'Host đã tắt chat.',
             ]);

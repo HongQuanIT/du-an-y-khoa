@@ -53,16 +53,21 @@ final class ListWeakTopicsAction
             ->orderBy('correct_rate')
             ->limit($limit)
             ->get()
-            ->map(fn (TopicMastery $mastery) => [
-                'id' => (int) $mastery->medical_taxonomy_node_id,
-                'name' => $mastery->medicalTaxonomyNode?->name ?? 'Không rõ',
-                'accuracy' => (int) round($mastery->correct_rate),
-                'attempts' => (int) $mastery->attempts,
-                'incorrect' => (int) $mastery->getAttribute('unresolved_incorrect'),
-                'practice_url' => route('qbank.create', [
-                    'source' => 'weak_topics',
-                    'medical_taxonomy_node_ids' => [$mastery->medical_taxonomy_node_id],
-                ]),
-            ]);
+            ->map(function (TopicMastery $mastery) {
+                $unresolved = (int) $mastery->getAttribute('unresolved_incorrect');
+                $incorrectCount = $unresolved > 0 ? $unresolved : max(1, (int) ($mastery->attempts - $mastery->correct));
+
+                return [
+                    'id' => (int) $mastery->medical_taxonomy_node_id,
+                    'name' => $mastery->medicalTaxonomyNode?->name ?? 'Không rõ',
+                    'accuracy' => (int) round($mastery->correct_rate),
+                    'attempts' => (int) $mastery->attempts,
+                    'incorrect' => $incorrectCount,
+                    'practice_url' => route('qbank.create', [
+                        'medical_taxonomy_node_ids' => [$mastery->medical_taxonomy_node_id],
+                        'question_statuses' => ['incorrect'],
+                    ]),
+                ];
+            });
     }
 }

@@ -59,6 +59,13 @@ final class AdminMenu
                 'match' => 'admin.questions.*',
             ],
             [
+                'label' => 'Feedback câu hỏi',
+                'icon' => 'rate_review',
+                'route' => 'admin.question-feedback.index',
+                'permission' => Permission::QuestionView->value,
+                'match' => 'admin.question-feedback.*',
+            ],
+            [
                 'label' => 'Phân loại',
                 'icon' => 'category',
                 'route' => 'admin.taxonomy.index',

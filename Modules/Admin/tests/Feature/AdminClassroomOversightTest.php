@@ -154,8 +154,24 @@ final class AdminClassroomOversightTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.permissions.can_moderate', false)
             ->assertJsonPath('data.permissions.can_publish', false)
-            ->assertJsonPath('data.session.chat_readonly', true)
-            ->assertJsonPath('data.token.role', 'subscriber');
+            ->assertJsonPath('data.session.chat_readonly', false)
+            ->assertJsonPath('data.token.role', 'subscriber')
+            ->assertJsonPath('data.urls.messages', route('admin.classrooms.live.api.messages', [$classroom, $session]));
+
+        $this->actingAs($admin)
+            ->withSession([TwoFactorSession::KEY => now()->timestamp])
+            ->postJson(route('admin.classrooms.live.api.messages', [$classroom, $session]), [
+                'body' => 'Xin chào từ ban quản trị!',
+                'type' => 'chat',
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.message.body', 'Xin chào từ ban quản trị!');
+
+        $this->assertDatabaseHas('live_session_messages', [
+            'live_session_id' => $session->id,
+            'user_id' => $admin->id,
+            'body' => 'Xin chào từ ban quản trị!',
+        ]);
     }
 
     public function test_admin_can_approve_pending_classroom(): void

@@ -69,7 +69,7 @@ final class LiveRoomController extends Controller
             'canHostLive' => $canHostLive,
             'tokenPayload' => $tokenPayload,
             'livekitConfigured' => $tokens->isConfigured(),
-            'chatReadonly' => $observer || ! $liveSession->allowsChatSend(),
+            'chatReadonly' => ! $liveSession->allowsChatSend(),
             'isObserver' => $observer,
             'exitUrl' => $exitUrl,
             'bootstrapUrl' => $bootstrapUrl,
@@ -88,8 +88,12 @@ final class LiveRoomController extends Controller
 
         $action->handle($liveSession, $request->user(), $request->string('body')->toString(), $type);
 
+        $redirectRoute = $request->routeIs('admin.*')
+            ? route('admin.classrooms.live', [$classroom, $liveSession])
+            : route('classroom.live', [$classroom, $liveSession]);
+
         return redirect()
-            ->route('classroom.live', [$classroom, $liveSession])
+            ->to($redirectRoute)
             ->withFragment('chat');
     }
 }

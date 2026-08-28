@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 use Modules\QuestionBank\Http\Controllers\CustomSessionController;
 use Modules\QuestionBank\Http\Controllers\QuestionBankPageController;
 use Modules\QuestionBank\Http\Controllers\QuestionBookmarkPageController;
+use Modules\QuestionBank\Http\Controllers\QuestionFeedbackController;
 use Modules\QuestionBank\Http\Controllers\QuestionReviewController;
 use Modules\QuestionBank\Http\Controllers\SessionHistoryController;
 use Modules\QuestionBank\Http\Controllers\SessionSummaryController;
@@ -43,6 +44,7 @@ Route::middleware(['auth', 'learner'])->group(function (): void {
     Route::get('/qbank/session/{session}', [StudySessionController::class, 'show'])->name('qbank.session');
     Route::post('/qbank/session/{session}/answer', [StudySessionController::class, 'answer'])->name('qbank.session.answer');
     Route::post('/qbank/session/{session}/annotation', [StudySessionController::class, 'annotate'])->name('qbank.session.annotate');
+    Route::post('/qbank/session/{session}/feedback', [QuestionFeedbackController::class, 'store'])->name('qbank.session.feedback');
     Route::post('/qbank/session/{session}/pause', [StudySessionController::class, 'pause'])->name('qbank.session.pause');
     Route::post('/qbank/session/{session}/resume', [StudySessionController::class, 'resume'])->name('qbank.session.resume');
     Route::post('/qbank/session/{session}/finish', [StudySessionController::class, 'finish'])->name('qbank.session.finish');

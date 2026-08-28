@@ -37,9 +37,19 @@ export function registerRichEditor(Alpine) {
         },
 
         handlePaste(event) {
-            // Ignore paste if user is typing in an input, textarea, or Quill editor
-            const tag = event.target.tagName;
-            if (tag === 'INPUT' || tag === 'TEXTAREA' || event.target.isContentEditable || event.target.closest('.ql-editor')) {
+            const active = document.activeElement;
+            if (active && (
+                active.tagName === 'INPUT' ||
+                active.tagName === 'TEXTAREA' ||
+                active.isContentEditable ||
+                active.closest?.('.ql-editor') ||
+                active.closest?.('.admin-rich-editor')
+            )) {
+                return;
+            }
+
+            const tag = event.target?.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || event.target?.isContentEditable || event.target?.closest?.('.ql-editor')) {
                 return;
             }
 

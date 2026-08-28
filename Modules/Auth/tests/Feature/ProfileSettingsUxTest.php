@@ -136,7 +136,7 @@ final class ProfileSettingsUxTest extends TestCase
             ->get(route('profile.show'))
             ->assertOk()
             ->assertSee('Quản trị viên', false)
-            ->assertSee('Admin Test', false);
+            ->assertSee('Admin Test', false)
             ->assertSee('Quản trị hệ thống')
             ->assertSee('Quản trị viên')
             ->assertDontSee('Ngân hàng câu hỏi');

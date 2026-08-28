@@ -8,28 +8,30 @@ use App\Models\User;
 use App\Support\Enums\Role;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Queue;
 use Modules\Classroom\Enums\ClassroomPurpose;
 use Modules\Classroom\Enums\ClassroomStatus;
 use Modules\Classroom\Enums\ClassroomVisibility;
 use Modules\Classroom\Enums\LiveSessionStatus;
 use Modules\Classroom\Enums\MemberRole;
 use Modules\Classroom\Enums\MemberStatus;
-use Modules\Classroom\Enums\RecordingStatus;
-use Modules\Classroom\Jobs\StartLiveRecordingJob;
-use Modules\Classroom\Jobs\StopLiveRecordingJob;
 use Modules\Classroom\Models\Classroom;
 use Modules\Classroom\Models\ClassroomMember;
-use Modules\Classroom\Models\LiveRecording;
 use Modules\Classroom\Models\LiveSession;
-use Modules\Classroom\Services\LiveKitEgressService;
+use Modules\QuestionBank\Enums\TaxonomyStatus;
+use Modules\QuestionBank\Models\Blueprint;
+use Modules\QuestionBank\Models\BlueprintSection;
+use Modules\QuestionBank\Models\CoreClinicalTopic;
 use Modules\QuestionBank\Models\Question;
+use Modules\QuestionBank\Models\QuestionFeedback;
+use Modules\QuestionBank\Models\QuestionSession;
+use Modules\QuestionBank\Models\Tag;
 use Modules\Search\Models\SearchDocument;
+use Tests\Support\CreatesMedicalTaxonomy;
 use Tests\TestCase;
 
 final class TeachClassroomTest extends TestCase
 {
+    use CreatesMedicalTaxonomy;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -148,6 +150,98 @@ final class TeachClassroomTest extends TestCase
             ->assertSessionHasErrors('question_ids.0');
 
         $this->assertDatabaseMissing('live_sessions', ['title' => 'Buổi chứa câu nháp']);
+    }
+
+    public function test_instructor_can_filter_live_library_by_topic_and_feedback_category(): void
+    {
+        $instructor = $this->instructor(['email' => 'filter-library@example.com']);
+        $student = User::factory()->create(['email' => 'feedback-student@example.com']);
+        $classroom = $this->seedClassroom($instructor, ClassroomPurpose::ExamReview);
+        $blueprint = Blueprint::query()->create([
+            'name' => 'Blueprint lọc live',
+            'slug' => 'blueprint-loc-live',
+            'status' => TaxonomyStatus::Active,
+            'sort_order' => 1,
+        ]);
+        $section = BlueprintSection::query()->create([
+            'blueprint_id' => $blueprint->getKey(),
+            'name' => 'Nội khoa',
+            'slug' => 'noi-khoa',
+            'status' => TaxonomyStatus::Active,
+            'sort_order' => 1,
+        ]);
+        $coreTopic = CoreClinicalTopic::query()->create([
+            'blueprint_section_id' => $section->getKey(),
+            'name' => 'Đau ngực',
+            'slug' => 'dau-nguc',
+            'status' => TaxonomyStatus::Active,
+            'sort_order' => 1,
+        ]);
+        $cardiology = $this->makeMedicalNode(['name' => 'Tim mạch']);
+        $respiratory = $this->makeMedicalNode(['name' => 'Hô hấp']);
+        $tag = Tag::query()->create([
+            'name' => 'ECG',
+            'slug' => 'ecg',
+            'status' => TaxonomyStatus::Active,
+        ]);
+        $cardiologyQuestion = Question::factory()->free()->withOptions()->create([
+            'stem' => 'Câu hỏi lọc theo Tim mạch',
+        ]);
+        $respiratoryQuestion = Question::factory()->free()->withOptions()->create([
+            'stem' => 'Câu hỏi lọc theo Hô hấp',
+        ]);
+        $cardiologyQuestion->coreClinicalTopics()->attach($coreTopic->getKey());
+        $cardiologyQuestion->medicalTaxonomyNodes()->attach($cardiology->getKey());
+        $cardiologyQuestion->tags()->attach($tag->getKey());
+        $respiratoryQuestion->medicalTaxonomyNodes()->attach($respiratory->getKey());
+        $questionSession = QuestionSession::factory()->for($student)->create([
+            'question_ids' => [$respiratoryQuestion->getKey()],
+        ]);
+        QuestionFeedback::query()->create([
+            'user_id' => $student->getKey(),
+            'question_id' => $respiratoryQuestion->getKey(),
+            'question_session_id' => $questionSession->getKey(),
+            'target' => 'question',
+            'category' => 'incorrect',
+            'message' => 'Nội dung cần kiểm tra lại.',
+        ]);
+
+        $this->actingAs($instructor)
+            ->getJson(route('teach.classes.questions.search', [
+                $classroom,
+                'medical_taxonomy_node_ids' => [$cardiology->getKey()],
+            ]))
+            ->assertOk()
+            ->assertJsonPath('data.questions.0.id', $cardiologyQuestion->id)
+            ->assertJsonPath('data.questions.0.core_topics.0.name', 'Đau ngực')
+            ->assertJsonMissing(['id' => $respiratoryQuestion->id]);
+
+        $this->actingAs($instructor)
+            ->getJson(route('teach.classes.questions.search', [
+                $classroom,
+                'core_clinical_topic_ids' => [$coreTopic->getKey()],
+            ]))
+            ->assertOk()
+            ->assertJsonPath('data.questions.0.id', $cardiologyQuestion->id)
+            ->assertJsonMissing(['id' => $respiratoryQuestion->id]);
+
+        $this->actingAs($instructor)
+            ->getJson(route('teach.classes.questions.search', [
+                $classroom,
+                'tag_ids' => [$tag->getKey()],
+            ]))
+            ->assertOk()
+            ->assertJsonPath('data.questions.0.id', $cardiologyQuestion->id)
+            ->assertJsonMissing(['id' => $respiratoryQuestion->id]);
+
+        $this->actingAs($instructor)
+            ->getJson(route('teach.classes.questions.search', [
+                $classroom,
+                'feedback_categories' => ['incorrect'],
+            ]))
+            ->assertOk()
+            ->assertJsonPath('data.questions.0.id', $respiratoryQuestion->id)
+            ->assertJsonMissing(['id' => $cardiologyQuestion->id]);
     }
 
     public function test_instructor_can_schedule_start_and_end_live_from_teach_portal(): void

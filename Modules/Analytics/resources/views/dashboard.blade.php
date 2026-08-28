@@ -280,14 +280,10 @@
                                 <p class="text-label-sm text-on-surface-variant">
                                     {{ $topic['incorrect'] }} lượt trả lời sai được ghi nhận.
                                 </p>
-                                <form method="POST" action="{{ route('qbank.weak-topics.session', $topic['id']) }}">
-                                    @csrf
-                                    <input type="hidden" name="count" value="10">
-                                    <button type="submit"
-                                        class="rounded-lg border border-primary px-3 py-1.5 text-label-sm font-semibold text-primary transition-colors hover:bg-primary/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
-                                        Luyện tập ngay
-                                    </button>
-                                </form>
+                                <a href="{{ $topic['practice_url'] }}"
+                                    class="rounded-lg border border-primary px-3 py-1.5 text-label-sm font-semibold text-primary transition-colors hover:bg-primary/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+                                    Luyện tập ngay
+                                </a>
                             </div>
                         </div>
                     @empty

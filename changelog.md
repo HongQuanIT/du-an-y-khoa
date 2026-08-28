@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-08-29
+
+### Popup modal thông báo học tập & hoạt động
+- Thêm modal popup tự động hiển thị thông báo mới/chưa đọc khi học viên mở web hoặc vừa đăng nhập (`notification::partials.popup-modal`).
+- Hỗ trợ đầy đủ các danh mục thông báo: nhắc học hàng ngày, cảnh báo/cột mốc streak, bài tập mới/hạn nộp, lịch live class, kết quả bài thi/bài học, thành tích, tổng kết tuần, nhắc quay lại học và thông báo lớp học.
+- Bổ sung xử lý AJAX cho `markRead` và `markAllRead` trong `NotificationController`.
+
+### Phân tích câu sai & Luồng tạo câu luyện tập theo chủ đề yếu
+- Tổng hợp và thống kê chính xác số câu sai từ tất cả các chế độ luyện tập và kỳ thi trong `ListWeakTopicsAction`.
+- Nút "Luyện tập ngay" trên dashboard chuyển hướng trực tiếp đến trang tạo phiên câu hỏi (`/qbank/create`) với chủ đề và bộ lọc câu sai được chọn sẵn.
+
+### Quản lý phản hồi câu hỏi (Question Feedback)
+- Thêm bảng `question_feedback`, model và controller gửi phản hồi câu hỏi cho học viên.
+- Trang quản lý, lọc và xử lý phản hồi câu hỏi trong portal Admin (`admin.question-feedback.index`).
+
+### Việt hóa & Khắc phục thao tác Copy/Paste trong Form câu hỏi
+- Việt hóa các nhãn bộ lọc và phân loại: `Blueprint` → `Chủ đề lâm sàng`, `Medical taxonomy` → `Phân loại y khoa`, `Tags` → `Thẻ`, `Khung kiến thức` → `Phân loại`.
+- Sửa lỗi bắt sự kiện dán toàn trang (`@paste.window`) gây gián đoạn `Command + V` trong trình soạn thảo câu hỏi Admin.
+
 ## 2026-08-28
 
 ### Billing — Admin cổng thanh toán: VNPay mặc định, bỏ Fake
@@ -18,6 +37,10 @@
 ### Deploy — ổn định log aaPanel / storage / PHP-FPM
 - Tắt ANSI/progress khi chạy qua webhook; `composer --no-scripts` + `package:discover` riêng.
 - `storage:link` idempotent; reload PHP-FPM đa fallback (systemctl / init.d / aaPanel).
+### Đồng bộ con trỏ chuột (Cursor pointer) toàn hệ thống
+- Thêm quy tắc CSS base cho mọi liên kết `a[href]`, nút bấm `button`, `[role=button]`, `summary`, `label`, `select` và các nút input để luôn hiển thị con trỏ bàn tay (`cursor: pointer`) khi rê chuột.
+- Tự động áp dụng đồng nhất trên toàn bộ portal: Quản trị viên (Admin), Biên tập viên (Content Creator), Học viên (Learner), Giảng viên (Instructor), Public, Auth và Live Classroom.
+- Các phần tử bị vô hiệu hóa (`disabled`, `aria-disabled`) tự động hiển thị biểu tượng cấm (`cursor: not-allowed`), đồng thời bảo toàn các con trỏ chuyên dụng (kéo thả, chọn văn bản, zoom ảnh).
 
 ### Classroom — vòng đời lớp, điểm danh live và ghi hình
 - Tách `approval_status` và `lifecycle_status`; giảng viên đóng/mở lại lớp và sửa thông tin lớp.

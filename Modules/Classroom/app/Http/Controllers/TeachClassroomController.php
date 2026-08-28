@@ -36,7 +36,12 @@ use Modules\Classroom\Models\Classroom;
 use Modules\Classroom\Models\LiveSession;
 use Modules\Classroom\Services\LiveKitTokenService;
 use Modules\QuestionBank\Enums\QuestionStatus;
+use Modules\QuestionBank\Models\CoreClinicalTopic;
+use Modules\QuestionBank\Models\MedicalTaxonomyNode;
 use Modules\QuestionBank\Models\Question;
+use Modules\QuestionBank\Models\QuestionFeedback;
+use Modules\QuestionBank\Models\Tag;
+use Modules\QuestionBank\Support\MedicalTaxonomyNodeTypes;
 
 final class TeachClassroomController extends Controller
 {
@@ -229,12 +234,54 @@ final class TeachClassroomController extends Controller
 
         $validated = $request->validate([
             'q' => ['nullable', 'string', 'max:255'],
+            'core_clinical_topic_ids' => ['nullable', 'array', 'max:10'],
+            'core_clinical_topic_ids.*' => ['integer', 'exists:core_clinical_topics,id'],
+            'medical_taxonomy_node_ids' => ['nullable', 'array', 'max:10'],
+            'medical_taxonomy_node_ids.*' => ['integer', 'exists:medical_taxonomy_nodes,id'],
+            'tag_ids' => ['nullable', 'array', 'max:10'],
+            'tag_ids.*' => ['integer', 'exists:tags,id'],
+            'feedback_categories' => ['nullable', 'array', 'max:8'],
+            'feedback_categories.*' => ['string', 'in:grammar,incorrect,missing,improvement,technical,media,search,other'],
         ]);
         $search = trim((string) ($validated['q'] ?? ''));
+        $coreTopicIds = collect($validated['core_clinical_topic_ids'] ?? [])
+            ->map(fn ($id): int => (int) $id)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+        $topicIds = collect($validated['medical_taxonomy_node_ids'] ?? [])
+            ->map(fn ($id): int => (int) $id)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+        $tagIds = collect($validated['tag_ids'] ?? [])
+            ->map(fn ($id): int => (int) $id)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+        $feedbackCategories = collect($validated['feedback_categories'] ?? [])
+            ->map(fn ($category): string => (string) $category)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
 
         // Chỉ trả về câu đã xuất bản và đúng quyền QBank của giảng viên.
         $questions = Question::query()
-            ->with(['medicalTaxonomyNodes:id,name'])
+            ->with([
+                'coreClinicalTopics:id,name,blueprint_section_id',
+                'coreClinicalTopics.section:id,name',
+                'latestFeedback.user:id,name',
+                'medicalTaxonomyNodes:id,name,node_type',
+                'tags:id,name',
+            ])
+            ->withCount([
+                'feedback',
+                'feedback as pending_feedback_count' => fn ($feedback) => $feedback->where('status', QuestionFeedback::STATUS_PENDING),
+            ])
             ->where('status', QuestionStatus::Published)
             ->when(
                 ! $request->user()->hasEntitlement(Entitlement::QbankFull->value),
@@ -246,24 +293,138 @@ final class TeachClassroomController extends Controller
                     $questions
                         ->whereRaw("stem LIKE ? ESCAPE '!'", [$pattern])
                         ->orWhereHas(
+                            'coreClinicalTopics',
+                            fn ($topics) => $topics->whereRaw("name LIKE ? ESCAPE '!'", [$pattern]),
+                        )
+                        ->orWhereHas(
                             'medicalTaxonomyNodes',
                             fn ($nodes) => $nodes->whereRaw("name LIKE ? ESCAPE '!'", [$pattern]),
+                        )
+                        ->orWhereHas(
+                            'tags',
+                            fn ($tags) => $tags->whereRaw("name LIKE ? ESCAPE '!'", [$pattern]),
                         );
                 });
+            })
+            ->when($coreTopicIds !== [], function ($query) use ($coreTopicIds): void {
+                $query->whereHas(
+                    'coreClinicalTopics',
+                    fn ($topics) => $topics->whereIn('core_clinical_topics.id', $coreTopicIds),
+                );
+            })
+            ->when($topicIds !== [], function ($query) use ($topicIds): void {
+                $query->whereHas(
+                    'medicalTaxonomyNodes',
+                    fn ($nodes) => $nodes->whereIn('medical_taxonomy_nodes.id', $topicIds),
+                );
+            })
+            ->when($tagIds !== [], function ($query) use ($tagIds): void {
+                $query->whereHas(
+                    'tags',
+                    fn ($tags) => $tags->whereIn('tags.id', $tagIds),
+                );
+            })
+            ->when($feedbackCategories !== [], function ($query) use ($feedbackCategories): void {
+                $query->whereHas(
+                    'feedback',
+                    fn ($feedback) => $feedback->whereIn('category', $feedbackCategories),
+                );
             })
             ->latest()
             ->limit(30)
             ->get(['id', 'stem', 'difficulty']);
 
+        $availableQuestionScope = function ($query) use ($request): void {
+            $query->where('status', QuestionStatus::Published)
+                ->when(
+                    ! $request->user()->hasEntitlement(Entitlement::QbankFull->value),
+                    fn ($questions) => $questions->where('is_free', true),
+                );
+        };
+
+        $coreTopicOptions = CoreClinicalTopic::query()
+            ->with(['section:id,name'])
+            ->whereHas('questions', $availableQuestionScope)
+            ->orderBy('name')
+            ->limit(80)
+            ->get(['id', 'blueprint_section_id', 'name']);
+
+        $topicOptions = MedicalTaxonomyNode::query()
+            ->whereHas('questions', $availableQuestionScope)
+            ->orderBy('name')
+            ->limit(80)
+            ->get(['id', 'name', 'node_type']);
+
+        $tagOptions = Tag::query()
+            ->whereHas('questions', $availableQuestionScope)
+            ->orderBy('name')
+            ->limit(80)
+            ->get(['id', 'name']);
+
         return ApiResponse::item([
+            'filters' => [
+                'core_topics' => $coreTopicOptions->map(fn (CoreClinicalTopic $topic): array => [
+                    'id' => (int) $topic->getKey(),
+                    'name' => $topic->name,
+                    'section_name' => $topic->section?->name,
+                ])->values(),
+                'medical_groups' => collect(MedicalTaxonomyNodeTypes::GROUPS)
+                    ->map(fn (array $group, string $key): array => [
+                        'key' => $key,
+                        'label' => $group['label'],
+                        'icon' => $group['icon'],
+                        'types' => $group['types'],
+                    ])
+                    ->values(),
+                'medical_nodes' => $topicOptions->map(fn (MedicalTaxonomyNode $node): array => [
+                    'id' => (int) $node->getKey(),
+                    'name' => $node->name,
+                    'node_type' => $node->node_type,
+                    'node_type_label' => MedicalTaxonomyNodeTypes::label($node->node_type),
+                    'group_key' => MedicalTaxonomyNodeTypes::groupKey($node->node_type),
+                ])->values(),
+                'tags' => $tagOptions->map(fn (Tag $tag): array => [
+                    'id' => (int) $tag->getKey(),
+                    'name' => $tag->name,
+                ])->values(),
+                'feedback_categories' => [
+                    ['value' => 'grammar', 'label' => 'Ngữ pháp và chính tả'],
+                    ['value' => 'incorrect', 'label' => 'Nội dung không chính xác'],
+                    ['value' => 'missing', 'label' => 'Nội dung bị thiếu'],
+                    ['value' => 'improvement', 'label' => 'Cần cải thiện nội dung'],
+                    ['value' => 'technical', 'label' => 'Sự cố kỹ thuật'],
+                    ['value' => 'media', 'label' => 'Phản hồi hình ảnh'],
+                    ['value' => 'search', 'label' => 'Kết quả tìm kiếm'],
+                    ['value' => 'other', 'label' => 'Khác'],
+                ],
+            ],
             'questions' => $questions->map(fn (Question $question): array => [
                 'id' => (string) $question->getKey(),
                 'stem' => trim(strip_tags(html_entity_decode($question->stem, ENT_QUOTES | ENT_HTML5, 'UTF-8'))),
                 'difficulty' => $question->difficulty->label(),
                 'topic' => $question->medicalTaxonomyNodes->pluck('name')->join(', ') ?: 'Tổng hợp',
+                'core_topics' => $question->coreClinicalTopics->map(fn (CoreClinicalTopic $topic): array => [
+                    'id' => (int) $topic->getKey(),
+                    'name' => $topic->name,
+                    'section_name' => $topic->section?->name,
+                ])->values(),
                 'topics' => $question->medicalTaxonomyNodes->pluck('name')->values(),
                 'medical_taxonomy_node_ids' => $question->medicalTaxonomyNodes->pluck('id')->map(fn ($id): int => (int) $id)->values(),
                 'topic_ids' => $question->medicalTaxonomyNodes->pluck('id')->map(fn ($id): int => (int) $id)->values(),
+                'tags' => $question->tags->map(fn (Tag $tag): array => [
+                    'id' => (int) $tag->getKey(),
+                    'name' => $tag->name,
+                ])->values(),
+                'feedback_count' => (int) ($question->feedback_count ?? 0),
+                'pending_feedback_count' => (int) ($question->pending_feedback_count ?? 0),
+                'latest_feedback' => $question->latestFeedback ? [
+                    'target' => QuestionFeedback::targetLabels()[$question->latestFeedback->target] ?? $question->latestFeedback->target,
+                    'category' => QuestionFeedback::categoryLabels()[$question->latestFeedback->category] ?? $question->latestFeedback->category,
+                    'status' => QuestionFeedback::statusLabels()[$question->latestFeedback->status] ?? $question->latestFeedback->status,
+                    'message' => $question->latestFeedback->message,
+                    'user' => $question->latestFeedback->user?->name,
+                    'created_at' => $question->latestFeedback->created_at?->format('d/m/Y H:i'),
+                ] : null,
             ])->values(),
         ]);
     }
