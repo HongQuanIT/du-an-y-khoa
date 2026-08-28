@@ -141,28 +141,35 @@ class BillingDatabaseSeeder extends Seeder
             );
         }
 
-        RedeemCode::query()->updateOrCreate(
-            ['code' => 'MEDLEARN2026'],
-            [
-                'plan_id' => $premium->getKey(),
-                'duration_days' => 30,
-                'max_uses' => 1000,
-                'uses_count' => 0,
-                'expires_at' => Carbon::now()->addYear(),
-                'type' => 'promo',
-            ],
-        );
+        // Promo code + fake institution are local/dev only.
+        if (app()->environment('local')) {
+            RedeemCode::query()->updateOrCreate(
+                ['code' => 'MEDLEARN2026'],
+                [
+                    'plan_id' => $premium->getKey(),
+                    'duration_days' => 30,
+                    'max_uses' => 1000,
+                    'uses_count' => 0,
+                    'expires_at' => Carbon::now()->addYear(),
+                    'type' => 'promo',
+                ],
+            );
 
-        Institution::query()->updateOrCreate(
-            ['name' => 'Đại học Y Dược TP.HCM'],
-            [
-                'email_domains' => ['medlearn.local', 'student.medlearn.local'],
-                'plan_id' => $premium->getKey(),
-                'valid_until' => Carbon::parse('2026-09-18'),
-                'is_active' => true,
-            ],
-        );
+            Institution::query()->updateOrCreate(
+                ['name' => 'Đại học Y Dược TP.HCM'],
+                [
+                    'email_domains' => ['medlearn.local', 'student.medlearn.local'],
+                    'plan_id' => $premium->getKey(),
+                    'valid_until' => Carbon::parse('2026-09-18'),
+                    'is_active' => true,
+                ],
+            );
 
-        $this->command?->info('Billing: gói Free/Premium + SKU bảng giá, mã MEDLEARN2026, giấy phép @medlearn.local.');
+            $this->command?->info('Billing: gói Free/Premium + SKU bảng giá, mã MEDLEARN2026, giấy phép @medlearn.local.');
+
+            return;
+        }
+
+        $this->command?->info('Billing: gói Free/Premium + SKU bảng giá (không seed promo/institution).');
     }
 }

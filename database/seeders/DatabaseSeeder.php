@@ -16,6 +16,14 @@ use Modules\QuestionBank\Database\Seeders\QuestionBankDatabaseSeeder;
 use Modules\Search\Database\Seeders\SearchDatabaseSeeder;
 use Modules\StudyPlan\Database\Seeders\StudyPlanDatabaseSeeder;
 
+/**
+ * Full local/dev dataset (demo questions, library, study plan, banners, …).
+ * Does not wipe the database — see docs/seeding.md.
+ *
+ *   php artisan app:seed local
+ *   php artisan app:seed local --fresh
+ *   php artisan app:seed staging|production
+ */
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
