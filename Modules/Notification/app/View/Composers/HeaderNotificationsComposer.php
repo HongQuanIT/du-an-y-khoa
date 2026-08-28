@@ -27,6 +27,7 @@ final class HeaderNotificationsComposer
         $view->with([
             'headerNotifications' => (clone $baseQuery)->latest()->limit(8)->get(),
             'headerUnreadCount' => (clone $baseQuery)->whereNull('read_at')->count(),
+            'popupNotifications' => (clone $baseQuery)->whereNull('read_at')->latest()->limit(5)->get(),
         ]);
     }
 }

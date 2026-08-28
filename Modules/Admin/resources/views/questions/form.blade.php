@@ -405,11 +405,12 @@
                     <input type="hidden" name="stem_image_path" x-ref="pathInput" :value="imagePath">
                     <input type="file" x-ref="fileInput" class="hidden" accept="image/png,image/jpeg,image/gif,image/webp" @change="upload($event)">
 
-                    <div class="overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest transition-colors"
+                    <div class="overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+                         tabindex="0"
                          @dragover.prevent="isDragging = true"
                          @dragleave.prevent="isDragging = false"
                          @drop.prevent="isDragging = false; handleDrop($event)"
-                         @paste.window="handlePaste($event)"
+                         @paste="handlePaste($event)"
                          :class="isDragging ? 'border-primary ring-2 ring-primary/20 bg-primary/5' : ''">
                         <div x-show="imageUrl" class="bg-white flex justify-center">
                             <img :src="imageUrl" alt="Ảnh minh họa câu hỏi" class="w-full h-auto max-h-[600px] object-contain">

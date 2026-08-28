@@ -28,9 +28,12 @@ final class LiveMessageApiController extends Controller
         SendLiveMessageAction $action,
     ): JsonResponse {
         $this->authorize('view', $classroom);
-        abort_unless($classroom->isActiveMember($request->user()), 403);
+        abort_unless($classroom->canWatchLive($request->user()), 403);
 
-        if ($liveSession->chat_muted && ! ($classroom->roleFor($request->user())?->canModerate() ?? false)) {
+        $isOverseer = $request->user()->can(\App\Support\Enums\Permission::ClassroomOversee->value);
+        $canModerate = $isOverseer || ($classroom->roleFor($request->user())?->canModerate() ?? false);
+
+        if ($liveSession->chat_muted && ! $canModerate) {
             return ApiResponse::error('CHAT_MUTED', 'Host đã tắt chat.', 422);
         }
 

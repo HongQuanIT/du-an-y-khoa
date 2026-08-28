@@ -39,7 +39,7 @@ final class MedicalTaxonomyNodeTypes
      */
     public const GROUPS = [
         'structure' => [
-            'label' => 'Khung kiến thức',
+            'label' => 'Phân loại',
             'description' => 'Cây phân cấp chính theo hệ cơ quan và chuyên khoa, đến bệnh / hội chứng.',
             'icon' => 'account_tree',
             'types' => ['system', 'specialty', 'disease', 'condition'],

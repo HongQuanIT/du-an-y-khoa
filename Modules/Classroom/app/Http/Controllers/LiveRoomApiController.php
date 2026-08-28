@@ -52,7 +52,7 @@ final class LiveRoomApiController extends Controller
         $canHostLive = ! $observer && ($teachPortal || ! $classroom->purpose->isTeachPurpose())
             ? $request->user()->can('manageLive', $classroom)
             : false;
-        $chatReadonly = $observer || ! $liveSession->allowsChatSend();
+        $chatReadonly = ! $liveSession->allowsChatSend();
 
         return ApiResponse::item([
             'session' => [
@@ -145,11 +145,11 @@ final class LiveRoomApiController extends Controller
     {
         if ($observer) {
             return [
-                'messages' => route('admin.classrooms.live.api.bootstrap', [$classroom, $liveSession]),
+                'messages' => route('admin.classrooms.live.api.messages', [$classroom, $liveSession]),
                 'token_refresh' => route('admin.classrooms.live.api.token', [$classroom, $liveSession]),
                 'question' => route('admin.classrooms.live.api.bootstrap', [$classroom, $liveSession]),
                 'raise_hand' => route('admin.classrooms.live.api.bootstrap', [$classroom, $liveSession]),
-                'react' => route('admin.classrooms.live.api.bootstrap', [$classroom, $liveSession]),
+                'react' => route('admin.classrooms.live.api.react', [$classroom, $liveSession]),
                 'mute_chat' => route('admin.classrooms.live.api.bootstrap', [$classroom, $liveSession]),
                 'focus_questions' => route('admin.classrooms.live.api.bootstrap', [$classroom, $liveSession]),
                 'presenter' => route('admin.classrooms.live', [$classroom, $liveSession]),

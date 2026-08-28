@@ -47,11 +47,18 @@ final class NotificationController extends Controller
         ));
     }
 
-    public function markRead(Request $request, UserNotification $notification): RedirectResponse
+    public function markRead(Request $request, UserNotification $notification): RedirectResponse|\Illuminate\Http\JsonResponse
     {
         abort_unless((int) $notification->user_id === (int) $request->user()->getKey(), 403);
 
         $notification->markRead();
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'action_url' => $notification->action_url,
+            ]);
+        }
 
         if ($notification->action_url) {
             return redirect()->to($notification->action_url);
@@ -60,12 +67,16 @@ final class NotificationController extends Controller
         return back();
     }
 
-    public function markAllRead(Request $request): RedirectResponse
+    public function markAllRead(Request $request): RedirectResponse|\Illuminate\Http\JsonResponse
     {
         UserNotification::query()
             ->where('user_id', $request->user()->getKey())
             ->whereNull('read_at')
             ->update(['read_at' => now()]);
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true]);
+        }
 
         return back();
     }

@@ -196,6 +196,58 @@
         annotateUrl: @js($playerConfig['annotate_url']),
         csrf: @js(csrf_token()),
         questionId: @js($question->id),
+        feedbackUrl: @js(route('qbank.session.feedback', $session, absolute: false)),
+        feedbackOpen: false,
+        feedbackTarget: 'question',
+        feedbackOptionId: null,
+        feedbackCategory: '',
+        feedbackMessage: '',
+        feedbackSaving: false,
+        feedbackError: '',
+        feedbackSent: false,
+        openFeedback(target, optionId = null) {
+            this.feedbackTarget = target;
+            this.feedbackOptionId = optionId;
+            this.feedbackCategory = '';
+            this.feedbackMessage = '';
+            this.feedbackError = '';
+            this.feedbackSent = false;
+            this.feedbackOpen = true;
+        },
+        closeFeedback() {
+            if (!this.feedbackSaving) this.feedbackOpen = false;
+        },
+        async submitFeedback() {
+            if (!this.feedbackCategory || this.feedbackSaving) return;
+            this.feedbackSaving = true;
+            this.feedbackError = '';
+            try {
+                const response = await fetch(this.feedbackUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': this.csrf,
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: JSON.stringify({
+                        question_id: this.questionId,
+                        target: this.feedbackTarget,
+                        option_id: this.feedbackOptionId,
+                        category: this.feedbackCategory,
+                        message: this.feedbackMessage,
+                    }),
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(payload?.message || payload?.error?.message || 'Không thể gửi phản hồi.');
+                this.feedbackSent = true;
+                setTimeout(() => this.feedbackOpen = false, 900);
+            } catch (error) {
+                this.feedbackError = error?.message || 'Không thể gửi phản hồi.';
+            } finally {
+                this.feedbackSaving = false;
+            }
+        },
         _historyHandler: null,
         init() {
             this.installBrowserExitGuard();
@@ -710,6 +762,13 @@
                                     :class="bookmarked && 'fill-1'">folder_managed</span>
                                 <span class="hidden sm:inline" x-text="bookmarked ? 'Đã lưu' : 'Lưu'"></span>
                             </button>
+                            <button type="button" @click="openFeedback('question')"
+                                class="inline-flex h-12 items-center gap-2 border-b-2 border-transparent px-3 text-label-sm font-bold text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-primary"
+                                aria-label="Phản hồi về nội dung câu hỏi">
+                                <span class="material-symbols-outlined text-[18px]">feedback</span>
+                                <span class="hidden sm:inline">Phản hồi câu hỏi</span>
+                                <span class="sm:hidden">Phản hồi</span>
+                            </button>
                             <span x-show="bookmarkError" x-cloak
                                 class="px-2 text-xs font-medium text-error"
                                 x-text="bookmarkError"></span>
@@ -796,15 +855,25 @@
                         @if ($hasAttendingTip)
                             <div x-show="attendingTipOpen" x-cloak x-transition class="space-y-3"
                                 data-testid="attending-tip-panel">
-                                <div x-show="attendingTipUsed"
-                                    class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-bold tracking-wide text-amber-700 uppercase"
-                                    data-testid="attending-tip-used-badge">
-                                    <span class="material-symbols-outlined text-[15px] fill-1">check_circle</span>
-                                    <span>Đã dùng kiến thức</span>
-                                </div>
-                                <div class="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50/70 p-4 text-on-surface">
-                                    <span class="material-symbols-outlined mt-0.5 shrink-0 text-amber-700">stethoscope</span>
-                                    <div class="prose prose-sm max-w-none font-body-md text-body-md leading-relaxed italic" x-html="attendingTip"></div>
+                                <div class="rounded-xl border border-amber-200 bg-amber-50/70 p-4 text-on-surface">
+                                    <div x-show="attendingTipUsed"
+                                        class="mb-3 inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-bold tracking-wide text-amber-700 uppercase"
+                                        data-testid="attending-tip-used-badge">
+                                        <span class="material-symbols-outlined text-[15px] fill-1">check_circle</span>
+                                        <span>Đã dùng kiến thức</span>
+                                    </div>
+                                    <div class="flex items-start gap-3">
+                                        <span class="material-symbols-outlined mt-0.5 shrink-0 text-amber-700">stethoscope</span>
+                                        <div class="prose prose-sm max-w-none font-body-md text-body-md leading-relaxed italic" x-html="attendingTip"></div>
+                                    </div>
+                                    <div class="mt-3 flex justify-end">
+                                        <button type="button" @click="openFeedback('knowledge')"
+                                            class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-label-sm font-semibold text-on-surface-variant transition-colors hover:bg-amber-100 hover:text-amber-800"
+                                            aria-label="Phản hồi về phần kiến thức">
+                                            <span class="material-symbols-outlined text-[18px]">feedback</span>
+                                            Phản hồi kiến thức
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         @endif
@@ -844,6 +913,12 @@
                                             x-text="option.correct ? 'Đáp án đúng' : 'Vì sao sai'"></p>
                                         <div class="prose prose-sm max-w-none text-body-sm leading-relaxed text-on-surface-variant"
                                             x-html="detailText(option)"></div>
+                                        <button type="button" @click.stop="openFeedback('answer', option.id)"
+                                            class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-label-sm font-semibold text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-primary"
+                                            :aria-label="'Phản hồi về đáp án ' + option.label">
+                                            <span class="material-symbols-outlined text-[18px]">feedback</span>
+                                            Phản hồi đáp án
+                                        </button>
                                     </div>
                                 </div>
                             </template>
@@ -1049,6 +1124,68 @@
         </div>
 
         <!-- Exit confirm (chưa làm xong) -->
+        <div x-show="feedbackOpen" x-cloak x-transition.opacity
+            class="fixed inset-0 z-[100] flex items-center justify-center p-4"
+            role="dialog" aria-modal="true" aria-labelledby="question-feedback-title"
+            @keydown.escape.window="closeFeedback()">
+            <div class="absolute inset-0 bg-black/45" @click="closeFeedback()"></div>
+            <section class="relative w-full max-w-xl rounded-2xl bg-white p-5 shadow-2xl md:p-6" @click.stop>
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <h2 id="question-feedback-title" class="font-headline-sm text-headline-sm font-bold text-on-surface">
+                            Phản hồi của bạn có nội dung như thế nào?
+                        </h2>
+                        <p class="mt-1 text-body-sm text-on-surface-variant"
+                            x-text="feedbackTarget === 'answer' ? 'Phản hồi về đáp án' : (feedbackTarget === 'knowledge' ? 'Phản hồi về kiến thức' : 'Phản hồi về câu hỏi')"></p>
+                    </div>
+                    <button type="button" @click="closeFeedback()"
+                        class="flex size-10 shrink-0 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-high"
+                        aria-label="Đóng cửa sổ phản hồi">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+
+                <div class="mt-5 space-y-4">
+                    <div>
+                        <label for="question-feedback-category" class="mb-1.5 block text-label-md font-bold text-on-surface">
+                            Loại phản hồi <span class="text-error">*</span>
+                        </label>
+                        <select id="question-feedback-category" x-model="feedbackCategory"
+                            class="w-full rounded-lg border border-outline bg-white px-3 py-3 text-body-md text-on-surface focus:border-primary focus:ring-primary">
+                            <option value="" disabled>Lựa chọn</option>
+                            <option value="grammar">Ngữ pháp và chính tả</option>
+                            <option value="incorrect">Nội dung không chính xác</option>
+                            <option value="missing">Nội dung bị thiếu</option>
+                            <option value="improvement">Cải thiện nội dung</option>
+                            <option value="technical">Sự cố kỹ thuật</option>
+                            <option value="media">Hình ảnh hoặc tệp đính kèm</option>
+                            <option value="search">Kết quả tìm kiếm</option>
+                            <option value="other">Khác</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="question-feedback-message" class="mb-1.5 block text-label-md font-bold text-on-surface">
+                            Mô tả chi tiết <span class="font-normal text-on-surface-variant">(không bắt buộc)</span>
+                        </label>
+                        <textarea id="question-feedback-message" x-model="feedbackMessage" maxlength="2000" rows="6"
+                            class="w-full resize-y rounded-lg border border-outline-variant p-3 text-body-md focus:border-primary focus:ring-primary"
+                            placeholder="Hãy viết thứ cho chúng tôi cần kiểm tra..."></textarea>
+                        <p class="mt-1 text-right text-xs text-on-surface-variant" x-text="feedbackMessage.length + '/2000'"></p>
+                    </div>
+                    <p x-show="feedbackError" x-text="feedbackError" class="text-body-sm font-semibold text-error" role="alert"></p>
+                    <p x-show="feedbackSent" class="rounded-lg bg-success/10 p-3 text-body-sm font-semibold text-success" role="status">
+                        Cảm ơn bạn. Phản hồi đã được ghi nhận.
+                    </p>
+                    <button type="button" @click="submitFeedback()"
+                        :disabled="!feedbackCategory || feedbackSaving || feedbackSent"
+                        class="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-35">
+                        <span x-show="feedbackSaving" class="material-symbols-outlined animate-spin text-[19px]">progress_activity</span>
+                        <span x-text="feedbackSaving ? 'Đang gửi...' : 'Gửi phản hồi'"></span>
+                    </button>
+                </div>
+            </section>
+        </div>
+
         <div x-show="exitOpen" x-cloak x-transition.opacity
             class="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
             <div class="absolute inset-0" @click="exitOpen = false"></div>

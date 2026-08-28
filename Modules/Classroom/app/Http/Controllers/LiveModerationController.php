@@ -114,7 +114,7 @@ final class LiveModerationController extends Controller
         LiveSession $liveSession,
     ): JsonResponse {
         $this->authorize('view', $classroom);
-        abort_unless($classroom->isActiveMember($request->user()), 403);
+        abort_unless($classroom->canWatchLive($request->user()), 403);
         abort_unless($liveSession->isLive(), 422);
 
         $type = $request->string('type')->toString();

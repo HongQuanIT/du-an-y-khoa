@@ -56,17 +56,21 @@ final class GetDashboardStatsAction
     /** @param Collection<int, DailyLearningStat> $stats */
     private function streak(Collection $stats): int
     {
-        $goalDates = $stats
-            ->where('daily_goal_reached', true)
+        // A study streak represents consecutive days with learning activity.
+        // Reaching the daily question target is tracked separately by
+        // `daily_goal_reached` and must not prevent a learner from starting a
+        // streak after completing fewer questions than their daily target.
+        $activeDates = $stats
+            ->filter(fn (DailyLearningStat $stat): bool => $stat->questions_answered > 0)
             ->mapWithKeys(fn (DailyLearningStat $stat): array => [$stat->date->toDateString() => true]);
         $cursor = Carbon::today();
 
-        if (! $goalDates->has($cursor->toDateString())) {
+        if (! $activeDates->has($cursor->toDateString())) {
             $cursor->subDay();
         }
 
         $streak = 0;
-        while ($goalDates->has($cursor->toDateString())) {
+        while ($activeDates->has($cursor->toDateString())) {
             $streak++;
             $cursor->subDay();
         }

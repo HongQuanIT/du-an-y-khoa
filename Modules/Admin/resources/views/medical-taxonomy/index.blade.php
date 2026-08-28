@@ -163,11 +163,11 @@
                         </ul>
                     @endif
                 @else
-                    {{-- Phần 1: Cây khung kiến thức --}}
+                    {{-- Phần 1: Cây phân loại --}}
                     <div class="border-b border-outline-variant">
                         <div class="flex flex-wrap items-center justify-between gap-2 bg-surface-container-low px-4 py-2.5">
                             <div>
-                                <p class="text-xs font-semibold uppercase tracking-wide text-on-surface">Khung kiến thức</p>
+                                <p class="text-xs font-semibold uppercase tracking-wide text-on-surface">Phân loại</p>
                                 <p class="text-[11px] text-on-surface-variant">Hệ cơ quan → Chuyên khoa → Bệnh / Hội chứng</p>
                             </div>
                             <div class="flex gap-2">
@@ -178,7 +178,7 @@
                             </div>
                         </div>
                         @if ($structureTree === [])
-                            <div class="px-4 py-8 text-center text-sm text-on-surface-variant">Chưa có mục khung kiến thức.</div>
+                            <div class="px-4 py-8 text-center text-sm text-on-surface-variant">Chưa có mục phân loại.</div>
                         @else
                             <ul class="divide-y divide-outline-variant/70">
                                 @include('admin::medical-taxonomy._tree-nodes', [

@@ -62,7 +62,8 @@
 
         <main class="flex h-screen w-full items-center justify-center px-6 pt-24 pb-12">
             <div class="flashcard-container flex h-full w-full max-w-3xl flex-col items-center justify-center gap-8">
-                <div class="flashcard relative aspect-[4/3] max-h-[500px] w-full" :class="{ flipped: flipped }"
+                <div class="flashcard relative aspect-[4/3] max-h-[500px] w-full" :class="{ flipped: flipped, 'cursor-pointer': !flipped }"
+                    @click="!flipped && flip()"
                     x-ref="card">
                     <div
                         class="flashcard-front flex flex-col justify-center rounded-xl border border-outline-variant bg-white p-12 text-center shadow-sm">

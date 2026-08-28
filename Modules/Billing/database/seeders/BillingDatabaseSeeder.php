@@ -141,8 +141,8 @@ class BillingDatabaseSeeder extends Seeder
             );
         }
 
-        // Promo code + fake institution are local/dev only.
-        if (app()->environment('local')) {
+        // Promo code + fake institution are local/dev/testing only.
+        if (app()->environment('local', 'testing')) {
             RedeemCode::query()->updateOrCreate(
                 ['code' => 'MEDLEARN2026'],
                 [

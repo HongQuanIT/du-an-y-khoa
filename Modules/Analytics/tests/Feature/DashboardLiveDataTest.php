@@ -44,6 +44,7 @@ final class DashboardLiveDataTest extends TestCase
             ->assertSee('2')
             ->assertSee('50%')
             ->assertSee('30 phút')
+            ->assertSee('1 ngày học liên tục')
             ->assertSee('Hoàn thành '.lcfirst($session->displayName()))
             ->assertDontSee('1.240')
             ->assertDontSee('15 ngày học liên tục');

@@ -17,7 +17,7 @@
                 <button type="button" @click="tab = 'participants'"
                     :class="tab === 'participants' ? 'border-b-2 border-primary text-primary' : 'text-on-surface-variant'"
                     class="flex-1 py-3 text-sm font-medium">
-                    Học viên <span data-lk-participant-count>0</span>
+                    Học viên
                 </button>
             @endif
         </div>

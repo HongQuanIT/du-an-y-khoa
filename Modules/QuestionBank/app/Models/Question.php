@@ -204,6 +204,18 @@ class Question extends Model
         return $this->hasMany(QuestionOption::class, 'question_id');
     }
 
+    /** @return HasMany<QuestionFeedback, $this> */
+    public function feedback(): HasMany
+    {
+        return $this->hasMany(QuestionFeedback::class, 'question_id');
+    }
+
+    /** @return HasOne<QuestionFeedback, $this> */
+    public function latestFeedback(): HasOne
+    {
+        return $this->hasOne(QuestionFeedback::class, 'question_id')->latestOfMany();
+    }
+
     /** @return HasMany<QuestionVersion, $this> */
     public function versions(): HasMany
     {

@@ -10,6 +10,8 @@ use App\Support\Audit\Enums\AuditAction;
 use App\Support\Enums\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Modules\Personalization\Models\BookmarkFolder;
+use Modules\Personalization\Models\BookmarkFolderItem;
 use Modules\QuestionBank\Actions\RepeatQuestionSessionAction;
 use Modules\QuestionBank\Database\Seeders\DemoLearningSeeder;
 use Modules\QuestionBank\Enums\Difficulty;
@@ -21,6 +23,7 @@ use Modules\QuestionBank\Enums\UserQuestionStatus;
 use Modules\QuestionBank\Models\MedicalTaxonomyNode;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
+use Modules\QuestionBank\Models\QuestionFeedback;
 use Modules\QuestionBank\Models\QuestionOption;
 use Modules\QuestionBank\Models\QuestionScope;
 use Modules\QuestionBank\Models\QuestionSession;
@@ -28,9 +31,8 @@ use Modules\QuestionBank\Models\QuestionSessionSnapshot;
 use Modules\QuestionBank\Models\QuestionStatus;
 use Modules\QuestionBank\Services\QuestionKeyInfoRenderer;
 use Spatie\Permission\Models\Role as RoleModel;
-use Tests\TestCase;
 use Tests\Support\CreatesMedicalTaxonomy;
-
+use Tests\TestCase;
 
 final class QuestionBankFlowTest extends TestCase
 {
@@ -125,14 +127,14 @@ final class QuestionBankFlowTest extends TestCase
 
     public function test_can_count_and_create_session_for_specific_folder(): void
     {
-        $folder = \Modules\Personalization\Models\BookmarkFolder::query()->create([
+        $folder = BookmarkFolder::query()->create([
             'user_id' => $this->user->id,
             'name' => 'Bộ sưu tập đặc biệt',
         ]);
         $question1 = $this->createQuestion($this->topic, true, Difficulty::Easy, 'Câu 1');
         $this->createQuestion($this->topic, true, Difficulty::Easy, 'Câu 2');
 
-        \Modules\Personalization\Models\BookmarkFolderItem::query()->create([
+        BookmarkFolderItem::query()->create([
             'folder_id' => $folder->id,
             'question_id' => (string) $question1->id,
         ]);
@@ -1209,6 +1211,42 @@ final class QuestionBankFlowTest extends TestCase
         $this->actingAs($this->user)
             ->get(route('qbank.review', $session))
             ->assertRedirect(route('qbank.index'));
+    }
+
+    public function test_student_can_submit_feedback_for_question_knowledge_and_answer(): void
+    {
+        $question = $this->createQuestion($this->topic, true, Difficulty::Easy, 'Câu cần phản hồi');
+        $option = $question->options()->firstOrFail();
+        $session = QuestionSession::query()->create([
+            'user_id' => $this->user->id,
+            'mode' => SessionMode::Study,
+            'status' => SessionStatus::Active,
+            'source' => 'custom',
+            'question_ids' => [(string) $question->getKey()],
+            'total' => 1,
+        ]);
+
+        $this->actingAs($this->user)
+            ->get(route('qbank.session', $session))
+            ->assertOk()
+            ->assertSee('Phản hồi câu hỏi')
+            ->assertSee('Phản hồi của bạn có nội dung như thế nào?');
+
+        $this->actingAs($this->user)
+            ->postJson(route('qbank.session.feedback', $session), [
+                'question_id' => (string) $question->getKey(),
+                'target' => 'answer',
+                'option_id' => $option->getKey(),
+                'category' => 'incorrect',
+                'message' => 'Đáp án này cần kiểm tra lại.',
+            ])
+            ->assertCreated();
+
+        $feedback = QuestionFeedback::query()->firstOrFail();
+        $this->assertSame($this->user->id, $feedback->user_id);
+        $this->assertSame('answer', $feedback->target);
+        $this->assertSame($option->getKey(), $feedback->question_option_id);
+        $this->assertSame('pending', $feedback->status);
     }
 
     /**

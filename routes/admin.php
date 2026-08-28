@@ -10,6 +10,7 @@ use Modules\Admin\Http\Controllers\BillingGatewayController;
 use Modules\Admin\Http\Controllers\BillingPaymentController;
 use Modules\Admin\Http\Controllers\BillingPlanController;
 use Modules\Admin\Http\Controllers\BillingSubscriptionController;
+use Modules\Admin\Http\Controllers\BlueprintController;
 use Modules\Admin\Http\Controllers\ClassroomOversightController;
 use Modules\Admin\Http\Controllers\Cms\BannerController;
 use Modules\Admin\Http\Controllers\Cms\FaqController;
@@ -17,23 +18,27 @@ use Modules\Admin\Http\Controllers\Cms\MenuController;
 use Modules\Admin\Http\Controllers\Cms\PageController;
 use Modules\Admin\Http\Controllers\EditorImageUploadController;
 use Modules\Admin\Http\Controllers\ExamController;
+use Modules\Admin\Http\Controllers\MedicalTaxonomyController;
 use Modules\Admin\Http\Controllers\QuestionController;
+use Modules\Admin\Http\Controllers\QuestionFeedbackController;
 use Modules\Admin\Http\Controllers\QuestionReviewController;
 use Modules\Admin\Http\Controllers\QuestionVersionController;
 use Modules\Admin\Http\Controllers\RoleController;
 use Modules\Admin\Http\Controllers\SettingController;
 use Modules\Admin\Http\Controllers\SupportConversationController;
-use Modules\Admin\Http\Controllers\BlueprintController;
-use Modules\Admin\Http\Controllers\MedicalTaxonomyController;
 use Modules\Admin\Http\Controllers\TagController;
 use Modules\Admin\Http\Controllers\TaxonomyController;
-use Modules\QuestionBank\Http\Controllers\TaxonomyLookupController;
 use Modules\Admin\Http\Controllers\UserController;
 use Modules\Auth\Http\Controllers\AdminTwoFactorController;
 use Modules\Auth\Http\Controllers\AuthenticatedSessionController;
+use Modules\Classroom\Http\Controllers\LiveMessageApiController;
+use Modules\Classroom\Http\Controllers\LiveModerationController;
 use Modules\Classroom\Http\Controllers\LiveRoomApiController;
 use Modules\Classroom\Http\Controllers\LiveRoomController;
 use Modules\Media\Http\Controllers\MediaController;
+use Modules\Notification\Http\Controllers\AdminBroadcastController;
+use Modules\Notification\Http\Controllers\NotificationController;
+use Modules\QuestionBank\Http\Controllers\TaxonomyLookupController;
 
 /*
 |--------------------------------------------------------------------------
@@ -105,13 +110,13 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
             Route::post('/support/{conversation}/messages', [SupportConversationController::class, 'message'])->name('support.messages.store');
             Route::post('/support/{conversation}/resolve', [SupportConversationController::class, 'resolve'])->name('support.resolve');
 
-            Route::get('/notifications/broadcast', [\Modules\Notification\Http\Controllers\AdminBroadcastController::class, 'create'])
+            Route::get('/notifications/broadcast', [AdminBroadcastController::class, 'create'])
                 ->name('notifications.broadcast');
-            Route::post('/notifications/broadcast', [\Modules\Notification\Http\Controllers\AdminBroadcastController::class, 'store'])
+            Route::post('/notifications/broadcast', [AdminBroadcastController::class, 'store'])
                 ->name('notifications.broadcast.store');
         });
 
-        Route::get('/notifications', [\Modules\Notification\Http\Controllers\NotificationController::class, 'index'])
+        Route::get('/notifications', [NotificationController::class, 'index'])
             ->name('notifications.index');
 
         Route::middleware('permission:'.Permission::AuditView->value)->group(function (): void {
@@ -126,12 +131,21 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
             Route::get('/classrooms/{classroom}/live/{liveSession}', [LiveRoomController::class, 'show'])
                 ->scopeBindings()
                 ->name('classrooms.live');
+            Route::post('/classrooms/{classroom}/live/{liveSession}/messages', [LiveRoomController::class, 'message'])
+                ->scopeBindings()
+                ->name('classrooms.live.message');
             Route::get('/classrooms/{classroom}/live/{liveSession}/api/bootstrap', [LiveRoomApiController::class, 'bootstrap'])
                 ->scopeBindings()
                 ->name('classrooms.live.api.bootstrap');
             Route::post('/classrooms/{classroom}/live/{liveSession}/api/token', [LiveRoomApiController::class, 'refreshToken'])
                 ->scopeBindings()
                 ->name('classrooms.live.api.token');
+            Route::post('/classrooms/{classroom}/live/{liveSession}/api/messages', [LiveMessageApiController::class, 'store'])
+                ->scopeBindings()
+                ->name('classrooms.live.api.messages');
+            Route::post('/classrooms/{classroom}/live/{liveSession}/api/react', [LiveModerationController::class, 'react'])
+                ->scopeBindings()
+                ->name('classrooms.live.api.react');
             Route::post('/classrooms/{classroom}/force-end', [ClassroomOversightController::class, 'forceEnd'])
                 ->name('classrooms.force-end');
             Route::post('/classrooms/{classroom}/approve', [ClassroomOversightController::class, 'approve'])
@@ -144,6 +158,7 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
 
         Route::middleware('permission:'.Permission::QuestionView->value)->group(function (): void {
             Route::get('/questions', [QuestionController::class, 'index'])->name('questions.index');
+            Route::get('/question-feedback', [QuestionFeedbackController::class, 'index'])->name('question-feedback.index');
             Route::get('/questions/{question}/edit', [QuestionController::class, 'edit'])->name('questions.edit');
             Route::get('/questions/{question}/stats', [QuestionController::class, 'stats'])->name('questions.stats');
             Route::get('/questions/{question}/versions', [QuestionVersionController::class, 'index'])
@@ -158,6 +173,8 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
 
         Route::middleware('permission:'.Permission::QuestionUpdate->value)->group(function (): void {
             Route::put('/questions/{question}', [QuestionController::class, 'update'])->name('questions.update');
+            Route::patch('/question-feedback/{feedback}/status', [QuestionFeedbackController::class, 'updateStatus'])
+                ->name('question-feedback.update-status');
             Route::post('/questions/{question}/transition', [QuestionController::class, 'transition'])
                 ->name('questions.transition');
             Route::post(
