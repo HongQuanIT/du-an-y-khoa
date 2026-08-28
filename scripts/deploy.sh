@@ -23,6 +23,14 @@ if [[ -z "${HOME:-}" ]]; then
 fi
 export HOME="${HOME:-/root}"
 
+# aaPanel log không phải TTY — tắt ANSI/progress bar để output đọc được
+export NO_COLOR=1
+export FORCE_COLOR=0
+export TERM=dumb
+export CI=true
+export npm_config_color=false
+export npm_config_loglevel=warn
+
 # --------------------- Cấu hình (chỉnh theo server) --------------------------
 SITE_PATH="${SITE_PATH:-/www/wwwroot/medpro.wpops.io}"
 BRANCH="${BRANCH:-main}"
@@ -58,17 +66,21 @@ fail() { echo "[deploy ERROR] $*" >&2; exit 1; }
 
 run_as() {
   # Artisan / composer / npm: chạy dưới www để đúng quyền runtime
+  # env ... : sudo mặc định strip biến môi trường → phải truyền lại NO_COLOR/CI
+  local -a deploy_env=(
+    env NO_COLOR=1 FORCE_COLOR=0 TERM=dumb CI=true npm_config_color=false
+  )
   if [[ "$(id -un)" == "$APP_USER" ]]; then
-    "$@"
+    "${deploy_env[@]}" "$@"
   elif command -v sudo >/dev/null 2>&1; then
-    sudo -u "$APP_USER" -H "$@"
+    sudo -u "$APP_USER" -H "${deploy_env[@]}" "$@"
   else
     fail "Cần chạy bằng user ${APP_USER} hoặc có sudo"
   fi
 }
 
 artisan() {
-  run_as "$PHP_BIN" artisan "$@"
+  run_as "$PHP_BIN" artisan --no-ansi "$@"
 }
 
 # Git phải chạy bằng user webhook (thường root) — aaPanel đã cấu hình SSH key ở đó.
@@ -83,6 +95,60 @@ run_git() {
 
   local -a git_cmd=(git -c safe.directory="$SITE_PATH" -c safe.directory='*')
   GIT_SSH_COMMAND="$ssh_cmd" "${git_cmd[@]}" "$@"
+}
+
+ensure_storage_link() {
+  local public_storage="$SITE_PATH/public/storage"
+  local target="$SITE_PATH/storage/app/public"
+
+  if [[ -L "$public_storage" ]]; then
+    local current expected
+    current="$(readlink -f "$public_storage" 2>/dev/null || true)"
+    expected="$(readlink -f "$target" 2>/dev/null || true)"
+    if [[ -n "$current" && -n "$expected" && "$current" == "$expected" ]]; then
+      log "public/storage đã liên kết — bỏ qua storage:link"
+      return 0
+    fi
+    log "public/storage trỏ sai — xóa và tạo lại"
+    rm -f "$public_storage"
+  elif [[ -e "$public_storage" ]]; then
+    log "public/storage tồn tại nhưng không phải symlink — bỏ qua (kiểm tra tay)"
+    return 0
+  fi
+
+  artisan storage:link
+}
+
+reload_php_fpm() {
+  [[ -n "$PHP_FPM_SERVICE" ]] || return 0
+
+  log "Reload PHP-FPM (${PHP_FPM_SERVICE})"
+
+  if command -v systemctl >/dev/null 2>&1 \
+    && systemctl reload "$PHP_FPM_SERVICE" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  if [[ -x "/etc/init.d/${PHP_FPM_SERVICE}" ]] \
+    && "/etc/init.d/${PHP_FPM_SERVICE}" reload >/dev/null 2>&1; then
+    return 0
+  fi
+
+  if command -v service >/dev/null 2>&1 \
+    && service "$PHP_FPM_SERVICE" reload >/dev/null 2>&1; then
+    return 0
+  fi
+
+  # aaPanel đôi khi đặt script trong /www/server/php/84/sbin/
+  local php_ver="${PHP_FPM_SERVICE#php-fpm-}"
+  if [[ -x "/www/server/php/${php_ver}/sbin/php-fpm" ]]; then
+    if kill -USR2 "$(cat "/www/server/php/${php_ver}/var/run/php-fpm.pid" 2>/dev/null)" 2>/dev/null; then
+      return 0
+    fi
+  fi
+
+  log "Cảnh báo: không reload được ${PHP_FPM_SERVICE} — reload tay trên aaPanel"
+  return 0
 }
 
 ensure_remote_host_key() {
@@ -153,7 +219,7 @@ git config --global --add safe.directory '*' 2>/dev/null || true
 log "Git fetch + reset cứng về origin/${BRANCH}"
 # Giữ .env / storage / vendor / node_modules / public/build
 run_git fetch --prune origin
-run_git checkout "$BRANCH"
+run_git checkout -q "$BRANCH"
 run_git reset --hard "origin/${BRANCH}"
 run_git clean -fd \
   -e '.env' \
@@ -175,26 +241,34 @@ fi
 
 # --------------------- Dependencies ------------------------------------------
 log "Composer install (no-dev)"
+# --no-scripts: tránh post-autoload-dump gọi `artisan package:discover --ansi` (log aaPanel bị mã màu)
+composer_install_args=(
+  install
+  --no-dev
+  --optimize-autoloader
+  --no-interaction
+  --prefer-dist
+  --no-ansi
+  --no-progress
+  --no-scripts
+)
 if command -v "$COMPOSER_BIN" >/dev/null 2>&1; then
-  run_as "$COMPOSER_BIN" install \
-    --no-dev \
-    --optimize-autoloader \
-    --no-interaction \
-    --prefer-dist
+  run_as "$COMPOSER_BIN" "${composer_install_args[@]}"
 else
   if [[ -f "$SITE_PATH/composer.phar" ]]; then
-    run_as "$PHP_BIN" "$SITE_PATH/composer.phar" install \
-      --no-dev --optimize-autoloader --no-interaction --prefer-dist
+    run_as "$PHP_BIN" "$SITE_PATH/composer.phar" "${composer_install_args[@]}"
   else
     fail "Không tìm thấy composer. Cài composer hoặc set COMPOSER_BIN"
   fi
 fi
+log "Composer package discover"
+artisan package:discover
 
 if [[ "$BUILD_ASSETS" == "true" ]]; then
   # vite nằm trong devDependencies → phải npm ci ĐỦ (không --omit=dev), build xong mới prune
   log "Build frontend assets (npm ci && npm run build)"
   command -v "$NPM_BIN" >/dev/null 2>&1 || fail "Không tìm thấy npm — cài Node 20 hoặc set BUILD_ASSETS=false"
-  run_as "$NPM_BIN" ci
+  run_as "$NPM_BIN" ci --no-audit --fund=false
   run_as "$NPM_BIN" run build
   run_as "$NPM_BIN" prune --omit=dev
 else
@@ -203,7 +277,7 @@ fi
 
 # --------------------- Laravel -----------------------------------------------
 log "storage:link (idempotent)"
-artisan storage:link || true
+ensure_storage_link
 
 if [[ "$RUN_MIGRATE" == "true" ]]; then
   log "Migrate --force"
@@ -246,11 +320,7 @@ else
   log "supervisorctl không có — bỏ qua restart Horizon/Reverb"
 fi
 
-if command -v systemctl >/dev/null 2>&1 && [[ -n "$PHP_FPM_SERVICE" ]]; then
-  log "Reload PHP-FPM (${PHP_FPM_SERVICE})"
-  systemctl reload "$PHP_FPM_SERVICE" >/dev/null 2>&1 \
-    || log "Cảnh báo: không reload được ${PHP_FPM_SERVICE} — reload tay trên aaPanel"
-fi
+reload_php_fpm
 
 # --------------------- Up ----------------------------------------------------
 trap - ERR
@@ -258,3 +328,4 @@ log "Tắt maintenance mode"
 artisan up
 
 log "========== Deploy OK: $(run_git rev-parse --short HEAD) =========="
+exit 0

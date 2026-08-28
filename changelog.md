@@ -8,6 +8,10 @@
 - Billing: promo code + institution giả chỉ seed khi `APP_ENV=local`.
 - Tài liệu: `docs/seeding.md`.
 
+### Deploy — ổn định log aaPanel / storage / PHP-FPM
+- Tắt ANSI/progress khi chạy qua webhook; `composer --no-scripts` + `package:discover` riêng.
+- `storage:link` idempotent; reload PHP-FPM đa fallback (systemctl / init.d / aaPanel).
+
 ### Classroom — vòng đời lớp, điểm danh live và ghi hình
 - Tách `approval_status` và `lifecycle_status`; giảng viên đóng/mở lại lớp và sửa thông tin lớp.
 - Điểm danh live qua webhook LiveKit; buổi live có grace period và thời lượng dự kiến.
