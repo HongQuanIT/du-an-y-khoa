@@ -6,11 +6,48 @@
 
     <form method="get" action="{{ route('admin.audit.index') }}" role="search" aria-label="Lọc nhật ký hoạt động"
         class="mb-6 grid grid-cols-1 items-end gap-4 rounded-xl border border-outline-variant bg-surface p-4 sm:grid-cols-2 xl:grid-cols-12">
-        <div class="min-w-0 xl:col-span-3">
+        <div class="relative min-w-0 xl:col-span-3"
+            x-data='{
+                open: false,
+                query: @json((string) ($filters["action"] ?? "")),
+                items: @json($actionSuggestions),
+                matches() {
+                    const keyword = this.query.trim().toLocaleLowerCase();
+                    const rows = keyword === ""
+                        ? this.items
+                        : this.items.filter(item =>
+                            item.label.toLocaleLowerCase().includes(keyword)
+                            || item.value.toLocaleLowerCase().includes(keyword)
+                        );
+
+                    return rows.slice(0, 8);
+                }
+            }'
+            @click.outside="open = false">
             <label class="mb-1.5 block font-label-sm font-medium text-on-surface-variant" for="action">Hành động</label>
-            <input id="action" name="action" value="{{ $filters['action'] }}" type="search"
-                placeholder="Nhập mã hành động" autocomplete="off"
-                class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-body-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20">
+            <div class="relative">
+                <span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant">search</span>
+                <input id="action" name="action" x-model="query" type="search"
+                    @focus="open = true" @input="open = true" @keydown.escape="open = false"
+                    placeholder="Nhập mã hoặc tên hành động" autocomplete="new-password" autocapitalize="none"
+                    spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true"
+                    class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low py-2 pl-9 pr-3 font-body-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20">
+            </div>
+
+            <div x-show="open && matches().length > 0" x-cloak
+                class="absolute inset-x-0 z-40 mt-1 max-h-72 overflow-y-auto rounded-xl border border-outline-variant bg-surface p-1.5 shadow-xl">
+                <template x-for="item in matches()" :key="item.value">
+                    <button type="button"
+                        @click="query = item.value; open = false; $nextTick(() => $el.closest('form').requestSubmit())"
+                        class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-surface-container-low">
+                        <span class="material-symbols-outlined text-[18px] text-primary">bolt</span>
+                        <span class="min-w-0 flex-1">
+                            <span class="block truncate text-sm text-on-surface" x-text="item.label"></span>
+                            <span class="block truncate font-mono text-[11px] text-on-surface-variant" x-text="item.value"></span>
+                        </span>
+                    </button>
+                </template>
+            </div>
         </div>
         <div class="min-w-0 xl:col-span-2">
             <label class="mb-1.5 block font-label-sm font-medium text-on-surface-variant" for="actor">Người thực hiện</label>

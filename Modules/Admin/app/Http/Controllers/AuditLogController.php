@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Support\Enums\Permission;
 use App\Support\Enums\Role;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Modules\Admin\Models\AuditLog;
@@ -25,7 +26,7 @@ final class AuditLogController extends Controller
             ->latest('id');
 
         if ($action = trim((string) $request->query('action', ''))) {
-            $query->where('action', 'like', "{$action}%");
+            $this->applyActionSearch($query, mb_substr($action, 0, 255));
         }
 
         $actor = trim((string) $request->query('actor', $request->query('actor_id', '')));
@@ -86,6 +87,7 @@ final class AuditLogController extends Controller
             'roles' => Role::cases(),
             'userMorphClass' => $subjectTypes['user'],
             'questionMorphClass' => $subjectTypes['question'],
+            'actionSuggestions' => $this->actionSuggestions(),
         ]);
     }
 
@@ -111,5 +113,55 @@ final class AuditLogController extends Controller
         $user = auth()->user();
 
         return $user;
+    }
+
+    /** @param Builder<AuditLog> $query */
+    private function applyActionSearch(Builder $query, string $term): void
+    {
+        $matchingActions = AuditLog::query()
+            ->visibleToAdmin()
+            ->select('action')
+            ->distinct()
+            ->pluck('action')
+            ->filter(function (string $action) use ($term): bool {
+                $log = new AuditLog;
+                $log->action = $action;
+
+                return str_contains(mb_strtolower($action), mb_strtolower($term))
+                    || str_contains(mb_strtolower($log->actionLabel()), mb_strtolower($term));
+            })
+            ->values()
+            ->all();
+
+        $query->where(function ($builder) use ($term, $matchingActions): void {
+            $builder->where('action', 'like', '%'.$term.'%');
+
+            if ($matchingActions !== []) {
+                $builder->orWhereIn('action', $matchingActions);
+            }
+        });
+    }
+
+    /** @return list<array{value: string, label: string}> */
+    private function actionSuggestions(): array
+    {
+        return AuditLog::query()
+            ->visibleToAdmin()
+            ->select('action')
+            ->distinct()
+            ->orderBy('action')
+            ->limit(150)
+            ->pluck('action')
+            ->map(function (string $action): array {
+                $log = new AuditLog;
+                $log->action = $action;
+
+                return [
+                    'value' => $action,
+                    'label' => $log->actionLabel(),
+                ];
+            })
+            ->values()
+            ->all();
     }
 }
