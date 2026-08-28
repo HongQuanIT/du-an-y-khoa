@@ -2,6 +2,12 @@
 
 ## 2026-08-28
 
+### Seed — tách Staging / Production + `app:seed --fresh`
+- Thêm `StagingSeeder` (baseline + QA users + FAQ) và `ProductionSeeder` (baseline tối thiểu, không user/FAQ demo).
+- Command `php artisan app:seed {staging|production|local}` — mặc định idempotent; `--fresh` = `migrate:fresh` rồi seed lại; `--force` bỏ confirm.
+- Billing: promo code + institution giả chỉ seed khi `APP_ENV=local`.
+- Tài liệu: `docs/seeding.md`.
+
 ### Classroom — vòng đời lớp, điểm danh live và ghi hình
 - Tách `approval_status` và `lifecycle_status`; giảng viên đóng/mở lại lớp và sửa thông tin lớp.
 - Điểm danh live qua webhook LiveKit; buổi live có grace period và thời lượng dự kiến.
