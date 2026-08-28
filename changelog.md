@@ -2,6 +2,9 @@
 
 ## 2026-08-28
 
+### Fix — autoload blueprint seed trên Linux
+- Chuyển `MedicalLicensingExamBlueprint` khỏi `seeders/data/` lên cạnh seeder (PSR-4), tránh lỗi class not found khi filesystem phân biệt hoa/thường.
+
 ### Seed — tách Staging / Production + `app:seed --fresh`
 - Thêm `StagingSeeder` (baseline + QA users + FAQ) và `ProductionSeeder` (baseline tối thiểu, không user/FAQ demo).
 - Command `php artisan app:seed {staging|production|local}` — mặc định idempotent; `--fresh` = `migrate:fresh` rồi seed lại; `--force` bỏ confirm.
