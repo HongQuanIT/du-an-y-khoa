@@ -2,6 +2,11 @@
 
 ## 2026-08-29
 
+### Classroom live — số người đúng, tab Thành viên, nút share
+- Sửa đếm người trong phòng: chỉ lấy từ LiveKit (bỏ race Echo cộng N+1).
+- Icon mắt + số người cạnh badge Live; tab **Thành viên** (avatar, chức danh/trường, icon mic/kick).
+- Học viên bỏ tab Đề (đề trên khung video); host giữ Đề. Nút chia sẻ màn hình đổi trạng thái rõ khi đang share.
+
 ### Classroom live — chat avatar, emotion gọn, sửa nút mic
 - Chat kiểu Facebook: avatar + tên cho người khác; tin của mình căn phải không hiện avatar.
 - Emotion 1 chip/lần (avatar + emoji + tên), bay chậm ~4s; nút tim/like trên Studio giảng viên.

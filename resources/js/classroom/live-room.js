@@ -1157,32 +1157,10 @@ export function mountLiveRoom(root) {
                 }
             });
 
+        // Presence still joins for catalog/live-now signals; in-room count comes from LiveKit only.
+        // (Do not increment data-lk-count here — that raced with LiveKit and showed N+1.)
         if (config.classroom_uuid) {
-            window.Echo.join(`classroom.${config.classroom_uuid}`)
-                .here((users) => {
-                    const el = document.querySelector('[data-live-viewer-count]');
-                    if (el) {
-                        el.textContent = `${users.length} người`;
-                    }
-                    const lkCount = root.querySelector('[data-lk-count]');
-                    if (lkCount) {
-                        lkCount.textContent = `${users.length} người`;
-                    }
-                })
-                .joining(() => {
-                    const lkCount = root.querySelector('[data-lk-count]');
-                    if (lkCount) {
-                        const n = parseInt(lkCount.textContent ?? '1', 10) + 1;
-                        lkCount.textContent = `${n} người`;
-                    }
-                })
-                .leaving(() => {
-                    const lkCount = root.querySelector('[data-lk-count]');
-                    if (lkCount) {
-                        const n = Math.max(1, parseInt(lkCount.textContent ?? '1', 10) - 1);
-                        lkCount.textContent = `${n} người`;
-                    }
-                });
+            window.Echo.join(`classroom.${config.classroom_uuid}`);
         }
 
         return true;

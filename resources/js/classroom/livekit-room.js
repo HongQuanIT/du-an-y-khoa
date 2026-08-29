@@ -298,10 +298,16 @@ export function mountLivekitRoom(root) {
     };
 
     const refreshCount = () => {
-        if (! countEl || ! room) {
+        if (! room) {
             return;
         }
-        countEl.textContent = `${room.remoteParticipants.size + 1} người`;
+        const total = room.remoteParticipants.size + 1;
+        if (countEl) {
+            countEl.textContent = String(total);
+        }
+        document.querySelectorAll('[data-live-viewer-count-num]').forEach((el) => {
+            el.textContent = String(total);
+        });
     };
 
     const leaveRoom = (urlTo = exitUrl) => {
@@ -418,20 +424,142 @@ export function mountLivekitRoom(root) {
         }
     };
 
+    const localProfile = () => {
+        const fromConfig = liveConfig.user && typeof liveConfig.user === 'object'
+            ? liveConfig.user
+            : {};
+
+        return {
+            avatar_url: fromConfig.avatar_url ?? liveConfig.user_avatar_url ?? null,
+            avatar_initial: fromConfig.avatar_initial
+                ?? liveConfig.user_avatar_initial
+                ?? '?',
+            career_role: fromConfig.career_role ?? null,
+            specialty: fromConfig.specialty ?? null,
+            institution: fromConfig.institution ?? null,
+        };
+    };
+
+    const buildAvatarEl = (profile, sizeClass = 'size-10') => {
+        const wrap = document.createElement('div');
+        wrap.className = `${sizeClass} shrink-0 overflow-hidden rounded-full bg-primary/15 text-primary ring-1 ring-outline-variant/60`;
+        wrap.title = String(profile?.name ?? '');
+        const url = profile?.avatar_url;
+        if (url) {
+            const img = document.createElement('img');
+            img.src = String(url);
+            img.alt = String(profile?.name ?? '');
+            img.className = 'size-full object-cover';
+            img.loading = 'lazy';
+            wrap.appendChild(img);
+        } else {
+            const initial = document.createElement('span');
+            initial.className = 'flex size-full items-center justify-center text-sm font-semibold';
+            initial.textContent = String(profile?.avatar_initial || profile?.name?.[0] || '?')
+                .toUpperCase()
+                .slice(0, 1);
+            wrap.appendChild(initial);
+        }
+
+        return wrap;
+    };
+
+    const iconButton = ({ icon, label, danger = false, onClick }) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.title = label;
+        btn.setAttribute('aria-label', label);
+        btn.className = danger
+            ? 'inline-flex size-8 items-center justify-center rounded-lg border border-error/40 text-error hover:bg-error/5 disabled:opacity-40'
+            : 'inline-flex size-8 items-center justify-center rounded-lg border border-outline-variant text-on-surface hover:bg-surface-container-low disabled:opacity-40';
+        const glyph = document.createElement('span');
+        glyph.className = 'material-symbols-outlined text-[18px]';
+        glyph.setAttribute('aria-hidden', 'true');
+        glyph.textContent = icon;
+        btn.appendChild(glyph);
+        btn.addEventListener('click', onClick);
+
+        return btn;
+    };
+
+    const statusIcon = (icon, label, active = false) => {
+        const el = document.createElement('span');
+        el.className = `inline-flex size-8 items-center justify-center rounded-lg ${
+            active ? 'bg-primary/10 text-primary' : 'text-on-surface-variant'
+        }`;
+        el.title = label;
+        el.setAttribute('aria-label', label);
+        const glyph = document.createElement('span');
+        glyph.className = 'material-symbols-outlined text-[18px]';
+        glyph.setAttribute('aria-hidden', 'true');
+        glyph.textContent = icon;
+        el.appendChild(glyph);
+
+        return el;
+    };
+
+    const profileSubtitle = (participant) => {
+        const role = participant.career_role
+            || (participant.isHost ? 'Giảng viên' : 'Học viên');
+        const bits = [role];
+        if (participant.specialty) {
+            bits.push(participant.specialty);
+        }
+        if (participant.institution) {
+            bits.push(participant.institution);
+        }
+
+        return bits.join(' · ');
+    };
+
+    const mapParticipantRow = (participant, { isSelf = false } = {}) => {
+        const meta = parseParticipantMeta(participant);
+        const fallback = isSelf ? localProfile() : {};
+
+        return {
+            identity: participant.identity,
+            userId: userIdFromIdentity(participant.identity) ?? (meta.user_id != null ? Number(meta.user_id) : null),
+            name: participant.name || meta.name || participant.identity,
+            micOn: participantMicActive(participant),
+            isHost: isHostParticipant(participant) || (isSelf && isLocalHost) || meta.is_host === true,
+            isSelf,
+            avatar_url: meta.avatar_url ?? fallback.avatar_url ?? null,
+            avatar_initial: meta.avatar_initial ?? fallback.avatar_initial ?? '?',
+            career_role: meta.career_role ?? fallback.career_role ?? null,
+            specialty: meta.specialty ?? fallback.specialty ?? null,
+            institution: meta.institution ?? fallback.institution ?? null,
+        };
+    };
+
     const renderParticipants = () => {
         if (! room || participantListEls.length === 0) {
             return;
         }
 
-        const participants = Array.from(room.remoteParticipants.values())
-            .map((participant) => ({
-                identity: participant.identity,
-                userId: userIdFromIdentity(participant.identity),
-                name: participant.name || participant.identity,
-                micOn: participantMicActive(participant),
-                isHost: isHostParticipant(participant),
-            }))
-            .filter((participant) => participant.userId !== null);
+        const byUserId = new Map();
+        const local = mapParticipantRow(room.localParticipant, { isSelf: true });
+        if (local.userId !== null) {
+            byUserId.set(local.userId, local);
+        }
+        for (const remote of room.remoteParticipants.values()) {
+            const row = mapParticipantRow(remote);
+            if (row.userId === null || byUserId.has(row.userId)) {
+                continue;
+            }
+            byUserId.set(row.userId, row);
+        }
+
+        const participants = Array.from(byUserId.values())
+            .sort((a, b) => {
+                if (a.isHost !== b.isHost) {
+                    return a.isHost ? -1 : 1;
+                }
+                if (a.isSelf !== b.isSelf) {
+                    return a.isSelf ? -1 : 1;
+                }
+
+                return String(a.name).localeCompare(String(b.name), 'vi');
+            });
 
         participantCountEls.forEach((el) => {
             el.textContent = String(participants.length);
@@ -444,66 +572,89 @@ export function mountLivekitRoom(root) {
             list.innerHTML = '';
             participants.forEach((participant) => {
                 const item = document.createElement('li');
-                item.className = 'flex items-center justify-between gap-3 px-4 py-3 text-sm';
+                item.className = 'flex items-center gap-3 px-4 py-3 text-sm';
+
+                item.appendChild(buildAvatarEl(participant, 'size-11'));
 
                 const left = document.createElement('div');
                 left.className = 'min-w-0 flex-1';
                 const name = document.createElement('p');
-                name.className = 'truncate text-on-surface';
-                name.textContent = participant.name;
+                name.className = 'truncate font-medium text-on-surface';
+                name.textContent = participant.isSelf
+                    ? `${participant.name} (Bạn)`
+                    : participant.name;
                 const meta = document.createElement('p');
-                meta.className = 'text-[11px] text-on-surface-variant';
-                meta.textContent = participant.isHost
-                    ? 'Giảng viên'
-                    : (participant.micOn ? 'Mic đang bật' : 'Mic tắt');
+                meta.className = 'truncate text-[11px] text-on-surface-variant';
+                meta.textContent = profileSubtitle(participant);
                 left.append(name, meta);
 
                 const actions = document.createElement('div');
                 actions.className = 'flex shrink-0 items-center gap-1';
 
-                if (Boolean(liveConfig.can_moderate) && ! participant.isHost) {
-                    const micBtn = document.createElement('button');
-                    micBtn.type = 'button';
-                    micBtn.className = 'rounded-lg border border-outline-variant px-2 py-1 text-xs font-semibold text-on-surface hover:bg-surface-container-low';
-                    micBtn.textContent = participant.micOn ? 'Tắt mic' : 'Bật mic';
-                    micBtn.addEventListener('click', async () => {
-                        const shouldMute = participant.micOn;
-                        micBtn.disabled = true;
-                        try {
-                            if (! shouldMute) {
-                                await enforceLearnerFloor(participant.userId);
+                if (Boolean(liveConfig.can_moderate) && ! participant.isHost && ! participant.isSelf) {
+                    const micBtn = iconButton({
+                        icon: participant.micOn ? 'mic_off' : 'mic',
+                        label: participant.micOn ? 'Tắt mic' : 'Bật mic',
+                        onClick: async () => {
+                            const shouldMute = participant.micOn;
+                            micBtn.disabled = true;
+                            try {
+                                if (! shouldMute) {
+                                    await enforceLearnerFloor(participant.userId);
+                                }
+                                await publishMicCommand(shouldMute ? 'mute' : 'unmute', participant.userId, participant.identity);
+                                await apiSpeakerAction(shouldMute ? 'mute' : 'unmute', participant.userId);
+                                if (shouldMute) {
+                                    remoteMutedByHost.add(participant.userId);
+                                } else {
+                                    remoteMutedByHost.delete(participant.userId);
+                                }
+                            } catch (e) {
+                                console.error('[LiveKit] remote mic', e);
+                                setError('Không đổi được mic học viên.');
+                            } finally {
+                                micBtn.disabled = false;
+                                renderParticipants();
                             }
-                            await publishMicCommand(shouldMute ? 'mute' : 'unmute', participant.userId, participant.identity);
-                            await apiSpeakerAction(shouldMute ? 'mute' : 'unmute', participant.userId);
-                            if (shouldMute) {
-                                remoteMutedByHost.add(participant.userId);
-                            } else {
-                                remoteMutedByHost.delete(participant.userId);
-                            }
-                        } catch (e) {
-                            console.error('[LiveKit] remote mic', e);
-                            setError('Không đổi được mic học viên.');
-                        } finally {
-                            micBtn.disabled = false;
-                            renderParticipants();
-                        }
+                        },
                     });
                     actions.appendChild(micBtn);
 
-                    const kickBtn = document.createElement('button');
-                    kickBtn.type = 'button';
-                    kickBtn.className = 'rounded-lg border border-error px-2 py-1 text-xs font-semibold text-error hover:bg-error/5';
-                    kickBtn.textContent = 'Kick';
-                    kickBtn.addEventListener('click', async () => {
-                        await kickParticipant(participant.userId, participant.identity, kickBtn);
+                    const kickBtn = iconButton({
+                        icon: 'person_remove',
+                        label: 'Kick khỏi phòng',
+                        danger: true,
+                        onClick: async () => {
+                            await kickParticipant(participant.userId, participant.identity, kickBtn);
+                        },
                     });
                     actions.appendChild(kickBtn);
+                } else {
+                    actions.appendChild(statusIcon(
+                        participant.micOn ? 'mic' : 'mic_off',
+                        participant.micOn ? 'Mic đang bật' : 'Mic tắt',
+                        participant.micOn,
+                    ));
                 }
 
                 item.append(left, actions);
                 list.appendChild(item);
             });
         });
+    };
+
+    const setButtonIcon = (button, icon, label) => {
+        if (! (button instanceof HTMLElement)) {
+            return;
+        }
+        button.title = label;
+        button.setAttribute('aria-label', label);
+        const glyph = button.querySelector('.material-symbols-outlined');
+        if (glyph) {
+            glyph.textContent = icon;
+        } else {
+            button.textContent = label;
+        }
     };
 
     const kickParticipant = async (userId, identity, button) => {
@@ -513,7 +664,7 @@ export function mountLivekitRoom(root) {
         }
 
         button.disabled = true;
-        button.textContent = 'Đang kick...';
+        setButtonIcon(button, 'hourglass_top', 'Đang kick...');
 
         try {
             const res = await fetch(template.replace('__USER__', String(userId)), {
@@ -542,14 +693,14 @@ export function mountLivekitRoom(root) {
                 });
             }
 
-            button.textContent = 'Đã kick';
+            setButtonIcon(button, 'check', 'Đã kick');
         } catch (e) {
             if (isClosedSocketError(e)) {
                 return;
             }
             console.error('[LiveKit] kick participant', e);
             button.disabled = false;
-            button.textContent = 'Kick';
+            setButtonIcon(button, 'person_remove', 'Kick khỏi phòng');
             setError(e instanceof Error ? e.message : 'Không kick được học viên.');
         }
     };
@@ -655,7 +806,19 @@ export function mountLivekitRoom(root) {
             btnCam.classList.toggle('hidden', ! canPublishVideo);
         });
         btnScreens.forEach((btnScreen) => {
-            btnScreen.classList.toggle('text-teal-300', screenOn);
+            const icon = btnScreen.querySelector('.material-symbols-outlined');
+            if (icon) {
+                icon.textContent = screenOn ? 'stop_screen_share' : 'present_to_all';
+            }
+            btnScreen.classList.toggle('bg-teal-600', screenOn);
+            btnScreen.classList.toggle('hover:bg-teal-500', screenOn);
+            btnScreen.classList.toggle('text-white', screenOn);
+            btnScreen.classList.toggle('bg-white/10', ! screenOn);
+            btnScreen.classList.toggle('hover:bg-white/20', ! screenOn);
+            btnScreen.setAttribute('aria-label', screenOn ? 'Dừng chia sẻ màn hình' : 'Chia sẻ màn hình');
+            btnScreen.title = screenOn
+                ? 'Đang chia sẻ màn hình — bấm để dừng'
+                : 'Chia sẻ slide/PDF/app ngoài (không cần khi chữa đề trong app)';
             btnScreen.disabled = ! canPublishScreen || ! connected;
             btnScreen.classList.toggle('hidden', ! canPublishScreen);
         });
@@ -968,6 +1131,10 @@ export function mountLivekitRoom(root) {
                 renderParticipants();
             })
             .on(RoomEvent.LocalTrackPublished, (publication) => {
+                if (publication.source === Track.Source.ScreenShare) {
+                    screenOn = true;
+                    syncButtons();
+                }
                 if (publication.track) {
                     attachTrack(publication.track, 'local', true);
                 }
@@ -977,7 +1144,15 @@ export function mountLivekitRoom(root) {
                     stageEl?.querySelector('[data-lk-video="local-cam"]')?.remove();
                 }
                 if (publication.source === Track.Source.ScreenShare) {
+                    screenOn = false;
                     stageEl?.querySelector('[data-lk-main]')?.replaceChildren();
+                    if (studioMode) {
+                        const camPub = room?.localParticipant.getTrackPublication(Track.Source.Camera);
+                        if (camPub?.track) {
+                            attachTrack(camPub.track, 'local', true);
+                        }
+                    }
+                    syncButtons();
                 }
                 publication.track?.detach().forEach((el) => el.remove());
             });
