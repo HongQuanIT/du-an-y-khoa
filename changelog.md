@@ -2,6 +2,12 @@
 
 ## 2026-08-29
 
+### Classroom live — chữa đề nhanh + tô màu realtime
+- Thêm Vite entry `presenter-window.js` (sửa lỗi manifest production khi mở màn phụ).
+- Optimistic UI + `question_deck` cho host: sổ đáp án / đổi câu không chờ API.
+- Tô màu text trên đề/đáp án (phòng live + màn phụ), đồng bộ Echo `.marks.updated` (<1s); poll chỉ fallback.
+- Migration `text_marks`, API `PATCH .../marks`; await Echo trước khi subscribe để tránh rơi về poll chậm.
+
 ### Popup modal thông báo học tập & hoạt động
 - Thêm modal popup tự động hiển thị thông báo mới/chưa đọc khi học viên mở web hoặc vừa đăng nhập (`notification::partials.popup-modal`).
 - Hỗ trợ đầy đủ các danh mục thông báo: nhắc học hàng ngày, cảnh báo/cột mốc streak, bài tập mới/hạn nộp, lịch live class, kết quả bài thi/bài học, thành tích, tổng kết tuần, nhắc quay lại học và thông báo lớp học.
