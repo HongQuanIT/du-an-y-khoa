@@ -2,6 +2,10 @@
 
 ## 2026-08-29
 
+### Classroom live — icon mic Thành viên + xác nhận kick
+- Sửa icon mic tab Thành viên hiển thị đúng trạng thái (mic bật/tắt).
+- Thêm popup xác nhận trước khi kick thành viên khỏi phòng live.
+
 ### Classroom live — số người đúng, tab Thành viên, nút share
 - Sửa đếm người trong phòng: chỉ lấy từ LiveKit (bỏ race Echo cộng N+1).
 - Icon mắt + số người cạnh badge Live; tab **Thành viên** (avatar, chức danh/trường, icon mic/kick).
