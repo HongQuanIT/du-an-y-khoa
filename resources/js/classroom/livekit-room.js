@@ -47,6 +47,11 @@ const LOCAL_PROFILE = {
         videoCaptureDefaults: {
             resolution: VideoPresets.h360.resolution,
         },
+        audioCaptureDefaults: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+        },
     },
     cameraCapture: {
         resolution: VideoPresets.h360.resolution,
@@ -88,6 +93,11 @@ const CLOUD_PROFILE = {
         videoCaptureDefaults: {
             resolution: VideoPresets.h540.resolution,
         },
+        audioCaptureDefaults: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+        },
     },
     cameraCapture: {
         resolution: VideoPresets.h540.resolution,
@@ -107,6 +117,8 @@ const CLOUD_PROFILE = {
         videoEncoding: ScreenSharePresets.h720fps15.encoding,
     },
 };
+
+const MAX_LEARNER_SPEAKERS = 2;
 
 /**
  * Vanilla LiveKit mount for Classroom live room.
@@ -163,14 +175,19 @@ export function mountLivekitRoom(root) {
     let camOn = false;
     let micOn = false;
     let screenOn = false;
+    let micLockedByHost = false;
     let disposed = false;
     let hasRemoteVideo = false;
     let mainVideoPriority = 0;
     let connectRetryTimer = null;
     let connecting = false;
     let leaving = false;
+    /** @type {Set<number>} */
+    const remoteMutedByHost = new Set();
 
     const MAX_CONNECT_ATTEMPTS = 4;
+    const isLocalHost = Boolean(liveConfig.can_moderate) || role === 'publisher';
+    const currentUserId = liveConfig.user_id != null ? Number(liveConfig.user_id) : null;
 
     const isRoomUsable = () => ! disposed && room?.state === 'connected';
 
@@ -185,6 +202,73 @@ export function mountLivekitRoom(root) {
         const match = String(identity).match(/^user-(\d+)$/);
 
         return match ? Number(match[1]) : null;
+    };
+
+    const parseParticipantMeta = (participant) => {
+        try {
+            const raw = participant?.metadata;
+            if (! raw) {
+                return {};
+            }
+
+            return JSON.parse(raw);
+        } catch {
+            return {};
+        }
+    };
+
+    const isHostParticipant = (participant) => {
+        const meta = parseParticipantMeta(participant);
+        if (meta.is_host === true) {
+            return true;
+        }
+        // Fallback: host thường publish camera/screen.
+        const cam = participant.getTrackPublication?.(Track.Source.Camera);
+        const screen = participant.getTrackPublication?.(Track.Source.ScreenShare);
+
+        return Boolean(cam?.track || screen?.track);
+    };
+
+    const participantMicActive = (participant) => {
+        const pub = participant.getTrackPublication?.(Track.Source.Microphone);
+        if (! pub) {
+            return false;
+        }
+
+        return ! pub.isMuted && (pub.track != null || pub.isSubscribed);
+    };
+
+    /** @returns {list<{userId: number, identity: string, since: number}>} */
+    const listActiveLearnerMics = () => {
+        if (! room) {
+            return [];
+        }
+        /** @type {Array<{userId: number, identity: string}>} */
+        const out = [];
+        if (micOn && ! isLocalHost && currentUserId) {
+            out.push({ userId: currentUserId, identity: `user-${currentUserId}` });
+        }
+        for (const participant of room.remoteParticipants.values()) {
+            if (isHostParticipant(participant)) {
+                continue;
+            }
+            const userId = userIdFromIdentity(participant.identity);
+            if (userId === null || ! participantMicActive(participant)) {
+                continue;
+            }
+            out.push({ userId, identity: participant.identity });
+        }
+
+        return out;
+    };
+
+    const showMicTip = (msg) => {
+        setError(msg);
+        window.setTimeout(() => {
+            if (errorEl?.textContent === msg) {
+                setError('');
+            }
+        }, 5_000);
     };
 
     const setStatus = (text, kind = 'connecting') => {
@@ -239,6 +323,102 @@ export function mountLivekitRoom(root) {
         window.location.href = urlTo;
     };
 
+    const speakerUrl = (kind, userId) => {
+        const key = kind === 'invite'
+            ? 'speakers_invite'
+            : kind === 'unmute'
+                ? 'speakers_unmute'
+                : 'speakers_mute';
+        const template = String(liveConfig.urls?.[key]
+            ?? liveConfig[`${key}_url_template`]
+            ?? '');
+        if (! template) {
+            const base = String(liveConfig.bootstrap_url ?? '').replace(/\/bootstrap\/?$/, '');
+
+            return `${base}/speakers/${userId}/${kind === 'unmute' ? 'unmute' : kind === 'invite' ? 'invite' : 'mute'}`;
+        }
+
+        return template.replace('__USER__', String(userId));
+    };
+
+    const publishMicCommand = async (action, userId, identity) => {
+        if (! isRoomUsable() || ! identity) {
+            return;
+        }
+        const payload = JSON.stringify({
+            type: 'mic',
+            action,
+            user_id: userId,
+        });
+        await room.localParticipant.publishData(new TextEncoder().encode(payload), {
+            reliable: true,
+            topic: 'moderation',
+            destinationIdentities: [identity],
+        });
+    };
+
+    const apiSpeakerAction = async (kind, userId) => {
+        const res = await fetch(speakerUrl(kind, userId), {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'X-CSRF-TOKEN': csrf(),
+            },
+            credentials: 'same-origin',
+        });
+        if (! res.ok) {
+            throw new Error(`speaker ${kind} failed`);
+        }
+
+        return res.json();
+    };
+
+    const setLocalMicEnabled = async (enabled, { locked = null, invited = false, bypassFloor = false } = {}) => {
+        if (! isRoomUsable() || ! canPublishAudio) {
+            return false;
+        }
+        if (enabled && micLockedByHost && ! invited && locked !== false) {
+            showMicTip('Host đã tắt mic của bạn. Chờ được gọi hoặc host bật lại.');
+
+            return false;
+        }
+        if (enabled && ! isLocalHost && ! bypassFloor) {
+            const active = listActiveLearnerMics().filter((s) => s.userId !== currentUserId);
+            if (active.length >= MAX_LEARNER_SPEAKERS) {
+                showMicTip('Đã đủ người đang nói. Host sẽ gọi khi đến lượt bạn.');
+
+                return false;
+            }
+        }
+        try {
+            await room.localParticipant.setMicrophoneEnabled(
+                Boolean(enabled),
+                enabled ? profile.room.audioCaptureDefaults : undefined,
+            );
+            micOn = Boolean(enabled);
+            if (locked === true) {
+                micLockedByHost = true;
+            } else if (locked === false || invited) {
+                micLockedByHost = false;
+            }
+            if (enabled) {
+                showMicTip('Nên dùng tai nghe để tránh hú tiếng khi ngồi gần loa.');
+            }
+            syncButtons();
+            renderParticipants();
+
+            return true;
+        } catch (e) {
+            if (isClosedSocketError(e)) {
+                return false;
+            }
+            console.error('[LiveKit] mic set', e);
+            setError(e instanceof Error ? e.message : 'Lỗi micro');
+
+            return false;
+        }
+    };
+
     const renderParticipants = () => {
         if (! room || participantListEls.length === 0) {
             return;
@@ -249,6 +429,8 @@ export function mountLivekitRoom(root) {
                 identity: participant.identity,
                 userId: userIdFromIdentity(participant.identity),
                 name: participant.name || participant.identity,
+                micOn: participantMicActive(participant),
+                isHost: isHostParticipant(participant),
             }))
             .filter((participant) => participant.userId !== null);
 
@@ -265,19 +447,61 @@ export function mountLivekitRoom(root) {
                 const item = document.createElement('li');
                 item.className = 'flex items-center justify-between gap-3 px-4 py-3 text-sm';
 
-                const name = document.createElement('span');
-                name.className = 'min-w-0 truncate text-on-surface';
+                const left = document.createElement('div');
+                left.className = 'min-w-0 flex-1';
+                const name = document.createElement('p');
+                name.className = 'truncate text-on-surface';
                 name.textContent = participant.name;
+                const meta = document.createElement('p');
+                meta.className = 'text-[11px] text-on-surface-variant';
+                meta.textContent = participant.isHost
+                    ? 'Giảng viên'
+                    : (participant.micOn ? 'Mic đang bật' : 'Mic tắt');
+                left.append(name, meta);
 
-                const button = document.createElement('button');
-                button.type = 'button';
-                button.className = 'shrink-0 rounded-lg border border-error px-2 py-1 text-xs font-semibold text-error hover:bg-error/5';
-                button.textContent = 'Kick';
-                button.addEventListener('click', async () => {
-                    await kickParticipant(participant.userId, participant.identity, button);
-                });
+                const actions = document.createElement('div');
+                actions.className = 'flex shrink-0 items-center gap-1';
 
-                item.append(name, button);
+                if (Boolean(liveConfig.can_moderate) && ! participant.isHost) {
+                    const micBtn = document.createElement('button');
+                    micBtn.type = 'button';
+                    micBtn.className = 'rounded-lg border border-outline-variant px-2 py-1 text-xs font-semibold text-on-surface hover:bg-surface-container-low';
+                    micBtn.textContent = participant.micOn ? 'Tắt mic' : 'Bật mic';
+                    micBtn.addEventListener('click', async () => {
+                        const shouldMute = participant.micOn;
+                        micBtn.disabled = true;
+                        try {
+                            if (! shouldMute) {
+                                await enforceLearnerFloor(participant.userId);
+                            }
+                            await publishMicCommand(shouldMute ? 'mute' : 'unmute', participant.userId, participant.identity);
+                            await apiSpeakerAction(shouldMute ? 'mute' : 'unmute', participant.userId);
+                            if (shouldMute) {
+                                remoteMutedByHost.add(participant.userId);
+                            } else {
+                                remoteMutedByHost.delete(participant.userId);
+                            }
+                        } catch (e) {
+                            console.error('[LiveKit] remote mic', e);
+                            setError('Không đổi được mic học viên.');
+                        } finally {
+                            micBtn.disabled = false;
+                            renderParticipants();
+                        }
+                    });
+                    actions.appendChild(micBtn);
+
+                    const kickBtn = document.createElement('button');
+                    kickBtn.type = 'button';
+                    kickBtn.className = 'rounded-lg border border-error px-2 py-1 text-xs font-semibold text-error hover:bg-error/5';
+                    kickBtn.textContent = 'Kick';
+                    kickBtn.addEventListener('click', async () => {
+                        await kickParticipant(participant.userId, participant.identity, kickBtn);
+                    });
+                    actions.appendChild(kickBtn);
+                }
+
+                item.append(left, actions);
                 list.appendChild(item);
             });
         });
@@ -331,6 +555,76 @@ export function mountLivekitRoom(root) {
         }
     };
 
+    const enforceLearnerFloor = async (exceptUserId = null) => {
+        if (! isLocalHost || ! isRoomUsable()) {
+            return;
+        }
+        const active = listActiveLearnerMics().filter((s) => s.userId !== exceptUserId);
+        const maxOthers = exceptUserId != null ? MAX_LEARNER_SPEAKERS - 1 : MAX_LEARNER_SPEAKERS;
+        const toMute = active.slice(0, Math.max(0, active.length - maxOthers));
+        for (const speaker of toMute) {
+            try {
+                await publishMicCommand('mute', speaker.userId, speaker.identity);
+                await apiSpeakerAction('mute', speaker.userId);
+                remoteMutedByHost.add(speaker.userId);
+            } catch (e) {
+                console.error('[LiveKit] floor mute', e);
+            }
+        }
+        if (toMute.length) {
+            renderParticipants();
+        }
+    };
+
+    const handleMicModeration = async (message) => {
+        if (message?.type !== 'mic') {
+            return;
+        }
+        const targetId = Number(message.user_id);
+        if (currentUserId === null || targetId !== currentUserId) {
+            return;
+        }
+        if (message.action === 'mute') {
+            await setLocalMicEnabled(false, { locked: true });
+        } else if (message.action === 'unmute') {
+            await setLocalMicEnabled(true, { locked: false, invited: true, bypassFloor: true });
+        }
+    };
+
+    const onSpeakerUpdated = async (event) => {
+        const detail = event?.detail ?? {};
+        const action = String(detail.action ?? '');
+        const targetId = Number(detail.user_id);
+        const muteIds = Array.isArray(detail.mute_user_ids)
+            ? detail.mute_user_ids.map(Number)
+            : [];
+
+        if (currentUserId !== null && muteIds.includes(currentUserId)) {
+            await setLocalMicEnabled(false, { locked: true });
+        }
+
+        if (currentUserId === null || targetId !== currentUserId) {
+            if (isLocalHost && (action === 'invite' || action === 'unmute') && Number.isFinite(targetId)) {
+                await enforceLearnerFloor(targetId);
+                try {
+                    await publishMicCommand('unmute', targetId, `user-${targetId}`);
+                    remoteMutedByHost.delete(targetId);
+                } catch (e) {
+                    console.error('[LiveKit] invite unmute data', e);
+                }
+            }
+            renderParticipants();
+
+            return;
+        }
+
+        if (action === 'invite' || action === 'unmute') {
+            await setLocalMicEnabled(true, { locked: false, invited: true, bypassFloor: true });
+        } else if (action === 'mute') {
+            await setLocalMicEnabled(false, { locked: true });
+        }
+    };
+
     const syncButtons = () => {
         if (btnMic) {
             btnMic.classList.toggle('text-red-300', ! micOn);
@@ -339,9 +633,15 @@ export function mountLivekitRoom(root) {
             if (icon) {
                 icon.textContent = micOn ? 'mic' : 'mic_off';
             }
-            btnMic.setAttribute('aria-label', micOn ? 'Tắt micro' : 'Bật micro');
+            btnMic.setAttribute('aria-label', micOn
+                ? 'Tắt micro'
+                : (micLockedByHost ? 'Mic bị host tắt' : 'Bật micro'));
+            btnMic.title = micLockedByHost && ! micOn
+                ? 'Host đã tắt mic — chờ được gọi'
+                : 'Bật/tắt micro';
             btnMic.disabled = ! canPublishAudio || ! room;
             btnMic.classList.toggle('hidden', ! canPublishAudio);
+            btnMic.classList.toggle('opacity-50', micLockedByHost && ! micOn);
         }
         if (btnCam) {
             btnCam.classList.toggle('text-red-300', ! camOn);
@@ -545,9 +845,13 @@ export function mountLivekitRoom(root) {
             }
         }
 
+        // Host / studio: auto-enable mic. Learners keep mic off until self-toggle or invite.
         if (canPublishAudio && (canPublishVideo || studioMode || Boolean(liveConfig.can_moderate))) {
             try {
-                await targetRoom.localParticipant.setMicrophoneEnabled(true);
+                await targetRoom.localParticipant.setMicrophoneEnabled(
+                    true,
+                    profile.room.audioCaptureDefaults,
+                );
                 micOn = true;
             } catch (e) {
                 if (! isClosedSocketError(e) && ! disposed) {
@@ -634,12 +938,16 @@ export function mountLivekitRoom(root) {
                     if (message.type === 'kick' && Number(message.user_id) === Number(liveConfig.user_id)) {
                         leaveRoom(String(message.redirect_url ?? liveConfig.exit_url ?? '/classes'));
                     }
+                    if (message.type === 'mic') {
+                        void handleMicModeration(message);
+                    }
                 } catch {
                     // ignore malformed data messages
                 }
             })
             .on(RoomEvent.TrackSubscribed, (track, _pub, participant) => {
                 attachTrack(track, participant.identity, false);
+                renderParticipants();
                 syncButtons();
             })
             .on(RoomEvent.TrackUnsubscribed, (track) => {
@@ -650,7 +958,14 @@ export function mountLivekitRoom(root) {
                         mainVideoPriority = 0;
                     }
                 }
+                renderParticipants();
                 syncButtons();
+            })
+            .on(RoomEvent.TrackMuted, () => {
+                renderParticipants();
+            })
+            .on(RoomEvent.TrackUnmuted, () => {
+                renderParticipants();
             })
             .on(RoomEvent.LocalTrackPublished, (publication) => {
                 if (publication.track) {
@@ -724,19 +1039,8 @@ export function mountLivekitRoom(root) {
         if (! isRoomUsable() || ! canPublishAudio) {
             return;
         }
-        try {
-            const next = ! micOn;
-            await room.localParticipant.setMicrophoneEnabled(next);
-            micOn = next;
-            setError('');
-            syncButtons();
-        } catch (e) {
-            if (isClosedSocketError(e)) {
-                return;
-            }
-            console.error('[LiveKit] mic toggle', e);
-            setError(e instanceof Error ? e.message : 'Lỗi micro');
-        }
+        setError('');
+        await setLocalMicEnabled(! micOn);
     };
 
     const onCam = async () => {
@@ -831,6 +1135,7 @@ export function mountLivekitRoom(root) {
         syncButtons();
     };
     root.addEventListener('live:stage-teach', onStageTeach);
+    root.addEventListener('live:speaker-updated', onSpeakerUpdated);
 
     // Bootstrap may have set stage teach before LiveKit mounted.
     if (isStageTeach()) {
@@ -851,6 +1156,7 @@ export function mountLivekitRoom(root) {
             connectRetryTimer = null;
         }
         root.removeEventListener('live:stage-teach', onStageTeach);
+        root.removeEventListener('live:speaker-updated', onSpeakerUpdated);
         btnMic?.removeEventListener('click', onMic);
         btnCam?.removeEventListener('click', onCam);
         btnScreen?.removeEventListener('click', onScreen);

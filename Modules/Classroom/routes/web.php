@@ -58,6 +58,15 @@ Route::middleware(['auth', 'learner'])
                 ->name('marks');
             Route::post('/raise-hand', [LiveModerationController::class, 'raiseHand'])->name('raise-hand');
             Route::post('/hands/{hand}/dismiss', [LiveModerationController::class, 'dismissHand'])->name('hands.dismiss');
+            Route::post('/speakers/{user}/invite', [LiveModerationController::class, 'inviteSpeaker'])
+                ->withoutScopedBindings()
+                ->name('speakers.invite');
+            Route::post('/speakers/{user}/mute', [LiveModerationController::class, 'muteSpeaker'])
+                ->withoutScopedBindings()
+                ->name('speakers.mute');
+            Route::post('/speakers/{user}/unmute', [LiveModerationController::class, 'unmuteSpeaker'])
+                ->withoutScopedBindings()
+                ->name('speakers.unmute');
             Route::post('/react', [LiveModerationController::class, 'react'])
                 ->middleware('throttle:30,1')
                 ->name('react');
