@@ -159,12 +159,11 @@ export function mountLivekitRoom(root) {
     const countEl = root.querySelector('[data-lk-count]');
     const stageEl = root.querySelector('[data-lk-stage]');
     const waitingEl = root.querySelector('[data-lk-waiting]');
-    const btnMic = root.querySelector('[data-lk-mic]');
-    const btnCam = root.querySelector('[data-lk-cam]');
-    const btnScreen = root.querySelector('[data-lk-screen]');
-    const btnLeave = root.querySelector('[data-lk-leave]');
+    const btnMics = root.querySelectorAll('[data-lk-mic]');
+    const btnCams = root.querySelectorAll('[data-lk-cam]');
+    const btnScreens = root.querySelectorAll('[data-lk-screen]');
     const btnTeach = root.querySelector('[data-lk-teach]');
-    const controlsEl = root.querySelector('[data-lk-controls]');
+    const controlsEls = root.querySelectorAll('[data-lk-controls]');
     const exitUrl = root.dataset.lkExitUrl ?? '/';
     const participantListEls = root.querySelectorAll('[data-lk-participants]');
     const participantEmptyEls = root.querySelectorAll('[data-lk-participants-empty]');
@@ -626,7 +625,8 @@ export function mountLivekitRoom(root) {
     };
 
     const syncButtons = () => {
-        if (btnMic) {
+        const connected = isRoomUsable();
+        btnMics.forEach((btnMic) => {
             btnMic.classList.toggle('text-red-300', ! micOn);
             btnMic.classList.toggle('text-white', micOn);
             const icon = btnMic.querySelector('.material-symbols-outlined');
@@ -639,11 +639,11 @@ export function mountLivekitRoom(root) {
             btnMic.title = micLockedByHost && ! micOn
                 ? 'Host đã tắt mic — chờ được gọi'
                 : 'Bật/tắt micro';
-            btnMic.disabled = ! canPublishAudio || ! room;
+            btnMic.disabled = ! canPublishAudio || ! connected;
             btnMic.classList.toggle('hidden', ! canPublishAudio);
             btnMic.classList.toggle('opacity-50', micLockedByHost && ! micOn);
-        }
-        if (btnCam) {
+        });
+        btnCams.forEach((btnCam) => {
             btnCam.classList.toggle('text-red-300', ! camOn);
             btnCam.classList.toggle('text-white', camOn);
             const icon = btnCam.querySelector('.material-symbols-outlined');
@@ -651,18 +651,18 @@ export function mountLivekitRoom(root) {
                 icon.textContent = camOn ? 'videocam' : 'videocam_off';
             }
             btnCam.setAttribute('aria-label', camOn ? 'Tắt camera' : 'Bật camera');
-            btnCam.disabled = ! canPublishVideo || ! room;
+            btnCam.disabled = ! canPublishVideo || ! connected;
             btnCam.classList.toggle('hidden', ! canPublishVideo);
-        }
-        if (btnScreen) {
+        });
+        btnScreens.forEach((btnScreen) => {
             btnScreen.classList.toggle('text-teal-300', screenOn);
-            btnScreen.disabled = ! canPublishScreen || ! room;
+            btnScreen.disabled = ! canPublishScreen || ! connected;
             btnScreen.classList.toggle('hidden', ! canPublishScreen);
-        }
-        if (controlsEl) {
+        });
+        controlsEls.forEach((controlsEl) => {
             controlsEl.classList.toggle('hidden', ! canPublish);
             controlsEl.classList.toggle('flex', canPublish);
-        }
+        });
         if (waitingEl) {
             const showWait = ! canPublishVideo && ! hasRemoteVideo && ! isStageTeach();
             waitingEl.classList.toggle('hidden', ! showWait);
@@ -674,7 +674,7 @@ export function mountLivekitRoom(root) {
             } catch {
                 // ignore
             }
-            btnTeach.classList.toggle('hidden', ! Boolean(liveConfig.can_moderate) || ! room || ! hasQuestions);
+            btnTeach.classList.toggle('hidden', ! Boolean(liveConfig.can_moderate) || ! connected || ! hasQuestions);
         }
     };
 
@@ -1036,7 +1036,12 @@ export function mountLivekitRoom(root) {
     };
 
     const onMic = async () => {
-        if (! isRoomUsable() || ! canPublishAudio) {
+        if (! canPublishAudio) {
+            return;
+        }
+        if (! isRoomUsable()) {
+            showMicTip('Đang kết nối phòng live — thử lại sau vài giây.');
+
             return;
         }
         setError('');
@@ -1044,7 +1049,12 @@ export function mountLivekitRoom(root) {
     };
 
     const onCam = async () => {
-        if (! isRoomUsable() || ! canPublishVideo) {
+        if (! canPublishVideo) {
+            return;
+        }
+        if (! isRoomUsable()) {
+            showMicTip('Đang kết nối phòng live — thử lại sau vài giây.');
+
             return;
         }
         try {
@@ -1079,7 +1089,12 @@ export function mountLivekitRoom(root) {
     };
 
     const onScreen = async () => {
-        if (! isRoomUsable() || ! canPublishScreen) {
+        if (! canPublishScreen) {
+            return;
+        }
+        if (! isRoomUsable()) {
+            showMicTip('Đang kết nối phòng live — thử lại sau vài giây.');
+
             return;
         }
         try {
@@ -1120,15 +1135,41 @@ export function mountLivekitRoom(root) {
         }
     };
 
-    btnMic?.addEventListener('click', onMic);
-    btnCam?.addEventListener('click', onCam);
-    btnScreen?.addEventListener('click', onScreen);
-
     const onLeave = () => {
         leaveRoom(exitUrl);
     };
 
-    btnLeave?.addEventListener('click', onLeave);
+    /** Desktop + mobile control bars both render [data-lk-*] — bind all via delegation. */
+    const onControlsClick = (event) => {
+        const target = event.target instanceof Element ? event.target : null;
+        if (! target) {
+            return;
+        }
+        if (target.closest('[data-lk-mic]')) {
+            event.preventDefault();
+            void onMic();
+
+            return;
+        }
+        if (target.closest('[data-lk-cam]')) {
+            event.preventDefault();
+            void onCam();
+
+            return;
+        }
+        if (target.closest('[data-lk-screen]')) {
+            event.preventDefault();
+            void onScreen();
+
+            return;
+        }
+        if (target.closest('[data-lk-leave]')) {
+            event.preventDefault();
+            onLeave();
+        }
+    };
+
+    root.addEventListener('click', onControlsClick);
 
     const onStageTeach = () => {
         relayoutPublishedVideos();
@@ -1155,12 +1196,9 @@ export function mountLivekitRoom(root) {
             window.clearTimeout(connectRetryTimer);
             connectRetryTimer = null;
         }
+        root.removeEventListener('click', onControlsClick);
         root.removeEventListener('live:stage-teach', onStageTeach);
         root.removeEventListener('live:speaker-updated', onSpeakerUpdated);
-        btnMic?.removeEventListener('click', onMic);
-        btnCam?.removeEventListener('click', onCam);
-        btnScreen?.removeEventListener('click', onScreen);
-        btnLeave?.removeEventListener('click', onLeave);
         if (room?.state === 'connected') {
             try {
                 room.disconnect();

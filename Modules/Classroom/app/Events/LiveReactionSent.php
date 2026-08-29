@@ -11,6 +11,7 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use Modules\Classroom\Models\LiveSession;
+use Modules\Classroom\Support\LiveUserPresenter;
 
 final class LiveReactionSent implements ShouldBroadcastNow
 {
@@ -42,10 +43,7 @@ final class LiveReactionSent implements ShouldBroadcastNow
     {
         return [
             'type' => $this->type,
-            'user' => [
-                'id' => $this->user->getKey(),
-                'name' => $this->user->name,
-            ],
+            'user' => LiveUserPresenter::toArray($this->user),
         ];
     }
 }

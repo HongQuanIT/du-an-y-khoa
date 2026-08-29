@@ -11,6 +11,7 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use Modules\Classroom\Models\LiveSession;
 use Modules\Classroom\Models\LiveSessionMessage;
+use Modules\Classroom\Support\LiveUserPresenter;
 
 final class LiveMessageCreated implements ShouldBroadcastNow
 {
@@ -48,10 +49,7 @@ final class LiveMessageCreated implements ShouldBroadcastNow
                 'type' => $this->message->type->value,
                 'is_pinned' => $this->message->is_pinned,
                 'created_at' => $this->message->created_at?->toIso8601String(),
-                'user' => [
-                    'id' => $this->message->user?->getKey(),
-                    'name' => $this->message->user?->name,
-                ],
+                'user' => LiveUserPresenter::toArray($this->message->user),
             ],
         ];
     }

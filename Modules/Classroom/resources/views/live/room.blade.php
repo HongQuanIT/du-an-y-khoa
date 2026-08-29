@@ -21,6 +21,8 @@
         'exit_url' => $exitUrl,
         'has_questions' => $session->hasQuestionSet(),
         'user_id' => auth()->id(),
+        'user_avatar_url' => auth()->user()?->avatarUrl(),
+        'user_avatar_initial' => auth()->user()?->avatarInitial(),
         'csrf' => csrf_token(),
     ];
 @endphp

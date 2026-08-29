@@ -21,6 +21,7 @@ use Modules\Classroom\Models\Classroom;
 use Modules\Classroom\Models\ClassroomMember;
 use Modules\Classroom\Models\LiveSession;
 use Modules\Classroom\Models\LiveSessionHand;
+use Modules\Classroom\Support\LiveUserPresenter;
 
 final class LiveModerationController extends Controller
 {
@@ -210,10 +211,7 @@ final class LiveModerationController extends Controller
 
         return ApiResponse::item([
             'type' => $type,
-            'user' => [
-                'id' => $request->user()->getKey(),
-                'name' => $request->user()->name,
-            ],
+            'user' => LiveUserPresenter::toArray($request->user()),
         ]);
     }
 

@@ -19,6 +19,8 @@
         'kick_member_url_template' => route('teach.classes.members.kick', [$classroom, '__USER__']),
         'has_questions' => $session->hasQuestionSet(),
         'user_id' => auth()->id(),
+        'user_avatar_url' => auth()->user()?->avatarUrl(),
+        'user_avatar_initial' => auth()->user()?->avatarInitial(),
         'csrf' => csrf_token(),
     ];
 @endphp
@@ -74,6 +76,19 @@
                     </div>
 
                     <div class="flex flex-wrap items-center gap-2">
+                        <div class="flex items-center gap-1">
+                            <button type="button" data-live-react="heart"
+                                class="inline-flex size-8 items-center justify-center rounded-full bg-white/10 text-rose-300 transition hover:bg-rose-500/30 hover:text-rose-200"
+                                aria-label="Thả tim" title="Thả tim">
+                                <span class="material-symbols-outlined text-[18px]">favorite</span>
+                            </button>
+                            <button type="button" data-live-react="like"
+                                class="inline-flex size-8 items-center justify-center rounded-full bg-white/10 text-sky-300 transition hover:bg-sky-500/30 hover:text-sky-200"
+                                aria-label="Thả like" title="Thả like">
+                                <span class="material-symbols-outlined text-[18px]">thumb_up</span>
+                            </button>
+                        </div>
+
                         <div data-lk-controls class="flex items-center gap-1">
                             <button type="button" data-lk-mic
                                 class="inline-flex size-10 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 disabled:opacity-40"
