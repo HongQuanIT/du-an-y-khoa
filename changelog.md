@@ -2,6 +2,11 @@
 
 ## 2026-08-29
 
+### Classroom live — khung đề trong video + tô màu đáp án
+- Chế độ `stage_teach`: đề hiện trong khung video, camera PiP góc phải (thay popout tab); sync Echo + API `PATCH .../stage`.
+- Tô màu trên nội dung đáp án và giải thích; click đáp án vẫn sổ/ẩn (bỏ qua khi đang bôi chọn chữ).
+- Gỡ text hướng dẫn thừa trên panel đề / stage header.
+
 ### Classroom live — chữa đề nhanh + tô màu realtime
 - Thêm Vite entry `presenter-window.js` (sửa lỗi manifest production khi mở màn phụ).
 - Optimistic UI + `question_deck` cho host: sổ đáp án / đổi câu không chờ API.

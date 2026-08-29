@@ -129,7 +129,7 @@ final class LiveTextMarksService
         if ($id === '' || $questionId === '') {
             return null;
         }
-        if (! in_array($target, ['stem', 'option'], true)) {
+        if (! in_array($target, ['stem', 'option', 'explanation'], true)) {
             return null;
         }
         if (! in_array($color, self::COLORS, true)) {
@@ -139,6 +139,9 @@ final class LiveTextMarksService
             return null;
         }
         if ($target === 'option' && ($optionId === null || $optionId <= 0)) {
+            return null;
+        }
+        if ($target === 'explanation' && $optionId !== null && $optionId <= 0) {
             return null;
         }
         if ($target === 'stem') {

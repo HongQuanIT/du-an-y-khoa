@@ -30,7 +30,7 @@
         </button>
         <button type="button" data-lk-teach
             class="hidden items-center gap-1 rounded-full bg-teal-600/80 px-3 py-2 text-xs font-semibold text-white hover:bg-teal-600 md:inline-flex"
-            title="Mở tab Đề — học viên xem đồng bộ, không cần share màn hình">
+            title="Hiện đề trong khung video (camera góc phải) — học viên nhìn cùng một khung">
             <span class="material-symbols-outlined text-[18px]">menu_book</span>
             Chữa đề
         </button>

@@ -63,6 +63,7 @@ Route::middleware(['auth', 'learner'])
                 ->name('react');
             Route::post('/mute-chat', [LiveModerationController::class, 'muteChat'])->name('mute-chat');
             Route::post('/focus-questions', [LivePresenterController::class, 'focusQuestions'])->name('focus-questions');
+            Route::patch('/stage', [LivePresenterController::class, 'updateStage'])->name('stage');
         });
 
         Route::post('/{classroom}/members/{user}/ban', [LiveModerationController::class, 'banMember'])

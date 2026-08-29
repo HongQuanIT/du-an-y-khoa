@@ -36,6 +36,9 @@
             data-live-config='@json($studioConfig)'
             data-lk-root
             data-lk-studio="1"
+            @if ($session->hasQuestionSet() && $session->stage_teach)
+                data-lk-stage-teach="1"
+            @endif
             data-lk-url="{{ $tokenPayload['url'] }}"
             data-lk-token="{{ $tokenPayload['token'] }}"
             data-lk-role="{{ $tokenPayload['role'] }}"
@@ -54,7 +57,12 @@
                             <p class="mt-2 text-sm">Đang khởi tạo camera và micro...</p>
                         </div>
                     </div>
+                    @include('classroom::live.partials.stage-teach')
                     <div data-live-reactions class="pointer-events-none absolute inset-0 z-30 overflow-hidden" aria-hidden="true"></div>
+                    <div data-live-teach-banner
+                        class="pointer-events-none absolute inset-x-0 top-0 z-20 hidden bg-teal-600/90 px-4 py-2 text-center text-xs text-white">
+                        Chế độ chữa đề trên khung video — camera góc phải.
+                    </div>
                 </div>
 
                 <div class="flex shrink-0 flex-col gap-3 border-t border-white/10 bg-black/90 px-3 py-3 sm:flex-row sm:items-center sm:justify-between md:px-5">

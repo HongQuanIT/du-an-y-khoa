@@ -35,6 +35,9 @@
     <div
         data-live-room
         data-live-config='@json($liveRoomConfig)'
+        @if ($session->hasQuestionSet() && $session->stage_teach)
+            data-lk-stage-teach="1"
+        @endif
         @if ($livekitConfigured && $tokenPayload)
             data-lk-root
             data-lk-url="{{ $tokenPayload['url'] }}"
@@ -53,12 +56,14 @@
         <div class="relative flex min-h-0 flex-1 flex-col bg-black">
             @if ($session->status === LiveSessionStatus::Live && $livekitConfigured && $tokenPayload)
                 <div data-lk-stage class="relative min-h-[220px] flex-1 overflow-hidden bg-black md:min-h-0">
+                    <div data-lk-main class="flex h-full w-full items-center justify-center"></div>
+                    @include('classroom::live.partials.stage-teach')
                     <div data-live-reactions
                         class="pointer-events-none absolute inset-0 z-30 overflow-hidden"
                         aria-hidden="true"></div>
                     <div data-live-teach-banner
                         class="pointer-events-none absolute inset-x-0 top-0 z-20 hidden bg-teal-600/90 px-4 py-2 text-center text-xs text-white">
-                        Chế độ chữa đề — học viên thấy tab <strong>Đề</strong> đồng bộ. Không cần share màn hình.
+                        Chế độ chữa đề trên khung video — camera góc phải. Không cần share màn hình.
                     </div>
                     @if ($isObserver)
                         <div class="absolute inset-x-0 top-0 z-20 bg-amber-600/90 px-4 py-2 text-center text-xs text-white">
@@ -66,7 +71,7 @@
                         </div>
                     @endif
                     <div data-lk-waiting
-                        class="{{ ($tokenPayload['role'] ?? '') === 'publisher' ? 'hidden' : 'flex' }} absolute inset-0 items-center justify-center bg-black/60 text-sm text-white/70">
+                        class="{{ ($tokenPayload['role'] ?? '') === 'publisher' ? 'hidden' : 'flex' }} absolute inset-0 z-[5] items-center justify-center bg-black/60 text-sm text-white/70">
                         Đang chờ host chia sẻ nội dung…
                     </div>
                 </div>
