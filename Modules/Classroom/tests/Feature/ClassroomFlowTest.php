@@ -207,6 +207,74 @@ final class ClassroomFlowTest extends TestCase
             ->assertJsonPath('data.hands', []);
     }
 
+    public function test_host_can_invite_mute_and_unmute_speaker(): void
+    {
+        $host = User::factory()->create();
+        $host->assignRole(Role::Student->value);
+
+        $member = User::factory()->create();
+        $member->assignRole(Role::Student->value);
+
+        $classroom = app(CreateClassroomAction::class)->handle($host, [
+            'title' => 'Lớp mic học viên',
+            'visibility' => 'public',
+        ]);
+        $classroom->update(['status' => ClassroomStatus::Active]);
+
+        $this->actingAs($member)->post(route('classroom.join', $classroom));
+
+        $this->actingAs($host)->post(route('classroom.sessions.store', $classroom), [
+            'title' => 'Buổi mic',
+        ]);
+        $session = $classroom->sessions()->firstOrFail();
+        $this->actingAs($host)->post(route('classroom.sessions.start', [$classroom, $session]));
+
+        $this->actingAs($member)
+            ->postJson(route('classroom.live.api.raise-hand', [$classroom, $session]))
+            ->assertOk()
+            ->assertJsonPath('data.raised', true);
+
+        $this->actingAs($host)
+            ->postJson(route('classroom.live.api.speakers.invite', [$classroom, $session, $member]))
+            ->assertOk()
+            ->assertJsonPath('data.invited', true)
+            ->assertJsonPath('data.user_id', $member->id)
+            ->assertJsonPath('data.hands', []);
+
+        $this->assertNotNull(
+            $session->hands()->where('user_id', $member->id)->whereNotNull('acknowledged_at')->first()
+        );
+
+        $this->actingAs($host)
+            ->getJson(route('classroom.live.api.bootstrap', [$classroom, $session]))
+            ->assertOk()
+            ->assertJsonStructure([
+                'data' => [
+                    'urls' => [
+                        'speakers_invite',
+                        'speakers_mute',
+                        'speakers_unmute',
+                    ],
+                ],
+            ]);
+
+        $this->actingAs($host)
+            ->postJson(route('classroom.live.api.speakers.mute', [$classroom, $session, $member]))
+            ->assertOk()
+            ->assertJsonPath('data.muted', true)
+            ->assertJsonPath('data.user_id', $member->id);
+
+        $this->actingAs($host)
+            ->postJson(route('classroom.live.api.speakers.unmute', [$classroom, $session, $member]))
+            ->assertOk()
+            ->assertJsonPath('data.unmuted', true)
+            ->assertJsonPath('data.user_id', $member->id);
+
+        $this->actingAs($member)
+            ->postJson(route('classroom.live.api.speakers.mute', [$classroom, $session, $host]))
+            ->assertForbidden();
+    }
+
     public function test_member_can_send_live_reaction(): void
     {
         $host = User::factory()->create();

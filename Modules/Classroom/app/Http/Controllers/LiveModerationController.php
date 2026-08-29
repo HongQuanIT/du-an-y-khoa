@@ -16,6 +16,7 @@ use Modules\Classroom\Enums\MemberStatus;
 use Modules\Classroom\Events\LiveHandsUpdated;
 use Modules\Classroom\Events\LiveReactionSent;
 use Modules\Classroom\Events\LiveSessionUpdated;
+use Modules\Classroom\Events\LiveSpeakerUpdated;
 use Modules\Classroom\Models\Classroom;
 use Modules\Classroom\Models\ClassroomMember;
 use Modules\Classroom\Models\LiveSession;
@@ -105,6 +106,91 @@ final class LiveModerationController extends Controller
         return ApiResponse::item([
             'dismissed' => true,
             'hands' => $hands,
+        ]);
+    }
+
+    public function inviteSpeaker(
+        Request $request,
+        Classroom $classroom,
+        LiveSession $liveSession,
+        User $user,
+    ): JsonResponse {
+        $this->authorize('update', $classroom);
+        abort_unless($liveSession->isLive(), 422);
+        abort_unless($classroom->isActiveMember($user), 404);
+        abort_if($classroom->host_user_id === $user->getKey(), 422, 'Host đã có micro.');
+
+        LiveSessionHand::query()
+            ->where('live_session_id', $liveSession->getKey())
+            ->where('user_id', $user->getKey())
+            ->whereNull('acknowledged_at')
+            ->update(['acknowledged_at' => now()]);
+
+        $hands = LiveHandsUpdated::serializeActiveHands($liveSession);
+        event(new LiveHandsUpdated(
+            $liveSession,
+            $hands,
+            'dismissed',
+            (int) $user->getKey(),
+        ));
+
+        event(new LiveSpeakerUpdated(
+            $liveSession,
+            'invite',
+            (int) $user->getKey(),
+            $request->user() !== null ? (int) $request->user()->getAuthIdentifier() : null,
+        ));
+
+        return ApiResponse::item([
+            'invited' => true,
+            'user_id' => (int) $user->getKey(),
+            'hands' => $hands,
+        ]);
+    }
+
+    public function muteSpeaker(
+        Request $request,
+        Classroom $classroom,
+        LiveSession $liveSession,
+        User $user,
+    ): JsonResponse {
+        $this->authorize('update', $classroom);
+        abort_unless($liveSession->isLive(), 422);
+        abort_unless($classroom->isActiveMember($user), 404);
+
+        event(new LiveSpeakerUpdated(
+            $liveSession,
+            'mute',
+            (int) $user->getKey(),
+            $request->user() !== null ? (int) $request->user()->getAuthIdentifier() : null,
+        ));
+
+        return ApiResponse::item([
+            'muted' => true,
+            'user_id' => (int) $user->getKey(),
+        ]);
+    }
+
+    public function unmuteSpeaker(
+        Request $request,
+        Classroom $classroom,
+        LiveSession $liveSession,
+        User $user,
+    ): JsonResponse {
+        $this->authorize('update', $classroom);
+        abort_unless($liveSession->isLive(), 422);
+        abort_unless($classroom->isActiveMember($user), 404);
+
+        event(new LiveSpeakerUpdated(
+            $liveSession,
+            'unmute',
+            (int) $user->getKey(),
+            $request->user() !== null ? (int) $request->user()->getAuthIdentifier() : null,
+        ));
+
+        return ApiResponse::item([
+            'unmuted' => true,
+            'user_id' => (int) $user->getKey(),
         ]);
     }
 

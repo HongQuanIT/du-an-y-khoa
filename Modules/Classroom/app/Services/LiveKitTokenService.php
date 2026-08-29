@@ -71,6 +71,10 @@ final class LiveKitTokenService
             'nbf' => $now - 10,
             'exp' => $now + $ttl,
             'name' => $user->name,
+            'metadata' => json_encode([
+                'user_id' => (int) $user->getKey(),
+                'is_host' => $role->canModerate(),
+            ], JSON_THROW_ON_ERROR),
             'video' => [
                 'roomJoin' => true,
                 'room' => $room,

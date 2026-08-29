@@ -724,6 +724,60 @@ export function mountLiveRoom(root) {
         tone(1396.9, t + 0.22, 0.22, 'sine', 0.07);
     };
 
+    const playSpeakInviteSound = () => {
+        const ctx = ensureAudio();
+        if (! ctx) {
+            return;
+        }
+        const t = ctx.currentTime;
+        tone(523.25, t, 0.1, 'sine', 0.08);
+        tone(659.25, t + 0.09, 0.12, 'sine', 0.07);
+        tone(783.99, t + 0.2, 0.18, 'triangle', 0.06);
+    };
+
+    const speakerActionUrl = (kind, userId) => {
+        const key = kind === 'invite'
+            ? 'speakers_invite'
+            : kind === 'unmute'
+                ? 'speakers_unmute'
+                : 'speakers_mute';
+        const template = String(apiUrls[key] ?? '');
+        if (template) {
+            return template.replace('__USER__', String(userId));
+        }
+        const base = String(config.bootstrap_url ?? '').replace(/\/bootstrap\/?$/, '');
+
+        return `${base}/speakers/${userId}/${kind}`;
+    };
+
+    const inviteSpeaker = async (userId) => {
+        if (! userId) {
+            return;
+        }
+        ensureAudio();
+        const res = await fetch(speakerActionUrl('invite', userId), {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': csrf(), Accept: 'application/json' },
+            credentials: 'same-origin',
+        });
+        if (! res.ok) {
+            return;
+        }
+        const json = await res.json();
+        const data = json.data ?? json;
+        if (Array.isArray(data.hands)) {
+            renderHands(data.hands);
+        }
+        playSpeakInviteSound();
+        root.dispatchEvent(new CustomEvent('live:speaker-updated', {
+            detail: {
+                action: 'invite',
+                user_id: Number(userId),
+                mute_user_ids: Array.isArray(data.mute_user_ids) ? data.mute_user_ids : [],
+            },
+        }));
+    };
+
     const playReactionSound = (type) => {
         const ctx = ensureAudio();
         if (! ctx) {
@@ -832,12 +886,24 @@ export function mountLiveRoom(root) {
                 li.appendChild(name);
 
                 if (canModerate) {
+                    const actions = document.createElement('div');
+                    actions.className = 'flex shrink-0 items-center gap-1';
+
+                    const invite = document.createElement('button');
+                    invite.type = 'button';
+                    invite.dataset.inviteHandUser = String(hand.user?.id ?? '');
+                    invite.className = 'shrink-0 rounded border border-teal-600/40 bg-teal-50 px-2 py-0.5 text-[11px] font-semibold text-teal-800 hover:bg-teal-100';
+                    invite.textContent = 'Gọi';
+                    actions.appendChild(invite);
+
                     const dismiss = document.createElement('button');
                     dismiss.type = 'button';
                     dismiss.dataset.dismissHand = String(hand.id);
                     dismiss.className = 'shrink-0 rounded border border-outline-variant px-2 py-0.5 text-[11px] text-on-surface hover:bg-surface-container-low';
-                    dismiss.textContent = 'Đã gọi';
-                    li.appendChild(dismiss);
+                    dismiss.textContent = 'Bỏ';
+                    actions.appendChild(dismiss);
+
+                    li.appendChild(actions);
                 }
                 list.appendChild(li);
             });
@@ -954,6 +1020,21 @@ export function mountLiveRoom(root) {
                 if (e.action === 'raised' && Number(e.actor_user_id) !== currentUserId) {
                     playRaiseHandSound();
                 }
+            })
+            .listen('.speaker.updated', (e) => {
+                const detail = {
+                    action: e.action,
+                    user_id: e.user_id,
+                    mute_user_ids: e.mute_user_ids ?? [],
+                };
+                if (Number(e.user_id) === currentUserId && (e.action === 'invite' || e.action === 'unmute')) {
+                    ensureAudio();
+                    playSpeakInviteSound();
+                } else if (canModerate && e.action === 'invite' && Number(e.actor_user_id) !== currentUserId) {
+                    ensureAudio();
+                    playSpeakInviteSound();
+                }
+                root.dispatchEvent(new CustomEvent('live:speaker-updated', { detail }));
             })
             .listen('.reaction.sent', (e) => {
                 if (Number(e.user?.id) === currentUserId) {
@@ -1129,6 +1210,13 @@ export function mountLiveRoom(root) {
         if (reactBtn instanceof HTMLElement && root.contains(reactBtn)) {
             const type = reactBtn.dataset.liveReact === 'like' ? 'like' : 'heart';
             sendReaction(type);
+
+            return;
+        }
+
+        const inviteBtn = el.closest('[data-invite-hand-user]');
+        if (inviteBtn instanceof HTMLElement && root.contains(inviteBtn)) {
+            inviteSpeaker(inviteBtn.dataset.inviteHandUser);
 
             return;
         }

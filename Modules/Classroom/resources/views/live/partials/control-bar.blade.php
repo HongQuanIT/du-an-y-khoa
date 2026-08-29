@@ -12,11 +12,11 @@
         </button>
     </div>
 
-    <div data-lk-controls class="{{ ($tokenPayload['role'] ?? '') === 'publisher' ? 'flex' : 'hidden' }} flex-wrap items-center gap-1">
+    <div data-lk-controls class="{{ ($tokenPayload['can_publish_audio'] ?? false) || ($tokenPayload['can_publish_video'] ?? false) || ($tokenPayload['can_publish_screen'] ?? false) || in_array(($tokenPayload['role'] ?? ''), ['publisher', 'speaker'], true) ? 'flex' : 'hidden' }} flex-wrap items-center gap-1">
         <button type="button" data-lk-mic
-            class="inline-flex size-10 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
-            aria-label="Micro">
-            <span class="material-symbols-outlined text-[22px]">mic</span>
+            class="{{ ($tokenPayload['can_publish_audio'] ?? false) || in_array(($tokenPayload['role'] ?? ''), ['publisher', 'speaker'], true) ? '' : 'hidden ' }}inline-flex size-10 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
+            aria-label="Micro" title="Bật/tắt micro">
+            <span class="material-symbols-outlined text-[22px]">mic_off</span>
         </button>
         <button type="button" data-lk-cam
             class="inline-flex size-10 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
