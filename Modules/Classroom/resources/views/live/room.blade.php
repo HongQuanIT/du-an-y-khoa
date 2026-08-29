@@ -21,6 +21,7 @@
         'exit_url' => $exitUrl,
         'has_questions' => $session->hasQuestionSet(),
         'user_id' => auth()->id(),
+        'user' => \Modules\Classroom\Support\LiveUserPresenter::toArray(auth()->user()),
         'user_avatar_url' => auth()->user()?->avatarUrl(),
         'user_avatar_initial' => auth()->user()?->avatarInitial(),
         'csrf' => csrf_token(),
@@ -82,7 +83,10 @@
                     <div class="flex items-center gap-2 text-xs text-white/80">
                         <span data-lk-dot class="size-1.5 rounded-full bg-amber-400"></span>
                         <span data-lk-status>Đang kết nối…</span>
-                        <span data-lk-count class="text-white/60">1 người</span>
+                        <span class="inline-flex items-center gap-1 text-white/60" title="Số người trong phòng">
+                            <span class="material-symbols-outlined text-[14px]" aria-hidden="true">visibility</span>
+                            <span data-lk-count>1</span>
+                        </span>
                     </div>
                     @include('classroom::live.partials.control-bar')
                 </div>
@@ -139,11 +143,14 @@
                 <button type="button" @click="mobileTab = 'chat'"
                     :class="mobileTab === 'chat' ? 'border-b-2 border-primary text-primary' : 'text-on-surface-variant'"
                     class="flex-1 py-2.5 text-sm font-medium">Chat</button>
-            @if ($session->hasQuestionSet())
-                <button type="button" data-live-tab="questions" @click="mobileTab = 'questions'"
-                    :class="mobileTab === 'questions' ? 'border-b-2 border-primary text-primary' : 'text-on-surface-variant'"
-                    class="flex-1 py-2.5 text-sm font-medium">Đề</button>
-            @endif
+                @if ($canModerate && $session->hasQuestionSet())
+                    <button type="button" data-live-tab="questions" @click="mobileTab = 'questions'"
+                        :class="mobileTab === 'questions' ? 'border-b-2 border-primary text-primary' : 'text-on-surface-variant'"
+                        class="flex-1 py-2.5 text-sm font-medium">Đề</button>
+                @endif
+                <button type="button" @click="mobileTab = 'participants'"
+                    :class="mobileTab === 'participants' ? 'border-b-2 border-primary text-primary' : 'text-on-surface-variant'"
+                    class="flex-1 py-2.5 text-sm font-medium">Thành viên</button>
             </div>
             <div x-show="mobileTab !== 'video'" class="h-[45vh] overflow-hidden">
                 @include('classroom::live.partials.sidebar-tabs', ['mobile' => true])

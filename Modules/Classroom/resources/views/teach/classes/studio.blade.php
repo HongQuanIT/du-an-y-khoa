@@ -19,6 +19,7 @@
         'kick_member_url_template' => route('teach.classes.members.kick', [$classroom, '__USER__']),
         'has_questions' => $session->hasQuestionSet(),
         'user_id' => auth()->id(),
+        'user' => \Modules\Classroom\Support\LiveUserPresenter::toArray(auth()->user()),
         'user_avatar_url' => auth()->user()?->avatarUrl(),
         'user_avatar_initial' => auth()->user()?->avatarInitial(),
         'csrf' => csrf_token(),
@@ -72,7 +73,10 @@
                         <span data-lk-dot class="size-1.5 rounded-full bg-amber-400"></span>
                         <span data-lk-status>Đang kết nối...</span>
                         <span class="text-white/30">·</span>
-                        <span data-lk-count class="text-white/60">1 người</span>
+                        <span class="inline-flex items-center gap-1 text-white/60" title="Số người trong phòng">
+                            <span class="material-symbols-outlined text-[14px]" aria-hidden="true">visibility</span>
+                            <span data-lk-count>1</span>
+                        </span>
                     </div>
 
                     <div class="flex flex-wrap items-center gap-2">

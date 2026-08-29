@@ -7,6 +7,7 @@ namespace Modules\Classroom\Services;
 use App\Models\User;
 use Modules\Classroom\Enums\MemberRole;
 use Modules\Classroom\Models\LiveSession;
+use Modules\Classroom\Support\LiveUserPresenter;
 use RuntimeException;
 
 /**
@@ -72,6 +73,7 @@ final class LiveKitTokenService
             'exp' => $now + $ttl,
             'name' => $user->name,
             'metadata' => json_encode([
+                ...LiveUserPresenter::toArray($user),
                 'user_id' => (int) $user->getKey(),
                 'is_host' => $role->canModerate(),
             ], JSON_THROW_ON_ERROR),

@@ -40,10 +40,16 @@
                     <span class="size-1.5 animate-pulse rounded-full bg-white"></span>
                     Live
                 </span>
-            @endif
-            @if ($viewerCount !== null)
-                <span data-live-viewer-count class="rounded-full bg-white/10 px-2.5 py-1 text-xs">
-                    {{ $viewerCount }} người
+                <span class="inline-flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 text-xs text-white/90"
+                    title="Số người trong phòng">
+                    <span class="material-symbols-outlined text-[16px]" aria-hidden="true">visibility</span>
+                    <span data-live-viewer-count-num>{{ $viewerCount ?? 1 }}</span>
+                </span>
+            @elseif ($viewerCount !== null)
+                <span class="inline-flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 text-xs"
+                    title="Số người trong phòng">
+                    <span class="material-symbols-outlined text-[16px]" aria-hidden="true">visibility</span>
+                    <span data-live-viewer-count-num>{{ $viewerCount }}</span>
                 </span>
             @endif
         </div>
