@@ -40,6 +40,7 @@ class LiveSession extends Model
         'chat_muted',
         'show_answer',
         'revealed_option_ids',
+        'text_marks',
     ];
 
     protected $casts = [
@@ -54,6 +55,7 @@ class LiveSession extends Model
         'chat_muted' => 'boolean',
         'show_answer' => 'boolean',
         'revealed_option_ids' => 'array',
+        'text_marks' => 'array',
     ];
 
     protected static function booted(): void

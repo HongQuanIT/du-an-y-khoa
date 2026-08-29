@@ -34,6 +34,8 @@ final class LivePresenterController extends Controller
             'canModerate' => $role->canModerate(),
             'bootstrapUrl' => route($teachPortal ? 'teach.classes.sessions.studio.api.bootstrap' : 'classroom.live.api.bootstrap', [$classroom, $liveSession]),
             'questionUrl' => route($teachPortal ? 'teach.classes.sessions.studio.api.question' : 'classroom.live.api.question', [$classroom, $liveSession]),
+            'marksUrl' => route($teachPortal ? 'teach.classes.sessions.studio.api.marks' : 'classroom.live.api.marks', [$classroom, $liveSession]),
+            'sessionUuid' => $liveSession->uuid,
         ]);
     }
 

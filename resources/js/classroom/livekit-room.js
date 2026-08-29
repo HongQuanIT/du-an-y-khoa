@@ -651,15 +651,19 @@ export function mountLivekitRoom(root) {
 
             if (! disposed && String(next.state) === 'disconnected' && attempt < MAX_CONNECT_ATTEMPTS) {
                 const delay = Math.min(1_000 * (2 ** (attempt - 1)), 5_000);
+                const detail = e instanceof Error ? e.message : String(e ?? '');
+                const hint = /failed to fetch|connection refused|err_connection|websocket/i.test(detail)
+                    ? ' Máy chủ LiveKit có thể chưa chạy (docker compose up -d livekit).'
+                    : '';
                 setStatus('LiveKit đang khởi động…', 'connecting');
-                setError(`Chưa kết nối được phòng live. Hệ thống sẽ thử lại sau ${delay / 1_000} giây.`);
+                setError(`Chưa kết nối được phòng live. Hệ thống sẽ thử lại sau ${delay / 1_000} giây.${hint}`);
                 connectRetryTimer = window.setTimeout(() => {
                     connectRetryTimer = null;
                     connect(attempt + 1);
                 }, delay);
             } else if (! disposed) {
                 setStatus('Lỗi kết nối', 'error');
-                setError('Không kết nối được máy chủ phòng live. Vui lòng tải lại trang sau ít phút.');
+                setError('Không kết nối được máy chủ phòng live. Kiểm tra LiveKit đang chạy rồi tải lại trang.');
             }
             syncButtons();
         } finally {

@@ -42,7 +42,11 @@ function resolveDevCorsOrigins() {
 export default defineConfig({
     plugins: [
         laravel({
-            input: ['resources/css/app.css', 'resources/js/app.js'],
+            input: [
+                'resources/css/app.css',
+                'resources/js/app.js',
+                'resources/js/classroom/presenter-window.js',
+            ],
             refresh: true,
             fonts: [
                 google('Be Vietnam Pro', {

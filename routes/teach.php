@@ -9,6 +9,7 @@ use Modules\Classroom\Http\Controllers\LiveModerationController;
 use Modules\Classroom\Http\Controllers\LivePresenterController;
 use Modules\Classroom\Http\Controllers\LiveQuestionController;
 use Modules\Classroom\Http\Controllers\LiveRoomApiController;
+use Modules\Classroom\Http\Controllers\LiveTextMarksController;
 use Modules\Classroom\Http\Controllers\TeachClassroomController;
 use Modules\Classroom\Http\Controllers\TeachProfileController;
 use Modules\Notification\Http\Controllers\NotificationController;
@@ -69,6 +70,7 @@ Route::middleware(['auth', 'instructor'])->group(function (): void {
             Route::post('/messages/{message}/pin', [LiveMessageApiController::class, 'pin'])->name('messages.pin');
             Route::delete('/messages/{message}', [LiveMessageApiController::class, 'destroy'])->name('messages.destroy');
             Route::patch('/question', [LiveQuestionController::class, 'update'])->name('question');
+            Route::patch('/marks', [LiveTextMarksController::class, 'update'])->middleware('throttle:60,1')->name('marks');
             Route::post('/raise-hand', [LiveModerationController::class, 'raiseHand'])->name('raise-hand');
             Route::post('/hands/{hand}/dismiss', [LiveModerationController::class, 'dismissHand'])->name('hands.dismiss');
             Route::post('/react', [LiveModerationController::class, 'react'])->middleware('throttle:30,1')->name('react');
