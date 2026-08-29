@@ -2,6 +2,12 @@
 
 ## 2026-08-29
 
+### Classroom live — mic học viên, gọi từ giơ tay, chống feedback
+- Học viên teach: mic mặc định tắt, tự bật/tắt; AEC/NS/AGC; tip dùng tai nghe.
+- Host mute/unmute remote qua DataChannel + API `speakers/{user}/mute|unmute`; Echo `speaker.updated`.
+- Giơ tay → **Gọi**: dismiss hand, bật mic học viên + âm báo; metadata LiveKit `is_host`.
+- Floor tối đa 2 learner mic đồng thời; feature test invite/mute/unmute.
+
 ### Classroom live — khung đề trong video + tô màu đáp án
 - Chế độ `stage_teach`: đề hiện trong khung video, camera PiP góc phải (thay popout tab); sync Echo + API `PATCH .../stage`.
 - Tô màu trên nội dung đáp án và giải thích; click đáp án vẫn sổ/ẩn (bỏ qua khi đang bôi chọn chữ).
