@@ -17,7 +17,8 @@ final class LiveQuestionPanelService
      *   index: int,
      *   show_answer: bool,
      *   question: array<string, mixed>|null,
-     *   map: list<array{id: string, label: string}>
+     *   map: list<array{id: string, label: string}>,
+     *   revealed_option_ids: list<int>
      * }
      */
     public function panel(LiveSession $session): array
@@ -26,6 +27,7 @@ final class LiveQuestionPanelService
         $index = min(max(0, $session->current_question_index), max(0, count($ids) - 1));
         $questions = $this->questionsById($ids);
         $currentId = $ids[$index] ?? null;
+        $revealed = $session->revealedOptionIds();
 
         return [
             'total' => count($ids),
@@ -34,16 +36,54 @@ final class LiveQuestionPanelService
             'question' => $currentId !== null
                 ? $this->serializeQuestion(
                     $questions->get($currentId),
-                    $session->revealedOptionIds(),
+                    $revealed,
                 )
                 : null,
-            'map' => collect($ids)->values()->map(
-                fn (string $id, int $i): array => [
-                    'id' => $id,
-                    'label' => (string) ($i + 1),
-                ],
-            )->all(),
+            'map' => $this->map($ids),
+            'revealed_option_ids' => $revealed,
         ];
+    }
+
+    /**
+     * Full answer key for moderators only — enables optimistic reveal/nav on the client.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function deck(LiveSession $session): array
+    {
+        $ids = $session->questionIds();
+        if ($ids === []) {
+            return [];
+        }
+
+        $questions = $this->questionsById($ids);
+
+        return collect($ids)
+            ->map(function (string $id) use ($questions): ?array {
+                $question = $questions->get($id);
+                if ($question === null) {
+                    return null;
+                }
+
+                return $this->serializeQuestion($question, revealAll: true);
+            })
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  list<string>  $ids
+     * @return list<array{id: string, label: string}>
+     */
+    public function map(array $ids): array
+    {
+        return collect($ids)->values()->map(
+            fn (string $id, int $i): array => [
+                'id' => $id,
+                'label' => (string) ($i + 1),
+            ],
+        )->all();
     }
 
     /**
@@ -69,8 +109,11 @@ final class LiveQuestionPanelService
      * @param  list<int>  $revealedOptionIds
      * @return array<string, mixed>|null
      */
-    private function serializeQuestion(?Question $question, array $revealedOptionIds): ?array
-    {
+    private function serializeQuestion(
+        ?Question $question,
+        array $revealedOptionIds = [],
+        bool $revealAll = false,
+    ): ?array {
         if ($question === null) {
             return null;
         }
@@ -79,9 +122,9 @@ final class LiveQuestionPanelService
         $correctRevealed = false;
 
         $options = $question->options->sortBy('order')->values()->map(
-            function ($opt) use ($revealedLookup, &$correctRevealed): array {
+            function ($opt) use ($revealedLookup, $revealAll, &$correctRevealed): array {
                 $optionId = (int) $opt->getKey();
-                $revealed = isset($revealedLookup[$optionId]);
+                $revealed = $revealAll || isset($revealedLookup[$optionId]);
                 if ($revealed && $opt->is_correct) {
                     $correctRevealed = true;
                 }
@@ -101,7 +144,7 @@ final class LiveQuestionPanelService
             'id' => (string) $question->getKey(),
             'stem' => SafeHtml::forDisplay((string) $question->stem),
             'stem_image_url' => $question->stemImageUrl(),
-            'explanation' => $correctRevealed
+            'explanation' => ($revealAll || $correctRevealed)
                 ? SafeHtml::forDisplay((string) ($question->explanation ?? ''))
                 : null,
             'difficulty' => $question->difficulty->value,

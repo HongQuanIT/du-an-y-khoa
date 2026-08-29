@@ -295,7 +295,11 @@ final class ClassroomFlowTest extends TestCase
             ->getJson(route('classroom.live.api.bootstrap', [$classroom, $session]))
             ->assertOk()
             ->assertJsonPath('data.question_panel.question.options.0.explanation', null)
-            ->assertJsonPath('data.question_panel.question.options.1.explanation', null);
+            ->assertJsonPath('data.question_panel.question.options.1.explanation', null)
+            ->assertJsonPath('data.question_deck.0.id', (string) $question->getKey())
+            ->assertJsonPath('data.question_deck.0.options.0.is_correct', (bool) $firstOption->is_correct)
+            ->assertJsonPath('data.question_deck.0.options.0.explanation', 'Giải thích đáp án A trong live.')
+            ->assertJsonCount(0, 'data.text_marks');
 
         $response = $this->actingAs($host)
             ->patchJson(route('classroom.live.api.question', [$classroom, $session]), [
@@ -306,7 +310,8 @@ final class ClassroomFlowTest extends TestCase
             ->assertJsonPath('data.question.options.0.explanation', 'Giải thích đáp án A trong live.')
             ->assertJsonPath('data.question.options.1.explanation', null)
             ->assertJsonPath('data.question.options.0.is_correct', (bool) $firstOption->is_correct)
-            ->assertJsonPath('data.question.options.1.is_correct', null);
+            ->assertJsonPath('data.question.options.1.is_correct', null)
+            ->assertJsonPath('data.revealed_option_ids.0', (int) $firstOption->getKey());
 
         $this->actingAs($host)
             ->patchJson(route('classroom.live.api.question', [$classroom, $session]), [
@@ -327,5 +332,31 @@ final class ClassroomFlowTest extends TestCase
 
         $imageUrl = (string) $response->json('data.question.stem_image_url');
         $this->assertStringContainsString('question-images/live-ecg.png', $imageUrl);
+
+        $this->actingAs($host)
+            ->patchJson(route('classroom.live.api.marks', [$classroom, $session]), [
+                'action' => 'add',
+                'question_id' => (string) $question->getKey(),
+                'target' => 'stem',
+                'start' => 0,
+                'end' => 3,
+                'color' => 'yellow',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.marks.0.color', 'yellow')
+            ->assertJsonPath('data.marks.0.question_id', (string) $question->getKey());
+
+        $this->actingAs($host)
+            ->getJson(route('classroom.live.api.bootstrap', [$classroom, $session]))
+            ->assertOk()
+            ->assertJsonCount(1, 'data.text_marks');
+
+        $this->actingAs($host)
+            ->patchJson(route('classroom.live.api.marks', [$classroom, $session]), [
+                'action' => 'clear',
+                'question_id' => (string) $question->getKey(),
+            ])
+            ->assertOk()
+            ->assertJsonCount(0, 'data.marks');
     }
 }

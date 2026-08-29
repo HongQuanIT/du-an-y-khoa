@@ -1,4 +1,16 @@
 import { mountHlsPlayers } from './hls-player';
+import {
+    panelFromDeck,
+    revealedIdsFromQuestion,
+    toggleRevealedOption,
+} from './question-deck';
+import { ensureClassroomEcho } from './realtime';
+import {
+    MARK_COLORS,
+    applyMarksToElement,
+    marksForTarget,
+    selectionOffsetsIn,
+} from './text-marks';
 
 /**
  * Classroom live room: Echo chat, question panel, moderation hooks.
@@ -27,6 +39,12 @@ export function mountLiveRoom(root) {
     /** @type {Array<Record<string, unknown>>} */
     let allMessages = [];
     let panelState = null;
+    /** @type {Array<Record<string, unknown>>|null} */
+    let questionDeck = null;
+    /** @type {number[]} */
+    let revealedOptionIds = [];
+    /** @type {Array<Record<string, unknown>>} */
+    let textMarks = [];
     let filterType = 'all';
     let chatMuted = Boolean(config.chat_muted);
     const canModerate = Boolean(config.can_moderate);
@@ -36,6 +54,10 @@ export function mountLiveRoom(root) {
     /** @type {Array<Record<string, unknown>>} */
     let hands = [];
     let pollTimer = null;
+    /** @type {number} */
+    let questionSyncEpoch = 0;
+    /** @type {HTMLElement|null} */
+    let markToolbar = null;
 
     const csrf = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 
@@ -190,6 +212,13 @@ export function mountLiveRoom(root) {
             return;
         }
         panelState = panel;
+        if (Array.isArray(panel.revealed_option_ids)) {
+            revealedOptionIds = panel.revealed_option_ids.map(Number);
+        } else if (panel.question) {
+            revealedOptionIds = revealedIdsFromQuestion(panel.question);
+        }
+
+        const questionId = panel.question ? String(panel.question.id) : null;
 
         questionPanels.forEach((questionPanel) => {
             const stem = questionPanel.querySelector('[data-q-stem]');
@@ -219,6 +248,10 @@ export function mountLiveRoom(root) {
 
             if (stem) {
                 stem.innerHTML = panel.question.stem ?? '';
+                stem.dataset.qMarkTarget = 'stem';
+                if (questionId) {
+                    applyMarksToElement(stem, marksForTarget(textMarks, questionId, 'stem'));
+                }
             }
             renderStemImage(stemImage, panel.question.stem_image_url ?? null);
 
@@ -243,15 +276,23 @@ export function mountLiveRoom(root) {
                     const row = document.createElement('div');
                     row.className = 'flex items-start gap-2 px-3 py-2';
 
-                    const label = document.createElement('span');
-                    label.className = 'font-medium';
-                    label.textContent = `${String.fromCharCode(65 + i)}. `;
+                    const letter = document.createElement('span');
+                    letter.className = 'font-medium';
+                    letter.textContent = `${String.fromCharCode(65 + i)}. `;
 
                     const content = document.createElement('div');
-                    content.className = 'prose prose-sm min-w-0 flex-1 text-on-surface';
+                    content.className = 'prose prose-sm min-w-0 flex-1 select-text text-on-surface';
+                    content.dataset.qMarkTarget = 'option';
+                    content.dataset.qMarkOptionId = String(opt.id ?? '');
                     content.innerHTML = opt.content ?? '';
+                    if (questionId) {
+                        applyMarksToElement(
+                            content,
+                            marksForTarget(textMarks, questionId, 'option', Number(opt.id)),
+                        );
+                    }
 
-                    row.append(label, content);
+                    row.append(letter, content);
 
                     if (isCorrect || isWrong) {
                         const badge = document.createElement('span');
@@ -299,12 +340,167 @@ export function mountLiveRoom(root) {
         });
     };
 
+    const renderFromLocalState = (index = panelState?.index ?? 0) => {
+        if (! questionDeck || questionDeck.length === 0) {
+            return false;
+        }
+        renderQuestionPanel(panelFromDeck(
+            questionDeck,
+            index,
+            revealedOptionIds,
+            panelState?.map ?? null,
+        ));
+
+        return true;
+    };
+
     const updateQuestion = async (index, { optionId = null } = {}) => {
         const body = { index };
         if (optionId !== null) {
             body.option_id = optionId;
         }
-        const res = await fetch(apiUrls.question ?? String(config.bootstrap_url).replace('/bootstrap', '/question'), {
+
+        const previousRevealed = [...revealedOptionIds];
+        const previousIndex = panelState?.index ?? 0;
+        const epoch = ++questionSyncEpoch;
+
+        if (canModerate && questionDeck?.length) {
+            if (optionId !== null) {
+                revealedOptionIds = toggleRevealedOption(revealedOptionIds, optionId);
+            }
+            renderFromLocalState(index);
+        }
+
+        try {
+            const res = await fetch(apiUrls.question ?? String(config.bootstrap_url).replace('/bootstrap', '/question'), {
+                method: 'PATCH',
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrf(),
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify(body),
+            });
+            if (! res.ok) {
+                throw new Error('question update failed');
+            }
+            const json = await res.json();
+            const data = json.data ?? json;
+            if (epoch !== questionSyncEpoch) {
+                return;
+            }
+            if (Array.isArray(data.revealed_option_ids)) {
+                revealedOptionIds = data.revealed_option_ids.map(Number);
+            }
+            if (questionDeck?.length) {
+                renderFromLocalState(data.index ?? index);
+            } else {
+                renderQuestionPanel(data);
+            }
+        } catch (err) {
+            console.error('[LiveRoom] question update', err);
+            if (epoch !== questionSyncEpoch) {
+                return;
+            }
+            revealedOptionIds = previousRevealed;
+            if (questionDeck?.length) {
+                renderFromLocalState(previousIndex);
+            }
+        }
+    };
+
+    const ensureMarkToolbar = () => {
+        if (markToolbar || ! canModerate) {
+            return markToolbar;
+        }
+        const bar = document.createElement('div');
+        bar.dataset.qMarkToolbar = '1';
+        bar.className = 'fixed z-[80] hidden items-center gap-1 rounded-lg border border-outline-variant bg-surface px-2 py-1.5 shadow-lg';
+        bar.innerHTML = Object.entries(MARK_COLORS).map(([key, meta]) => (
+            `<button type="button" data-mark-color="${key}" title="Tô ${meta.label}"
+                class="size-6 rounded-full border border-outline-variant"
+                style="background:${meta.bg}"></button>`
+        )).join('')
+            + `<button type="button" data-mark-clear class="ml-1 rounded px-2 py-0.5 text-[11px] font-medium text-on-surface-variant hover:bg-surface-container-low">Xóa tô</button>`;
+        document.body.appendChild(bar);
+        markToolbar = bar;
+
+        bar.addEventListener('mousedown', (e) => {
+            // Keep selection while clicking toolbar.
+            e.preventDefault();
+        });
+
+        bar.addEventListener('click', (e) => {
+            const el = e.target instanceof Element ? e.target : null;
+            if (! el) {
+                return;
+            }
+            const colorBtn = el.closest('[data-mark-color]');
+            if (colorBtn instanceof HTMLElement) {
+                void addMarkFromSelection(colorBtn.dataset.markColor ?? 'yellow');
+
+                return;
+            }
+            if (el.closest('[data-mark-clear]')) {
+                void clearMarksForCurrentQuestion();
+            }
+        });
+
+        return bar;
+    };
+
+    const hideMarkToolbar = () => {
+        if (markToolbar) {
+            markToolbar.classList.add('hidden');
+            markToolbar.classList.remove('flex');
+        }
+    };
+
+    const showMarkToolbarAt = (x, y) => {
+        const bar = ensureMarkToolbar();
+        if (! bar) {
+            return;
+        }
+        bar.classList.remove('hidden');
+        bar.classList.add('flex');
+        const left = Math.min(window.innerWidth - 180, Math.max(8, x));
+        const top = Math.min(window.innerHeight - 48, Math.max(8, y));
+        bar.style.left = `${left}px`;
+        bar.style.top = `${top}px`;
+    };
+
+    const resolveMarkTargetFromSelection = () => {
+        const sel = window.getSelection();
+        if (! sel || sel.rangeCount === 0) {
+            return null;
+        }
+        const node = sel.getRangeAt(0).commonAncestorContainer;
+        const el = node instanceof Element ? node : node.parentElement;
+        const target = el?.closest?.('[data-q-mark-target]');
+        if (! (target instanceof HTMLElement) || ! root.contains(target)) {
+            return null;
+        }
+        const kind = target.dataset.qMarkTarget;
+        if (kind !== 'stem' && kind !== 'option') {
+            return null;
+        }
+        const offsets = selectionOffsetsIn(target);
+        if (! offsets) {
+            return null;
+        }
+
+        return {
+            el: target,
+            target: kind,
+            optionId: kind === 'option' ? Number(target.dataset.qMarkOptionId) : null,
+            ...offsets,
+        };
+    };
+
+    const persistMarks = async (payload) => {
+        const url = apiUrls.marks ?? String(config.bootstrap_url).replace('/bootstrap', '/marks');
+        const res = await fetch(url, {
             method: 'PATCH',
             headers: {
                 Accept: 'application/json',
@@ -312,11 +508,75 @@ export function mountLiveRoom(root) {
                 'X-CSRF-TOKEN': csrf(),
             },
             credentials: 'same-origin',
-            body: JSON.stringify(body),
+            body: JSON.stringify(payload),
         });
-        if (res.ok) {
-            const json = await res.json();
-            renderQuestionPanel(json.data ?? json);
+        if (! res.ok) {
+            throw new Error('marks update failed');
+        }
+        const json = await res.json();
+        textMarks = (json.data ?? json).marks ?? textMarks;
+        if (panelState) {
+            renderQuestionPanel(panelState);
+        }
+    };
+
+    const addMarkFromSelection = async (color) => {
+        const questionId = panelState?.question?.id;
+        if (! questionId) {
+            return;
+        }
+        const sel = resolveMarkTargetFromSelection();
+        if (! sel) {
+            hideMarkToolbar();
+
+            return;
+        }
+        const optimistic = {
+            id: `tmp-${Date.now()}`,
+            question_id: String(questionId),
+            target: sel.target,
+            option_id: sel.optionId,
+            start: sel.start,
+            end: sel.end,
+            color,
+        };
+        textMarks = [...textMarks, optimistic];
+        renderQuestionPanel(panelState);
+        hideMarkToolbar();
+        window.getSelection()?.removeAllRanges();
+
+        try {
+            await persistMarks({
+                action: 'add',
+                question_id: String(questionId),
+                target: sel.target,
+                option_id: sel.optionId,
+                start: sel.start,
+                end: sel.end,
+                color,
+            });
+        } catch (err) {
+            console.error('[LiveRoom] mark add', err);
+            textMarks = textMarks.filter((m) => m.id !== optimistic.id);
+            renderQuestionPanel(panelState);
+        }
+    };
+
+    const clearMarksForCurrentQuestion = async () => {
+        const questionId = panelState?.question?.id;
+        if (! questionId) {
+            return;
+        }
+        const previous = textMarks;
+        textMarks = textMarks.filter((m) => String(m.question_id) !== String(questionId));
+        renderQuestionPanel(panelState);
+        hideMarkToolbar();
+        try {
+            await persistMarks({ action: 'clear', question_id: String(questionId) });
+        } catch (err) {
+            console.error('[LiveRoom] mark clear', err);
+            textMarks = previous;
+            renderQuestionPanel(panelState);
         }
     };
 
@@ -637,13 +897,38 @@ export function mountLiveRoom(root) {
                 window.location.reload();
             })
             .listen('.question.changed', (e) => {
-                renderQuestionPanel({
-                    total: e.total,
-                    index: e.index,
-                    show_answer: e.show_answer,
-                    question: e.question,
-                    map: panelState?.map ?? [],
-                });
+                if (canModerate && Number(e.actor_user_id) === currentUserId) {
+                    // Host already applied optimistic UI; keep deck-driven state.
+                    if (Array.isArray(e.revealed_option_ids)) {
+                        revealedOptionIds = e.revealed_option_ids.map(Number);
+                    }
+                    if (questionDeck?.length) {
+                        renderFromLocalState(e.index ?? panelState?.index ?? 0);
+
+                        return;
+                    }
+                }
+                if (Array.isArray(e.revealed_option_ids)) {
+                    revealedOptionIds = e.revealed_option_ids.map(Number);
+                }
+                if (questionDeck?.length) {
+                    renderFromLocalState(e.index ?? 0);
+                } else {
+                    renderQuestionPanel({
+                        total: e.total,
+                        index: e.index,
+                        show_answer: e.show_answer,
+                        question: e.question,
+                        map: panelState?.map ?? [],
+                        revealed_option_ids: e.revealed_option_ids ?? revealedOptionIds,
+                    });
+                }
+            })
+            .listen('.marks.updated', (e) => {
+                textMarks = e.marks ?? [];
+                if (panelState) {
+                    renderQuestionPanel(panelState);
+                }
             })
             .listen('.recording.ready', () => {
                 window.location.reload();
@@ -660,31 +945,33 @@ export function mountLiveRoom(root) {
                 }
             });
 
-        window.Echo.join(`classroom.${config.classroom_uuid}`)
-            .here((users) => {
-                const el = document.querySelector('[data-live-viewer-count]');
-                if (el) {
-                    el.textContent = `${users.length} người`;
-                }
-                const lkCount = root.querySelector('[data-lk-count]');
-                if (lkCount) {
-                    lkCount.textContent = `${users.length} người`;
-                }
-            })
-            .joining(() => {
-                const lkCount = root.querySelector('[data-lk-count]');
-                if (lkCount) {
-                    const n = parseInt(lkCount.textContent ?? '1', 10) + 1;
-                    lkCount.textContent = `${n} người`;
-                }
-            })
-            .leaving(() => {
-                const lkCount = root.querySelector('[data-lk-count]');
-                if (lkCount) {
-                    const n = Math.max(1, parseInt(lkCount.textContent ?? '1', 10) - 1);
-                    lkCount.textContent = `${n} người`;
-                }
-            });
+        if (config.classroom_uuid) {
+            window.Echo.join(`classroom.${config.classroom_uuid}`)
+                .here((users) => {
+                    const el = document.querySelector('[data-live-viewer-count]');
+                    if (el) {
+                        el.textContent = `${users.length} người`;
+                    }
+                    const lkCount = root.querySelector('[data-lk-count]');
+                    if (lkCount) {
+                        lkCount.textContent = `${users.length} người`;
+                    }
+                })
+                .joining(() => {
+                    const lkCount = root.querySelector('[data-lk-count]');
+                    if (lkCount) {
+                        const n = parseInt(lkCount.textContent ?? '1', 10) + 1;
+                        lkCount.textContent = `${n} người`;
+                    }
+                })
+                .leaving(() => {
+                    const lkCount = root.querySelector('[data-lk-count]');
+                    if (lkCount) {
+                        const n = Math.max(1, parseInt(lkCount.textContent ?? '1', 10) - 1);
+                        lkCount.textContent = `${n} người`;
+                    }
+                });
+        }
 
         return true;
     };
@@ -804,14 +1091,52 @@ export function mountLiveRoom(root) {
             return;
         }
 
+        if (el.closest('[data-q-clear-marks]') && root.contains(el.closest('[data-q-clear-marks]'))) {
+            void clearMarksForCurrentQuestion();
+
+            return;
+        }
+
         const optionBtn = el.closest('[data-q-option-id]');
         if (optionBtn instanceof HTMLElement && root.contains(optionBtn) && canModerate && panelState) {
+            const sel = window.getSelection();
+            if (sel && ! sel.isCollapsed && optionBtn.contains(sel.anchorNode)) {
+                return;
+            }
             const optionId = Number(optionBtn.dataset.qOptionId);
             if (Number.isFinite(optionId) && optionId > 0) {
                 updateQuestion(panelState.index, { optionId });
             }
         }
     });
+
+    if (canModerate) {
+        const onMarkMouseUp = (e) => {
+            if (! (e.target instanceof Node) || ! root.contains(e.target)) {
+                return;
+            }
+            window.setTimeout(() => {
+                const sel = resolveMarkTargetFromSelection();
+                if (! sel) {
+                    hideMarkToolbar();
+
+                    return;
+                }
+                showMarkToolbarAt(e.clientX + 8, e.clientY + 8);
+            }, 10);
+        };
+        const onMarkKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                hideMarkToolbar();
+            }
+        };
+        document.addEventListener('mouseup', onMarkMouseUp);
+        document.addEventListener('keydown', onMarkKeyDown);
+        root._liveMarkCleanup = () => {
+            document.removeEventListener('mouseup', onMarkMouseUp);
+            document.removeEventListener('keydown', onMarkKeyDown);
+        };
+    }
 
     root.querySelector('[data-lk-teach]')?.addEventListener('click', async () => {
         switchToQuestionsTab();
@@ -840,7 +1165,22 @@ export function mountLiveRoom(root) {
         }
         loadMessages(data.messages);
         renderHands(data.hands ?? []);
-        renderQuestionPanel(data.question_panel);
+        if (Array.isArray(data.question_deck) && data.question_deck.length > 0) {
+            questionDeck = data.question_deck;
+        }
+        if (Array.isArray(data.text_marks)) {
+            textMarks = data.text_marks;
+        }
+        if (data.question_panel) {
+            if (Array.isArray(data.question_panel.revealed_option_ids)) {
+                revealedOptionIds = data.question_panel.revealed_option_ids.map(Number);
+            }
+            if (questionDeck?.length) {
+                renderFromLocalState(data.question_panel.index ?? 0);
+            } else {
+                renderQuestionPanel(data.question_panel);
+            }
+        }
         if (data.recording?.playback_url) {
             const hlsRoot = root.querySelector('[data-hls-root]');
             if (hlsRoot instanceof HTMLElement) {
@@ -865,15 +1205,24 @@ export function mountLiveRoom(root) {
             console.error('[LiveRoom] bootstrap', err);
         }
 
+        // Echo loads async via app.js — must await or marks/chat fall back to slow poll.
+        await ensureClassroomEcho();
         const realtimeConnected = subscribeEcho();
-        // Reverb is primary. Polling guarantees convergence when WebSocket is
-        // disabled, blocked by a proxy, or temporarily disconnected.
-        pollTimer = window.setInterval(pollBootstrap, realtimeConnected ? 15_000 : 7_000);
+        // Reverb is primary (<1s). Poll is convergence-only if socket drops.
+        pollTimer = window.setInterval(pollBootstrap, realtimeConnected ? 30_000 : 5_000);
     })();
 
     return () => {
         if (pollTimer !== null) {
             window.clearInterval(pollTimer);
+        }
+        if (typeof root._liveMarkCleanup === 'function') {
+            root._liveMarkCleanup();
+            delete root._liveMarkCleanup;
+        }
+        if (markToolbar) {
+            markToolbar.remove();
+            markToolbar = null;
         }
         if (window.Echo && config.session_uuid) {
             window.Echo.leave(`live-session.${config.session_uuid}`);

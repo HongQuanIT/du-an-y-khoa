@@ -16,6 +16,7 @@ use Modules\Classroom\Http\Controllers\LiveQuestionController;
 use Modules\Classroom\Http\Controllers\LiveRoomApiController;
 use Modules\Classroom\Http\Controllers\LiveRoomController;
 use Modules\Classroom\Http\Controllers\LiveSessionController;
+use Modules\Classroom\Http\Controllers\LiveTextMarksController;
 
 Route::post('/webhooks/livekit', LiveKitWebhookController::class)->name('webhooks.livekit');
 
@@ -52,6 +53,9 @@ Route::middleware(['auth', 'learner'])
             Route::post('/messages/{message}/pin', [LiveMessageApiController::class, 'pin'])->name('messages.pin');
             Route::delete('/messages/{message}', [LiveMessageApiController::class, 'destroy'])->name('messages.destroy');
             Route::patch('/question', [LiveQuestionController::class, 'update'])->name('question');
+            Route::patch('/marks', [LiveTextMarksController::class, 'update'])
+                ->middleware('throttle:60,1')
+                ->name('marks');
             Route::post('/raise-hand', [LiveModerationController::class, 'raiseHand'])->name('raise-hand');
             Route::post('/hands/{hand}/dismiss', [LiveModerationController::class, 'dismissHand'])->name('hands.dismiss');
             Route::post('/react', [LiveModerationController::class, 'react'])

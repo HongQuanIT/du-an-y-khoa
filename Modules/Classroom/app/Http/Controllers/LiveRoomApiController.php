@@ -15,6 +15,7 @@ use Modules\Classroom\Models\LiveSession;
 use Modules\Classroom\Models\LiveSessionMessage;
 use Modules\Classroom\Services\LiveKitTokenService;
 use Modules\Classroom\Services\LiveQuestionPanelService;
+use Modules\Classroom\Services\LiveTextMarksService;
 
 final class LiveRoomApiController extends Controller
 {
@@ -24,6 +25,7 @@ final class LiveRoomApiController extends Controller
         LiveSession $liveSession,
         LiveKitTokenService $tokens,
         LiveQuestionPanelService $questions,
+        LiveTextMarksService $textMarks,
     ): JsonResponse {
         $this->authorize('view', $classroom);
         abort_unless($classroom->canWatchLive($request->user()), 403);
@@ -53,6 +55,7 @@ final class LiveRoomApiController extends Controller
             ? $request->user()->can('manageLive', $classroom)
             : false;
         $chatReadonly = ! $liveSession->allowsChatSend();
+        $canModerate = ! $observer && $role->canModerate();
 
         return ApiResponse::item([
             'session' => [
@@ -73,7 +76,7 @@ final class LiveRoomApiController extends Controller
                 'can_publish_audio' => (bool) ($tokenPayload['can_publish_audio'] ?? false),
                 'can_publish_video' => (bool) ($tokenPayload['can_publish_video'] ?? false),
                 'can_publish_screen' => (bool) ($tokenPayload['can_publish_screen'] ?? false),
-                'can_moderate' => ! $observer && $role->canModerate(),
+                'can_moderate' => $canModerate,
                 'can_host_live' => $canHostLive,
             ],
             'token' => $tokenPayload,
@@ -85,6 +88,8 @@ final class LiveRoomApiController extends Controller
                 'raised_at' => $h->raised_at?->toIso8601String(),
             ])->values(),
             'question_panel' => $questions->panel($liveSession),
+            'question_deck' => $canModerate ? $questions->deck($liveSession) : null,
+            'text_marks' => $textMarks->marks($liveSession),
             'urls' => $this->roomUrls($classroom, $liveSession, $teachPortal, $observer),
         ]);
     }
@@ -148,6 +153,7 @@ final class LiveRoomApiController extends Controller
                 'messages' => route('admin.classrooms.live.api.messages', [$classroom, $liveSession]),
                 'token_refresh' => route('admin.classrooms.live.api.token', [$classroom, $liveSession]),
                 'question' => route('admin.classrooms.live.api.bootstrap', [$classroom, $liveSession]),
+                'marks' => route('admin.classrooms.live.api.bootstrap', [$classroom, $liveSession]),
                 'raise_hand' => route('admin.classrooms.live.api.bootstrap', [$classroom, $liveSession]),
                 'react' => route('admin.classrooms.live.api.react', [$classroom, $liveSession]),
                 'mute_chat' => route('admin.classrooms.live.api.bootstrap', [$classroom, $liveSession]),
@@ -161,6 +167,7 @@ final class LiveRoomApiController extends Controller
             'messages' => route($teachPortal ? 'teach.classes.sessions.studio.api.messages' : 'classroom.live.api.messages', [$classroom, $liveSession]),
             'token_refresh' => route($teachPortal ? 'teach.classes.sessions.studio.api.token' : 'classroom.live.api.token', [$classroom, $liveSession]),
             'question' => route($teachPortal ? 'teach.classes.sessions.studio.api.question' : 'classroom.live.api.question', [$classroom, $liveSession]),
+            'marks' => route($teachPortal ? 'teach.classes.sessions.studio.api.marks' : 'classroom.live.api.marks', [$classroom, $liveSession]),
             'raise_hand' => route($teachPortal ? 'teach.classes.sessions.studio.api.raise-hand' : 'classroom.live.api.raise-hand', [$classroom, $liveSession]),
             'react' => route($teachPortal ? 'teach.classes.sessions.studio.api.react' : 'classroom.live.api.react', [$classroom, $liveSession]),
             'mute_chat' => route($teachPortal ? 'teach.classes.sessions.studio.api.mute-chat' : 'classroom.live.api.mute-chat', [$classroom, $liveSession]),

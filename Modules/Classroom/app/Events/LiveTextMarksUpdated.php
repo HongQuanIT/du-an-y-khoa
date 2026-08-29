@@ -11,22 +11,18 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use Modules\Classroom\Models\LiveSession;
 
-final class LiveQuestionChanged implements ShouldBroadcastNow
+final class LiveTextMarksUpdated implements ShouldBroadcastNow
 {
     use Dispatchable;
     use InteractsWithSockets;
     use SerializesModels;
 
     /**
-     * @param  array<string, mixed>|null  $question
-     * @param  list<int>  $revealedOptionIds
+     * @param  list<array<string, mixed>>  $marks
      */
     public function __construct(
         public LiveSession $session,
-        public int $index,
-        public bool $showAnswer,
-        public ?array $question = null,
-        public array $revealedOptionIds = [],
+        public array $marks,
         public ?int $actorUserId = null,
     ) {}
 
@@ -40,18 +36,14 @@ final class LiveQuestionChanged implements ShouldBroadcastNow
 
     public function broadcastAs(): string
     {
-        return 'question.changed';
+        return 'marks.updated';
     }
 
     /** @return array<string, mixed> */
     public function broadcastWith(): array
     {
         return [
-            'index' => $this->index,
-            'show_answer' => $this->showAnswer,
-            'total' => count($this->session->questionIds()),
-            'question' => $this->question,
-            'revealed_option_ids' => $this->revealedOptionIds,
+            'marks' => $this->marks,
             'actor_user_id' => $this->actorUserId,
         ];
     }

@@ -83,6 +83,8 @@ final class LiveQuestionController extends Controller
             $data['index'],
             $data['show_answer'],
             $data['question'],
+            $data['revealed_option_ids'],
+            $request->user() !== null ? (int) $request->user()->getAuthIdentifier() : null,
         ));
 
         if ($updates !== []) {
