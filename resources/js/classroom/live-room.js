@@ -642,13 +642,6 @@ export function mountLiveRoom(root) {
         }
     };
 
-    const showTeachBanner = () => {
-        const banner = root.querySelector('[data-live-teach-banner]');
-        if (banner instanceof HTMLElement) {
-            banner.classList.toggle('hidden', ! stageTeach);
-        }
-    };
-
     const syncStageTeachButtons = () => {
         root.querySelectorAll('[data-live-stage-teach-label]').forEach((el) => {
             el.textContent = stageTeach ? 'Đang khung đề' : 'Khung đề';
@@ -657,10 +650,22 @@ export function mountLiveRoom(root) {
             if (! (btn instanceof HTMLElement)) {
                 return;
             }
-            btn.classList.toggle('border-primary', stageTeach);
-            btn.classList.toggle('text-primary', stageTeach);
+            const isExit = btn.hasAttribute('data-live-stage-teach-exit');
+            if (! isExit) {
+                btn.classList.toggle('border-primary', stageTeach);
+                btn.classList.toggle('text-primary', stageTeach);
+            }
             btn.setAttribute('aria-pressed', stageTeach ? 'true' : 'false');
         });
+        const teachBtn = root.querySelector('[data-lk-teach]');
+        if (teachBtn instanceof HTMLElement) {
+            teachBtn.classList.toggle('bg-teal-600', stageTeach);
+            teachBtn.classList.toggle('bg-teal-600/80', ! stageTeach);
+            teachBtn.setAttribute('aria-pressed', stageTeach ? 'true' : 'false');
+            teachBtn.title = stageTeach
+                ? 'Thoát chế độ chữa đề trên khung video'
+                : 'Hiện đề trong khung video (camera góc phải) — học viên nhìn cùng một khung';
+        }
     };
 
     const applyStageTeach = (on, { syncMobile = true } = {}) => {
@@ -680,7 +685,6 @@ export function mountLiveRoom(root) {
             waiting.classList.add('hidden');
         }
 
-        showTeachBanner();
         syncStageTeachButtons();
 
         if (stageTeach && syncMobile && root._x_dataStack?.[0]) {

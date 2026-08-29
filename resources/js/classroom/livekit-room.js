@@ -881,7 +881,7 @@ export function mountLivekitRoom(root) {
 
     const isStageTeach = () => root.dataset.lkStageTeach === '1';
 
-    const pipClassName = () => 'absolute bottom-3 right-3 z-20 h-28 w-40 rounded-lg border border-white/30 object-cover shadow-lg sm:h-36 sm:w-52';
+    const pipClassName = () => 'absolute bottom-3 right-3 z-40 h-28 w-40 rounded-lg border border-white/30 object-cover shadow-lg sm:h-36 sm:w-52';
 
     /**
      * @param {boolean} isLocal

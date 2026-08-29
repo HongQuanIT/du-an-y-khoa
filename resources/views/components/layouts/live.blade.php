@@ -16,7 +16,7 @@
     @livewireStyles
 </head>
 
-<body class="flex h-[100dvh] flex-col overflow-hidden bg-on-surface text-white">
+<body class="flex h-[100dvh] flex-col overflow-hidden bg-[#12141a] text-white">
     <header class="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-2.5 md:px-6">
         <div class="flex min-w-0 items-center gap-3">
             @if ($exitUrl)

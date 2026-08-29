@@ -50,9 +50,9 @@
             data-lk-can-video="{{ ($tokenPayload['can_publish_video'] ?? false) ? '1' : '0' }}"
             data-lk-can-screen="{{ ($tokenPayload['can_publish_screen'] ?? false) ? '1' : '0' }}"
             data-lk-exit-url="{{ route('teach.classes.show', $classroom) }}"
-            class="flex min-h-0 flex-1 flex-col bg-black lg:flex-row"
+            class="flex min-h-0 flex-1 flex-col gap-2 bg-transparent p-2 lg:flex-row lg:gap-3 lg:p-3"
         >
-            <div class="flex min-h-0 flex-1 flex-col">
+            <div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/15 bg-black shadow-[0_8px_28px_rgba(0,0,0,0.35)] ring-1 ring-inset ring-white/5">
                 <div data-lk-stage class="relative min-h-[240px] flex-1 overflow-hidden bg-black">
                     <div data-lk-main class="flex h-full w-full items-center justify-center">
                         <div class="text-center text-white/60">
@@ -62,10 +62,6 @@
                     </div>
                     @include('classroom::live.partials.stage-teach')
                     <div data-live-reactions class="pointer-events-none absolute inset-0 z-30 overflow-hidden" aria-hidden="true"></div>
-                    <div data-live-teach-banner
-                        class="pointer-events-none absolute inset-x-0 top-0 z-20 hidden bg-teal-600/90 px-4 py-2 text-center text-xs text-white">
-                        Chế độ chữa đề trên khung video — camera góc phải.
-                    </div>
                 </div>
 
                 <div class="flex shrink-0 flex-col gap-3 border-t border-white/10 bg-black/90 px-3 py-3 sm:flex-row sm:items-center sm:justify-between md:px-5">
@@ -143,7 +139,7 @@
                 <p data-lk-error class="hidden shrink-0 border-t border-red-400/30 bg-red-500/20 px-4 py-2 text-xs text-red-100"></p>
             </div>
 
-            <aside class="flex h-[42vh] w-full shrink-0 flex-col overflow-hidden border-t border-white/10 bg-surface text-on-surface lg:h-auto lg:min-h-0 lg:w-[380px] lg:border-l lg:border-t-0 xl:w-[420px]">
+            <aside class="flex h-[42vh] w-full shrink-0 flex-col overflow-hidden rounded-2xl border border-white/15 bg-surface text-on-surface shadow-[0_8px_28px_rgba(0,0,0,0.22)] ring-1 ring-inset ring-black/5 lg:h-auto lg:min-h-0 lg:w-[380px] xl:w-[420px]">
                 @include('classroom::live.partials.sidebar-tabs')
             </aside>
         </div>

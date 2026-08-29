@@ -2,6 +2,10 @@
 
 ## 2026-08-29
 
+### Classroom live — UI chữa đề + tách khung video/sidebar
+- Sửa nút Thoát chữa đề bị che: đưa vào header “Đề đang chữa”; bỏ banner/text “Chế độ chữa đề”.
+- Khung video và sidebar bo góc, viền/shadow mềm, có khoảng cách để tách biệt dễ nhìn.
+
 ### Classroom live — icon mic Thành viên + xác nhận kick
 - Sửa icon mic tab Thành viên hiển thị đúng trạng thái (mic bật/tắt).
 - Thêm popup xác nhận trước khi kick thành viên khỏi phòng live.
