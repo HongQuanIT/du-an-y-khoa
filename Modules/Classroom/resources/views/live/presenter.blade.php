@@ -21,9 +21,6 @@
         <h1 style="font-size:1.125rem;margin:0.25rem 0 0;">{{ $session->title }}</h1>
         <p data-q-index-label style="font-size:0.875rem;color:#6b7280;margin:0.5rem 0 0;">Đang tải…</p>
     </header>
-    @if ($canModerate)
-        <p style="font-size:0.75rem;color:#6b7280;margin:0 0 1rem;">Bôi chọn chữ trên đề/đáp án rồi chọn màu — học viên thấy realtime. Click đáp án để sổ/ẩn.</p>
-    @endif
     <div data-q-stem style="font-size:1rem;line-height:1.6;margin-bottom:1rem;user-select:text;"></div>
     <div data-q-stem-image style="display:none;margin-bottom:1rem;"></div>
     <ul data-q-options style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:0.5rem;"></ul>

@@ -41,6 +41,7 @@ class LiveSession extends Model
         'show_answer',
         'revealed_option_ids',
         'text_marks',
+        'stage_teach',
     ];
 
     protected $casts = [
@@ -56,6 +57,7 @@ class LiveSession extends Model
         'show_answer' => 'boolean',
         'revealed_option_ids' => 'array',
         'text_marks' => 'array',
+        'stage_teach' => 'boolean',
     ];
 
     protected static function booted(): void

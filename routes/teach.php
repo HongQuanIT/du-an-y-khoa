@@ -76,6 +76,7 @@ Route::middleware(['auth', 'instructor'])->group(function (): void {
             Route::post('/react', [LiveModerationController::class, 'react'])->middleware('throttle:30,1')->name('react');
             Route::post('/mute-chat', [LiveModerationController::class, 'muteChat'])->name('mute-chat');
             Route::post('/focus-questions', [LivePresenterController::class, 'focusQuestions'])->name('focus-questions');
+            Route::patch('/stage', [LivePresenterController::class, 'updateStage'])->name('stage');
         });
 
     Route::get('/profile', [TeachProfileController::class, 'show'])->name('profile.show');

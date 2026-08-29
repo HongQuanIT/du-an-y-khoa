@@ -358,5 +358,26 @@ final class ClassroomFlowTest extends TestCase
             ])
             ->assertOk()
             ->assertJsonCount(0, 'data.marks');
+
+        $this->actingAs($host)
+            ->patchJson(route('classroom.live.api.stage', [$classroom, $session]), [
+                'stage_teach' => true,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.stage_teach', true);
+
+        $this->assertTrue((bool) $session->fresh()->stage_teach);
+
+        $this->actingAs($host)
+            ->getJson(route('classroom.live.api.bootstrap', [$classroom, $session]))
+            ->assertOk()
+            ->assertJsonPath('data.session.stage_teach', true);
+
+        $this->actingAs($host)
+            ->patchJson(route('classroom.live.api.stage', [$classroom, $session]), [
+                'stage_teach' => false,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.stage_teach', false);
     }
 }

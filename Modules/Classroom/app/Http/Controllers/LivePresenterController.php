@@ -47,8 +47,39 @@ final class LivePresenterController extends Controller
         $this->authorize('update', $classroom);
         abort_unless($liveSession->hasQuestionSet(), 422);
 
-        event(new LiveSessionUpdated($liveSession, ['focus' => 'questions']));
+        $liveSession->update(['stage_teach' => true]);
 
-        return ApiResponse::item(['focus' => 'questions']);
+        event(new LiveSessionUpdated($liveSession, [
+            'focus' => 'questions',
+            'stage_teach' => true,
+        ]));
+
+        return ApiResponse::item([
+            'focus' => 'questions',
+            'stage_teach' => true,
+        ]);
+    }
+
+    public function updateStage(
+        Request $request,
+        Classroom $classroom,
+        LiveSession $liveSession,
+    ): JsonResponse {
+        $this->authorize('update', $classroom);
+        abort_unless($liveSession->hasQuestionSet(), 422);
+
+        $validated = $request->validate([
+            'stage_teach' => ['required', 'boolean'],
+        ]);
+
+        $stageTeach = (bool) $validated['stage_teach'];
+        $liveSession->update(['stage_teach' => $stageTeach]);
+
+        event(new LiveSessionUpdated($liveSession, [
+            'stage_teach' => $stageTeach,
+            'focus' => $stageTeach ? 'questions' : null,
+        ]));
+
+        return ApiResponse::item(['stage_teach' => $stageTeach]);
     }
 }

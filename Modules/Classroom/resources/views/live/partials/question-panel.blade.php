@@ -1,12 +1,12 @@
 <div class="flex shrink-0 items-center justify-between border-b border-outline-variant px-4 py-3">
     <h2 class="font-semibold text-on-surface">Đề đang chữa</h2>
     <div class="flex items-center gap-2">
-        @if ($canModerate)
-            <button type="button" data-live-presenter-popout
+        @if ($canModerate && empty($inStage))
+            <button type="button" data-live-stage-teach-toggle
                 class="inline-flex items-center gap-1 rounded-lg border border-outline-variant px-2 py-1 text-xs text-on-surface-variant hover:bg-surface-container-low"
-                title="Mở cửa sổ tham khảo trên màn hình phụ">
-                <span class="material-symbols-outlined text-[16px]">open_in_new</span>
-                Màn phụ
+                title="Hiện đề trong khung video, camera thu góc phải — học viên nhìn cùng một khung">
+                <span class="material-symbols-outlined text-[16px]">picture_in_picture_alt</span>
+                <span data-live-stage-teach-label>Khung đề</span>
             </button>
         @endif
         <span data-q-index-label class="text-xs text-on-surface-variant">—</span>
@@ -14,11 +14,6 @@
 </div>
 
 <div class="min-h-0 flex-1 overflow-y-auto p-4">
-    @if ($canModerate)
-        <p class="mb-3 text-[11px] leading-relaxed text-on-surface-variant">
-            Bôi chọn chữ trên đề/đáp án rồi chọn màu để học viên thấy realtime. Click đáp án để sổ/ẩn.
-        </p>
-    @endif
     <div data-q-stem class="prose prose-sm max-w-none select-text text-on-surface"></div>
     <div data-q-stem-image class="mt-3 hidden"></div>
     <ul data-q-options class="mt-4 space-y-2"></ul>

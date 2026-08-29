@@ -28,7 +28,7 @@ final class LiveTextMarksController extends Controller
             'action' => ['required', 'string', Rule::in(['add', 'remove', 'clear'])],
             'mark_id' => ['required_if:action,remove', 'nullable', 'string', 'max:40'],
             'question_id' => ['required_if:action,add,clear', 'nullable', 'string', 'max:40'],
-            'target' => ['required_if:action,add', 'nullable', 'string', Rule::in(['stem', 'option'])],
+            'target' => ['required_if:action,add', 'nullable', 'string', Rule::in(['stem', 'option', 'explanation'])],
             'option_id' => ['nullable', 'integer', 'min:1'],
             'start' => ['required_if:action,add', 'nullable', 'integer', 'min:0'],
             'end' => ['required_if:action,add', 'nullable', 'integer', 'min:1'],

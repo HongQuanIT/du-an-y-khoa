@@ -364,7 +364,7 @@ export function mountLivekitRoom(root) {
             controlsEl.classList.toggle('flex', canPublish);
         }
         if (waitingEl) {
-            const showWait = ! canPublishVideo && ! hasRemoteVideo;
+            const showWait = ! canPublishVideo && ! hasRemoteVideo && ! isStageTeach();
             waitingEl.classList.toggle('hidden', ! showWait);
         }
         if (btnTeach) {
@@ -403,6 +403,55 @@ export function mountLivekitRoom(root) {
     const isQuestionsTabVisible = () => Array.from(root.querySelectorAll('[data-live-question-panel]'))
         .some((panel) => panel instanceof HTMLElement && panel.offsetParent !== null);
 
+    const isStageTeach = () => root.dataset.lkStageTeach === '1';
+
+    const pipClassName = () => 'absolute bottom-3 right-3 z-20 h-28 w-40 rounded-lg border border-white/30 object-cover shadow-lg sm:h-36 sm:w-52';
+
+    /**
+     * @param {boolean} isLocal
+     * @param {boolean} isScreen
+     */
+    const shouldPipCamera = (isLocal, isScreen) => {
+        if (isScreen) {
+            return false;
+        }
+        if (isStageTeach()) {
+            return true;
+        }
+
+        return isLocal && ! studioMode;
+    };
+
+    const relayoutPublishedVideos = () => {
+        if (! room || ! stageEl) {
+            return;
+        }
+
+        const camPub = room.localParticipant.getTrackPublication(Track.Source.Camera);
+        if (camPub?.track) {
+            attachTrack(camPub.track, 'local', true);
+        }
+
+        for (const participant of room.remoteParticipants.values()) {
+            for (const publication of participant.trackPublications.values()) {
+                if (publication.track && publication.track.kind === Track.Kind.Video) {
+                    attachTrack(publication.track, participant.identity, false);
+                }
+            }
+        }
+
+        if (isStageTeach() && ! screenOn) {
+            const main = stageEl.querySelector('[data-lk-main]');
+            if (main instanceof HTMLElement) {
+                // Keep shell; clear fullscreen camera so đề overlay is the focus.
+                const hasScreenPlaceholder = main.querySelector('.material-symbols-outlined')?.textContent === 'screen_share';
+                if (! hasScreenPlaceholder) {
+                    main.replaceChildren();
+                }
+            }
+        }
+    };
+
     /**
      * @param {import('livekit-client').Track} track
      * @param {string} identity
@@ -436,7 +485,7 @@ export function mountLivekitRoom(root) {
 
             stageEl.querySelector(`[data-lk-video="${key}"]`)?.remove();
 
-            if (! isLocal && videoPriority < mainVideoPriority) {
+            if (! isLocal && ! isStageTeach() && videoPriority < mainVideoPriority) {
                 return;
             }
 
@@ -446,8 +495,8 @@ export function mountLivekitRoom(root) {
             el.autoplay = true;
             el.muted = isLocal;
 
-            if (isLocal && ! isScreen && ! studioMode) {
-                el.className = 'absolute bottom-3 right-3 z-10 h-28 w-40 rounded-lg border border-white/30 object-cover shadow-lg sm:h-36 sm:w-52';
+            if (shouldPipCamera(isLocal, isScreen)) {
+                el.className = pipClassName();
                 stageEl.appendChild(el);
             } else {
                 mainVideoPriority = videoPriority;
@@ -777,6 +826,17 @@ export function mountLivekitRoom(root) {
 
     btnLeave?.addEventListener('click', onLeave);
 
+    const onStageTeach = () => {
+        relayoutPublishedVideos();
+        syncButtons();
+    };
+    root.addEventListener('live:stage-teach', onStageTeach);
+
+    // Bootstrap may have set stage teach before LiveKit mounted.
+    if (isStageTeach()) {
+        onStageTeach();
+    }
+
     syncButtons();
     connect();
 
@@ -790,6 +850,7 @@ export function mountLivekitRoom(root) {
             window.clearTimeout(connectRetryTimer);
             connectRetryTimer = null;
         }
+        root.removeEventListener('live:stage-teach', onStageTeach);
         btnMic?.removeEventListener('click', onMic);
         btnCam?.removeEventListener('click', onCam);
         btnScreen?.removeEventListener('click', onScreen);

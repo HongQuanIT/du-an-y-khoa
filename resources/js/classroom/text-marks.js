@@ -119,7 +119,7 @@ export function selectionOffsetsIn(root) {
 /**
  * @param {TextMark[]} marks
  * @param {string} questionId
- * @param {'stem'|'option'} target
+ * @param {'stem'|'option'|'explanation'} target
  * @param {number|null} [optionId]
  * @returns {TextMark[]}
  */
@@ -128,8 +128,11 @@ export function marksForTarget(marks, questionId, target, optionId = null) {
         if (String(m.question_id) !== String(questionId) || m.target !== target) {
             return false;
         }
-        if (target === 'option') {
+        if (target === 'option' || (target === 'explanation' && optionId != null)) {
             return Number(m.option_id) === Number(optionId);
+        }
+        if (target === 'explanation') {
+            return m.option_id == null || m.option_id === '';
         }
 
         return true;

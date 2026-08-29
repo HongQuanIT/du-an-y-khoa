@@ -64,6 +64,7 @@ final class LiveRoomApiController extends Controller
                 'status' => $liveSession->status->value,
                 'chat_muted' => (bool) $liveSession->chat_muted,
                 'chat_readonly' => $chatReadonly,
+                'stage_teach' => (bool) $liveSession->stage_teach,
             ],
             'classroom' => [
                 'uuid' => $classroom->uuid,
@@ -158,6 +159,7 @@ final class LiveRoomApiController extends Controller
                 'react' => route('admin.classrooms.live.api.react', [$classroom, $liveSession]),
                 'mute_chat' => route('admin.classrooms.live.api.bootstrap', [$classroom, $liveSession]),
                 'focus_questions' => route('admin.classrooms.live.api.bootstrap', [$classroom, $liveSession]),
+                'stage' => route('admin.classrooms.live.api.bootstrap', [$classroom, $liveSession]),
                 'presenter' => route('admin.classrooms.live', [$classroom, $liveSession]),
                 'exit' => route('admin.classrooms.index'),
             ];
@@ -172,6 +174,7 @@ final class LiveRoomApiController extends Controller
             'react' => route($teachPortal ? 'teach.classes.sessions.studio.api.react' : 'classroom.live.api.react', [$classroom, $liveSession]),
             'mute_chat' => route($teachPortal ? 'teach.classes.sessions.studio.api.mute-chat' : 'classroom.live.api.mute-chat', [$classroom, $liveSession]),
             'focus_questions' => route($teachPortal ? 'teach.classes.sessions.studio.api.focus-questions' : 'classroom.live.api.focus-questions', [$classroom, $liveSession]),
+            'stage' => route($teachPortal ? 'teach.classes.sessions.studio.api.stage' : 'classroom.live.api.stage', [$classroom, $liveSession]),
             'presenter' => route($teachPortal ? 'teach.classes.sessions.studio.presenter' : 'classroom.live.presenter', [$classroom, $liveSession]),
             'exit' => route($teachPortal ? 'teach.classes.show' : 'classroom.show', $classroom),
         ];

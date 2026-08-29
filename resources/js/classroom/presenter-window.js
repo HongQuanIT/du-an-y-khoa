@@ -156,7 +156,16 @@ if (root instanceof HTMLElement) {
                     note.style.fontSize = '0.8125rem';
                     note.style.lineHeight = '1.5';
                     note.style.color = '#4b5563';
+                    note.style.userSelect = 'text';
+                    note.dataset.qMarkTarget = 'explanation';
+                    note.dataset.qMarkOptionId = String(opt.id ?? '');
                     note.innerHTML = opt.explanation;
+                    if (questionId) {
+                        applyMarksToElement(
+                            note,
+                            marksForTarget(textMarks, questionId, 'explanation', Number(opt.id)),
+                        );
+                    }
                     li.appendChild(note);
                 }
 
@@ -166,7 +175,16 @@ if (root instanceof HTMLElement) {
         if (explanation) {
             if (panel.question.explanation) {
                 explanation.innerHTML = panel.question.explanation;
+                explanation.dataset.qMarkTarget = 'explanation';
+                delete explanation.dataset.qMarkOptionId;
+                explanation.style.userSelect = 'text';
                 explanation.style.display = 'block';
+                if (questionId) {
+                    applyMarksToElement(
+                        explanation,
+                        marksForTarget(textMarks, questionId, 'explanation'),
+                    );
+                }
             } else {
                 explanation.style.display = 'none';
             }
@@ -303,7 +321,7 @@ if (root instanceof HTMLElement) {
             return null;
         }
         const kind = target.dataset.qMarkTarget;
-        if (kind !== 'stem' && kind !== 'option') {
+        if (kind !== 'stem' && kind !== 'option' && kind !== 'explanation') {
             return null;
         }
         const offsets = selectionOffsetsIn(target);
@@ -313,7 +331,9 @@ if (root instanceof HTMLElement) {
 
         return {
             target: kind,
-            optionId: kind === 'option' ? Number(target.dataset.qMarkOptionId) : null,
+            optionId: (kind === 'option' || kind === 'explanation') && target.dataset.qMarkOptionId
+                ? Number(target.dataset.qMarkOptionId)
+                : null,
             ...offsets,
         };
     };

@@ -58,6 +58,7 @@ export function mountLiveRoom(root) {
     let questionSyncEpoch = 0;
     /** @type {HTMLElement|null} */
     let markToolbar = null;
+    let stageTeach = false;
 
     const csrf = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 
@@ -307,8 +308,16 @@ export function mountLiveRoom(root) {
 
                     if (revealed && opt.explanation) {
                         const note = document.createElement('div');
-                        note.className = 'border-t border-outline-variant/60 px-3 py-2 pl-8 text-xs leading-relaxed text-on-surface-variant';
+                        note.className = 'border-t border-outline-variant/60 px-3 py-2 pl-8 text-xs leading-relaxed text-on-surface-variant select-text';
+                        note.dataset.qMarkTarget = 'explanation';
+                        note.dataset.qMarkOptionId = String(opt.id ?? '');
                         note.innerHTML = opt.explanation;
+                        if (questionId) {
+                            applyMarksToElement(
+                                note,
+                                marksForTarget(textMarks, questionId, 'explanation', Number(opt.id)),
+                            );
+                        }
                         li.appendChild(note);
                     }
 
@@ -319,7 +328,16 @@ export function mountLiveRoom(root) {
             if (explanation) {
                 if (panel.question.explanation) {
                     explanation.innerHTML = panel.question.explanation;
+                    explanation.dataset.qMarkTarget = 'explanation';
+                    delete explanation.dataset.qMarkOptionId;
+                    explanation.classList.add('select-text');
                     explanation.classList.remove('hidden');
+                    if (questionId) {
+                        applyMarksToElement(
+                            explanation,
+                            marksForTarget(textMarks, questionId, 'explanation'),
+                        );
+                    }
                 } else {
                     explanation.classList.add('hidden');
                 }
@@ -482,7 +500,7 @@ export function mountLiveRoom(root) {
             return null;
         }
         const kind = target.dataset.qMarkTarget;
-        if (kind !== 'stem' && kind !== 'option') {
+        if (kind !== 'stem' && kind !== 'option' && kind !== 'explanation') {
             return null;
         }
         const offsets = selectionOffsetsIn(target);
@@ -493,7 +511,9 @@ export function mountLiveRoom(root) {
         return {
             el: target,
             target: kind,
-            optionId: kind === 'option' ? Number(target.dataset.qMarkOptionId) : null,
+            optionId: (kind === 'option' || kind === 'explanation') && target.dataset.qMarkOptionId
+                ? Number(target.dataset.qMarkOptionId)
+                : null,
             ...offsets,
         };
     };
@@ -580,17 +600,81 @@ export function mountLiveRoom(root) {
         }
     };
 
-    const switchToQuestionsTab = () => {
-        root.querySelector('[data-live-tab="questions"]')?.click();
-        if (root._x_dataStack?.[0]) {
-            root._x_dataStack[0].mobileTab = 'questions';
-        }
-    };
-
     const showTeachBanner = () => {
         const banner = root.querySelector('[data-live-teach-banner]');
         if (banner instanceof HTMLElement) {
-            banner.classList.remove('hidden');
+            banner.classList.toggle('hidden', ! stageTeach);
+        }
+    };
+
+    const syncStageTeachButtons = () => {
+        root.querySelectorAll('[data-live-stage-teach-label]').forEach((el) => {
+            el.textContent = stageTeach ? 'Đang khung đề' : 'Khung đề';
+        });
+        root.querySelectorAll('[data-live-stage-teach-toggle]').forEach((btn) => {
+            if (! (btn instanceof HTMLElement)) {
+                return;
+            }
+            btn.classList.toggle('border-primary', stageTeach);
+            btn.classList.toggle('text-primary', stageTeach);
+            btn.setAttribute('aria-pressed', stageTeach ? 'true' : 'false');
+        });
+    };
+
+    const applyStageTeach = (on, { syncMobile = true } = {}) => {
+        stageTeach = Boolean(on);
+        root.dataset.lkStageTeach = stageTeach ? '1' : '0';
+
+        root.querySelectorAll('[data-live-stage-teach]').forEach((el) => {
+            if (! (el instanceof HTMLElement)) {
+                return;
+            }
+            el.classList.toggle('hidden', ! stageTeach);
+            el.classList.toggle('flex', stageTeach);
+        });
+
+        const waiting = root.querySelector('[data-lk-waiting]');
+        if (waiting instanceof HTMLElement && stageTeach) {
+            waiting.classList.add('hidden');
+        }
+
+        showTeachBanner();
+        syncStageTeachButtons();
+
+        if (stageTeach && syncMobile && root._x_dataStack?.[0]) {
+            // Mobile: stay on video tab so học viên thấy đề trong khung.
+            root._x_dataStack[0].mobileTab = 'video';
+        }
+
+        root.dispatchEvent(new CustomEvent('live:stage-teach', { detail: { on: stageTeach } }));
+    };
+
+    const setStageTeach = async (next) => {
+        if (! canModerate) {
+            applyStageTeach(next);
+
+            return;
+        }
+        applyStageTeach(next);
+        const url = apiUrls.stage
+            ?? String(config.bootstrap_url).replace('/bootstrap', '/stage');
+        try {
+            const res = await fetch(url, {
+                method: 'PATCH',
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrf(),
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({ stage_teach: Boolean(next) }),
+            });
+            if (! res.ok) {
+                throw new Error('stage update failed');
+            }
+        } catch (err) {
+            console.error('[LiveRoom] stage', err);
+            applyStageTeach(! next);
         }
     };
 
@@ -856,16 +940,6 @@ export function mountLiveRoom(root) {
         applyChatMuted(next);
     };
 
-    const focusQuestions = async () => {
-        const url = apiUrls.focus_questions
-            ?? String(config.bootstrap_url).replace('/bootstrap', '/focus-questions');
-        await fetch(url, {
-            method: 'POST',
-            headers: { 'X-CSRF-TOKEN': csrf(), Accept: 'application/json' },
-            credentials: 'same-origin',
-        });
-    };
-
     const subscribeEcho = () => {
         if (! window.Echo || ! config.session_uuid) {
             return false;
@@ -937,8 +1011,10 @@ export function mountLiveRoom(root) {
                 if (e.changes?.chat_muted !== undefined) {
                     applyChatMuted(e.changes.chat_muted);
                 }
-                if (e.changes?.focus === 'questions') {
-                    switchToQuestionsTab();
+                if (e.changes?.stage_teach !== undefined) {
+                    applyStageTeach(Boolean(e.changes.stage_teach));
+                } else if (e.changes?.focus === 'questions') {
+                    applyStageTeach(true);
                 }
                 if (Number(e.changes?.kicked_user_id) === currentUserId) {
                     window.location.href = e.changes?.redirect_url ?? '/classes';
@@ -1099,6 +1175,7 @@ export function mountLiveRoom(root) {
 
         const optionBtn = el.closest('[data-q-option-id]');
         if (optionBtn instanceof HTMLElement && root.contains(optionBtn) && canModerate && panelState) {
+            // Đang bôi chọn để tô màu → không sổ đáp án.
             const sel = window.getSelection();
             if (sel && ! sel.isCollapsed && optionBtn.contains(sel.anchorNode)) {
                 return;
@@ -1139,20 +1216,19 @@ export function mountLiveRoom(root) {
     }
 
     root.querySelector('[data-lk-teach]')?.addEventListener('click', async () => {
-        switchToQuestionsTab();
-        showTeachBanner();
         if (config.can_moderate) {
-            await focusQuestions();
+            await setStageTeach(true);
+        } else {
+            applyStageTeach(true);
         }
     });
 
-    root.querySelectorAll('[data-live-presenter-popout]').forEach((btn) => {
+    root.querySelectorAll('[data-live-stage-teach-toggle]').forEach((btn) => {
         btn.addEventListener('click', () => {
-            const url = apiUrls.presenter;
-            if (! url) {
+            if (! canModerate) {
                 return;
             }
-            window.open(url, 'live-presenter', 'width=720,height=900,menubar=no,toolbar=no');
+            void setStageTeach(! stageTeach);
         });
     });
 
@@ -1162,6 +1238,9 @@ export function mountLiveRoom(root) {
         apiUrls = data.urls ?? apiUrls;
         if (data.session?.chat_muted !== undefined) {
             applyChatMuted(data.session.chat_muted);
+        }
+        if (data.session?.stage_teach !== undefined) {
+            applyStageTeach(Boolean(data.session.stage_teach), { syncMobile: false });
         }
         loadMessages(data.messages);
         renderHands(data.hands ?? []);
