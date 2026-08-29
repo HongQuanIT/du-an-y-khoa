@@ -52,11 +52,11 @@
             data-lk-can-screen="{{ ($tokenPayload['can_publish_screen'] ?? false) ? '1' : '0' }}"
             data-lk-exit-url="{{ $exitUrl }}"
         @endif
-        class="flex min-h-0 flex-1 flex-col lg:flex-row"
+        class="flex min-h-0 flex-1 flex-col gap-2 p-2 lg:flex-row lg:gap-3 lg:p-3"
         x-data="{ mobileTab: 'video', sidebarTab: 'chat' }"
     >
         {{-- Stage column --}}
-        <div class="relative flex min-h-0 flex-1 flex-col bg-black">
+        <div class="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/15 bg-black shadow-[0_8px_28px_rgba(0,0,0,0.35)] ring-1 ring-inset ring-white/5">
             @if ($session->status === LiveSessionStatus::Live && $livekitConfigured && $tokenPayload)
                 <div data-lk-stage class="relative min-h-[220px] flex-1 overflow-hidden bg-black md:min-h-0">
                     <div data-lk-main class="flex h-full w-full items-center justify-center"></div>
@@ -64,10 +64,6 @@
                     <div data-live-reactions
                         class="pointer-events-none absolute inset-0 z-30 overflow-hidden"
                         aria-hidden="true"></div>
-                    <div data-live-teach-banner
-                        class="pointer-events-none absolute inset-x-0 top-0 z-20 hidden bg-teal-600/90 px-4 py-2 text-center text-xs text-white">
-                        Chế độ chữa đề trên khung video — camera góc phải. Không cần share màn hình.
-                    </div>
                     @if ($isObserver)
                         <div class="absolute inset-x-0 top-0 z-20 bg-amber-600/90 px-4 py-2 text-center text-xs text-white">
                             Đang xem với tư cách quản trị — {{ $classroom->host?->name ? 'Giảng viên: '.$classroom->host->name : 'không điều khiển buổi live' }}.
@@ -130,12 +126,12 @@
         </div>
 
         {{-- Sidebar (desktop) — text-on-surface resets body text-white from live layout --}}
-        <aside class="hidden w-full max-w-md shrink-0 flex-col overflow-hidden border-l border-white/10 bg-surface text-on-surface lg:flex lg:min-h-0 lg:w-[380px] xl:w-[420px]">
+        <aside class="hidden w-full max-w-md shrink-0 flex-col overflow-hidden rounded-2xl border border-white/15 bg-surface text-on-surface shadow-[0_8px_28px_rgba(0,0,0,0.22)] ring-1 ring-inset ring-black/5 lg:flex lg:min-h-0 lg:w-[380px] xl:w-[420px]">
             @include('classroom::live.partials.sidebar-tabs')
         </aside>
 
         {{-- Mobile bottom tabs --}}
-        <div class="flex shrink-0 flex-col border-t border-outline-variant bg-surface text-on-surface lg:hidden">
+        <div class="flex shrink-0 flex-col overflow-hidden rounded-2xl border border-white/15 bg-surface text-on-surface shadow-[0_8px_28px_rgba(0,0,0,0.22)] ring-1 ring-inset ring-black/5 lg:hidden">
             <div class="flex border-b border-outline-variant">
                 <button type="button" @click="mobileTab = 'video'"
                     :class="mobileTab === 'video' ? 'border-b-2 border-primary text-primary' : 'text-on-surface-variant'"

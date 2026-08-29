@@ -1,12 +1,21 @@
-<div class="flex shrink-0 items-center justify-between border-b border-outline-variant px-4 py-3">
-    <h2 class="font-semibold text-on-surface">Đề đang chữa</h2>
-    <div class="flex items-center gap-2">
+<div class="flex shrink-0 items-center justify-between gap-2 border-b border-outline-variant px-4 py-3">
+    <h2 class="min-w-0 truncate font-semibold text-on-surface">Đề đang chữa</h2>
+    <div class="flex shrink-0 items-center gap-2">
         @if ($canModerate && empty($inStage))
             <button type="button" data-live-stage-teach-toggle
                 class="inline-flex items-center gap-1 rounded-lg border border-outline-variant px-2 py-1 text-xs text-on-surface-variant hover:bg-surface-container-low"
                 title="Hiện đề trong khung video, camera thu góc phải — học viên nhìn cùng một khung">
                 <span class="material-symbols-outlined text-[16px]">picture_in_picture_alt</span>
                 <span data-live-stage-teach-label>Khung đề</span>
+            </button>
+        @endif
+        @if ($canModerate && ! empty($inStage))
+            <button type="button" data-live-stage-teach-toggle data-live-stage-teach-exit
+                class="inline-flex items-center gap-1 rounded-lg border border-outline-variant bg-surface px-2.5 py-1.5 text-xs font-medium text-on-surface shadow-sm hover:bg-surface-container-low"
+                title="Thoát chế độ chữa đề trên khung video"
+                aria-label="Thoát chữa đề trên video">
+                <span class="material-symbols-outlined text-[16px]">close_fullscreen</span>
+                Thoát
             </button>
         @endif
         <span data-q-index-label class="text-xs text-on-surface-variant">—</span>
