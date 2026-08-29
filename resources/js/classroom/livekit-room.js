@@ -520,7 +520,7 @@ export function mountLivekitRoom(root) {
             identity: participant.identity,
             userId: userIdFromIdentity(participant.identity) ?? (meta.user_id != null ? Number(meta.user_id) : null),
             name: participant.name || meta.name || participant.identity,
-            micOn: participantMicActive(participant),
+            micOn: isSelf ? micOn : participantMicActive(participant),
             isHost: isHostParticipant(participant) || (isSelf && isLocalHost) || meta.is_host === true,
             isSelf,
             avatar_url: meta.avatar_url ?? fallback.avatar_url ?? null,
@@ -593,7 +593,7 @@ export function mountLivekitRoom(root) {
 
                 if (Boolean(liveConfig.can_moderate) && ! participant.isHost && ! participant.isSelf) {
                     const micBtn = iconButton({
-                        icon: participant.micOn ? 'mic_off' : 'mic',
+                        icon: participant.micOn ? 'mic' : 'mic_off',
                         label: participant.micOn ? 'Tắt mic' : 'Bật mic',
                         onClick: async () => {
                             const shouldMute = participant.micOn;
@@ -625,7 +625,12 @@ export function mountLivekitRoom(root) {
                         label: 'Kick khỏi phòng',
                         danger: true,
                         onClick: async () => {
-                            await kickParticipant(participant.userId, participant.identity, kickBtn);
+                            await kickParticipant(
+                                participant.userId,
+                                participant.identity,
+                                kickBtn,
+                                participant.name,
+                            );
                         },
                     });
                     actions.appendChild(kickBtn);
@@ -657,9 +662,17 @@ export function mountLivekitRoom(root) {
         }
     };
 
-    const kickParticipant = async (userId, identity, button) => {
+    const kickParticipant = async (userId, identity, button, displayName = null) => {
         const template = String(liveConfig.kick_member_url_template ?? liveConfig.ban_member_url_template ?? '');
         if (! template || ! userId || ! isRoomUsable()) {
+            return;
+        }
+
+        const who = String(displayName || identity || 'thành viên này').trim();
+        const confirmed = window.confirm(
+            `Kick “${who}” khỏi phòng live?\nHọ sẽ bị ngắt kết nối ngay và không thể ở lại buổi này.`,
+        );
+        if (! confirmed) {
             return;
         }
 
