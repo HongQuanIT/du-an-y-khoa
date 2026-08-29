@@ -2,6 +2,11 @@
 
 ## 2026-08-29
 
+### Classroom live — chat avatar, emotion gọn, sửa nút mic
+- Chat kiểu Facebook: avatar + tên cho người khác; tin của mình căn phải không hiện avatar.
+- Emotion 1 chip/lần (avatar + emoji + tên), bay chậm ~4s; nút tim/like trên Studio giảng viên.
+- Sửa nút mic học viên: bind mọi control bar (desktop/mobile), sync trạng thái đúng.
+
 ### Classroom live — mic học viên, gọi từ giơ tay, chống feedback
 - Học viên teach: mic mặc định tắt, tự bật/tắt; AEC/NS/AGC; tip dùng tai nghe.
 - Host mute/unmute remote qua DataChannel + API `speakers/{user}/mute|unmute`; Echo `speaker.updated`.

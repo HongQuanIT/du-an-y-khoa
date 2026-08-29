@@ -18,6 +18,7 @@ use Modules\Classroom\Http\Requests\SendMessageRequest;
 use Modules\Classroom\Models\Classroom;
 use Modules\Classroom\Models\LiveSession;
 use Modules\Classroom\Models\LiveSessionMessage;
+use Modules\Classroom\Support\LiveUserPresenter;
 
 final class LiveMessageApiController extends Controller
 {
@@ -57,10 +58,7 @@ final class LiveMessageApiController extends Controller
                 'type' => $message->type->value,
                 'is_pinned' => $message->is_pinned,
                 'created_at' => $message->created_at?->toIso8601String(),
-                'user' => [
-                    'id' => $message->user?->getKey(),
-                    'name' => $message->user?->name,
-                ],
+                'user' => LiveUserPresenter::toArray($message->user),
             ],
         ], 201);
     }

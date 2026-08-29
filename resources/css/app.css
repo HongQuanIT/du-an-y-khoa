@@ -502,33 +502,75 @@ mark[data-hl='#10b981'] {
     color: inherit;
 }
 
-/* Classroom live — Meet-style floating reactions */
+/* Classroom live — compact named reactions */
 @keyframes live-reaction-float {
     0% {
-        transform: translate3d(0, 0, 0) scale(0.55) rotate(-8deg);
+        transform: translate3d(0, 0, 0) scale(0.9);
         opacity: 0;
     }
-    12% {
+    8% {
         opacity: 1;
-        transform: translate3d(var(--live-drift-mid, 8px), -12vh, 0) scale(1.15) rotate(4deg);
+        transform: translate3d(0, -4vh, 0) scale(1);
+    }
+    75% {
+        opacity: 1;
+        transform: translate3d(calc(var(--live-drift, 12px) * 0.7), -32vh, 0) scale(1);
     }
     100% {
-        transform: translate3d(var(--live-drift, 28px), -95vh, 0) scale(1) rotate(-4deg);
+        transform: translate3d(var(--live-drift, 12px), -42vh, 0) scale(0.96);
         opacity: 0;
     }
 }
 
+.live-reaction-chip {
+    position: absolute;
+    bottom: 10%;
+    left: var(--live-x, 72%);
+    z-index: 40;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    max-width: 11rem;
+    padding: 0.2rem 0.45rem 0.2rem 0.2rem;
+    border-radius: 9999px;
+    background: rgb(15 23 42 / 0.72);
+    color: #fff;
+    font-size: 0.7rem;
+    line-height: 1;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgb(0 0 0 / 0.28);
+    animation: live-reaction-float 4s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+    will-change: transform, opacity;
+}
+
+.live-reaction-chip__avatar {
+    box-shadow: 0 0 0 1px rgb(255 255 255 / 0.35);
+}
+
+.live-reaction-chip__emoji {
+    font-size: 0.95rem;
+    line-height: 1;
+}
+
+.live-reaction-chip__name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 6.5rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+/* legacy class kept for safety if old markup remains */
 .live-reaction-bubble {
     position: absolute;
     bottom: 12%;
     left: var(--live-x, 72%);
     z-index: 40;
-    font-size: clamp(1.75rem, 3vw, 2.5rem);
+    font-size: 1.25rem;
     line-height: 1;
     pointer-events: none;
-    filter: drop-shadow(0 4px 10px rgb(0 0 0 / 0.35));
-    animation: live-reaction-float 2.8s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
-    will-change: transform, opacity;
+    animation: live-reaction-float 4s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
 }
 
 .material-symbols-outlined {

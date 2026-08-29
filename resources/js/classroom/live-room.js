@@ -74,10 +74,26 @@ export function mountLiveRoom(root) {
         return json.data ?? json;
     };
 
-    const escapeHtml = (s) => String(s)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
+    const buildAvatarEl = (user, sizeClass = 'size-8') => {
+        const wrap = document.createElement('div');
+        wrap.className = `${sizeClass} shrink-0 overflow-hidden rounded-full bg-primary/15 text-primary ring-1 ring-black/5`;
+        wrap.title = String(user?.name ?? '');
+        const url = user?.avatar_url;
+        if (url) {
+            const img = document.createElement('img');
+            img.src = String(url);
+            img.alt = String(user?.name ?? '');
+            img.className = 'size-full object-cover';
+            wrap.appendChild(img);
+        } else {
+            const initial = document.createElement('span');
+            initial.className = 'flex size-full items-center justify-center text-[11px] font-semibold';
+            initial.textContent = String(user?.avatar_initial || user?.name?.[0] || '?').toUpperCase().slice(0, 1);
+            wrap.appendChild(initial);
+        }
+
+        return wrap;
+    };
 
     const buildMessageEl = (msg, optimistic = false) => {
         const isOwnMessage = msg.type !== 'system'
@@ -93,32 +109,58 @@ export function mountLiveRoom(root) {
             notice.className = 'max-w-[90%] rounded-lg bg-primary/10 px-3 py-2 text-[13px] text-primary';
             notice.textContent = String(msg.body ?? '');
             row.appendChild(notice);
+
             return row;
         }
 
-        row.className = `flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`;
+        // Facebook-style: others left + avatar; own messages right without avatar.
+        row.className = `flex items-end gap-2 ${isOwnMessage ? 'justify-end' : 'justify-start'}`;
+
+        if (! isOwnMessage) {
+            row.appendChild(buildAvatarEl(msg.user, 'size-8'));
+        }
+
+        const col = document.createElement('div');
+        col.className = `flex min-w-0 max-w-[78%] flex-col ${isOwnMessage ? 'items-end' : 'items-start'}`;
+
+        if (! isOwnMessage) {
+            const name = document.createElement('p');
+            name.className = 'mb-0.5 px-1 text-[11px] font-medium text-on-surface-variant';
+            name.textContent = String(msg.user?.name ?? '—');
+            col.appendChild(name);
+        }
 
         const bubble = document.createElement('div');
-        bubble.className = `max-w-[80%] rounded-2xl px-4 py-3 text-[13px] ${
+        bubble.className = `rounded-2xl px-3 py-2 text-[13px] leading-snug ${
             isOwnMessage
-                ? 'bg-primary text-on-primary'
-                : 'bg-surface-container text-on-surface'
+                ? 'rounded-br-md bg-primary text-on-primary'
+                : 'rounded-bl-md bg-surface-container text-on-surface'
         }`;
 
-        const meta = document.createElement('div');
-        meta.className = 'mb-1 flex items-center gap-1 text-[11px] opacity-70';
-        meta.innerHTML = `
-            <span>${escapeHtml(isOwnMessage ? 'Bạn' : (msg.user?.name ?? '—'))}</span>
-            ${msg.type === 'question' ? '<span class="rounded bg-secondary/15 px-1">Hỏi</span>' : ''}
-            ${msg.is_pinned ? '<span class="rounded bg-amber-100 px-1 text-amber-800">Ghim</span>' : ''}
-        `;
-        bubble.appendChild(meta);
+        if (msg.type === 'question' || msg.is_pinned) {
+            const badges = document.createElement('div');
+            badges.className = `mb-1 flex flex-wrap gap-1 text-[10px] ${isOwnMessage ? 'text-on-primary/80' : 'opacity-70'}`;
+            if (msg.type === 'question') {
+                const q = document.createElement('span');
+                q.className = 'rounded bg-black/10 px-1';
+                q.textContent = 'Hỏi';
+                badges.appendChild(q);
+            }
+            if (msg.is_pinned) {
+                const p = document.createElement('span');
+                p.className = 'rounded bg-amber-100 px-1 text-amber-800';
+                p.textContent = 'Ghim';
+                badges.appendChild(p);
+            }
+            bubble.appendChild(badges);
+        }
 
         const body = document.createElement('p');
-        body.className = 'whitespace-pre-wrap';
+        body.className = 'whitespace-pre-wrap break-words';
         body.textContent = String(msg.body ?? '');
         bubble.appendChild(body);
-        row.appendChild(bubble);
+        col.appendChild(bubble);
+        row.appendChild(col);
 
         if (optimistic) {
             row.classList.add('opacity-60');
@@ -793,37 +835,50 @@ export function mountLiveRoom(root) {
         }
     };
 
-    const spawnReaction = (type, burst = 1) => {
+    const spawnReaction = (type, user = null) => {
         const layers = root.querySelectorAll('[data-live-reactions]');
         if (layers.length === 0) {
             return;
         }
         const emoji = type === 'like' ? '👍' : '❤️';
-        const count = Math.max(1, Math.min(burst, 3));
+        const label = Number(user?.id) === currentUserId
+            ? 'Bạn'
+            : String(user?.name ?? '').trim();
         layers.forEach((layer) => {
             if (! (layer instanceof HTMLElement)) {
                 return;
             }
-            for (let i = 0; i < count; i += 1) {
-                const el = document.createElement('span');
-                el.className = 'live-reaction-bubble';
-                el.textContent = emoji;
-                const x = 58 + Math.random() * 30;
-                const drift = (Math.random() * 80) - 40;
-                const driftMid = drift * 0.4;
-                el.style.setProperty('--live-x', `${x}%`);
-                el.style.setProperty('--live-drift', `${drift}px`);
-                el.style.setProperty('--live-drift-mid', `${driftMid}px`);
-                el.style.animationDelay = `${i * 90}ms`;
-                layer.appendChild(el);
-                window.setTimeout(() => el.remove(), 3200 + i * 90);
-            }
+            const el = document.createElement('div');
+            el.className = 'live-reaction-chip';
+            el.style.setProperty('--live-x', `${62 + Math.random() * 22}%`);
+            el.style.setProperty('--live-drift', `${(Math.random() * 36) - 18}px`);
+
+            const face = buildAvatarEl(user ?? { name: label || '?', avatar_initial: (label || '?').slice(0, 1) }, 'size-5');
+            face.classList.add('live-reaction-chip__avatar');
+
+            const emojiEl = document.createElement('span');
+            emojiEl.className = 'live-reaction-chip__emoji';
+            emojiEl.textContent = emoji;
+
+            const nameEl = document.createElement('span');
+            nameEl.className = 'live-reaction-chip__name';
+            nameEl.textContent = label || 'Học viên';
+
+            el.append(face, emojiEl, nameEl);
+            layer.appendChild(el);
+            window.setTimeout(() => el.remove(), 4000);
         });
     };
 
     const sendReaction = async (type) => {
         ensureAudio();
-        spawnReaction(type, 2);
+        const selfUser = {
+            id: currentUserId,
+            name: 'Bạn',
+            avatar_url: config.user_avatar_url ?? null,
+            avatar_initial: config.user_avatar_initial ?? 'B',
+        };
+        spawnReaction(type, selfUser);
         playReactionSound(type);
 
         const url = apiUrls.react ?? String(config.bootstrap_url).replace('/bootstrap', '/react');
@@ -1040,7 +1095,7 @@ export function mountLiveRoom(root) {
                 if (Number(e.user?.id) === currentUserId) {
                     return;
                 }
-                spawnReaction(e.type === 'like' ? 'like' : 'heart', 2);
+                spawnReaction(e.type === 'like' ? 'like' : 'heart', e.user ?? null);
                 playReactionSound(e.type === 'like' ? 'like' : 'heart');
             })
             .listen('.session.ended', () => {

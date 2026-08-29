@@ -16,6 +16,7 @@ use Modules\Classroom\Models\LiveSessionMessage;
 use Modules\Classroom\Services\LiveKitTokenService;
 use Modules\Classroom\Services\LiveQuestionPanelService;
 use Modules\Classroom\Services\LiveTextMarksService;
+use Modules\Classroom\Support\LiveUserPresenter;
 
 final class LiveRoomApiController extends Controller
 {
@@ -197,10 +198,7 @@ final class LiveRoomApiController extends Controller
             'type' => $message->type->value,
             'is_pinned' => $message->is_pinned,
             'created_at' => $message->created_at?->toIso8601String(),
-            'user' => [
-                'id' => $message->user?->getKey(),
-                'name' => $message->user?->name,
-            ],
+            'user' => LiveUserPresenter::toArray($message->user),
         ];
     }
 }
