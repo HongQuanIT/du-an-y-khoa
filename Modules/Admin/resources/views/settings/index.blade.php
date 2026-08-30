@@ -46,6 +46,8 @@
                             $dotName = "settings.{$groupKey}.{$fieldKey}";
                             $value = $fieldValue($groupKey, $fieldKey, $field);
                             $isWide = ($field['textarea'] ?? false) || $field['type'] === 'boolean';
+                            $integerMin = $field['min'] ?? null;
+                            $integerMax = $field['max'] ?? null;
                         @endphp
 
                         <div @class([
@@ -74,7 +76,8 @@
                                 <input id="{{ $groupKey }}_{{ $fieldKey }}" name="{{ $name }}"
                                     type="{{ $field['type'] === 'integer' ? 'number' : 'text' }}"
                                     value="{{ $value }}"
-                                    @if ($field['type'] === 'integer') min="1" max="500" @endif
+                                    @if ($field['type'] === 'integer' && $integerMin !== null) min="{{ $integerMin }}" @endif
+                                    @if ($field['type'] === 'integer' && $integerMax !== null) max="{{ $integerMax }}" @endif
                                     class="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2 font-body-md text-body-md text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
                             @endif
 

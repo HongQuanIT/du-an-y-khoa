@@ -25,6 +25,7 @@ class UserSeeder extends Seeder
         ['Content Editor', 'editor@medlearn.local', Role::ContentEditor],
 
         ['Giảng viên Minh', 'instructor@medlearn.local', Role::Instructor],
+        ['Cộng tác viên Demo', 'partner@medlearn.local', Role::Partner],
         ['Nguyễn Văn An', 'student@medlearn.local', Role::Student],
         ['Trần Thị Bình', 'student2@medlearn.local', Role::Student],
         ['Lê Hoàng Cường', 'student3@medlearn.local', Role::Student],

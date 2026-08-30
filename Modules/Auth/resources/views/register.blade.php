@@ -12,9 +12,15 @@
             </div>
         @endif
 
+        @if (! empty($inviteCode))
+            <div class="mb-6 rounded-lg border border-outline-variant bg-surface-container-low px-4 py-3 font-body-sm text-body-sm text-on-surface">
+                Bạn đang đăng ký với mã mời <span class="font-bold tracking-wide">{{ $inviteCode }}</span>.
+            </div>
+        @endif
+
         <x-auth.errors />
 
-        <form class="space-y-5" action="{{ route('register', \Modules\Billing\Support\CheckoutIntent::authQuery($planPriceId ?? null)) }}" method="post"
+        <form class="space-y-5" action="{{ route('register', array_merge(\Modules\Billing\Support\CheckoutIntent::authQuery($planPriceId ?? null), \Modules\Partner\Support\PartnerInviteIntent::authQuery($inviteCode ?? null))) }}" method="post"
             x-data="{
                 password: '',
                 get score() {
@@ -40,12 +46,18 @@
             @if (! empty($planPriceId))
                 <input type="hidden" name="plan_price_id" value="{{ $planPriceId }}">
             @endif
+            @if (! empty($inviteCode))
+                <input type="hidden" name="ref" value="{{ $inviteCode }}">
+            @endif
 
             <x-auth.input name="name" label="Họ và tên" placeholder="Nguyễn Văn An" required autofocus
                 autocomplete="name" />
 
             <x-auth.input name="email" label="Email" type="email" placeholder="bacsi@mebpro.vn" required
                 autocomplete="email" />
+
+            <x-auth.input name="invite_code" label="Mã mời (nếu có)" value="{{ old('invite_code', $inviteCode ?? '') }}"
+                placeholder="VD: CTV2026" autocomplete="off" />
 
             <x-auth.password-input name="password" label="Mật khẩu" x-model="password" required
                 autocomplete="new-password">

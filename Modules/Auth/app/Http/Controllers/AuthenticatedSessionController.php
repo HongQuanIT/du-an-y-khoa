@@ -24,13 +24,14 @@ use Modules\Auth\Http\Requests\LoginRequest;
 use Modules\Billing\Support\CheckoutIntent;
 
 /**
- * Session lifecycle for the `web` guard: student, instructor, admin portals.
+ * Session lifecycle for the `web` guard: student, instructor, partner, admin portals.
  */
 final class AuthenticatedSessionController extends Controller
 {
     public function create(Request $request): View
     {
         CheckoutIntent::capture($request);
+        \Modules\Partner\Support\PartnerInviteIntent::capture($request);
 
         return view('auth::login', [
             'planPriceId' => CheckoutIntent::peek($request),
@@ -40,6 +41,7 @@ final class AuthenticatedSessionController extends Controller
     public function store(LoginRequest $request, AttemptLoginAction $action): RedirectResponse
     {
         CheckoutIntent::capture($request);
+        \Modules\Partner\Support\PartnerInviteIntent::capture($request);
 
         $user = $action->handle($request->toData(), LoginPortal::Student);
 
@@ -72,6 +74,20 @@ final class AuthenticatedSessionController extends Controller
             $request,
             HomePath::for($user),
             LoginPortal::Instructor,
+        );
+    }
+
+    public function storePartner(LoginRequest $request, AttemptLoginAction $action): RedirectResponse
+    {
+        $user = $action->handle($request->toData(), LoginPortal::Partner);
+
+        $request->session()->regenerate();
+        TwoFactorSession::clear($request);
+
+        return PortalRedirect::afterLogin(
+            $request,
+            HomePath::for($user),
+            LoginPortal::Partner,
         );
     }
 
@@ -111,6 +127,18 @@ final class AuthenticatedSessionController extends Controller
         $request->session()->regenerateToken();
 
         return redirect()->route('teach.login');
+    }
+
+    public function destroyPartner(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        $this->auditLogout($user, AuditPortal::Partner);
+        Auth::guard('web')->logout();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('partner.login');
     }
 
     public function destroyAdmin(Request $request): RedirectResponse

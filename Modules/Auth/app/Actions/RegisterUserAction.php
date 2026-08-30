@@ -12,6 +12,8 @@ use App\Support\Enums\Role;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\DB;
 use Modules\Auth\Data\RegisterData;
+use Modules\Partner\Actions\AttributePartnerReferralAction;
+use Modules\Partner\Enums\AttributionSource;
 use Spatie\Permission\Models\Role as RoleModel;
 
 /**
@@ -23,6 +25,10 @@ use Spatie\Permission\Models\Role as RoleModel;
 final class RegisterUserAction
 {
     use AsAction;
+
+    public function __construct(
+        private readonly AttributePartnerReferralAction $attributeReferral,
+    ) {}
 
     public function handle(RegisterData $data): User
     {
@@ -36,6 +42,14 @@ final class RegisterUserAction
 
             RoleModel::findOrCreate(Role::Student->value, 'web');
             $user->assignRole(Role::Student->value);
+
+            if ($data->inviteCode !== null) {
+                $this->attributeReferral->handle(
+                    $user,
+                    $data->inviteCode,
+                    $data->inviteFromField ? AttributionSource::CodeField : AttributionSource::Link,
+                );
+            }
 
             return $user;
         });

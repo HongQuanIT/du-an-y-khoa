@@ -11,6 +11,7 @@ namespace Modules\Admin\Enums;
  */
 enum AuditAction: string
 {
+    case UserCreated = 'admin.user.create';
     case UserRoleChanged = 'admin.user.role_change';
     case UserStatusChanged = 'admin.user.status_change';
     case UserEmailVerified = 'admin.user.email_verified';
@@ -34,6 +35,7 @@ enum AuditAction: string
     public function label(): string
     {
         return match ($this) {
+            self::UserCreated => 'Tạo người dùng',
             self::UserRoleChanged => 'Đổi vai trò người dùng',
             self::UserStatusChanged => 'Đổi trạng thái người dùng',
             self::UserEmailVerified => 'Xác minh email người dùng',

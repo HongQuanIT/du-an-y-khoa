@@ -17,6 +17,10 @@
                     <dd class="text-on-surface">{{ $user->id }}</dd>
                 </div>
                 <div>
+                    <dt class="font-label-sm text-label-sm text-on-surface-variant">Portal</dt>
+                    <dd class="text-on-surface">{{ \App\Support\Enums\Role::tryFromName($user->primaryRoleName())?->portal()->label() ?? '—' }}</dd>
+                </div>
+                <div>
                     <dt class="font-label-sm text-label-sm text-on-surface-variant">Vai trò</dt>
                     <dd class="text-on-surface">{{ \App\Support\Enums\Role::tryFromName($user->primaryRoleName())?->label() ?? '—' }}</dd>
                 </div>
@@ -45,15 +49,14 @@
             @if (! $canManage)
                 <p class="font-body-sm text-body-sm text-on-surface-variant">Bạn không thể quản lý tài khoản này (thiếu quyền hoặc tự thao tác).</p>
             @else
-                <form method="post" action="{{ route('admin.users.role', $user) }}" class="space-y-2">
+                <form method="post" action="{{ route('admin.users.role', $user) }}" class="space-y-3">
                     @csrf
                     @method('PATCH')
-                    <label class="block font-label-sm text-label-sm text-on-surface-variant" for="role">Đổi vai trò</label>
-                    <select id="role" name="role" class="w-full rounded-lg bg-surface-container-low px-3 py-2 font-body-sm">
-                        @foreach ($assignableRoles as $role)
-                            <option value="{{ $role->value }}" @selected($user->primaryRoleName() === $role->value)>{{ $role->label() }}</option>
-                        @endforeach
-                    </select>
+                    <p class="font-label-sm text-label-sm text-on-surface-variant">Đổi portal / vai trò</p>
+                    @include('admin::partials.portal-role-picker', [
+                        'assignableRoles' => $assignableRoles,
+                        'selectedRole' => old('role', $user->primaryRoleName()),
+                    ])
                     <button type="submit" class="w-full rounded-lg bg-primary px-3 py-2 font-label-md text-on-primary">Lưu vai trò</button>
                 </form>
 

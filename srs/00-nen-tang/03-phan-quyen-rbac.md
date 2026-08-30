@@ -13,12 +13,14 @@
 
 | Portal | Login | Ai vào | Không vào |
 |--------|-------|--------|-----------|
-| **Learner** | `/login` | `student` | staff, instructor |
-| **Instructor (Teach)** | `/teach/login` | `instructor` | student, staff CMS |
-| **Admin** | `/admin/login` | `content_editor`, `admin`, `super_admin` | student, instructor |
+| **Learner** | `/login` | `student` | staff, instructor, partner |
+| **Instructor (Teach)** | `/teach/login` | `instructor` | student, staff CMS, partner |
+| **Partner (CTV)** | `/partner/login` | `partner` | student, instructor, staff |
+| **Admin** | `/admin/login` | `content_editor`, `admin`, `super_admin` | student, instructor, partner |
 
 - Giảng viên **không** dùng layout học viên và **không** vào `/admin` (CMS/users/RBAC).
 - Admin/Super Admin **không** vận hành lớp hàng ngày trên `/teach`; chỉ **giám sát** (`classroom.oversee`) trên `/admin`.
+- CTV (Module 46) chỉ dùng `/partner`; Admin tạo/gán role `partner` tại `/admin/partners`.
 - Chi tiết Classroom: `srs/modules/44-classroom-live-review.md` §16.
 
 ## 2. Danh sách Role
@@ -29,6 +31,7 @@
 | Student (Free) | `student` | Mặc định sau đăng ký |
 | Premium Student | `student` + subscription `premium` | Gating theo subscription; có thể host lớp **cộng đồng** trên `/classes` |
 | **Instructor** | `instructor` | Portal `/teach`; host lớp chữa đề vận hành (feedback QBank / exam); **không** phụ thuộc Premium |
+| **Partner (CTV)** | `partner` | Portal `/partner`; mã mời + theo dõi referral + hoa hồng (Module 46) |
 | Content Editor | `content_editor` | CMS nội dung (`/admin`) |
 | Admin | `admin` | Quản trị + oversight lớp |
 | Super Admin | `super_admin` | Toàn quyền + oversight |
@@ -81,6 +84,20 @@ live.start, live.join, live.force_end, instructor.assign
 # 🔵 Phase 2 (Organization, chưa dùng): org.manage_members, org.manage_billing, org.view_reports
 ai.use, analytics.advanced, exam.take, exam.manage
 ```
+
+### 4.1 Nhóm theo portal (admin UI)
+
+Catalog `/admin/permissions` và ma trận role nhóm theo **4 portal** (không theo prefix resource):
+
+| Portal | Roles | Permission chính |
+|--------|-------|------------------|
+| Học viên | `student` | `session.*`, `exam.take`, `classroom.join`, `live.join`, `question.view`, `library.view`, … |
+| Giảng viên | `instructor` | `classroom.create/manage/moderate`, `live.start`, … |
+| Admin | `content_editor`, `admin`, `super_admin` | CMS, user/RBAC, oversight, billing, `admin.partners.*`, … |
+| Cộng tác viên | `partner` | `partner.portal`, `partner.codes.manage`, `partner.referrals.view`, `partner.commissions.view` |
+
+- Mỗi permission có **một portal chính** (catalog). Ability dùng chung vẫn hiện badge “cũng dùng bởi …” theo ma trận role.
+- Tạo/đổi user: chọn **portal → role**; permission **không** gán trực tiếp trên user (lấy từ role).
 
 | Permission Classroom | Ai có | Ý nghĩa |
 |----------------------|-------|---------|

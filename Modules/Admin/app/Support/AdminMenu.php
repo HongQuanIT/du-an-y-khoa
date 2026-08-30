@@ -148,6 +148,26 @@ final class AdminMenu
                 'match' => 'admin.billing.gateways.*',
             ],
             [
+                'label' => 'Cộng tác viên',
+                'icon' => 'handshake',
+                'route' => 'admin.partners.index',
+                'permission' => Permission::AdminPartnersManage->value,
+                'match' => [
+                    'admin.partners.index',
+                    'admin.partners.create',
+                    'admin.partners.show',
+                    'admin.partners.store',
+                    'admin.partners.update',
+                ],
+            ],
+            [
+                'label' => 'Chi trả CTV',
+                'icon' => 'account_balance_wallet',
+                'route' => 'admin.partners.payouts.index',
+                'permission' => Permission::AdminPartnersPayouts->value,
+                'match' => 'admin.partners.payouts.*',
+            ],
+            [
                 'label' => 'Phân quyền',
                 'icon' => 'admin_panel_settings',
                 'route' => 'admin.roles.index',

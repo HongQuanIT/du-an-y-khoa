@@ -14,5 +14,6 @@
     "AiAssistant": true,
     "Admin": true,
     "Landing": true,
-    "Classroom": true
+    "Classroom": true,
+    "Partner": true
 }

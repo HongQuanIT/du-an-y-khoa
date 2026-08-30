@@ -12,6 +12,8 @@ use Modules\Admin\Database\Seeders\MenuSeeder;
 use Modules\Admin\Database\Seeders\SettingsSeeder;
 use Modules\Billing\Database\Seeders\BillingDatabaseSeeder;
 use Modules\Library\Database\Seeders\LibraryDatabaseSeeder;
+use Modules\Partner\Database\Seeders\PartnerDatabaseSeeder;
+use Modules\Partner\Database\Seeders\PartnerSettingsSeeder;
 use Modules\QuestionBank\Database\Seeders\QuestionBankDatabaseSeeder;
 use Modules\Search\Database\Seeders\SearchDatabaseSeeder;
 use Modules\StudyPlan\Database\Seeders\StudyPlanDatabaseSeeder;
@@ -44,8 +46,10 @@ class DatabaseSeeder extends Seeder
         $this->call(StudyPlanDatabaseSeeder::class);
 
         $this->call(BillingDatabaseSeeder::class);
+        $this->call(PartnerDatabaseSeeder::class);
 
         $this->call(SettingsSeeder::class);
+        $this->call(PartnerSettingsSeeder::class);
         $this->call(FaqSeeder::class);
         $this->call(CmsPageSeeder::class);
         $this->call(BannerSeeder::class);

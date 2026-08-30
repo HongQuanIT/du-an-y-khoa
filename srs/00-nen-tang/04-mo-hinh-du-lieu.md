@@ -295,6 +295,17 @@ Index: `host_user_id`, `visibility`, `status`, `join_code`.
 ### Coupon
 `id, code, type(percent/fixed), value, max_redemptions, redeemed_count, valid_from/to, active`.
 
+### Partner (Module 46 — CTV / chia sẻ doanh thu)
+`partners(id, user_id UNIQUE, display_name, default_commission_rate_bps INT, status(active/suspended), timestamps)`.
+
+`partner_invite_codes(id, partner_id FK, code UNIQUE, label, starts_at null, expires_at null, max_uses null, use_count, commission_rate_bps null, is_active, timestamps)`. Index `code`.
+
+`partner_attributions(id, partner_id FK, invite_code_id FK, referred_user_id UNIQUE, attributed_at, source(link/code_field), timestamps)`.
+
+`partner_commissions(id, partner_id FK, attribution_id FK, payment_id UNIQUE → billing_payments, referred_user_id, gross_cents, rate_bps, commission_cents, status(pending/approved/paid/void), payout_id null, timestamps)`. Index `(partner_id, status)`.
+
+`partner_payouts(id, partner_id FK, period_from, period_to, amount_cents, status(draft/approved/paid/cancelled), paid_at null, note null, created_by FK users, timestamps)`.
+
 ## 11. Nhóm Hệ thống
 
 ### Notification

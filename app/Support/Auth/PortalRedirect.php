@@ -37,6 +37,10 @@ final class PortalRedirect
             return LoginPortal::Instructor;
         }
 
+        if ($path === '/partner' || str_starts_with($path, '/partner/')) {
+            return LoginPortal::Partner;
+        }
+
         return LoginPortal::Student;
     }
 }

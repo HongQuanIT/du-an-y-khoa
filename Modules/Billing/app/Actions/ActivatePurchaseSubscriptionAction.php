@@ -12,6 +12,7 @@ use Modules\Billing\Models\CheckoutSession;
 use Modules\Billing\Models\Invoice;
 use Modules\Billing\Models\Payment;
 use Modules\Billing\Models\Subscription;
+use Modules\Partner\Actions\RecordPartnerCommissionAction;
 
 /**
  * Activate Premium after a successful payment for a checkout session.
@@ -23,6 +24,7 @@ final class ActivatePurchaseSubscriptionAction
 
     public function __construct(
         private readonly InvalidateEntitlementCacheAction $invalidateCache,
+        private readonly RecordPartnerCommissionAction $recordCommission,
     ) {}
 
     /**
@@ -141,8 +143,9 @@ final class ActivatePurchaseSubscriptionAction
 
             if ($pendingPayment !== null) {
                 $pendingPayment->forceFill($paymentAttrs)->save();
+                $payment = $pendingPayment;
             } else {
-                Payment::query()->create(array_merge($paymentAttrs, [
+                $payment = Payment::query()->create(array_merge($paymentAttrs, [
                     'checkout_session_id' => $locked->getKey(),
                 ]));
             }
@@ -153,6 +156,8 @@ final class ActivatePurchaseSubscriptionAction
             ])->save();
 
             $this->invalidateCache->handle((int) $locked->user_id);
+
+            $this->recordCommission->handle($payment, (int) $locked->user_id);
 
             return $subscription->load(['plan', 'planPrice']);
         });

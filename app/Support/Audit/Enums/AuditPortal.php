@@ -8,6 +8,7 @@ enum AuditPortal: string
 {
     case Admin = 'admin';
     case Teach = 'teach';
+    case Partner = 'partner';
     case Student = 'student';
     case Api = 'api';
     case System = 'system';
