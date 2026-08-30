@@ -13,6 +13,7 @@ use Illuminate\View\View;
 use Modules\Auth\Actions\RegisterUserAction;
 use Modules\Auth\Http\Requests\RegisterRequest;
 use Modules\Billing\Support\CheckoutIntent;
+use Modules\Partner\Support\PartnerInviteIntent;
 
 /**
  * Self-service sign up for the `web` guard (learners only).
@@ -24,9 +25,11 @@ final class RegisteredUserController extends Controller
         abort_unless(setting('features.registration_enabled', true), 404);
 
         CheckoutIntent::capture($request);
+        PartnerInviteIntent::capture($request);
 
         return view('auth::register', [
             'planPriceId' => CheckoutIntent::peek($request),
+            'inviteCode' => PartnerInviteIntent::peek($request),
         ]);
     }
 
@@ -35,8 +38,11 @@ final class RegisteredUserController extends Controller
         abort_unless(setting('features.registration_enabled', true), 404);
 
         CheckoutIntent::capture($request);
+        PartnerInviteIntent::capture($request);
 
         $user = $action->handle($request->toData());
+
+        PartnerInviteIntent::clear($request);
 
         Auth::guard('web')->login($user);
 

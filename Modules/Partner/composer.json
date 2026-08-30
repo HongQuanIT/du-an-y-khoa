@@ -1,0 +1,28 @@
+{
+    "name": "medlearn/partner",
+    "description": "Partner / affiliate revenue share",
+    "authors": [
+        {
+            "name": "MedLearn Team",
+            "email": "dev@medlearn.local"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {}
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\Partner\\": "app/",
+            "Modules\\Partner\\Database\\Factories\\": "database/factories/",
+            "Modules\\Partner\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Partner\\Tests\\": "tests/"
+        }
+    }
+}

@@ -10,6 +10,7 @@ use Modules\Admin\Database\Seeders\FaqSeeder;
 use Modules\Admin\Database\Seeders\MenuSeeder;
 use Modules\Admin\Database\Seeders\SettingsSeeder;
 use Modules\Billing\Database\Seeders\BillingDatabaseSeeder;
+use Modules\Partner\Database\Seeders\PartnerSettingsSeeder;
 use Modules\QuestionBank\Database\Seeders\MedicalKnowledgeTaxonomySeeder;
 use Modules\QuestionBank\Database\Seeders\MedicalLicensingExamBlueprintSeeder;
 
@@ -37,6 +38,7 @@ class StagingSeeder extends Seeder
             BillingDatabaseSeeder::class,
 
             SettingsSeeder::class,
+            PartnerSettingsSeeder::class,
             CmsPageSeeder::class,
             MenuSeeder::class,
             FaqSeeder::class,

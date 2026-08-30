@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-08-30
+
+### Liên hệ công khai + hộp thư admin
+- Form `/contact` lưu inquiry (mã tham chiếu, honeypot, rate limit), thông báo staff khi có tin mới.
+- Admin `/admin/contacts`: lọc theo trạng thái/chủ đề, gán xử lý, ghi chú nội bộ, audit; quyền `contact.view` / `contact.manage`.
+
+### Partner / CTV (Module 46) + RBAC 4 portal
+- Thêm module Partner: portal `/partner`, mã mời, referral, hoa hồng, payout; admin quản lý CTV/cài đặt.
+- Tích hợp Auth (login portal partner, capture mã mời khi đăng ký), Billing ghi commission khi kích hoạt gói.
+- Nhóm permission/role admin theo 4 portal (Học viên, Giảng viên, Admin, CTV); catalog + ma trận role theo portal.
+- Tạo/đổi user portal-first (permission lấy từ role); CTV mới chuyển sang hoàn tất hồ sơ partner.
+
 ## 2026-08-29
 
 ### Classroom live — UI chữa đề + tách khung video/sidebar

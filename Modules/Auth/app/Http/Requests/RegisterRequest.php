@@ -8,6 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Modules\Auth\Data\RegisterData;
+use Modules\Partner\Support\PartnerInviteIntent;
 
 class RegisterRequest extends FormRequest
 {
@@ -21,6 +22,7 @@ class RegisterRequest extends FormRequest
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'confirmed', Password::defaults()],
             'terms' => ['accepted'],
+            'invite_code' => ['nullable', 'string', 'max:64'],
         ];
     }
 
@@ -38,10 +40,15 @@ class RegisterRequest extends FormRequest
 
     public function toData(): RegisterData
     {
+        $inviteFromField = filled($this->input('invite_code'));
+        $inviteCode = PartnerInviteIntent::resolveForRegistration($this);
+
         return new RegisterData(
             name: (string) $this->string('name'),
             email: (string) $this->string('email'),
             password: (string) $this->string('password'),
+            inviteCode: $inviteCode,
+            inviteFromField: $inviteFromField,
         );
     }
 }

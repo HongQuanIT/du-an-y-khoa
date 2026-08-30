@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
+use Modules\Landing\Http\Controllers\ContactController;
 use Modules\Landing\Http\Controllers\LandingController;
 use Modules\Landing\Http\Controllers\RobotsController;
 use Modules\Landing\Http\Controllers\SitemapController;
@@ -26,3 +27,7 @@ Route::controller(LandingController::class)->group(function (): void {
     Route::get('/privacy', 'privacy')->name('landing.privacy');
     Route::get('/faq', 'faq')->name('landing.faq');
 });
+
+Route::post('/contact', [ContactController::class, 'store'])
+    ->middleware('throttle:contact')
+    ->name('landing.contact.store');

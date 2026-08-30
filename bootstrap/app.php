@@ -1,8 +1,10 @@
 <?php
 
 use App\Http\Middleware\AssignRequestId;
+use App\Http\Middleware\CapturePartnerInvite;
 use App\Http\Middleware\EnsureInstructor;
 use App\Http\Middleware\EnsureLearner;
+use App\Http\Middleware\EnsurePartner;
 use App\Http\Middleware\EnsureStaffTwoFactor;
 use App\Http\Middleware\EnsureStudentTwoFactor;
 use App\Http\Middleware\EnsureSubscriptionActive;
@@ -44,6 +46,11 @@ return Application::configure(basePath: dirname(__DIR__))
                 ->prefix('teach')
                 ->name('teach.')
                 ->group(base_path('routes/teach.php'));
+
+            Route::middleware('web')
+                ->prefix('partner')
+                ->name('partner.')
+                ->group(base_path('routes/partner.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
@@ -51,7 +58,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->prepend(AssignRequestId::class);
 
         // Locale resolution for browser + API clients.
-        $middleware->web(append: [SetLocale::class, EnsureSystemIsAvailable::class, EnsureStudentTwoFactor::class]);
+        $middleware->web(append: [SetLocale::class, EnsureSystemIsAvailable::class, EnsureStudentTwoFactor::class, CapturePartnerInvite::class]);
 
         // API is JSON-only: force JSON negotiation, then resolve locale.
         $middleware->api(prepend: [ForceJsonResponse::class]);
@@ -70,6 +77,10 @@ return Application::configure(basePath: dirname(__DIR__))
                 return route('teach.login');
             }
 
+            if ($request->is('partner') || $request->is('partner/*')) {
+                return route('partner.login');
+            }
+
             return route('login');
         });
         $middleware->redirectUsersTo(fn (Request $request) => HomePath::for($request->user()));
@@ -86,6 +97,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'learner' => EnsureLearner::class,
             'instructor' => EnsureInstructor::class,
+            'partner' => EnsurePartner::class,
             'staff.2fa' => EnsureStaffTwoFactor::class,
             'subscription' => EnsureSubscriptionActive::class,
             'role' => RoleMiddleware::class,

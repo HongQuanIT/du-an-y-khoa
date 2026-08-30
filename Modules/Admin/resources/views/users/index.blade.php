@@ -1,15 +1,32 @@
 <x-layouts.admin title="Người dùng">
     <x-admin.page-header title="Người dùng"
-        description="Tìm kiếm, lọc và quản lý tài khoản trên hệ thống." />
+        description="Tìm kiếm, lọc và quản lý tài khoản trên hệ thống.">
+        <x-slot:actions>
+            @if ($canCreate)
+                <a href="{{ route('admin.users.create') }}"
+                    class="rounded-lg bg-primary px-3 py-2 font-label-md text-label-md text-on-primary hover:opacity-90">Tạo người dùng</a>
+            @endif
+        </x-slot:actions>
+    </x-admin.page-header>
 
     <x-admin.flash />
 
     <form method="get" action="{{ route('admin.users.index') }}"
-        class="mb-6 grid grid-cols-1 gap-3 rounded-xl border border-outline-variant bg-surface p-4 sm:grid-cols-4">
-        <div class="sm:col-span-2">
+        class="mb-6 grid grid-cols-1 gap-3 rounded-xl border border-outline-variant bg-surface p-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div class="sm:col-span-2 lg:col-span-2">
             <label class="mb-1 block font-label-sm text-label-sm text-on-surface-variant" for="q">Tìm kiếm</label>
             <input id="q" name="q" value="{{ $filters['q'] }}" type="search" placeholder="Tên hoặc email"
                 class="w-full rounded-lg border-none bg-surface-container-low px-3 py-2 font-body-sm text-body-sm focus:ring-2 focus:ring-primary">
+        </div>
+        <div>
+            <label class="mb-1 block font-label-sm text-label-sm text-on-surface-variant" for="portal">Portal</label>
+            <select id="portal" name="portal"
+                class="w-full rounded-lg border-none bg-surface-container-low px-3 py-2 font-body-sm text-body-sm focus:ring-2 focus:ring-primary">
+                <option value="">Tất cả</option>
+                @foreach ($portals as $portal)
+                    <option value="{{ $portal->value }}" @selected($filters['portal'] === $portal->value)>{{ $portal->label() }}</option>
+                @endforeach
+            </select>
         </div>
         <div>
             <label class="mb-1 block font-label-sm text-label-sm text-on-surface-variant" for="role">Vai trò</label>
@@ -31,7 +48,7 @@
                 @endforeach
             </select>
         </div>
-        <div class="sm:col-span-4 flex gap-2">
+        <div class="sm:col-span-2 lg:col-span-5 flex gap-2">
             <button type="submit"
                 class="rounded-lg bg-primary px-4 py-2 font-label-md text-label-md text-on-primary hover:opacity-90">Lọc</button>
             <a href="{{ route('admin.users.index') }}"
@@ -44,7 +61,7 @@
             <thead class="border-b border-outline-variant bg-surface-container-low font-label-md text-label-md text-on-surface-variant">
                 <tr>
                     <th class="px-4 py-3">Người dùng</th>
-                    <th class="px-4 py-3">Vai trò</th>
+                    <th class="px-4 py-3">Portal / Vai trò</th>
                     <th class="px-4 py-3">Trạng thái</th>
                     <th class="px-4 py-3">Email</th>
                     <th class="px-4 py-3"></th>
@@ -52,13 +69,19 @@
             </thead>
             <tbody>
                 @forelse ($users as $user)
+                    @php $roleEnum = \App\Support\Enums\Role::tryFromName($user->primaryRoleName()); @endphp
                     <tr class="border-b border-outline-variant/60 last:border-0">
                         <td class="px-4 py-3">
                             <div class="font-label-md text-label-md text-on-surface">{{ $user->name }}</div>
                             <div class="font-label-sm text-label-sm text-on-surface-variant">#{{ $user->id }}</div>
                         </td>
                         <td class="px-4 py-3 text-on-surface-variant">
-                            {{ \App\Support\Enums\Role::tryFromName($user->primaryRoleName())?->label() ?? '—' }}
+                            @if ($roleEnum)
+                                <div>{{ $roleEnum->portal()->label() }}</div>
+                                <div class="font-label-sm text-label-sm">{{ $roleEnum->label() }}</div>
+                            @else
+                                —
+                            @endif
                         </td>
                         <td class="px-4 py-3 text-on-surface-variant">
                             {{ ($user->status ?? \App\Support\Enums\UserStatus::Active)->label() }}

@@ -2,10 +2,12 @@
 
 namespace Modules\Notification\Providers;
 
+use App\Events\ContactInquirySubmitted;
 use App\Events\SupportMessageCreated;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 use Modules\Classroom\Events\LiveRecordingReady;
 use Modules\Classroom\Events\LiveSessionStarted;
+use Modules\Notification\Listeners\NotifyContactInquirySubmitted;
 use Modules\Notification\Listeners\NotifyLiveRecordingReady;
 use Modules\Notification\Listeners\NotifyLiveSessionStarted;
 use Modules\Notification\Listeners\NotifySessionCompleted;
@@ -29,6 +31,9 @@ class EventServiceProvider extends ServiceProvider
         ],
         SupportMessageCreated::class => [
             NotifySupportMessage::class,
+        ],
+        ContactInquirySubmitted::class => [
+            NotifyContactInquirySubmitted::class,
         ],
     ];
 

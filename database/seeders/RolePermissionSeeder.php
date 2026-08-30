@@ -81,6 +81,13 @@ class RolePermissionSeeder extends Seeder
                 PermissionEnum::ExamTake->value,
             ],
 
+            RoleEnum::Partner => [
+                PermissionEnum::PartnerPortal->value,
+                PermissionEnum::PartnerCodesManage->value,
+                PermissionEnum::PartnerReferralsView->value,
+                PermissionEnum::PartnerCommissionsView->value,
+            ],
+
             RoleEnum::Student => [
                 PermissionEnum::QuestionView->value,
                 PermissionEnum::SessionStart->value,

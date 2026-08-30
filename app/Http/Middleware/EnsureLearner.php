@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use App\Support\Auth\Instructor;
+use App\Support\Auth\Partner;
 use App\Support\Auth\Staff;
 use App\Support\Http\Responses\ApiResponse;
 use Closure;
@@ -12,7 +13,7 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Learner portal only: staff and instructors must stay in their own portals.
+ * Learner portal only: staff, instructors, and partners must stay in their own portals.
  */
 final class EnsureLearner
 {
@@ -42,6 +43,18 @@ final class EnsureLearner
             }
 
             return redirect()->route('teach.dashboard');
+        }
+
+        if (Partner::is($user)) {
+            if ($request->expectsJson()) {
+                return ApiResponse::error(
+                    code: 'PARTNER_PORTAL_REQUIRED',
+                    message: 'Tài khoản cộng tác viên chỉ dùng khu vực /partner.',
+                    status: 403,
+                );
+            }
+
+            return redirect()->route('partner.dashboard');
         }
 
         return $next($request);

@@ -1,0 +1,11 @@
+{
+    "name": "Partner",
+    "alias": "partner",
+    "description": "CTV / affiliate: invite codes, attribution, commissions, payouts (Module 46)",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Partner\\Providers\\PartnerServiceProvider"
+    ],
+    "files": []
+}

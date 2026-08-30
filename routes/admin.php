@@ -16,6 +16,7 @@ use Modules\Admin\Http\Controllers\Cms\BannerController;
 use Modules\Admin\Http\Controllers\Cms\FaqController;
 use Modules\Admin\Http\Controllers\Cms\MenuController;
 use Modules\Admin\Http\Controllers\Cms\PageController;
+use Modules\Admin\Http\Controllers\ContactInquiryController;
 use Modules\Admin\Http\Controllers\EditorImageUploadController;
 use Modules\Admin\Http\Controllers\ExamController;
 use Modules\Admin\Http\Controllers\MedicalTaxonomyController;
@@ -38,6 +39,7 @@ use Modules\Classroom\Http\Controllers\LiveRoomController;
 use Modules\Media\Http\Controllers\MediaController;
 use Modules\Notification\Http\Controllers\AdminBroadcastController;
 use Modules\Notification\Http\Controllers\NotificationController;
+use Modules\Partner\Http\Controllers\Admin\PartnerAdminController;
 use Modules\QuestionBank\Http\Controllers\TaxonomyLookupController;
 
 /*
@@ -82,10 +84,13 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
 
         Route::middleware('permission:'.Permission::UserView->value)->group(function (): void {
             Route::get('/users', [UserController::class, 'index'])->name('users.index');
-            Route::get('/users/{user}', [UserController::class, 'show'])->name('users.show');
+            Route::get('/users/{user}', [UserController::class, 'show'])->name('users.show')
+                ->whereNumber('user');
         });
 
         Route::middleware('permission:'.Permission::UserManage->value)->group(function (): void {
+            Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
+            Route::post('/users', [UserController::class, 'store'])->name('users.store');
             Route::patch('/users/{user}/role', [UserController::class, 'updateRole'])->name('users.role');
             Route::patch('/users/{user}/status', [UserController::class, 'updateStatus'])->name('users.status');
             Route::post('/users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('users.reset-password');
@@ -114,6 +119,16 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
                 ->name('notifications.broadcast');
             Route::post('/notifications/broadcast', [AdminBroadcastController::class, 'store'])
                 ->name('notifications.broadcast.store');
+        });
+
+        Route::middleware('permission:'.Permission::ContactView->value)->group(function (): void {
+            Route::get('/contacts', [ContactInquiryController::class, 'index'])->name('contacts.index');
+            Route::get('/contacts/{contact}', [ContactInquiryController::class, 'show'])->name('contacts.show');
+        });
+
+        Route::middleware('permission:'.Permission::ContactManage->value)->group(function (): void {
+            Route::patch('/contacts/{contact}', [ContactInquiryController::class, 'update'])->name('contacts.update');
+            Route::post('/contacts/{contact}/claim', [ContactInquiryController::class, 'claim'])->name('contacts.claim');
         });
 
         Route::get('/notifications', [NotificationController::class, 'index'])
@@ -304,6 +319,23 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
             Route::get('/billing/plan-prices/{planPrice}/edit', [BillingPlanController::class, 'editPrice'])->name('billing.plan-prices.edit');
             Route::put('/billing/plan-prices/{planPrice}', [BillingPlanController::class, 'updatePrice'])->name('billing.plan-prices.update');
             Route::delete('/billing/plan-prices/{planPrice}', [BillingPlanController::class, 'destroyPrice'])->name('billing.plan-prices.destroy');
+        });
+
+        Route::middleware('permission:'.Permission::AdminPartnersManage->value)->group(function (): void {
+            Route::get('/partners', [PartnerAdminController::class, 'index'])->name('partners.index');
+            Route::get('/partners/create', [PartnerAdminController::class, 'create'])->name('partners.create');
+            Route::post('/partners', [PartnerAdminController::class, 'store'])->name('partners.store');
+            Route::get('/partners/{partner}', [PartnerAdminController::class, 'show'])->name('partners.show');
+            Route::put('/partners/{partner}', [PartnerAdminController::class, 'update'])->name('partners.update');
+            Route::post('/partners/{partner}/codes', [PartnerAdminController::class, 'storeCode'])->name('partners.codes.store');
+            Route::put('/partners/{partner}/codes/{inviteCode}', [PartnerAdminController::class, 'updateCode'])->name('partners.codes.update');
+            Route::post('/partners/{partner}/codes/{inviteCode}/toggle', [PartnerAdminController::class, 'toggleCode'])->name('partners.codes.toggle');
+        });
+
+        Route::middleware('permission:'.Permission::AdminPartnersPayouts->value)->group(function (): void {
+            Route::get('/partners-payouts', [PartnerAdminController::class, 'payoutsIndex'])->name('partners.payouts.index');
+            Route::post('/partners-payouts', [PartnerAdminController::class, 'payoutsStore'])->name('partners.payouts.store');
+            Route::post('/partners-payouts/{payout}/mark-paid', [PartnerAdminController::class, 'payoutsMarkPaid'])->name('partners.payouts.mark-paid');
         });
     });
 });

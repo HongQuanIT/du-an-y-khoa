@@ -7,11 +7,14 @@ namespace Modules\Admin\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Support\Enums\Permission;
+use App\Support\Enums\PortalGroup;
 use App\Support\Enums\Role;
 use App\Support\Enums\UserStatus;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Modules\Admin\Actions\CreateUserAction;
 use Modules\Admin\Actions\SendUserPasswordResetAction;
 use Modules\Admin\Actions\UpdateUserRoleAction;
 use Modules\Admin\Actions\UpdateUserStatusAction;
@@ -33,7 +36,15 @@ final class UserController extends Controller
             });
         }
 
-        if ($role = $request->query('role')) {
+        if ($portal = $request->query('portal')) {
+            $portalEnum = PortalGroup::tryFrom((string) $portal);
+            if ($portalEnum !== null) {
+                $query->role(array_map(
+                    static fn (Role $role): string => $role->value,
+                    Role::rolesIn($portalEnum),
+                ));
+            }
+        } elseif ($role = $request->query('role')) {
             $query->role((string) $role);
         }
 
@@ -46,13 +57,67 @@ final class UserController extends Controller
         return view('admin::users.index', [
             'users' => $users,
             'roles' => Role::cases(),
+            'portals' => PortalGroup::cases(),
             'statuses' => UserStatus::cases(),
+            'canCreate' => $this->actor()->can(Permission::UserManage->value)
+                && Role::assignableBy($this->actor()) !== [],
             'filters' => [
                 'q' => $search,
+                'portal' => $request->query('portal'),
                 'role' => $request->query('role'),
                 'status' => $request->query('status'),
             ],
         ]);
+    }
+
+    public function create(): View
+    {
+        $this->authorizePermission(Permission::UserManage);
+
+        return view('admin::users.create', [
+            'assignableRoles' => Role::assignableBy($this->actor()),
+        ]);
+    }
+
+    public function store(Request $request, CreateUserAction $action): RedirectResponse
+    {
+        $this->authorizePermission(Permission::UserManage);
+
+        $assignable = array_map(
+            static fn (Role $role): string => $role->value,
+            Role::assignableBy($this->actor()),
+        );
+
+        $data = $request->validate([
+            'portal' => ['required', 'string', Rule::in(PortalGroup::values())],
+            'role' => ['required', 'string', Rule::in($assignable)],
+            'name' => ['required', 'string', 'max:120'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'password' => ['required', 'string', 'min:8', 'max:255'],
+        ]);
+
+        $role = Role::from($data['role']);
+
+        if ($role->portal()->value !== $data['portal']) {
+            return back()
+                ->withInput()
+                ->withErrors(['role' => 'Vai trò không thuộc portal đã chọn.']);
+        }
+
+        $user = $action->handle($this->actor(), $data, $role);
+
+        if ($role === Role::Partner) {
+            return redirect()
+                ->route('admin.partners.create', [
+                    'mode' => 'existing',
+                    'user_id' => $user->getKey(),
+                ])
+                ->with('status', 'Đã tạo tài khoản CTV. Hoàn tất hồ sơ đối tác bên dưới.');
+        }
+
+        return redirect()
+            ->route('admin.users.show', $user)
+            ->with('status', 'Đã tạo người dùng.');
     }
 
     public function show(User $user): View
@@ -89,11 +154,23 @@ final class UserController extends Controller
     {
         $this->authorizePermission(Permission::UserManage);
 
+        $assignable = array_map(
+            static fn (Role $role): string => $role->value,
+            Role::assignableBy($this->actor()),
+        );
+
         $data = $request->validate([
-            'role' => ['required', 'string', 'in:'.implode(',', Role::values())],
+            'portal' => ['required', 'string', Rule::in(PortalGroup::values())],
+            'role' => ['required', 'string', Rule::in($assignable)],
         ]);
 
-        $action->handle($this->actor(), $user, Role::from($data['role']));
+        $role = Role::from($data['role']);
+
+        if ($role->portal()->value !== $data['portal']) {
+            return back()->withErrors(['role' => 'Vai trò không thuộc portal đã chọn.']);
+        }
+
+        $action->handle($this->actor(), $user, $role);
 
         return back()->with('status', 'Đã cập nhật vai trò.');
     }

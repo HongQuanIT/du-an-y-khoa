@@ -12,6 +12,7 @@ use App\Support\Audit\Enums\AuditCategory;
 use App\Support\Audit\Enums\AuditPortal;
 use App\Support\Audit\Enums\AuditResult;
 use App\Support\Auth\Instructor;
+use App\Support\Auth\Partner;
 use App\Support\Auth\Staff;
 use App\Support\Concerns\AsAction;
 use Illuminate\Support\Facades\Auth;
@@ -77,6 +78,7 @@ final class AttemptLoginAction
         match ($portal) {
             LoginPortal::Admin => $this->assertStaffPortal($user, $key),
             LoginPortal::Instructor => $this->assertInstructorPortal($user, $key),
+            LoginPortal::Partner => $this->assertPartnerPortal($user, $key),
             LoginPortal::Student => $this->assertStudentPortal($user, $key),
         };
 
@@ -119,6 +121,16 @@ final class AttemptLoginAction
     /**
      * @throws ValidationException
      */
+    private function assertPartnerPortal(User $user, string $key): void
+    {
+        if (! Partner::is($user)) {
+            $this->rejectPortalMismatch($key, $user, LoginPortal::Partner);
+        }
+    }
+
+    /**
+     * @throws ValidationException
+     */
     private function assertStudentPortal(User $user, string $key): void
     {
         if (Staff::isStaff($user)) {
@@ -138,6 +150,16 @@ final class AttemptLoginAction
 
             throw ValidationException::withMessages([
                 'email' => 'Tài khoản giảng viên vui lòng đăng nhập tại '.route('teach.login').'.',
+            ]);
+        }
+
+        if (Partner::is($user)) {
+            $this->auditFailure(LoginPortal::Student, AuditResult::Denied, 'portal_mismatch', $user);
+            Auth::logout();
+            RateLimiter::hit($key, self::DECAY_SECONDS);
+
+            throw ValidationException::withMessages([
+                'email' => 'Tài khoản cộng tác viên vui lòng đăng nhập tại '.route('partner.login').'.',
             ]);
         }
     }
@@ -180,6 +202,7 @@ final class AttemptLoginAction
         return match ($portal) {
             LoginPortal::Admin => AuditPortal::Admin,
             LoginPortal::Instructor => AuditPortal::Teach,
+            LoginPortal::Partner => AuditPortal::Partner,
             LoginPortal::Student => AuditPortal::Student,
         };
     }

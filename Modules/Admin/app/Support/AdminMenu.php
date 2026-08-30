@@ -7,6 +7,7 @@ namespace Modules\Admin\Support;
 use App\Models\User;
 use App\Support\Enums\Permission;
 use Illuminate\Support\Facades\Route;
+use Modules\Admin\Models\ContactInquiry;
 use Modules\QuestionBank\Enums\QuestionReviewStatus;
 use Modules\QuestionBank\Models\QuestionReviewRequest;
 
@@ -106,6 +107,13 @@ final class AdminMenu
                 'match' => 'admin.cms.*',
             ],
             [
+                'label' => 'Liên hệ',
+                'icon' => 'mail',
+                'route' => 'admin.contacts.index',
+                'permission' => Permission::ContactView->value,
+                'match' => 'admin.contacts.*',
+            ],
+            [
                 'label' => 'Media',
                 'icon' => 'perm_media',
                 'route' => 'admin.media.index',
@@ -146,6 +154,26 @@ final class AdminMenu
                 'route' => 'admin.billing.gateways.index',
                 'permission' => Permission::BillingManage->value,
                 'match' => 'admin.billing.gateways.*',
+            ],
+            [
+                'label' => 'Cộng tác viên',
+                'icon' => 'handshake',
+                'route' => 'admin.partners.index',
+                'permission' => Permission::AdminPartnersManage->value,
+                'match' => [
+                    'admin.partners.index',
+                    'admin.partners.create',
+                    'admin.partners.show',
+                    'admin.partners.store',
+                    'admin.partners.update',
+                ],
+            ],
+            [
+                'label' => 'Chi trả CTV',
+                'icon' => 'account_balance_wallet',
+                'route' => 'admin.partners.payouts.index',
+                'permission' => Permission::AdminPartnersPayouts->value,
+                'match' => 'admin.partners.payouts.*',
             ],
             [
                 'label' => 'Phân quyền',
@@ -212,6 +240,7 @@ final class AdminMenu
                     $item['route'] === 'admin.questions.index' && QuestionAccess::isReviewer($user) => QuestionReviewRequest::query()
                         ->where('status', QuestionReviewStatus::Pending->value)
                         ->count(),
+                    $item['route'] === 'admin.contacts.index' => ContactInquiry::newCount(),
                     default => 0,
                 },
             ];

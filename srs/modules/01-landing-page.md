@@ -107,6 +107,7 @@ Ngoại lệ:
 - Chủ yếu đọc: `plans` (module 28), nội dung CMS (`Article type=general`, module 42), `settings` (site config).
 - Preview dùng vài `questions` `is_free=true`.
 - `newsletter_subscribers(id, email, locale, source, confirmed_at, created_at)`.
+- `contact_inquiries` — form `/contact` (reference, name, email, phone?, subject, message, status, user_id?, assigned_admin_id?, admin_notes, ip/ua, read_at, resolved_at).
 
 ## 7. API
 | Method | URL | Payload | Response | Quyền |
@@ -116,8 +117,9 @@ Ngoại lệ:
 | POST | `/api/v1/public/qbank-preview/answer` | `{question_id, option_id}` | `{is_correct, explanation, remaining}` | Public, rate-limited |
 | POST | `/api/v1/public/newsletter` | `{email}` | 202 | Public, throttle |
 | GET | `/api/v1/public/content/{slug}` | — | trang CMS | Public |
+| POST | `/contact` | form web: name, email, phone?, subject, message, privacy | redirect + mã tham chiếu | Public, throttle `contact`, honeypot |
 
-Lỗi: `429` khi spam preview/newsletter; `VALIDATION_ERROR` email sai.
+Lỗi: `429` khi spam preview/newsletter/contact; `VALIDATION_ERROR` email sai.
 
 ## 8. State Management
 - Chủ yếu **server-rendered**; Alpine cho menu/accordion/preview.
@@ -137,7 +139,7 @@ Lỗi: `429` khi spam preview/newsletter; `VALIDATION_ERROR` email sai.
 | Bot scraping preview | Rate limit + captcha |
 
 ## 11. Tracking
-`landing_view`, `hero_cta_click`, `pricing_view`, `plan_select`, `qbank_preview_open`, `question_answer(preview=true)`, `paywall_view`, `signup_start`, `newsletter_subscribe`, `faq_open`.
+`landing_view`, `hero_cta_click`, `pricing_view`, `plan_select`, `qbank_preview_open`, `question_answer(preview=true)`, `paywall_view`, `signup_start`, `newsletter_subscribe`, `faq_open`, `contact_submit`.
 
 ## 12. Responsive
 - **Desktop:** hero 2 cột, feature xen kẽ, menu ngang.
@@ -145,7 +147,7 @@ Lỗi: `429` khi spam preview/newsletter; `VALIDATION_ERROR` email sai.
 - **Mobile:** 1 cột, hamburger drawer, CTA sticky đáy, carousel testimonial/pricing.
 
 ## 13. Security
-- Public nên: chống spam form (captcha/honeypot), rate limit preview/newsletter, không lộ đáp án câu preview qua API trước khi submit, sanitize nội dung CMS.
+- Public nên: chống spam form (captcha/honeypot), rate limit preview/newsletter/contact, không lộ đáp án câu preview qua API trước khi submit, sanitize nội dung CMS.
 
 ## 14. Performance
 - SSR + cache trang toàn phần (CDN); ảnh webp/lazy; critical CSS inline; defer JS; LCP < 2.5s.

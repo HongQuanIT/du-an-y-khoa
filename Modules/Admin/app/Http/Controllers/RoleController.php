@@ -7,12 +7,13 @@ namespace Modules\Admin\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Support\Enums\Permission as PermissionEnum;
+use App\Support\Enums\PortalGroup;
 use App\Support\Enums\Role as RoleEnum;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Modules\Admin\Actions\SyncRolePermissionsAction;
-use Spatie\Permission\Models\Permission;
+use Modules\Admin\Support\PermissionCatalog;
 use Spatie\Permission\Models\Role;
 
 final class RoleController extends Controller
@@ -29,7 +30,7 @@ final class RoleController extends Controller
             ->get();
 
         return view('admin::roles.index', [
-            'roles' => $roles,
+            'roleGroups' => PermissionCatalog::rolesGroupedByPortal($roles),
         ]);
     }
 
@@ -39,19 +40,15 @@ final class RoleController extends Controller
 
         $role->load('permissions');
 
-        $permissions = Permission::query()
-            ->where('guard_name', 'web')
-            ->orderBy('name')
-            ->get()
-            ->groupBy(fn (Permission $permission) => explode('.', $permission->name)[0] ?? 'other');
-
-        $assigned = $role->permissions->pluck('id')->all();
+        $systemRole = RoleEnum::tryFrom($role->name);
+        $focusPortal = $systemRole?->portal() ?? PortalGroup::Admin;
 
         return view('admin::roles.show', [
             'role' => $role,
-            'permissionGroups' => $permissions,
-            'assignedIds' => $assigned,
-            'systemRole' => RoleEnum::tryFrom($role->name) !== null,
+            'permissionGroups' => PermissionCatalog::groupedByPortal(),
+            'assignedIds' => $role->permissions->pluck('id')->all(),
+            'systemRole' => $systemRole !== null,
+            'focusPortal' => $focusPortal,
             'canEdit' => auth()->user()?->hasRole(RoleEnum::SuperAdmin->value)
                 && $role->name !== RoleEnum::SuperAdmin->value,
         ]);
@@ -75,14 +72,32 @@ final class RoleController extends Controller
     {
         $this->authorizePermission(PermissionEnum::RoleManage);
 
-        $permissions = Permission::query()
+        $roleModels = Role::query()
             ->where('guard_name', 'web')
-            ->orderBy('name')
             ->get()
-            ->groupBy(fn (Permission $permission) => explode('.', $permission->name)[0] ?? 'other');
+            ->keyBy('name');
+
+        $rolesByPortal = [];
+        foreach (PortalGroup::cases() as $portal) {
+            $rolesByPortal[$portal->value] = collect(RoleEnum::rolesIn($portal))
+                ->map(function (RoleEnum $enum) use ($roleModels) {
+                    $model = $roleModels->get($enum->value);
+
+                    return $model === null ? null : [
+                        'id' => $model->id,
+                        'name' => $enum->value,
+                        'label' => $enum->label(),
+                    ];
+                })
+                ->filter()
+                ->values()
+                ->all();
+        }
 
         return view('admin::permissions.index', [
-            'permissionGroups' => $permissions,
+            'permissionGroups' => PermissionCatalog::groupedByPortal(),
+            'roleLabelsByPermission' => PermissionCatalog::roleLabelsByPermission(),
+            'rolesByPortal' => $rolesByPortal,
         ]);
     }
 

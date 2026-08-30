@@ -46,6 +46,8 @@ enum Permission: string
     case CmsManage = 'cms.manage';
     case MediaView = 'media.view';
     case MediaManage = 'media.manage';
+    case ContactView = 'contact.view';
+    case ContactManage = 'contact.manage';
     case SystemManage = 'system.manage';
     case FeatureFlagManage = 'feature_flag.manage';
 
@@ -68,4 +70,43 @@ enum Permission: string
 
     // Billing / subscription admin
     case BillingManage = 'billing.manage';
+
+    // Partner / affiliate (Module 46)
+    case PartnerPortal = 'partner.portal';
+    case PartnerCodesManage = 'partner.codes.manage';
+    case PartnerReferralsView = 'partner.referrals.view';
+    case PartnerCommissionsView = 'partner.commissions.view';
+    case AdminPartnersManage = 'admin.partners.manage';
+    case AdminPartnersPayouts = 'admin.partners.payouts';
+
+    /**
+     * Primary portal for catalog grouping. Shared abilities still have one home group.
+     */
+    public function portal(): PortalGroup
+    {
+        return match ($this) {
+            self::SessionStart,
+            self::SessionSubmit,
+            self::SessionReview,
+            self::QuestionView,
+            self::LibraryView,
+            self::ClassroomJoin,
+            self::LiveJoin,
+            self::AiUse,
+            self::AnalyticsAdvanced,
+            self::ExamTake => PortalGroup::Learner,
+
+            self::ClassroomCreate,
+            self::ClassroomManage,
+            self::ClassroomModerate,
+            self::LiveStart => PortalGroup::Instructor,
+
+            self::PartnerPortal,
+            self::PartnerCodesManage,
+            self::PartnerReferralsView,
+            self::PartnerCommissionsView => PortalGroup::Partner,
+
+            default => PortalGroup::Admin,
+        };
+    }
 }

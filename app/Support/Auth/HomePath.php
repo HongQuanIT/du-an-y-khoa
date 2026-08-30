@@ -21,6 +21,10 @@ final class HomePath
             return route('teach.dashboard', absolute: false);
         }
 
+        if (Partner::is($user)) {
+            return route('partner.dashboard', absolute: false);
+        }
+
         return route('dashboard', absolute: false);
     }
 }
