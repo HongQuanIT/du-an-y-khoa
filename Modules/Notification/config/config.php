@@ -161,6 +161,14 @@ return [
             'preference_key' => 'push_support',
             'icon' => 'mark_unread_chat_alt',
         ],
+        'contact.new' => [
+            'category' => 'support',
+            'audience' => 'admin',
+            'label' => 'Liên hệ form mới',
+            'preference_key' => null,
+            'bypass_prefs' => true,
+            'icon' => 'mail',
+        ],
         'billing.payment' => [
             'category' => 'billing',
             'audience' => 'learner',

@@ -16,6 +16,7 @@ use Modules\Admin\Http\Controllers\Cms\BannerController;
 use Modules\Admin\Http\Controllers\Cms\FaqController;
 use Modules\Admin\Http\Controllers\Cms\MenuController;
 use Modules\Admin\Http\Controllers\Cms\PageController;
+use Modules\Admin\Http\Controllers\ContactInquiryController;
 use Modules\Admin\Http\Controllers\EditorImageUploadController;
 use Modules\Admin\Http\Controllers\ExamController;
 use Modules\Admin\Http\Controllers\MedicalTaxonomyController;
@@ -118,6 +119,16 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
                 ->name('notifications.broadcast');
             Route::post('/notifications/broadcast', [AdminBroadcastController::class, 'store'])
                 ->name('notifications.broadcast.store');
+        });
+
+        Route::middleware('permission:'.Permission::ContactView->value)->group(function (): void {
+            Route::get('/contacts', [ContactInquiryController::class, 'index'])->name('contacts.index');
+            Route::get('/contacts/{contact}', [ContactInquiryController::class, 'show'])->name('contacts.show');
+        });
+
+        Route::middleware('permission:'.Permission::ContactManage->value)->group(function (): void {
+            Route::patch('/contacts/{contact}', [ContactInquiryController::class, 'update'])->name('contacts.update');
+            Route::post('/contacts/{contact}/claim', [ContactInquiryController::class, 'claim'])->name('contacts.claim');
         });
 
         Route::get('/notifications', [NotificationController::class, 'index'])

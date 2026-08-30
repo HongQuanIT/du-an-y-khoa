@@ -72,6 +72,14 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('activity-heartbeat', fn (Request $request) => Limit::perMinute(10)
             ->by($request->user()?->getAuthIdentifier() ?? $request->ip()));
+
+        RateLimiter::for('contact', function (Request $request) {
+            if (app()->environment('testing')) {
+                return Limit::none();
+            }
+
+            return Limit::perMinute(5)->by($request->ip());
+        });
     }
 
     /**

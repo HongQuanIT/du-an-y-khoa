@@ -7,6 +7,7 @@ namespace Modules\Admin\Support;
 use App\Models\User;
 use App\Support\Enums\Permission;
 use Illuminate\Support\Facades\Route;
+use Modules\Admin\Models\ContactInquiry;
 use Modules\QuestionBank\Enums\QuestionReviewStatus;
 use Modules\QuestionBank\Models\QuestionReviewRequest;
 
@@ -104,6 +105,13 @@ final class AdminMenu
                 'route' => 'admin.cms.pages.index',
                 'permission' => Permission::CmsManage->value,
                 'match' => 'admin.cms.*',
+            ],
+            [
+                'label' => 'Liên hệ',
+                'icon' => 'mail',
+                'route' => 'admin.contacts.index',
+                'permission' => Permission::ContactView->value,
+                'match' => 'admin.contacts.*',
             ],
             [
                 'label' => 'Media',
@@ -232,6 +240,7 @@ final class AdminMenu
                     $item['route'] === 'admin.questions.index' && QuestionAccess::isReviewer($user) => QuestionReviewRequest::query()
                         ->where('status', QuestionReviewStatus::Pending->value)
                         ->count(),
+                    $item['route'] === 'admin.contacts.index' => ContactInquiry::newCount(),
                     default => 0,
                 },
             ];

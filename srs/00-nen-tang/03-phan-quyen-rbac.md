@@ -78,7 +78,7 @@ session.start, session.submit, session.review
 library.view, library.edit, library.publish
 user.view, user.manage, user.impersonate
 role.manage, permission.manage
-audit.view, report.export, cms.manage, media.view, media.manage, feature_flag.manage
+audit.view, report.export, cms.manage, media.view, media.manage, contact.view, contact.manage, feature_flag.manage
 classroom.create, classroom.create_on_behalf, classroom.manage, classroom.join, classroom.moderate, classroom.oversee
 live.start, live.join, live.force_end, instructor.assign
 # 🔵 Phase 2 (Organization, chưa dùng): org.manage_members, org.manage_billing, org.view_reports

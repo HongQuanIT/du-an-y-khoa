@@ -46,6 +46,8 @@ enum Permission: string
     case CmsManage = 'cms.manage';
     case MediaView = 'media.view';
     case MediaManage = 'media.manage';
+    case ContactView = 'contact.view';
+    case ContactManage = 'contact.manage';
     case SystemManage = 'system.manage';
     case FeatureFlagManage = 'feature_flag.manage';
 
