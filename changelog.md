@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-08-31
+
+### Chính sách session web + 2FA
+- Một thiết bị đăng nhập web; idle 24h buộc đăng nhập lại; phiên tối đa 30 ngày (`config/auth-session.php`, `active_web_session_id`).
+- 2FA khi thiết bị mới hoặc sau 30 ngày (cookie trusted device); challenge portal cho teach/partner.
+- Admin/staff bật/tắt 2FA tự do (không bắt buộc khi login); cài đặt tại tab Bảo mật profile.
+
 ## 2026-08-30
 
 ### Liên hệ công khai + hộp thư admin

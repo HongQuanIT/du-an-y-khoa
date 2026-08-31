@@ -2,9 +2,12 @@
 
 use App\Http\Middleware\AssignRequestId;
 use App\Http\Middleware\CapturePartnerInvite;
+use App\Http\Middleware\EnforceWebSessionPolicy;
 use App\Http\Middleware\EnsureInstructor;
+use App\Http\Middleware\EnsureInstructorTwoFactor;
 use App\Http\Middleware\EnsureLearner;
 use App\Http\Middleware\EnsurePartner;
+use App\Http\Middleware\EnsurePartnerTwoFactor;
 use App\Http\Middleware\EnsureStaffTwoFactor;
 use App\Http\Middleware\EnsureStudentTwoFactor;
 use App\Http\Middleware\EnsureSubscriptionActive;
@@ -58,7 +61,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->prepend(AssignRequestId::class);
 
         // Locale resolution for browser + API clients.
-        $middleware->web(append: [SetLocale::class, EnsureSystemIsAvailable::class, EnsureStudentTwoFactor::class, CapturePartnerInvite::class]);
+        $middleware->web(append: [
+            SetLocale::class,
+            EnsureSystemIsAvailable::class,
+            EnforceWebSessionPolicy::class,
+            EnsureStudentTwoFactor::class,
+            CapturePartnerInvite::class,
+        ]);
 
         // API is JSON-only: force JSON negotiation, then resolve locale.
         $middleware->api(prepend: [ForceJsonResponse::class]);
@@ -97,7 +106,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'learner' => EnsureLearner::class,
             'instructor' => EnsureInstructor::class,
+            'instructor.2fa' => EnsureInstructorTwoFactor::class,
             'partner' => EnsurePartner::class,
+            'partner.2fa' => EnsurePartnerTwoFactor::class,
             'staff.2fa' => EnsureStaffTwoFactor::class,
             'subscription' => EnsureSubscriptionActive::class,
             'role' => RoleMiddleware::class,

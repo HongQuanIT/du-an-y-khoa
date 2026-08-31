@@ -6,6 +6,7 @@ namespace Modules\Auth\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Support\Auth\HomePath;
+use App\Support\Auth\WebSessionManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -47,6 +48,7 @@ final class RegisteredUserController extends Controller
         Auth::guard('web')->login($user);
 
         $request->session()->regenerate();
+        WebSessionManager::bindToUser($user, $request);
 
         return redirect()->intended(HomePath::for($user));
     }

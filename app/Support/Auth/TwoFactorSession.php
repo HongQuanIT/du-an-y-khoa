@@ -7,7 +7,7 @@ namespace App\Support\Auth;
 use Illuminate\Http\Request;
 
 /**
- * Session marker: staff completed TOTP (or recovery) for this browser session.
+ * Session marker: user completed TOTP (or recovery) for this browser session.
  */
 final class TwoFactorSession
 {
@@ -25,6 +25,14 @@ final class TwoFactorSession
 
     public static function isConfirmed(Request $request): bool
     {
-        return $request->session()->has(self::KEY);
+        $timestamp = $request->session()->get(self::KEY);
+
+        if (! is_numeric($timestamp)) {
+            return false;
+        }
+
+        $ttlSeconds = (int) config('auth-session.two_factor_trust_days', 30) * 86400;
+
+        return (int) $timestamp + $ttlSeconds >= now()->timestamp;
     }
 }

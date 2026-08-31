@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
 use Modules\Auth\Http\Controllers\AuthenticatedSessionController;
+use Modules\Auth\Http\Controllers\PortalTwoFactorChallengeController;
 use Modules\Partner\Http\Controllers\PartnerCodeController;
 use Modules\Partner\Http\Controllers\PartnerCommissionController;
 use Modules\Partner\Http\Controllers\PartnerDashboardController;
@@ -27,7 +28,14 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroyPartner']
     ->middleware('auth')
     ->name('logout');
 
-Route::middleware(['auth', 'partner'])->group(function (): void {
+Route::middleware('auth')->group(function (): void {
+    Route::get('/2fa/challenge', [PortalTwoFactorChallengeController::class, 'showPartner'])
+        ->name('2fa.challenge');
+    Route::post('/2fa/challenge', [PortalTwoFactorChallengeController::class, 'verifyPartner'])
+        ->name('2fa.challenge.verify');
+});
+
+Route::middleware(['auth', 'partner', 'partner.2fa'])->group(function (): void {
     Route::get('/', [PartnerDashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/codes', [PartnerCodeController::class, 'index'])->name('codes.index');

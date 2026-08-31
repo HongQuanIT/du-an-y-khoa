@@ -5,9 +5,7 @@ declare(strict_types=1);
 namespace Modules\Auth\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Support\Auth\Instructor;
-use App\Support\Auth\Staff;
-use App\Support\Auth\StudentTwoFactorDevice;
+use App\Support\Auth\TwoFactorTrustedDevice;
 use App\Support\Auth\TwoFactorSession;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,13 +15,14 @@ use Modules\Auth\Actions\ConfirmTwoFactorSetupAction;
 use Modules\Auth\Actions\DisableTwoFactorAction;
 
 /**
- * Learner/instructor opt-in TOTP from Settings (not mandatory).
+ * Opt-in TOTP from account settings (all authenticated users, including staff).
  */
 final class SettingsTwoFactorController extends Controller
 {
     public function showSetup(Request $request, BeginTwoFactorSetupAction $begin): View|RedirectResponse
     {
-        $user = $this->nonStaffUser($request);
+        $user = $request->user();
+        assert($user !== null);
 
         if ($user->hasTwoFactorEnabled()) {
             return redirect()
@@ -45,15 +44,13 @@ final class SettingsTwoFactorController extends Controller
             'code' => ['required', 'string'],
         ]);
 
-        $user = $this->nonStaffUser($request);
+        $user = $request->user();
+        assert($user !== null);
 
         $recoveryCodes = $confirm->handle($user, (string) $request->input('code'));
 
         TwoFactorSession::confirm($request);
-
-        if (! Instructor::is($user)) {
-            StudentTwoFactorDevice::queue($user);
-        }
+        TwoFactorTrustedDevice::queue($user);
 
         $request->session()->flash('two_factor_recovery_codes', $recoveryCodes);
 
@@ -62,7 +59,8 @@ final class SettingsTwoFactorController extends Controller
 
     public function showRecovery(Request $request): View|RedirectResponse
     {
-        $this->nonStaffUser($request);
+        $user = $request->user();
+        assert($user !== null);
 
         $codes = $request->session()->get('two_factor_recovery_codes');
 
@@ -77,8 +75,7 @@ final class SettingsTwoFactorController extends Controller
 
     public function finishRecovery(Request $request): RedirectResponse
     {
-        $this->nonStaffUser($request);
-
+        $request->user();
         $request->session()->forget('two_factor_recovery_codes');
 
         return redirect()
@@ -92,27 +89,13 @@ final class SettingsTwoFactorController extends Controller
             'current_password' => ['required', 'string'],
         ]);
 
-        $user = $this->nonStaffUser($request);
+        $user = $request->user();
+        assert($user !== null);
 
         $disable->handle($user, (string) $request->input('current_password'), $request);
 
         return redirect()
             ->route('profile.show', ['tab' => 'security'])
             ->with('status', 'Đã tắt xác thực hai bước.');
-    }
-
-    /**
-     * @return \App\Models\User
-     */
-    private function nonStaffUser(Request $request)
-    {
-        $user = $request->user();
-        assert($user !== null);
-
-        if (Staff::isStaff($user)) {
-            abort(403);
-        }
-
-        return $user;
     }
 }

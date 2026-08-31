@@ -12,8 +12,9 @@ use App\Support\Audit\Enums\AuditAction;
 use App\Support\Audit\Enums\AuditPortal;
 use App\Support\Auth\HomePath;
 use App\Support\Auth\PortalRedirect;
-use App\Support\Auth\StudentTwoFactorDevice;
+use App\Support\Auth\TwoFactorGate;
 use App\Support\Auth\TwoFactorSession;
+use App\Support\Auth\WebSessionManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -45,74 +46,40 @@ final class AuthenticatedSessionController extends Controller
 
         $user = $action->handle($request->toData(), LoginPortal::Student);
 
-        $request->session()->regenerate();
-        TwoFactorSession::clear($request);
-
-        if ($user->hasTwoFactorEnabled()) {
-            if (StudentTwoFactorDevice::isTrusted($request, $user)) {
-                TwoFactorSession::confirm($request);
-            } else {
-                return redirect()->route('student.2fa.challenge');
-            }
-        }
-
-        return PortalRedirect::afterLogin(
-            $request,
-            HomePath::for($user),
-            LoginPortal::Student,
-        );
+        return $this->finishLogin($request, $user, LoginPortal::Student, HomePath::for($user));
     }
 
     public function storeTeach(LoginRequest $request, AttemptLoginAction $action): RedirectResponse
     {
         $user = $action->handle($request->toData(), LoginPortal::Instructor);
 
-        $request->session()->regenerate();
-        TwoFactorSession::clear($request);
-
-        return PortalRedirect::afterLogin(
-            $request,
-            HomePath::for($user),
-            LoginPortal::Instructor,
-        );
+        return $this->finishLogin($request, $user, LoginPortal::Instructor, HomePath::for($user));
     }
 
     public function storePartner(LoginRequest $request, AttemptLoginAction $action): RedirectResponse
     {
         $user = $action->handle($request->toData(), LoginPortal::Partner);
 
-        $request->session()->regenerate();
-        TwoFactorSession::clear($request);
-
-        return PortalRedirect::afterLogin(
-            $request,
-            HomePath::for($user),
-            LoginPortal::Partner,
-        );
+        return $this->finishLogin($request, $user, LoginPortal::Partner, HomePath::for($user));
     }
 
     public function storeAdmin(LoginRequest $request, AttemptLoginAction $action): RedirectResponse
     {
         $user = $action->handle($request->toData(), LoginPortal::Admin);
 
-        $request->session()->regenerate();
-        TwoFactorSession::clear($request);
-
-        if (! $user->hasTwoFactorEnabled()) {
-            return redirect()->route('admin.2fa.setup');
-        }
-
-        return redirect()->route('admin.2fa.challenge');
+        return $this->finishLogin(
+            $request,
+            $user,
+            LoginPortal::Admin,
+            route('admin.dashboard', absolute: false),
+        );
     }
 
     public function destroy(Request $request): RedirectResponse
     {
         $user = $request->user();
         $this->auditLogout($user, AuditPortal::Student);
-        Auth::guard('web')->logout();
-
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        $this->logout($request);
 
         return redirect()->route('landing.home');
     }
@@ -121,10 +88,7 @@ final class AuthenticatedSessionController extends Controller
     {
         $user = $request->user();
         $this->auditLogout($user, AuditPortal::Teach);
-        Auth::guard('web')->logout();
-
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        $this->logout($request);
 
         return redirect()->route('teach.login');
     }
@@ -133,10 +97,7 @@ final class AuthenticatedSessionController extends Controller
     {
         $user = $request->user();
         $this->auditLogout($user, AuditPortal::Partner);
-        Auth::guard('web')->logout();
-
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        $this->logout($request);
 
         return redirect()->route('partner.login');
     }
@@ -145,12 +106,54 @@ final class AuthenticatedSessionController extends Controller
     {
         $user = $request->user();
         $this->auditLogout($user, AuditPortal::Admin);
+        $this->logout($request);
+
+        return redirect()->route('admin.login');
+    }
+
+    private function finishLogin(
+        Request $request,
+        User $user,
+        LoginPortal $portal,
+        string $home,
+    ): RedirectResponse {
+        $request->session()->regenerate();
+        TwoFactorSession::clear($request);
+        WebSessionManager::bindToUser($user, $request);
+
+        if ($user->hasTwoFactorEnabled()) {
+            if (TwoFactorGate::isSatisfied($request, $user)) {
+                TwoFactorGate::confirmIfTrusted($request, $user);
+            } else {
+                return $this->redirectToTwoFactorChallenge($portal);
+            }
+        }
+
+        return PortalRedirect::afterLogin($request, $home, $portal);
+    }
+
+    private function redirectToTwoFactorChallenge(LoginPortal $portal): RedirectResponse
+    {
+        return match ($portal) {
+            LoginPortal::Student => redirect()->route('student.2fa.challenge'),
+            LoginPortal::Instructor => redirect()->route('teach.2fa.challenge'),
+            LoginPortal::Partner => redirect()->route('partner.2fa.challenge'),
+            LoginPortal::Admin => redirect()->route('admin.2fa.challenge'),
+        };
+    }
+
+    private function logout(Request $request): void
+    {
+        $user = $request->user();
+
+        if ($user !== null) {
+            WebSessionManager::clearForUser($user);
+        }
+
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-
-        return redirect()->route('admin.login');
     }
 
     private function auditLogout(?User $user, AuditPortal $portal): void

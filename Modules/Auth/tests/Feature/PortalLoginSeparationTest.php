@@ -61,7 +61,7 @@ final class PortalLoginSeparationTest extends TestCase
         $this->assertGuest();
     }
 
-    public function test_staff_without_2fa_is_sent_to_setup_after_admin_login(): void
+    public function test_staff_without_2fa_reaches_admin_dashboard_after_login(): void
     {
         $user = User::factory()->create(['email' => 'admin@example.com']);
         $user->assignRole(Role::SuperAdmin->value);
@@ -69,7 +69,7 @@ final class PortalLoginSeparationTest extends TestCase
         $this->post(route('admin.login.store'), [
             'email' => 'admin@example.com',
             'password' => 'password',
-        ])->assertRedirect(route('admin.2fa.setup'));
+        ])->assertRedirect(route('admin.dashboard', absolute: false));
 
         $this->assertAuthenticatedAs($user);
     }

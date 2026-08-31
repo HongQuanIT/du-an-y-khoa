@@ -102,53 +102,51 @@
         </form>
     </section>
 
-    @unless (\App\Support\Auth\Staff::isStaff(auth()->user()))
-        <section class="{{ $cardClass }} mt-6">
-            <div class="{{ $cardHeaderClass }}">
-                <h2 class="flex items-center gap-2 font-title-md text-title-md text-on-surface">
-                    <span class="material-symbols-outlined text-[20px] text-primary">phonelink_lock</span>
-                    Xác thực hai bước (2FA)
-                </h2>
-                <p class="mt-0.5 font-body-sm text-body-sm text-on-surface-variant">
-                    Tăng bảo mật bằng mã từ ứng dụng Authenticator. Mặc định không bắt buộc — chỉ cần khi bạn bật.
-                </p>
-            </div>
+    <section class="{{ $cardClass }} mt-6">
+        <div class="{{ $cardHeaderClass }}">
+            <h2 class="flex items-center gap-2 font-title-md text-title-md text-on-surface">
+                <span class="material-symbols-outlined text-[20px] text-primary">phonelink_lock</span>
+                Xác thực hai bước (2FA)
+            </h2>
+            <p class="mt-0.5 font-body-sm text-body-sm text-on-surface-variant">
+                Tăng bảo mật bằng mã từ ứng dụng Authenticator. Tùy chọn — bật/tắt bất cứ lúc nào bằng mật khẩu hiện tại.
+            </p>
+        </div>
 
-            <div class="{{ $cardBodyClass }}">
-                @if (auth()->user()->hasTwoFactorEnabled())
-                    <div class="mb-5 flex items-center gap-2">
-                        <span class="inline-flex items-center rounded-md bg-primary/10 px-2.5 py-1 font-label-sm text-label-sm font-semibold text-primary">
-                            Đã bật
-                        </span>
+        <div class="{{ $cardBodyClass }}">
+            @if (auth()->user()->hasTwoFactorEnabled())
+                <div class="mb-5 flex items-center gap-2">
+                    <span class="inline-flex items-center rounded-md bg-primary/10 px-2.5 py-1 font-label-sm text-label-sm font-semibold text-primary">
+                        Đã bật
+                    </span>
+                </div>
+                <form method="post" action="{{ route('settings.2fa.disable') }}" class="max-w-md space-y-4">
+                    @csrf
+                    @method('DELETE')
+                    <div class="flex flex-col gap-1.5">
+                        <label for="disable_2fa_password" class="{{ $labelClass }}">
+                            Mật khẩu hiện tại để tắt 2FA
+                        </label>
+                        <input id="disable_2fa_password" name="current_password" type="password" required autocomplete="current-password"
+                            placeholder="••••••••"
+                            class="{{ $inputClass }} @error('current_password') border-error @enderror">
+                        @error('current_password')
+                            <p class="font-body-sm text-body-sm text-error">{{ $message }}</p>
+                        @enderror
                     </div>
-                    <form method="post" action="{{ route('settings.2fa.disable') }}" class="max-w-md space-y-4">
-                        @csrf
-                        @method('DELETE')
-                        <div class="flex flex-col gap-1.5">
-                            <label for="disable_2fa_password" class="{{ $labelClass }}">
-                                Mật khẩu hiện tại để tắt 2FA
-                            </label>
-                            <input id="disable_2fa_password" name="current_password" type="password" required autocomplete="current-password"
-                                placeholder="••••••••"
-                                class="{{ $inputClass }} @error('current_password') border-error @enderror">
-                            @error('current_password')
-                                <p class="font-body-sm text-body-sm text-error">{{ $message }}</p>
-                            @enderror
-                        </div>
-                        <button type="submit"
-                            class="rounded-lg border border-error/40 bg-error-container px-5 py-2.5 font-label-md text-label-md font-semibold text-on-error-container hover:opacity-90">
-                            Tắt xác thực hai bước
-                        </button>
-                    </form>
-                @else
-                    <a href="{{ route('settings.2fa.setup') }}"
-                        class="inline-flex rounded-lg bg-primary px-5 py-2.5 font-label-md text-label-md font-semibold text-on-primary hover:opacity-90">
-                        Bật 2FA
-                    </a>
-                @endif
-            </div>
-        </section>
-    @endunless
+                    <button type="submit"
+                        class="rounded-lg border border-error/40 bg-error-container px-5 py-2.5 font-label-md text-label-md font-semibold text-on-error-container hover:opacity-90">
+                        Tắt xác thực hai bước
+                    </button>
+                </form>
+            @else
+                <a href="{{ route('settings.2fa.setup') }}"
+                    class="inline-flex rounded-lg bg-primary px-5 py-2.5 font-label-md text-label-md font-semibold text-on-primary hover:opacity-90">
+                    Bật 2FA
+                </a>
+            @endif
+        </div>
+    </section>
 
 @elseif ($tab === 'notifications')
     <section class="{{ $cardClass }}">

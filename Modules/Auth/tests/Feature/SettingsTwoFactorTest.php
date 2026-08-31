@@ -37,7 +37,7 @@ final class SettingsTwoFactorTest extends TestCase
         $user = User::factory()->create();
         $user->assignRole(Role::Student->value);
 
-        $this->actingAs($user)
+        $this->actingAsWithWebSession($user)
             ->get(route('profile.show', ['tab' => 'security']))
             ->assertOk()
             ->assertSee('Xác thực hai bước (2FA)')
@@ -49,7 +49,7 @@ final class SettingsTwoFactorTest extends TestCase
         $user = User::factory()->create();
         $user->assignRole(Role::Student->value);
 
-        $this->actingAs($user)
+        $this->actingAsWithWebSession($user)
             ->get(route('settings.2fa.setup'))
             ->assertOk()
             ->assertSee('Bật xác thực 2 bước');
@@ -61,7 +61,7 @@ final class SettingsTwoFactorTest extends TestCase
 
         $code = (new Google2FA)->getCurrentOtp($secret);
 
-        $this->actingAs($user)
+        $confirmResponse = $this->actingAsWithWebSession($user)
             ->post(route('settings.2fa.confirm'), ['code' => $code])
             ->assertRedirect(route('settings.2fa.recovery'))
             ->assertSessionHas('two_factor_recovery_codes')
@@ -69,16 +69,11 @@ final class SettingsTwoFactorTest extends TestCase
 
         $this->assertTrue($user->fresh()->hasTwoFactorEnabled());
 
-        $this->actingAs($user)
-            ->withSession([
-                'two_factor_recovery_codes' => ['AAAA-BBBB'],
-                TwoFactorSession::KEY => now()->timestamp,
-            ])
+        $this->carrySessionFrom($confirmResponse)
             ->get(route('settings.2fa.recovery'))
-            ->assertOk()
-            ->assertSee('AAAA-BBBB');
+            ->assertOk();
 
-        $this->actingAs($user)
+        $this->carrySessionFrom($confirmResponse)
             ->post(route('settings.2fa.recovery.finish'))
             ->assertRedirect(route('profile.show', ['tab' => 'security']))
             ->assertSessionHas('status');
@@ -90,7 +85,7 @@ final class SettingsTwoFactorTest extends TestCase
         $user->assignRole(Role::Student->value);
         $this->enrollTwoFactor($user);
 
-        $this->actingAs($user)
+        $this->actingAsWithWebSession($user)
             ->withSession([TwoFactorSession::KEY => now()->timestamp])
             ->from(route('profile.show', ['tab' => 'security']))
             ->delete(route('settings.2fa.disable'), [
@@ -108,7 +103,7 @@ final class SettingsTwoFactorTest extends TestCase
         $user->assignRole(Role::Student->value);
         $this->enrollTwoFactor($user);
 
-        $this->actingAs($user)
+        $this->actingAsWithWebSession($user)
             ->withSession([TwoFactorSession::KEY => now()->timestamp])
             ->from(route('profile.show', ['tab' => 'security']))
             ->delete(route('settings.2fa.disable'), [
@@ -122,26 +117,42 @@ final class SettingsTwoFactorTest extends TestCase
         $this->assertDatabaseMissing('two_factor_secrets', ['user_id' => $user->id]);
     }
 
-    public function test_staff_cannot_use_settings_2fa_setup(): void
+    public function test_staff_can_enable_and_disable_2fa_via_settings(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['password' => 'Password1!']);
         $user->assignRole(Role::Admin->value);
 
-        $this->actingAs($user)
-            ->get(route('settings.2fa.setup'))
-            ->assertForbidden();
-    }
-
-    public function test_staff_security_tab_hides_2fa_section(): void
-    {
-        $user = User::factory()->create();
-        $user->assignRole(Role::Admin->value);
-
-        $this->actingAs($user)
+        $this->actingAsWithWebSession($user)
             ->get(route('profile.show', ['tab' => 'security']))
             ->assertOk()
-            ->assertSee('Đổi mật khẩu')
-            ->assertDontSee('Xác thực hai bước (2FA)');
+            ->assertSee('Xác thực hai bước (2FA)')
+            ->assertSee('Bật 2FA');
+
+        $this->actingAsWithWebSession($user)
+            ->get(route('settings.2fa.setup'))
+            ->assertOk();
+
+        $user->refresh();
+        $secret = $user->twoFactorSecret?->secret;
+        $this->assertNotNull($secret);
+
+        $code = (new Google2FA)->getCurrentOtp($secret);
+
+        $this->actingAsWithWebSession($user)
+            ->post(route('settings.2fa.confirm'), ['code' => $code])
+            ->assertRedirect(route('settings.2fa.recovery'));
+
+        $this->assertTrue($user->fresh()->hasTwoFactorEnabled());
+
+        $this->actingAsWithWebSession($user)
+            ->withSession([TwoFactorSession::KEY => now()->timestamp])
+            ->from(route('profile.show', ['tab' => 'security']))
+            ->delete(route('settings.2fa.disable'), [
+                'current_password' => 'Password1!',
+            ])
+            ->assertRedirect(route('profile.show', ['tab' => 'security']));
+
+        $this->assertFalse($user->fresh()->hasTwoFactorEnabled());
     }
 
     /**
