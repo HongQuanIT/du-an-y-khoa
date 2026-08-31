@@ -44,13 +44,16 @@ final class StudentLoginTwoFactorTest extends TestCase
         $user->assignRole(Role::Student->value);
         $this->enrollTwoFactor($user);
 
-        $this->post('/login', [
+        $response = $this->post('/login', [
             'email' => 'student@example.com',
             'password' => 'password',
         ])->assertRedirect(route('student.2fa.challenge'));
 
         $this->assertAuthenticatedAs($user);
-        $this->get(route('dashboard'))->assertRedirect(route('student.2fa.challenge'));
+
+        $this->carrySessionFrom($response)
+            ->get(route('dashboard'))
+            ->assertRedirect(route('student.2fa.challenge'));
     }
 
     public function test_student_with_2fa_cannot_open_app_before_challenge(): void
@@ -59,11 +62,11 @@ final class StudentLoginTwoFactorTest extends TestCase
         $user->assignRole(Role::Student->value);
         $this->enrollTwoFactor($user);
 
-        $this->actingAs($user)
+        $this->actingAsWithWebSession($user)
             ->get(route('dashboard'))
             ->assertRedirect(route('student.2fa.challenge'));
 
-        $this->actingAs($user)
+        $this->actingAsWithWebSession($user)
             ->get(route('settings.edit', ['tab' => 'security']))
             ->assertRedirect(route('student.2fa.challenge'));
     }
@@ -75,17 +78,20 @@ final class StudentLoginTwoFactorTest extends TestCase
         $secret = $this->enrollTwoFactor($user);
         $code = (new Google2FA)->getCurrentOtp($secret);
 
-        $this->post('/login', [
+        $loginResponse = $this->post('/login', [
             'email' => 'student@example.com',
             'password' => 'password',
         ])->assertRedirect(route('student.2fa.challenge'));
 
-        $this->post(route('student.2fa.challenge.verify'), ['code' => $code])
+        $verifyResponse = $this->carrySessionFrom($loginResponse)
+            ->post(route('student.2fa.challenge.verify'), ['code' => $code])
             ->assertRedirect(route('dashboard', absolute: false))
             ->assertCookie(StudentTwoFactorDevice::COOKIE)
             ->assertSessionHas(TwoFactorSession::KEY);
 
-        $this->get(route('dashboard'))->assertOk();
+        $this->carrySessionFrom($verifyResponse)
+            ->get(route('dashboard'))
+            ->assertOk();
     }
 
     public function test_trusted_device_skips_challenge_on_next_login(): void
@@ -94,7 +100,7 @@ final class StudentLoginTwoFactorTest extends TestCase
         $user->assignRole(Role::Student->value);
         $this->enrollTwoFactor($user);
 
-        $this->withCookie(
+        $response = $this->withCookie(
             StudentTwoFactorDevice::COOKIE,
             $this->devicePayload($user),
         )->post('/login', [
@@ -102,7 +108,9 @@ final class StudentLoginTwoFactorTest extends TestCase
             'password' => 'password',
         ])->assertRedirect(route('dashboard', absolute: false));
 
-        $this->get(route('dashboard'))->assertOk();
+        $this->carrySessionFrom($response)
+            ->get(route('dashboard'))
+            ->assertOk();
     }
 
     public function test_expired_trusted_device_still_requires_challenge(): void
@@ -120,18 +128,20 @@ final class StudentLoginTwoFactorTest extends TestCase
         ])->assertRedirect(route('student.2fa.challenge'));
     }
 
-    public function test_instructor_with_2fa_skips_student_challenge_on_teach_login(): void
+    public function test_instructor_with_2fa_is_challenged_on_teach_login_without_trusted_device(): void
     {
         $user = User::factory()->create(['email' => 'instructor@example.com']);
         $user->assignRole(Role::Instructor->value);
         $this->enrollTwoFactor($user);
 
-        $this->post(route('teach.login.store'), [
+        $response = $this->post(route('teach.login.store'), [
             'email' => 'instructor@example.com',
             'password' => 'password',
-        ])->assertRedirect(route('teach.dashboard', absolute: false));
+        ])->assertRedirect(route('teach.2fa.challenge'));
 
-        $this->get(route('teach.dashboard'))->assertOk();
+        $this->carrySessionFrom($response)
+            ->get(route('teach.dashboard'))
+            ->assertRedirect(route('teach.2fa.challenge'));
     }
 
     /**

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
 use Modules\Auth\Http\Controllers\AuthenticatedSessionController;
+use Modules\Auth\Http\Controllers\PortalTwoFactorChallengeController;
 use Modules\Classroom\Http\Controllers\LiveMessageApiController;
 use Modules\Classroom\Http\Controllers\LiveModerationController;
 use Modules\Classroom\Http\Controllers\LivePresenterController;
@@ -32,7 +33,14 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroyTeach'])
     ->middleware('auth')
     ->name('logout');
 
-Route::middleware(['auth', 'instructor'])->group(function (): void {
+Route::middleware('auth')->group(function (): void {
+    Route::get('/2fa/challenge', [PortalTwoFactorChallengeController::class, 'showTeach'])
+        ->name('2fa.challenge');
+    Route::post('/2fa/challenge', [PortalTwoFactorChallengeController::class, 'verifyTeach'])
+        ->name('2fa.challenge.verify');
+});
+
+Route::middleware(['auth', 'instructor', 'instructor.2fa'])->group(function (): void {
     Route::view('/', 'classroom::teach.dashboard')->name('dashboard');
 
     Route::get('/notifications', [NotificationController::class, 'index'])

@@ -47,7 +47,7 @@ use Modules\QuestionBank\Http\Controllers\TaxonomyLookupController;
 | Admin panel (prefix `admin`, name `admin.`)
 |--------------------------------------------------------------------------
 | Auth entry is separate from the learner `/login` (same web guard/session).
-| Protected pages require staff roles + confirmed 2FA session.
+| Protected pages require staff roles + 2FA when enabled.
 */
 
 Route::middleware('guest')->group(function (): void {

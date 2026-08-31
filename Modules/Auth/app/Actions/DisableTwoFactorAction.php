@@ -7,7 +7,7 @@ namespace Modules\Auth\Actions;
 use App\Models\User;
 use App\Support\Audit\Auditor;
 use App\Support\Audit\Enums\AuditAction;
-use App\Support\Auth\StudentTwoFactorDevice;
+use App\Support\Auth\TwoFactorTrustedDevice;
 use App\Support\Auth\TwoFactorSession;
 use App\Support\Concerns\AsAction;
 use Illuminate\Http\Request;
@@ -39,7 +39,7 @@ final class DisableTwoFactorAction
         $user->unsetRelation('twoFactorSecret');
 
         TwoFactorSession::clear($request);
-        StudentTwoFactorDevice::forget();
+        TwoFactorTrustedDevice::forget();
         Auditor::record(AuditAction::AuthTwoFactorDisabled, $user, $user, request: $request);
     }
 }

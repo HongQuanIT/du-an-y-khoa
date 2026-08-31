@@ -7,6 +7,7 @@ namespace Modules\Auth\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Support\Auth\PortalRedirect;
 use App\Support\Auth\TwoFactorSession;
+use App\Support\Auth\TwoFactorTrustedDevice;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -17,7 +18,7 @@ use Modules\Auth\Actions\VerifyTwoFactorCodeAction;
 use Modules\Auth\Enums\LoginPortal;
 
 /**
- * Admin-portal TOTP setup + challenge (mandatory for staff).
+ * Admin-portal TOTP setup + challenge (optional — staff choose to enable 2FA).
  */
 final class AdminTwoFactorController extends Controller
 {
@@ -54,6 +55,7 @@ final class AdminTwoFactorController extends Controller
         $recoveryCodes = $confirm->handle($user, (string) $request->input('code'));
 
         TwoFactorSession::confirm($request);
+        TwoFactorTrustedDevice::queue($user);
         Auditor::record('admin.2fa.enabled', $user, $user);
 
         $request->session()->flash('two_factor_recovery_codes', $recoveryCodes);
@@ -91,7 +93,7 @@ final class AdminTwoFactorController extends Controller
         assert($user !== null);
 
         if (! $user->hasTwoFactorEnabled()) {
-            return redirect()->route('admin.2fa.setup');
+            return redirect()->route('admin.dashboard');
         }
 
         if (TwoFactorSession::isConfirmed($request)) {
@@ -113,6 +115,7 @@ final class AdminTwoFactorController extends Controller
         $verify->handle($user, (string) $request->input('code'));
 
         TwoFactorSession::confirm($request);
+        TwoFactorTrustedDevice::queue($user);
         Auditor::record('admin.login', $user, $user);
 
         return PortalRedirect::afterLogin(

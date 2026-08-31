@@ -9,7 +9,8 @@ use App\Support\Auth\HomePath;
 use App\Support\Auth\Instructor;
 use App\Support\Auth\PortalRedirect;
 use App\Support\Auth\Staff;
-use App\Support\Auth\StudentTwoFactorDevice;
+use App\Support\Auth\TwoFactorGate;
+use App\Support\Auth\TwoFactorTrustedDevice;
 use App\Support\Auth\TwoFactorSession;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -43,8 +44,8 @@ final class StudentTwoFactorController extends Controller
             );
         }
 
-        if (TwoFactorSession::isConfirmed($request) || StudentTwoFactorDevice::isTrusted($request, $user)) {
-            TwoFactorSession::confirm($request);
+        if (TwoFactorGate::isSatisfied($request, $user)) {
+            TwoFactorGate::confirmIfTrusted($request, $user);
 
             return PortalRedirect::afterLogin(
                 $request,
@@ -53,7 +54,10 @@ final class StudentTwoFactorController extends Controller
             );
         }
 
-        return view('auth::two-factor-challenge');
+        return view('auth::two-factor-challenge', [
+            'verifyUrl' => route('student.2fa.challenge.verify'),
+            'logoutUrl' => route('logout'),
+        ]);
     }
 
     public function verify(Request $request, VerifyTwoFactorCodeAction $verify): RedirectResponse
@@ -72,7 +76,7 @@ final class StudentTwoFactorController extends Controller
         $verify->handle($user, (string) $request->input('code'));
 
         TwoFactorSession::confirm($request);
-        StudentTwoFactorDevice::queue($user);
+        TwoFactorTrustedDevice::queue($user);
 
         return PortalRedirect::afterLogin(
             $request,

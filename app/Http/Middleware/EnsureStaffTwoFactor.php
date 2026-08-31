@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use App\Support\Auth\Staff;
-use App\Support\Auth\TwoFactorSession;
+use App\Support\Auth\TwoFactorGate;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Staff must have confirmed TOTP for the current session before /admin pages.
+ * Staff must confirm TOTP when 2FA is enabled (optional for admin accounts).
  */
 final class EnsureStaffTwoFactor
 {
@@ -19,18 +19,16 @@ final class EnsureStaffTwoFactor
     {
         $user = $request->user();
 
-        if ($user === null || ! Staff::isStaff($user)) {
+        if ($user === null || ! Staff::isStaff($user) || ! $user->hasTwoFactorEnabled()) {
             return $next($request);
         }
 
-        if (! $user->hasTwoFactorEnabled()) {
-            return redirect()->route('admin.2fa.setup');
+        if (TwoFactorGate::isSatisfied($request, $user)) {
+            TwoFactorGate::confirmIfTrusted($request, $user);
+
+            return $next($request);
         }
 
-        if (! TwoFactorSession::isConfirmed($request)) {
-            return redirect()->route('admin.2fa.challenge');
-        }
-
-        return $next($request);
+        return redirect()->route('admin.2fa.challenge');
     }
 }
