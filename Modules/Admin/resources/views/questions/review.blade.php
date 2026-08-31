@@ -3,7 +3,6 @@
     $payload = $reviewRequest->payload ?? [];
     $isUpdate = $reviewRequest->action === \Modules\QuestionBank\Enums\QuestionReviewAction::Update;
     $proposedStem = $isUpdate ? ($payload['stem'] ?? '') : $question->stem;
-    $proposedExplanation = $isUpdate ? ($payload['explanation'] ?? '') : $question->explanation;
     $proposedKeyInfo = collect($isUpdate ? ($payload['key_info'] ?? []) : ($question->key_info ?? []));
     $proposedAttendingTip = $isUpdate ? ($payload['attending_tip'] ?? '') : $question->attending_tip;
     $proposedOptions = $isUpdate ? collect($payload['options'] ?? []) : $question->options;
@@ -87,9 +86,6 @@
                     @endforeach
                 </div>
 
-                <h3 class="mt-5 text-sm font-bold text-on-surface">Giải thích</h3>
-                <p class="mt-1 whitespace-pre-wrap text-sm leading-6 text-on-surface-variant">{{ filled(strip_tags((string) $question->explanation)) ? strip_tags((string) $question->explanation) : 'Chưa nhập giải thích chung.' }}</p>
-
                 <h3 class="mt-5 text-sm font-bold text-on-surface">Ý chính cần ghi nhớ</h3>
                 @forelse ((array) $question->key_info as $item)
                     <p class="mt-1 text-sm text-on-surface-variant">• {{ strip_tags((string) $item) }}</p>
@@ -137,9 +133,6 @@
                     </div>
                 @endforeach
             </div>
-
-            <h3 class="mt-5 text-sm font-bold text-on-surface">Giải thích</h3>
-            <p class="mt-1 whitespace-pre-wrap text-sm leading-6 text-on-surface-variant">{{ filled(strip_tags((string) $proposedExplanation)) ? strip_tags((string) $proposedExplanation) : 'Chưa nhập giải thích chung.' }}</p>
 
             <h3 class="mt-5 text-sm font-bold text-on-surface">Ý chính cần ghi nhớ</h3>
             @forelse ($proposedKeyInfo as $item)

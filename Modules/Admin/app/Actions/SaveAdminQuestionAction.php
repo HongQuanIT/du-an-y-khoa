@@ -39,7 +39,6 @@ final class SaveAdminQuestionAction
      * @param  array{
      *     stem: string,
      *     stem_image_path: ?string,
-     *     explanation: ?string,
      *     key_info: array<int, string>,
      *     attending_tip: ?string,
      *     difficulty: string,
@@ -94,9 +93,7 @@ final class SaveAdminQuestionAction
             $question->fill([
                 'stem' => SafeHtml::fromEditor($data['stem']),
                 'stem_image_path' => $this->sanitizeStemImagePath($data['stem_image_path'] ?? null),
-                'explanation' => SafeHtml::fromEditor(
-                    $this->generalExplanation($data['explanation'] ?? null, $options),
-                ) ?: null,
+                'explanation' => SafeHtml::fromEditor($this->correctOptionExplanation($options)) ?: null,
                 'key_info' => $keyInfo,
                 'attending_tip' => SafeHtml::fromEditor($data['attending_tip'] ?? null) ?: null,
                 'difficulty' => Difficulty::from($data['difficulty']),
@@ -234,19 +231,15 @@ final class SaveAdminQuestionAction
     /**
      * @param  list<array{id?: int|null, content: string, is_correct: bool, explanation?: ?string}>  $options
      */
-    private function generalExplanation(?string $explanation, array $options): ?string
+    private function correctOptionExplanation(array $options): ?string
     {
-        if (! SafeHtml::isBlank($explanation)) {
-            return $explanation;
-        }
-
         foreach ($options as $option) {
             if (($option['is_correct'] ?? false) && ! SafeHtml::isBlank($option['explanation'] ?? null)) {
                 return $option['explanation'];
             }
         }
 
-        return $explanation;
+        return null;
     }
 
     /**

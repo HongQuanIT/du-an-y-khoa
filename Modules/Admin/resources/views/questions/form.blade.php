@@ -353,14 +353,10 @@
                     </div>
                 </div>
 
-                {{-- Giải thích & Hints --}}
+                {{-- Hints --}}
                 <div class="rounded-2xl border border-outline-variant bg-surface p-5">
-                    <h2 class="mb-4 font-label-lg font-semibold text-on-surface">Giải thích & Gợi ý</h2>
+                    <h2 class="mb-4 font-label-lg font-semibold text-on-surface">Gợi ý</h2>
                     <div class="space-y-4">
-                        <x-admin.rich-editor name="explanation" label="Giải thích chung"
-                            :value="old('explanation', $question->explanation)"
-                            placeholder="Giải thích đáp án đúng và kiến thức liên quan..." />
-
                         <div>
                             <div class="mb-2 flex items-center justify-between">
                                 <label class="text-sm font-semibold text-on-surface">Hints (theo thứ tự)</label>

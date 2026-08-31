@@ -185,7 +185,7 @@ final class TransitionQuestionStatusAction
 
         if (SafeHtml::isBlank($question->stem) || SafeHtml::isBlank($question->explanation)) {
             throw ValidationException::withMessages([
-                'status' => 'Cần nội dung câu hỏi và giải thích chung trước khi gửi duyệt / xuất bản.',
+                'status' => 'Cần nội dung câu hỏi và giải thích cho đáp án đúng trước khi gửi duyệt / xuất bản.',
             ]);
         }
 

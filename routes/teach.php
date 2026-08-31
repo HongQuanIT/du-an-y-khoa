@@ -49,6 +49,8 @@ Route::middleware(['auth', 'instructor'])->group(function (): void {
     Route::delete('/classes/{classroom}', [TeachClassroomController::class, 'destroy'])->name('classes.destroy');
     Route::get('/classes/{classroom}/questions/search', [TeachClassroomController::class, 'searchQuestions'])
         ->name('classes.questions.search');
+    Route::get('/classes/{classroom}/questions/{question}/feedback', [TeachClassroomController::class, 'questionFeedback'])
+        ->name('classes.questions.feedback');
     Route::post('/classes/{classroom}/members/{user}/kick', [LiveModerationController::class, 'kickMember'])
         ->name('classes.members.kick');
     Route::post('/classes/{classroom}/sessions', [TeachClassroomController::class, 'scheduleLive'])->name('classes.sessions.store');
