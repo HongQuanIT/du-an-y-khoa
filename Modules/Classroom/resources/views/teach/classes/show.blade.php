@@ -152,12 +152,16 @@
                     <p class="text-xs font-semibold uppercase tracking-wide text-primary">Nội dung giảng dạy</p>
                     <h2 id="live-management-title" class="mt-1 font-title-lg text-title-lg font-bold text-on-surface">Quản lý buổi live</h2>
                     <p class="mt-1 text-sm leading-5 text-on-surface-variant">
-                        Lên lịch, chọn tối đa 50 câu hỏi đã xuất bản và quản lý quá trình phát trực tiếp của lớp.
+                        @if ($classroom->purpose === \Modules\Classroom\Enums\ClassroomPurpose::ExamReview)
+                            Lên lịch, chọn đề thi cần chữa và quản lý quá trình phát trực tiếp của lớp.
+                        @else
+                            Lên lịch, chọn các câu hỏi từ feedback và quản lý quá trình phát trực tiếp của lớp.
+                        @endif
                     </p>
                 </div>
 
                 @if (! $isClosed && ! $classroom->liveSession)
-                    <div x-data="classroomQuestionPicker(@js(route('teach.classes.questions.search', $classroom)))" x-init="loadQuestions()"
+                    <div @if ($classroom->purpose === \Modules\Classroom\Enums\ClassroomPurpose::FeedbackReview) x-data="classroomQuestionPicker(@js(route('teach.classes.questions.search', $classroom)), @js(route('teach.classes.questions.feedback', [$classroom, '__QUESTION__'])))" x-init="loadQuestions()" @endif
                         class="mb-5 rounded-lg border border-outline-variant bg-surface-container-lowest p-4 md:p-5">
                         <form method="post" action="{{ route('teach.classes.sessions.store', $classroom) }}" class="space-y-5">
                             @csrf
@@ -181,11 +185,45 @@
                             </div>
                             <p class="text-xs text-on-surface-variant">Hệ thống kiểm tra lịch trùng của giảng viên chủ lớp theo thời gian và thời lượng dự kiến.</p>
 
+                            @if ($classroom->purpose === \Modules\Classroom\Enums\ClassroomPurpose::ExamReview)
+                                <fieldset>
+                                    <legend class="font-label-md font-semibold text-on-surface">Chọn đề thi <span class="text-error">*</span></legend>
+                                    <p class="mt-1 text-xs text-on-surface-variant">Toàn bộ câu hỏi của đề sẽ được đưa vào buổi chữa theo đúng thứ tự của đề.</p>
+
+                                    @if ($publishedExams->isEmpty())
+                                        <div class="mt-3 rounded-lg border border-dashed border-outline-variant px-4 py-8 text-center">
+                                            <span class="material-symbols-outlined text-3xl text-on-surface-variant">quiz</span>
+                                            <p class="mt-2 text-sm text-on-surface-variant">Chưa có đề thi đã xuất bản để lựa chọn.</p>
+                                        </div>
+                                    @else
+                                        <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                                            @foreach ($publishedExams as $exam)
+                                                <label class="cursor-pointer rounded-lg border border-outline-variant bg-surface p-4 transition hover:border-primary has-[:checked]:border-primary has-[:checked]:bg-primary/5 has-[:checked]:ring-1 has-[:checked]:ring-primary">
+                                                    <span class="flex items-start gap-3">
+                                                        <input type="radio" name="exam_id" value="{{ $exam->id }}" required @checked((string) old('exam_id') === (string) $exam->id)
+                                                            class="mt-1 size-4 shrink-0 text-primary">
+                                                        <span class="min-w-0 flex-1">
+                                                            <span class="block font-semibold text-on-surface">{{ $exam->title }}</span>
+                                                            <span class="mt-1 block text-xs text-on-surface-variant">
+                                                                {{ $exam->questions_count }} câu
+                                                                @if ($exam->duration_minutes) · {{ $exam->duration_minutes }} phút @endif
+                                                            </span>
+                                                            @if ($exam->description)
+                                                                <span class="mt-2 line-clamp-2 block text-sm text-on-surface-variant">{{ $exam->description }}</span>
+                                                            @endif
+                                                        </span>
+                                                    </span>
+                                                </label>
+                                            @endforeach
+                                        </div>
+                                    @endif
+                                </fieldset>
+                            @else
                             <div class="grid min-h-[320px] gap-4 lg:grid-cols-2">
                                 <div class="min-w-0">
                                     <div class="mb-2 flex items-center justify-between gap-2">
                                         <h3 class="font-label-md font-semibold text-on-surface">Câu đã chọn</h3>
-                                        <span class="font-label-sm text-on-surface-variant" x-text="selected.length + '/50 câu'">0/50 câu</span>
+                                        <span class="font-label-sm text-on-surface-variant" x-text="selected.length + ' câu'">0 câu</span>
                                     </div>
                                     <div class="max-h-72 space-y-2 overflow-y-auto pr-1">
                                         <template x-for="(question, index) in selected" :key="question.id">
@@ -331,40 +369,109 @@
 	                                    </div>
                                     <div class="mt-3 max-h-64 space-y-2 overflow-y-auto pr-1">
 	                                        <template x-for="question in availableQuestions" :key="question.id">
-	                                            <button type="button" @click="add(question)" :disabled="selected.some(item => item.id === question.id) || selected.length >= 50"
-	                                                class="block w-full rounded-lg border border-outline-variant bg-surface p-3 text-left hover:border-primary hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-45">
-	                                                <p class="line-clamp-2 font-body-sm text-on-surface" x-text="question.stem"></p>
-	                                                <p class="mt-1 font-label-sm text-on-surface-variant" x-text="question.topic + ' · ' + question.difficulty"></p>
-	                                                <div x-show="question.feedback_count > 0" x-cloak class="mt-2 rounded-md border border-tertiary/25 bg-tertiary/5 px-2.5 py-2">
-	                                                    <div class="flex flex-wrap items-center gap-2 text-[11px] font-semibold text-tertiary">
-	                                                        <span class="inline-flex items-center gap-1">
-	                                                            <span class="material-symbols-outlined text-[15px]">feedback</span>
-	                                                            <span x-text="question.feedback_count + ' feedback'"></span>
-	                                                        </span>
-	                                                        <span x-show="question.pending_feedback_count > 0" class="rounded-full bg-error/10 px-2 py-0.5 text-error" x-text="question.pending_feedback_count + ' chờ xử lý'"></span>
-	                                                    </div>
-	                                                    <p x-show="question.latest_feedback" class="mt-1 line-clamp-2 text-xs text-on-surface-variant">
-	                                                        <span class="font-semibold" x-text="question.latest_feedback?.category"></span>
-	                                                        <span> · </span>
-	                                                        <span x-text="question.latest_feedback?.message || 'Không có ghi chú.'"></span>
-	                                                    </p>
+	                                            <div class="overflow-hidden rounded-lg border border-outline-variant bg-surface hover:border-primary">
+	                                                <button type="button" @click="add(question)" :disabled="selected.some(item => item.id === question.id)"
+	                                                    class="block w-full p-3 text-left hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-45">
+	                                                    <p class="line-clamp-2 font-body-sm text-on-surface" x-text="question.stem"></p>
+	                                                    <p class="mt-1 font-label-sm text-on-surface-variant" x-text="question.topic + ' · ' + question.difficulty"></p>
+	                                                </button>
+	                                                <div x-show="question.feedback_count > 0" x-cloak class="px-3 pb-3">
+	                                                    <button type="button" @click.stop="openFeedback(question)"
+	                                                        class="block w-full rounded-md border border-tertiary/25 bg-tertiary/5 px-2.5 py-2 text-left transition hover:border-tertiary/50 hover:bg-tertiary/10"
+	                                                        :aria-label="'Xem chi tiết ' + question.feedback_count + ' feedback của câu hỏi'">
+	                                                        <div class="flex flex-wrap items-center gap-2 text-[11px] font-semibold text-tertiary">
+	                                                            <span class="inline-flex items-center gap-1">
+	                                                                <span class="material-symbols-outlined text-[15px]">feedback</span>
+	                                                                <span x-text="question.feedback_count + ' feedback'"></span>
+	                                                            </span>
+	                                                            <span x-show="question.pending_feedback_count > 0" class="rounded-full bg-error/10 px-2 py-0.5 text-error" x-text="question.pending_feedback_count + ' chờ xử lý'"></span>
+	                                                            <span class="ml-auto inline-flex items-center gap-0.5 text-primary">Chi tiết<span class="material-symbols-outlined text-[15px]">open_in_new</span></span>
+	                                                        </div>
+	                                                        <p x-show="question.latest_feedback" class="mt-1 line-clamp-2 text-xs text-on-surface-variant">
+	                                                            <span class="font-semibold" x-text="question.latest_feedback?.category"></span>
+	                                                            <span> · </span>
+	                                                            <span x-text="question.latest_feedback?.message || 'Không có ghi chú.'"></span>
+	                                                        </p>
+	                                                    </button>
 	                                                </div>
-	                                            </button>
+	                                            </div>
 	                                        </template>
                                         <p x-show="loading" class="py-8 text-center font-body-sm text-on-surface-variant">Đang tìm câu hỏi...</p>
                                         <p x-show="!loading && availableQuestions.length === 0" class="py-8 text-center font-body-sm text-on-surface-variant">Không tìm thấy câu hỏi phù hợp.</p>
                                     </div>
                                 </div>
                             </div>
+                            @endif
 
                             <div class="flex flex-col gap-3 border-t border-outline-variant pt-4 sm:flex-row sm:items-center sm:justify-between">
-                                <p class="text-xs text-on-surface-variant">Bạn có thể lên lịch mà không chọn câu hỏi và bổ sung nội dung sau.</p>
-                                <button type="submit" class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 font-label-md font-semibold text-on-primary hover:opacity-90">
+                                <p class="text-xs text-on-surface-variant">
+                                    @if ($classroom->purpose === \Modules\Classroom\Enums\ClassroomPurpose::ExamReview)
+                                        Đề thi là bắt buộc đối với lớp chữa đề.
+                                    @else
+                                        Bạn có thể lên lịch mà không chọn câu hỏi và bổ sung nội dung sau.
+                                    @endif
+                                </p>
+                                <button type="submit" @disabled($classroom->purpose === \Modules\Classroom\Enums\ClassroomPurpose::ExamReview && $publishedExams->isEmpty()) class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 font-label-md font-semibold text-on-primary hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
                                     <span class="material-symbols-outlined text-[20px]">event</span>
                                     Lên lịch buổi live
                                 </button>
                             </div>
                         </form>
+
+                        @if ($classroom->purpose === \Modules\Classroom\Enums\ClassroomPurpose::FeedbackReview)
+                            <div x-show="feedbackModalOpen" x-cloak @keydown.escape.window="closeFeedback()"
+                                class="fixed inset-0 z-[80] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="feedback-modal-title">
+                                <div class="absolute inset-0 bg-black/45" @click="closeFeedback()"></div>
+                                <div class="relative flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-outline-variant bg-surface shadow-2xl">
+                                    <header class="flex items-start justify-between gap-4 border-b border-outline-variant px-5 py-4">
+                                        <div class="min-w-0">
+                                            <p class="text-xs font-semibold uppercase tracking-wide text-tertiary">Feedback học viên</p>
+                                            <h2 id="feedback-modal-title" class="mt-1 line-clamp-2 font-title-md font-bold text-on-surface" x-text="feedbackQuestion?.stem || 'Chi tiết feedback'"></h2>
+                                            <p class="mt-1 text-xs text-on-surface-variant" x-show="!feedbackLoading" x-text="feedbackTotal + ' phản hồi'"></p>
+                                        </div>
+                                        <button type="button" @click="closeFeedback()"
+                                            class="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container-low" aria-label="Đóng popup feedback">
+                                            <span class="material-symbols-outlined">close</span>
+                                        </button>
+                                    </header>
+
+                                    <div class="min-h-0 flex-1 overflow-y-auto p-5">
+                                        <div x-show="feedbackLoading" class="py-12 text-center text-sm text-on-surface-variant">Đang tải chi tiết feedback...</div>
+                                        <div x-show="feedbackError" x-cloak class="rounded-lg border border-error/20 bg-error/5 px-4 py-3 text-sm text-error" x-text="feedbackError"></div>
+                                        <div x-show="!feedbackLoading && !feedbackError" class="space-y-3">
+                                            <template x-for="item in feedbackItems" :key="item.id">
+                                                <article class="rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
+                                                    <div class="flex flex-wrap items-start justify-between gap-2">
+                                                        <div>
+                                                            <p class="font-semibold text-on-surface" x-text="item.student"></p>
+                                                            <p class="mt-0.5 text-xs text-on-surface-variant" x-text="item.created_at"></p>
+                                                        </div>
+                                                        <span class="rounded-full bg-surface-container-high px-2.5 py-1 text-xs font-semibold text-on-surface-variant" x-text="item.status"></span>
+                                                    </div>
+                                                    <div class="mt-3 flex flex-wrap gap-1.5 text-xs">
+                                                        <span class="rounded-full bg-primary/10 px-2 py-0.5 font-semibold text-primary" x-text="item.target"></span>
+                                                        <span class="rounded-full bg-tertiary/10 px-2 py-0.5 font-semibold text-tertiary" x-text="item.category"></span>
+                                                    </div>
+                                                    <p class="mt-3 whitespace-pre-line text-sm leading-6 text-on-surface" x-text="item.message"></p>
+                                                    <p x-show="item.option" x-cloak class="mt-3 rounded-lg bg-surface-container-low px-3 py-2 text-xs text-on-surface-variant">
+                                                        <span class="font-semibold" x-text="'Đáp án ' + item.option?.label + ': '"></span>
+                                                        <span x-text="item.option?.content"></span>
+                                                    </p>
+                                                </article>
+                                            </template>
+                                            <p x-show="feedbackItems.length === 0" class="py-10 text-center text-sm text-on-surface-variant">Câu hỏi chưa có feedback.</p>
+                                            <p x-show="feedbackTotal > feedbackItems.length" x-cloak class="text-center text-xs text-on-surface-variant">
+                                                Đang hiển thị <span x-text="feedbackItems.length"></span> feedback mới nhất trong tổng số <span x-text="feedbackTotal"></span>.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <footer class="flex justify-end border-t border-outline-variant px-5 py-3">
+                                        <button type="button" @click="closeFeedback()" class="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-on-primary hover:opacity-90">Đóng</button>
+                                    </footer>
+                                </div>
+                            </div>
+                        @endif
                     </div>
                 @endif
 
@@ -509,7 +616,7 @@
             <section class="rounded-xl border border-outline-variant bg-surface p-5">
                 <h2 class="font-title-md font-semibold text-on-surface">Bước tiếp theo</h2>
                 <ol class="mt-3 space-y-3 text-sm text-on-surface-variant">
-                    <li class="flex gap-2"><span class="font-semibold text-primary">1.</span><span>Chọn tối đa 50 câu hỏi đã xuất bản.</span></li>
+                    <li class="flex gap-2"><span class="font-semibold text-primary">1.</span><span>{{ $classroom->purpose === \Modules\Classroom\Enums\ClassroomPurpose::ExamReview ? 'Chọn đề thi cần chữa.' : 'Chọn các câu hỏi từ feedback.' }}</span></li>
                     <li class="flex gap-2"><span class="font-semibold text-primary">2.</span><span>Đặt tiêu đề, lịch dự kiến và kiểm tra bộ câu hỏi.</span></li>
                     <li class="flex gap-2"><span class="font-semibold text-primary">3.</span><span>Mở Live Studio để kiểm tra thiết bị trước khi bắt đầu.</span></li>
                 </ol>
@@ -519,7 +626,7 @@
     </div>
 
     <script>
-		        window.classroomQuestionPicker = (searchUrl) => ({
+		        window.classroomQuestionPicker = (searchUrl, feedbackUrlTemplate) => ({
 		            availableQuestions: [],
 		            selected: [],
 		            coreTopicOptions: [],
@@ -536,6 +643,12 @@
 		            loading: false,
 	            searchTimer: null,
 	            requestSequence: 0,
+	            feedbackModalOpen: false,
+	            feedbackLoading: false,
+	            feedbackError: '',
+	            feedbackQuestion: null,
+	            feedbackItems: [],
+	            feedbackTotal: 0,
 
 		            toggleFilter(filter) {
 		                this.openFilter = this.openFilter === filter ? null : filter;
@@ -725,8 +838,41 @@
 		                this.loadQuestions();
 		            },
 
+	            async openFeedback(question) {
+	                this.feedbackModalOpen = true;
+	                this.feedbackLoading = true;
+	                this.feedbackError = '';
+	                this.feedbackQuestion = question;
+	                this.feedbackItems = [];
+	                this.feedbackTotal = question.feedback_count ?? 0;
+
+	                try {
+	                    const url = feedbackUrlTemplate.replace('__QUESTION__', encodeURIComponent(question.id));
+	                    const response = await fetch(url, {
+	                        headers: { Accept: 'application/json' },
+	                        credentials: 'same-origin',
+	                    });
+	                    if (!response.ok) {
+	                        throw new Error('Không tải được chi tiết feedback.');
+	                    }
+
+	                    const payload = await response.json();
+	                    this.feedbackQuestion = payload.data?.question ?? question;
+	                    this.feedbackItems = payload.data?.feedback ?? [];
+	                    this.feedbackTotal = payload.data?.total ?? this.feedbackItems.length;
+	                } catch (error) {
+	                    this.feedbackError = error.message || 'Không tải được chi tiết feedback.';
+	                } finally {
+	                    this.feedbackLoading = false;
+	                }
+	            },
+
+	            closeFeedback() {
+	                this.feedbackModalOpen = false;
+	            },
+
 	            add(question) {
-	                if (this.selected.length >= 50 || this.selected.some(item => item.id === question.id)) {
+	                if (this.selected.some(item => item.id === question.id)) {
 	                    return;
                 }
                 this.selected.push(question);

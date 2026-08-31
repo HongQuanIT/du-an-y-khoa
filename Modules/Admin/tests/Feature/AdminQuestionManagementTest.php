@@ -19,19 +19,19 @@ use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionReviewAction;
 use Modules\QuestionBank\Enums\QuestionReviewStatus;
 use Modules\QuestionBank\Enums\QuestionStatus;
+use Modules\QuestionBank\Models\MedicalTaxonomyNode;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionReviewRequest;
 use Modules\QuestionBank\Models\QuestionVersion;
-use Tests\TestCase;
 use Tests\Support\CreatesMedicalTaxonomy;
-
+use Tests\TestCase;
 
 final class AdminQuestionManagementTest extends TestCase
 {
     use CreatesMedicalTaxonomy;
     use RefreshDatabase;
 
-    private \Modules\QuestionBank\Models\MedicalTaxonomyNode $topic;
+    private MedicalTaxonomyNode $topic;
 
     protected function setUp(): void
     {
@@ -89,7 +89,7 @@ final class AdminQuestionManagementTest extends TestCase
 
         $question = Question::query()->firstOrFail();
 
-                $this->assertEqualsCanonicalizing(
+        $this->assertEqualsCanonicalizing(
             [$this->topic->id, $secondaryTopic->id],
             $question->medicalTaxonomyNodes()->pluck('medical_taxonomy_nodes.id')->all(),
         );
@@ -107,13 +107,13 @@ final class AdminQuestionManagementTest extends TestCase
             ->assertRedirect();
 
         $question->refresh();
-                $this->assertSame(
+        $this->assertSame(
             [$secondaryTopic->id],
             $question->medicalTaxonomyNodes()->pluck('medical_taxonomy_nodes.id')->all(),
         );
     }
 
-    public function test_question_form_and_admin_review_show_all_explanation_fields(): void
+    public function test_question_form_uses_option_explanations_without_general_explanation_field(): void
     {
         $editor = $this->staffUser(Role::ContentEditor);
         $admin = $this->staffUser(Role::Admin);
@@ -121,8 +121,8 @@ final class AdminQuestionManagementTest extends TestCase
         $this->actingAsStaff($editor)
             ->get(route('admin.questions.create'))
             ->assertOk()
-            ->assertSee('name="explanation"', false)
-            ->assertSee('Giải thích chung')
+            ->assertDontSee('name="explanation"', false)
+            ->assertDontSee('Giải thích chung')
             ->assertSee('Kiến thức / Gợi ý')
             ->assertDontSee('Ý chính cần gạch chân');
 
@@ -135,7 +135,7 @@ final class AdminQuestionManagementTest extends TestCase
         $this->actingAsStaff($admin)
             ->get(route('admin.questions.reviews.show', $reviewRequest))
             ->assertOk()
-            ->assertSee('Giải thích lâm sàng đầy đủ.')
+            ->assertDontSee('Giải thích lâm sàng đầy đủ.')
             ->assertSee('Nhớ ECG sớm.')
             ->assertSee('đau ngực')
             ->assertSee('Giải thích:')
@@ -230,7 +230,6 @@ final class AdminQuestionManagementTest extends TestCase
             ->assertSee('Hiện tại: phiên bản 1')
             ->assertSee('Hình ảnh')
             ->assertSee('/storage/questions/stem-version.png')
-            ->assertSee('Giải thích lâm sàng đầy đủ.')
             ->assertSee('Kiến thức / Gợi ý')
             ->assertSee('Nhớ ECG sớm.')
             ->assertSee('Đáp án đúng')
@@ -560,10 +559,10 @@ final class AdminQuestionManagementTest extends TestCase
         $this->assertSame(QuestionStatus::Published, $published->status);
         $this->assertSame('Bệnh nhân 55 tuổi đau ngực. Chẩn đoán nào phù hợp nhất?', strip_tags($published->stem));
         $this->assertSame(['đau ngực', 'Chẩn đoán nào phù hợp nhất?'], array_values(array_map('strip_tags', $published->key_info ?? [])));
-        $this->assertSame('Giải thích lâm sàng đầy đủ.', strip_tags($published->explanation));
+        $this->assertSame('Đúng', strip_tags($published->explanation));
         $this->assertSame('Nhớ ECG sớm.', strip_tags($published->attending_tip));
         $this->assertSame(Difficulty::Medium, $published->difficulty);
-                $this->assertSame([$this->topic->id], $published->medicalTaxonomyNodes->pluck('id')->all());
+        $this->assertSame([$this->topic->id], $published->medicalTaxonomyNodes->pluck('id')->all());
         $this->assertTrue($published->is_free);
 
         $this->actingAs($student)

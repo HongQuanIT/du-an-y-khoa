@@ -11,8 +11,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
-use Modules\Admin\Actions\RequestQuestionDeletionAction;
 use Modules\Admin\Actions\CloneQuestionAction;
+use Modules\Admin\Actions\RequestQuestionDeletionAction;
 use Modules\Admin\Actions\SaveAdminQuestionAction;
 use Modules\Admin\Actions\TransitionQuestionStatusAction;
 use Modules\Admin\Support\QuestionAccess;
@@ -254,7 +254,6 @@ final class QuestionController extends Controller
      * @return array{
      *     stem: string,
      *     stem_image_path: ?string,
-     *     explanation: ?string,
      *     key_info: array<int, string>,
      *     attending_tip: ?string,
      *     difficulty: string,
@@ -269,7 +268,6 @@ final class QuestionController extends Controller
         $data = $request->validate([
             'stem' => ['required', 'string'],
             'stem_image_path' => ['nullable', 'string', 'max:1024'],
-            'explanation' => ['nullable', 'string'],
             'key_info' => ['nullable', 'string'],
             'attending_tip' => ['nullable', 'string'],
             'difficulty' => ['required', Rule::in(Difficulty::values())],
@@ -321,7 +319,6 @@ final class QuestionController extends Controller
         $payload = [
             'stem' => $data['stem'],
             'stem_image_path' => $data['stem_image_path'] ?? null,
-            'explanation' => $data['explanation'] ?? null,
             'key_info' => $this->parseKeyInfo($data['key_info'] ?? null),
             'attending_tip' => $data['attending_tip'] ?? null,
             'difficulty' => $data['difficulty'],

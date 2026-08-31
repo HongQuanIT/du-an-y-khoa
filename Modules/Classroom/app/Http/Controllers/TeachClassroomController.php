@@ -35,6 +35,8 @@ use Modules\Classroom\Http\Requests\UpdateTeachClassroomRequest;
 use Modules\Classroom\Models\Classroom;
 use Modules\Classroom\Models\LiveSession;
 use Modules\Classroom\Services\LiveKitTokenService;
+use Modules\Exam\Enums\ExamStatus;
+use Modules\Exam\Models\Exam;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\CoreClinicalTopic;
 use Modules\QuestionBank\Models\MedicalTaxonomyNode;
@@ -165,6 +167,13 @@ final class TeachClassroomController extends Controller
 
         return view('classroom::teach.classes.show', [
             'classroom' => $classroom,
+            'publishedExams' => $classroom->purpose === ClassroomPurpose::ExamReview
+                ? Exam::query()
+                    ->where('status', ExamStatus::Published->value)
+                    ->withCount('questions')
+                    ->orderBy('title')
+                    ->get(['id', 'title', 'description', 'duration_minutes'])
+                : collect(),
             'upcomingSessions' => $upcomingSessions,
             'pastSessions' => $pastSessions,
             'members' => $members,
@@ -424,6 +433,45 @@ final class TeachClassroomController extends Controller
                     'message' => $question->latestFeedback->message,
                     'user' => $question->latestFeedback->user?->name,
                     'created_at' => $question->latestFeedback->created_at?->format('d/m/Y H:i'),
+                ] : null,
+            ])->values(),
+        ]);
+    }
+
+    public function questionFeedback(Request $request, Classroom $classroom, Question $question): JsonResponse
+    {
+        $this->authorizeTeachClassroom($request, $classroom);
+        $this->authorize('manageLive', $classroom);
+        abort_unless($classroom->purpose === ClassroomPurpose::FeedbackReview, 404);
+        abort_unless($question->status === QuestionStatus::Published, 404);
+        abort_if(
+            ! $question->is_free && ! $request->user()->hasEntitlement(Entitlement::QbankFull->value),
+            404,
+        );
+
+        $feedback = $question->feedback()
+            ->with(['user:id,name', 'option:id,question_id,label,content'])
+            ->latest()
+            ->limit(100)
+            ->get();
+
+        return ApiResponse::item([
+            'question' => [
+                'id' => (string) $question->getKey(),
+                'stem' => trim(strip_tags(html_entity_decode($question->stem, ENT_QUOTES | ENT_HTML5, 'UTF-8'))),
+            ],
+            'total' => $question->feedback()->count(),
+            'feedback' => $feedback->map(fn (QuestionFeedback $item): array => [
+                'id' => (int) $item->getKey(),
+                'target' => QuestionFeedback::targetLabels()[$item->target] ?? $item->target,
+                'category' => QuestionFeedback::categoryLabels()[$item->category] ?? $item->category,
+                'status' => QuestionFeedback::statusLabels()[$item->status] ?? $item->status,
+                'message' => $item->message ?: 'Không có ghi chú thêm.',
+                'student' => $item->user?->name ?? 'Học viên không xác định',
+                'created_at' => $item->created_at?->timezone(config('app.timezone'))->format('d/m/Y H:i'),
+                'option' => $item->option ? [
+                    'label' => $item->option->label,
+                    'content' => trim(strip_tags(html_entity_decode($item->option->content, ENT_QUOTES | ENT_HTML5, 'UTF-8'))),
                 ] : null,
             ])->values(),
         ]);

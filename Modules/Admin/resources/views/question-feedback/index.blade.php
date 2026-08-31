@@ -94,7 +94,25 @@
                                         {{ $categories[$feedback->category] ?? $feedback->category }}
                                     </span>
                                 </div>
-                                <p class="whitespace-pre-line leading-5 text-on-surface">{{ $feedback->message ?: 'Không có ghi chú thêm.' }}</p>
+                                <div x-data="{ expanded: false, truncated: false }"
+                                    x-init="$nextTick(() => truncated = $refs.preview.scrollHeight > $refs.preview.clientHeight + 1)">
+                                    <p x-ref="preview" x-show="!expanded"
+                                        class="line-clamp-2 whitespace-pre-line leading-5 text-on-surface">
+                                        {{ $feedback->message ?: 'Không có ghi chú thêm.' }}
+                                    </p>
+                                    <p x-show="expanded" x-cloak
+                                        class="whitespace-pre-line leading-5 text-on-surface">
+                                        {{ $feedback->message ?: 'Không có ghi chú thêm.' }}
+                                    </p>
+                                    <button type="button" x-show="truncated || expanded" x-cloak
+                                        @click="expanded = !expanded"
+                                        :aria-expanded="expanded"
+                                        class="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline">
+                                        <span x-text="expanded ? 'Thu gọn' : 'Chi tiết'"></span>
+                                        <span class="material-symbols-outlined text-[16px] transition-transform"
+                                            :class="expanded ? 'rotate-180' : ''" aria-hidden="true">expand_more</span>
+                                    </button>
+                                </div>
                                 @if ($feedback->option)
                                     <p class="mt-2 text-xs text-on-surface-variant">
                                         Đáp án {{ $feedback->option->label }}: {{ \Illuminate\Support\Str::limit(strip_tags($feedback->option->content), 100) }}

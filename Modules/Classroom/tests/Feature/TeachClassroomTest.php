@@ -17,6 +17,8 @@ use Modules\Classroom\Enums\MemberStatus;
 use Modules\Classroom\Models\Classroom;
 use Modules\Classroom\Models\ClassroomMember;
 use Modules\Classroom\Models\LiveSession;
+use Modules\Exam\Enums\ExamStatus;
+use Modules\Exam\Models\Exam;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
 use Modules\QuestionBank\Models\Blueprint;
 use Modules\QuestionBank\Models\BlueprintSection;
@@ -50,7 +52,10 @@ final class TeachClassroomTest extends TestCase
             ->get(route('teach.classes.index'))
             ->assertOk()
             ->assertSee('Lớp của tôi')
-            ->assertSee('Tạo lớp');
+            ->assertSee('Tạo lớp')
+            ->assertSee('name="robots" content="noindex, nofollow"', false)
+            ->assertSee('name="description" content="Quản lý lớp chữa đề, lịch phát trực tiếp và học viên trên cổng giảng viên."', false)
+            ->assertSee('aria-labelledby="classroom-list-title"', false);
 
         $this->actingAs($instructor)
             ->get(route('teach.classes.create'))
@@ -132,7 +137,7 @@ final class TeachClassroomTest extends TestCase
     public function test_instructor_cannot_attach_unpublished_question_to_live_session(): void
     {
         $instructor = $this->instructor(['email' => 'draft-question@example.com']);
-        $classroom = $this->seedClassroom($instructor, ClassroomPurpose::ExamReview);
+        $classroom = $this->seedClassroom($instructor, ClassroomPurpose::FeedbackReview);
         $draft = Question::factory()->draft()->free()->create([
             'stem' => 'Câu hỏi nháp không được gắn',
         ]);
@@ -155,8 +160,11 @@ final class TeachClassroomTest extends TestCase
     public function test_instructor_can_filter_live_library_by_topic_and_feedback_category(): void
     {
         $instructor = $this->instructor(['email' => 'filter-library@example.com']);
-        $student = User::factory()->create(['email' => 'feedback-student@example.com']);
-        $classroom = $this->seedClassroom($instructor, ClassroomPurpose::ExamReview);
+        $student = User::factory()->create([
+            'name' => 'Học viên gửi feedback',
+            'email' => 'feedback-student@example.com',
+        ]);
+        $classroom = $this->seedClassroom($instructor, ClassroomPurpose::FeedbackReview);
         $blueprint = Blueprint::query()->create([
             'name' => 'Blueprint lọc live',
             'slug' => 'blueprint-loc-live',
@@ -207,6 +215,13 @@ final class TeachClassroomTest extends TestCase
         ]);
 
         $this->actingAs($instructor)
+            ->get(route('teach.classes.show', $classroom))
+            ->assertOk()
+            ->assertSee('Feedback học viên')
+            ->assertSee('@click.stop="openFeedback(question)"', false)
+            ->assertSee('Chi tiết feedback');
+
+        $this->actingAs($instructor)
             ->getJson(route('teach.classes.questions.search', [
                 $classroom,
                 'medical_taxonomy_node_ids' => [$cardiology->getKey()],
@@ -242,12 +257,21 @@ final class TeachClassroomTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.questions.0.id', $respiratoryQuestion->id)
             ->assertJsonMissing(['id' => $cardiologyQuestion->id]);
+
+        $this->actingAs($instructor)
+            ->getJson(route('teach.classes.questions.feedback', [$classroom, $respiratoryQuestion]))
+            ->assertOk()
+            ->assertJsonPath('data.question.id', $respiratoryQuestion->id)
+            ->assertJsonPath('data.total', 1)
+            ->assertJsonPath('data.feedback.0.student', 'Học viên gửi feedback')
+            ->assertJsonPath('data.feedback.0.category', 'Nội dung không chính xác')
+            ->assertJsonPath('data.feedback.0.message', 'Nội dung cần kiểm tra lại.');
     }
 
     public function test_instructor_can_schedule_start_and_end_live_from_teach_portal(): void
     {
         $instructor = $this->instructor();
-        $classroom = $this->seedClassroom($instructor, ClassroomPurpose::ExamReview);
+        $classroom = $this->seedClassroom($instructor, ClassroomPurpose::FeedbackReview);
         $classroom->update(['status' => ClassroomStatus::Active]);
         $student = User::factory()->create(['email' => 'live-student@example.com']);
         $student->assignRole(Role::Student->value);
@@ -392,6 +416,85 @@ final class TeachClassroomTest extends TestCase
             ->get(route('teach.classes.sessions.studio', [$classroom, $session]))
             ->assertOk()
             ->assertSee('Live Studio');
+    }
+
+    public function test_instructor_can_schedule_a_live_session_with_more_than_fifty_questions(): void
+    {
+        $instructor = $this->instructor();
+        $classroom = $this->seedClassroom($instructor, ClassroomPurpose::FeedbackReview);
+        $classroom->update(['status' => ClassroomStatus::Active]);
+        $questions = Question::factory()->count(51)->free()->withOptions()->create();
+
+        $this->actingAs($instructor)
+            ->post(route('teach.classes.sessions.store', $classroom), [
+                'title' => 'Chữa bộ đề đầy đủ',
+                'question_ids' => $questions->pluck('id')->all(),
+            ])
+            ->assertRedirect(route('teach.classes.show', $classroom))
+            ->assertSessionHasNoErrors();
+
+        $session = $classroom->sessions()->latest('id')->firstOrFail();
+
+        $this->assertCount(51, $session->questionIds());
+        $this->assertSame($questions->pluck('id')->all(), $session->questionIds());
+    }
+
+    public function test_exam_review_session_uses_all_questions_from_the_selected_exam_in_order(): void
+    {
+        $instructor = $this->instructor(['email' => 'exam-review@example.com']);
+        $classroom = $this->seedClassroom($instructor, ClassroomPurpose::ExamReview);
+        $classroom->update(['status' => ClassroomStatus::Active]);
+        $questions = Question::factory()->count(3)->free()->withOptions()->create();
+        $exam = Exam::query()->create([
+            'title' => 'Đề thi Nội khoa 2026',
+            'description' => 'Đề thi dùng cho buổi chữa đề.',
+            'duration_minutes' => 90,
+            'status' => ExamStatus::Published,
+            'is_published' => true,
+        ]);
+        $orderedIds = [$questions[2]->id, $questions[0]->id, $questions[1]->id];
+        $exam->questions()->attach([
+            $orderedIds[0] => ['order' => 1],
+            $orderedIds[1] => ['order' => 2],
+            $orderedIds[2] => ['order' => 3],
+        ]);
+
+        $this->actingAs($instructor)
+            ->get(route('teach.classes.show', $classroom))
+            ->assertOk()
+            ->assertSee('Chọn đề thi')
+            ->assertSee('Đề thi Nội khoa 2026')
+            ->assertDontSee('Thư viện câu hỏi');
+
+        $this->actingAs($instructor)
+            ->post(route('teach.classes.sessions.store', $classroom), [
+                'title' => 'Chữa đề Nội khoa 2026',
+                'exam_id' => $exam->getKey(),
+            ])
+            ->assertRedirect(route('teach.classes.show', $classroom))
+            ->assertSessionHasNoErrors();
+
+        $session = $classroom->sessions()->latest('id')->firstOrFail();
+
+        $this->assertSame($exam->getKey(), $session->linked_exam_id);
+        $this->assertSame('exam', $session->question_set['source']);
+        $this->assertSame($orderedIds, $session->questionIds());
+    }
+
+    public function test_exam_review_session_requires_a_published_exam_instead_of_manual_questions(): void
+    {
+        $instructor = $this->instructor(['email' => 'exam-required@example.com']);
+        $classroom = $this->seedClassroom($instructor, ClassroomPurpose::ExamReview);
+        $question = Question::factory()->free()->withOptions()->create();
+
+        $this->actingAs($instructor)
+            ->post(route('teach.classes.sessions.store', $classroom), [
+                'title' => 'Chữa đề thiếu đề thi',
+                'question_ids' => [$question->id],
+            ])
+            ->assertSessionHasErrors(['exam_id', 'question_ids']);
+
+        $this->assertDatabaseMissing('live_sessions', ['title' => 'Chữa đề thiếu đề thi']);
     }
 
     public function test_instructor_can_start_live_before_classroom_approval(): void

@@ -105,8 +105,7 @@ final class AdminAuditArchitectureTest extends TestCase
 
         $this->assertNull($log->before);
         $this->assertSame('Ca lâm sàng audit', strip_tags($log->after['stem']));
-        $this->assertSame('Giải thích audit', strip_tags($log->after['explanation']));
-        $this->assertStringContainsString('/storage/questions/audit.png', $log->after['explanation']);
+        $this->assertSame('Vì sao đúng', strip_tags($log->after['explanation']));
         $this->assertSame([$topic->id], $log->after['medical_taxonomy_node_ids']);
         $this->assertSame('Dấu hiệu gợi ý', strip_tags($log->after['hints'][0]['content']));
         $this->assertTrue($log->after['exam_flag']);

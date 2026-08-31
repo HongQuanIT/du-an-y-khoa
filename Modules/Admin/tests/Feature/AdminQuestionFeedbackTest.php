@@ -46,14 +46,16 @@ final class AdminQuestionFeedbackTest extends TestCase
             'question_option_id' => $option->getKey(),
             'target' => 'answer',
             'category' => 'incorrect',
-            'message' => 'Đáp án này cần kiểm tra lại.',
+            'message' => str_repeat('Đáp án này cần kiểm tra lại. ', 12),
         ]);
 
         $this->actingAsStaff($admin)
             ->get(route('admin.question-feedback.index'))
             ->assertOk()
             ->assertSee('Đáp án này cần kiểm tra lại.')
-            ->assertSee($option->content);
+            ->assertSee($option->content)
+            ->assertSee('line-clamp-2', false)
+            ->assertSee("x-text=\"expanded ? 'Thu gọn' : 'Chi tiết'\"", false);
 
         $this->actingAsStaff($admin)
             ->patch(route('admin.question-feedback.update-status', $feedback), [
