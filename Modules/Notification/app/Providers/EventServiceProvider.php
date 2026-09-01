@@ -6,7 +6,9 @@ use App\Events\ContactInquirySubmitted;
 use App\Events\SupportMessageCreated;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 use Modules\Classroom\Events\LiveRecordingReady;
+use Modules\Classroom\Events\LiveSessionEnded;
 use Modules\Classroom\Events\LiveSessionStarted;
+use Modules\Notification\Listeners\DismissLiveSessionNotifications;
 use Modules\Notification\Listeners\NotifyContactInquirySubmitted;
 use Modules\Notification\Listeners\NotifyLiveRecordingReady;
 use Modules\Notification\Listeners\NotifyLiveSessionStarted;
@@ -20,11 +22,11 @@ class EventServiceProvider extends ServiceProvider
      * @var array<string, array<int, string>>
      */
     protected $listen = [
-        QuestionSessionProgressed::class => [
-            NotifySessionCompleted::class,
-        ],
         LiveSessionStarted::class => [
             NotifyLiveSessionStarted::class,
+        ],
+        LiveSessionEnded::class => [
+            DismissLiveSessionNotifications::class,
         ],
         LiveRecordingReady::class => [
             NotifyLiveRecordingReady::class,

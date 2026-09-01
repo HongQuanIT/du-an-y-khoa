@@ -553,7 +553,6 @@
     </script>
     @stack('scripts')
     <x-billing::paywall-overlay />
-    @include('notification::partials.popup-modal')
 </body>
 
 </html>
