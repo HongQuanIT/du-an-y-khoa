@@ -12,7 +12,8 @@
 
     <x-admin.flash />
 
-    <form method="post" action="{{ route('admin.settings.update') }}" x-data="{ active: '{{ $firstGroup }}' }"
+    <form method="post" action="{{ route('admin.settings.update') }}"
+        x-data="{ active: @js(request()->query('tab', $firstGroup)) }"
         class="rounded-xl border border-outline-variant bg-surface">
         @csrf
 
@@ -70,6 +71,18 @@
                                     class="mb-2 block font-label-md text-label-md text-on-surface">{{ $field['label'] }}</label>
                                 <textarea id="{{ $groupKey }}_{{ $fieldKey }}" name="{{ $name }}" rows="4"
                                     class="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2 font-body-md text-body-md text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">{{ $value }}</textarea>
+                            @elseif (! empty($field['options']) && is_array($field['options']))
+                                <label for="{{ $groupKey }}_{{ $fieldKey }}"
+                                    class="mb-2 block font-label-md text-label-md text-on-surface">{{ $field['label'] }}</label>
+                                <select id="{{ $groupKey }}_{{ $fieldKey }}" name="{{ $name }}"
+                                    class="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2 font-body-md text-body-md text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+                                    @foreach ($field['options'] as $optionValue => $optionLabel)
+                                        <option value="{{ $optionValue }}" @selected((string) $value === (string) $optionValue)>{{ $optionLabel }}</option>
+                                    @endforeach
+                                </select>
+                                @if (! empty($field['help']))
+                                    <p class="mt-2 font-body-sm text-body-sm text-on-surface-variant">{{ $field['help'] }}</p>
+                                @endif
                             @else
                                 <label for="{{ $groupKey }}_{{ $fieldKey }}"
                                     class="mb-2 block font-label-md text-label-md text-on-surface">{{ $field['label'] }}</label>
@@ -79,6 +92,9 @@
                                     @if ($field['type'] === 'integer' && $integerMin !== null) min="{{ $integerMin }}" @endif
                                     @if ($field['type'] === 'integer' && $integerMax !== null) max="{{ $integerMax }}" @endif
                                     class="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2 font-body-md text-body-md text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+                                @if (! empty($field['help']))
+                                    <p class="mt-2 font-body-sm text-body-sm text-on-surface-variant">{{ $field['help'] }}</p>
+                                @endif
                             @endif
 
                             @error($dotName)

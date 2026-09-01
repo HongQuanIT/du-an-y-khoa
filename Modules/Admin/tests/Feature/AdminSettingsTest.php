@@ -89,8 +89,10 @@ final class AdminSettingsTest extends TestCase
             ->get(route('admin.settings.index'))
             ->assertOk()
             ->assertSee('Cài đặt hệ thống')
-            ->assertSee('Cấu hình chung');
+            ->assertSee('Cấu hình chung')
+            ->assertSee('Báo cáo');
 
+        $this->flushSession();
         $this->actingAsStaff($admin)
             ->post(route('admin.settings.update'), [
                 'settings' => [
@@ -111,6 +113,20 @@ final class AdminSettingsTest extends TestCase
                         'livekit_api_key' => 'lk_api_key',
                         'notification_webhook_url' => 'https://hooks.example.com/admin',
                     ],
+                    'reports' => [
+                        'cache_warm_interval_days' => '7',
+                    ],
+                    'partner' => [
+                        'attribution_window_days' => '7',
+                        'default_commission_rate_percent' => '10',
+                        'default_invite_expires_days' => '7',
+                        'default_invite_max_uses' => '0',
+                        'commission_on_renewals' => '1',
+                        'first_payment_window_days' => '0',
+                        'min_payout_cents' => '0',
+                        'overwrite_attribution' => '0',
+                        'require_active_partner' => '1',
+                    ],
                 ],
             ])
             ->assertRedirect()
@@ -123,8 +139,17 @@ final class AdminSettingsTest extends TestCase
             'type' => 'string',
         ]);
 
+        $this->assertDatabaseHas('settings', [
+            'group' => 'reports',
+            'key' => 'cache_warm_interval_days',
+            'value' => '7',
+            'type' => 'integer',
+        ]);
+
         $this->assertFalse(setting('features.maintenance_mode'));
         $this->assertSame(25, setting('features.free_test_question_limit'));
+        $this->assertSame(7, setting('reports.cache_warm_interval_days'));
+        $this->assertSame(7, \Modules\Admin\Support\AdminReportCache::warmIntervalDays());
     }
 
     public function test_student_cannot_access_admin_settings(): void

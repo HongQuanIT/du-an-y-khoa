@@ -45,6 +45,7 @@ export default defineConfig({
             input: [
                 'resources/css/app.css',
                 'resources/js/app.js',
+                'resources/js/admin/dashboard-charts.js',
                 'resources/js/classroom/presenter-window.js',
             ],
             refresh: true,

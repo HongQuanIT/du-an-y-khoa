@@ -28,6 +28,7 @@ final class SettingsSeeder extends Seeder
             ['integrations', 'livekit_url', '', 'string'],
             ['integrations', 'livekit_api_key', '', 'string'],
             ['integrations', 'notification_webhook_url', '', 'string'],
+            ['reports', 'cache_warm_interval_days', 1, 'integer'],
         ];
 
         foreach ($defaults as [$group, $key, $value, $type]) {

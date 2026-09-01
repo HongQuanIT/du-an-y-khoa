@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-09-01
+
+### Admin dashboard + trung tâm báo cáo
+- Dashboard KPI thật (DAU/MAU, MRR, nội dung…), biểu đồ Chart.js, checklist sức khỏe theo hạng mục (ổn định/cảnh báo/lỗi), audit feed và thao tác nhanh.
+- Catalog báo cáo: viewer theo kỳ, CSV, lên lịch email (bật/tắt lịch & gửi mail riêng), cron warm cache (mặc định 1 ngày, cấu hình ở Cài đặt → Báo cáo).
+- Làm mới báo cáo qua queue Horizon kèm trạng thái đang xử lý; timeout warm-all tăng lên 300s.
+
 ## 2026-08-31
 
 ### Chính sách session web + 2FA
