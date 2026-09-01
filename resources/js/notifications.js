@@ -33,7 +33,7 @@ export function bootNotifications() {
             host = document.createElement('div');
             host.setAttribute('data-notification-toasts', '');
             host.className =
-                'pointer-events-none fixed right-4 bottom-4 z-[70] flex w-[min(100vw-2rem,360px)] flex-col gap-2';
+                'pointer-events-none fixed top-16 right-4 sm:right-6 z-[70] flex w-[min(100vw-2rem,360px)] sm:w-[380px] flex-col gap-2';
             document.body.appendChild(host);
         }
         return host;
@@ -53,16 +53,44 @@ export function bootNotifications() {
         const host = ensureToastHost();
         const toast = document.createElement('div');
         toast.className =
-            'pointer-events-auto rounded-xl border border-outline-variant bg-surface p-4 shadow-lg transition duration-200';
+            'pointer-events-auto rounded-2xl border border-outline-variant bg-surface p-4 shadow-xl ring-1 ring-black/5 transition duration-300';
+        
+        const actionHtml = payload.action_url
+            ? `<a href="${escapeHtml(payload.action_url)}" class="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-1 text-xs font-bold text-white shadow-sm hover:bg-primary-container hover:text-on-primary-container transition-colors">
+                <span>Xem ngay</span>
+                <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+               </a>`
+            : '';
+
         toast.innerHTML = `
-            <p class="font-label-md text-label-md font-semibold text-on-surface">${escapeHtml(payload.title || 'Thông báo')}</p>
-            <p class="mt-1 font-body-sm text-body-sm text-on-surface-variant">${escapeHtml(payload.body || '')}</p>
+            <div class="flex items-start justify-between gap-2 pb-1.5">
+                <span class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                    <span class="size-1.5 rounded-full bg-primary animate-ping"></span>
+                    Thông báo mới
+                </span>
+                <button type="button" class="rounded-lg p-1 text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" data-toast-close aria-label="Đóng">
+                    <span class="material-symbols-outlined text-[16px]">close</span>
+                </button>
+            </div>
+            <p class="font-label-md text-label-md font-bold text-on-surface">${escapeHtml(payload.title || 'Thông báo')}</p>
+            <p class="mt-0.5 font-body-sm text-body-sm text-on-surface-variant line-clamp-2">${escapeHtml(payload.body || '')}</p>
+            ${actionHtml ? `<div class="mt-2.5 flex justify-end">${actionHtml}</div>` : ''}
         `;
+
+        toast.querySelector('[data-toast-close]')?.addEventListener('click', () => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(-6px)';
+            window.setTimeout(() => toast.remove(), 200);
+        });
+
         host.prepend(toast);
         window.setTimeout(() => {
-            toast.style.opacity = '0';
-            window.setTimeout(() => toast.remove(), 200);
-        }, 5000);
+            if (toast.isConnected) {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-6px)';
+                window.setTimeout(() => toast.remove(), 250);
+            }
+        }, 7000);
     };
 
     const prependItem = (payload) => {
