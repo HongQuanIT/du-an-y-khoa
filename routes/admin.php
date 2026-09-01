@@ -6,6 +6,7 @@ use App\Support\Enums\Permission;
 use App\Support\Enums\Role;
 use Illuminate\Support\Facades\Route;
 use Modules\Admin\Http\Controllers\AuditLogController;
+use Modules\Admin\Http\Controllers\DashboardController;
 use Modules\Admin\Http\Controllers\BillingGatewayController;
 use Modules\Admin\Http\Controllers\BillingPaymentController;
 use Modules\Admin\Http\Controllers\BillingPlanController;
@@ -23,6 +24,7 @@ use Modules\Admin\Http\Controllers\MedicalTaxonomyController;
 use Modules\Admin\Http\Controllers\QuestionController;
 use Modules\Admin\Http\Controllers\QuestionFeedbackController;
 use Modules\Admin\Http\Controllers\QuestionReviewController;
+use Modules\Admin\Http\Controllers\ReportController;
 use Modules\Admin\Http\Controllers\QuestionVersionController;
 use Modules\Admin\Http\Controllers\RoleController;
 use Modules\Admin\Http\Controllers\SettingController;
@@ -80,7 +82,7 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
         ->name('2fa.challenge.verify');
 
     Route::middleware('staff.2fa')->group(function (): void {
-        Route::view('/', 'admin::dashboard')->name('dashboard');
+        Route::get('/', DashboardController::class)->name('dashboard');
 
         Route::middleware('permission:'.Permission::UserView->value)->group(function (): void {
             Route::get('/users', [UserController::class, 'index'])->name('users.index');
@@ -304,6 +306,31 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
             Route::get('/cms/menus', [MenuController::class, 'index'])->name('cms.menus.index');
             Route::get('/cms/menus/{menu}/edit', [MenuController::class, 'edit'])->name('cms.menus.edit');
             Route::put('/cms/menus/{menu}', [MenuController::class, 'update'])->name('cms.menus.update');
+        });
+
+        Route::middleware('permission:'.Permission::ReportExport->value)->group(function (): void {
+            Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+            Route::post('/reports/cache/warm-all', [ReportController::class, 'queueWarmAll'])
+                ->name('reports.cache.warm-all');
+            Route::post('/reports/cache/warm-all/reset', [ReportController::class, 'resetWarmAllStatus'])
+                ->name('reports.cache.warm-all-reset');
+            Route::get('/reports/cache/warm-all/status', [ReportController::class, 'warmAllStatusJson'])
+                ->name('reports.cache.warm-all-status');
+            Route::post('/reports/schedules/{schedule}/toggle', [ReportController::class, 'toggleSchedule'])
+                ->name('reports.schedules.toggle');
+            Route::post('/reports/schedules/{schedule}/toggle-email', [ReportController::class, 'toggleScheduleEmail'])
+                ->name('reports.schedules.toggle-email');
+            Route::post('/reports/schedules/{schedule}/destroy', [ReportController::class, 'destroySchedule'])
+                ->name('reports.schedules.destroy');
+            Route::get('/reports/{category}', [ReportController::class, 'showCategory'])->name('reports.show-category');
+            Route::post('/reports/{category}/{report}/schedules', [ReportController::class, 'storeSchedule'])
+                ->name('reports.schedules.store');
+            Route::post('/reports/{category}/{report}/refresh', [ReportController::class, 'refresh'])
+                ->name('reports.refresh');
+            Route::get('/reports/{category}/{report}/refresh-status', [ReportController::class, 'refreshStatus'])
+                ->name('reports.refresh-status');
+            Route::get('/reports/{category}/{report}/export', [ReportController::class, 'export'])->name('reports.export');
+            Route::get('/reports/{category}/{report}', [ReportController::class, 'showReport'])->name('reports.show');
         });
 
         Route::middleware('permission:'.Permission::BillingManage->value)->group(function (): void {

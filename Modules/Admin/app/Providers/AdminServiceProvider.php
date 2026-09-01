@@ -22,7 +22,10 @@ class AdminServiceProvider extends ModuleServiceProvider
      *
      * @var string[]
      */
-    // protected array $commands = [];
+    protected array $commands = [
+        \Modules\Admin\Console\RunDueReportSchedulesCommand::class,
+        \Modules\Admin\Console\WarmAdminReportCachesCommand::class,
+    ];
 
     /**
      * Provider classes to register.
@@ -39,8 +42,15 @@ class AdminServiceProvider extends ModuleServiceProvider
      *
      * @param  $schedule
      */
-    // protected function configureSchedules(Schedule $schedule): void
-    // {
-    //     $schedule->command('inspire')->hourly();
-    // }
+    protected function configureSchedules(Schedule $schedule): void
+    {
+        $schedule->command('admin:reports-warm-cache')
+            ->hourly()
+            ->when(fn (): bool => \Modules\Admin\Support\AdminReportCache::shouldAutoWarm())
+            ->withoutOverlapping();
+
+        $schedule->command('admin:report-schedules-run')
+            ->everyFiveMinutes()
+            ->withoutOverlapping();
+    }
 }

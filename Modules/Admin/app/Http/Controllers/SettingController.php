@@ -155,6 +155,30 @@ final class SettingController extends Controller
                     ],
                 ],
             ],
+            'reports' => [
+                'label' => 'Báo cáo',
+                'description' => 'Chu kỳ cron tạo snapshot cache báo cáo admin. Có thể làm mới thủ công bất cứ lúc nào trên trang báo cáo.',
+                'icon' => 'analytics',
+                'fields' => [
+                    'cache_warm_interval_days' => [
+                        'label' => 'Chu kỳ warm cache báo cáo (ngày)',
+                        'help' => 'Mặc định 1 ngày. Cron kiểm tra mỗi giờ; chỉ chạy khi đã đủ số ngày kể từ lần warm trước.',
+                        'type' => 'integer',
+                        'default' => 1,
+                        'min' => 1,
+                        'max' => 30,
+                        'options' => [
+                            1 => 'Mỗi 1 ngày (mặc định)',
+                            2 => 'Mỗi 2 ngày',
+                            3 => 'Mỗi 3 ngày',
+                            7 => 'Mỗi 7 ngày',
+                            14 => 'Mỗi 14 ngày',
+                            30 => 'Mỗi 30 ngày',
+                        ],
+                        'rules' => ['required', 'integer', 'min:1', 'max:30'],
+                    ],
+                ],
+            ],
             'partner' => [
                 'label' => 'Cộng tác viên',
                 'description' => 'Attribution, % hoa hồng mặc định, hạn mã mời và quy tắc ghi nhận doanh thu chia sẻ.',

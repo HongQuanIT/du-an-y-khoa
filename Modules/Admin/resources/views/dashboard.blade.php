@@ -1,41 +1,66 @@
 <x-layouts.admin title="Tổng quan">
     <x-admin.page-header title="Tổng quan vận hành"
-        description="KPI sẽ nối rollup thật ở phase sau. Hiện là khung dashboard + lối tắt theo quyền của bạn." />
+        description="Sức khỏe hệ thống, hàng đợi vận hành và hoạt động quản trị gần đây.">
+        <x-slot:actions>
+            <span class="inline-flex items-center gap-1.5 rounded-full border border-outline-variant bg-surface px-3 py-1.5 font-label-sm text-label-sm text-on-surface-variant">
+                <span class="material-symbols-outlined text-[16px]">update</span>
+                Cập nhật {{ $refreshed_at->format('H:i d/m/Y') }}
+            </span>
+        </x-slot:actions>
+    </x-admin.page-header>
 
-    <div class="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <x-admin.kpi-card label="MAU" value="—" hint="Sắp có" icon="group" />
-        <x-admin.kpi-card label="Đăng ký mới (7 ngày)" value="—" hint="Sắp có" icon="person_add" />
-        <x-admin.kpi-card label="Câu hỏi published" value="—" hint="Sắp có" icon="quiz" />
-        <x-admin.kpi-card label="Report chờ xử lý" value="—" hint="Sắp có" icon="flag" />
+    @if (count($kpis) > 0)
+        <div class="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            @foreach ($kpis as $kpi)
+                <x-admin.kpi-card
+                    :label="$kpi['label']"
+                    :value="$kpi['value']"
+                    :hint="$kpi['hint']"
+                    :icon="$kpi['icon']"
+                    :delta="$kpi['delta']"
+                    :delta-suffix="$kpi['delta_suffix']"
+                    :delta-mode="$kpi['delta_mode']"
+                    :href="$kpi['href']"
+                    :severity="$kpi['severity']" />
+            @endforeach
+        </div>
+    @else
+        <div class="mb-8 rounded-xl border border-dashed border-outline-variant bg-surface px-6 py-10 text-center">
+            <span class="material-symbols-outlined mb-3 text-[40px] text-on-surface-variant">dashboard</span>
+            <h3 class="font-title-md text-on-surface">Chưa có KPI nào cho quyền của bạn</h3>
+            <p class="mx-auto mt-2 max-w-lg font-body-sm text-on-surface-variant">
+                Liên hệ Super Admin nếu bạn cần truy cập thêm module quản trị.
+            </p>
+        </div>
+    @endif
+
+    @if (count($charts) > 0)
+        <div class="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2"
+            data-admin-dashboard-charts
+            data-charts='@json($charts)'>
+            @foreach ($charts as $chart)
+                <x-admin.trend-chart
+                    :id="$chart['id']"
+                    :title="$chart['title']"
+                    :subtitle="$chart['subtitle']"
+                    :full-width="(bool) ($chart['full_width'] ?? false)" />
+            @endforeach
+        </div>
+    @endif
+
+    <div class="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <x-admin.alerts-panel :alerts="$alerts" />
+
+        @if (count($audit_feed) > 0 || auth()->user()?->can(\App\Support\Enums\Permission::AuditView->value))
+            <x-admin.audit-feed
+                :items="$audit_feed"
+                :view-all-href="auth()->user()?->can(\App\Support\Enums\Permission::AuditView->value) ? route('admin.audit.index') : null" />
+        @endif
     </div>
 
-    <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <section class="rounded-xl border border-outline-variant bg-surface p-5">
-            <h3 class="font-headline-sm text-headline-sm text-on-surface mb-2">Lối tắt</h3>
-            <p class="font-body-sm text-body-sm text-on-surface-variant mb-4">
-                Các module quản trị sẽ hiện ở đây khi được triển khai. Menu trái đã lọc theo permission.
-            </p>
-            <ul class="space-y-2 font-label-md text-label-md text-on-surface-variant">
-                @foreach (\Modules\Admin\Support\AdminMenu::for(auth()->user()) as $item)
-                    @if ($item['route'])
-                        <li>
-                            <a href="{{ route($item['route']) }}" class="text-primary hover:underline">{{ $item['label'] }}</a>
-                        </li>
-                    @elseif ($item['coming_soon'] ?? false)
-                        <li class="opacity-60">{{ $item['label'] }} — sắp có</li>
-                    @endif
-                @endforeach
-            </ul>
-        </section>
+    <x-admin.quick-actions :actions="$quick_actions" />
 
-        <section class="rounded-xl border border-outline-variant bg-surface p-5">
-            <h3 class="font-headline-sm text-headline-sm text-on-surface mb-2">Bảo mật phiên</h3>
-            <p class="font-body-sm text-body-sm text-on-surface-variant mb-2">
-                Đăng nhập quản trị bắt buộc 2FA (TOTP). Mỗi phiên đăng nhập mới cần nhập lại mã.
-            </p>
-            <p class="font-label-sm text-label-sm text-on-surface-variant">
-                Xin chào, <span class="text-on-surface">{{ auth()->user()->name }}</span> — khu vực này độc lập với dashboard học viên.
-            </p>
-        </section>
-    </div>
+    @push('scripts')
+        @vite('resources/js/admin/dashboard-charts.js')
+    @endpush
 </x-layouts.admin>
