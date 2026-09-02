@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\Notification\Mail;
 
 use App\Models\User;
+use App\Support\Queue\Concerns\HasQueueDisplayName;
+use App\Support\Queue\QueueName;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -17,6 +19,7 @@ use Modules\StudyPlan\Models\StudyPlanTask;
 
 final class StudyPlanReminderMail extends Mailable implements ShouldQueue
 {
+    use HasQueueDisplayName;
     use Queueable, SerializesModels;
 
     /**
@@ -26,7 +29,19 @@ final class StudyPlanReminderMail extends Mailable implements ShouldQueue
         public User $user,
         public Collection $tasks,
         public Carbon $reminderDate,
-    ) {}
+    ) {
+        $this->onQueue(QueueName::Mail->value);
+    }
+
+    public function displayName(): string
+    {
+        return sprintf(
+            'mail:study-plan-reminder:user-%d:tasks-%d:date-%s',
+            $this->user->getKey(),
+            $this->tasks->count(),
+            $this->reminderDate->toDateString(),
+        );
+    }
 
     public function envelope(): Envelope
     {
@@ -41,6 +56,17 @@ final class StudyPlanReminderMail extends Mailable implements ShouldQueue
     {
         return new Content(
             view: 'notification::emails.study-plan-reminder',
+        );
+    }
+
+    /** @return array<int, string> */
+    public function tags(): array
+    {
+        return $this->featureTags(
+            'mail',
+            'study-plan-reminder',
+            'user:'.$this->user->getKey(),
+            'date:'.$this->reminderDate->toDateString(),
         );
     }
 }

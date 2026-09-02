@@ -2,7 +2,7 @@
 
 return [
     'queue_enabled' => env('AUDIT_QUEUE_ENABLED', true),
-    'queue' => env('AUDIT_QUEUE', 'default'),
+    'queue' => env('AUDIT_QUEUE', 'audit'),
 
     'activity' => [
         'enabled' => env('AUDIT_ACTIVITY_ENABLED', true),

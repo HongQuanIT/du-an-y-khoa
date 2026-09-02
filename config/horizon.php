@@ -94,9 +94,18 @@ return [
     | will be fired. Every connection / queue combination may have its
     | own, unique threshold (in seconds) before this event is fired.
     |
+    | Queue names: App\Support\Queue\QueueName
+    |
     */
 
     'waits' => [
+        'redis:billing' => 30,
+        'redis:mail' => 120,
+        'redis:notifications' => 60,
+        'redis:audit' => 120,
+        'redis:admin-reports' => 180,
+        'redis:study-plan' => 300,
+        'redis:search' => 120,
         'redis:default' => 60,
     ],
 
@@ -136,7 +145,7 @@ return [
     ],
 
     'silenced_tags' => [
-        // 'notifications',
+        // 'audit',
     ],
 
     /*
@@ -190,14 +199,103 @@ return [
     | Queue Worker Configuration
     |--------------------------------------------------------------------------
     |
-    | Here you may define the queue worker settings used by your application
-    | in all environments. These supervisors and settings handle all your
-    | queued jobs and will be provisioned by Horizon during deployment.
+    | Mỗi supervisor phục vụ một luồng queue theo tính năng (QueueName enum).
+    | Production scale maxProcesses; local giảm xuống 1–2 worker/queue.
     |
     */
 
     'defaults' => [
-        'supervisor-1' => [
+        'supervisor-billing' => [
+            'connection' => 'redis',
+            'queue' => ['billing'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'time',
+            'maxProcesses' => 2,
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 128,
+            'tries' => 3,
+            'timeout' => 60,
+            'nice' => 0,
+        ],
+        'supervisor-mail' => [
+            'connection' => 'redis',
+            'queue' => ['mail'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'time',
+            'maxProcesses' => 2,
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 128,
+            'tries' => 3,
+            'timeout' => 120,
+            'nice' => 0,
+        ],
+        'supervisor-notifications' => [
+            'connection' => 'redis',
+            'queue' => ['notifications'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'time',
+            'maxProcesses' => 2,
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 128,
+            'tries' => 2,
+            'timeout' => 120,
+            'nice' => 0,
+        ],
+        'supervisor-audit' => [
+            'connection' => 'redis',
+            'queue' => ['audit'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'time',
+            'maxProcesses' => 3,
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 128,
+            'tries' => 3,
+            'timeout' => 60,
+            'nice' => 0,
+        ],
+        'supervisor-admin-reports' => [
+            'connection' => 'redis',
+            'queue' => ['admin-reports'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'time',
+            'maxProcesses' => 2,
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 256,
+            'tries' => 2,
+            'timeout' => 300,
+            'nice' => 0,
+        ],
+        'supervisor-study-plan' => [
+            'connection' => 'redis',
+            'queue' => ['study-plan'],
+            'balance' => 'simple',
+            'maxProcesses' => 1,
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 256,
+            'tries' => 1,
+            'timeout' => 600,
+            'nice' => 0,
+        ],
+        'supervisor-search' => [
+            'connection' => 'redis',
+            'queue' => ['search'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'time',
+            'maxProcesses' => 2,
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 128,
+            'tries' => 3,
+            'timeout' => 120,
+            'nice' => 0,
+        ],
+        'supervisor-default' => [
             'connection' => 'redis',
             'queue' => ['default'],
             'balance' => 'auto',
@@ -207,24 +305,60 @@ return [
             'maxJobs' => 0,
             'memory' => 128,
             'tries' => 1,
-            'timeout' => 300,
+            'timeout' => 60,
             'nice' => 0,
         ],
     ],
 
     'environments' => [
         'production' => [
-            'supervisor-1' => [
-                'maxProcesses' => 10,
+            'supervisor-billing' => [
+                'maxProcesses' => 4,
                 'balanceMaxShift' => 1,
                 'balanceCooldown' => 3,
+            ],
+            'supervisor-mail' => [
+                'maxProcesses' => 3,
+                'balanceMaxShift' => 1,
+                'balanceCooldown' => 3,
+            ],
+            'supervisor-notifications' => [
+                'maxProcesses' => 4,
+                'balanceMaxShift' => 1,
+                'balanceCooldown' => 3,
+            ],
+            'supervisor-audit' => [
+                'maxProcesses' => 6,
+                'balanceMaxShift' => 2,
+                'balanceCooldown' => 3,
+            ],
+            'supervisor-admin-reports' => [
+                'maxProcesses' => 3,
+                'balanceMaxShift' => 1,
+                'balanceCooldown' => 5,
+            ],
+            'supervisor-study-plan' => [
+                'maxProcesses' => 1,
+            ],
+            'supervisor-search' => [
+                'maxProcesses' => 3,
+                'balanceMaxShift' => 1,
+                'balanceCooldown' => 3,
+            ],
+            'supervisor-default' => [
+                'maxProcesses' => 2,
             ],
         ],
 
         'local' => [
-            'supervisor-1' => [
-                'maxProcesses' => 3,
-            ],
+            'supervisor-billing' => ['maxProcesses' => 1],
+            'supervisor-mail' => ['maxProcesses' => 1],
+            'supervisor-notifications' => ['maxProcesses' => 1],
+            'supervisor-audit' => ['maxProcesses' => 1],
+            'supervisor-admin-reports' => ['maxProcesses' => 1],
+            'supervisor-study-plan' => ['maxProcesses' => 1],
+            'supervisor-search' => ['maxProcesses' => 1],
+            'supervisor-default' => ['maxProcesses' => 1],
         ],
     ],
 

@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\StudyPlan\Jobs;
 
+use App\Support\Queue\Concerns\HasQueueDisplayName;
+use App\Support\Queue\QueueName;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
@@ -19,9 +22,32 @@ use Throwable;
  * Plans are processed in chunks and one failure never blocks the rest, so a
  * single broken plan cannot stall the whole run.
  */
-final class ReplanActivePlansJob implements ShouldQueue
+final class ReplanActivePlansJob implements ShouldBeUnique, ShouldQueue
 {
+    use HasQueueDisplayName;
     use Queueable;
+
+    public int $timeout = 600;
+
+    public int $tries = 1;
+
+    /** Một lần replan nightly — lock 2 giờ. */
+    public int $uniqueFor = 7200;
+
+    public function __construct()
+    {
+        $this->onQueue(QueueName::StudyPlan->value);
+    }
+
+    public function displayName(): string
+    {
+        return 'study-plan:replan-active-adaptive';
+    }
+
+    public function uniqueId(): string
+    {
+        return 'replan-active-adaptive';
+    }
 
     public function handle(ReplanStudyPlanAction $replan): void
     {
@@ -40,5 +66,11 @@ final class ReplanActivePlansJob implements ShouldQueue
                     }
                 }
             });
+    }
+
+    /** @return array<int, string> */
+    public function tags(): array
+    {
+        return $this->featureTags('study-plan', 'replan', 'adaptive');
     }
 }
