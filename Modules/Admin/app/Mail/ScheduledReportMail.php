@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Admin\Mail;
 
+use App\Support\Queue\Concerns\HasQueueDisplayName;
+use App\Support\Queue\QueueName;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -15,6 +17,7 @@ use Modules\Admin\Models\ReportSchedule;
 
 final class ScheduledReportMail extends Mailable implements ShouldQueue
 {
+    use HasQueueDisplayName;
     use Queueable, SerializesModels;
 
     /**
@@ -25,7 +28,20 @@ final class ScheduledReportMail extends Mailable implements ShouldQueue
         public array $export,
         public string $reportTitle,
         public string $categoryTitle,
-    ) {}
+    ) {
+        $this->onQueue(QueueName::Mail->value);
+    }
+
+    public function displayName(): string
+    {
+        return sprintf(
+            'mail:scheduled-report:schedule-%d:%s/%s@%s',
+            $this->schedule->getKey(),
+            $this->schedule->category_slug,
+            $this->schedule->report_slug,
+            $this->schedule->range_key,
+        );
+    }
 
     public function envelope(): Envelope
     {
@@ -60,6 +76,18 @@ final class ScheduledReportMail extends Mailable implements ShouldQueue
             Attachment::fromData(fn (): string => $csv, $filename)
                 ->withMime('text/csv'),
         ];
+    }
+
+    /** @return array<int, string> */
+    public function tags(): array
+    {
+        return $this->featureTags(
+            'mail',
+            'scheduled-report',
+            'schedule:'.$this->schedule->getKey(),
+            'category:'.$this->schedule->category_slug,
+            'report:'.$this->schedule->report_slug,
+        );
     }
 
     private function buildCsv(): string

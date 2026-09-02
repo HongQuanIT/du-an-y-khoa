@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-09-02
+
+### Queue / Horizon — tách luồng theo tính năng
+- Thêm `QueueName` enum: billing, mail, notifications, audit, admin-reports, study-plan, search, default.
+- Horizon: 8 supervisor riêng, timeout và `maxProcesses` theo từng queue; cảnh báo chờ lâu theo luồng.
+- Job/Mail: `displayName()` kèm ID chi tiết, `tags()` filter Horizon; `ShouldBeUnique` chống trùng webhook/reconcile/refresh/warm/replan.
+- `.env.example`: `AUDIT_QUEUE=audit`, `SCOUT_QUEUE=search`.
+
 ## 2026-09-01
 
 ### Admin dashboard + trung tâm báo cáo

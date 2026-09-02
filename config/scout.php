@@ -45,7 +45,10 @@ return [
     |
     */
 
-    'queue' => env('SCOUT_QUEUE', false),
+    // SCOUT_QUEUE=false → sync; true → queue "search"; hoặc tên queue tùy chỉnh
+    'queue' => ($scoutQueue = env('SCOUT_QUEUE', false)) === false || $scoutQueue === 'false' || $scoutQueue === ''
+        ? false
+        : ($scoutQueue === true || $scoutQueue === 'true' ? 'search' : $scoutQueue),
 
     /*
     |--------------------------------------------------------------------------

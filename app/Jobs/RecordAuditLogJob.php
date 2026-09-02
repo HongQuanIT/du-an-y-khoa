@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Jobs;
 
 use App\Models\AuditLog;
+use App\Support\Queue\Concerns\HasQueueDisplayName;
+use App\Support\Queue\QueueName;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -14,6 +16,7 @@ use Illuminate\Queue\SerializesModels;
 final class RecordAuditLogJob implements ShouldQueueAfterCommit
 {
     use Dispatchable;
+    use HasQueueDisplayName;
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;
@@ -26,7 +29,15 @@ final class RecordAuditLogJob implements ShouldQueueAfterCommit
     /** @param array<string, mixed> $attributes */
     public function __construct(public readonly array $attributes)
     {
-        $this->onQueue((string) config('audit.queue', 'default'));
+        $this->onQueue((string) config('audit.queue', QueueName::Audit->value));
+    }
+
+    public function displayName(): string
+    {
+        $action = (string) ($this->attributes['action'] ?? 'unknown');
+        $eventId = (string) ($this->attributes['event_id'] ?? 'no-event-id');
+
+        return sprintf('audit:log:%s:%s', $action, $eventId);
     }
 
     public function handle(): void
@@ -40,6 +51,9 @@ final class RecordAuditLogJob implements ShouldQueueAfterCommit
     /** @return array<int, string> */
     public function tags(): array
     {
-        return ['audit', 'audit:'.$this->attributes['action']];
+        $action = (string) ($this->attributes['action'] ?? 'unknown');
+        $eventId = (string) ($this->attributes['event_id'] ?? 'no-event-id');
+
+        return $this->featureTags('audit', $action, 'event:'.$eventId);
     }
 }
