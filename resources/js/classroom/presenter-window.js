@@ -32,8 +32,6 @@ if (root instanceof HTMLElement) {
     let syncEpoch = 0;
     /** @type {HTMLElement|null} */
     let markToolbar = null;
-    /** @type {number|null} */
-    let pollTimer = null;
 
     const csrf = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 
@@ -484,6 +482,23 @@ if (root instanceof HTMLElement) {
                 map: panelState?.map ?? [],
                 revealed_option_ids: e.revealed_option_ids ?? revealedOptionIds,
             });
+        } else {
+            const panelUrl = questionUrl || String(bootstrapUrl).replace(/\/bootstrap\/?$/, '/question');
+            void fetch(panelUrl, { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+                .then(async (res) => {
+                    if (! res.ok) {
+                        throw new Error('panel');
+                    }
+                    const json = await res.json();
+                    const panel = json.data ?? json;
+                    if (panel?.question || panel?.total !== undefined) {
+                        if (Array.isArray(panel.revealed_option_ids)) {
+                            revealedOptionIds = panel.revealed_option_ids.map(Number);
+                        }
+                        render(panel);
+                    }
+                })
+                .catch((err) => console.error('[Presenter] question panel', err));
         }
     };
 
@@ -567,15 +582,10 @@ if (root instanceof HTMLElement) {
     (async () => {
         await load();
         await ensureClassroomEcho();
-        const realtimeConnected = subscribeEcho();
-        // Echo primary for marks (<1s). Poll only as safety net.
-        pollTimer = window.setInterval(load, realtimeConnected ? 30_000 : 5_000);
+        subscribeEcho();
     })();
 
     window.addEventListener('pagehide', () => {
-        if (pollTimer !== null) {
-            window.clearInterval(pollTimer);
-        }
         if (window.Echo && sessionUuid) {
             window.Echo.leave(`live-session.${sessionUuid}`);
         }

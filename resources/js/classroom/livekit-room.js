@@ -1359,7 +1359,17 @@ export function mountLivekitRoom(root) {
 
     root.addEventListener('click', onControlsClick);
 
-    const onStageTeach = () => {
+    const onStageTeach = (event) => {
+        // Ignore no-op / duplicate events — remounting video is what users see as "giật".
+        if (event instanceof CustomEvent && event.detail && typeof event.detail.on === 'boolean') {
+            const want = event.detail.on ? '1' : '0';
+            if (root.dataset.lkStageTeachApplied === want) {
+                syncButtons();
+
+                return;
+            }
+            root.dataset.lkStageTeachApplied = want;
+        }
         relayoutPublishedVideos();
         syncButtons();
     };

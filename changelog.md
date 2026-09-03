@@ -2,6 +2,12 @@
 
 ## 2026-09-03
 
+### Fix — Live Classroom realtime (Payload too large + giật video)
+- `LiveQuestionChanged` chỉ broadcast metadata; thêm `GET /question` cho học viên sync panel.
+- Tăng Reverb `max_message_size` / `max_request_size` (250KB); ghi chú deploy production.
+- Bỏ poll bootstrap định kỳ — sync sau vào phòng chỉ qua Echo/Reverb; tránh remount `<video>` khi `stage_teach` không đổi.
+- Client: fingerprint DOM, guard LiveKit relayout; test unit + feature cập nhật.
+
 ### AI Tutor — drawer 1-tap + stream Reverb/Horizon
 - Spec Module 08 + `08-ai-tutor-drawer.md`; thống nhất tên **AI Tutor** (SRS, stitch, billing, mock HTML).
 - Backend: threads/messages/quota/stop/feedback; context pack chống spoiler; quota Free theo ngày; entitlement `ai.tutor`.

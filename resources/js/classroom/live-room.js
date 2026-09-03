@@ -53,7 +53,6 @@ export function mountLiveRoom(root) {
 
     /** @type {Array<Record<string, unknown>>} */
     let hands = [];
-    let pollTimer = null;
     /** @type {number} */
     let questionSyncEpoch = 0;
     /** @type {HTMLElement|null} */
@@ -73,6 +72,77 @@ export function mountLiveRoom(root) {
         const json = await res.json();
         return json.data ?? json;
     };
+
+    const questionPanelUrl = () => apiUrls.question_panel
+        ?? String(config.bootstrap_url).replace(/\/bootstrap\/?$/, '/question');
+
+    /**
+     * @param {Record<string, unknown>} panel
+     */
+    const applyQuestionPanelData = (panel) => {
+        if (! panel) {
+            return;
+        }
+        lastPanelFp = panelFingerprint(panel);
+        if (Array.isArray(panel.revealed_option_ids)) {
+            revealedOptionIds = panel.revealed_option_ids.map(Number);
+        }
+        if (questionDeck?.length) {
+            renderFromLocalState(panel.index ?? 0);
+        } else {
+            renderQuestionPanel(panel);
+        }
+    };
+
+    const fetchQuestionPanel = async () => {
+        const res = await fetch(questionPanelUrl(), {
+            headers: { Accept: 'application/json' },
+            credentials: 'same-origin',
+        });
+        if (! res.ok) {
+            throw new Error('Question panel failed');
+        }
+        const json = await res.json();
+
+        return json.data ?? json;
+    };
+
+    /** @param {unknown[]} messages */
+    const messagesFingerprint = (messages) => {
+        if (! Array.isArray(messages) || messages.length === 0) {
+            return '0';
+        }
+
+        return `${messages.length}:${messages[0]?.id ?? ''}:${messages[messages.length - 1]?.id ?? ''}:${messages.filter((m) => m?.is_pinned).length}`;
+    };
+
+    /** @param {unknown[]} hands */
+    const handsFingerprint = (hands) => {
+        if (! Array.isArray(hands) || hands.length === 0) {
+            return '0';
+        }
+
+        return hands.map((h) => h?.id).join(',');
+    };
+
+    /** @param {Record<string, unknown>|null|undefined} panel */
+    const panelFingerprint = (panel) => {
+        if (! panel) {
+            return '';
+        }
+        const revealed = Array.isArray(panel.revealed_option_ids)
+            ? panel.revealed_option_ids.join(',')
+            : '';
+
+        return `${panel.index ?? ''}|${panel.show_answer ? 1 : 0}|${panel.question?.id ?? ''}|${revealed}|${panel.question?.hints_revealed ? 1 : 0}`;
+    };
+
+    let lastMessagesFp = '';
+    let lastHandsFp = '';
+    let lastPanelFp = '';
+    let lastMarksFp = '';
+    let lastChatMuted = null;
+    let lastStageTeachSync = null;
 
     const buildAvatarEl = (user, sizeClass = 'size-8') => {
         const wrap = document.createElement('div');
@@ -697,7 +767,14 @@ export function mountLiveRoom(root) {
     };
 
     const applyStageTeach = (on, { syncMobile = true } = {}) => {
-        stageTeach = Boolean(on);
+        const next = Boolean(on);
+        // Unchanged stage-teach still used to dispatch live:stage-teach →
+        // LiveKit relayoutPublishedVideos() remounted every <video> (visible hitch
+        // on each bootstrap poll).
+        if (stageTeach === next && root.dataset.lkStageTeach === (next ? '1' : '0')) {
+            return;
+        }
+        stageTeach = next;
         root.dataset.lkStageTeach = stageTeach ? '1' : '0';
 
         root.querySelectorAll('[data-live-stage-teach]').forEach((el) => {
@@ -1150,7 +1227,8 @@ export function mountLiveRoom(root) {
                 }
                 if (questionDeck?.length) {
                     renderFromLocalState(e.index ?? 0);
-                } else {
+                } else if (e.question) {
+                    // Legacy payloads that still include the full question.
                     renderQuestionPanel({
                         total: e.total,
                         index: e.index,
@@ -1159,6 +1237,11 @@ export function mountLiveRoom(root) {
                         map: panelState?.map ?? [],
                         revealed_option_ids: e.revealed_option_ids ?? revealedOptionIds,
                     });
+                } else {
+                    // Metadata-only event — fetch the panel only (not full bootstrap).
+                    void fetchQuestionPanel()
+                        .then(applyQuestionPanelData)
+                        .catch((err) => console.error('[LiveRoom] question panel', err));
                 }
             })
             .listen('.marks.updated', (e) => {
@@ -1384,44 +1467,66 @@ export function mountLiveRoom(root) {
 
     const applyBootstrap = (data) => {
         apiUrls = data.urls ?? apiUrls;
-        if (data.session?.chat_muted !== undefined) {
+
+        if (data.session?.chat_muted !== undefined && data.session.chat_muted !== lastChatMuted) {
+            lastChatMuted = data.session.chat_muted;
             applyChatMuted(data.session.chat_muted);
         }
+
         if (data.session?.stage_teach !== undefined) {
-            applyStageTeach(Boolean(data.session.stage_teach), { syncMobile: false });
+            const nextStage = Boolean(data.session.stage_teach);
+            if (lastStageTeachSync !== nextStage) {
+                lastStageTeachSync = nextStage;
+                applyStageTeach(nextStage, { syncMobile: false });
+            }
         }
-        loadMessages(data.messages);
-        renderHands(data.hands ?? []);
+
+        const msgFp = messagesFingerprint(data.messages);
+        if (msgFp !== lastMessagesFp) {
+            lastMessagesFp = msgFp;
+            loadMessages(data.messages);
+        }
+
+        const handFp = handsFingerprint(data.hands);
+        if (handFp !== lastHandsFp) {
+            lastHandsFp = handFp;
+            renderHands(data.hands ?? []);
+        }
+
         if (Array.isArray(data.question_deck) && data.question_deck.length > 0) {
             questionDeck = data.question_deck;
         }
+
         if (Array.isArray(data.text_marks)) {
-            textMarks = data.text_marks;
+            const marksFp = JSON.stringify(data.text_marks);
+            if (marksFp !== lastMarksFp) {
+                lastMarksFp = marksFp;
+                textMarks = data.text_marks;
+                if (panelState?.question && questionPanels.length) {
+                    const qid = String(panelState.question.id);
+                    questionPanels.forEach((questionPanel) => {
+                        const stem = questionPanel.querySelector('[data-q-stem]');
+                        if (stem instanceof HTMLElement) {
+                            applyMarksToElement(stem, marksForTarget(textMarks, qid, 'stem'));
+                        }
+                    });
+                }
+            }
         }
+
         if (data.question_panel) {
-            if (Array.isArray(data.question_panel.revealed_option_ids)) {
-                revealedOptionIds = data.question_panel.revealed_option_ids.map(Number);
-            }
-            if (questionDeck?.length) {
-                renderFromLocalState(data.question_panel.index ?? 0);
-            } else {
-                renderQuestionPanel(data.question_panel);
+            const nextFp = panelFingerprint(data.question_panel);
+            if (nextFp !== lastPanelFp) {
+                applyQuestionPanelData(data.question_panel);
             }
         }
+
         if (data.recording?.playback_url) {
             const hlsRoot = root.querySelector('[data-hls-root]');
             if (hlsRoot instanceof HTMLElement) {
                 hlsRoot.dataset.hlsUrl = data.recording.playback_url;
             }
             mountHlsPlayers(root);
-        }
-    };
-
-    const pollBootstrap = async () => {
-        try {
-            applyBootstrap(await fetchBootstrap());
-        } catch (err) {
-            console.error('[LiveRoom] poll', err);
         }
     };
 
@@ -1432,17 +1537,12 @@ export function mountLiveRoom(root) {
             console.error('[LiveRoom] bootstrap', err);
         }
 
-        // Echo loads async via app.js — must await or marks/chat fall back to slow poll.
+        // Socket (Echo/Reverb) is the only sync path after initial bootstrap.
         await ensureClassroomEcho();
-        const realtimeConnected = subscribeEcho();
-        // Reverb is primary (<1s). Poll is convergence-only if socket drops.
-        pollTimer = window.setInterval(pollBootstrap, realtimeConnected ? 30_000 : 5_000);
+        subscribeEcho();
     })();
 
     return () => {
-        if (pollTimer !== null) {
-            window.clearInterval(pollTimer);
-        }
         if (typeof root._liveMarkCleanup === 'function') {
             root._liveMarkCleanup();
             delete root._liveMarkCleanup;

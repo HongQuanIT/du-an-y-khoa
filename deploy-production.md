@@ -359,6 +359,9 @@ REVERB_PORT=443
 REVERB_SCHEME=https
 REVERB_SERVER_HOST=0.0.0.0
 REVERB_SERVER_PORT=8080
+# Câu hỏi HTML / text marks — tránh "Pusher error: Payload too large" (default 10KB).
+REVERB_APP_MAX_MESSAGE_SIZE=250000
+REVERB_MAX_REQUEST_SIZE=250000
 
 # Browser (build-time Vite) — phải khớp domain/WS public
 VITE_REVERB_APP_KEY="${REVERB_APP_KEY}"
@@ -929,6 +932,7 @@ Theo dõi queue Horizon nếu `SCOUT_QUEUE=true`.
 | `Route [login] not defined` trên API | Client không gửi JSON | API đã ép JSON qua middleware — client gọi với `Accept: application/json` |
 | Queue không chạy | Horizon chưa start | `supervisorctl status`; `php artisan horizon:status` |
 | WebSocket không kết nối | Reverb down / sai proxy Nginx | Kiểm tra `location /app` proxy tới `127.0.0.1:8080`; `VITE_REVERB_*` khớp domain HTTPS |
+| `Pusher error: Payload too large` khi PATCH `/studio/api/question` | Reverb `max_message_size` 10KB / broadcast kèm full HTML câu hỏi | Deploy bản slim `LiveQuestionChanged`; set `REVERB_APP_MAX_MESSAGE_SIZE=250000` + restart Reverb |
 | Search không trả kết quả | Meili chưa index | `curl http://127.0.0.1:7700/health`; chạy `scout:import` |
 | Upload media lỗi | Thiếu quyền `storage/app` | `chown www-data storage -R`; `php artisan storage:link` |
 | OPcache code cũ sau deploy | FPM chưa reload | `sudo systemctl reload php8.4-fpm`; `php artisan horizon:terminate` |

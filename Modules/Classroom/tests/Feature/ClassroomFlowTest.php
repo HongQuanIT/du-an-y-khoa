@@ -376,6 +376,12 @@ final class ClassroomFlowTest extends TestCase
             ->assertJsonPath('data.question_deck.0.hints_revealed', true)
             ->assertJsonCount(0, 'data.text_marks');
 
+        $this->actingAs($host)
+            ->getJson(route('classroom.live.api.question.show', [$classroom, $session]))
+            ->assertOk()
+            ->assertJsonPath('data.question.id', (string) $question->getKey())
+            ->assertJsonPath('data.index', 0);
+
         $response = $this->actingAs($host)
             ->patchJson(route('classroom.live.api.question', [$classroom, $session]), [
                 'option_id' => (int) $question->options()->orderBy('order')->skip(1)->value('id'),
