@@ -1,9 +1,11 @@
 # Module 45 — Support Chat
 
-**Nhóm:** System · **Ưu tiên:** Cao · **Phụ thuộc:** Authentication (02), Billing (29), Notification (27), AI Assistant (08), Admin (33) · **Trạng thái:** 🟡
+**Nhóm:** System · **Ưu tiên:** Cao · **Phụ thuộc:** Authentication (02), Billing (29), Notification (27), Admin (33) · **Trạng thái:** 🟡
 
 ## 0. Tóm tắt
-Kênh chat hỗ trợ giữa người dùng và quản trị viên cho năm nhóm: **Tài khoản, Thanh toán, Khóa học, Lỗi hệ thống, Vấn đề khác**. AI là tuyến đầu cho câu hỏi FAQ ít rủi ro; mọi yêu cầu cần tra cứu, thay đổi dữ liệu, thanh toán hoặc AI không chắc chắn phải chuyển ngay sang nhân viên.
+Kênh chat hỗ trợ giữa người dùng và quản trị viên cho năm nhóm: **Tài khoản, Thanh toán, Khóa học, Lỗi hệ thống, Vấn đề khác**. AI CSKH là tuyến đầu cho FAQ ít rủi ro; mọi yêu cầu cần tra cứu, thay đổi dữ liệu, thanh toán hoặc AI không chắc chắn phải chuyển ngay sang nhân viên.
+
+**Tách biệt AI Tutor (Module 08):** prompt, quota, thread CSKH không dùng chung với gia sư y khoa. Support không giải thích Q-bank.
 
 | Route | Màn hình |
 |---|---|

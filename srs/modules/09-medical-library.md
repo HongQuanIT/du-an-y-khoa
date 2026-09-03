@@ -23,7 +23,7 @@ Thư viện bài viết y khoa (kiến thức nền) liên kết chéo với câ
 | **Search bar + filter** | Tìm + lọc loại nội dung | Luôn | Sticky |
 | **TOC (mục lục)** | Điều hướng trong bài (sticky) | Trang bài | Drawer mobile |
 | **Article body** | Nội dung rich: heading, bảng, ảnh, callout | Trang bài | Full |
-| **Reading toolbar** | Highlight, note, bookmark, font size, AI, print | Trang bài | Overflow mobile |
+| **Reading toolbar** | Highlight, note, bookmark, font size, **Hỏi AI Tutor**, print | Trang bài | Overflow mobile; AI Tutor 1-tap drawer |
 | **Cross-link chips** | Liên kết câu hỏi/thuốc/ảnh liên quan | Trong bài | Inline/aside |
 | **Related articles** | Gợi ý đọc thêm | Cuối bài | Carousel |
 | **Reading progress** | Thanh % đọc | Trang bài | Top |
@@ -34,8 +34,9 @@ Thư viện bài viết y khoa (kiến thức nền) liên kết chéo với câ
 ### `ArticleReader`
 - **Props:** `article(body, toc, references, crossLinks)`, `userHighlights`, `userNotes`, `isPremiumLocked`.
 - **State:** `activeSection`, `fontSize`, `selection`.
-- **Events:** `onHighlight`, `onNote`, `onBookmark`, `onCrosslink`, `onAsk AI`.
+- **Events:** `onHighlight`, `onNote`, `onBookmark`, `onCrosslink`, `onAiTutor`.
 - **Permission:** Free preview → paywall giữa bài; Premium full.
+- **`onAiTutor`:** drawer 1-tap, preset `explain_article` (`08-ai-tutor-drawer.md`).
 - **A11y:** heading structure, skip-to-content, contrast, font scaling.
 - **Loading:** skeleton; **Error:** retry; **Empty:** N/A.
 
@@ -45,7 +46,7 @@ Thư viện bài viết y khoa (kiến thức nền) liên kết chéo với câ
 ```
 /library → chọn chuyên ngành → mở bài → đọc, highlight, note, bookmark
  → click cross-link → mở câu hỏi/thuốc liên quan
- → hỏi AI về đoạn đang đọc
+ → hỏi AI Tutor về bài / đoạn đang đọc (1-tap drawer)
 Free: đọc preview → paywall → upgrade.
 ```
 

@@ -45,8 +45,9 @@ Xem lại kết quả sau session/exam: tổng kết điểm, xem từng câu (�
 
 ### `ReviewQuestionRow` / `ReviewDetail`
 - **Props:** `attempt`, `question`, `options(with correctness)`, `explanation`.
-- **Events:** `onNext/onPrev`, `onCrosslink`, `onAddFlashcard`, `onAI`.
+- **Events:** `onNext/onPrev`, `onCrosslink`, `onAddFlashcard`, `onAiTutor`.
 - **Permission:** giải thích đầy đủ (trong review luôn hiện, kể cả exam đã nộp).
+- **`onAiTutor`:** drawer 1-tap, auto-prompt theo đúng/sai (`08-ai-tutor-drawer.md`). Flashcard vẫn từ toolbar câu (Module 18), không từ tin AI Tutor.
 - **A11y:** trạng thái qua icon+text.
 
 ### `ReviewFilterChips`, `PeerComparison`, `RetakeIncorrectButton`.
@@ -57,6 +58,7 @@ Session finish → Summary (điểm, chart, topic breakdown)
  → Review list (lọc incorrect) → xem từng câu + explanation
  → hành động: "Ôn lại câu sai" → tạo session mới (chỉ câu sai)
              "Tạo flashcard từ câu sai"
+             "Hỏi AI Tutor" (1-tap drawer theo câu đang xem)
              mở cross-link Library để đọc sâu
  → về Dashboard / Weak Topics (đã cập nhật)
 Ngoại lệ:
@@ -107,7 +109,7 @@ Ngoại lệ:
 | Refresh | State từ server (bất biến) |
 
 ## 11. Tracking
-`review_open`, `summary_view`, `review_filter`, `review_question_open`, `retake_incorrect`, `flashcard_from_question`, `topic_practice_from_review`, `crosslink_click`, `peer_compare_view`.
+`review_open`, `summary_view`, `review_filter`, `review_question_open`, `retake_incorrect`, `flashcard_from_question`, `topic_practice_from_review`, `crosslink_click`, `peer_compare_view`, `ai_open`, `ai_autostart`.
 
 ## 12. Responsive
 - Desktop: summary + chart cạnh nhau; review 2 cột (list + detail). Tablet: chart trên, breakdown dưới. Mobile: chart full, breakdown card, review detail full-screen, action bar sticky.

@@ -112,7 +112,7 @@ Catalog `/admin/permissions` và ma trận role nhóm theo **4 portal** (không 
 |-------------|-------|
 | `qbank.full` | Toàn bộ ngân hàng câu hỏi |
 | `library.full` | Toàn bộ thư viện + liên kết chéo |
-| `ai.tutor` | AI Assistant không giới hạn (hoặc quota cao) |
+| `ai.tutor` | AI Tutor không giới hạn (hoặc quota cao) |
 | `analytics.advanced` | Heatmap, dự báo, so sánh peer |
 | `exam.simulation` | Mô phỏng thi đầy đủ |
 | `offline.download` | Tải nội dung offline (nếu có) |

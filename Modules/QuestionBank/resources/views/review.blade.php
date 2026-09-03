@@ -243,7 +243,7 @@
                                     style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
                             </div>
                             <div>
-                                <h4 class="font-label-md text-label-md font-bold text-primary">AI MedAssist Analysis
+                                <h4 class="font-label-md text-label-md font-bold text-primary">Gợi ý ôn tập
                                 </h4>
                                 <p class="text-[11px] text-outline">Gợi ý thông minh cho kỳ thi</p>
                             </div>

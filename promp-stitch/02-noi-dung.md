@@ -1,29 +1,30 @@
-# 02 — Nội dung (AI Assistant, Thư viện, Bệnh học, Dược, Thủ thuật, Ảnh, Video)
+# 02 — Nội dung (AI Tutor, Thư viện, Bệnh học, Dược, Thủ thuật, Ảnh, Video)
 
 Prompt Stitch cho 7 module nội dung. **Đọc `00-he-thong-thiet-ke.md` và dán Prompt Theme trước.** Mỗi khối ``` là một màn hình.
 
 ---
 
-## Module 08 — AI Assistant (AI Tutor)
-Trợ lý AI giải thích câu hỏi/khái niệm y khoa, dẫn nguồn nội bộ.
+## Module 08 — AI Tutor
+Trợ lý **AI Tutor** giải thích câu hỏi/khái niệm y khoa, dẫn nguồn nội bộ. Tên hiển thị duy nhất: AI Tutor (không Med-AI / MedAssist / AI Mentor).
 
-### 8.1 Trang chat AI (`/ai`)
+### 8.1 Trang chat AI Tutor (`/ai`)
 ```
 Màn hình "AI Tutor" (route /ai) của MedPro, app shell sidebar + header.
 Bố cục 2 cột: cột trái hẹp là danh sách hội thoại cũ ("Giải thích STEMI", "Cơ chế Metformin", "Chẩn đoán phân biệt đau ngực") + nút "Cuộc trò chuyện mới". Cột phải là khu vực chat:
-- Danh sách tin nhắn dạng bong bóng: tin người dùng bên phải nền teal nhạt, tin AI bên trái nền trắng có avatar robot; câu trả lời AI mẫu tiếng Việt giải thích vì sao STEMI thành trước, kèm khối "Nguồn tham khảo" liệt kê chip liên kết ("Bài: Nhồi máu cơ tim cấp", "Câu hỏi #1024"); mỗi tin AI có nút 👍/👎, Sao chép, "Tạo flashcard", "Lưu ghi chú".
-- Chỉ báo AI đang gõ (typing dots) khi chờ.
-- Ô nhập prompt sticky đáy có placeholder "Hỏi AI Tutor về y khoa...", hàng chip gợi ý nhanh ("Tóm tắt suy tim", "Tạo 5 câu hỏi Dược lý", "So sánh Amlodipin vs Losartan"), nút gửi teal.
+- Danh sách tin nhắn dạng bong bóng: tin người dùng bên phải nền teal nhạt, tin AI Tutor bên trái nền trắng có avatar robot; câu trả lời mẫu tiếng Việt giải thích vì sao STEMI thành trước, kèm khối "Nguồn tham khảo" liệt kê chip liên kết ("Bài: Nhồi máu cơ tim cấp", "Câu hỏi #1024"); mỗi tin AI Tutor có nút 👍/👎 và Sao chép. KHÔNG có nút Tạo flashcard hay Lưu ghi chú trên tin nhắn.
+- Chỉ báo AI Tutor đang gõ (typing dots) khi chờ; nút Dừng khi streaming.
+- Ô nhập prompt sticky đáy có placeholder "Hỏi AI Tutor về y khoa...", hàng chip gợi ý nhanh ("Tóm tắt suy tim", "So sánh Amlodipin vs Losartan"), nút gửi teal.
 - Với tài khoản Free: QuotaMeter "Còn 3/10 lượt hỏi hôm nay".
-Trạng thái rỗng (chưa có hội thoại): minh họa robot + gợi ý các câu hỏi mẫu.
+Trạng thái rỗng (chưa có hội thoại): minh họa robot + gợi ý các câu hỏi mẫu y khoa.
 Thiết kế 2 màn hình RIÊNG BIỆT (tách rời, KHÔNG gộp chung): một màn hình Desktop với bố cục đầy đủ như mô tả trên, và một màn hình Mobile. Trên mobile: ẩn cột trái (mở qua nút), chat full-screen, input sticky đáy. Màu teal #0F766E.
 ```
 
-### 8.2 Drawer AI theo ngữ cảnh (trong Session/Library)
+### 8.2 Drawer AI Tutor 1-tap (trong Session/Review/Library)
 ```
-Drawer "Hỏi AI về câu hỏi này" trượt từ bên phải, phủ 40% màn hình, dùng trong màn làm bài/đọc bài MedPro.
-Đầu drawer: chip ngữ cảnh "Đang hỏi về: Câu #1024 — Nhồi máu cơ tim" + nút đóng. Thân: hội thoại ngắn, người dùng hỏi "Vì sao đáp án B sai?", AI trả lời tiếng Việt kèm nguồn dẫn. Đáy: ô nhập + chip gợi ý ("Giải thích đơn giản hơn", "Cho ví dụ lâm sàng"). 
-Thiết kế 2 màn hình RIÊNG BIỆT (tách rời, KHÔNG gộp chung): một màn hình Desktop với bố cục đầy đủ như mô tả trên, và một màn hình Mobile. Trên mobile: drawer full-screen từ đáy. Màu teal #0F766E.
+Drawer "AI Tutor" trượt từ bên phải, phủ 40% màn hình, dùng trong màn làm bài Study/Review hoặc đọc bài MedPro. Header: tiêu đề "AI Tutor", chip ngữ cảnh "Đang hỏi về: Câu #1024 — Nhồi máu cơ tim", quota Free, nút đóng.
+Hành vi 1-tap: bấm "Hỏi AI Tutor" trên toolbar/FAB → drawer mở và TỰ GỬI prompt (học viên đã nộp sai: "Tôi chọn D, đáp án đúng là B, giải thích vì sao tôi sai…"; đúng: giải thích sâu; chưa nộp: phân tích đề không lộ đáp án). Typing dots rồi stream trả lời tiếng Việt + nguồn dẫn. Đáy: ô nhập + chip "Giải thích đơn giản hơn", "Cho ví dụ lâm sàng", "So sánh đáp án". Không nút flashcard/ghi chú trong drawer (các nút đó ở toolbar câu).
+Exam đang làm: KHÔNG hiện nút Hỏi AI Tutor.
+Thiết kế 2 màn hình RIÊNG BIỆT (tách rời, KHÔNG gộp chung): một màn hình Desktop với bố cục đầy đủ như mô tả trên, và một màn hình Mobile. Trên mobile: sheet full-screen từ đáy, FAB "Hỏi AI Tutor" góc phải dưới (Study/Review), input sticky + safe-area, chip cuộn ngang. Màu teal #0F766E.
 ```
 
 ---
@@ -52,7 +53,7 @@ Màn hình đọc bài viết y khoa (route /library/{slug}), app shell, bố c�
 - Cột trái: mục lục (TOC) sticky liệt kê các đề mục bài, đề mục đang đọc tô teal.
 - Cột giữa: nội dung bài "Suy tim" — tiêu đề, breadcrumb (Thư viện › Tim mạch › Suy tim), nội dung rich tiếng Việt gồm đoạn văn, bảng, callout "High-yield" nền vàng nhạt, hình ảnh có chú thích, đoạn được bôi vàng (highlight) sẵn.
 - Cột phải: aside cross-link "Liên quan" — chip Thuốc điều trị (Furosemid, Enalapril), Câu hỏi liên quan (3), Hình ảnh (X-quang ngực).
-- Thanh công cụ đọc nổi: cỡ chữ A-/A+, Bôi vàng, Ghi chú, Đánh dấu, Hỏi AI, In.
+- Thanh công cụ đọc nổi: cỡ chữ A-/A+, Bôi vàng, Ghi chú, Đánh dấu, Hỏi AI Tutor, In.
 - Giữa bài (tài khoản Free): PaywallOverlay mờ dần "Đọc tiếp với Premium" + nút "Nâng cấp".
 - Cuối bài: "Bài viết liên quan" dạng thẻ + phần Tham khảo.
 Thiết kế 2 màn hình RIÊNG BIỆT (tách rời, KHÔNG gộp chung): một màn hình Desktop với bố cục đầy đủ như mô tả trên, và một màn hình Mobile. Trên mobile: TOC thành bottom sheet, aside xuống dưới, toolbar thành menu .... Màu teal #0F766E.
@@ -77,7 +78,7 @@ Màn hình chi tiết bệnh "Nhồi máu cơ tim cấp" (route /library/disease
 - Header bệnh: tên + mã ICD "I21" + badge hệ Tim mạch + nhãn High-yield.
 - Nội dung: các section cấu trúc tiếng Việt; bảng "Chẩn đoán phân biệt (DDx)" so sánh Nhồi máu cơ tim / Viêm màng ngoài tim / Bóc tách ĐM chủ theo đặc điểm phân biệt; hình ECG có chú thích.
 - Cột phải cross-link: Thuốc điều trị (Aspirin, Clopidogrel, Atorvastatin), Thủ thuật (Can thiệp mạch vành PCI), Câu hỏi liên quan.
-- Thanh công cụ đọc (Bôi vàng/Ghi chú/Đánh dấu/AI). PaywallOverlay giữa bài cho Free.
+- Thanh công cụ đọc (Bôi vàng/Ghi chú/Đánh dấu/Hỏi AI Tutor). PaywallOverlay giữa bài cho Free.
 Thiết kế 2 màn hình RIÊNG BIỆT (tách rời, KHÔNG gộp chung): một màn hình Desktop với bố cục đầy đủ như mô tả trên, và một màn hình Mobile. Trên mobile: section nav thành accordion, DDx table cuộn ngang. Màu teal #0F766E.
 ```
 

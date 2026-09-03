@@ -73,4 +73,4 @@ Dashboard widget "3 chủ đề yếu" → /weak-topics → "Luyện ngay" Dư�
 - Đọc rollup cache; recompute async; index `(user_id, mastery_level)`.
 
 ## 15. Đề xuất cải tiến
-- "Fix my weakness" 1 chạm tạo lộ trình mini; AI giải thích tại sao yếu + kế hoạch; nhắc nhở định kỳ; so sánh điểm yếu với cohort.
+- "Fix my weakness" 1 chạm tạo lộ trình mini; AI Tutor giải thích tại sao yếu + kế hoạch; nhắc nhở định kỳ; so sánh điểm yếu với cohort.

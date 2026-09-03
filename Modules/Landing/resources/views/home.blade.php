@@ -161,7 +161,7 @@
             </div>
         </div>
 
-        {{-- Feature 3: AI Assistant (chat) --}}
+        {{-- Feature 3: AI Tutor --}}
         @php $fb = $featureBlocks[2] ?? []; @endphp
         <div class="max-w-container-max mx-auto px-margin-mobile md:px-gutter">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">

@@ -1,7 +1,7 @@
 {
     "name": "AiAssistant",
     "alias": "aiassistant",
-    "description": "",
+    "description": "AI Tutor — hỏi đáp y khoa, drawer 1-tap trên Q-bank/Library",
     "keywords": [],
     "priority": 0,
     "providers": [

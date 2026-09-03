@@ -49,7 +49,7 @@
                             class="premium-gradient flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold tracking-widest text-white uppercase">
                             <span class="material-symbols-outlined text-[12px]"
                                 style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
-                            AI MedAssist
+                            AI Tutor
                         </span>
                     </div>
                     <p class="text-on-surface-variant">

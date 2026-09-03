@@ -15,7 +15,7 @@
     ];
 
     $aiTools = [
-        ['icon' => 'psychology', 'label' => 'Hỏi Med-AI'],
+        ['icon' => 'psychology', 'label' => 'Hỏi AI Tutor'],
         ['icon' => 'style', 'label' => 'Tạo thẻ học', 'action' => 'flashcard'],
     ];
 

@@ -1,7 +1,7 @@
 @props([
     'feature' => null,
     'title' => 'Tính năng Premium',
-    'message' => 'Nâng cấp để mở khóa toàn bộ QBank, thư viện, AI Mentor và mô phỏng thi.',
+    'message' => 'Nâng cấp để mở khóa toàn bộ QBank, thư viện, AI Tutor và mô phỏng thi.',
 ])
 
 @php

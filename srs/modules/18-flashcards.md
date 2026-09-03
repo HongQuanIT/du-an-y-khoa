@@ -1,9 +1,9 @@
 # Module 18 — Flashcards (Spaced Repetition)
 
-**Nhóm:** Personal · **Ưu tiên:** Cao · **Phụ thuộc:** Session (06), Review (07), Library (09), AI (08) · **Trạng thái:** ✅
+**Nhóm:** Personal · **Ưu tiên:** Cao · **Phụ thuộc:** Session (06), Review (07), Library (09) · **Trạng thái:** ✅
 
 ## 0. Tóm tắt module
-Thẻ ghi nhớ với thuật toán lặp lại ngắt quãng (SRS, kiểu SM-2). Tạo thủ công, từ câu hỏi/bài viết, hoặc AI. Ôn theo lịch "due", quản lý deck.
+Thẻ ghi nhớ với thuật toán lặp lại ngắt quãng (SRS, kiểu SM-2). Tạo thủ công hoặc từ câu hỏi/bài viết. Ôn theo lịch "due", quản lý deck. **Không** tạo thẻ từ tin nhắn AI Tutor (Module 08 đã loại CTA này).
 
 | Route | Màn hình |
 |-------|----------|
@@ -49,7 +49,7 @@ Hết due → gợi ý học thẻ mới / nghỉ.
   - Again → reset repetitions, interval ngắn.
   - Hard/Good/Easy → tăng interval theo ease.
 - **New vs due:** giới hạn thẻ mới/ngày (tránh quá tải).
-- **Tạo từ nguồn:** link `source_type/id` để quay lại; AI sinh front/back.
+- **Tạo từ nguồn:** link `source_type/id` để quay lại (câu hỏi, bài viết). Không sinh thẻ từ hội thoại AI Tutor.
 - **Suspend/bury** thẻ; **leech** (thẻ hay sai) đánh dấu.
 - **Continue Learning/Study Plan** đọc số due.
 
@@ -69,7 +69,7 @@ Hết due → gợi ý học thẻ mới / nghỉ.
 - Review queue client; grade → optimistic + đồng bộ SRS; due count cache (invalidations sau review); không realtime.
 
 ## 9. Phân quyền
-- Owner. Free: giới hạn số thẻ/deck; Premium: không giới hạn + AI tạo thẻ + deck chia sẻ. Instructor phát deck cho lớp.
+- Owner. Free: giới hạn số thẻ/deck; Premium: không giới hạn + deck chia sẻ. Instructor phát deck cho lớp.
 
 ## 10. Edge Cases
 - Nguồn xóa → thẻ giữ; offline → ôn cache + sync grade; double grade → idempotent; đổi timezone → tính due theo tz user; import trùng → gộp.
@@ -88,3 +88,4 @@ Hết due → gợi ý học thẻ mới / nghỉ.
 
 ## 15. Đề xuất cải tiến
 - Cloze deletion (điền khuyết); image occlusion; FSRS thay SM-2 (tối ưu retention); deck cộng đồng có rating; đồng bộ Anki (import/export).
+- Sinh front/back bằng AI Tutor: **không thuộc Module 08 hiện tại**; nếu làm sau thì spec riêng ở Module 18, không gắn nút vào tin nhắn drawer.

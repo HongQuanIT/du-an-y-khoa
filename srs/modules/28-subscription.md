@@ -29,7 +29,7 @@ Quản lý gói & quyền lợi (entitlements): xem gói, nâng cấp/hạ cấp
 | **Trial badge** | Đang dùng thử + còn lại | Nếu trialing | — |
 | **Cancel flow** | Lý do hủy + ưu đãi giữ chân | `/cancel` | Wizard |
 | **Paywall component** | Overlay khóa (dùng lại toàn hệ thống) | Free ở nội dung khóa | — |
-| **Quota meter** | Lượt AI/câu còn lại | Free | — |
+| **Quota meter** | Lượt AI Tutor / câu còn lại | Free | — |
 | **Empty/Loading/Error** | Chuẩn | Theo trạng thái | — |
 
 ## 3. Phân tích Component

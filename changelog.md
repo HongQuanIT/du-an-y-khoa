@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-09-03
+
+### AI Tutor — drawer 1-tap + stream Reverb/Horizon
+- Spec Module 08 + `08-ai-tutor-drawer.md`; thống nhất tên **AI Tutor** (SRS, stitch, billing, mock HTML).
+- Backend: threads/messages/quota/stop/feedback; context pack chống spoiler; quota Free theo ngày; entitlement `ai.tutor`.
+- Stream qua Horizon + Reverb (`AiStreamEvent`); fallback Fake khi thiếu/key OpenAI lỗi; poll drawer khi Echo chậm.
+- UI: drawer + FAB/sidebar trên Study session; trang `/ai`; env `AI_TUTOR_*` trong `.env.example`.
+- Session UX: tách chip danh mục/độ khó (1 nhãn cấp cao); sidebar cố định, chỉ content scroll.
+
 ## 2026-09-02
 
 ### Queue / Horizon — tách luồng theo tính năng

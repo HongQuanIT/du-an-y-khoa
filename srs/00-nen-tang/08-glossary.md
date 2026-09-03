@@ -41,4 +41,7 @@
 | **Instructor portal (`/teach`)** | Workspace giảng viên: tạo lớp, gắn đề, host live — tách learner & admin |
 | **Classroom oversight** | Admin/Super Admin giám sát mọi lớp (force-end, archive) — không vận hành chữa đề |
 | **Cohost** | Thành viên lớp được host ủy quyền publish/moderate |
+| **AI Tutor** | Gia sư y khoa trong sản phẩm: hỏi đáp + giải thích Q-bank/Library, dẫn nguồn nội bộ. Tên hiển thị duy nhất (không dùng Med-AI, MedAssist, AI Mentor). |
+| **Drawer 1-tap** | Bấm Hỏi AI Tutor → mở panel và tự gửi prompt theo câu/bài đang xem |
+| **Context pack** | Gói stem/đáp án/giải thích (server) gắn vào AI Tutor; đáp án đúng không do model tự quyết |
 | **Meilisearch** | Công cụ full-text search |

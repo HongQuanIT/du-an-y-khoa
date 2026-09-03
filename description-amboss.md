@@ -538,7 +538,7 @@ Vite
 
 7. Question Review
 
-8. AI Assistant
+8. AI Tutor
 
 9. Medical Library
 

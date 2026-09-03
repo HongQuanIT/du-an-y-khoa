@@ -93,7 +93,7 @@ Idempotency-Key: <uuid>               # cho POST nhạy cảm (thanh toán, subm
 | Auth (login/otp) | 5–10 req/phút/IP |
 | Đọc chung | 120 req/phút/user |
 | Ghi (submit answer) | 60 req/phút/user |
-| AI Assistant | quota theo gói (vd 20/ngày free) |
+| AI Tutor | quota theo gói (vd 20/ngày free) |
 | Export/report | 5 req/phút/user |
 
 Vượt giới hạn → `429` + `Retry-After` + `X-RateLimit-Remaining`.
@@ -133,7 +133,7 @@ Vượt giới hạn → `429` + `Retry-After` + `X-RateLimit-Remaining`.
 /api/v1/search            global search
 /api/v1/notifications
 /api/v1/billing           plans, subscription, invoices
-/api/v1/ai                assistant/tutor
+/api/v1/ai                AI Tutor (drawer 1-tap + /ai)
 /api/v1/admin/*           quản trị (RBAC nghiêm ngặt)
 /api/webhooks/*           webhook bên thứ 3
 ```
