@@ -18,14 +18,17 @@ final class LiveQuestionChanged implements ShouldBroadcastNow
     use SerializesModels;
 
     /**
-     * @param  array<string, mixed>|null  $question
+     * Broadcast metadata only — full question HTML routinely exceeds Reverb's
+     * default 10KB max_message_size and fails the initiating PATCH with
+     * "Pusher error: Payload too large". Clients with a moderator deck render
+     * locally; others refetch the question panel over HTTP.
+     *
      * @param  list<int>  $revealedOptionIds
      */
     public function __construct(
         public LiveSession $session,
         public int $index,
         public bool $showAnswer,
-        public ?array $question = null,
         public array $revealedOptionIds = [],
         public ?int $actorUserId = null,
     ) {}
@@ -50,7 +53,6 @@ final class LiveQuestionChanged implements ShouldBroadcastNow
             'index' => $this->index,
             'show_answer' => $this->showAnswer,
             'total' => count($this->session->questionIds()),
-            'question' => $this->question,
             'revealed_option_ids' => $this->revealedOptionIds,
             'actor_user_id' => $this->actorUserId,
         ];

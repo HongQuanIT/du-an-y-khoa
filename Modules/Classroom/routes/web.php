@@ -52,6 +52,7 @@ Route::middleware(['auth', 'learner'])
                 ->name('messages');
             Route::post('/messages/{message}/pin', [LiveMessageApiController::class, 'pin'])->name('messages.pin');
             Route::delete('/messages/{message}', [LiveMessageApiController::class, 'destroy'])->name('messages.destroy');
+            Route::get('/question', [LiveQuestionController::class, 'show'])->name('question.show');
             Route::patch('/question', [LiveQuestionController::class, 'update'])->name('question');
             Route::patch('/marks', [LiveTextMarksController::class, 'update'])
                 ->middleware('throttle:60,1')

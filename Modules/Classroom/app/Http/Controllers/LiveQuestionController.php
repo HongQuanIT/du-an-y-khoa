@@ -20,6 +20,21 @@ use Modules\QuestionBank\Models\QuestionOption;
 
 final class LiveQuestionController extends Controller
 {
+    /**
+     * Current question panel for viewers — light alternative to full room bootstrap.
+     */
+    public function show(
+        Request $request,
+        Classroom $classroom,
+        LiveSession $liveSession,
+        LiveQuestionPanelService $panel,
+    ): JsonResponse {
+        $this->authorize('view', $classroom);
+        abort_unless($classroom->canWatchLive($request->user()), 403);
+
+        return ApiResponse::item($panel->panel($liveSession));
+    }
+
     public function update(
         Request $request,
         Classroom $classroom,
@@ -93,11 +108,11 @@ final class LiveQuestionController extends Controller
         $updates = $result['updates'];
         /** @var array<string, mixed> $data */
         $data = $result['data'];
+        // Metadata-only broadcast — full question HTML exceeds Reverb/Pusher limits.
         event(new LiveQuestionChanged(
             $liveSession,
             $data['index'],
             $data['show_answer'],
-            $data['question'],
             $data['revealed_option_ids'],
             $request->user() !== null ? (int) $request->user()->getAuthIdentifier() : null,
         ));
