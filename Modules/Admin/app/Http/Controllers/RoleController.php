@@ -11,7 +11,10 @@ use App\Support\Enums\PortalGroup;
 use App\Support\Enums\Role as RoleEnum;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Modules\Admin\Actions\CreateRoleAction;
 use Modules\Admin\Actions\SyncRolePermissionsAction;
 use Modules\Admin\Support\PermissionCatalog;
 use Spatie\Permission\Models\Role;
@@ -31,7 +34,50 @@ final class RoleController extends Controller
 
         return view('admin::roles.index', [
             'roleGroups' => PermissionCatalog::rolesGroupedByPortal($roles),
+            'canCreate' => $this->actor()->hasRole(RoleEnum::SuperAdmin->value),
         ]);
+    }
+
+    public function create(): View
+    {
+        $this->authorizePermission(PermissionEnum::RoleManage);
+        abort_unless($this->actor()->hasRole(RoleEnum::SuperAdmin->value), 403);
+
+        return view('admin::roles.create', [
+            'permissionGroups' => PermissionCatalog::groupedByPortal(),
+        ]);
+    }
+
+    public function store(Request $request, CreateRoleAction $action): RedirectResponse
+    {
+        $this->authorizePermission(PermissionEnum::RoleManage);
+        abort_unless($this->actor()->hasRole(RoleEnum::SuperAdmin->value), 403);
+
+        // Accept human-friendly or pasted names and normalize them to the
+        // stable slug format used by Spatie roles.
+        $normalizedName = Str::of((string) $request->input('name'))
+            ->trim()
+            ->lower()
+            ->ascii()
+            ->replaceMatches('/[^a-z0-9._-]+/', '_')
+            ->trim('._-')
+            ->toString();
+        $request->merge(['name' => $normalizedName]);
+
+        $data = $request->validate([
+            'name' => [
+                'required', 'string', 'min:2', 'max:80', 'regex:/^[a-z][a-z0-9._-]*$/',
+                Rule::unique('roles', 'name')->where('guard_name', 'web'),
+            ],
+            'permissions' => ['nullable', 'array'],
+            'permissions.*' => ['integer', 'distinct', 'exists:permissions,id'],
+        ], [
+            'name.regex' => 'Tên role chỉ dùng chữ thường, số, dấu chấm, gạch ngang hoặc gạch dưới.',
+        ]);
+
+        $role = $action->handle($this->actor(), $data['name'], $data['permissions'] ?? []);
+
+        return redirect()->route('admin.roles.show', $role)->with('status', 'Đã tạo role mới.');
     }
 
     public function show(Role $role): View

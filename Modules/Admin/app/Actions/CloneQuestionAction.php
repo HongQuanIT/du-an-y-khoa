@@ -9,9 +9,13 @@ use App\Support\Concerns\AsAction;
 use App\Support\Html\SafeHtml;
 use Illuminate\Support\Facades\DB;
 use Modules\Admin\Support\Auditor;
+use Modules\Admin\Support\QuestionAccess;
 use Modules\QuestionBank\Enums\Difficulty;
+use Modules\QuestionBank\Enums\QuestionReviewAction;
+use Modules\QuestionBank\Enums\QuestionReviewStatus;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
+use Modules\QuestionBank\Models\QuestionReviewRequest;
 
 /**
  * Clone a question into a new draft (independent lifecycle).
@@ -100,6 +104,15 @@ final class CloneQuestionAction
             $this->syncOptionsFromSnapshot($clone, $snapshot);
 
             $clone->load('options', 'medicalTaxonomyNodes');
+
+            if (! QuestionAccess::isReviewer($actor)) {
+                QuestionReviewRequest::query()->create([
+                    'question_id' => $clone->getKey(),
+                    'action' => QuestionReviewAction::Create,
+                    'status' => QuestionReviewStatus::Pending,
+                    'requested_by' => $actor->getKey(),
+                ]);
+            }
 
             Auditor::record(
                 'admin.question.clone',

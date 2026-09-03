@@ -72,6 +72,8 @@ if (root instanceof HTMLElement) {
         const questionId = panel.question ? String(panel.question.id) : null;
         const stem = root.querySelector('[data-q-stem]');
         const stemImage = root.querySelector('[data-q-stem-image]');
+        const knowledge = root.querySelector('[data-q-knowledge]');
+        const knowledgeContent = root.querySelector('[data-q-knowledge-content]');
         const options = root.querySelector('[data-q-options]');
         const explanation = root.querySelector('[data-q-explanation]');
         const label = root.querySelector('[data-q-index-label]');
@@ -84,17 +86,30 @@ if (root instanceof HTMLElement) {
                 stem.textContent = 'Chưa có câu hỏi.';
             }
             renderStemImage(stemImage, null);
+            if (knowledge) {
+                knowledge.style.display = 'none';
+            }
 
             return;
         }
         if (stem) {
             stem.innerHTML = panel.question.stem ?? '';
+            stem.classList.toggle('q-hints-revealed', Boolean(panel.question.hints_revealed));
             stem.dataset.qMarkTarget = 'stem';
             if (questionId) {
                 applyMarksToElement(stem, marksForTarget(textMarks, questionId, 'stem'));
             }
         }
         renderStemImage(stemImage, panel.question.stem_image_url ?? null);
+        if (knowledge && knowledgeContent) {
+            if (panel.question.attending_tip) {
+                knowledgeContent.innerHTML = panel.question.attending_tip;
+                knowledge.style.display = 'block';
+            } else {
+                knowledgeContent.innerHTML = '';
+                knowledge.style.display = 'none';
+            }
+        }
         if (options) {
             options.innerHTML = '';
             (panel.question.options ?? []).forEach((opt, i) => {
@@ -105,6 +120,7 @@ if (root instanceof HTMLElement) {
                 if (canModerate) {
                     li.dataset.qOptionId = String(opt.id ?? '');
                     li.style.cursor = 'pointer';
+                    li.title = revealed ? 'Bấm lại để ẩn đáp án' : 'Bấm để hiện đáp án';
                 }
                 li.style.padding = '0';
                 li.style.border = `1px solid ${isCorrect ? '#16a34a' : isWrong ? '#dc2626' : '#e5e7eb'}`;
@@ -142,7 +158,7 @@ if (root instanceof HTMLElement) {
                     badge.style.fontSize = '0.75rem';
                     badge.style.fontWeight = '700';
                     badge.style.color = isCorrect ? '#16a34a' : '#dc2626';
-                    badge.textContent = isCorrect ? 'Đáp án đúng' : 'Đáp án sai';
+                    badge.textContent = `${isCorrect ? 'Đáp án đúng' : 'Đáp án sai'} · Bấm lại để ẩn`;
                     row.appendChild(badge);
                 }
 
@@ -212,6 +228,7 @@ if (root instanceof HTMLElement) {
         const previousRevealed = [...revealedOptionIds];
         const previousIndex = panelState?.index ?? 0;
         const epoch = ++syncEpoch;
+        const renderedOptimistically = Boolean(questionDeck?.length);
 
         if (questionDeck?.length) {
             if (optionId !== null) {
@@ -239,11 +256,19 @@ if (root instanceof HTMLElement) {
             if (epoch !== syncEpoch) {
                 return;
             }
+            const serverRevealed = Array.isArray(data.revealed_option_ids)
+                ? data.revealed_option_ids.map(Number)
+                : revealedOptionIds;
+            const responseIndex = Number(data.index ?? index);
+            const sameRevealed = serverRevealed.length === revealedOptionIds.length
+                && serverRevealed.every((id) => revealedOptionIds.includes(id));
             if (Array.isArray(data.revealed_option_ids)) {
-                revealedOptionIds = data.revealed_option_ids.map(Number);
+                revealedOptionIds = serverRevealed;
             }
             if (questionDeck?.length) {
-                renderLocal(data.index ?? index);
+                if (! renderedOptimistically || responseIndex !== Number(index) || ! sameRevealed) {
+                    renderLocal(responseIndex);
+                }
             } else {
                 render(data);
             }

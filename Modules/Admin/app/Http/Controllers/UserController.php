@@ -6,6 +6,7 @@ namespace Modules\Admin\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\UserActivitySession;
 use App\Support\Enums\Permission;
 use App\Support\Enums\PortalGroup;
 use App\Support\Enums\Role;
@@ -19,7 +20,7 @@ use Modules\Admin\Actions\SendUserPasswordResetAction;
 use Modules\Admin\Actions\UpdateUserRoleAction;
 use Modules\Admin\Actions\UpdateUserStatusAction;
 use Modules\Admin\Actions\VerifyUserEmailAction;
-use Modules\Admin\Models\AuditLog;
+use Modules\Partner\Models\Partner;
 
 final class UserController extends Controller
 {
@@ -107,12 +108,11 @@ final class UserController extends Controller
         $user = $action->handle($this->actor(), $data, $role);
 
         if ($role === Role::Partner) {
+            $partner = Partner::query()->where('user_id', $user->getKey())->firstOrFail();
+
             return redirect()
-                ->route('admin.partners.create', [
-                    'mode' => 'existing',
-                    'user_id' => $user->getKey(),
-                ])
-                ->with('status', 'Đã tạo tài khoản CTV. Hoàn tất hồ sơ đối tác bên dưới.');
+                ->route('admin.partners.show', $partner)
+                ->with('status', 'Đã tạo tài khoản và hồ sơ CTV.');
         }
 
         return redirect()
@@ -126,17 +126,9 @@ final class UserController extends Controller
 
         $user->load('roles');
 
-        $audits = AuditLog::query()
-            ->visibleToAdmin()
-            ->where(function ($query) use ($user): void {
-                $query->where('actor_id', $user->getKey())
-                    ->orWhere(function ($subject) use ($user): void {
-                        $subject->where('auditable_type', $user->getMorphClass())
-                            ->where('auditable_id', (string) $user->getKey());
-                    });
-            })
-            ->with('actor:id,name')
-            ->latest('id')
+        $activities = UserActivitySession::query()
+            ->where('user_id', $user->getKey())
+            ->latest('last_seen_at')
             ->limit(20)
             ->get();
 
@@ -144,7 +136,7 @@ final class UserController extends Controller
             'user' => $user,
             'assignableRoles' => Role::assignableBy($this->actor()),
             'statuses' => UserStatus::cases(),
-            'audits' => $audits,
+            'activities' => $activities,
             'canManage' => $this->actor()->can(Permission::UserManage->value)
                 && $this->actor()->isNot($user),
         ]);

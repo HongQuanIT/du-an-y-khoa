@@ -134,6 +134,14 @@ return [
             'preference_key' => 'push_classroom',
             'icon' => 'group_add',
         ],
+        'classroom.pending_approval' => [
+            'category' => 'classroom',
+            'audience' => 'admin',
+            'label' => 'Lớp chờ duyệt',
+            'preference_key' => null,
+            'bypass_prefs' => true,
+            'icon' => 'pending_actions',
+        ],
         'classroom.approved' => [
             'category' => 'classroom',
             'audience' => 'instructor',

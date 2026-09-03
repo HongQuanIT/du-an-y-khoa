@@ -11,6 +11,8 @@ use Modules\StudyPlan\Enums\TaskStatus;
 use Modules\StudyPlan\Enums\TaskType;
 use Modules\StudyPlan\Models\StudyPlan;
 use Modules\StudyPlan\Models\StudyPlanTask;
+use Modules\QuestionBank\Enums\QuestionStatus;
+use Modules\QuestionBank\Models\Question;
 use Tests\TestCase;
 use Tests\Support\CreatesMedicalTaxonomy;
 
@@ -38,6 +40,11 @@ final class StudyPlanScheduleTest extends TestCase
             'node_type' => 'system',
             'sort_order' => 0,
         ]);
+        $question = Question::factory()->create([
+            'status' => QuestionStatus::Published,
+            'is_free' => true,
+        ]);
+        $question->medicalTaxonomyNodes()->sync([$this->topic->id]);
     }
 
     public function test_a_task_can_be_moved_to_another_day(): void

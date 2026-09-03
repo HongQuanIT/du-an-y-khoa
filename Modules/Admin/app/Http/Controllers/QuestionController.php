@@ -9,6 +9,8 @@ use App\Models\User;
 use App\Support\Enums\Permission;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Modules\Admin\Actions\CloneQuestionAction;
@@ -16,10 +18,12 @@ use Modules\Admin\Actions\RequestQuestionDeletionAction;
 use Modules\Admin\Actions\SaveAdminQuestionAction;
 use Modules\Admin\Actions\TransitionQuestionStatusAction;
 use Modules\Admin\Support\QuestionAccess;
+use Modules\QuestionBank\Actions\SyncQuestionStatsAction;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionReviewAction;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
+use Modules\QuestionBank\Models\QuestionFeedback;
 
 final class QuestionController extends Controller
 {
@@ -29,7 +33,12 @@ final class QuestionController extends Controller
 
         $actor = $this->actor();
         $query = QuestionAccess::scopeVisibleTo(
-            Question::query()->with(['medicalTaxonomyNodes', 'creator:id,name', 'pendingReviewRequest.requester:id,name']),
+            Question::query()
+                ->with(['medicalTaxonomyNodes', 'creator:id,name', 'pendingReviewRequest.requester:id,name'])
+                ->withCount([
+                    'feedback',
+                    'feedback as pending_feedback_count' => fn ($q) => $q->where('status', QuestionFeedback::STATUS_PENDING),
+                ]),
             $actor,
         )->latest('updated_at');
 
@@ -72,13 +81,19 @@ final class QuestionController extends Controller
         }
 
         if ($request->query('has_reports') === '1') {
-            $query->where('stats_cache->total_reports', '>', 0);
+            $query->where(function ($builder): void {
+                $builder->has('feedback')
+                    ->orWhere('stats_cache->total_reports', '>', 0);
+            });
         }
 
         $statsQuery = QuestionAccess::scopeVisibleTo(Question::query(), $actor);
 
+        $questions = $query->paginate(20)->withQueryString();
+        $this->ensureListStatsAreFresh($questions->getCollection());
+
         return view('admin::questions.index', [
-            'questions' => $query->paginate(20)->withQueryString(),
+            'questions' => $questions,
             'statuses' => QuestionStatus::cases(),
             'difficulties' => Difficulty::cases(),
             'filters' => [
@@ -155,6 +170,9 @@ final class QuestionController extends Controller
             'reviewer:id,name',
         ]);
 
+        app(SyncQuestionStatsAction::class)->syncForQuestion($question);
+        $question->refresh();
+
         return view('admin::questions.stats', [
             'question' => $question,
             'stats' => $question->detailStats(),
@@ -171,8 +189,12 @@ final class QuestionController extends Controller
 
         return back()->with('status', QuestionAccess::isReviewer($this->actor())
             ? 'Đã lưu câu hỏi.'
-            : ($question->status === QuestionStatus::Published
-                ? 'Đã gửi thay đổi để admin duyệt. Bản đang xuất bản chưa bị thay đổi.'
+            : (in_array($question->status, [
+                QuestionStatus::Published,
+                QuestionStatus::Private,
+                QuestionStatus::Retired,
+            ], true)
+                ? 'Đã gửi thay đổi để admin duyệt. Nội dung đang hiển thị chưa bị thay đổi.'
                 : 'Đã lưu nội dung và cập nhật yêu cầu chờ duyệt.'));
     }
 
@@ -221,7 +243,9 @@ final class QuestionController extends Controller
 
         return redirect()
             ->route('admin.questions.edit', $clone)
-            ->with('status', 'Đã nhân bản câu hỏi thành bản nháp mới.');
+            ->with('status', QuestionAccess::isReviewer($this->actor())
+                ? 'Đã nhân bản câu hỏi thành bản nháp mới.'
+                : 'Đã nhân bản câu hỏi. Bản nháp mới đang chờ admin duyệt trước khi xuất bản.');
     }
 
     /**
@@ -233,14 +257,19 @@ final class QuestionController extends Controller
         $isReviewer = QuestionAccess::isReviewer($this->actor());
         $hasBlockingReview = $pendingReview !== null
             && $pendingReview->action !== QuestionReviewAction::Create;
+        $isLockedForEditor = ! $isReviewer && $question->exists
+            && $question->status === QuestionStatus::InReview;
 
         return [
             'question' => $question,
             'statuses' => QuestionStatus::cases(),
+            'workflowStatuses' => $question->exists
+                ? $this->workflowStatuses($question->status, $isReviewer)
+                : [],
             'difficulties' => Difficulty::cases(),
             'canUpdate' => ($this->actor()->can(Permission::QuestionUpdate->value)
                 || ($question->exists === false && $this->actor()->can(Permission::QuestionCreate->value)))
-                && ($isReviewer || ! $hasBlockingReview),
+                && ($isReviewer || (! $hasBlockingReview && ! $isLockedForEditor)),
             'canPublish' => $this->actor()->can(Permission::QuestionPublish->value),
             'canDelete' => $question->exists && $this->actor()->can(Permission::QuestionDelete->value),
             'canClone' => $question->exists && $this->actor()->can(Permission::QuestionCreate->value),
@@ -248,6 +277,30 @@ final class QuestionController extends Controller
             'pendingReview' => $pendingReview,
             'canViewAudit' => $this->actor()->can(Permission::AuditView->value),
         ];
+    }
+
+    /**
+     * @return list<QuestionStatus>
+     */
+    private function workflowStatuses(QuestionStatus $current, bool $isReviewer): array
+    {
+        $canUpdate = $this->actor()->can(Permission::QuestionUpdate->value);
+        $canPublish = $this->actor()->can(Permission::QuestionPublish->value);
+
+        return match ($current) {
+            QuestionStatus::Draft => $isReviewer && $canPublish
+                ? [QuestionStatus::Published, QuestionStatus::Private]
+                : ($canUpdate ? [QuestionStatus::InReview] : []),
+            QuestionStatus::InReview => $isReviewer && $canPublish
+                ? [QuestionStatus::Published, QuestionStatus::Rejected]
+                : ($canUpdate ? [QuestionStatus::Draft] : []),
+            QuestionStatus::Published, QuestionStatus::Private => $canPublish
+                ? [QuestionStatus::Retired]
+                : [],
+            QuestionStatus::Rejected, QuestionStatus::Retired => $canUpdate
+                ? [QuestionStatus::Draft]
+                : [],
+        };
     }
 
     /**
@@ -353,6 +406,57 @@ final class QuestionController extends Controller
             ->unique()
             ->values()
             ->all();
+    }
+
+    /**
+     * @param  Collection<int, Question>  $questions
+     */
+    private function ensureListStatsAreFresh(Collection $questions): void
+    {
+        if ($questions->isEmpty()) {
+            return;
+        }
+
+        $idsOnPage = $questions
+            ->pluck('id')
+            ->map(fn ($id): string => (string) $id)
+            ->values()
+            ->all();
+
+        $idsWithAttempts = DB::table('question_attempts')
+            ->whereIn('question_id', $idsOnPage)
+            ->whereNotNull('is_correct')
+            ->distinct()
+            ->pluck('question_id')
+            ->map(fn ($id): string => (string) $id);
+
+        $questionIds = $questions
+            ->filter(function (Question $question) use ($idsWithAttempts): bool {
+                if ($question->stats_cache === null || $question->stats_updated_at === null) {
+                    return true;
+                }
+
+                $cachedAttempts = (int) ($question->stats_cache['total_attempts'] ?? 0);
+
+                return $cachedAttempts === 0 && $idsWithAttempts->contains((string) $question->getKey());
+            })
+            ->pluck('id')
+            ->map(fn ($id): string => (string) $id)
+            ->values()
+            ->all();
+
+        if ($questionIds === []) {
+            return;
+        }
+
+        app(SyncQuestionStatsAction::class)->syncForQuestionIds($questionIds);
+
+        $synced = array_flip($questionIds);
+        $questions->each(function (Question $question) use ($synced): void {
+            if (isset($synced[(string) $question->getKey()])) {
+                $question->refresh();
+            }
+        });
     }
 
     private function authorizePermission(Permission $permission): void

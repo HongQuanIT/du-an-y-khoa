@@ -92,32 +92,41 @@
     </div>
 
     <section class="mt-6 rounded-xl border border-outline-variant bg-surface p-5">
-        <div class="mb-3 flex items-center justify-between gap-2">
-            <h3 class="font-headline-sm text-headline-sm text-on-surface">Audit gần đây</h3>
-            @can('audit.view')
-                <a href="{{ route('admin.audit.index', ['related_user_id' => $user->id]) }}" class="font-label-md text-label-md text-primary hover:underline">Mở toàn bộ Audit</a>
-            @endcan
-        </div>
+        <h3 class="mb-3 font-headline-sm text-headline-sm text-on-surface">Hoạt động gần đây của người dùng</h3>
         <div class="overflow-x-auto">
             <table class="min-w-full text-left font-body-sm text-body-sm">
                 <thead class="border-b border-outline-variant font-label-md text-label-md text-on-surface-variant">
                     <tr>
-                        <th class="py-2 pe-4">Thời gian</th>
-                        <th class="py-2 pe-4">Action</th>
-                        <th class="py-2 pe-4">Quan hệ</th>
-                        <th class="py-2">Chi tiết</th>
+                        <th class="py-2 pe-4">Bắt đầu</th>
+                        <th class="py-2 pe-4">Hoạt động gần nhất</th>
+                        <th class="py-2 pe-4">Khu vực</th>
+                        <th class="py-2 pe-4">Thời lượng</th>
+                        <th class="py-2">Thiết bị / IP</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse ($audits as $log)
+                    @forelse ($activities as $activity)
                         <tr class="border-b border-outline-variant/50">
-                            <td class="py-2 pe-4 whitespace-nowrap text-on-surface-variant">{{ $log->created_at?->format('d/m/Y H:i') }}</td>
-                            <td class="py-2 pe-4"><a href="{{ route('admin.audit.show', $log) }}" class="text-primary hover:underline">{{ $log->action }}</a></td>
-                            <td class="whitespace-nowrap py-2 pe-4 text-on-surface-variant">{{ (int) $log->actor_id === (int) $user->id ? 'Tài khoản thực hiện' : 'Bị tác động' }}</td>
-                            <td class="py-2 text-on-surface-variant truncate max-w-xs">{{ $log->ip }}</td>
+                            <td class="whitespace-nowrap py-2 pe-4 text-on-surface-variant">{{ $activity->started_at?->format('d/m/Y H:i') }}</td>
+                            <td class="whitespace-nowrap py-2 pe-4 text-on-surface-variant">{{ $activity->last_seen_at?->format('d/m/Y H:i') }}</td>
+                            <td class="py-2 pe-4">
+                                <span class="font-semibold text-on-surface">{{ match ($activity->portal) { 'admin' => 'Admin', 'teach' => 'Giảng viên', default => 'Học viên' } }}</span>
+                                <span class="mt-0.5 block max-w-xs truncate text-on-surface-variant" title="{{ $activity->area }}">{{ $activity->area }}</span>
+                            </td>
+                            <td class="whitespace-nowrap py-2 pe-4 text-on-surface-variant">
+                                @if ($activity->duration_seconds >= 60)
+                                    {{ intdiv($activity->duration_seconds, 60) }} phút {{ $activity->duration_seconds % 60 }} giây
+                                @else
+                                    {{ $activity->duration_seconds }} giây
+                                @endif
+                            </td>
+                            <td class="py-2 text-on-surface-variant">
+                                <span>{{ collect([$activity->device_name, $activity->operating_system, $activity->browser])->filter()->join(' · ') ?: 'Không xác định' }}</span>
+                                <span class="mt-0.5 block">{{ $activity->ip ?: '—' }}</span>
+                            </td>
                         </tr>
                     @empty
-                        <tr><td colspan="4" class="py-6 text-on-surface-variant">Chưa có nhật ký liên quan đến user này.</td></tr>
+                        <tr><td colspan="5" class="py-6 text-on-surface-variant">Người dùng chưa có hoạt động nào được ghi nhận.</td></tr>
                     @endforelse
                 </tbody>
             </table>

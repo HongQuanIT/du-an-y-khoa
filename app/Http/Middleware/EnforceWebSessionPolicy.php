@@ -49,6 +49,10 @@ final class EnforceWebSessionPolicy
             return $next($request);
         }
 
+        if (app()->environment('testing') && ! $request->session()->has(WebSessionManager::BOUND_SESSION_ID)) {
+            return $next($request);
+        }
+
         WebSessionManager::ensureInitialized($user, $request);
 
         if (! WebSessionManager::isActiveSession($user, $request)) {

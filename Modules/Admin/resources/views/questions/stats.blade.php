@@ -69,7 +69,7 @@
             </p>
         </div>
         <div class="rounded-2xl border border-outline-variant bg-surface p-4 shadow-sm">
-            <p class="text-label-sm font-medium text-on-surface-variant">Báo lỗi</p>
+            <p class="text-label-sm font-medium text-on-surface-variant">Tổng feedback</p>
             <p class="mt-1 text-headline-sm font-bold tabular-nums {{ $stats['total_reports'] > 0 ? 'text-red-700 dark:text-red-300' : 'text-on-surface' }}">
                 {{ number_format($stats['total_reports']) }}
             </p>
@@ -98,9 +98,9 @@
         </section>
 
         <section class="rounded-2xl border border-outline-variant bg-surface p-5 shadow-sm">
-            <h2 class="mb-4 font-label-md font-semibold text-on-surface">Báo lỗi theo lý do</h2>
+            <h2 class="mb-4 font-label-md font-semibold text-on-surface">Feedback theo lý do</h2>
             @if ($stats['reports_by_reason'] === [])
-                <p class="text-sm text-on-surface-variant">Chưa có breakdown báo lỗi trong cache.</p>
+                <p class="text-sm text-on-surface-variant">Chưa có breakdown feedback trong cache.</p>
             @else
                 <dl class="space-y-3 text-sm">
                     @foreach ($stats['reports_by_reason'] as $reason => $count)

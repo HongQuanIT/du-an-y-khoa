@@ -73,9 +73,7 @@ final class TaxonomyLookupController extends Controller
     {
         $query = CoreClinicalTopic::query()
             ->where('status', TaxonomyStatus::Active)
-            ->with(['section:id,blueprint_id,name'])
-            ->orderBy('sort_order')
-            ->orderBy('name');
+            ->with(['section:id,blueprint_id,name,sort_order']);
 
         if ($request->filled('blueprint_id')) {
             $blueprintId = (int) $request->query('blueprint_id');
@@ -89,17 +87,24 @@ final class TaxonomyLookupController extends Controller
         if ($request->filled('q')) {
             $term = '%'.trim((string) $request->query('q')).'%';
             $query->where('name', 'like', $term);
-        } elseif (! $request->filled('blueprint_section_id')) {
-            return response()->json(['data' => []]);
         }
 
-        $items = $query->limit(100)->get(['id', 'blueprint_section_id', 'name', 'slug'])
+        // The learner picker shows the complete curated catalog (currently 128),
+        // not just the first page when it opens without a search term.
+        $items = $query->limit(200)->get(['id', 'blueprint_section_id', 'name', 'slug', 'sort_order'])
+            ->sortBy(fn (CoreClinicalTopic $topic): string => sprintf(
+                '%05d:%05d:%s',
+                $topic->section?->sort_order ?? PHP_INT_MAX,
+                $topic->sort_order,
+                $topic->name,
+            ))
             ->map(fn (CoreClinicalTopic $topic): array => [
                 'id' => $topic->id,
                 'blueprint_section_id' => $topic->blueprint_section_id,
                 'name' => $topic->name,
                 'slug' => $topic->slug,
                 'section_name' => $topic->section?->name,
+                'section_sort_order' => $topic->section?->sort_order,
             ]);
 
         return response()->json(['data' => $items]);
@@ -108,6 +113,7 @@ final class TaxonomyLookupController extends Controller
     public function medicalTaxonomyNodes(Request $request): JsonResponse
     {
         $parentId = $request->filled('parent_id') ? (int) $request->query('parent_id') : null;
+        $includeDescendants = $request->boolean('include_descendants');
         $canonical = MedicalTaxonomy::canonical();
 
         $query = MedicalTaxonomyNode::query()
@@ -137,6 +143,8 @@ final class TaxonomyLookupController extends Controller
             $query->where('name', 'like', $term)->limit(50);
         } elseif ($types !== []) {
             $query->limit(100);
+        } elseif ($includeDescendants) {
+            $query->limit(200);
         } else {
             $query->where('parent_id', $parentId)->limit(100);
         }

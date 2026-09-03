@@ -62,6 +62,12 @@ final class StudyPlanRequest extends FormRequest
             'question_statuses' => ['nullable', 'array'],
             'question_statuses.*' => ['string', 'in:unanswered,correct_with_hints,incorrect,correct'],
             'question_status_mode' => ['nullable', 'string', 'in:all,latest'],
+            'blueprint_id' => ['nullable', 'integer', 'exists:blueprints,id'],
+            'blueprint_section_id' => ['nullable', 'integer', 'exists:blueprint_sections,id'],
+            'core_clinical_topic_ids' => ['nullable', 'array'],
+            'core_clinical_topic_ids.*' => ['integer', 'distinct', 'exists:core_clinical_topics,id'],
+            'tag_ids' => ['nullable', 'array'],
+            'tag_ids.*' => ['integer', 'distinct', 'exists:tags,id'],
             'study_days' => ['required', 'array', 'min:1'],
             'study_days.*' => ['integer', 'between:1,7'],
             'strategy' => ['required', 'string', 'in:'.implode(',', PlanStrategy::values())],
@@ -102,6 +108,10 @@ final class StudyPlanRequest extends FormRequest
             difficulties: array_values(array_unique(array_map('strval', $this->input('difficulties', [])))),
             questionStatuses: array_values(array_unique(array_map('strval', $this->input('question_statuses', [])))),
             questionStatusMode: (string) $this->input('question_status_mode', 'latest'),
+            blueprintId: $this->filled('blueprint_id') ? $this->integer('blueprint_id') : null,
+            blueprintSectionId: $this->filled('blueprint_section_id') ? $this->integer('blueprint_section_id') : null,
+            coreClinicalTopicIds: array_values(array_unique(array_map('intval', $this->input('core_clinical_topic_ids', [])))),
+            tagIds: array_values(array_unique(array_map('intval', $this->input('tag_ids', [])))),
         );
     }
 }

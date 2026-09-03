@@ -266,6 +266,8 @@ export function mountLiveRoom(root) {
         questionPanels.forEach((questionPanel) => {
             const stem = questionPanel.querySelector('[data-q-stem]');
             const stemImage = questionPanel.querySelector('[data-q-stem-image]');
+            const knowledge = questionPanel.querySelector('[data-q-knowledge]');
+            const knowledgeContent = questionPanel.querySelector('[data-q-knowledge-content]');
             const options = questionPanel.querySelector('[data-q-options]');
             const explanation = questionPanel.querySelector('[data-q-explanation]');
             const label = questionPanel.querySelector('[data-q-index-label]');
@@ -285,18 +287,32 @@ export function mountLiveRoom(root) {
                 if (options) {
                     options.innerHTML = '';
                 }
+                if (knowledge) {
+                    knowledge.classList.add('hidden');
+                }
 
                 return;
             }
 
             if (stem) {
                 stem.innerHTML = panel.question.stem ?? '';
+                stem.classList.toggle('q-hints-revealed', Boolean(panel.question.hints_revealed));
                 stem.dataset.qMarkTarget = 'stem';
                 if (questionId) {
                     applyMarksToElement(stem, marksForTarget(textMarks, questionId, 'stem'));
                 }
             }
             renderStemImage(stemImage, panel.question.stem_image_url ?? null);
+
+            if (knowledge && knowledgeContent) {
+                if (panel.question.attending_tip) {
+                    knowledgeContent.innerHTML = panel.question.attending_tip;
+                    knowledge.classList.remove('hidden');
+                } else {
+                    knowledgeContent.innerHTML = '';
+                    knowledge.classList.add('hidden');
+                }
+            }
 
             if (options) {
                 options.innerHTML = '';
@@ -307,6 +323,7 @@ export function mountLiveRoom(root) {
                     const li = document.createElement('li');
                     if (canModerate) {
                         li.dataset.qOptionId = String(opt.id ?? '');
+                        li.title = revealed ? 'Bấm lại để ẩn đáp án' : 'Bấm để hiện đáp án';
                     }
                     li.className = 'overflow-hidden rounded-lg border bg-surface text-left text-sm text-on-surface'
                         + (isCorrect
@@ -342,7 +359,7 @@ export function mountLiveRoom(root) {
                         badge.className = isCorrect
                             ? 'shrink-0 text-xs font-bold text-success'
                             : 'shrink-0 text-xs font-bold text-error';
-                        badge.textContent = isCorrect ? 'Đáp án đúng' : 'Đáp án sai';
+                        badge.textContent = `${isCorrect ? 'Đáp án đúng' : 'Đáp án sai'} · Bấm lại để ẩn`;
                         row.appendChild(badge);
                     }
 
@@ -423,6 +440,7 @@ export function mountLiveRoom(root) {
         const previousRevealed = [...revealedOptionIds];
         const previousIndex = panelState?.index ?? 0;
         const epoch = ++questionSyncEpoch;
+        const renderedOptimistically = canModerate && Boolean(questionDeck?.length);
 
         if (canModerate && questionDeck?.length) {
             if (optionId !== null) {
@@ -450,11 +468,21 @@ export function mountLiveRoom(root) {
             if (epoch !== questionSyncEpoch) {
                 return;
             }
+            const serverRevealed = Array.isArray(data.revealed_option_ids)
+                ? data.revealed_option_ids.map(Number)
+                : revealedOptionIds;
+            const responseIndex = Number(data.index ?? index);
+            const sameRevealed = serverRevealed.length === revealedOptionIds.length
+                && serverRevealed.every((id) => revealedOptionIds.includes(id));
             if (Array.isArray(data.revealed_option_ids)) {
-                revealedOptionIds = data.revealed_option_ids.map(Number);
+                revealedOptionIds = serverRevealed;
             }
             if (questionDeck?.length) {
-                renderFromLocalState(data.index ?? index);
+                // Do not rebuild the panel a second time when the optimistic
+                // state is exactly what the server confirmed.
+                if (! renderedOptimistically || responseIndex !== Number(index) || ! sameRevealed) {
+                    renderFromLocalState(responseIndex);
+                }
             } else {
                 renderQuestionPanel(data);
             }
@@ -1112,15 +1140,10 @@ export function mountLiveRoom(root) {
             })
             .listen('.question.changed', (e) => {
                 if (canModerate && Number(e.actor_user_id) === currentUserId) {
-                    // Host already applied optimistic UI; keep deck-driven state.
-                    if (Array.isArray(e.revealed_option_ids)) {
-                        revealedOptionIds = e.revealed_option_ids.map(Number);
-                    }
-                    if (questionDeck?.length) {
-                        renderFromLocalState(e.index ?? panelState?.index ?? 0);
-
-                        return;
-                    }
+                    // The initiating host already has the optimistic state and
+                    // the PATCH response. Replaying this broadcast can apply an
+                    // older event after a rapid click/navigation sequence.
+                    return;
                 }
                 if (Array.isArray(e.revealed_option_ids)) {
                     revealedOptionIds = e.revealed_option_ids.map(Number);

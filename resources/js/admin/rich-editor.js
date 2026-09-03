@@ -1,6 +1,167 @@
 import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
 
+const Delta = Quill.import('delta');
+
+// Patch Quill internals once so copy & paste NEVER crash across all editors
+function patchQuillInternals() {
+    try {
+        const dummy = document.createElement('div');
+        const tempQuill = new Quill(dummy);
+
+        const SelectionProto = tempQuill.selection?.constructor?.prototype;
+        if (SelectionProto && !SelectionProto.__medlearnPatched) {
+            SelectionProto.__medlearnPatched = true;
+            const originalNormalizedToRange = SelectionProto.normalizedToRange;
+
+            SelectionProto.normalizedToRange = function(range) {
+                if (!range || !range.start) {
+                    const RangeClass = this.savedRange?.constructor || Quill.import('core/selection')?.Range || Object;
+                    return new RangeClass(0, 0);
+                }
+                try {
+                    const positions = [[range.start.node, range.start.offset]];
+                    if (!range.native?.collapsed && range.end) {
+                        positions.push([range.end.node, range.end.offset]);
+                    }
+                    const indexes = positions.map(position => {
+                        const [node, offset] = position;
+                        if (!node) return 0;
+                        let blot = this.scroll.find(node, true);
+                        let curr = node;
+                        while (!blot && curr && curr !== this.root) {
+                            curr = curr.parentNode;
+                            if (curr) {
+                                blot = this.scroll.find(curr, true);
+                            }
+                        }
+                        if (!blot) {
+                            blot = this.scroll.find(this.root, true);
+                        }
+                        if (!blot || typeof blot.offset !== 'function') {
+                            return 0;
+                        }
+                        const index = blot.offset(this.scroll);
+                        if (offset === 0) {
+                            return index;
+                        }
+                        if (typeof blot.index === 'function') {
+                            try {
+                                return index + blot.index(node, offset);
+                            } catch (_) {
+                                return index;
+                            }
+                        }
+                        if (typeof blot.length === 'function') {
+                            return index + blot.length();
+                        }
+                        return index;
+                    });
+                    const scrollLen = this.scroll?.length?.() ?? 1;
+                    const end = Math.min(Math.max(...indexes), Math.max(0, scrollLen - 1));
+                    const start = Math.min(end, Math.max(0, ...indexes));
+                    const RangeClass = this.savedRange?.constructor || Quill.import('core/selection')?.Range;
+                    return new RangeClass(start, Math.max(0, end - start));
+                } catch (err) {
+                    console.warn('Quill normalizedToRange fallback:', err);
+                    if (originalNormalizedToRange) {
+                        try {
+                            return originalNormalizedToRange.call(this, range);
+                        } catch (_) {}
+                    }
+                    return this.savedRange || { index: 0, length: 0 };
+                }
+            };
+        }
+
+        const ClipboardProto = tempQuill.clipboard?.constructor?.prototype;
+        if (ClipboardProto && !ClipboardProto.__medlearnPatched) {
+            ClipboardProto.__medlearnPatched = true;
+
+            ClipboardProto.onCaptureCopy = function(e, isCut = false) {
+                if (e.defaultPrevented) return;
+                try {
+                    const rangeTuple = this.quill.selection.getRange();
+                    const range = rangeTuple ? rangeTuple[0] : null;
+                    if (!range || range.length === 0) {
+                        // Let browser native copy handle it!
+                        return;
+                    }
+                    const { html, text } = this.onCopy(range, isCut);
+                    if (!text && !html) {
+                        // Let browser native copy handle it!
+                        return;
+                    }
+                    e.preventDefault();
+                    if (text) e.clipboardData?.setData('text/plain', text);
+                    if (html) e.clipboardData?.setData('text/html', html);
+                    if (isCut) {
+                        this.quill.deleteText(range.index, range.length, 'user');
+                    }
+                } catch (err) {
+                    console.warn('Quill copy fallback to native browser copy:', err);
+                }
+            };
+
+            ClipboardProto.onCapturePaste = function(e) {
+                if (e.defaultPrevented || !this.quill.isEnabled()) return;
+                try {
+                    let range = null;
+                    try {
+                        range = this.quill.getSelection(true);
+                    } catch (_) {}
+                    if (!range) {
+                        range = { index: Math.max(0, this.quill.getLength() - 1), length: 0 };
+                    }
+                    const html = e.clipboardData?.getData('text/html');
+                    let text = e.clipboardData?.getData('text/plain');
+                    if (!html && !text) {
+                        const urlList = e.clipboardData?.getData('text/uri-list');
+                        if (urlList) {
+                            text = this.normalizeURIList ? this.normalizeURIList(urlList) : urlList;
+                        }
+                    }
+                    const files = Array.from(e.clipboardData?.files || []);
+                    if (!html && files.length > 0 && this.quill.uploader) {
+                        e.preventDefault();
+                        this.quill.uploader.upload(range, files);
+                        return;
+                    }
+                    if (html && files.length > 0 && this.quill.uploader) {
+                        const doc = new DOMParser().parseFromString(html, 'text/html');
+                        if (doc.body.childElementCount === 1 && doc.body.firstElementChild?.tagName === 'IMG') {
+                            e.preventDefault();
+                            this.quill.uploader.upload(range, files);
+                            return;
+                        }
+                    }
+                    e.preventDefault();
+                    this.onPaste(range, { html, text });
+                } catch (err) {
+                    console.warn('Quill paste fallback to plain text insert:', err);
+                    try {
+                        const text = e.clipboardData?.getData('text/plain');
+                        if (text) {
+                            e.preventDefault();
+                            let range = null;
+                            try { range = this.quill.getSelection(); } catch (_) {}
+                            const idx = range ? range.index : Math.max(0, this.quill.getLength() - 1);
+                            this.quill.insertText(idx, text, 'user');
+                            this.quill.setSelection(idx + text.length, 0, 'silent');
+                        }
+                    } catch (fallbackErr) {
+                        console.error('Quill fallback paste failed:', fallbackErr);
+                    }
+                }
+            };
+        }
+    } catch (e) {
+        console.warn('Failed to patch Quill internals:', e);
+    }
+}
+
+patchQuillInternals();
+
 // Expose Quill globally so inline x-init scripts (e.g. inside x-for) can use it
 window.Quill = Quill;
 

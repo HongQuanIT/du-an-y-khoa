@@ -119,69 +119,51 @@
             </div>
         </div>
 
-        {{-- Workflow buttons (edit only) --}}
+        {{-- Workflow status (edit only) --}}
         @if (! $isNew)
             <div class="flex flex-wrap items-center gap-2">
-                @if ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::Draft && $canUpdate)
-                    <form method="post" action="{{ route('admin.questions.transition', $question) }}">
-                        @csrf <input type="hidden" name="status" value="in_review">
-                        <button class="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-semibold text-amber-800 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300">
-                            <span class="material-symbols-outlined text-[16px]">send</span>Gửi duyệt
-                        </button>
-                    </form>
-                @endif
-                @if ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::InReview && $canUpdate)
-                    <form method="post" action="{{ route('admin.questions.transition', $question) }}">
-                        @csrf <input type="hidden" name="status" value="draft">
-                        <button class="inline-flex items-center gap-1.5 rounded-xl border border-outline-variant bg-surface px-3 py-1.5 text-sm font-semibold text-on-surface hover:bg-surface-container-low">
-                            <span class="material-symbols-outlined text-[16px]">undo</span>Trả về nháp
-                        </button>
-                    </form>
-                @endif
-                @if ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::InReview && $canPublish)
-                    <form method="post" action="{{ route('admin.questions.transition', $question) }}" class="inline-flex items-center gap-2">
+                @if ($workflowStatuses !== [])
+                    <form method="post" action="{{ route('admin.questions.transition', $question) }}"
+                          x-data="{
+                              current: @js($question->status->value),
+                              changeStatus(event) {
+                                  const next = event.target.value;
+                                  if (next === this.current) return;
+
+                                  if (next === 'rejected') {
+                                      const reason = window.prompt('Nhập lý do từ chối câu hỏi:');
+                                      if (! reason || ! reason.trim()) {
+                                          event.target.value = this.current;
+                                          return;
+                                      }
+                                      event.target.form.elements.rejection_reason.value = reason.trim();
+                                  }
+
+                                  event.target.disabled = true;
+                                  event.target.form.submit();
+                              }
+                          }">
                         @csrf
-                        <input type="hidden" name="status" value="rejected">
-                        <input type="text" name="rejection_reason" required maxlength="2000" placeholder="Lý do từ chối…"
-                               class="w-48 rounded-xl border border-outline-variant bg-surface px-2 py-1.5 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
-                        <button onclick="return confirm('Từ chối câu hỏi này?')"
-                                class="inline-flex items-center gap-1.5 rounded-xl border border-red-300 bg-red-50 px-3 py-1.5 text-sm font-semibold text-red-700 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-300">
-                            <span class="material-symbols-outlined text-[16px]">cancel</span>Từ chối
-                        </button>
-                    </form>
-                @endif
-                @if ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::Rejected && $canUpdate)
-                    <form method="post" action="{{ route('admin.questions.transition', $question) }}">
-                        @csrf <input type="hidden" name="status" value="draft">
-                        <button class="inline-flex items-center gap-1.5 rounded-xl border border-outline-variant bg-surface px-3 py-1.5 text-sm font-semibold text-on-surface hover:bg-surface-container-low">
-                            <span class="material-symbols-outlined text-[16px]">edit</span>Sửa lại (về nháp)
-                        </button>
-                    </form>
-                @endif
-                @if (in_array($question->status, [\Modules\QuestionBank\Enums\QuestionStatus::Draft, \Modules\QuestionBank\Enums\QuestionStatus::InReview], true) && $canPublish)
-                    <form method="post" action="{{ route('admin.questions.transition', $question) }}">
-                        @csrf <input type="hidden" name="status" value="published">
-                        <button onclick="return confirm('Xuất bản câu hỏi này?')"
-                                class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-1.5 text-sm font-semibold text-on-primary hover:bg-primary/90">
-                            <span class="material-symbols-outlined text-[16px]">publish</span>Xuất bản
-                        </button>
-                    </form>
-                @endif
-                @if ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::Published && $canPublish)
-                    <form method="post" action="{{ route('admin.questions.transition', $question) }}">
-                        @csrf <input type="hidden" name="status" value="retired">
-                        <button onclick="return confirm('Ngừng sử dụng câu hỏi này?')"
-                                class="inline-flex items-center gap-1.5 rounded-xl border border-rose-300 bg-rose-50 px-3 py-1.5 text-sm font-semibold text-rose-700 hover:bg-rose-100 dark:bg-rose-950/40 dark:text-rose-300">
-                            <span class="material-symbols-outlined text-[16px]">block</span>Ngừng dùng
-                        </button>
-                    </form>
-                @endif
-                @if ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::Retired && $canUpdate)
-                    <form method="post" action="{{ route('admin.questions.transition', $question) }}">
-                        @csrf <input type="hidden" name="status" value="draft">
-                        <button class="inline-flex items-center gap-1.5 rounded-xl border border-outline-variant bg-surface px-3 py-1.5 text-sm font-semibold text-on-surface hover:bg-surface-container-low">
-                            <span class="material-symbols-outlined text-[16px]">restore</span>Khôi phục
-                        </button>
+                        <input type="hidden" name="rejection_reason" value="">
+                        <label class="flex items-center gap-2 rounded-xl border border-outline-variant bg-surface px-3 py-1.5 text-sm text-on-surface shadow-sm">
+                            <span class="font-semibold text-on-surface-variant">Trạng thái:</span>
+                            <select name="status" aria-label="Trạng thái câu hỏi" @change="changeStatus($event)"
+                                    class="min-w-36 border-0 bg-transparent py-0 pr-8 font-semibold text-on-surface focus:ring-0">
+                                <option value="{{ $question->status->value }}">{{ $question->status->label() }}</option>
+                                @foreach ($workflowStatuses as $workflowStatus)
+                                    <option value="{{ $workflowStatus->value }}">
+                                        {{ match ($workflowStatus) {
+                                            \Modules\QuestionBank\Enums\QuestionStatus::InReview => 'Gửi duyệt',
+                                            \Modules\QuestionBank\Enums\QuestionStatus::Published => 'Xuất bản',
+                                            \Modules\QuestionBank\Enums\QuestionStatus::Rejected => 'Từ chối',
+                                            \Modules\QuestionBank\Enums\QuestionStatus::Draft => 'Chuyển về nháp',
+                                            \Modules\QuestionBank\Enums\QuestionStatus::Private => 'Chuyển sang riêng tư',
+                                            \Modules\QuestionBank\Enums\QuestionStatus::Retired => 'Ngừng dùng',
+                                        } }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </label>
                     </form>
                 @endif
                 @if ($canDelete && ! $pendingReview)
@@ -218,6 +200,18 @@
                 </a>
             @endif
         </div>
+    @endif
+
+    @if (! $isNew && ! $isReviewer && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::InReview)
+        <div class="mb-5 rounded-2xl border border-outline-variant bg-surface-container-low px-4 py-3 text-sm text-on-surface-variant">
+            Câu hỏi đang chờ admin duyệt. Bạn không thể chỉnh sửa nội dung cho đến khi admin xử lý hoặc bạn chọn <strong>Trả về nháp</strong>.
+        </div>
+    @endif
+
+    @if (! $isNew && ($canClone ?? false))
+        <form id="clone-question-form" method="post" action="{{ route('admin.questions.clone', $question) }}" class="hidden">
+            @csrf
+        </form>
     @endif
 
     {{-- ── MAIN FORM ── --}}
@@ -368,18 +362,63 @@
                             <p class="mb-3 text-[11px] leading-4 text-on-surface-variant">
                                 Hint hiển thị lần lượt — không hiện hint 2 trước hint 1. Không lấy từ Concept.
                             </p>
-                            <div class="space-y-2">
+                             <div class="space-y-2">
                                 <template x-for="(hint, index) in hints" :key="'hint-'+index">
-                                    <div class="rounded-xl border border-outline-variant bg-surface-container-lowest p-3">
-                                        <div class="mb-2 flex items-center justify-between">
+                                    <div class="rounded-xl border border-outline-variant bg-surface-container-lowest p-3 space-y-2">
+                                        <div class="flex items-center justify-between">
                                             <span class="text-xs font-bold text-on-surface-variant" x-text="'Hint ' + (index + 1)"></span>
                                             <button type="button" @click="removeHint(index)"
                                                     class="text-xs font-medium text-error hover:underline">Xóa</button>
                                         </div>
                                         <input type="hidden" :name="'hints['+index+'][id]'" :value="hint.id || ''">
-                                        <textarea :name="'hints['+index+'][content]'" x-model="hint.content" rows="2"
-                                                  class="w-full resize-none rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                                                  :placeholder="'Nội dung hint ' + (index + 1)"></textarea>
+
+                                        {{-- Mini rich-editor for hint content (supports formatting & images, matching option explanation) --}}
+                                        <div class="admin-rich-editor mini overflow-hidden rounded-lg border border-outline-variant bg-surface"
+                                             x-init="
+                                                 (function(currentHint) {
+                                                     const container = $el.querySelector('[data-mini-hint-editor]');
+                                                     const uploadUrl = '{{ route('admin.editor.images') }}';
+                                                     const q = new window.Quill(container, {
+                                                         theme: 'snow',
+                                                         modules: { toolbar: [['bold', 'italic'], ['link', 'image'], ['clean']] },
+                                                         placeholder: 'Nội dung hint ' + (index + 1) + '...'
+                                                     });
+                                                     if (currentHint.content) {
+                                                         const paste = q.clipboard.convert({ html: currentHint.content, text: '' });
+                                                         q.setContents(paste, 'silent');
+                                                     }
+                                                     q.on('text-change', function() {
+                                                         const html = q.root.innerHTML.trim();
+                                                         currentHint.content = (html === '<p><br></p>') ? '' : html;
+                                                     });
+                                                     const ed = q.root;
+                                                     ed.addEventListener('compositionstart', function() { ed.classList.remove('ql-blank'); });
+                                                     ed.addEventListener('compositionend', function() { ed.classList.toggle('ql-blank', q.getLength() <= 1); });
+                                                     q.getModule('toolbar').addHandler('image', function() {
+                                                         const inp = document.createElement('input');
+                                                         inp.type = 'file';
+                                                         inp.accept = 'image/png,image/jpeg,image/gif,image/webp';
+                                                         inp.click();
+                                                         inp.onchange = async function() {
+                                                             const file = inp.files?.[0];
+                                                             if (!file) return;
+                                                             const body = new FormData();
+                                                             body.append('image', file);
+                                                             const csrf = document.querySelector('meta[name=csrf-token]')?.content || '';
+                                                             try {
+                                                                 const res = await fetch(uploadUrl, { method: 'POST', headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' }, body: body, credentials: 'same-origin' });
+                                                                 const data = await res.json();
+                                                                 const range = q.getSelection(true) || { index: q.getLength(), length: 0 };
+                                                                 q.insertEmbed(range.index, 'image', data.url, 'user');
+                                                                 q.setSelection(range.index + 1, 0, 'silent');
+                                                             } catch(e) { alert('Không tải được ảnh. Vui lòng thử lại.'); }
+                                                         };
+                                                     });
+                                                 })(hint);
+                                             ">
+                                            <div data-mini-hint-editor class="min-h-[64px] font-body-sm text-on-surface"></div>
+                                        </div>
+                                        <input type="hidden" :name="'hints['+index+'][content]'" :value="hint.content">
                                     </div>
                                 </template>
                             </div>
@@ -519,17 +558,14 @@
                             </div>
                         @endif
                     </div>
-                    @if ($canClone ?? false)
+                    @if (! $isNew && ($canClone ?? false))
                         <div class="rounded-2xl border border-outline-variant bg-surface p-4">
                             <h2 class="mb-3 font-label-md font-semibold text-on-surface-variant">Nhân bản</h2>
-                            <form method="post" action="{{ route('admin.questions.clone', $question) }}">
-                                @csrf
-                                <button type="submit" onclick="return confirm('Tạo bản sao mới từ câu hỏi này?')"
-                                        class="flex w-full items-center justify-center gap-2 rounded-xl border border-outline-variant py-2.5 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-low">
-                                    <span class="material-symbols-outlined text-[18px]">content_copy</span>
-                                    Clone câu hỏi
-                                </button>
-                            </form>
+                            <button type="submit" form="clone-question-form" onclick="return confirm('Tạo bản sao mới từ câu hỏi này?')"
+                                    class="flex w-full items-center justify-center gap-2 rounded-xl border border-outline-variant py-2.5 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-low">
+                                <span class="material-symbols-outlined text-[18px]">content_copy</span>
+                                Clone câu hỏi
+                            </button>
                         </div>
                     @endif
                 @endif

@@ -103,4 +103,28 @@ final class LiveSessionNotificationDismissTest extends TestCase
         $this->assertNull($data['importantFlyoutNotification']);
         $this->assertNotNull($staleNotif->fresh()->read_at);
     }
+
+    public function test_instructor_dismissing_flyout_persists_and_does_not_show_again(): void
+    {
+        $instructor = User::factory()->create();
+        $instructor->assignRole(Role::Instructor->value);
+        $notification = UserNotification::query()->create([
+            'user_id' => $instructor->getKey(),
+            'type' => 'classroom.approved',
+            'title' => 'Lớp đã được duyệt',
+            'body' => 'Lớp của bạn đã được duyệt.',
+            'action_url' => '/teach/classes/1',
+        ]);
+
+        $this->actingAs($instructor)
+            ->postJson(route('notifications.read', $notification))
+            ->assertOk();
+
+        $this->assertNotNull($notification->fresh()->read_at);
+
+        $view = view('notification::partials.bell');
+        (new HeaderNotificationsComposer())->compose($view);
+
+        $this->assertNull($view->getData()['importantFlyoutNotification']);
+    }
 }

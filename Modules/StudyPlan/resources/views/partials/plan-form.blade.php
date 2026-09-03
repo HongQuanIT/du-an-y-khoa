@@ -19,13 +19,16 @@
         'difficulty' => null,
         'question_statuses' => [],
         'question_status_mode' => 'latest',
+        'blueprint_id' => null,
+        'blueprint_section_id' => null,
+        'core_clinical_topic_ids' => [],
+        'tag_ids' => [],
     ];
 
     $selectedTopicIds = array_map('intval', old('medical_taxonomy_node_ids', $filters['medical_taxonomy_node_ids'] ?? $filters['topic_ids'] ?? []));
     $specialtyIds = $specialties->pluck('id')->all();
     $systemIdList = $systems->pluck('id')->all();
     $defaultExam = old('exam_key', $plan?->exam_key ?? array_key_first($exams));
-    $defaultExamTag = \Modules\StudyPlan\Support\TargetExams::filterTag((string) $defaultExam);
     $savedExamTags = array_values(old('exam_tags', $filters['exam_tags']));
 
     $initial = [
@@ -33,7 +36,7 @@
         'date' => old('exam_target_date', $plan?->exam_target_date?->toDateString() ?? $defaultDate ?? now()->addMonths(3)->toDateString()),
         'specialtyIds' => array_values(array_intersect($selectedTopicIds, $specialtyIds)),
         'systemIds' => array_values(array_intersect($selectedTopicIds, $systemIdList !== [] ? $systemIdList : array_diff($selectedTopicIds, $specialtyIds))),
-        'examTags' => $savedExamTags !== [] ? $savedExamTags : [$defaultExamTag],
+        'examTags' => $savedExamTags,
         'articles' => array_values(old('articles', $filters['articles'])),
         'symptoms' => array_values(old('symptoms', $filters['symptoms'])),
         'savedOnly' => (bool) old('saved_only', $filters['saved_only']),
@@ -48,6 +51,10 @@
         'intensity' => (int) old('daily_goal_questions', $plan?->daily_goal_questions ?? 40),
         'days' => array_map('intval', old('study_days', $plan?->studyWeekdays() ?? [1, 2, 3, 4, 5])),
         'strategy' => old('strategy', $plan?->strategy->value ?? 'fixed'),
+        'blueprintId' => old('blueprint_id', $filters['blueprint_id'] ?? null),
+        'blueprintSectionId' => old('blueprint_section_id', $filters['blueprint_section_id'] ?? null),
+        'coreClinicalTopicIds' => array_map('intval', old('core_clinical_topic_ids', $filters['core_clinical_topic_ids'] ?? [])),
+        'tagIds' => array_map('intval', old('tag_ids', $filters['tag_ids'] ?? [])),
     ];
 
     $weekdays = [1 => 'T2', 2 => 'T3', 3 => 'T4', 4 => 'T5', 5 => 'T6', 6 => 'T7', 7 => 'CN'];
@@ -67,7 +74,7 @@
     $statusOptions = \Modules\StudyPlan\Support\ScopeFilters::questionStatuses();
 @endphp
 
-<form method="POST" action="{{ $formAction }}" class="contents"
+<form method="POST" action="{{ $formAction }}" class="contents" x-ref="planForm"
     x-data="{
         exam: @js($initial['exam']),
         date: @js($initial['date']),
@@ -83,6 +90,29 @@
         intensity: @js($initial['intensity']),
         days: @js($initial['days']),
         strategy: @js($initial['strategy']),
+        matching: null,
+        counting: false,
+        countUrl: @js(route('qbank.count', absolute: false)),
+        source: 'custom',
+        activeFilter: null,
+        taxonomySearch: '',
+        blueprintId: @js($initial['blueprintId'] ? (int) $initial['blueprintId'] : null),
+        blueprintName: '',
+        blueprintSectionId: @js($initial['blueprintSectionId'] ? (int) $initial['blueprintSectionId'] : null),
+        blueprintSectionName: '',
+        coreClinicalTopicIds: @js($initial['coreClinicalTopicIds']),
+        coreClinicalTopicLabels: {},
+        medicalTaxonomyNodeIds: @js($selectedTopicIds),
+        medicalNodeLabels: {},
+        tagIds: @js($initial['tagIds']),
+        tagLabels: {},
+        blueprintResults: [], blueprintSectionResults: [], coreTopicResults: [], medicalNodeResults: [], tagResults: [],
+        taxonomyUrls: {
+            blueprints: @js(route('qbank.taxonomy.lookups.blueprints', absolute: false)),
+            coreTopicsSearch: @js(route('qbank.taxonomy.lookups.core-topics.search', absolute: false)),
+            medicalNodes: @js(route('qbank.taxonomy.lookups.medical-nodes', absolute: false)),
+            tags: @js(route('qbank.taxonomy.lookups.tags', absolute: false)),
+        },
         specialtyOptions: @js($specialtyOptions),
         systemOptions: @js($systemOptions),
         examTagOptions: @js($examTagOptions),
@@ -106,8 +136,44 @@
         },
         selectExam(key) {
             this.exam = key;
-            const tag = key === 'usmle' ? 'usmle-step-1' : key;
-            this.examTags = [tag];
+        },
+        openFilter(filter) {
+            this.activeFilter = filter; this.taxonomySearch = '';
+            if (filter === 'blueprint') this.fetchBlueprints();
+            if (filter === 'coreTopics') this.fetchCoreTopics();
+            if (filter === 'medicalNodes') this.fetchMedicalNodes();
+            if (filter === 'tags') this.fetchTags();
+        },
+        async fetchBlueprints() { const q=this.taxonomySearch.trim(); const r=await fetch(this.taxonomyUrls.blueprints+(q?'?q='+encodeURIComponent(q):'')); this.blueprintResults=(await r.json()).data??[]; },
+        async fetchBlueprintSections() { if(!this.blueprintId)return; const q=this.taxonomySearch.trim(); const r=await fetch(this.taxonomyUrls.blueprints+'/'+this.blueprintId+'/sections'+(q?'?q='+encodeURIComponent(q):'')); this.blueprintSectionResults=(await r.json()).data??[]; },
+        async fetchCoreTopics() { const p=new URLSearchParams(); if(this.blueprintId)p.set('blueprint_id',this.blueprintId); if(this.blueprintSectionId)p.set('blueprint_section_id',this.blueprintSectionId); if(this.taxonomySearch.trim().length>=2)p.set('q',this.taxonomySearch.trim()); const r=await fetch(this.taxonomyUrls.coreTopicsSearch+'?'+p); this.coreTopicResults=(await r.json()).data??[]; },
+        async fetchMedicalNodes() { const p=new URLSearchParams({include_descendants:'1'}); if(this.taxonomySearch.trim().length>=2)p.set('q',this.taxonomySearch.trim()); const r=await fetch(this.taxonomyUrls.medicalNodes+'?'+p); this.medicalNodeResults=(await r.json()).data??[]; },
+        async fetchTags() { const q=this.taxonomySearch.trim(); const r=await fetch(this.taxonomyUrls.tags+(q?'?q='+encodeURIComponent(q):'')); this.tagResults=(await r.json()).data??[]; },
+        selectBlueprint(i){this.blueprintId=i.id;this.blueprintName=i.name;this.clearBlueprintSection();},
+        clearBlueprint(){this.blueprintId=null;this.blueprintName='';this.clearBlueprintSection();},
+        selectBlueprintSection(i){this.blueprintSectionId=i.id;this.blueprintSectionName=i.name;},
+        clearBlueprintSection(){this.blueprintSectionId=null;this.blueprintSectionName='';},
+        toggleCoreTopic(i){const n=this.coreClinicalTopicIds.indexOf(i.id);if(n>=0){this.coreClinicalTopicIds.splice(n,1);delete this.coreClinicalTopicLabels[i.id]}else{this.coreClinicalTopicIds.push(i.id);this.coreClinicalTopicLabels[i.id]=i.name}},
+        toggleMedicalNode(i){const n=this.medicalTaxonomyNodeIds.indexOf(i.id);if(n>=0){this.medicalTaxonomyNodeIds.splice(n,1);delete this.medicalNodeLabels[i.id]}else{this.medicalTaxonomyNodeIds.push(i.id);this.medicalNodeLabels[i.id]=i.name}},
+        toggleTag(i){const n=this.tagIds.indexOf(i.id);if(n>=0){this.tagIds.splice(n,1);delete this.tagLabels[i.id]}else{this.tagIds.push(i.id);this.tagLabels[i.id]=i.name}},
+        blueprintLabel(){return this.blueprintName||(this.blueprintId?'Đã chọn':'Tất cả')},
+        coreTopicLabel(){return this.coreClinicalTopicIds.length?this.coreClinicalTopicIds.length+' đã chọn':'Tất cả'},
+        medicalNodeLabel(){return this.medicalTaxonomyNodeIds.length?this.medicalTaxonomyNodeIds.length+' đã chọn':'Tất cả'},
+        tagLabel(){return this.tagIds.length?this.tagIds.length+' đã chọn':'Tất cả'},
+        groupedCoreTopics(){const g=[];const m=new Map;this.coreTopicResults.forEach(t=>{const k=String(t.blueprint_section_id??'other');if(!m.has(k)){const x={id:k,name:t.section_name||'Chủ đề khác',topics:[]};m.set(k,x);g.push(x)}m.get(k).topics.push(t)});return g},
+        async refreshCount(){
+            await this.$nextTick();
+            this.counting=true;
+            try {
+                const body=new FormData(this.$refs.planForm);
+                body.set('mode','study'); body.set('source','custom'); body.set('count','1');
+                // Kỳ thi mục tiêu dùng để đặt tên/mốc kế hoạch, không phải bộ lọc
+                // phạm vi. Khi các hàng phạm vi đều là "Tất cả", phải đếm toàn kho.
+                body.delete('exam_key');
+                body.delete('exam_tags[]');
+                const r=await fetch(this.countUrl,{method:'POST',headers:{Accept:'application/json','X-CSRF-TOKEN':@js(csrf_token())},body});
+                const j=await r.json(); this.matching=r.ok?Number(j?.data?.count??0):0;
+            } catch(e) { this.matching=0 } finally { this.counting=false }
         },
         openModal(type) {
             this.modal = type;
@@ -181,7 +247,7 @@
             if (i === -1) this.days.push(day);
             else this.days.splice(i, 1);
         },
-        topicIds() { return [...this.specialtyIds, ...this.systemIds]; },
+        topicIds() { return this.medicalTaxonomyNodeIds; },
         studyDaysUntilExam() {
             if (!this.date || this.days.length === 0) return 0;
             const target = new Date(this.date + 'T00:00:00');
@@ -195,7 +261,7 @@
             }
             return count;
         },
-        totalQuestions() { return this.studyDaysUntilExam() * this.intensity; },
+        totalQuestions() { const capacity=this.studyDaysUntilExam()*this.intensity; return this.matching===null?capacity:Math.min(capacity,this.matching); },
         daysUntilExam() {
             if (!this.date) return 0;
             const target = new Date(this.date + 'T00:00:00');
@@ -203,7 +269,7 @@
             today.setHours(0, 0, 0, 0);
             return Math.max(0, Math.round((target - today) / 86400000));
         },
-    }" @keydown.escape.window="if (modal) closeModal()">
+    }" x-init="refreshCount()" @change.debounce.300ms="refreshCount()" @keydown.escape.window="if (activeFilter) activeFilter = null; else if (modal) closeModal()">
     @csrf
     @isset($formMethod)
         @method($formMethod)
@@ -212,11 +278,22 @@
     <input type="hidden" name="exam_key" :value="exam">
     <input type="hidden" name="daily_goal_questions" :value="intensity">
     <input type="hidden" name="strategy" :value="strategy">
+    <input type="hidden" name="mode" value="study">
+    <input type="hidden" name="source" value="custom">
+    <input type="hidden" name="count" value="1">
     <input type="hidden" name="saved_only" :value="savedOnly ? 1 : 0">
     <template x-for="difficulty in difficulties" :key="'difficulty-' + difficulty">
         <input type="hidden" name="difficulties[]" :value="difficulty">
     </template>
     <input type="hidden" name="question_status_mode" :value="questionStatusMode">
+    <input type="hidden" name="blueprint_id" :value="blueprintId || ''">
+    <input type="hidden" name="blueprint_section_id" :value="blueprintSectionId || ''">
+    <template x-for="id in coreClinicalTopicIds" :key="'core-' + id">
+        <input type="hidden" name="core_clinical_topic_ids[]" :value="id">
+    </template>
+    <template x-for="id in tagIds" :key="'tag-' + id">
+        <input type="hidden" name="tag_ids[]" :value="id">
+    </template>
     <template x-for="id in topicIds()" :key="'topic-' + id">
         <input type="hidden" name="medical_taxonomy_node_ids[]" :value="id">
     </template>
@@ -310,6 +387,8 @@
 
                     <div class="overflow-hidden rounded-xl border border-outline-variant bg-white shadow-sm">
                         <div class="space-y-0">
+                            @include('questionbank::partials.taxonomy-session-filter-rows')
+
                             <button type="button" @click="openModal('articles')"
                                 class="group flex w-full cursor-pointer items-center justify-between border-b border-outline-variant px-6 py-4 text-left transition-colors hover:bg-surface-container-lowest">
                                 <div class="flex shrink-0 items-center gap-4">
@@ -321,40 +400,6 @@
                                         <span class="text-sm text-on-surface-variant">Tất cả</span>
                                     </template>
                                     <template x-for="chip in chips(articles, articleOptions)" :key="'article-chip-' + chip">
-                                        <span class="rounded bg-secondary-fixed px-3 py-1 text-[12px] font-medium text-on-secondary-fixed"
-                                            x-text="chip"></span>
-                                    </template>
-                                </div>
-                            </button>
-
-                            <button type="button" @click="openModal('systems')"
-                                class="group flex w-full cursor-pointer items-center justify-between border-b border-outline-variant px-6 py-4 text-left transition-colors hover:bg-surface-container-lowest">
-                                <div class="flex shrink-0 items-center gap-4">
-                                    <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">add</span>
-                                    <span class="font-medium">Hệ cơ quan</span>
-                                </div>
-                                <div class="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2 pl-4">
-                                    <template x-if="systemIds.length === 0">
-                                        <span class="text-sm text-on-surface-variant">Tất cả</span>
-                                    </template>
-                                    <template x-for="chip in chips(systemIds, systemOptions)" :key="'system-chip-' + chip">
-                                        <span class="rounded bg-secondary-fixed px-3 py-1 text-[12px] font-medium text-on-secondary-fixed"
-                                            x-text="chip"></span>
-                                    </template>
-                                </div>
-                            </button>
-
-                            <button type="button" @click="openModal('specialty')"
-                                class="group flex w-full cursor-pointer items-center justify-between border-b border-outline-variant px-6 py-4 text-left transition-colors hover:bg-surface-container-lowest">
-                                <div class="flex shrink-0 items-center gap-4">
-                                    <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">add</span>
-                                    <span class="font-medium">Chuyên khoa</span>
-                                </div>
-                                <div class="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2 pl-4">
-                                    <template x-if="specialtyIds.length === 0">
-                                        <span class="text-sm text-on-surface-variant">Tất cả</span>
-                                    </template>
-                                    <template x-for="chip in chips(specialtyIds, specialtyOptions)" :key="'specialty-chip-' + chip">
                                         <span class="rounded bg-secondary-fixed px-3 py-1 text-[12px] font-medium text-on-secondary-fixed"
                                             x-text="chip"></span>
                                     </template>
@@ -561,6 +606,27 @@
                         {{ $submitLabel }}
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bộ chọn taxonomy dùng chung với Ngân hàng câu hỏi -->
+    <div x-show="activeFilter" x-cloak class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4"
+        @click.self="activeFilter = null">
+        <div class="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-xl bg-white shadow-xl">
+            <div class="flex items-center justify-between border-b border-outline-variant p-4">
+                <h3 class="font-headline-sm text-on-surface" x-text="({blueprint:'Ma trận đề thi',coreTopics:'Chủ đề lâm sàng',medicalNodes:'Chuyên khoa & danh mục y khoa',tags:'Tags'})[activeFilter] || 'Bộ lọc'"></h3>
+                <button type="button" @click="activeFilter = null" class="rounded-full p-2 hover:bg-surface-container" aria-label="Đóng">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="custom-scrollbar space-y-4 overflow-y-auto p-4">
+                @include('questionbank::partials.taxonomy-session-filter-modals')
+            </div>
+            <div class="flex items-center justify-between border-t border-outline-variant bg-surface-container-lowest p-4">
+                <button type="button" @click="activeFilter === 'blueprint' ? clearBlueprint() : activeFilter === 'coreTopics' ? (coreClinicalTopicIds = []) : activeFilter === 'medicalNodes' ? (medicalTaxonomyNodeIds = []) : (tagIds = [])"
+                    class="text-sm font-bold text-primary hover:underline">Đặt lại</button>
+                <button type="button" @click="activeFilter = null" class="rounded-lg bg-primary px-8 py-2 font-bold text-white">Xong</button>
             </div>
         </div>
     </div>

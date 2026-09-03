@@ -1,3 +1,7 @@
+@php
+    use Modules\Billing\Support\MoneyFormatter;
+@endphp
+
 <x-layouts.partner title="Chi trả">
     <div class="overflow-x-auto rounded-xl border border-outline-variant bg-surface">
         <table class="min-w-full text-left font-body-sm text-body-sm">
@@ -16,7 +20,7 @@
                         <td class="px-4 py-3">
                             {{ $payout->period_from->format('d/m/Y') }} — {{ $payout->period_to->format('d/m/Y') }}
                         </td>
-                        <td class="px-4 py-3 font-label-md">{{ number_format($payout->amount_cents / 100) }} ₫</td>
+                        <td class="px-4 py-3 font-label-md">{{ MoneyFormatter::vnd((int) $payout->amount_cents) }}</td>
                         <td class="px-4 py-3">{{ $payout->status->label() }}</td>
                         <td class="px-4 py-3 text-on-surface-variant">{{ $payout->paid_at?->format('d/m/Y H:i') ?? '—' }}</td>
                         <td class="px-4 py-3 text-on-surface-variant">{{ $payout->note ?? '—' }}</td>

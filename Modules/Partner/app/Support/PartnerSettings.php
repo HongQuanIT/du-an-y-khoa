@@ -70,7 +70,7 @@ final class PartnerSettings
         return (bool) setting('partner.allow_self_referral', false);
     }
 
-    /** Minimum payout amount in cents; 0 = no minimum. */
+    /** Minimum payout amount in whole VND; the legacy setting key keeps its `_cents` suffix. */
     public static function minPayoutCents(): int
     {
         return max(0, (int) setting('partner.min_payout_cents', 0));

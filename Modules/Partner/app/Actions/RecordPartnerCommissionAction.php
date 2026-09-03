@@ -82,16 +82,19 @@ final class RecordPartnerCommissionAction
                 return null;
             }
 
-            $commissionCents = (int) intdiv($payment->amount_cents * $rateBps, 10_000);
+            // Billing stores whole VND despite the legacy `_cents` suffix.
+            // Gross revenue is the full customer payment; only commission applies the rate.
+            $grossAmountVnd = (int) $payment->amount_cents;
+            $commissionAmountVnd = (int) intdiv($grossAmountVnd * $rateBps, 10_000);
 
             return PartnerCommission::query()->create([
                 'partner_id' => $attribution->partner_id,
                 'attribution_id' => $attribution->getKey(),
                 'payment_id' => $payment->getKey(),
                 'referred_user_id' => $referredUserId,
-                'gross_cents' => $payment->amount_cents,
+                'gross_cents' => $grossAmountVnd,
                 'rate_bps' => $rateBps,
-                'commission_cents' => $commissionCents,
+                'commission_cents' => $commissionAmountVnd,
                 'status' => CommissionStatus::Pending,
             ]);
         });

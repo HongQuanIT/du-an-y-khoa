@@ -101,6 +101,8 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
 
         Route::middleware('permission:'.Permission::RoleManage->value)->group(function (): void {
             Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');
+            Route::get('/roles/create', [RoleController::class, 'create'])->name('roles.create');
+            Route::post('/roles', [RoleController::class, 'store'])->name('roles.store');
             Route::get('/roles/{role}', [RoleController::class, 'show'])->name('roles.show');
             Route::put('/roles/{role}/permissions', [RoleController::class, 'syncPermissions'])->name('roles.permissions');
             Route::get('/permissions', [RoleController::class, 'permissionsCatalog'])->name('permissions.index');
@@ -143,8 +145,12 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
 
         Route::middleware('permission:'.Permission::ClassroomOversee->value)->group(function (): void {
             Route::get('/classrooms', [ClassroomOversightController::class, 'index'])->name('classrooms.index');
+            Route::get('/classrooms/create', [ClassroomOversightController::class, 'create'])->name('classrooms.create');
+            Route::post('/classrooms', [ClassroomOversightController::class, 'store'])->name('classrooms.store');
             Route::get('/classrooms/{classroom}', [ClassroomOversightController::class, 'show'])
                 ->name('classrooms.show');
+            Route::post('/classrooms/{classroom}/sessions', [ClassroomOversightController::class, 'scheduleLive'])
+                ->name('classrooms.sessions.store');
             Route::get('/classrooms/{classroom}/live/{liveSession}', [LiveRoomController::class, 'show'])
                 ->scopeBindings()
                 ->name('classrooms.live');
@@ -173,19 +179,20 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
                 ->name('classrooms.archive');
         });
 
-        Route::middleware('permission:'.Permission::QuestionView->value)->group(function (): void {
-            Route::get('/questions', [QuestionController::class, 'index'])->name('questions.index');
-            Route::get('/question-feedback', [QuestionFeedbackController::class, 'index'])->name('question-feedback.index');
-            Route::get('/questions/{question}/edit', [QuestionController::class, 'edit'])->name('questions.edit');
-            Route::get('/questions/{question}/stats', [QuestionController::class, 'stats'])->name('questions.stats');
-            Route::get('/questions/{question}/versions', [QuestionVersionController::class, 'index'])
-                ->name('questions.versions.index');
-        });
-
         Route::middleware('permission:'.Permission::QuestionCreate->value)->group(function (): void {
             Route::get('/questions/create', [QuestionController::class, 'create'])->name('questions.create');
             Route::post('/questions', [QuestionController::class, 'store'])->name('questions.store');
             Route::post('/questions/{question}/clone', [QuestionController::class, 'clone'])->name('questions.clone');
+        });
+
+        Route::middleware('permission:'.Permission::QuestionView->value)->group(function (): void {
+            Route::get('/questions', [QuestionController::class, 'index'])->name('questions.index');
+            Route::get('/question-feedback', [QuestionFeedbackController::class, 'index'])->name('question-feedback.index');
+            Route::get('/questions/{question}', [QuestionController::class, 'edit']);
+            Route::get('/questions/{question}/edit', [QuestionController::class, 'edit'])->name('questions.edit');
+            Route::get('/questions/{question}/stats', [QuestionController::class, 'stats'])->name('questions.stats');
+            Route::get('/questions/{question}/versions', [QuestionVersionController::class, 'index'])
+                ->name('questions.versions.index');
         });
 
         Route::middleware('permission:'.Permission::QuestionUpdate->value)->group(function (): void {
@@ -350,8 +357,6 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
 
         Route::middleware('permission:'.Permission::AdminPartnersManage->value)->group(function (): void {
             Route::get('/partners', [PartnerAdminController::class, 'index'])->name('partners.index');
-            Route::get('/partners/create', [PartnerAdminController::class, 'create'])->name('partners.create');
-            Route::post('/partners', [PartnerAdminController::class, 'store'])->name('partners.store');
             Route::get('/partners/{partner}', [PartnerAdminController::class, 'show'])->name('partners.show');
             Route::put('/partners/{partner}', [PartnerAdminController::class, 'update'])->name('partners.update');
             Route::post('/partners/{partner}/codes', [PartnerAdminController::class, 'storeCode'])->name('partners.codes.store');

@@ -21,6 +21,41 @@ use Modules\Classroom\Models\Classroom;
 
 final class ClassroomOversightController extends Controller
 {
+    public function create(): View
+    {
+        $this->authorizePermission(Permission::ClassroomOversee);
+
+        return view('admin::classrooms.create', [
+            'instructors' => User::role(\App\Support\Enums\Role::Instructor->value)->orderBy('name')->get(['id', 'name', 'email']),
+            'purposes' => ClassroomPurpose::teachCases(),
+            'visibilities' => \Modules\Classroom\Enums\ClassroomVisibility::cases(),
+        ]);
+    }
+
+    public function store(
+        Request $request,
+        \Modules\Classroom\Actions\CreateClassroomAction $create,
+        ApproveClassroomAction $approve,
+    ): RedirectResponse {
+        $this->authorizePermission(Permission::ClassroomOversee);
+        $data = $request->validate([
+            'host_user_id' => ['required', 'integer', 'exists:users,id'],
+            'title' => ['required', 'string', 'max:200'],
+            'description' => ['nullable', 'string', 'max:5000'],
+            'purpose' => ['required', \Illuminate\Validation\Rule::in(array_map(fn (ClassroomPurpose $p) => $p->value, ClassroomPurpose::teachCases()))],
+            'visibility' => ['required', \Illuminate\Validation\Rule::enum(\Modules\Classroom\Enums\ClassroomVisibility::class)],
+            'max_members' => ['nullable', 'integer', 'min:2', 'max:5000'],
+        ]);
+        $host = User::findOrFail($data['host_user_id']);
+        abort_unless($host->hasRole(\App\Support\Enums\Role::Instructor->value), 422, 'Host phải là giảng viên.');
+
+        // Lớp do chính Admin tạo và duyệt ngay không cần thông báo chờ duyệt cho các Admin khác.
+        $classroom = $create->handle($host, $data, notifyAdmins: false);
+        $approve->handle($this->actor(), $classroom);
+
+        return redirect()->route('admin.classrooms.show', $classroom)->with('status', 'Đã tạo lớp cho giảng viên.');
+    }
+
     public function index(Request $request): View
     {
         $this->authorizePermission(Permission::ClassroomOversee);
@@ -88,6 +123,17 @@ final class ClassroomOversightController extends Controller
         return view('admin::classrooms.show', [
             'classroom' => $classroom,
         ]);
+    }
+
+    public function scheduleLive(
+        \Modules\Classroom\Http\Requests\ScheduleSessionRequest $request,
+        Classroom $classroom,
+        \Modules\Classroom\Actions\ScheduleLiveSessionAction $action,
+    ): RedirectResponse {
+        $this->authorizePermission(Permission::ClassroomOversee);
+        $session = $action->handle($classroom, $request->sessionPayload());
+
+        return back()->with('status', 'Đã tạo phòng live: '.$session->title);
     }
 
     public function forceEnd(Classroom $classroom, ForceEndClassroomLiveAction $action): RedirectResponse

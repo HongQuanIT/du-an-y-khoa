@@ -14,7 +14,6 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Modules\Billing\Support\CurrentSubscription;
-use Modules\Partner\Actions\CreatePartnerAction;
 use Modules\Partner\Actions\CreatePartnerPayoutAction;
 use Modules\Partner\Actions\MarkPartnerPayoutPaidAction;
 use Modules\Partner\Enums\PartnerStatus;
@@ -166,67 +165,6 @@ final class PartnerAdminController extends Controller
         $this->applyPartnerListFilters($query, $filters);
 
         return $query->pluck('id');
-    }
-
-    public function create(Request $request): View
-    {
-        $this->authorizePermission(Permission::AdminPartnersManage);
-
-        return view('partner::admin.create', [
-            'defaultCommissionPercent' => PartnerSettings::defaultCommissionRatePercent(),
-            'prefillMode' => $request->query('mode', 'new'),
-            'prefillUserId' => $request->query('user_id'),
-        ]);
-    }
-
-    public function store(Request $request, CreatePartnerAction $action): RedirectResponse
-    {
-        $this->authorizePermission(Permission::AdminPartnersManage);
-
-        $defaultPercent = PartnerSettings::defaultCommissionRatePercent();
-        $mode = $request->input('mode', 'new');
-
-        if ($mode === 'existing') {
-            $data = $request->validate([
-                'user_id' => ['required', 'integer', 'exists:users,id'],
-                'display_name' => ['required', 'string', 'max:120'],
-                'default_commission_rate_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
-            ]);
-
-            $percent = isset($data['default_commission_rate_percent']) && $data['default_commission_rate_percent'] !== ''
-                ? (float) $data['default_commission_rate_percent']
-                : $defaultPercent;
-
-            $partner = $action->handle([
-                'user_id' => (int) $data['user_id'],
-                'display_name' => $data['display_name'],
-                'default_commission_rate_bps' => (int) round($percent * 100),
-            ]);
-        } else {
-            $data = $request->validate([
-                'name' => ['required', 'string', 'max:255'],
-                'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-                'password' => ['required', 'string', 'min:8'],
-                'display_name' => ['required', 'string', 'max:120'],
-                'default_commission_rate_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
-            ]);
-
-            $percent = isset($data['default_commission_rate_percent']) && $data['default_commission_rate_percent'] !== ''
-                ? (float) $data['default_commission_rate_percent']
-                : $defaultPercent;
-
-            $partner = $action->handle([
-                'name' => $data['name'],
-                'email' => $data['email'],
-                'password' => $data['password'],
-                'display_name' => $data['display_name'],
-                'default_commission_rate_bps' => (int) round($percent * 100),
-            ]);
-        }
-
-        return redirect()
-            ->route('admin.partners.show', $partner)
-            ->with('status', 'Đã tạo cộng tác viên.');
     }
 
     public function show(Partner $partner): View

@@ -1,3 +1,7 @@
+@php
+    use Modules\Billing\Support\MoneyFormatter;
+@endphp
+
 <x-layouts.partner title="Tổng quan">
     @if (session('status'))
         <div class="mb-4 rounded-lg border border-success/30 bg-success/10 px-4 py-3 font-body-sm text-body-sm text-on-surface">
@@ -17,15 +21,15 @@
         </div>
         <div class="rounded-xl border border-outline-variant bg-surface p-4">
             <p class="font-label-sm text-label-sm text-on-surface-variant">Hoa hồng chờ duyệt</p>
-            <p class="mt-2 font-headline-sm text-headline-sm text-on-surface">{{ number_format($stats['pending_cents'] / 100) }} ₫</p>
+            <p class="mt-2 font-headline-sm text-headline-sm text-on-surface">{{ MoneyFormatter::vnd((int) $stats['pending_cents']) }}</p>
         </div>
         <div class="rounded-xl border border-outline-variant bg-surface p-4">
             <p class="font-label-sm text-label-sm text-on-surface-variant">Đã duyệt</p>
-            <p class="mt-2 font-headline-sm text-headline-sm text-on-surface">{{ number_format($stats['approved_cents'] / 100) }} ₫</p>
+            <p class="mt-2 font-headline-sm text-headline-sm text-on-surface">{{ MoneyFormatter::vnd((int) $stats['approved_cents']) }}</p>
         </div>
         <div class="rounded-xl border border-outline-variant bg-surface p-4">
             <p class="font-label-sm text-label-sm text-on-surface-variant">Đã chi trả</p>
-            <p class="mt-2 font-headline-sm text-headline-sm text-on-surface">{{ number_format($stats['paid_cents'] / 100) }} ₫</p>
+            <p class="mt-2 font-headline-sm text-headline-sm text-on-surface">{{ MoneyFormatter::vnd((int) $stats['paid_cents']) }}</p>
         </div>
     </div>
 

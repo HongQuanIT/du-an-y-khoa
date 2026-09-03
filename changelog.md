@@ -8,6 +8,13 @@
 - Stream qua Horizon + Reverb (`AiStreamEvent`); fallback Fake khi thiếu/key OpenAI lỗi; poll drawer khi Echo chậm.
 - UI: drawer + FAB/sidebar trên Study session; trang `/ai`; env `AI_TUTOR_*` trong `.env.example`.
 - Session UX: tách chip danh mục/độ khó (1 nhãn cấp cao); sidebar cố định, chỉ content scroll.
+### Fix — đơn vị doanh thu và hoa hồng CTV
+- Chuẩn hóa toàn bộ màn hình Partner/Admin dùng VND nguyên như Billing, bỏ phép chia `/100` làm số tiền thấp hơn thực tế 100 lần.
+- Sửa nhãn và thông báo ngưỡng payout theo VND; bổ sung test hồi quy cho phép tính, dashboard, hoa hồng và chi trả.
+
+### Fix — Admin gán role CTV thiếu hồ sơ Partner
+- Tạo user hoặc đổi role sang CTV sẽ tạo hồ sơ Partner mặc định trong cùng transaction.
+- Tài khoản CTV cũ thiếu hồ sơ được tự phục hồi khi mở portal, không còn lỗi HTTP 500 `Partner profile missing`.
 
 ## 2026-09-02
 

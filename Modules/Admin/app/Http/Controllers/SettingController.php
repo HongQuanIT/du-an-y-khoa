@@ -237,7 +237,7 @@ final class SettingController extends Controller
                         'rules' => ['sometimes', 'boolean'],
                     ],
                     'min_payout_cents' => [
-                        'label' => 'Số tiền chi trả tối thiểu (xu, 1/100 ₫) — 0 = không tối thiểu. VD: 100000 = 1.000 ₫',
+                        'label' => 'Số tiền chi trả tối thiểu (₫) — 0 = không tối thiểu. VD: 100000 = 100.000 ₫',
                         'type' => 'integer',
                         'default' => 0,
                         'min' => 0,

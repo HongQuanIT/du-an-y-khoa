@@ -6,6 +6,7 @@ namespace Modules\Admin\Tests\Feature;
 
 use App\Jobs\RecordAuditLogJob;
 use App\Models\User;
+use App\Models\UserActivitySession;
 use App\Support\Audit\AuditContext;
 use App\Support\Audit\Enums\AuditAction as PlatformAuditAction;
 use App\Support\Audit\Enums\AuditCategory;
@@ -335,11 +336,45 @@ final class AdminAuditArchitectureTest extends TestCase
         $this->actingAsStaff($admin)
             ->get(route('admin.users.show', $student))
             ->assertOk()
-            ->assertSee(PlatformAuditAction::LearningSessionCompleted->value)
+            ->assertSee('Hoạt động gần đây của người dùng')
+            ->assertDontSee(PlatformAuditAction::LearningSessionCompleted->value)
             ->assertDontSee(PlatformAuditAction::LearningQuestionAnswered->value)
             ->assertDontSee(PlatformAuditAction::LearningSessionPaused->value)
             ->assertDontSee(PlatformAuditAction::LearningSessionResumed->value)
             ->assertDontSee(PlatformAuditAction::LearningSessionDeleted->value);
+    }
+
+    public function test_user_detail_shows_recent_activity_sessions_instead_of_audit_logs(): void
+    {
+        $admin = $this->staffUser(Role::Admin);
+        $student = $this->staffUser(Role::Student);
+
+        UserActivitySession::query()->create([
+            'user_id' => $student->id,
+            'session_id' => fake()->uuid(),
+            'area' => '/qbank/session/42',
+            'portal' => 'student',
+            'started_at' => now()->subMinutes(5),
+            'last_seen_at' => now(),
+            'duration_seconds' => 305,
+            'heartbeat_count' => 6,
+            'ip' => '127.0.0.1',
+            'device_type' => 'desktop',
+            'device_name' => 'Mac',
+            'operating_system' => 'macOS',
+            'browser' => 'Chrome',
+        ]);
+
+        $this->actingAsStaff($admin)
+            ->get(route('admin.users.show', $student))
+            ->assertOk()
+            ->assertViewHas('activities', fn ($activities): bool => $activities->count() === 1)
+            ->assertSee('Hoạt động gần đây của người dùng')
+            ->assertSee('/qbank/session/42')
+            ->assertSee('5 phút 5 giây')
+            ->assertSee('Mac · macOS · Chrome')
+            ->assertSee('127.0.0.1')
+            ->assertDontSee('Audit gần đây');
     }
 
     public function test_instructor_and_student_cannot_open_admin_audit(): void

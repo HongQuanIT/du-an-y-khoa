@@ -322,8 +322,10 @@ final class ClassroomFlowTest extends TestCase
         ]);
 
         $question = Question::factory()->withOptions(2)->create([
-                        'stem' => 'Câu hỏi test live',
+            'stem' => '<p>Câu hỏi <mark data-hint="true">test live</mark></p>',
             'stem_image_path' => 'question-images/live-ecg.png',
+            'attending_tip' => '<p>Kiến thức hiển thị khi chọn đáp án.</p>',
+            'key_info' => ['test live'],
             'is_free' => true,
         ]);
         $question->options()->orderBy('order')->get()->each(function ($option, int $index): void {
@@ -331,6 +333,7 @@ final class ClassroomFlowTest extends TestCase
                 'explanation' => $index === 0
                     ? 'Giải thích đáp án A trong live.'
                     : 'Giải thích đáp án B trong live.',
+                'is_correct' => $index === 0,
             ])->save();
         });
         $firstOption = $question->options()->orderBy('order')->firstOrFail();
@@ -364,22 +367,44 @@ final class ClassroomFlowTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.question_panel.question.options.0.explanation', null)
             ->assertJsonPath('data.question_panel.question.options.1.explanation', null)
+            ->assertJsonPath('data.question_panel.question.attending_tip', null)
+            ->assertJsonPath('data.question_panel.question.hints_revealed', false)
             ->assertJsonPath('data.question_deck.0.id', (string) $question->getKey())
             ->assertJsonPath('data.question_deck.0.options.0.is_correct', (bool) $firstOption->is_correct)
             ->assertJsonPath('data.question_deck.0.options.0.explanation', 'Giải thích đáp án A trong live.')
+            ->assertJsonPath('data.question_deck.0.attending_tip', '<p>Kiến thức hiển thị khi chọn đáp án.</p>')
+            ->assertJsonPath('data.question_deck.0.hints_revealed', true)
             ->assertJsonCount(0, 'data.text_marks');
 
         $response = $this->actingAs($host)
             ->patchJson(route('classroom.live.api.question', [$classroom, $session]), [
-                'option_id' => (int) $firstOption->getKey(),
+                'option_id' => (int) $question->options()->orderBy('order')->skip(1)->value('id'),
             ])
             ->assertOk()
-            ->assertJsonPath('data.question.stem', 'Câu hỏi test live')
-            ->assertJsonPath('data.question.options.0.explanation', 'Giải thích đáp án A trong live.')
+            ->assertJsonPath('data.question.options.0.explanation', null)
+            ->assertJsonPath('data.question.options.1.explanation', 'Giải thích đáp án B trong live.')
+            ->assertJsonPath('data.question.options.0.is_correct', null)
+            ->assertJsonPath('data.question.options.1.is_correct', false)
+            ->assertJsonPath('data.question.attending_tip', '<p>Kiến thức hiển thị khi chọn đáp án.</p>')
+            ->assertJsonPath('data.question.hints_revealed', true)
+            ->assertJsonPath('data.revealed_option_ids.0', (int) $question->options()->orderBy('order')->skip(1)->value('id'));
+
+        $this->assertStringContainsString(
+            'data-key-info',
+            (string) $response->json('data.question.stem'),
+        );
+
+        // Selecting the same option again closes its revealed answer state.
+        $this->actingAs($host)
+            ->patchJson(route('classroom.live.api.question', [$classroom, $session]), [
+                'option_id' => (int) $question->options()->orderBy('order')->skip(1)->value('id'),
+            ])
+            ->assertOk()
             ->assertJsonPath('data.question.options.1.explanation', null)
-            ->assertJsonPath('data.question.options.0.is_correct', (bool) $firstOption->is_correct)
             ->assertJsonPath('data.question.options.1.is_correct', null)
-            ->assertJsonPath('data.revealed_option_ids.0', (int) $firstOption->getKey());
+            ->assertJsonPath('data.question.attending_tip', null)
+            ->assertJsonPath('data.question.hints_revealed', false)
+            ->assertJsonCount(0, 'data.revealed_option_ids');
 
         $this->actingAs($host)
             ->patchJson(route('classroom.live.api.question', [$classroom, $session]), [
@@ -395,8 +420,10 @@ final class ClassroomFlowTest extends TestCase
                 'index' => 0,
             ])
             ->assertOk()
-            ->assertJsonPath('data.question.options.0.explanation', 'Giải thích đáp án A trong live.')
-            ->assertJsonPath('data.question.options.1.explanation', null);
+            ->assertJsonPath('data.question.options.0.explanation', null)
+            ->assertJsonPath('data.question.options.1.explanation', null)
+            ->assertJsonPath('data.question.attending_tip', null)
+            ->assertJsonPath('data.question.hints_revealed', false);
 
         $imageUrl = (string) $response->json('data.question.stem_image_url');
         $this->assertStringContainsString('question-images/live-ecg.png', $imageUrl);

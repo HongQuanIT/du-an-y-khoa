@@ -29,9 +29,16 @@ export function panelFromDeck(deck, index, revealedOptionIds, map = null) {
     }
 
     let correctRevealed = false;
+    // revealedOptionIds are retained for all questions in the session. Only
+    // ids belonging to the current question may affect its visual state.
+    const currentOptionIds = new Set((full.options ?? []).map((opt) => Number(opt.id)));
+    const revealedForCurrentQuestion = new Set(
+        [...revealed].filter((id) => currentOptionIds.has(id)),
+    );
+    const optionRevealed = revealedForCurrentQuestion.size > 0;
     const options = (full.options ?? []).map((opt) => {
         const id = Number(opt.id);
-        const isRevealed = revealed.has(id);
+        const isRevealed = revealedForCurrentQuestion.has(id);
         if (isRevealed && opt.is_correct === true) {
             correctRevealed = true;
         }
@@ -52,9 +59,11 @@ export function panelFromDeck(deck, index, revealedOptionIds, map = null) {
         revealed_option_ids: [...revealed],
         question: {
             id: String(full.id),
-            stem: full.stem ?? '',
+            stem: optionRevealed ? (full.hint_stem ?? full.stem ?? '') : (full.stem ?? ''),
             stem_image_url: full.stem_image_url ?? null,
             explanation: correctRevealed ? (full.explanation ?? null) : null,
+            attending_tip: optionRevealed ? (full.attending_tip ?? null) : null,
+            hints_revealed: optionRevealed,
             difficulty: full.difficulty,
             options,
         },

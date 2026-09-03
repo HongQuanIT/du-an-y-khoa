@@ -36,7 +36,7 @@
                 if (markRead) {
                     try {
                         const token = document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || '';
-                        await fetch('/notifications/' + this.importantItem.id + '/read', {
+                        const response = await fetch(this.importantItem.read_url, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -44,6 +44,7 @@
                                 'X-CSRF-TOKEN': token
                             }
                         });
+                        if (!response.ok) throw new Error('Không thể lưu trạng thái thông báo.');
                     } catch (e) {}
                 }
             }
@@ -53,7 +54,7 @@
             if (!item) return;
             try {
                 const token = document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || '';
-                await fetch('/notifications/' + item.id + '/read', {
+                await fetch(item.read_url, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

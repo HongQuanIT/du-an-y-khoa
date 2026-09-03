@@ -61,6 +61,7 @@ final class SaveAdminQuestionAction
         return DB::transaction(function () use ($actor, $question, $data, $options): Question {
             $before = $question ? AuditSnapshot::question($question) : null;
             $isReviewer = QuestionAccess::isReviewer($actor);
+            $isReviewerUpdate = $question !== null && $isReviewer;
             $reviewRequest = null;
 
             if ($question === null) {
@@ -68,13 +69,21 @@ final class SaveAdminQuestionAction
                 $question->status = QuestionStatus::Draft;
                 $question->created_by = $actor->getKey();
             } else {
-                if (! $isReviewer && $question->status === QuestionStatus::Published) {
+                if (! $isReviewer && $this->requiresAdminApprovalBeforeApply($question->status)) {
+                    if ($question->status === QuestionStatus::InReview) {
+                        throw ValidationException::withMessages([
+                            'status' => 'Câu hỏi đang chờ duyệt. Hãy trả về nháp trước khi chỉnh sửa, hoặc chờ admin xử lý.',
+                        ]);
+                    }
+
                     $this->queueUpdate($actor, $question, $data);
 
                     return $question->fresh(['options', 'hints', 'medicalTaxonomyNodes', 'pendingReviewRequest']);
                 }
 
-                $this->captureVersion->handle($question, null, 'baseline');
+                if (! $isReviewerUpdate) {
+                    $this->captureVersion->handle($question, null, 'baseline');
+                }
             }
 
             if ($question->status === QuestionStatus::Rejected) {
@@ -101,7 +110,9 @@ final class SaveAdminQuestionAction
                 'exam_flag' => (bool) ($data['exam_flag'] ?? false),
                 'updated_by' => $actor->getKey(),
             ]);
-            $question->version = ($question->version ?: 0) + 1;
+            if (! $isReviewerUpdate) {
+                $question->version = ($question->version ?: 0) + 1;
+            }
             $question->save();
             $this->syncTaxonomyRelations($question, $data);
             if ($hints !== null) {
@@ -116,7 +127,9 @@ final class SaveAdminQuestionAction
             $this->syncOptions($question, $options);
 
             $question->load('options', 'hints', 'coreClinicalTopics', 'medicalTaxonomyNodes', 'tags');
-            $this->captureVersion->handle($question, $actor);
+            if (! $isReviewerUpdate) {
+                $this->captureVersion->handle($question, $actor);
+            }
 
             if (! $isReviewer) {
                 $reviewRequest = $this->queueCreationReview($actor, $question);
@@ -150,11 +163,25 @@ final class SaveAdminQuestionAction
         }
     }
 
+    private function requiresAdminApprovalBeforeApply(QuestionStatus $status): bool
+    {
+        return in_array($status, [
+            QuestionStatus::Published,
+            QuestionStatus::Private,
+            QuestionStatus::Retired,
+            QuestionStatus::InReview,
+        ], true);
+    }
+
     /** @param array<string, mixed> $data */
     private function queueUpdate(User $actor, Question $question, array $data): void
     {
         if ($question->reviewRequests()
             ->where('status', QuestionReviewStatus::Pending->value)
+            ->whereIn('action', [
+                QuestionReviewAction::Update->value,
+                QuestionReviewAction::Delete->value,
+            ])
             ->exists()) {
             throw ValidationException::withMessages([
                 'review' => 'Câu hỏi đang có một yêu cầu chờ duyệt. Vui lòng chờ admin xử lý trước khi gửi thay đổi mới.',

@@ -5,6 +5,7 @@
      * @var array<string, array{title: string, icon: string, hint: string}> $exams
      * @var array<int, array{id: string, name: string}> $articles
      * @var array<int, array{id: string, name: string}> $symptoms
+     * @var \Illuminate\Support\Collection<int, array{id: int, blueprint_section_id: int, name: string, slug: string, section_name: string|null}> $coreTopics
      */
     $initialMode = old('mode', request('mode', 'study'));
     $initialSource = old('source', request('source', 'custom'));
@@ -80,7 +81,7 @@
             taxonomySearch: '',
             blueprintResults: [],
             blueprintSectionResults: [],
-            coreTopicResults: [],
+            coreTopicResults: {{ Illuminate\Support\Js::from($coreTopics)->toHtml() }},
             medicalNodeResults: [],
             tagResults: [],
             taxonomyUrls: {
@@ -95,7 +96,6 @@
             folders: {{ Illuminate\Support\Js::from($bookmarkFolders)->toHtml() }},
             activeFilter: null,
             filterSearch: '',
-            showAdvanced: false,
             matching: null,
             counting: false,
             countRequest: 0,
@@ -150,7 +150,6 @@
                 this.taxonomySearch = '';
                 if (filter === 'blueprint') this.fetchBlueprints();
                 if (filter === 'blueprintSection' && this.blueprintId) this.fetchBlueprintSections();
-                if (filter === 'coreTopics') this.fetchCoreTopics();
                 if (filter === 'medicalNodes') this.fetchMedicalNodes();
                 if (filter === 'tags') this.fetchTags();
             },
@@ -176,19 +175,15 @@
                 if (this.blueprintSectionId) params.set('blueprint_section_id', String(this.blueprintSectionId));
                 const q = this.taxonomySearch.trim();
                 if (q.length >= 2) params.set('q', q);
-                else if (!this.blueprintSectionId) {
-                    this.coreTopicResults = [];
-                    return;
-                }
                 const res = await fetch(`${this.taxonomyUrls.coreTopicsSearch}?${params}`, { headers: { Accept: 'application/json' } });
                 const json = await res.json();
                 this.coreTopicResults = json.data ?? [];
             },
             async fetchMedicalNodes() {
                 const q = this.taxonomySearch.trim();
-                const url = q.length >= 2
-                    ? `${this.taxonomyUrls.medicalNodes}?q=${encodeURIComponent(q)}`
-                    : this.taxonomyUrls.medicalNodes;
+                const params = new URLSearchParams({ include_descendants: '1' });
+                if (q.length >= 2) params.set('q', q);
+                const url = `${this.taxonomyUrls.medicalNodes}?${params}`;
                 const res = await fetch(url, { headers: { Accept: 'application/json' } });
                 const json = await res.json();
                 this.medicalNodeResults = json.data ?? [];
@@ -268,6 +263,21 @@
                     return this.coreClinicalTopicLabels[id] || '1 đã chọn';
                 }
                 return this.coreClinicalTopicIds.length + ' đã chọn';
+            },
+            groupedCoreTopics() {
+                const groups = [];
+                const bySection = new Map();
+                this.coreTopicResults.forEach((topic) => {
+                    const key = String(topic.blueprint_section_id ?? 'other');
+                    if (!bySection.has(key)) {
+                        const group = { id: key, name: topic.section_name || 'Chủ đề khác', topics: [] };
+                        bySection.set(key, group);
+                        groups.push(group);
+                    }
+                    bySection.get(key).topics.push(topic);
+                });
+
+                return groups;
             },
             medicalNodeLabel() {
                 if (!this.medicalTaxonomyNodeIds.length) return 'Tất cả';
@@ -356,7 +366,6 @@
                 this.tagIds = [];
                 this.tagLabels = {};
                 this.activeFilter = null;
-                this.showAdvanced = false;
                 this.$nextTick(() => this.refreshCount());
             },
         }"
@@ -492,18 +501,6 @@
                                     </span>
                                     <span class="text-sm text-on-surface-variant"
                                         x-text="selectedCount(systemIds) ? selectedCount(systemIds) + ' đã chọn' : 'Tất cả'"></span>
-                                </button>
-
-                                <button type="button" @click="openFilter('specialties')"
-                                    :disabled="source === 'weak_topics' || savedOnly"
-                                    :class="(source === 'weak_topics' || savedOnly) && 'opacity-50 pointer-events-none'"
-                                    class="group flex w-full items-center justify-between border-b border-outline-variant px-6 py-4 text-left transition-colors hover:bg-surface-container-lowest">
-                                    <span class="flex items-center gap-4">
-                                        <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">add</span>
-                                        <span class="font-medium">Chuyên khoa</span>
-                                    </span>
-                                    <span class="text-sm text-on-surface-variant"
-                                        x-text="selectedCount(specialtyIds) ? selectedCount(specialtyIds) + ' đã chọn' : 'Tất cả'"></span>
                                 </button>
 
                                 <button type="button" @click="openFilter('symptoms')"
@@ -659,13 +656,6 @@
                                         x-text="statuses.length ? statuses.length + ' đã chọn' : 'Tất cả'"></span>
                                 </button>
                             </div>
-
-                            <button type="button" @click="showAdvanced = !showAdvanced"
-                                class="flex items-center gap-1 text-[11px] font-bold tracking-widest text-on-surface-variant uppercase hover:text-primary">
-                                Thêm
-                                <span class="material-symbols-outlined text-[16px] transition-transform"
-                                    :class="showAdvanced && 'rotate-180'">expand_more</span>
-                            </button>
 
                             <div x-show="mode === 'exam'" x-cloak
                                 class="rounded-lg border border-primary/20 bg-primary/5 p-4">

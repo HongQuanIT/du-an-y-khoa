@@ -35,7 +35,14 @@
 
     <div class="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
         <section class="rounded-xl border border-outline-variant bg-surface p-5 shadow-sm">
-            <h2 class="mb-4 font-headline-sm text-headline-sm text-on-surface">Các buổi học</h2>
+            <div class="mb-4 flex items-center justify-between gap-3">
+                <h2 class="font-headline-sm text-headline-sm text-on-surface">Các buổi học</h2>
+                <form method="post" action="{{ route('admin.classrooms.sessions.store', $classroom) }}" class="flex items-center gap-2">
+                    @csrf
+                    <input name="title" required maxlength="200" placeholder="Tên phòng live" class="w-40 rounded-lg border border-outline-variant px-2.5 py-1.5 text-sm">
+                    <button class="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-on-primary">Tạo live</button>
+                </form>
+            </div>
 
             @if ($classroom->sessions->isEmpty())
                 <p class="text-on-surface-variant">Lớp chưa có buổi học nào.</p>

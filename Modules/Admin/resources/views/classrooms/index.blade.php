@@ -4,6 +4,14 @@
 
     <x-admin.flash />
 
+    <div class="mb-6 flex justify-end">
+        <a href="{{ route('admin.classrooms.create') }}"
+            class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 font-label-md text-label-md font-semibold text-on-primary hover:opacity-90">
+            <span class="material-symbols-outlined text-[18px]">add</span>
+            Tạo lớp cho giảng viên
+        </a>
+    </div>
+
     @if ($pendingCount > 0)
         <div class="mb-6 flex flex-col gap-3 rounded-xl border border-tertiary/30 bg-tertiary/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <p class="font-body-sm text-body-sm text-on-surface">

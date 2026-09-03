@@ -19,9 +19,13 @@ use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionReviewAction;
 use Modules\QuestionBank\Enums\QuestionReviewStatus;
 use Modules\QuestionBank\Enums\QuestionStatus;
+use Modules\QuestionBank\Enums\SessionMode;
 use Modules\QuestionBank\Models\MedicalTaxonomyNode;
 use Modules\QuestionBank\Models\Question;
+use Modules\QuestionBank\Models\QuestionAttempt;
+use Modules\QuestionBank\Models\QuestionFeedback;
 use Modules\QuestionBank\Models\QuestionReviewRequest;
+use Modules\QuestionBank\Models\QuestionSession;
 use Modules\QuestionBank\Models\QuestionVersion;
 use Tests\Support\CreatesMedicalTaxonomy;
 use Tests\TestCase;
@@ -324,6 +328,34 @@ final class AdminQuestionManagementTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_admin_publishes_directly_without_submit_for_review(): void
+    {
+        $admin = $this->staffUser(Role::Admin);
+        $question = $this->makeDraftQuestion();
+
+        $this->actingAsStaff($admin)
+            ->get(route('admin.questions.edit', $question))
+            ->assertOk()
+            ->assertDontSee('Gửi duyệt', false)
+            ->assertSee('Xuất bản', false);
+
+        $this->actingAsStaff($admin)
+            ->post(route('admin.questions.transition', $question), [
+                'status' => QuestionStatus::InReview->value,
+            ])
+            ->assertSessionHasErrors('status');
+
+        $this->assertSame(QuestionStatus::Draft, $question->fresh()->status);
+
+        $this->actingAsStaff($admin)
+            ->post(route('admin.questions.transition', $question), [
+                'status' => QuestionStatus::Published->value,
+            ])
+            ->assertRedirect();
+
+        $this->assertSame(QuestionStatus::Published, $question->fresh()->status);
+    }
+
     public function test_admin_can_publish_question(): void
     {
         $admin = $this->staffUser(Role::Admin);
@@ -345,6 +377,34 @@ final class AdminQuestionManagementTest extends TestCase
             'event' => 'status',
         ]);
         $this->assertDatabaseHas('audit_logs', ['action' => 'admin.question.status_change']);
+    }
+
+    public function test_admin_saving_question_content_does_not_increment_version_until_publishing(): void
+    {
+        $admin = $this->staffUser(Role::Admin);
+        $question = $this->makeDraftQuestion($admin);
+        $versionBeforeSave = $question->version;
+
+        $this->actingAsStaff($admin)
+            ->put(route('admin.questions.update', $question), array_merge($this->payload(), [
+                'stem' => 'Nội dung đã được admin chỉnh sửa nhưng chưa duyệt.',
+            ]))
+            ->assertRedirect();
+
+        $question->refresh();
+        $this->assertSame($versionBeforeSave, $question->version);
+        $this->assertSame(
+            'Nội dung đã được admin chỉnh sửa nhưng chưa duyệt.',
+            strip_tags((string) $question->stem),
+        );
+
+        $this->actingAsStaff($admin)
+            ->post(route('admin.questions.transition', $question), [
+                'status' => QuestionStatus::Published->value,
+            ])
+            ->assertRedirect();
+
+        $this->assertSame($versionBeforeSave + 1, $question->fresh()->version);
     }
 
     public function test_admin_can_reject_question_in_review(): void
@@ -485,6 +545,65 @@ final class AdminQuestionManagementTest extends TestCase
         $this->assertSoftDeleted('questions', ['id' => $question->id]);
     }
 
+    public function test_editor_cannot_edit_question_while_in_review(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+        $question = $this->makeDraftQuestion($editor);
+        $originalStem = strip_tags($question->stem);
+
+        $question->forceFill(['status' => QuestionStatus::InReview])->save();
+
+        $this->actingAsStaff($editor)
+            ->get(route('admin.questions.edit', $question))
+            ->assertOk()
+            ->assertSee('Câu hỏi đang chờ admin duyệt', false);
+
+        $this->actingAsStaff($editor)
+            ->put(route('admin.questions.update', $question), array_merge($this->payload(), [
+                'stem' => 'Thay đổi không được phép khi đang chờ duyệt.',
+            ]))
+            ->assertSessionHasErrors('status');
+
+        $this->assertSame($originalStem, strip_tags($question->fresh()->stem));
+    }
+
+    public function test_editor_clone_queues_admin_review_before_publish(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+        $question = $this->makePublishedQuestion(createdBy: $editor);
+
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.clone', $question))
+            ->assertRedirect();
+
+        $clone = Question::query()->where('cloned_from_id', $question->id)->firstOrFail();
+        $this->assertSame(QuestionStatus::Draft, $clone->status);
+        $this->assertDatabaseHas('question_review_requests', [
+            'question_id' => $clone->id,
+            'action' => QuestionReviewAction::Create->value,
+            'status' => QuestionReviewStatus::Pending->value,
+            'requested_by' => $editor->id,
+        ]);
+    }
+
+    public function test_editor_cannot_submit_second_update_while_pending_review(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+        $question = $this->makePublishedQuestion(createdBy: $editor);
+
+        $this->actingAsStaff($editor)
+            ->put(route('admin.questions.update', $question), array_merge($this->payload(), [
+                'stem' => 'Thay đổi lần một.',
+            ]))
+            ->assertRedirect();
+
+        $this->actingAsStaff($editor)
+            ->put(route('admin.questions.update', $question), array_merge($this->payload(), [
+                'stem' => 'Thay đổi lần hai.',
+            ]))
+            ->assertSessionHasErrors('review');
+    }
+
     public function test_questions_index_filters_by_status(): void
     {
         $admin = $this->staffUser(Role::Admin);
@@ -496,23 +615,98 @@ final class AdminQuestionManagementTest extends TestCase
             ->assertSee('Nháp');
     }
 
+    public function test_questions_index_shows_attempt_stats_from_rollup(): void
+    {
+        $admin = $this->staffUser(Role::Admin);
+        $question = $this->makePublishedQuestion(stem: 'Câu hỏi có lượt làm thống kê');
+        $student = $this->studentUser();
+
+        $session = QuestionSession::factory()->create([
+            'user_id' => $student->id,
+            'mode' => SessionMode::Study,
+        ]);
+
+        QuestionAttempt::factory()->correct()->create([
+            'session_id' => $session->id,
+            'user_id' => $student->id,
+            'question_id' => $question->id,
+        ]);
+
+        QuestionAttempt::factory()->correct()->create([
+            'session_id' => QuestionSession::factory()->create([
+                'user_id' => $student->id,
+                'mode' => SessionMode::Study,
+            ])->id,
+            'user_id' => $student->id,
+            'question_id' => $question->id,
+        ]);
+
+        QuestionAttempt::factory()->correct()->create([
+            'session_id' => QuestionSession::factory()->create([
+                'user_id' => $student->id,
+                'mode' => SessionMode::Exam,
+            ])->id,
+            'user_id' => $student->id,
+            'question_id' => $question->id,
+        ]);
+
+        QuestionAttempt::factory()->incorrect()->create([
+            'session_id' => QuestionSession::factory()->create([
+                'user_id' => $student->id,
+                'mode' => SessionMode::Study,
+            ])->id,
+            'user_id' => $student->id,
+            'question_id' => $question->id,
+        ]);
+
+        QuestionAttempt::factory()->incorrect()->create([
+            'session_id' => QuestionSession::factory()->create([
+                'user_id' => $student->id,
+                'mode' => SessionMode::Exam,
+            ])->id,
+            'user_id' => $student->id,
+            'question_id' => $question->id,
+        ]);
+
+        $this->actingAsStaff($admin)
+            ->get(route('admin.questions.index'))
+            ->assertOk()
+            ->assertSee('Câu hỏi có lượt làm thống kê')
+            ->assertSee('5', false);
+
+        $question->refresh();
+        $this->assertSame(5, $question->listStats()['total_attempts']);
+        $this->assertSame(0.6, $question->listStats()['correct_rate']);
+    }
+
     public function test_admin_can_view_question_stats_page(): void
     {
         $admin = $this->staffUser(Role::Admin);
+        $student = User::factory()->create();
         $question = $this->makePublishedQuestion();
-        $question->forceFill([
-            'stats_cache' => [
-                'total_attempts' => 40,
-                'study_mode_attempts' => 25,
-                'exam_mode_attempts' => 15,
-                'correct_attempts' => 28,
-                'incorrect_attempts' => 12,
-                'correct_rate' => 0.7,
-                'total_reports' => 2,
-                'reports_by_reason' => ['wrong_answer' => 1, 'unclear' => 1],
-            ],
-            'stats_updated_at' => now(),
-        ])->save();
+
+        foreach ([true, true, true, true, false] as $correct) {
+            $this->createQuestionAttempt($question, $student, SessionMode::Study, $correct);
+        }
+
+        foreach ([true, true, true, false, false] as $correct) {
+            $this->createQuestionAttempt($question, $student, SessionMode::Exam, $correct);
+        }
+
+        $feedbackSession = QuestionSession::factory()->create([
+            'user_id' => $student->id,
+            'mode' => SessionMode::Study,
+        ]);
+
+        QuestionFeedback::query()->create([
+            'user_id' => $student->id,
+            'question_id' => $question->id,
+            'question_session_id' => $feedbackSession->id,
+            'target' => 'question',
+            'category' => 'incorrect',
+            'message' => 'Đáp án không chính xác',
+            'status' => QuestionFeedback::STATUS_PENDING,
+        ]);
 
         $this->actingAsStaff($admin)
             ->get(route('admin.questions.stats', $question))
@@ -520,7 +714,7 @@ final class AdminQuestionManagementTest extends TestCase
             ->assertSee('Thống kê câu hỏi', false)
             ->assertSee('70.0%', false)
             ->assertSee('Study mode', false)
-            ->assertSee('wrong_answer', false);
+            ->assertSee('incorrect', false);
     }
 
     public function test_content_creator_cannot_view_foreign_question_stats(): void
@@ -692,6 +886,26 @@ final class AdminQuestionManagementTest extends TestCase
         }
 
         return $question->fresh(['options', 'medicalTaxonomyNodes']);
+    }
+
+    private function createQuestionAttempt(
+        Question $question,
+        User $user,
+        SessionMode $mode,
+        bool $correct,
+    ): QuestionAttempt {
+        $session = QuestionSession::factory()->create([
+            'user_id' => $user->id,
+            'mode' => $mode,
+        ]);
+
+        return QuestionAttempt::factory()
+            ->when($correct, fn ($factory) => $factory->correct(), fn ($factory) => $factory->incorrect())
+            ->create([
+                'session_id' => $session->id,
+                'user_id' => $user->id,
+                'question_id' => $question->id,
+            ]);
     }
 
     private function makePublishedQuestion(

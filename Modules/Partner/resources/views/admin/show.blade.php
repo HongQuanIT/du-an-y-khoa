@@ -14,32 +14,6 @@
         </div>
     @endif
 
-    <form method="post" action="{{ route('admin.partners.update', $partner) }}" class="mb-8 grid max-w-xl grid-cols-1 gap-3 rounded-xl border border-outline-variant bg-surface p-4 sm:grid-cols-2">
-        @csrf
-        @method('PUT')
-        <div class="sm:col-span-2">
-            <label class="mb-1 block font-label-sm" for="display_name">Tên hiển thị</label>
-            <input id="display_name" name="display_name" value="{{ old('display_name', $partner->display_name) }}"
-                class="w-full rounded-lg bg-surface-container-low px-3 py-2">
-        </div>
-        <div>
-            <label class="mb-1 block font-label-sm" for="default_commission_rate_percent">% hoa hồng mặc định</label>
-            <input id="default_commission_rate_percent" name="default_commission_rate_percent" type="number" step="0.01"
-                value="{{ old('default_commission_rate_percent', $partner->commissionRatePercent()) }}"
-                class="w-full rounded-lg bg-surface-container-low px-3 py-2">
-        </div>
-        <div>
-            <label class="mb-1 block font-label-sm" for="status">Trạng thái</label>
-            <select id="status" name="status" class="w-full rounded-lg bg-surface-container-low px-3 py-2">
-                <option value="active" @selected($partner->status->value === 'active')>Hoạt động</option>
-                <option value="suspended" @selected($partner->status->value === 'suspended')>Tạm dừng</option>
-            </select>
-        </div>
-        <div class="sm:col-span-2">
-            <button type="submit" class="rounded-lg bg-primary px-4 py-2 font-label-md text-on-primary">Lưu CTV</button>
-        </div>
-    </form>
-
     <section class="mb-8 rounded-xl border border-outline-variant bg-surface p-4">
         <h2 class="mb-1 font-title-md text-title-md">Mã mời</h2>
         <p class="mb-4 font-body-sm text-body-sm text-on-surface-variant">

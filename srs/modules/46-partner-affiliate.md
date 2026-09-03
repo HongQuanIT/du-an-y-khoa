@@ -54,6 +54,7 @@ Admin cấu hình partner.* (window 7 ngày, % mặc định, hạn mã…)
 - **First-touch / last-touch:** `partner.overwrite_attribution=false` giữ mã click trước; `true` cho phép mã mới ghi đè.
 - **Hiệu lực mã:** `is_active` + `starts_at`/`expires_at`/`max_uses`; khi Admin để trống expires/max_uses lúc tạo mã → áp `partner.default_invite_expires_days` / `default_invite_max_uses`.
 - **% mặc định CTV:** `partner.default_commission_rate_percent` khi tạo CTV (có thể override từng CTV/mã).
+- **Hồ sơ CTV:** tạo user hoặc đổi role thành `partner` phải đồng thời bảo đảm có một bản ghi `partners`; portal tự phục hồi dữ liệu legacy thiếu hồ sơ.
 - **Hoa hồng:** `rate_bps` × `payment.amount_cents`; idempotent `payment_id`. Gate: `commission_on_renewals`, `first_payment_window_days`, `require_active_partner`, chặn self-referral nếu `allow_self_referral=false`.
 - **Payout:** pending → approved → paid; chặn nếu tổng &lt; `min_payout_cents`.
 
@@ -67,7 +68,7 @@ Admin cấu hình partner.* (window 7 ngày, % mặc định, hạn mã…)
 | `commission_on_renewals` | true | HH khi renew |
 | `first_payment_window_days` | 0 | Chỉ HH trong N ngày sau ĐK (0 = không giới hạn) |
 | `allow_self_referral` | false | CTV tự mời mình |
-| `min_payout_cents` | 0 | Ngưỡng chi trả (xu) |
+| `min_payout_cents` | 0 | Ngưỡng chi trả theo VND nguyên; tên key `_cents` được giữ để tương thích dữ liệu cũ |
 | `overwrite_attribution` | false | Last-touch nếu true |
 | `require_active_partner` | true | CTV suspended → không attribute/commission mới |
 
