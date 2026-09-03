@@ -18,7 +18,7 @@ Tô sáng đoạn văn trong bài viết/giải thích câu hỏi, nhiều màu,
 ## 2. Phân tích giao diện
 | Thành phần | Chức năng | Hiển thị/Ẩn | Responsive |
 |-----------|-----------|-------------|-----------|
-| **Selection toolbar** | Chọn màu, thêm note, copy khi bôi text | Khi có selection | Popover/bottom sheet |
+| **Selection toolbar** | Chọn màu, thêm note, copy, **Hỏi AI Tutor về đoạn này** khi bôi text | Khi có selection | Popover/bottom sheet |
 | **Highlight layer** | Render vùng tô trên nội dung | Trang có nội dung | — |
 | **Highlights manager** | List theo màu/nội dung + jump | `/highlights` | List |
 | **Color legend** | Ý nghĩa màu (tùy biến) | Manager | — |
@@ -28,7 +28,7 @@ Tô sáng đoạn văn trong bài viết/giải thích câu hỏi, nhiều màu,
 ### `HighlightLayer`
 - **Props:** `content`, `highlights[]`, `editable`.
 - **State:** `selection`, `activeHighlight`.
-- **Events:** `onCreate(anchor,color)`, `onDelete`, `onAddNote`, `onJump`.
+- **Events:** `onCreate(anchor,color)`, `onDelete`, `onAddNote`, `onJump`, `onAiTutorSelection`.
 - **Business:** anchor bằng selector + offset + `text_snapshot` để re-anchor sau update.
 - **A11y:** highlight có nhãn; keyboard tạo highlight khó → cung cấp menu thay thế.
 - **Loading/Error/Empty:** overlay tải; lỗi tạo → toast.

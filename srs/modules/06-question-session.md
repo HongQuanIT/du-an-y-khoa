@@ -25,7 +25,7 @@ Giao diện làm bài: hiển thị từng câu hỏi, nhận đáp án, chấm 
 | **Answer options** | Radio/checkbox A–E | Luôn | — | Single/multi theo type | Nút lớn mobile |
 | **Submit/Next button** | Nộp đáp án / câu tiếp | Luôn | — | Study: submit từng câu; Exam: next | Sticky đáy |
 | **Explanation panel** | Giải thích + vì sao đúng/sai | Study: sau submit | Exam: ẩn tới khi nộp cả bài | — | Accordion mobile |
-| **Toolbar câu** | Bookmark, Flag, Note, Highlight, Report, AI, Add flashcard | Luôn | — | Một số Premium | Icon bar / overflow menu |
+| **Toolbar câu** | Bookmark, Flag, Note, Highlight, Report, **Hỏi AI Tutor** (1-tap), Add flashcard | Study/Review: luôn. Exam đang làm: **ẩn AI Tutor** | — | AI Tutor: Premium/quota. Flashcard/note ở toolbar câu, không trong drawer AI Tutor | Icon bar / overflow; mobile: FAB AI Tutor |
 | **Lab values reference** | Bảng chỉ số bình thường | Toggle | — | — | Drawer |
 | **Hint** | Gợi ý (Study) | Study, khi bấm | Exam ẩn | Ghi `used_hint` | — |
 | **Calculator/tools** | Máy tính lâm sàng | Toggle | — | — | Modal |
@@ -43,7 +43,7 @@ Giao diện làm bài: hiển thị từng câu hỏi, nhận đáp án, chấm 
 - **State:** `currentIndex`, `question`, `selected`, `submittedMap`, `timerRemaining`, `flaggedSet`, `savingState`.
 - **Events:** `selectOption`, `submitAnswer`, `next`, `prev`, `flag`, `pause`, `finish`.
 - **Validation:** phải chọn đáp án trước submit (Study); Exam cho phép bỏ trống (omitted).
-- **Permission:** entitlement kiểm tra khi tải câu; hint/AI có thể Premium.
+- **Permission:** entitlement kiểm tra khi tải câu; hint/AI Tutor có thể Premium.
 - **A11y:** radios ARIA, phím tắt (1–5 chọn, Enter submit, ←/→ điều hướng), focus quản lý, timer thông báo `aria-live` polite.
 - **Animation:** transition chuyển câu, reveal explanation, tô đúng/sai.
 - **Loading:** skeleton; **Error:** retry giữ đáp án đã chọn; **Empty:** hết câu → summary; **Disabled:** submit khi chưa chọn (study).
@@ -62,15 +62,16 @@ Giao diện làm bài: hiển thị từng câu hỏi, nhận đáp án, chấm 
 
 ### `QuestionToolbar`
 - **Props:** `question`, `states(bookmarked, flagged, hasNote)`.
-- **Events:** `onBookmark, onFlag, onNote, onHighlight, onReport, onAI, onAddFlashcard`.
-- **Permission:** AI Premium; optimistic cho bookmark/flag.
+- **Events:** `onBookmark, onFlag, onNote, onHighlight, onReport, onAiTutor, onAddFlashcard`.
+- **Permission:** AI Tutor Premium/quota; optimistic cho bookmark/flag.
+- **`onAiTutor`:** mở drawer 1-tap (`08-ai-tutor-drawer.md`). Không tạo flashcard/note từ tin AI Tutor.
 
 ### `SessionTimer` (exam), `QuestionNavigator`, `LabValuesDrawer`, `HintButton`, `PauseModal`, `AutosaveBadge`.
 
 ## 4. Luồng người dùng
 ```
 STUDY MODE:
- mở câu → chọn đáp án → Submit → chấm + hiện explanation → (tương tác: note/highlight/AI)
+ mở câu → chọn đáp án → Submit → chấm + hiện explanation → (tương tác: note/highlight/Hỏi AI Tutor 1-tap)
    → Next → ... → câu cuối → Summary/Review
 
 EXAM MODE:
@@ -94,7 +95,8 @@ Ngoại lệ:
 - **Cập nhật trạng thái câu:** `question_status` (incorrect/correct/omitted) sau chấm.
 - **Continue Learning:** session `paused/active` là nguồn cho Dashboard.
 - **Adaptive (Premium):** có thể chèn câu bổ sung theo hiệu suất trong phiên.
-- **Anti-cheat exam:** không lộ đáp án qua API trước nộp; timer server; phát hiện tab switch (tùy chọn).
+- **Anti-cheat exam:** không lộ đáp án qua API trước nộp; timer server; phát hiện tab switch (tùy chọn). **Ẩn AI Tutor** khi exam đang làm.
+- **AI Tutor 1-tap:** bấm Hỏi AI Tutor → drawer + auto-prompt theo câu đang xem (`08-ai-tutor-drawer.md`). Flashcard/ghi chú không gắn vào tin AI Tutor.
 
 ## 6. Database
 - `question_sessions`, `question_attempts`, `question_status` (xem mục 4 data model).
@@ -124,7 +126,7 @@ Lỗi: `409` double submit, `410` câu retired, `403` không phải owner.
 - **Offline:** Service Worker cache câu đã tải; hàng đợi answer đồng bộ khi online.
 
 ## 9. Phân quyền
-- Owner của session. Free: chỉ câu free, quota/ngày; Premium full + hint/AI. Instructor xem session học viên (read) trong lớp.
+- Owner của session. Free: chỉ câu free, quota/ngày; Premium full + hint/AI Tutor. Instructor xem session học viên (read) trong lớp.
 
 ## 10. Edge Cases
 | Case | Xử lý |
@@ -140,12 +142,12 @@ Lỗi: `409` double submit, `410` câu retired, `403` không phải owner.
 | Hết giờ khi mất mạng | Server auto-submit theo thời điểm hết hạn |
 
 ## 11. Tracking
-`session_start`, `question_open`, `question_answer`, `question_skip`, `hint_use`, `question_flag`, `answer_change`, `crosslink_click`, `ai_open(from_question)`, `session_pause`, `session_resume`, `session_finish`, `exam_submit`.
+`session_start`, `question_open`, `question_answer`, `question_skip`, `hint_use`, `question_flag`, `answer_change`, `crosslink_click`, `ai_open`, `ai_autostart`, `session_pause`, `session_resume`, `session_finish`, `exam_submit`.
 
 ## 12. Responsive
-- **Desktop:** stem trái, options phải hoặc dọc; navigator bên; toolbar ngang.
-- **Tablet:** 1 cột rộng; navigator drawer.
-- **Mobile:** 1 câu/màn full-screen, options nút lớn, toolbar overflow menu, submit sticky đáy, navigator bottom drawer, timer thu gọn header.
+- **Desktop:** stem trái, options phải hoặc dọc; navigator bên; toolbar ngang; AI Tutor drawer ~40% phải (câu vẫn nhìn được).
+- **Tablet:** 1 cột rộng; navigator drawer; AI Tutor nửa màn.
+- **Mobile:** 1 câu/màn full-screen, options nút lớn, toolbar overflow, FAB Hỏi AI Tutor, submit sticky đáy, navigator bottom drawer, timer thu gọn header; AI Tutor full-screen sheet.
 
 ## 13. Security
 - **Không bao giờ** gửi `is_correct`/đáp án đúng tới FE trước khi chấm (đặc biệt Exam).
@@ -159,7 +161,7 @@ Lỗi: `409` double submit, `410` câu retired, `403` không phải owner.
 ## 15. Đề xuất cải tiến
 - **Eliminate option** (gạch bỏ đáp án) như phòng thi thật.
 - Highlight trực tiếp trên stem + tô màu.
-- Chế độ "tutor" hỏi AI ngay trong câu.
+- Bôi đen đoạn stem → Hỏi AI Tutor về đoạn chọn (`explain_selection`, Module 08).
 - Confidence-based scoring (đo tự tin để phân tích).
 - Đồng bộ realtime đa thiết bị + tiếp tục liền mạch.
 - Peer stats: "X% chọn đáp án này".

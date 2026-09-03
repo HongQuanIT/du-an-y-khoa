@@ -329,7 +329,7 @@
                         :class="search.mode === 'ai' ? 'bg-primary-container text-primary border-primary/30' : 'bg-white text-on-surface-variant border-outline-variant hover:bg-surface-container-low'"
                         class="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-bold transition-colors">
                         <span class="material-symbols-outlined text-[18px]">psychology</span>
-                        Chế độ AI
+                        AI Tutor
                     </button>
                     <button type="button" @click="search.submit()"
                         :class="search.query.trim() === '' ? 'bg-primary/20 text-primary/40' : 'bg-primary text-white hover:bg-primary/90'"

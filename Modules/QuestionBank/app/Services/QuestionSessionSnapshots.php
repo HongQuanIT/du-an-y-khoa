@@ -172,6 +172,7 @@ final class QuestionSessionSnapshots
                 'name' => (string) $node->name,
                 'slug' => (string) $node->slug,
                 'node_type' => (string) ($node->node_type ?? ''),
+                'is_primary' => (bool) ($node->pivot?->is_primary ?? false),
             ])->values()->all(),
             // Backward-compatible keys for older review UIs.
             'topics' => $nodes->map(fn (MedicalTaxonomyNode $node): array => [
@@ -230,6 +231,13 @@ final class QuestionSessionSnapshots
                 'slug' => $data['slug'] ?? '',
                 'node_type' => $data['node_type'] ?? $data['type'] ?? null,
             ]);
+
+            // Preserve pivot meta so session chrome can prefer the primary topic.
+            if (array_key_exists('is_primary', $data)) {
+                $pivot = new \stdClass;
+                $pivot->is_primary = (bool) $data['is_primary'];
+                $node->setRelation('pivot', $pivot);
+            }
 
             return $node;
         })->values();

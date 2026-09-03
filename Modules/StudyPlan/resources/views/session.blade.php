@@ -51,6 +51,7 @@
         ['icon' => 'description', 'label' => 'Ghi chú', 'action' => 'notes'],
         ['icon' => 'menu_book', 'label' => 'Nghiên cứu', 'action' => 'research'],
         ['icon' => 'drive_file_rename_outline', 'label' => 'Tô màu văn bản', 'action' => 'highlight'],
+        ['icon' => 'psychology', 'label' => 'Hỏi AI Tutor', 'action' => 'ai'],
     ];
 
     $labReferenceGroups = \Modules\QuestionBank\Support\LabReferenceValues::groups();
@@ -68,6 +69,10 @@
     $bookmarkUrl = $bookmarkUrl ?? route('bookmarks.questions.set', $question);
     $sessionIncomplete = count($answeredIds) < $total;
     $stemImageUrl = $question->stemImageUrl();
+    $categoryBadge = \Modules\QuestionBank\Support\QuestionCategoryBadge::resolve(
+        $question->medicalTaxonomyNodes,
+        $question->difficulty,
+    );
 @endphp
 
 <x-layouts.auth :title="$playerConfig['page_title']">
@@ -462,9 +467,9 @@
     }" @keydown.escape.window="notesOpen = false; navigatorOpen = false; exitOpen = false; researchOpen = false; selectionBar.show = false"
         @mouseup.window="onTextSelect()">
 
-        <div class="flex min-h-screen flex-col bg-white">
+        <div class="flex h-dvh flex-col overflow-hidden bg-white">
             <header
-                class="sticky top-0 z-50 flex h-header-height w-full items-center border-b border-outline-variant bg-white px-4 md:px-margin-desktop">
+                class="z-50 flex h-header-height w-full shrink-0 items-center border-b border-outline-variant bg-white px-4 md:px-margin-desktop">
                 <div class="flex flex-1 items-center gap-4">
                     <button type="button" @click="requestExit()"
                         class="flex size-10 items-center justify-center rounded-full transition-colors hover:bg-surface-container-high"
@@ -499,17 +504,19 @@
                 </div>
             </header>
 
-            <main class="flex flex-1 bg-white pb-28">
+            <main class="flex min-h-0 flex-1 overflow-hidden bg-white">
                 <aside x-show="!researchOpen"
-                    class="group sticky top-header-height hidden h-[calc(100vh-var(--spacing-header-height))] w-16 shrink-0 overflow-y-auto border-r border-outline-variant bg-white transition-all duration-300 hover:w-56 lg:block">
+                    class="group hidden h-full w-16 shrink-0 overflow-y-auto border-r border-outline-variant bg-white transition-all duration-300 hover:w-56 lg:block">
                     <nav class="space-y-2 p-4">
                         @foreach ($tools as $tool)
                             <button type="button"
                                 @if (($tool['action'] ?? null) === 'notes') @click="notesOpen = true"
                                 @elseif (($tool['action'] ?? null) === 'research') @click="openResearch()"
                                 @elseif (($tool['action'] ?? null) === 'highlight') @click="toggleHighlight()"
-                                @elseif (($tool['action'] ?? null) === 'flag') @click="toggleFlag()" @endif
+                                @elseif (($tool['action'] ?? null) === 'flag') @click="toggleFlag()"
+                                @elseif (($tool['action'] ?? null) === 'ai') @click="$dispatch('ai-tutor-open')" @endif
                                 @if (($tool['action'] ?? null) === 'research') data-testid="research-reference-toggle" @endif
+                                @if (($tool['action'] ?? null) === 'ai') data-testid="ai-tutor-toolbar-toggle" @endif
                                 @if (($tool['action'] ?? null) === 'research')
                                     class="flex w-full items-center justify-center gap-3 rounded-lg px-0 py-2.5 transition-colors group-hover:justify-start group-hover:px-3"
                                     :class="researchOpen ? 'bg-primary/5 text-primary' : 'text-on-surface-variant hover:bg-surface-container-high hover:text-primary'"
@@ -519,6 +526,8 @@
                                 @elseif (($tool['action'] ?? null) === 'flag')
                                     class="flex w-full items-center justify-center gap-3 rounded-lg px-0 py-2.5 transition-colors group-hover:justify-start group-hover:px-3"
                                     :class="flagged ? 'bg-amber-50 text-amber-600' : 'text-on-surface-variant hover:bg-surface-container-high hover:text-primary'"
+                                @elseif (($tool['action'] ?? null) === 'ai')
+                                    class="flex w-full items-center justify-center gap-3 rounded-lg px-0 py-2.5 text-[#0F766E] transition-colors group-hover:justify-start group-hover:px-3 hover:bg-teal-50"
                                 @else
                                     class="flex w-full items-center justify-center gap-3 rounded-lg px-0 py-2.5 text-on-surface-variant transition-colors group-hover:justify-start group-hover:px-3 hover:bg-surface-container-high hover:text-primary"
                                 @endif>
@@ -546,7 +555,7 @@
                     ])->values();
                 @endphp
 
-                <div class="w-full overflow-y-auto"
+                <div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
                     x-data="{
                         options: @js($optionPayload),
                         selected: @js(isset($selectedOptionIds[0]) ? (int) $selectedOptionIds[0] : null),
@@ -654,6 +663,7 @@
                             }
                         },
                     }">
+                    <div class="min-h-0 flex-1 overflow-y-auto pb-28">
                     <div class="flex min-h-full w-full flex-col items-stretch lg:flex-row">
                         <aside x-show="researchOpen" x-cloak x-transition.opacity
                             class="z-30 w-full shrink-0 overflow-hidden border-r border-outline-variant bg-white lg:sticky lg:top-0 lg:h-[calc(100vh-var(--spacing-header-height)-5rem)] lg:w-1/2"
@@ -673,13 +683,19 @@
                             <span class="font-label-md text-label-md font-bold">Câu hỏi – câu trả lời</span>
                         </div>
                         <div class="flex items-center justify-between gap-3">
-                            <div class="flex items-center gap-2 rounded-full bg-surface-container-highest px-3 py-1">
-                                <span class="size-2 rounded-full bg-primary"></span>
-                                <span class="font-label-sm text-label-sm font-bold text-on-surface-variant uppercase">
-                                    {{ $question->medicalTaxonomyNodes->pluck('name')->join(', ') ?: 'Tổng hợp' }} · {{ $question->difficulty->label() }}
+                            <div class="flex min-w-0 flex-wrap items-center gap-2">
+                                <span
+                                    class="inline-flex max-w-[min(100%,16rem)] items-center gap-1.5 truncate rounded-full bg-surface-container-highest px-3 py-1 font-label-sm text-label-sm font-bold text-on-surface-variant"
+                                    title="{{ $categoryBadge['category'] }}">
+                                    <span class="size-2 shrink-0 rounded-full bg-primary"></span>
+                                    <span class="truncate">{{ $categoryBadge['category'] }}</span>
+                                </span>
+                                <span
+                                    class="shrink-0 rounded-full px-3 py-1 font-label-sm text-label-sm font-bold {{ $categoryBadge['difficulty_tone'] }}">
+                                    {{ $categoryBadge['difficulty'] }}
                                 </span>
                             </div>
-                            <div class="flex items-center gap-2">
+                            <div class="flex shrink-0 items-center gap-2">
                                 <div class="flex items-center gap-1.5 rounded-full px-3 py-1 tabular-nums"
                                     :class="running
                                         ? 'bg-primary/10 text-primary'
@@ -925,6 +941,7 @@
                         </section>
 
 
+                    </div>
                     </div>
                     </div>
 
@@ -1225,6 +1242,16 @@
             </div>
         </div>
     </div>
+
+    @include('aiassistant::tutor.drawer', ['aiContext' => [
+        'type' => 'question',
+        'id' => (string) $question->getKey(),
+        'session_id' => (string) $session->getKey(),
+        'source' => 'session',
+        'answered' => $isAnswered,
+        'is_correct' => $attempt?->is_correct,
+        'label' => 'Câu ' . ($index + 1) . '/' . $total,
+    ]])
 </x-layouts.auth>
 
 {{-- ── Question Hint: click-to-reveal for students ── --}}

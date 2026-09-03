@@ -323,6 +323,15 @@ Index: `host_user_id`, `visibility`, `status`, `join_code`.
 ### Setting
 `id, group, key, value JSON, is_public, timestamps` — cấu hình hệ thống.
 
+### AiThread (Module 08 — AI Tutor)
+`id, uuid, user_id FK, context_type, context_id, session_id FK null, title, preset VARCHAR null, created_at, updated_at`. Index `(user_id, updated_at)`, `(context_type, context_id)`.
+
+### AiMessage
+`id, uuid, thread_id FK, role(user/assistant/system), content LONGTEXT, preset VARCHAR null, tokens_in INT null, tokens_out INT null, citations JSON null, feedback VARCHAR null (up/down), created_at`. Index `(thread_id, id)`.
+
+### AiUsage
+`user_id FK, date DATE, count INT`. PK `(user_id, date)` — counter quota ngày (Redis là nguồn đếm realtime; bảng này để đối soát).
+
 ## 12. Sơ đồ quan hệ (ERD rút gọn)
 
 ```
@@ -339,6 +348,7 @@ User ─┬─< QuestionSession ─< QuestionAttempt >─ Question ─< Question
       ├─< ExamAttempt >─ Exam
       ├─ Subscription ─ Plan ; Subscription ─< Invoice ─< Payment
       ├─< Notification
+      ├─< AiThread ─< AiMessage
       ├─ host Classroom ─< ClassroomMember >─ User
       │         └─< LiveSession ─< LiveSessionMessage
       │                      └─< LiveRecording >─ Media (HLS)

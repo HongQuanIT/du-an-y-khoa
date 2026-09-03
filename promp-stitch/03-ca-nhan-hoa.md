@@ -45,7 +45,7 @@ Tô sáng đoạn văn nhiều màu, tổng hợp để ôn nhanh.
 ### 17.1 Thanh chọn khi bôi text (selection toolbar)
 ```
 Thanh công cụ nhỏ nổi lên khi người dùng bôi chọn một đoạn văn bản trong bài viết MedPro.
-Nội dung: 4 chấm tròn chọn màu tô (vàng, xanh lá, hồng, xanh dương), nút "Ghi chú", nút "Sao chép", nút "Hỏi AI". Bo góc, đổ bóng nhẹ, xuất hiện ngay trên đoạn được chọn.
+Nội dung: 4 chấm tròn chọn màu tô (vàng, xanh lá, hồng, xanh dương), nút "Ghi chú", nút "Sao chép", nút "Hỏi AI Tutor". Bo góc, đổ bóng nhẹ, xuất hiện ngay trên đoạn được chọn.
 Thiết kế 2 màn hình RIÊNG BIỆT (tách rời, KHÔNG gộp chung): một màn hình Desktop với bố cục đầy đủ như mô tả trên, và một màn hình Mobile. Trên mobile: thành thanh bottom sheet khi chạm-giữ chọn text. Màu teal #0F766E.
 ```
 
@@ -123,7 +123,7 @@ Phát hiện & luyện chủ đề yếu bằng một chạm.
 ### 20.1 Danh sách chủ đề yếu (`/weak-topics`)
 ```
 Màn hình "Chủ đề yếu" (route /weak-topics), app shell.
-Khối chính: header "Tập trung vào điểm yếu để tiến bộ nhanh nhất"; bộ lọc theo chuyên ngành + sắp xếp (Ưu tiên/Yếu nhất/High-yield); danh sách chủ đề yếu mỗi dòng gồm: tên chủ đề ("Dược lý — Kháng sinh"), thanh tỷ lệ đúng màu đỏ-cam "45%", nhãn mức thành thạo (2/5), mini biểu đồ xu hướng (đang giảm ▼), số câu chưa làm "còn 84 câu", badge "High-yield", nút "Luyện ngay" teal; mở rộng dòng hiện "Bài đọc đề xuất" (chip bài Library) và "Hỏi AI vì sao yếu".
+Khối chính: header "Tập trung vào điểm yếu để tiến bộ nhanh nhất"; bộ lọc theo chuyên ngành + sắp xếp (Ưu tiên/Yếu nhất/High-yield); danh sách chủ đề yếu mỗi dòng gồm: tên chủ đề ("Dược lý — Kháng sinh"), thanh tỷ lệ đúng màu đỏ-cam "45%", nhãn mức thành thạo (2/5), mini biểu đồ xu hướng (đang giảm ▼), số câu chưa làm "còn 84 câu", badge "High-yield", nút "Luyện ngay" teal; mở rộng dòng hiện "Bài đọc đề xuất" (chip bài Library) và "Hỏi AI Tutor vì sao yếu".
 Trạng thái rỗng tích cực: "Tuyệt vời! Chưa phát hiện chủ đề yếu nào" hoặc "Làm thêm câu hỏi để hệ thống phát hiện điểm yếu".
 Free chỉ hiện top 3 + PaywallOverlay "Xem tất cả chủ đề yếu với Premium".
 Thiết kế 2 màn hình RIÊNG BIỆT (tách rời, KHÔNG gộp chung): một màn hình Desktop với bố cục đầy đủ như mô tả trên, và một màn hình Mobile. Trên mobile: card, nút "Luyện ngay" sticky. Màu teal #0F766E, yếu #DC2626.

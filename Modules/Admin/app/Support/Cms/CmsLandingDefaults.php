@@ -59,9 +59,9 @@ final class CmsLandingDefaults
                         'image_alt' => 'Thư viện số MedLib trên máy tính bảng',
                     ],
                     [
-                        'eyebrow' => 'AI Assistant',
+                        'eyebrow' => 'AI Tutor',
                         'title' => 'Hỏi bất cứ điều gì, trả lời tức thì',
-                        'body' => 'MedAI không chỉ là một chatbot, đó là một chuyên gia y tế được huấn luyện trên hàng triệu dữ liệu lâm sàng để hỗ trợ bạn học tập và tra cứu lâm sàng.',
+                        'body' => 'AI Tutor giải thích câu hỏi và khái niệm y khoa dựa trên ngân hàng câu hỏi và thư viện nội bộ, kèm nguồn tham khảo — phục vụ học tập, không thay thế ý kiến chuyên môn.',
                         'chat_user' => 'Giải thích cơ chế cơn đau thắt ngực không ổn định?',
                         'chat_ai' => 'Cơn đau thắt ngực không ổn định thường do sự nứt vỡ mảng xơ vữa dẫn đến hình thành huyết khối không hoàn toàn...',
                         'image_url' => 'https://lh3.googleusercontent.com/aida-public/AB6AXuCMZgidLBFyHnk0vrswjJRjSr-4vrn5qUOhjp-K_ae3Z0i0u0WgIANj0aQeDOr146w66qsdxvCDNmqSwFpcRzBkfZKdGCQzurFCR1kiWJ2i8G7xUFOaOtr0Z5fWErXh_pdRwRimRo9kUR_gUXk4ZVGJxOz6I05xE8oGZwA9aPAqMbZQpNFQ2PR-Ecq8zneZ9CDpzIPV2uaPGIW4L3yG8h2Clj16aQjej6puVrcjURyHpoLOC5jqkgOot7FtHFuxgLpiBrA9gJRu2eYV',
@@ -102,7 +102,7 @@ final class CmsLandingDefaults
                 'premium_yearly' => [
                     'description' => 'Giải pháp ôn thi toàn diện · thanh toán một lần',
                     'cta_label_prefix' => 'Mua gói',
-                    'features' => ['Toàn bộ QBank & Thư viện', 'AI Mentor không giới hạn', 'Mô phỏng thi thật', 'Phân tích lỗ hổng kiến thức', 'Ưu tiên hỗ trợ 24/7'],
+                    'features' => ['Toàn bộ QBank & Thư viện', 'AI Tutor không giới hạn', 'Mô phỏng thi thật', 'Phân tích lỗ hổng kiến thức', 'Ưu tiên hỗ trợ 24/7'],
                 ],
                 'premium_monthly' => [
                     'name' => 'Premium 1 tháng',
@@ -120,7 +120,7 @@ final class CmsLandingDefaults
                     ['question' => 'Dữ liệu câu hỏi được lấy từ đâu?', 'answer' => "Hệ thống câu hỏi được đội ngũ bác sĩ nội trú và giảng viên y khoa biên soạn dựa trên các textbook chuẩn như Harrison's, Gray's Anatomy, Sabiston... và các đề thi thật qua các năm."],
                     ['question' => 'Tôi có thể học trên điện thoại không?', 'answer' => "Hoàn toàn có thể. {$app} có phiên bản website mobile mượt mà và ứng dụng trên App Store/Google Play giúp bạn ôn tập mọi lúc mọi nơi."],
                     ['question' => 'Chính sách hoàn tiền như thế nào?', 'answer' => 'Chúng tôi cam kết hoàn tiền 100% trong vòng 7 ngày nếu bạn không hài lòng với chất lượng dịch vụ mà không cần lý do.'],
-                    ['question' => 'Hệ thống AI có thể giải đáp các thắc mắc khó không?', 'answer' => 'MedAI được tối ưu cho các câu hỏi về cơ chế bệnh sinh, chẩn đoán phân biệt và xử trí lâm sàng theo hướng dẫn (guidelines). Tuy nhiên, bạn nên luôn đối chiếu với y văn chính thống.'],
+                    ['question' => 'AI Tutor có thể giải đáp các thắc mắc khó không?', 'answer' => 'AI Tutor giải thích câu hỏi và khái niệm y khoa dựa trên ngân hàng câu hỏi và thư viện nội bộ, kèm nguồn tham khảo. Chỉ phục vụ học tập — không thay thế ý kiến chuyên môn; hãy đối chiếu với y văn chính thống.'],
                 ],
             ],
             'cta' => [

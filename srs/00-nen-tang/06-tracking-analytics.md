@@ -62,8 +62,8 @@ Lưu vào `tracking_events` (insert-only) + có thể forward tới kho phân t�
 ### Monetization
 `paywall_view`, `upgrade_click`, `checkout_start`, `subscription_upgrade`, `subscription_cancel`, `payment_success`, `payment_failed`, `coupon_apply`.
 
-### AI
-`ai_open`, `ai_prompt`, `ai_response`, `ai_feedback` (thumbs up/down).
+### AI Tutor
+`ai_open`, `ai_autostart`, `ai_prompt`, `ai_response`, `ai_feedback` (thumbs up/down), `ai_citation_click`, `ai_stop`, `ai_quota_hit`.
 
 ### Notification & Engagement
 `notification_receive`, `notification_open`, `streak_continue`, `streak_break`, `reminder_click`.
@@ -81,7 +81,7 @@ Lưu vào `tracking_events` (insert-only) + có thể forward tới kho phân t�
 | search | query, results_count |
 | content | content_type, content_id |
 | monetization | plan_id (nếu có), source (nơi bấm) |
-| ai_* | thread_id, tokens (nếu đo) |
+| ai_* | thread_id; `ai_open`/`ai_autostart`: context_type, context_id, preset?, source |
 | classroom_* / live_* | classroom_id; live_*: thêm session_id |
 
 ## 5. Pipeline phân tích

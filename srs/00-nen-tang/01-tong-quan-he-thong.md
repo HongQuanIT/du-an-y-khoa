@@ -43,7 +43,7 @@ Chi tiết ma trận quyền: xem `03-phan-quyen-rbac.md`.
 
 1. **Public**: Landing Page.
 2. **Core học tập**: Authentication, Dashboard, Study Plan, Question Bank, Question Session, Question Review.
-3. **Nội dung**: AI Assistant, Medical Library, Disease Library, Drug Library, Procedures, Images, Videos.
+3. **Nội dung**: AI Tutor, Medical Library, Disease Library, Drug Library, Procedures, Images, Videos.
 4. **Cá nhân hóa**: Notes, Bookmark, Highlight, Flashcards, Study Analytics, Weak Topics, Performance Dashboard, Heatmap.
 5. **Thi cử**: Exams, Self Assessment.
 6. **Khám phá**: Search, Global Search.

@@ -58,7 +58,7 @@ class BillingDatabaseSeeder extends Seeder
 
         $premiumFeatures = [
             'Toàn bộ QBank & Thư viện',
-            'AI Mentor không giới hạn',
+            'AI Tutor không giới hạn',
             'Mô phỏng thi thật',
             'Phân tích lỗ hổng kiến thức',
             'Ưu tiên hỗ trợ 24/7',

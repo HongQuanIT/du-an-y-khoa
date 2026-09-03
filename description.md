@@ -64,11 +64,9 @@ Hiển thị:
 
 ---
 
-### 🤖 5. Tích hợp AI ( Dự kiến )
-- **Retrieval-based GPT Tutor:**  
-  AI trả lời và giải thích dựa trên dữ liệu câu hỏi có sẵn.
-- **AI Study Suggestion:**  
-  Dựa vào kết quả làm sai → đề xuất block ôn tập phù hợp.
+### 🤖 5. Tích hợp AI Tutor
+- **AI Tutor (RAG + context Q-bank):** giải thích câu đang xem (drawer 1-tap), dẫn nguồn nội bộ; không tư vấn điều trị cá nhân.
+- **AI Study Suggestion (sau):** dựa vào câu sai → đề xuất block ôn tập. Không tạo flashcard/ghi chú từ tin AI Tutor (thuộc Module 18/15).
 
 ---
 

@@ -29,6 +29,7 @@
 1. Đọc **`00-nen-tang/`** trước — đây là nền tảng dùng chung, mọi module tham chiếu về đây.
 2. Đọc từng module trong **`modules/`** theo nhu cầu. Mỗi module tuân theo **khung 15 mục chuẩn** (xem `00-nen-tang/07-template-module.md`).
 3. Thuật ngữ khó tra tại **`00-nen-tang/08-glossary.md`**.
+4. Spec chi tiết UI/API ngoài khung 15 mục: Module 08 có [`modules/08-ai-tutor-drawer.md`](modules/08-ai-tutor-drawer.md) (drawer 1-tap). Tên sản phẩm: **AI Tutor**.
 
 ## 4. Cấu trúc thư mục
 
@@ -72,7 +73,7 @@ srs/
 | 5 | Question Bank | Core | `modules/05-question-bank.md` |
 | 6 | Question Session | Core | `modules/06-question-session.md` |
 | 7 | Question Review | Core | `modules/07-question-review.md` |
-| 8 | AI Assistant | Content | `modules/08-ai-assistant.md` |
+| 8 | AI Tutor | Content | `modules/08-ai-assistant.md` · spec drawer: `modules/08-ai-tutor-drawer.md` |
 | 9 | Medical Library | Content | `modules/09-medical-library.md` |
 | 10 | Disease Library | Content | `modules/10-disease-library.md` |
 | 11 | Drug Library | Content | `modules/11-drug-library.md` |

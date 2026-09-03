@@ -14,7 +14,7 @@ final class EntitlementLabels
         return [
             Entitlement::QbankFull->value => 'Toàn bộ Q-Bank',
             Entitlement::LibraryFull->value => 'Thư viện đầy đủ',
-            Entitlement::AiTutor->value => 'AI Mentor không giới hạn',
+            Entitlement::AiTutor->value => 'AI Tutor không giới hạn',
             Entitlement::AnalyticsAdvanced->value => 'Phân tích nâng cao',
             Entitlement::ExamSimulation->value => 'Mô phỏng thi thật',
             Entitlement::OfflineDownload->value => 'Tải offline',

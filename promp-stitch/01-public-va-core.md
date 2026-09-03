@@ -15,7 +15,7 @@ Các khối chính từ trên xuống:
 (1) Hero 2 cột: trái là tiêu đề lớn "Học hiệu quả hơn — hiểu bản chất, nhớ lâu, luyện thi đúng trọng tâm", phụ đề, 2 nút "Bắt đầu luyện thi" (teal) và "Xem câu hỏi mẫu"; phải là ảnh minh họa giao diện làm bài.
 (2) Dải số liệu tin cậy: "12.450 câu hỏi · 38.000+ người học · 18 chuyên ngành".
 (3) 3 value props có icon: "Ngân hàng câu hỏi chuẩn hóa", "Luyện đề thông minh & phát hiện điểm yếu", "AI Tutor giải thích tận gốc".
-(4) 4 feature section xen kẽ trái/phải kèm ảnh: Qbank, Thư viện y khoa, AI Assistant, Phân tích tiến độ (mô tả tiếng Việt).
+(4) 4 feature section xen kẽ trái/phải kèm ảnh: Qbank, Thư viện y khoa, AI Tutor, Phân tích tiến độ (mô tả tiếng Việt).
 (5) Widget câu hỏi mẫu tương tác: vignette bệnh nhân nam 58 tuổi đau ngực, 5 đáp án A–E, chọn được và bấm "Kiểm tra".
 (6) Social proof: 3 testimonial sinh viên Y (Nguyễn Văn An - ĐH Y Hà Nội) + avatar.
 (7) Bảng giá rút gọn 3 gói Miễn phí / Premium 199.000₫/tháng / Premium 6 tháng 990.000₫ (tiết kiệm ~17%).
@@ -260,7 +260,7 @@ Bố cục:
 - Header phiên: nút thoát (X), tiến trình "Câu 12/40", thanh progress mảnh, nhãn chế độ "Study", icon "Đã lưu" (autosave), nút mở Question Navigator.
 - Vùng chính 2 cột: cột trái là đề bài — vignette tiếng Việt "Bệnh nhân nam 58 tuổi, tiền sử tăng huyết áp và đái tháo đường type 2, nhập viện vì đau ngực sau xương ức lan vai trái 40 phút. ECG ST chênh lên V1–V4." + lead-in in đậm "Chẩn đoán phù hợp nhất là gì?"; cột phải 5 đáp án A–E dạng nút lớn có thể chọn (A. Nhồi máu cơ tim cấp thành trước; B. Viêm màng ngoài tim; C. Bóc tách động mạch chủ; D. Thuyên tắc phổi; E. Trào ngược dạ dày thực quản).
 - Sau khi bấm "Kiểm tra": tô xanh #16A34A đáp án đúng (A), đỏ #DC2626 nếu chọn sai; hiện ExplanationPanel bên dưới với giải thích tổng, giải thích từng đáp án, mục "Tham khảo" và cross-link "Xem bài: Nhồi máu cơ tim cấp" trong thư viện.
-- Thanh công cụ câu hỏi (icon): Đánh dấu (bookmark), Cờ (flag), Ghi chú, Bôi vàng (highlight), Báo lỗi, Hỏi AI, Tạo flashcard.
+- Thanh công cụ câu hỏi (icon): Đánh dấu (bookmark), Cờ (flag), Ghi chú, Bôi vàng (highlight), Báo lỗi, Hỏi AI Tutor (1-tap: mở drawer và tự hỏi câu đang xem), Tạo flashcard (toolbar câu — không nằm trong drawer AI Tutor).
 - Nút chính dưới cùng "Kiểm tra đáp án" → sau đó thành "Câu tiếp theo →" (sticky đáy).
 - Nút phụ mở "Chỉ số xét nghiệm" và "Máy tính lâm sàng".
 Thiết kế 2 màn hình RIÊNG BIỆT (tách rời, KHÔNG gộp chung): một màn hình Desktop với bố cục đầy đủ như mô tả trên, và một màn hình Mobile. Trên mobile: 1 câu/màn full-screen, đáp án nút lớn, thanh công cụ thu vào menu ..., nút chính sticky đáy, đề bài cuộn. Font Be Vietnam Pro, màu teal #0F766E.
@@ -309,6 +309,6 @@ Thiết kế 2 màn hình RIÊNG BIỆT (tách rời, KHÔNG gộp chung): một
 ### 7.3 Chi tiết một câu khi xem lại (`/qbank/session/{id}/review/{qid}`)
 ```
 Màn hình chi tiết câu khi xem lại (route .../review/{qid}), app shell.
-Khối chính: đề bài vignette đầy đủ; 5 đáp án hiển thị trạng thái cố định — đáp án đúng nền xanh có nhãn "Đáp án đúng", đáp án bạn chọn sai nền đỏ có nhãn "Bạn đã chọn"; ExplanationPanel đầy đủ giải thích tổng + từng đáp án + tham khảo + cross-link thư viện; thanh công cụ (Tạo flashcard, Hỏi AI, Ghi chú, Đánh dấu). Nút điều hướng "← Câu trước / Câu sau →".
+Khối chính: đề bài vignette đầy đủ; 5 đáp án hiển thị trạng thái cố định — đáp án đúng nền xanh có nhãn "Đáp án đúng", đáp án bạn chọn sai nền đỏ có nhãn "Bạn đã chọn"; ExplanationPanel đầy đủ giải thích tổng + từng đáp án + tham khảo + cross-link thư viện; thanh công cụ (Tạo flashcard, Hỏi AI Tutor, Ghi chú, Đánh dấu). Nút điều hướng "← Câu trước / Câu sau →".
 Thiết kế 2 màn hình RIÊNG BIỆT (tách rời, KHÔNG gộp chung): một màn hình Desktop với bố cục đầy đủ như mô tả trên, và một màn hình Mobile. Trên mobile: full-width. Màu teal #0F766E.
 ```

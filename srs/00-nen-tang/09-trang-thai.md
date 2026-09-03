@@ -27,7 +27,7 @@ Ký hiệu: ✅ hoàn chỉnh · 🟡 bản nháp chi tiết · ⬜ khung chờ 
 | 5 | Question Bank | ✅ |
 | 6 | Question Session | ✅ |
 | 7 | Question Review | ✅ |
-| 8 | AI Assistant | ✅ |
+| 8 | AI Tutor | ✅ |
 | 9 | Medical Library | ✅ |
 | 10 | Disease Library | ✅ |
 | 11 | Drug Library | ✅ |

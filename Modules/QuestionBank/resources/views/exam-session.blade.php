@@ -22,6 +22,10 @@
     $answeredCount = count($answeredIds);
     $flaggedCount = count($flaggedIds);
     $stemImageUrl = $question->stemImageUrl();
+    $categoryBadge = \Modules\QuestionBank\Support\QuestionCategoryBadge::resolve(
+        $question->medicalTaxonomyNodes,
+        $question->difficulty,
+    );
 @endphp
 
 <x-layouts.auth title="Chế độ thi">
@@ -376,10 +380,15 @@
                         @endif
 
                         <section class="space-y-6">
-                            <div class="flex flex-wrap items-center gap-3">
+                            <div class="flex flex-wrap items-center gap-2">
                                 <span class="rounded bg-primary px-3 py-1 text-label-sm tracking-wider text-white uppercase">Lâm sàng</span>
-                                <span class="font-label-sm text-on-surface-variant">
-                                    {{ $question->medicalTaxonomyNodes->pluck('name')->join(', ') ?: 'Tổng hợp' }} / {{ $question->difficulty->label() }}
+                                <span
+                                    class="inline-flex max-w-[min(100%,16rem)] truncate rounded-full bg-surface-container-highest px-3 py-1 font-label-sm text-label-sm font-bold text-on-surface-variant"
+                                    title="{{ $categoryBadge['category'] }}">
+                                    {{ $categoryBadge['category'] }}
+                                </span>
+                                <span class="rounded-full px-3 py-1 font-label-sm text-label-sm font-bold {{ $categoryBadge['difficulty_tone'] }}">
+                                    {{ $categoryBadge['difficulty'] }}
                                 </span>
                             </div>
                             <div class="space-y-5">
