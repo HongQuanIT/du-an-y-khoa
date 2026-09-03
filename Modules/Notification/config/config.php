@@ -117,6 +117,7 @@ return [
             'audience' => 'learner',
             'label' => 'Lớp đang live',
             'preference_key' => 'push_classroom',
+            'bypass_prefs' => true,
             'icon' => 'live_tv',
         ],
         'recording.ready' => [
