@@ -117,6 +117,7 @@ return [
             'audience' => 'learner',
             'label' => 'Lớp đang live',
             'preference_key' => 'push_classroom',
+            'bypass_prefs' => true,
             'icon' => 'live_tv',
         ],
         'recording.ready' => [
@@ -132,6 +133,14 @@ return [
             'label' => 'Mời vào lớp',
             'preference_key' => 'push_classroom',
             'icon' => 'group_add',
+        ],
+        'classroom.pending_approval' => [
+            'category' => 'classroom',
+            'audience' => 'admin',
+            'label' => 'Lớp chờ duyệt',
+            'preference_key' => null,
+            'bypass_prefs' => true,
+            'icon' => 'pending_actions',
         ],
         'classroom.approved' => [
             'category' => 'classroom',

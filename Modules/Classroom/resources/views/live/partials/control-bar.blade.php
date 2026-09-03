@@ -28,12 +28,6 @@
             aria-label="Chia sẻ màn hình" title="Chia sẻ slide/PDF/app ngoài (không cần khi chữa đề trong app)">
             <span class="material-symbols-outlined text-[22px]">present_to_all</span>
         </button>
-        <button type="button" data-lk-teach
-            class="hidden items-center gap-1 rounded-full bg-teal-600/80 px-3 py-2 text-xs font-semibold text-white hover:bg-teal-600 md:inline-flex"
-            title="Hiện đề trong khung video (camera góc phải) — học viên nhìn cùng một khung">
-            <span class="material-symbols-outlined text-[18px]">menu_book</span>
-            Chữa đề
-        </button>
     </div>
     <button type="button" data-lk-leave
         class="inline-flex size-10 items-center justify-center rounded-full bg-red-600/80 text-white transition hover:bg-red-600"

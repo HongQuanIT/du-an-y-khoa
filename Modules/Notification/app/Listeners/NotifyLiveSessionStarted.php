@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace Modules\Notification\Listeners;
 
 use App\Models\User;
+use App\Support\Enums\Role;
 use Modules\Classroom\Enums\MemberStatus;
 use Modules\Classroom\Events\LiveSessionStarted;
 use Modules\Notification\Actions\CreateUserNotificationAction;
 
-/** Notify active classroom members (except host) when a live session starts. */
+/** Notify learners system-wide when an instructor starts a live session. */
 final class NotifyLiveSessionStarted
 {
     public function __construct(private readonly CreateUserNotificationAction $notify) {}
@@ -22,17 +23,22 @@ final class NotifyLiveSessionStarted
             return;
         }
 
-        $memberIds = $classroom->members()
+        $activeMemberIds = $classroom->members()
             ->where('status', MemberStatus::Active->value)
             ->where('user_id', '!=', $classroom->host_user_id)
-            ->pluck('user_id');
+            ->pluck('user_id')
+            ->map(static fn (mixed $id): int => (int) $id)
+            ->all();
 
-        $url = route('classroom.live', [
+        $liveUrl = route('classroom.live', [
             'classroom' => $classroom,
             'liveSession' => $session,
         ]);
+        $classroomUrl = route('classroom.show', $classroom);
 
-        foreach (User::query()->whereIn('id', $memberIds)->cursor() as $user) {
+        foreach (User::query()->role(Role::Student->value)->cursor() as $user) {
+            $isActiveMember = in_array((int) $user->getKey(), $activeMemberIds, true);
+
             $this->notify->handle(
                 user: $user,
                 type: 'live.started',
@@ -42,7 +48,7 @@ final class NotifyLiveSessionStarted
                     'classroom_id' => $classroom->getKey(),
                     'session_id' => $session->getKey(),
                 ],
-                actionUrl: $url,
+                actionUrl: $isActiveMember ? $liveUrl : $classroomUrl,
             );
         }
     }

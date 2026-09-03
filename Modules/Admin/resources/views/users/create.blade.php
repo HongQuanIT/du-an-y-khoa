@@ -52,7 +52,7 @@
             </div>
 
             <p class="font-body-sm text-body-sm text-on-surface-variant">
-                Nếu chọn Cộng tác viên, sau khi tạo tài khoản bạn sẽ được chuyển sang hoàn tất hồ sơ CTV (tên hiển thị, % hoa hồng).
+                Nếu chọn Cộng tác viên, hệ thống sẽ tự tạo hồ sơ CTV với tên tài khoản và mức hoa hồng mặc định; bạn có thể chỉnh sửa sau khi tạo.
             </p>
 
             <button type="submit" class="rounded-lg bg-primary px-4 py-2.5 font-label-md text-on-primary">Tạo người dùng</button>

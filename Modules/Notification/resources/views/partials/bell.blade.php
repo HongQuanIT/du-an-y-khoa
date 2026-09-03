@@ -28,18 +28,33 @@
                 }
             }
         },
-        dismissFlyout() {
+        async dismissFlyout(markRead = true) {
             this.flyoutOpen = false;
             if (this.importantItem && this.importantItem.id) {
                 sessionStorage.setItem('medlearn_notif_flyout_dismissed', String(this.importantItem.id));
+
+                if (markRead) {
+                    try {
+                        const token = document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || '';
+                        const response = await fetch(this.importantItem.read_url, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': token
+                            }
+                        });
+                        if (!response.ok) throw new Error('Không thể lưu trạng thái thông báo.');
+                    } catch (e) {}
+                }
             }
         },
         async markReadAndGo(item) {
-            this.dismissFlyout();
+            await this.dismissFlyout(false);
             if (!item) return;
             try {
                 const token = document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || '';
-                await fetch('/notifications/' + item.id + '/read', {
+                await fetch(item.read_url, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

@@ -24,6 +24,7 @@ final class HeaderNotificationsComposer
         'system.broadcast',
         'system.maintenance',
         'support.reply',
+        'classroom.pending_approval',
         'classroom.approved',
         'classroom.rejected',
     ];
@@ -133,6 +134,7 @@ final class HeaderNotificationsComposer
                 'title' => $importantUnread->title,
                 'body' => $importantUnread->body,
                 'action_url' => $importantUnread->action_url,
+                'read_url' => route('notifications.read', $importantUnread),
                 'created_at_human' => $importantUnread->created_at?->diffForHumans() ?? 'Vừa xong',
             ], $style);
         }

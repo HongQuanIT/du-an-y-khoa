@@ -7,11 +7,10 @@ namespace Modules\Partner\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
+use Modules\Partner\Actions\EnsurePartnerProfileAction;
 use Modules\Partner\Enums\CommissionStatus;
 use Modules\Partner\Models\Partner;
 use Modules\Partner\Models\PartnerCommission;
-use RuntimeException;
 
 abstract class PartnerPortalController extends Controller
 {
@@ -19,13 +18,9 @@ abstract class PartnerPortalController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
-        $partner = Partner::forUser($user);
 
-        if ($partner === null) {
-            throw new RuntimeException('Partner profile missing for user '.$user->getKey());
-        }
-
-        return $partner;
+        return Partner::forUser($user)
+            ?? app(EnsurePartnerProfileAction::class)->handle($user);
     }
 
     protected function dashboardStats(Partner $partner): array

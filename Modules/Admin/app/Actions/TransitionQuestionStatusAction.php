@@ -173,6 +173,13 @@ final class TransitionQuestionStatusAction
         if (! $needsPublishPermission && ! $actor->can(Permission::QuestionUpdate->value)) {
             abort(403, 'Cần quyền question.update.');
         }
+
+        // Admin/SuperAdmin xuất bản trực tiếp — không dùng bước "Gửi duyệt".
+        if ($to === QuestionStatus::InReview && QuestionAccess::isReviewer($actor)) {
+            throw ValidationException::withMessages([
+                'status' => 'Admin có toàn quyền xuất bản trực tiếp, không cần gửi duyệt.',
+            ]);
+        }
     }
 
     private function assertReadyForStatus(Question $question, QuestionStatus $to): void

@@ -12,7 +12,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Str;
 use Modules\Personalization\Models\Bookmark;
 use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionSession;
@@ -375,7 +374,7 @@ final class StudyPlanSessionController extends Controller
         ]);
     }
 
-    public function review(StudyPlan $plan, StudyPlanTask $task): View|RedirectResponse
+    public function review(Request $request, StudyPlan $plan, StudyPlanTask $task): View|RedirectResponse
     {
         $this->authorize('view', $plan);
 
@@ -395,132 +394,20 @@ final class StudyPlanSessionController extends Controller
                 ->with('status', 'Chưa có câu hỏi để xem lại.');
         }
 
-        $attempts = $this->attempts($session);
-        $questions = $this->snapshots->questionMap($session);
-
-        $items = [];
-
-        foreach ($questionIds as $position => $questionId) {
-            $question = $questions[$questionId] ?? null;
-
-            if ($question === null) {
-                continue;
-            }
-
-            $attempt = $attempts->get($questionId);
-            $options = $question->getRelation('options');
-            $selectedIds = array_map('intval', $attempt?->selected_option_ids ?? []);
-            $correctOption = $options->firstWhere('is_correct', true);
-            $selectedOption = $options->first(fn ($option) => in_array((int) $option->id, $selectedIds, true));
-
-            $result = match (true) {
-                $attempt === null => 'skipped',
-                (bool) $attempt->is_correct => 'correct',
-                default => 'wrong',
-            };
-
-            $optionPayload = $options->map(function ($option) use ($selectedIds) {
-                $id = (int) $option->id;
-                $selected = in_array($id, $selectedIds, true);
-                $correct = (bool) $option->is_correct;
-
-                $state = match (true) {
-                    $correct && $selected => 'correct_selected',
-                    $correct => 'correct',
-                    $selected => 'wrong_selected',
-                    default => 'dimmed',
-                };
-
-                return [
-                    'id' => $id,
-                    'key' => $option->label,
-                    'text' => $option->content,
-                    'explanation' => $option->explanation,
-                    'state' => $state,
-                ];
-            })->values()->all();
-
-            $pick = match ($result) {
-                'skipped' => 'Chưa trả lời • Đúng <strong class="text-green-600">'.e($correctOption?->label ?? '—').'</strong>',
-                'correct' => 'Bạn chọn <strong class="text-primary">'.e($selectedOption?->label ?? '—').'</strong> • Đúng <strong class="text-green-600">'.e($correctOption?->label ?? '—').'</strong>',
-                default => 'Bạn chọn <strong class="text-error">'.e($selectedOption?->label ?? '—').'</strong> • Đúng <strong class="text-green-600">'.e($correctOption?->label ?? '—').'</strong>',
-            };
-
-            $annotation = ($session->annotations ?? [])[(string) $questionId] ?? [];
-            $stemHtml = (string) ($annotation['stem_html'] ?? SafeHtml::forDisplay((string) $question->stem));
-            $note = (string) ($annotation['note'] ?? '');
-            $noteHtml = (string) ($annotation['note_html'] ?? nl2br(e($note)));
-            $flagged = (bool) ($annotation['flagged'] ?? $attempt?->flagged ?? false);
-
-            $items[] = [
-                'id' => 'Q'.($position + 1),
-                'index' => $position,
-                'result' => $result,
-                'icon' => match ($result) {
-                    'correct' => 'check_circle',
-                    'wrong' => 'cancel',
-                    default => 'horizontal_rule',
-                },
-                'iconClass' => match ($result) {
-                    'correct' => 'text-green-600',
-                    'wrong' => 'text-error',
-                    default => 'text-outline',
-                },
-                'topic' => $question->medicalTaxonomyNodes->pluck('name')->join(', ') ?: 'Tổng hợp',
-                'topics' => $question->medicalTaxonomyNodes->pluck('name')->values()->all(),
-                'excerpt' => Str::limit(strip_tags($question->stem), 140),
-                'stem' => $question->stem,
-                'stemHtml' => $stemHtml,
-                'note' => $note,
-                'noteHtml' => $noteHtml,
-                'hasNote' => trim($note) !== '',
-                'explanation' => $question->explanation,
-                'pick' => $pick,
-                'flagged' => $flagged,
-                'options' => $optionPayload,
-            ];
-        }
-
-        $answered = collect($items)->where('result', '!=', 'skipped')->count();
-
-        $allowedFilters = ['all', 'correct', 'wrong', 'skipped', 'needs'];
-        $initialFilter = (string) request()->query('filter', 'all');
+        $items = $this->insights->reviewItems($session);
+        $allowedFilters = ['all', 'correct', 'wrong', 'skipped', 'flagged', 'needs'];
+        $initialFilter = (string) $request->query('filter', 'all');
         if (! in_array($initialFilter, $allowedFilters, true)) {
             $initialFilter = 'all';
         }
-
-        $topicNames = collect($items)->pluck('topic')->unique()->values()->all();
-        $initialTopic = (string) request()->query('topic', '');
-        if ($initialTopic !== '' && ! in_array($initialTopic, $topicNames, true)) {
-            $initialTopic = '';
-        }
-
-        $initialActive = collect($items)
-            ->first(function (array $item) use ($initialFilter, $initialTopic): bool {
-                if ($initialTopic !== '' && $item['topic'] !== $initialTopic) {
-                    return false;
-                }
-
-                return match ($initialFilter) {
-                    'needs' => in_array($item['result'], ['wrong', 'skipped'], true),
-                    'all' => true,
-                    default => $item['result'] === $initialFilter,
-                };
-            });
 
         return view('studyplan::session-review', [
             'plan' => $plan,
             'task' => $task,
             'session' => $session,
             'items' => $items,
-            'answered' => $answered,
-            'total' => count($items),
-            'correctCount' => collect($items)->where('result', 'correct')->count(),
-            'wrongCount' => collect($items)->where('result', 'wrong')->count(),
-            'skippedCount' => collect($items)->where('result', 'skipped')->count(),
             'initialFilter' => $initialFilter,
-            'initialTopic' => $initialTopic,
-            'initialActive' => (int) ($initialActive['index'] ?? 0),
+            'summaryUrl' => route('study-plan.session.summary', [$plan, $task]),
         ]);
     }
 

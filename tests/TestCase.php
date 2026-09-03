@@ -77,6 +77,7 @@ abstract class TestCase extends BaseTestCase
             'DB_CONNECTION' => 'sqlite',
             'DB_DATABASE' => ':memory:',
             'DB_URL' => '',
+            'QUEUE_CONNECTION' => 'sync',
         ];
 
         foreach ($forced as $key => $value) {

@@ -149,6 +149,50 @@ final class ExamModuleTest extends TestCase
             ->assertSee(route('exam.start', $exam->getKey()), false);
     }
 
+    public function test_exam_review_displays_question_stem_image(): void
+    {
+        $question = Question::factory()
+            ->free()
+            ->withOptions()
+            ->create([
+                'stem' => 'Hình ảnh X-quang ngực',
+                'stem_image_path' => 'questions/test-chest-xray.jpg',
+                'difficulty' => Difficulty::Medium,
+            ]);
+
+        $exam = \Modules\Exam\Models\Exam::query()->firstOrCreate(
+            ['title' => 'Exam Image Test'],
+            [
+                'description' => 'Test exam',
+                'duration_minutes' => 60,
+                'status' => \Modules\Exam\Enums\ExamStatus::Published,
+                'is_published' => true,
+            ]
+        );
+        $exam->questions()->attach($question->getKey());
+
+        $session = QuestionSession::factory()->create([
+            'user_id' => $this->user->getKey(),
+            'mode' => SessionMode::Exam,
+            'source' => SessionSource::Exam,
+            'status' => \Modules\QuestionBank\Enums\SessionStatus::Completed,
+            'exam_id' => $exam->getKey(),
+            'question_ids' => [$question->getKey()],
+            'total' => 1,
+            'answered_count' => 1,
+            'correct_count' => 1,
+        ]);
+
+        app(\Modules\QuestionBank\Services\QuestionSessionSnapshots::class)->capture($session);
+
+        $this->actingAs($this->user)
+            ->get(route('exam.review', $session))
+            ->assertOk()
+            ->assertSee('Xem lại kỳ thi')
+            ->assertSee('test-chest-xray.jpg')
+            ->assertSee('imageViewerOpen');
+    }
+
     private function examQuestion(string $stem, string $examKey): Question
     {
         $question = Question::factory()

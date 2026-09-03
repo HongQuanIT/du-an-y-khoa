@@ -109,6 +109,57 @@ final class AdminPhase1ManagementTest extends TestCase
         ]);
     }
 
+    public function test_super_admin_can_create_custom_role_with_existing_permissions(): void
+    {
+        $super = $this->staffUser(Role::SuperAdmin);
+        $permissions = \Spatie\Permission\Models\Permission::query()
+            ->whereIn('name', ['question.view', 'question.update'])
+            ->pluck('id')
+            ->all();
+
+        $this->actingAsStaff($super)
+            ->post(route('admin.roles.store'), [
+                'name' => 'medical_reviewer',
+                'permissions' => $permissions,
+            ])
+            ->assertRedirect();
+
+        $role = \Spatie\Permission\Models\Role::findByName('medical_reviewer', 'web');
+        $this->assertTrue($role->hasPermissionTo('question.view'));
+        $this->assertTrue($role->hasPermissionTo('question.update'));
+        $this->assertDatabaseHas('audit_logs', ['action' => 'admin.role.created']);
+
+        $this->actingAsStaff($super)
+            ->get(route('admin.roles.index'))
+            ->assertOk()
+            ->assertSee('medical_reviewer');
+    }
+
+    public function test_admin_cannot_create_custom_role(): void
+    {
+        $admin = $this->staffUser(Role::Admin);
+
+        $this->actingAsStaff($admin)
+            ->post(route('admin.roles.store'), ['name' => 'forbidden_role'])
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('roles', ['name' => 'forbidden_role', 'guard_name' => 'web']);
+    }
+
+    public function test_custom_role_name_is_normalized_before_validation(): void
+    {
+        $super = $this->staffUser(Role::SuperAdmin);
+
+        $this->actingAsStaff($super)
+            ->post(route('admin.roles.store'), ['name' => 'Người nhập liệu'])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('roles', [
+            'name' => 'nguoi_nhap_lieu',
+            'guard_name' => 'web',
+        ]);
+    }
+
     public function test_admin_cannot_sync_role_permissions(): void
     {
         $admin = $this->staffUser(Role::Admin);

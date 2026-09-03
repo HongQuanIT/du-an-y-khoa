@@ -1,3 +1,7 @@
+@php
+    use Modules\Billing\Support\MoneyFormatter;
+@endphp
+
 <x-layouts.admin title="Chi trả CTV">
     <x-admin.page-header title="Chi trả cộng tác viên"
         description="Tạo kỳ đối soát từ hoa hồng chờ duyệt và đánh dấu đã chi." />
@@ -51,7 +55,7 @@
                     <tr class="border-b border-outline-variant/60">
                         <td class="px-4 py-3">{{ $payout->partner?->display_name }}</td>
                         <td class="px-4 py-3">{{ $payout->period_from->format('d/m/Y') }} — {{ $payout->period_to->format('d/m/Y') }}</td>
-                        <td class="px-4 py-3">{{ number_format($payout->amount_cents / 100) }} ₫</td>
+                        <td class="px-4 py-3">{{ MoneyFormatter::vnd((int) $payout->amount_cents) }}</td>
                         <td class="px-4 py-3">{{ $payout->status->label() }}</td>
                         <td class="px-4 py-3">
                             @if ($payout->status->value !== 'paid' && $payout->status->value !== 'cancelled')

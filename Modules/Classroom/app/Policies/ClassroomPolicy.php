@@ -40,10 +40,10 @@ final class ClassroomPolicy
         return false;
     }
 
-    /** Only instructors create classrooms (via `/teach`). Learner hosting is disabled. */
+    /** Instructors create their own classrooms; administrators may create for instructors. */
     public function create(User $user): bool
     {
-        return $user->hasRole(Role::Instructor->value);
+        return $user->hasAnyRole([Role::Instructor->value, Role::Admin->value, Role::SuperAdmin->value]);
     }
 
     public function update(User $user, Classroom $classroom): bool
@@ -77,7 +77,8 @@ final class ClassroomPolicy
             return false;
         }
 
-        return $user->hasRole(Role::Instructor->value)
+        return $user->hasAnyRole([Role::Admin->value, Role::SuperAdmin->value])
+            || $user->hasRole(Role::Instructor->value)
             || $user->hasEntitlement(Entitlement::ClassroomHost->value);
     }
 

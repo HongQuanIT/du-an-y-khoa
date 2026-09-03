@@ -50,7 +50,7 @@ final class QuestionVersionController extends Controller
             'nodeNames' => $nodeNames,
             'contentVersion' => $contentVersion,
             'canRestore' => $this->actor()->can(Permission::QuestionUpdate->value)
-                && (QuestionAccess::isReviewer($this->actor()) || $question->status !== QuestionStatus::Published),
+                && (QuestionAccess::isReviewer($this->actor()) || $question->status === QuestionStatus::Draft),
         ]);
     }
 
@@ -62,9 +62,9 @@ final class QuestionVersionController extends Controller
         abort_unless($this->actor()->can(Permission::QuestionUpdate->value), 403);
         QuestionAccess::authorizeView($this->actor(), $question);
         abort_if(
-            ! QuestionAccess::isReviewer($this->actor()) && $question->status === QuestionStatus::Published,
+            ! QuestionAccess::isReviewer($this->actor()) && $question->status !== QuestionStatus::Draft,
             403,
-            'Khôi phục câu hỏi đã xuất bản cần admin thực hiện.',
+            'Khôi phục phiên bản cũ trên câu đã xuất bản hoặc đang chờ duyệt cần admin thực hiện.',
         );
 
         $restored = $action->handle($this->actor(), $question, $version);

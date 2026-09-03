@@ -25,6 +25,15 @@
 <div class="min-h-0 flex-1 overflow-y-auto p-4">
     <div data-q-stem class="prose prose-sm max-w-none select-text text-on-surface"></div>
     <div data-q-stem-image class="mt-3 hidden"></div>
+    <div data-q-knowledge class="mt-4 hidden rounded-lg border border-amber-200 bg-amber-50/70 p-3 text-sm text-on-surface">
+        <div class="flex items-start gap-2">
+            <span class="material-symbols-outlined mt-0.5 shrink-0 text-[18px] text-amber-700">stethoscope</span>
+            <div class="min-w-0">
+                <p class="mb-1 text-xs font-bold uppercase tracking-wide text-amber-700">Kiến thức</p>
+                <div data-q-knowledge-content class="prose prose-sm max-w-none italic"></div>
+            </div>
+        </div>
+    </div>
     <ul data-q-options class="mt-4 space-y-2"></ul>
     <div data-q-explanation class="mt-4 hidden rounded-lg bg-primary/10 p-3 text-sm text-primary"></div>
 </div>
@@ -40,3 +49,18 @@
     </div>
     <div data-q-map class="flex max-h-24 flex-wrap gap-1 overflow-y-auto border-t border-outline-variant p-3"></div>
 @endif
+
+<style>
+    [data-q-stem].q-hints-revealed mark[data-hint] {
+        background-color: transparent;
+        color: inherit;
+        text-decoration: underline #ea580c;
+        text-decoration-thickness: 2px;
+        text-underline-offset: 4px;
+    }
+    [data-q-stem].q-hints-revealed [data-key-info] {
+        text-decoration: underline #d97706;
+        text-decoration-thickness: 2px;
+        text-underline-offset: 4px;
+    }
+</style>

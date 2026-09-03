@@ -66,15 +66,17 @@
         <span class="block text-sm font-bold">Tất cả chủ đề</span>
     </button>
     <div class="max-h-72 space-y-1 overflow-y-auto">
-        <template x-for="item in coreTopicResults" :key="item.id">
-            <label class="flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-surface-container-low">
-                <input type="checkbox" :checked="coreClinicalTopicIds.includes(item.id)"
-                    @change="toggleCoreTopic(item)" class="size-5 rounded border-outline-variant text-primary focus:ring-primary">
-                <span class="text-sm">
-                    <span x-text="item.name"></span>
-                    <span x-show="item.section_name" class="ml-1 text-xs text-on-surface-variant" x-text="'(' + item.section_name + ')'"></span>
-                </span>
-            </label>
+        <template x-for="group in groupedCoreTopics()" :key="group.id">
+            <div class="py-1">
+                <p class="px-2 py-1.5 text-xs font-bold text-on-surface-variant" x-text="group.name"></p>
+                <template x-for="item in group.topics" :key="item.id">
+                    <label class="ml-5 flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-surface-container-low">
+                        <input type="checkbox" :checked="coreClinicalTopicIds.includes(item.id)"
+                            @change="toggleCoreTopic(item)" class="size-5 rounded border-outline-variant text-primary focus:ring-primary">
+                        <span class="text-sm" x-text="item.name"></span>
+                    </label>
+                </template>
+            </div>
         </template>
         <p x-show="taxonomySearch.length >= 2 && !coreTopicResults.length" class="text-sm text-on-surface-variant">Không tìm thấy.</p>
     </div>
@@ -84,13 +86,13 @@
     <div class="relative">
         <span class="material-symbols-outlined absolute top-1/2 left-3 -translate-y-1/2 text-[20px] text-on-surface-variant">search</span>
         <input type="search" x-model="taxonomySearch" @input.debounce.300ms="fetchMedicalNodes()"
-            placeholder="Tìm node danh mục y khoa..."
+            placeholder="Tìm chuyên khoa hoặc danh mục y khoa..."
             class="w-full rounded-lg border-none bg-surface-container-low py-2.5 pr-4 pl-10 text-sm focus:ring-2 focus:ring-primary">
     </div>
     <button type="button" @click="medicalTaxonomyNodeIds = []; medicalNodeLabels = {}; $nextTick(() => refreshCount())"
         class="flex w-full items-start gap-3 rounded-lg bg-surface-container-low p-3 text-left">
         <span class="material-symbols-outlined mt-0.5 text-primary">select_all</span>
-        <span class="block text-sm font-bold">Tất cả node</span>
+        <span class="block text-sm font-bold">Tất cả chuyên khoa và danh mục</span>
     </button>
     <div class="max-h-72 space-y-1 overflow-y-auto">
         <template x-for="item in medicalNodeResults" :key="item.id">

@@ -2,6 +2,10 @@
     <x-admin.page-header title="Vai trò & quyền"
         description="Role được nhóm theo 4 portal. Super Admin cập nhật ma trận permission.">
         <x-slot:actions>
+            @if ($canCreate)
+                <a href="{{ route('admin.roles.create') }}"
+                    class="rounded-lg bg-primary px-3 py-2 font-label-md text-on-primary hover:opacity-90">Tạo role</a>
+            @endif
             <a href="{{ route('admin.permissions.index') }}"
                 class="rounded-lg border border-outline-variant px-3 py-2 font-label-md text-label-md text-on-surface hover:bg-surface-container-low">Danh mục permission</a>
         </x-slot:actions>

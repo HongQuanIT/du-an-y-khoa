@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Support\Audit\Auditor;
 use App\Support\Audit\Enums\AuditAction;
 use App\Support\Concerns\AsAction;
+use App\Support\Enums\Role;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Modules\Classroom\Enums\ClassroomPurpose;
@@ -19,17 +20,22 @@ use Modules\Classroom\Enums\MemberRole;
 use Modules\Classroom\Enums\MemberStatus;
 use Modules\Classroom\Models\Classroom;
 use Modules\Classroom\Models\ClassroomMember;
+use Modules\Notification\Actions\CreateUserNotificationAction;
 
 final class CreateClassroomAction
 {
     use AsAction;
 
+    public function __construct(
+        private readonly CreateUserNotificationAction $notify,
+    ) {}
+
     /**
      * @param  array{title: string, description?: string|null, visibility?: string, purpose?: string, max_members?: int|null}  $data
      */
-    public function handle(User $host, array $data): Classroom
+    public function handle(User $host, array $data, bool $notifyAdmins = true): Classroom
     {
-        return DB::transaction(function () use ($host, $data): Classroom {
+        $classroom = DB::transaction(function () use ($host, $data): Classroom {
             $visibility = ClassroomVisibility::from($data['visibility'] ?? ClassroomVisibility::Public->value);
             $purpose = ClassroomPurpose::tryFrom((string) ($data['purpose'] ?? ''))
                 ?? ClassroomPurpose::CommunityReview;
@@ -65,6 +71,31 @@ final class CreateClassroomAction
 
             return $classroom;
         });
+
+        if ($notifyAdmins) {
+            $this->notifyAdminsThatClassroomNeedsApproval($host, $classroom);
+        }
+
+        return $classroom;
+    }
+
+    private function notifyAdminsThatClassroomNeedsApproval(User $host, Classroom $classroom): void
+    {
+        User::query()
+            ->role([Role::Admin->value, Role::SuperAdmin->value])
+            ->each(function (User $admin) use ($host, $classroom): void {
+                $this->notify->handle(
+                    $admin,
+                    'classroom.pending_approval',
+                    'Có lớp học mới chờ duyệt',
+                    "Giảng viên {$host->name} vừa tạo lớp “{$classroom->title}”.",
+                    [
+                        'classroom_id' => $classroom->getKey(),
+                        'host_user_id' => $host->getKey(),
+                    ],
+                    route('admin.classrooms.show', $classroom),
+                );
+            });
     }
 
     private function makeJoinCode(): string

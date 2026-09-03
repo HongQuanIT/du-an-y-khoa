@@ -12,16 +12,19 @@
         ['value' => 'flagged', 'label' => 'Đã gắn cờ'],
         ['value' => 'needs', 'label' => 'Cần ôn'],
     ];
+    $summaryUrl = $summaryUrl ?? route('qbank.summary', $session);
 @endphp
 
 <x-layouts.app title="Xem lại câu hỏi">
     <div class="flex h-[calc(100vh-var(--spacing-header-height))] overflow-hidden bg-surface"
         x-data="{
             items: @js($items),
-            filter: @js($initialFilter),
+            filter: '{{ $initialFilter }}',
             activeKey: @js($items[0]['question_id'] ?? null),
             detailOpen: false,
             notesOpen: false,
+            imageViewerOpen: false,
+            imageViewerSrc: null,
             get filtered() {
                 return this.items.filter((item) => this.matches(item, this.filter));
             },
@@ -90,7 +93,7 @@
                 <div class="mb-4 flex items-start justify-between gap-3">
                     <div>
                         <nav class="mb-1 flex items-center gap-1 text-[11px] text-on-surface-variant">
-                            <a href="{{ route('qbank.summary', $session) }}" class="hover:text-primary">Tổng kết</a>
+                            <a href="{{ $summaryUrl }}" class="hover:text-primary">Tổng kết</a>
                             <span>/</span>
                             <span class="font-bold text-primary">Xem lại</span>
                         </nav>
@@ -116,40 +119,36 @@
                 </div>
             </div>
 
-            <div class="custom-scrollbar flex-1 overflow-y-auto bg-surface">
-                <template x-if="filtered.length === 0">
-                    <div class="flex h-full flex-col items-center justify-center p-8 text-center">
-                        <span class="material-symbols-outlined text-6xl text-outline-variant">filter_alt_off</span>
-                        <h2 class="mt-4 font-headline-sm text-headline-sm text-on-surface">Không có câu phù hợp</h2>
-                        <p class="mt-2 text-body-sm text-on-surface-variant">Hãy chọn một bộ lọc khác để tiếp tục xem lại.</p>
-                        <button type="button" @click="setFilter('all')" class="mt-5 rounded-lg bg-primary px-5 py-2.5 font-bold text-on-primary">Xem tất cả</button>
-                    </div>
-                </template>
-
+            <div class="custom-scrollbar flex-1 divide-y divide-outline-variant/60 overflow-y-auto">
                 <template x-for="item in filtered" :key="item.question_id">
                     <button type="button" @click="select(item)"
-                        class="w-full border-b border-outline-variant p-4 text-left transition-colors hover:bg-surface-container-low"
-                        :class="current?.question_id === item.question_id && 'border-l-4 border-l-primary bg-primary/5'">
-                        <div class="mb-2 flex items-start justify-between gap-3">
+                        class="w-full p-4 text-left transition-colors"
+                        :class="activeKey === item.question_id
+                            ? 'bg-primary/5 border-l-4 border-primary pl-3'
+                            : 'hover:bg-surface-container-lowest'">
+                        <div class="mb-1.5 flex items-center justify-between gap-2">
                             <div class="flex items-center gap-2">
-                                <span class="font-bold" :class="current?.question_id === item.question_id ? 'text-primary' : 'text-on-surface'" x-text="item.id"></span>
-                                <span class="material-symbols-outlined text-[19px]"
-                                    :class="item.result === 'correct' ? 'text-success' : (item.result === 'wrong' ? 'text-error' : 'text-outline')"
-                                    x-text="resultIcon(item.result)"></span>
+                                <span class="font-bold text-on-surface" x-text="item.id"></span>
+                                <span x-show="item.flagged" class="material-symbols-outlined text-[16px] text-amber-500" style="font-variation-settings: 'FILL' 1;">flag</span>
                             </div>
                             <div class="flex items-center gap-1.5">
-                                <span x-show="item.flagged" class="material-symbols-outlined text-[17px] text-amber-500"
-                                    style="font-variation-settings: 'FILL' 1;">flag</span>
-                                <span class="rounded-full px-2 py-1 text-[10px] font-bold"
+                                <span class="material-symbols-outlined text-[18px]" :class="resultClass(item.result)"
+                                    x-text="resultIcon(item.result)"></span>
+                                <span class="text-xs font-bold capitalize"
                                     :class="resultClass(item.result)" x-text="resultLabel(item.result)"></span>
                             </div>
                         </div>
                         <p class="line-clamp-2 text-body-sm leading-relaxed text-on-surface" x-text="item.excerpt"></p>
                         <div class="mt-2 flex items-center justify-between gap-2">
                             <span class="truncate text-[11px] font-semibold text-on-surface-variant" x-text="item.topic"></span>
-                            <span x-show="item.note" class="inline-flex items-center gap-1 text-[11px] text-primary">
-                                <span class="material-symbols-outlined text-[14px]">description</span> Có ghi chú
-                            </span>
+                            <div class="flex items-center gap-2 shrink-0">
+                                <span x-show="item.stem_image_url" class="inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-semibold bg-primary/10 text-primary" title="Có hình ảnh minh họa">
+                                    <span class="material-symbols-outlined text-[13px]">image</span> Ảnh
+                                </span>
+                                <span x-show="item.note" class="inline-flex items-center gap-1 text-[11px] text-primary">
+                                    <span class="material-symbols-outlined text-[14px]">description</span> Có ghi chú
+                                </span>
+                            </div>
                         </div>
                     </button>
                 </template>
@@ -186,8 +185,30 @@
                                 <span class="font-bold text-primary" x-text="current.id"></span>
                                 <span class="text-sm text-on-surface-variant" x-text="current.topic"></span>
                             </div>
-                            <div class="prose prose-lg max-w-none rounded-2xl border border-outline-variant bg-surface p-5 text-body-lg leading-relaxed text-on-surface shadow-sm md:p-6 dark:prose-invert"
-                                x-html="current.stem_html"></div>
+
+                            <div class="grid gap-5"
+                                :class="current.stem_image_url ? 'lg:grid-cols-[minmax(0,1fr)_minmax(280px,380px)] lg:items-start' : ''">
+                                <div class="prose prose-lg max-w-none rounded-2xl border border-outline-variant bg-surface p-5 text-body-lg leading-relaxed text-on-surface shadow-sm md:p-6 dark:prose-invert"
+                                    x-html="current.stem_html"></div>
+
+                                <template x-if="current.stem_image_url">
+                                    <aside class="overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-sm">
+                                        <div class="flex cursor-zoom-in justify-center bg-white p-3"
+                                            @click="imageViewerOpen = true; imageViewerSrc = current.stem_image_url">
+                                            <img :src="current.stem_image_url" alt="Ảnh minh họa câu hỏi"
+                                                class="h-auto max-h-[460px] w-full object-contain transition-transform hover:scale-[1.02]">
+                                        </div>
+                                        <div class="flex items-center justify-between border-t border-outline-variant/60 bg-surface-container-low px-3.5 py-2 text-[11px] font-medium text-on-surface-variant">
+                                            <span class="inline-flex items-center gap-1">
+                                                <span class="material-symbols-outlined text-[15px]">zoom_in</span>
+                                                Nhấp để phóng to ảnh
+                                            </span>
+                                            <span class="rounded bg-surface px-1.5 py-0.5 text-[10px] font-semibold text-primary border border-outline-variant">Hình ảnh</span>
+                                        </div>
+                                    </aside>
+                                </template>
+                            </div>
+
                             <div class="flex flex-wrap items-center gap-2">
                                 <button type="button" @click="notesOpen = true"
                                     class="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant bg-surface px-3 py-1.5 text-label-sm text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-primary">
@@ -237,7 +258,7 @@
                             <span class="material-symbols-outlined">chevron_left</span>
                             <span class="hidden sm:inline">Câu trước</span>
                         </button>
-                        <a href="{{ route('qbank.summary', $session) }}"
+                        <a href="{{ $summaryUrl }}"
                             class="hidden rounded-lg border border-outline-variant bg-surface px-4 py-2 text-sm font-bold text-primary hover:bg-primary/5 sm:inline-flex">
                             Về tổng kết
                         </a>
@@ -254,7 +275,7 @@
                 <div class="flex h-full flex-col items-center justify-center p-8 text-center">
                     <span class="material-symbols-outlined text-6xl text-outline-variant">quiz</span>
                     <h2 class="mt-4 font-headline-sm text-headline-sm text-on-surface">Không có câu để xem lại</h2>
-                    <a href="{{ route('qbank.summary', $session) }}" class="mt-5 rounded-lg bg-primary px-5 py-2.5 font-bold text-on-primary">Quay lại tổng kết</a>
+                    <a href="{{ $summaryUrl }}" class="mt-5 rounded-lg bg-primary px-5 py-2.5 font-bold text-on-primary">Quay lại tổng kết</a>
                 </div>
             </template>
         </main>
@@ -284,6 +305,19 @@
                     </button>
                 </div>
             </div>
+        </div>
+
+        <div x-show="imageViewerOpen" x-cloak x-transition.opacity
+            class="fixed inset-0 z-[150] flex items-center justify-center bg-black/90 p-4"
+            @click="imageViewerOpen = false">
+            <button type="button"
+                class="absolute right-4 top-4 flex size-12 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
+                @click="imageViewerOpen = false" aria-label="Đóng ảnh">
+                <span class="material-symbols-outlined text-[24px]">close</span>
+            </button>
+            <img :src="imageViewerSrc" alt="Ảnh phóng to"
+                class="max-h-full max-w-full cursor-zoom-out object-contain"
+                @click.stop="imageViewerOpen = false">
         </div>
     </div>
 </x-layouts.app>

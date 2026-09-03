@@ -15,6 +15,8 @@ use Illuminate\Validation\ValidationException;
 use Modules\QuestionBank\Actions\CreateQuestionSessionAction;
 use Modules\QuestionBank\Http\Requests\CreateQuestionSessionRequest;
 use Modules\QuestionBank\Models\MedicalTaxonomyNode;
+use Modules\QuestionBank\Models\CoreClinicalTopic;
+use Modules\QuestionBank\Enums\TaxonomyStatus;
 use Modules\QuestionBank\Services\SessionQuestionSelector;
 use RuntimeException;
 
@@ -43,6 +45,25 @@ final class CustomSessionController extends Controller
             'exams' => TargetExams::selectable(),
             'articles' => ScopeFilters::articles(),
             'symptoms' => ScopeFilters::symptoms(),
+            'coreTopics' => CoreClinicalTopic::query()
+                ->where('status', TaxonomyStatus::Active)
+                ->with('section:id,name,sort_order')
+                ->get(['id', 'blueprint_section_id', 'name', 'slug', 'sort_order'])
+                ->sortBy(fn (CoreClinicalTopic $topic): string => sprintf(
+                    '%05d:%05d:%s',
+                    $topic->section?->sort_order ?? PHP_INT_MAX,
+                    $topic->sort_order,
+                    $topic->name,
+                ))
+                ->map(fn (CoreClinicalTopic $topic): array => [
+                    'id' => $topic->id,
+                    'blueprint_section_id' => $topic->blueprint_section_id,
+                    'name' => $topic->name,
+                    'slug' => $topic->slug,
+                    'section_name' => $topic->section?->name,
+                    'section_sort_order' => $topic->section?->sort_order,
+                ])
+                ->values(),
             'bookmarkFolders' => $bookmarkFolders,
         ]);
     }

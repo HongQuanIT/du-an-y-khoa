@@ -162,9 +162,7 @@ final class AdminMenu
                 'permission' => Permission::AdminPartnersManage->value,
                 'match' => [
                     'admin.partners.index',
-                    'admin.partners.create',
                     'admin.partners.show',
-                    'admin.partners.store',
                     'admin.partners.update',
                 ],
             ],

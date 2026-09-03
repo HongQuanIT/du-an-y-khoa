@@ -72,6 +72,38 @@ final class StudyPlanFlowTest extends TestCase
         $this->assertTrue($plan->tasks()->whereDate('date', Carbon::today())->exists());
     }
 
+    public function test_wizard_uses_the_same_taxonomy_scope_picker_as_question_bank(): void
+    {
+        $this->actingAs($this->user)
+            ->get(route('study-plan.create'))
+            ->assertOk()
+            ->assertSee('Ma trận đề thi')
+            ->assertSee('Chủ đề lâm sàng (128)')
+            ->assertSee('Chuyên khoa &amp; danh mục y khoa', false)
+            ->assertSee('Tags');
+    }
+
+    public function test_plan_uses_each_available_question_once_and_caps_the_last_day(): void
+    {
+        Question::query()->orderByDesc('id')->limit(2)->get()->each->delete();
+
+        $plan = $this->createPlan();
+        $tasks = $plan->tasks()
+            ->where('type', TaskType::Questions)
+            ->orderBy('date')
+            ->get();
+
+        $this->assertCount(2, $tasks);
+        $this->assertSame([5, 5], $tasks->pluck('target')->all());
+
+        $scheduledIds = $tasks
+            ->flatMap(fn (StudyPlanTask $task): array => $task->ref['question_ids'] ?? [])
+            ->all();
+
+        $this->assertCount(10, $scheduledIds);
+        $this->assertCount(10, array_unique($scheduledIds));
+    }
+
     public function test_plan_session_combines_multiple_difficulty_levels(): void
     {
         $questions = Question::query()->orderBy('id')->limit(2)->get();
@@ -259,7 +291,6 @@ final class StudyPlanFlowTest extends TestCase
             ->assertDontSee('data-testid="attending-tip-panel"', false)
             ->assertDontSee('data-testid="attending-tip-used-badge"', false);
     }
-
     public function test_answering_every_question_completes_the_task(): void
     {
         $plan = $this->createPlan();
@@ -268,6 +299,10 @@ final class StudyPlanFlowTest extends TestCase
         $this->actingAs($this->user)->post(route('study-plan.tasks.start', [$plan, $task]));
 
         $session = QuestionSession::firstOrFail();
+        $firstSessionQuestionId = $session->question_ids[0] ?? null;
+        if ($firstSessionQuestionId) {
+            Question::where('id', $firstSessionQuestionId)->update(['stem_image_path' => 'questions/study-plan-image.png']);
+        }
 
         foreach ($session->question_ids as $index => $questionId) {
             $question = Question::with('options')->findOrFail($questionId);
@@ -303,7 +338,9 @@ final class StudyPlanFlowTest extends TestCase
             ->get(route('study-plan.session.review', [$plan, $task]))
             ->assertOk()
             ->assertSee('Xem lại câu hỏi')
-            ->assertSee('Q1');
+            ->assertSee('Q1')
+            ->assertSee('study-plan-image.png')
+            ->assertSee('imageViewerOpen');
     }
 
     public function test_question_map_can_open_earlier_questions_after_finishing(): void
@@ -378,9 +415,18 @@ final class StudyPlanFlowTest extends TestCase
         $this->actingAs($this->user)
             ->get($reviewUrl)
             ->assertOk()
+            ->assertViewHas('items', fn (array $items): bool => count($items) === count($session->question_ids)
+                && isset($items[0]['question_id'], $items[0]['stem_html'])
+                && array_key_exists('selected', $items[0]['options'][0])
+                && array_key_exists('correct', $items[0]['options'][0]))
+            ->assertViewHas('initialFilter', 'needs')
+            ->assertViewHas('summaryUrl', route('study-plan.session.summary', [$plan, $task]))
+            ->assertSee('Danh sách câu hỏi')
+            ->assertSee('Đã gắn cờ')
             ->assertSee('Cần ôn')
             ->assertSee("filter: 'needs'", false)
-            ->assertSee("topic: 'Tim mạch'", false);
+            ->assertSee(route('study-plan.session.summary', [$plan, $task]), false)
+            ->assertDontSee(route('qbank.summary', $session), false);
     }
 
     public function test_flagging_a_question_persists_into_review(): void

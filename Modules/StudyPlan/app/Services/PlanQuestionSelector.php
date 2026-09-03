@@ -30,6 +30,14 @@ final class PlanQuestionSelector
      */
     public function forTask(StudyPlanTask $task, int $limit): array
     {
+        $assigned = array_values(array_unique(array_map(
+            'strval',
+            (array) ($task->ref['question_ids'] ?? []),
+        )));
+        if ($task->type === TaskType::Questions && $assigned !== []) {
+            return array_slice($assigned, 0, $limit);
+        }
+
         $userId = $task->plan->user_id;
         $filters = $task->plan->scopeFilters();
 

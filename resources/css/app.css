@@ -691,6 +691,19 @@ mark[data-hl='#10b981'] {
     color: var(--color-on-surface-variant);
 }
 
+/* Student view explanation & prose images */
+.prose img {
+    max-width: 220px;
+    width: auto;
+    height: auto;
+    border-radius: 0.5rem;
+    margin-top: 0.75rem;
+    margin-bottom: 0.75rem;
+    margin-left: 0;
+    margin-right: auto;
+    display: block;
+}
+
 /* Medical Laboratory & Content Table Styling */
 .prose table,
 .ql-editor table {

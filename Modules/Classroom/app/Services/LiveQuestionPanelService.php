@@ -8,6 +8,7 @@ use App\Support\Html\SafeHtml;
 use Illuminate\Support\Collection;
 use Modules\Classroom\Models\LiveSession;
 use Modules\QuestionBank\Models\Question;
+use Modules\QuestionBank\Services\QuestionKeyInfoRenderer;
 
 final class LiveQuestionPanelService
 {
@@ -120,11 +121,21 @@ final class LiveQuestionPanelService
 
         $revealedLookup = array_fill_keys($revealedOptionIds, true);
         $correctRevealed = false;
+        $optionRevealed = $revealAll;
+        $keyInfoRenderer = app(QuestionKeyInfoRenderer::class);
+        $rawStem = SafeHtml::forDisplay((string) $question->stem);
+        $hintStem = $keyInfoRenderer->render(
+            (string) $question->stem,
+            $keyInfoRenderer->resolvePhrases((string) $question->stem, (array) ($question->key_info ?? [])),
+        );
 
         $options = $question->options->sortBy('order')->values()->map(
-            function ($opt) use ($revealedLookup, $revealAll, &$correctRevealed): array {
+            function ($opt) use ($revealedLookup, $revealAll, &$correctRevealed, &$optionRevealed): array {
                 $optionId = (int) $opt->getKey();
                 $revealed = $revealAll || isset($revealedLookup[$optionId]);
+                if ($revealed) {
+                    $optionRevealed = true;
+                }
                 if ($revealed && $opt->is_correct) {
                     $correctRevealed = true;
                 }
@@ -142,11 +153,20 @@ final class LiveQuestionPanelService
 
         return [
             'id' => (string) $question->getKey(),
-            'stem' => SafeHtml::forDisplay((string) $question->stem),
+            // The moderator deck needs a raw stem for its initial render; the
+            // highlighted variant is selected client-side after an option click.
+            'stem' => $optionRevealed && ! $revealAll ? $hintStem : $rawStem,
+            'hint_stem' => $optionRevealed ? $hintStem : null,
             'stem_image_url' => $question->stemImageUrl(),
             'explanation' => ($revealAll || $correctRevealed)
                 ? SafeHtml::forDisplay((string) ($question->explanation ?? ''))
                 : null,
+            // Mở hỗ trợ học tập ngay khi giảng viên chọn một đáp án.
+            // The moderator deck retains this so optimistic UI updates match the server panel.
+            'attending_tip' => $optionRevealed
+                ? SafeHtml::forDisplay((string) ($question->attending_tip ?? ''))
+                : null,
+            'hints_revealed' => $optionRevealed,
             'difficulty' => $question->difficulty->value,
             'options' => $options,
         ];

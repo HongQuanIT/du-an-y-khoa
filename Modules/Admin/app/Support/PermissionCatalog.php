@@ -96,6 +96,7 @@ final class PermissionCatalog
                 $model = $byName->get($enum->value);
                 if ($model !== null) {
                     $portalRoles[] = $model;
+                    $byName->forget($enum->value);
                 }
             }
 
@@ -103,6 +104,12 @@ final class PermissionCatalog
                 'portal' => $portal,
                 'roles' => $portalRoles,
             ];
+        }
+
+        // Custom roles do not belong to the fixed product-role enum. Keep them
+        // visible and manageable in the Admin group.
+        foreach ($byName->values() as $customRole) {
+            $grouped[PortalGroup::Admin->value]['roles'][] = $customRole;
         }
 
         return $grouped;

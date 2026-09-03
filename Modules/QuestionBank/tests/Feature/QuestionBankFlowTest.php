@@ -557,6 +557,37 @@ final class QuestionBankFlowTest extends TestCase
         );
     }
 
+    public function test_qbank_review_displays_question_stem_image(): void
+    {
+        $question = $this->createQuestion(
+            $this->topic,
+            true,
+            Difficulty::Easy,
+            'Câu hỏi có ảnh điện tâm đồ',
+            'questions/test-ecg.png',
+        );
+
+        $session = QuestionSession::create([
+            'user_id' => $this->user->id,
+            'mode' => SessionMode::Study,
+            'status' => SessionStatus::Completed,
+            'source' => 'custom',
+            'question_ids' => [$question->id],
+            'total' => 1,
+            'answered_count' => 1,
+            'correct_count' => 1,
+        ]);
+
+        app(\Modules\QuestionBank\Services\QuestionSessionSnapshots::class)->capture($session);
+
+        $this->actingAs($this->user)
+            ->get(route('qbank.review', $session))
+            ->assertOk()
+            ->assertSee('Xem lại câu hỏi')
+            ->assertSee('test-ecg.png')
+            ->assertSee('imageViewerOpen');
+    }
+
     public function test_question_overview_paginates_after_five_rows(): void
     {
         for ($number = 1; $number <= 6; $number++) {

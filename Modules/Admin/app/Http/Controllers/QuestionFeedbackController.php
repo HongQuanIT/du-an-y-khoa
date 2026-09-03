@@ -25,11 +25,16 @@ final class QuestionFeedbackController extends Controller
             'status' => (string) $request->query('status', ''),
             'target' => (string) $request->query('target', ''),
             'category' => (string) $request->query('category', ''),
+            'question_id' => $request->query('question_id'),
         ];
 
         $query = QuestionFeedback::query()
             ->with(['option:id,question_id,label,content', 'question:id,stem,difficulty,status', 'session:id,user_id', 'user:id,name,email'])
             ->latest();
+
+        if ($filters['question_id']) {
+            $query->where('question_id', (int) $filters['question_id']);
+        }
 
         if ($filters['q'] !== '') {
             $keyword = $filters['q'];

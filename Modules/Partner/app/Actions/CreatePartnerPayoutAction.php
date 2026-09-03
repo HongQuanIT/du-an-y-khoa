@@ -9,6 +9,7 @@ use App\Support\Concerns\AsAction;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Modules\Billing\Support\MoneyFormatter;
 use Modules\Partner\Enums\CommissionStatus;
 use Modules\Partner\Enums\PayoutStatus;
 use Modules\Partner\Models\Partner;
@@ -43,12 +44,12 @@ final class CreatePartnerPayoutAction
             }
 
             $amount = (int) $commissions->sum('commission_cents');
-            $minCents = PartnerSettings::minPayoutCents();
+            $minimumPayout = PartnerSettings::minPayoutCents();
 
-            if ($minCents > 0 && $amount < $minCents) {
+            if ($minimumPayout > 0 && $amount < $minimumPayout) {
                 throw ValidationException::withMessages([
-                    'period' => 'Tổng hoa hồng ('.number_format($amount / 100).' ₫) chưa đạt mức tối thiểu '
-                        .number_format($minCents / 100).' ₫.',
+                    'period' => 'Tổng hoa hồng ('.MoneyFormatter::vnd($amount).') chưa đạt mức tối thiểu '
+                        .MoneyFormatter::vnd($minimumPayout).'.',
                 ]);
             }
 

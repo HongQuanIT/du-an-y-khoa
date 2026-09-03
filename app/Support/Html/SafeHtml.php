@@ -119,7 +119,7 @@ final class SafeHtml
 
                 $alt = self::extractAttr($attrs, 'alt') ?? '';
 
-                return '<img src="'.e($src).'" alt="'.e($alt).'" class="max-w-full h-auto rounded-lg my-2">';
+                return '<img src="'.e($src).'" alt="'.e($alt).'" class="max-w-[220px] w-auto h-auto rounded-lg my-3 block ml-0 mr-auto">';
             },
             $clean,
         ) ?? $clean;
@@ -240,7 +240,9 @@ final class SafeHtml
             return null;
         }
 
-        return html_entity_decode($m[2] !== '' ? $m[2] : ($m[3] !== '' ? $m[3] : $m[4]), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $val = $m[2] ?? $m[3] ?? $m[4] ?? '';
+
+        return html_entity_decode($val, ENT_QUOTES | ENT_HTML5, 'UTF-8');
     }
 
     private static function isSafeUrl(string $url): bool

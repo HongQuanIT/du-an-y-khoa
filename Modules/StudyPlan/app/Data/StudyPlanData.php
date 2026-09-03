@@ -43,6 +43,10 @@ final class StudyPlanData extends DataTransferObject
         public readonly array $difficulties = [],
         public readonly array $questionStatuses = [],
         public readonly string $questionStatusMode = 'latest',
+        public readonly ?int $blueprintId = null,
+        public readonly ?int $blueprintSectionId = null,
+        public readonly array $coreClinicalTopicIds = [],
+        public readonly array $tagIds = [],
     ) {}
 
     /** Rough time budget shown in the wizard preview (~2.25 min per question). */
@@ -69,6 +73,10 @@ final class StudyPlanData extends DataTransferObject
             'difficulty' => count($this->difficulties) === 1 ? $this->difficulties[0] : null,
             'question_statuses' => array_values($this->questionStatuses),
             'question_status_mode' => $this->questionStatusMode,
+            'blueprint_id' => $this->blueprintId,
+            'blueprint_section_id' => $this->blueprintSectionId,
+            'core_clinical_topic_ids' => array_values($this->coreClinicalTopicIds),
+            'tag_ids' => array_values($this->tagIds),
         ];
     }
 }

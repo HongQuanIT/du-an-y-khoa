@@ -1,4 +1,5 @@
 @php
+    use Modules\Billing\Support\MoneyFormatter;
     use Modules\Partner\Support\PartnerPeriodFilter;
 
     $sortUrl = function (string $sort) use ($queryParams, $filters): string {
@@ -21,12 +22,7 @@
 
 <x-layouts.admin title="Cộng tác viên">
     <x-admin.page-header title="Cộng tác viên"
-        description="Hiệu suất theo kỳ; mã còn hiệu lực là trạng thái hiện tại.">
-        <x-slot:actions>
-            <a href="{{ route('admin.partners.create') }}"
-                class="rounded-lg bg-primary px-4 py-2 font-label-md text-label-md text-on-primary hover:opacity-90">Thêm CTV</a>
-        </x-slot:actions>
-    </x-admin.page-header>
+        description="Hiệu suất theo kỳ; mã còn hiệu lực là trạng thái hiện tại." />
 
     <x-admin.flash />
 
@@ -117,11 +113,11 @@
         </div>
         <div class="rounded-xl border border-outline-variant bg-surface p-4">
             <p class="font-label-sm text-on-surface-variant">Doanh số kỳ</p>
-            <p class="mt-1 font-headline-sm text-headline-sm">{{ number_format($totals['gross_cents'] / 100) }} ₫</p>
+            <p class="mt-1 font-headline-sm text-headline-sm">{{ MoneyFormatter::vnd((int) $totals['gross_cents']) }}</p>
         </div>
         <div class="rounded-xl border border-outline-variant bg-surface p-4">
             <p class="font-label-sm text-on-surface-variant">Hoa hồng kỳ</p>
-            <p class="mt-1 font-headline-sm text-headline-sm">{{ number_format($totals['commission_cents'] / 100) }} ₫</p>
+            <p class="mt-1 font-headline-sm text-headline-sm">{{ MoneyFormatter::vnd((int) $totals['commission_cents']) }}</p>
         </div>
     </div>
 
@@ -175,8 +171,8 @@
                         </td>
                         <td class="px-4 py-3">{{ number_format($activeCodes) }}</td>
                         <td class="px-4 py-3">{{ number_format($referrals) }}</td>
-                        <td class="px-4 py-3">{{ number_format($gross / 100) }} ₫</td>
-                        <td class="px-4 py-3 font-label-md">{{ number_format($commission / 100) }} ₫</td>
+                        <td class="px-4 py-3">{{ MoneyFormatter::vnd($gross) }}</td>
+                        <td class="px-4 py-3 font-label-md">{{ MoneyFormatter::vnd($commission) }}</td>
                         <td class="px-4 py-3">{{ $partner->status->label() }}</td>
                         <td class="px-4 py-3">
                             <a href="{{ route('admin.partners.show', $partner) }}" class="text-primary hover:underline">Chi tiết</a>
@@ -193,8 +189,8 @@
                     <tr>
                         <td class="px-4 py-3" colspan="3">Tổng ({{ number_format($totals['partners']) }} CTV khớp lọc)</td>
                         <td class="px-4 py-3">{{ number_format($totals['referrals']) }}</td>
-                        <td class="px-4 py-3">{{ number_format($totals['gross_cents'] / 100) }} ₫</td>
-                        <td class="px-4 py-3">{{ number_format($totals['commission_cents'] / 100) }} ₫</td>
+                        <td class="px-4 py-3">{{ MoneyFormatter::vnd((int) $totals['gross_cents']) }}</td>
+                        <td class="px-4 py-3">{{ MoneyFormatter::vnd((int) $totals['commission_cents']) }}</td>
                         <td class="px-4 py-3" colspan="2"></td>
                     </tr>
                 </tfoot>

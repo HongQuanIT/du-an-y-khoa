@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\QuestionBank\Services;
 
 use App\Support\Html\SafeHtml;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
@@ -141,11 +142,26 @@ final class QuestionSessionInsights
         $attempts = $this->attempts($session);
         $questions = $this->snapshots->questionMap($session);
         $items = [];
+        $fallbackStemImages = null;
 
         foreach ($questionIds as $position => $questionId) {
             $question = $questions[(string) $questionId] ?? null;
             if (! $question instanceof Question) {
                 continue;
+            }
+
+            $stemImageUrl = $question->stemImageUrl();
+            if ($stemImageUrl === null) {
+                $fallbackStemImages ??= Question::withTrashed()
+                    ->whereIn('id', $questionIds)
+                    ->pluck('stem_image_path', 'id')
+                    ->all();
+                $fallbackPath = $fallbackStemImages[(string) $questionId] ?? $fallbackStemImages[(int) $questionId] ?? null;
+                if (is_string($fallbackPath) && $fallbackPath !== '') {
+                    $stemImageUrl = str_starts_with($fallbackPath, 'http://') || str_starts_with($fallbackPath, 'https://') || str_starts_with($fallbackPath, '/storage/')
+                        ? $fallbackPath
+                        : Storage::disk('public')->url($fallbackPath);
+                }
             }
 
             $attempt = $attempts[(string) $questionId] ?? null;
@@ -169,6 +185,7 @@ final class QuestionSessionInsights
                 'excerpt' => Str::limit(strip_tags((string) $question->stem), 140),
                 'stem' => (string) $question->stem,
                 'stem_html' => (string) ($annotation['stem_html'] ?? SafeHtml::forDisplay((string) $question->stem)),
+                'stem_image_url' => $stemImageUrl,
                 'note' => (string) ($annotation['note'] ?? ''),
                 'note_html' => (string) ($annotation['note_html'] ?? nl2br(e((string) ($annotation['note'] ?? '')))),
                 'flagged' => (bool) ($annotation['flagged']

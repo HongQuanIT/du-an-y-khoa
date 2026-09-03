@@ -11,6 +11,7 @@ use App\Support\Audit\Enums\AuditAction;
 use App\Support\Http\Responses\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Modules\Classroom\Events\LiveQuestionChanged;
 use Modules\Classroom\Models\Classroom;
 use Modules\Classroom\Models\LiveSession;
@@ -32,52 +33,66 @@ final class LiveQuestionController extends Controller
             'option_id' => ['nullable', 'integer'],
         ]);
 
-        $ids = $liveSession->questionIds();
-        abort_if($ids === [], 422, 'Session has no question set.');
+        // Several answer clicks can arrive at nearly the same time. Lock the
+        // session row so each toggle starts from the previous saved state,
+        // rather than allowing concurrent requests to overwrite one another.
+        $result = DB::transaction(function () use ($liveSession, $validated, $panel): array {
+            $liveSession = LiveSession::query()
+                ->lockForUpdate()
+                ->findOrFail($liveSession->getKey());
+            $ids = $liveSession->questionIds();
+            abort_if($ids === [], 422, 'Session has no question set.');
 
-        $updates = [];
-        $targetIndex = (int) $liveSession->current_question_index;
-        $before = [
-            'current_question_index' => $targetIndex,
-            'revealed_option_ids' => $liveSession->revealedOptionIds(),
-            'show_answer' => (bool) $liveSession->show_answer,
-        ];
+            $updates = [];
+            $targetIndex = (int) $liveSession->current_question_index;
+            $before = [
+                'current_question_index' => $targetIndex,
+                'revealed_option_ids' => $liveSession->revealedOptionIds(),
+                'show_answer' => (bool) $liveSession->show_answer,
+            ];
 
-        if (array_key_exists('index', $validated)) {
-            $targetIndex = min(
-                max(0, (int) $validated['index']),
-                count($ids) - 1,
-            );
-            $updates['current_question_index'] = $targetIndex;
-        }
+            if (array_key_exists('index', $validated)) {
+                $targetIndex = min(max(0, (int) $validated['index']), count($ids) - 1);
+                $updates['current_question_index'] = $targetIndex;
+            }
 
-        if (array_key_exists('option_id', $validated) && $validated['option_id'] !== null) {
-            $optionId = (int) $validated['option_id'];
-            $questionId = $ids[$targetIndex] ?? null;
-            abort_if($questionId === null, 422, 'Session has no question set.');
+            if (array_key_exists('option_id', $validated) && $validated['option_id'] !== null) {
+                $optionId = (int) $validated['option_id'];
+                $questionId = $ids[$targetIndex] ?? null;
+                abort_if($questionId === null, 422, 'Session has no question set.');
 
-            $allowed = QuestionOption::query()
-                ->where('question_id', $questionId)
-                ->pluck('id')
-                ->map(static fn (mixed $id): int => (int) $id)
-                ->all();
-            abort_unless(in_array($optionId, $allowed, true), 422, 'Đáp án không thuộc câu đang chữa.');
+                $allowed = QuestionOption::query()
+                    ->where('question_id', $questionId)
+                    ->pluck('id')
+                    ->map(static fn (mixed $id): int => (int) $id)
+                    ->all();
+                abort_unless(in_array($optionId, $allowed, true), 422, 'Đáp án không thuộc câu đang chữa.');
 
-            $revealed = $liveSession->revealedOptionIds();
-            $revealed = in_array($optionId, $revealed, true)
-                ? array_values(array_filter($revealed, static fn (int $id): bool => $id !== $optionId))
-                : [...$revealed, $optionId];
+                $revealed = $liveSession->revealedOptionIds();
+                $revealed = in_array($optionId, $revealed, true)
+                    ? array_values(array_filter($revealed, static fn (int $id): bool => $id !== $optionId))
+                    : [...$revealed, $optionId];
 
-            $updates['revealed_option_ids'] = $revealed;
-            $updates['show_answer'] = false;
-        }
+                $updates['revealed_option_ids'] = $revealed;
+                $updates['show_answer'] = false;
+            }
 
-        if ($updates !== []) {
-            $liveSession->update($updates);
-            $liveSession->refresh();
-        }
+            if ($updates !== []) {
+                $liveSession->update($updates);
+                $liveSession->refresh();
+            }
 
-        $data = $panel->panel($liveSession);
+            return compact('liveSession', 'before', 'updates') + ['data' => $panel->panel($liveSession)];
+        });
+
+        /** @var LiveSession $liveSession */
+        $liveSession = $result['liveSession'];
+        /** @var array<string, mixed> $before */
+        $before = $result['before'];
+        /** @var array<string, mixed> $updates */
+        $updates = $result['updates'];
+        /** @var array<string, mixed> $data */
+        $data = $result['data'];
         event(new LiveQuestionChanged(
             $liveSession,
             $data['index'],

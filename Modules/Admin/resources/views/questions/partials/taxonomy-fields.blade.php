@@ -146,6 +146,14 @@
                 </label>
             </template>
         </div>
+        <div class="mt-2 flex flex-wrap gap-1.5">
+            <template x-for="id in selectedMedicalNodeIds.filter(nid => !['disease','condition','symptom','sign','clinical_finding','lab_finding','imaging_finding','concept'].includes(selectedMedicalNodes[nid]?.node_type))" :key="'gen-chip-'+id">
+                <span class="inline-flex items-center gap-1 rounded-lg bg-surface-container px-2 py-1 text-xs font-medium text-on-surface">
+                    <span x-text="selectedMedicalNodes[id]?.name || ('#'+id)"></span>
+                    <button type="button" @click="removeMedicalNode(id)" class="material-symbols-outlined text-[14px]">close</button>
+                </span>
+            </template>
+        </div>
         <template x-for="id in selectedMedicalNodeIds" :key="'med-'+id">
             <input type="hidden" name="medical_taxonomy_node_ids[]" :value="id">
         </template>
@@ -204,6 +212,7 @@
                 for (const group of this.nodeGroups) {
                     await this.searchNodes(group);
                 }
+                await this.searchGeneralNodes();
             },
             async loadBlueprints() {
                 const res = await fetch(this.urls.blueprints);

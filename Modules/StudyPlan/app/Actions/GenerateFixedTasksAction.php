@@ -10,13 +10,14 @@ use Illuminate\Support\Facades\DB;
 use Modules\StudyPlan\Enums\TaskStatus;
 use Modules\StudyPlan\Enums\TaskType;
 use Modules\StudyPlan\Models\StudyPlan;
+use Modules\StudyPlan\Services\StudyPlanQuestionPool;
 
 /**
  * Use case: lay out the day-by-day task grid for a plan.
  *
- * Fixed strategy: the daily goal is constant, topics rotate through the scope
- * so each day focuses on one area, and every study week ends with a review
- * task for previously missed questions.
+ * Fixed strategy: eligible questions are reserved once, split by the daily
+ * maximum, and stop when the selected scope is exhausted. Every study week
+ * may end with a review task for previously missed questions.
  *
  * Regeneration (`$from`) only replaces pending future tasks — finished days and
  * their sessions stay untouched.
@@ -24,6 +25,8 @@ use Modules\StudyPlan\Models\StudyPlan;
 final class GenerateFixedTasksAction
 {
     use AsAction;
+
+    public function __construct(private readonly StudyPlanQuestionPool $questionPool) {}
 
     /** Weekly review target as a share of the daily question goal. */
     private const REVIEW_RATIO = 0.5;
@@ -45,6 +48,17 @@ final class GenerateFixedTasksAction
 
             $topics = $plan->scopeTopicIds();
             $weekdays = $plan->studyWeekdays();
+            $alreadyScheduled = $plan->tasks()
+                ->where('status', '!=', TaskStatus::Pending->value)
+                ->get()
+                ->flatMap(fn ($task) => (array) ($task->ref['question_ids'] ?? []))
+                ->map(fn ($id): string => (string) $id)
+                ->all();
+            $questionIds = array_values(array_diff(
+                $this->questionPool->questionIds($plan),
+                $alreadyScheduled,
+            ));
+            $dailyPools = array_chunk($questionIds, max(1, $plan->daily_goal_questions));
             $rows = [];
             $index = 0;
             $now = Carbon::now();
@@ -54,16 +68,23 @@ final class GenerateFixedTasksAction
                     continue;
                 }
 
+                if (! isset($dailyPools[$index])) {
+                    break;
+                }
+
+                $questionsForDay = $dailyPools[$index];
+
                 $rows[] = [
                     'study_plan_id' => $plan->getKey(),
                     'date' => $date->toDateString(),
                     'type' => TaskType::Questions->value,
-                    'target' => $plan->daily_goal_questions,
+                    'target' => count($questionsForDay),
                     'done' => 0,
                     'status' => TaskStatus::Pending->value,
                     'ref' => json_encode([
-                        'medical_taxonomy_node_ids' => $this->topicsForDay($topics, $index),
-                        'topic_ids' => $this->topicsForDay($topics, $index),
+                        'medical_taxonomy_node_ids' => $topics,
+                        'topic_ids' => $topics,
+                        'question_ids' => $questionsForDay,
                         'session_id' => null,
                         'mode' => 'study',
                     ]),
@@ -71,7 +92,7 @@ final class GenerateFixedTasksAction
                     'updated_at' => $now,
                 ];
 
-                if ($this->closesTheWeek($date, $weekdays)) {
+                if ($this->closesTheWeek($date, $weekdays) && isset($dailyPools[$index + 1])) {
                     $rows[] = [
                         'study_plan_id' => $plan->getKey(),
                         'date' => $date->toDateString(),
@@ -99,21 +120,6 @@ final class GenerateFixedTasksAction
 
             return count($rows);
         });
-    }
-
-    /**
-     * One topic per day, rotating; an empty scope means "any topic".
-     *
-     * @param  array<int, int>  $topics
-     * @return array<int, int>
-     */
-    private function topicsForDay(array $topics, int $index): array
-    {
-        if ($topics === []) {
-            return [];
-        }
-
-        return [$topics[$index % count($topics)]];
     }
 
     /** @param  array<int, int>  $weekdays */

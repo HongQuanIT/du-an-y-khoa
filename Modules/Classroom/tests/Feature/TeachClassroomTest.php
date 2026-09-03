@@ -17,6 +17,7 @@ use Modules\Classroom\Enums\MemberStatus;
 use Modules\Classroom\Models\Classroom;
 use Modules\Classroom\Models\ClassroomMember;
 use Modules\Classroom\Models\LiveSession;
+use Modules\Notification\Models\UserNotification;
 use Modules\Exam\Enums\ExamStatus;
 use Modules\Exam\Models\Exam;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
@@ -47,6 +48,8 @@ final class TeachClassroomTest extends TestCase
     public function test_instructor_can_list_and_create_teach_classroom(): void
     {
         $instructor = $this->instructor();
+        $admin = User::factory()->create();
+        $admin->assignRole(Role::Admin->value);
 
         $this->actingAs($instructor)
             ->get(route('teach.classes.index'))
@@ -78,6 +81,16 @@ final class TeachClassroomTest extends TestCase
         $this->assertSame(ClassroomPurpose::FeedbackReview, $classroom->purpose);
         $this->assertSame($instructor->id, $classroom->host_user_id);
         $this->assertSame(ClassroomStatus::PendingApproval, $classroom->status);
+        $this->assertDatabaseHas('user_notifications', [
+            'user_id' => $admin->id,
+            'type' => 'classroom.pending_approval',
+            'title' => 'Có lớp học mới chờ duyệt',
+            'action_url' => route('admin.classrooms.show', $classroom),
+        ]);
+        $this->assertStringContainsString(
+            $instructor->name,
+            UserNotification::query()->where('user_id', $admin->id)->firstOrFail()->body,
+        );
 
         $this->actingAs($instructor)
             ->get(route('teach.classes.show', $classroom))

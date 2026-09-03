@@ -3,6 +3,8 @@
 namespace Modules\QuestionBank\Providers;
 
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
+use Modules\QuestionBank\Data\QuestionSessionProgressed;
+use Modules\QuestionBank\Listeners\SyncQuestionStatsOnSessionProgress;
 
 class EventServiceProvider extends ServiceProvider
 {
@@ -11,7 +13,11 @@ class EventServiceProvider extends ServiceProvider
      *
      * @var array<string, array<int, string>>
      */
-    protected $listen = [];
+    protected $listen = [
+        QuestionSessionProgressed::class => [
+            SyncQuestionStatsOnSessionProgress::class,
+        ],
+    ];
 
     /**
      * Indicates if events should be discovered.

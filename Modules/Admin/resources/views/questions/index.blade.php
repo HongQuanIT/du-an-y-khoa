@@ -9,352 +9,511 @@
         'correct_rate' => false,
         'reports' => false,
     ];
+
+    $hasActiveFilters = filled($filters['q'])
+        || filled($filters['status'])
+        || filled($filters['difficulty'])
+        || filled($filters['is_free'])
+        || filled($filters['has_reports'])
+        || filled($filters['medical_taxonomy_node_id']);
 @endphp
 
-<x-layouts.admin :title="$isReviewer ? 'Ngân hàng câu hỏi' : 'Câu hỏi của tôi'">
+<x-layouts.admin :title="$isReviewer ? 'Ngân hàng câu hỏi — Quản trị nội dung' : 'Câu hỏi của tôi — Quản trị nội dung'">
     <div
         x-data="questionColumnPrefs({
             storageKey: 'admin.questions.columns.v1',
             defaults: @js($defaultColumns),
             isReviewer: @js($isReviewer),
         })"
+        class="space-y-6"
     >
-    <x-admin.page-header :title="$isReviewer ? 'Ngân hàng câu hỏi' : 'Câu hỏi của tôi'"
-        :description="$isReviewer ? 'Quản lý, kiểm duyệt và xuất bản câu hỏi trong hệ thống.' : 'Bạn chỉ nhìn thấy các câu hỏi do chính mình tạo.'">
-        <x-slot:actions>
-            @if ($canCreate)
-                <a href="{{ route('admin.questions.create') }}"
-                    class="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 font-label-md font-semibold text-on-primary shadow-sm transition-all hover:bg-primary/90 hover:shadow">
-                    <span class="material-symbols-outlined text-[20px]">add</span>
-                    Tạo câu hỏi mới
-                </a>
-            @endif
-            <div class="relative z-[70]" @keydown.escape.window="open = false">
-                <button type="button"
-                    x-ref="columnTrigger"
-                    @click="open = !open"
-                    class="inline-flex items-center gap-2 rounded-xl border border-outline-variant bg-surface px-4 py-2.5 font-label-md font-semibold text-on-surface shadow-sm transition-colors hover:bg-surface-container-low"
-                    :aria-expanded="open"
-                    aria-haspopup="true">
-                    <span class="material-symbols-outlined text-[20px]">view_column</span>
-                    Cột hiển thị
-                </button>
-                <template x-teleport="body">
-                    <div x-show="open"
-                        x-cloak
-                        x-transition.opacity.duration.100ms
-                        class="fixed inset-0 z-[80]"
-                        aria-hidden="true">
-                        <div class="absolute inset-0 bg-transparent" @click="open = false"></div>
-                        <div
-                            @click.stop
-                            :style="panelStyle"
-                            class="absolute w-64 rounded-2xl border border-outline-variant bg-surface p-3 shadow-xl"
-                            role="dialog"
-                            aria-label="Chọn cột hiển thị">
-                            <p class="mb-2 px-1 font-label-sm font-semibold text-on-surface-variant">Chọn cột cần xem</p>
-                            <div class="space-y-1">
-                                <label class="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-on-surface hover:bg-surface-container-low">
-                                    <input type="checkbox" checked disabled class="size-4 rounded text-primary opacity-60">
-                                    Nội dung câu hỏi
-                                </label>
-                                <template x-for="opt in toggleableColumns" :key="opt.key">
-                                    <label class="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-on-surface hover:bg-surface-container-low"
-                                        x-show="opt.key !== 'creator' || isReviewer">
-                                        <input type="checkbox" class="size-4 rounded text-primary focus:ring-primary"
-                                            :checked="cols[opt.key]"
-                                            @change="toggle(opt.key)">
-                                        <span x-text="opt.label"></span>
+        {{-- Header chính chuẩn SEO với thẻ H1 --}}
+        <header class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <h1 class="font-headline-md text-headline-md font-bold tracking-tight text-on-surface">
+                    {{ $isReviewer ? 'Ngân hàng câu hỏi' : 'Câu hỏi của tôi' }}
+                </h1>
+                <p class="mt-1 font-body-sm text-body-sm text-on-surface-variant">
+                    {{ $isReviewer ? 'Quản lý, kiểm duyệt, lọc theo danh mục chuyên khoa và xuất bản câu hỏi y khoa.' : 'Danh sách và theo dõi các câu hỏi do chính bạn biên soạn.' }}
+                </p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2.5">
+                @if ($canCreate)
+                    <a href="{{ route('admin.questions.create') }}"
+                        id="btn-create-question"
+                        class="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 font-label-md font-semibold text-on-primary shadow-sm transition-all hover:bg-primary/90 hover:shadow">
+                        <span class="material-symbols-outlined text-[20px]" aria-hidden="true">add</span>
+                        Tạo câu hỏi mới
+                    </a>
+                @endif
+
+                <div class="relative z-[70]" @keydown.escape.window="open = false">
+                    <button type="button"
+                        id="btn-toggle-columns"
+                        x-ref="columnTrigger"
+                        @click="open = !open"
+                        class="inline-flex items-center gap-2 rounded-xl border border-outline-variant bg-surface px-4 py-2.5 font-label-md font-semibold text-on-surface shadow-sm transition-colors hover:bg-surface-container-low"
+                        :aria-expanded="open"
+                        aria-haspopup="dialog"
+                        aria-label="Tùy chọn cột hiển thị trong bảng">
+                        <span class="material-symbols-outlined text-[20px]" aria-hidden="true">view_column</span>
+                        Cột hiển thị
+                    </button>
+
+                    <template x-teleport="body">
+                        <div x-show="open"
+                            x-cloak
+                            x-transition.opacity.duration.100ms
+                            class="fixed inset-0 z-[80]"
+                            aria-hidden="true">
+                            <div class="absolute inset-0 bg-transparent" @click="open = false"></div>
+                            <div
+                                @click.stop
+                                :style="panelStyle"
+                                class="absolute w-64 rounded-2xl border border-outline-variant bg-surface p-3 shadow-xl"
+                                role="dialog"
+                                aria-label="Chọn cột cần xem">
+                                <p class="mb-2 px-1 font-label-sm font-semibold text-on-surface-variant">Chọn cột cần xem</p>
+                                <div class="space-y-1">
+                                    <label class="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-on-surface hover:bg-surface-container-low">
+                                        <input type="checkbox" checked disabled class="size-4 rounded text-primary opacity-60">
+                                        Nội dung câu hỏi
                                     </label>
-                                </template>
-                                <label class="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-on-surface hover:bg-surface-container-low">
-                                    <input type="checkbox" checked disabled class="size-4 rounded text-primary opacity-60">
-                                    Thao tác
-                                </label>
+                                    <template x-for="opt in toggleableColumns" :key="opt.key">
+                                        <label class="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-on-surface hover:bg-surface-container-low"
+                                            x-show="opt.key !== 'creator' || isReviewer">
+                                            <input type="checkbox" class="size-4 rounded text-primary focus:ring-primary"
+                                                :checked="cols[opt.key]"
+                                                @change="toggle(opt.key)">
+                                            <span x-text="opt.label"></span>
+                                        </label>
+                                    </template>
+                                    <label class="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-on-surface hover:bg-surface-container-low">
+                                        <input type="checkbox" checked disabled class="size-4 rounded text-primary opacity-60">
+                                        Thao tác
+                                    </label>
+                                </div>
+                                <button type="button" @click="reset()"
+                                    class="mt-2 w-full rounded-xl border border-outline-variant px-3 py-2 text-xs font-semibold text-on-surface-variant hover:bg-surface-container-low">
+                                    Đặt lại mặc định
+                                </button>
                             </div>
-                            <button type="button" @click="reset()"
-                                class="mt-2 w-full rounded-xl border border-outline-variant px-3 py-2 text-xs font-semibold text-on-surface-variant hover:bg-surface-container-low">
-                                Đặt lại mặc định
-                            </button>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </header>
+
+        <x-admin.flash />
+
+        {{-- Section 1: Thống kê tổng quan --}}
+        <section aria-labelledby="heading-stats">
+            <h2 id="heading-stats" class="sr-only">Thống kê tổng quan câu hỏi</h2>
+            <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <div class="rounded-2xl border border-outline-variant bg-surface p-4 shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                            <span class="material-symbols-outlined text-[22px]" aria-hidden="true">help_center</span>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="truncate text-label-sm font-medium text-on-surface-variant">Tổng câu hỏi</p>
+                            <p class="text-headline-sm font-bold text-on-surface">{{ number_format($stats['total']) }}</p>
                         </div>
                     </div>
-                </template>
-            </div>
-        </x-slot:actions>
-    </x-admin.page-header>
+                </div>
 
-    <x-admin.flash />
+                <div class="rounded-2xl border border-outline-variant bg-surface p-4 shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-success/10 text-success">
+                            <span class="material-symbols-outlined text-[22px]" aria-hidden="true">check_circle</span>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="truncate text-label-sm font-medium text-on-surface-variant">Đã xuất bản</p>
+                            <p class="text-headline-sm font-bold text-on-surface">{{ number_format($stats['published']) }}</p>
+                        </div>
+                    </div>
+                </div>
 
-    <!-- Summary Stats Bar -->
-    <div class="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <div class="rounded-2xl border border-outline-variant bg-surface p-4 shadow-sm">
-            <div class="flex items-center gap-3">
-                <div class="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <span class="material-symbols-outlined text-[22px]">help_center</span>
-                </div>
-                <div>
-                    <p class="text-label-sm font-medium text-on-surface-variant">Tổng số câu hỏi</p>
-                    <p class="text-headline-sm font-bold text-on-surface">{{ number_format($stats['total']) }}</p>
-                </div>
-            </div>
-        </div>
-        <div class="rounded-2xl border border-outline-variant bg-surface p-4 shadow-sm">
-            <div class="flex items-center gap-3">
-                <div class="flex size-10 items-center justify-center rounded-xl bg-success/10 text-success">
-                    <span class="material-symbols-outlined text-[22px]">check_circle</span>
-                </div>
-                <div>
-                    <p class="text-label-sm font-medium text-on-surface-variant">Đã xuất bản</p>
-                    <p class="text-headline-sm font-bold text-on-surface">
-                        {{ number_format($stats['published']) }}
-                    </p>
-                </div>
-            </div>
-        </div>
-        <a href="{{ route('admin.questions.index', ['status' => 'in_review']) }}"
-            class="rounded-2xl border border-outline-variant bg-surface p-4 shadow-sm transition-colors hover:border-warning/40 hover:bg-warning/5">
-            <div class="flex items-center gap-3">
-                <div class="flex size-10 items-center justify-center rounded-xl bg-warning/10 text-warning">
-                    <span class="material-symbols-outlined text-[22px]">hourglass_empty</span>
-                </div>
-                <div>
-                    <p class="text-label-sm font-medium text-on-surface-variant">Chờ duyệt</p>
-                    <p class="text-headline-sm font-bold text-on-surface">
-                        {{ number_format($stats['pending']) }}
-                    </p>
-                </div>
-            </div>
-        </a>
-        <div class="rounded-2xl border border-outline-variant bg-surface p-4 shadow-sm">
-            <div class="flex items-center gap-3">
-                <div class="flex size-10 items-center justify-center rounded-xl bg-secondary/10 text-secondary">
-                    <span class="material-symbols-outlined text-[22px]">stars</span>
-                </div>
-                <div>
-                    <p class="text-label-sm font-medium text-on-surface-variant">Miễn phí</p>
-                    <p class="text-headline-sm font-bold text-on-surface">
-                        {{ number_format($stats['free']) }}
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
+                <a href="{{ route('admin.questions.index', ['status' => 'in_review']) }}"
+                    id="stats-pending-review-link"
+                    class="rounded-2xl border border-outline-variant bg-surface p-4 shadow-sm transition-colors hover:border-warning/40 hover:bg-warning/5"
+                    aria-label="Xem các câu hỏi chờ duyệt: {{ number_format($stats['pending']) }} câu">
+                    <div class="flex items-center gap-3">
+                        <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-warning/10 text-warning">
+                            <span class="material-symbols-outlined text-[22px]" aria-hidden="true">hourglass_empty</span>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="truncate text-label-sm font-medium text-on-surface-variant">Chờ duyệt</p>
+                            <p class="text-headline-sm font-bold text-on-surface">{{ number_format($stats['pending']) }}</p>
+                        </div>
+                    </div>
+                </a>
 
-    <!-- Filter Card -->
-    <div class="mb-6 rounded-2xl border border-outline-variant bg-surface p-5 shadow-sm">
-        <form method="get" action="{{ route('admin.questions.index') }}" class="grid grid-cols-1 items-end gap-4 sm:grid-cols-12">
-            <div class="sm:col-span-3">
-                <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant" for="q">Tìm kiếm từ khóa</label>
-                <div class="relative">
-                    <span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant">search</span>
-                    <input id="q" name="q" value="{{ $filters['q'] }}" type="search"
-                        placeholder="Mã hoặc nội dung câu hỏi..."
-                        class="h-11 w-full rounded-xl border border-outline-variant bg-surface-container-lowest pr-3 pl-9 font-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
+                <div class="rounded-2xl border border-outline-variant bg-surface p-4 shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-secondary/10 text-secondary">
+                            <span class="material-symbols-outlined text-[22px]" aria-hidden="true">stars</span>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="truncate text-label-sm font-medium text-on-surface-variant">Miễn phí</p>
+                            <p class="text-headline-sm font-bold text-on-surface">{{ number_format($stats['free']) }}</p>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="sm:col-span-2">
-                <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant" for="status">Trạng thái</label>
-                <select id="status" name="status" class="h-11 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 font-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
-                    <option value="">Tất cả trạng thái</option>
-                    @foreach ($statuses as $status)
-                        <option value="{{ $status->value }}" @selected($filters['status'] === $status->value)>{{ $status->label() }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="sm:col-span-2">
-                <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant" for="difficulty">Độ khó</label>
-                <select id="difficulty" name="difficulty" class="h-11 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 font-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
-                    <option value="">Tất cả độ khó</option>
-                    @foreach ($difficulties as $difficulty)
-                        <option value="{{ $difficulty->value }}" @selected($filters['difficulty'] === $difficulty->value)>{{ $difficulty->label() }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="sm:col-span-2">
-                <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant" for="is_free">Truy cập</label>
-                <select id="is_free" name="is_free" class="h-11 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 font-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
-                    <option value="">Tất cả</option>
-                    <option value="1" @selected($filters['is_free'] === '1')>Miễn phí</option>
-                    <option value="0" @selected($filters['is_free'] === '0')>Premium</option>
-                </select>
-            </div>
-            <div class="sm:col-span-2">
-                <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant" for="has_reports">Báo lỗi</label>
-                <select id="has_reports" name="has_reports" class="h-11 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 font-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
-                    <option value="">Tất cả</option>
-                    <option value="1" @selected(($filters['has_reports'] ?? null) === '1')>Có báo lỗi</option>
-                </select>
-            </div>
-            <div class="sm:col-span-1 flex gap-2">
-                <button type="submit" class="inline-flex h-11 w-full items-center justify-center rounded-xl bg-primary font-label-md font-semibold text-on-primary hover:bg-primary/90">
-                    Lọc
-                </button>
-            </div>
-        </form>
-    </div>
+        </section>
 
-    <!-- Data Table Card -->
-    <div class="overflow-hidden rounded-2xl border border-outline-variant bg-surface shadow-sm">
-        <div class="overflow-x-auto">
-            <table class="w-full text-left font-body-sm text-on-surface">
-                <thead class="border-b border-outline-variant bg-surface-container-low font-label-md text-on-surface-variant">
-                    <tr>
-                        <th class="sticky left-0 z-10 bg-surface-container-low px-5 py-3.5 shadow-[1px_0_0_0_var(--color-outline-variant)]">Nội dung câu hỏi</th>
-                        <th class="px-4 py-3.5" x-show="cols.taxonomy" x-cloak>Danh mục y khoa</th>
-                        <th class="px-4 py-3.5" x-show="cols.difficulty" x-cloak>Độ khó</th>
-                        @if ($isReviewer)
-                            <th class="px-4 py-3.5" x-show="cols.creator" x-cloak>Người tạo</th>
-                        @endif
-                        <th class="px-4 py-3.5" x-show="cols.status" x-cloak>Trạng thái</th>
-                        <th class="px-4 py-3.5" x-show="cols.access" x-cloak>Truy cập</th>
-                        <th class="px-4 py-3.5 text-end" x-show="cols.attempts" x-cloak>Lượt làm</th>
-                        <th class="px-4 py-3.5 text-end" x-show="cols.correct_rate" x-cloak>% đúng</th>
-                        <th class="px-4 py-3.5 text-end" x-show="cols.reports" x-cloak>Báo lỗi</th>
-                        <th class="sticky right-0 z-10 bg-surface-container-low px-5 py-3.5 text-end shadow-[-1px_0_0_0_var(--color-outline-variant)]">Thao tác</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-outline-variant/60">
-                    @forelse ($questions as $question)
-                        @php $listStats = $question->listStats(); @endphp
-                        <tr class="group/row transition-colors hover:bg-surface-container-lowest">
-                            <td class="sticky left-0 z-10 max-w-md bg-surface px-5 py-4 shadow-[1px_0_0_0_var(--color-outline-variant)] group-hover/row:bg-surface-container-lowest sm:max-w-lg">
-                                <a href="{{ route('admin.questions.edit', $question) }}" class="group block">
-                                    @if (filled($question->code))
-                                        <p class="mb-0.5 font-mono text-xs font-semibold text-on-surface-variant">{{ $question->code }}</p>
+        {{-- Section 2: Bộ lọc tìm kiếm câu hỏi --}}
+        <section aria-labelledby="heading-filters" class="rounded-2xl border border-outline-variant bg-surface p-5 shadow-sm">
+            <h2 id="heading-filters" class="sr-only">Bộ lọc tìm kiếm câu hỏi</h2>
+            <form method="get"
+                action="{{ route('admin.questions.index') }}"
+                id="question-filter-form"
+                role="search"
+                class="grid grid-cols-1 items-end gap-4 sm:grid-cols-12">
+                <div class="sm:col-span-3">
+                    <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant" for="question-search-input">
+                        Tìm kiếm từ khóa
+                    </label>
+                    <div class="relative">
+                        <span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant" aria-hidden="true">search</span>
+                        <input id="question-search-input"
+                            name="q"
+                            value="{{ $filters['q'] }}"
+                            type="search"
+                            autocomplete="off"
+                            placeholder="Mã câu hỏi hoặc từ khóa đề bài..."
+                            class="h-11 w-full rounded-xl border border-outline-variant bg-surface-container-lowest pr-3 pl-9 font-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
+                    </div>
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant" for="question-status-filter">
+                        Trạng thái
+                    </label>
+                    <select id="question-status-filter"
+                        name="status"
+                        class="h-11 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 font-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
+                        <option value="">Tất cả trạng thái</option>
+                        @foreach ($statuses as $status)
+                            <option value="{{ $status->value }}" @selected($filters['status'] === $status->value)>{{ $status->label() }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant" for="question-difficulty-filter">
+                        Độ khó
+                    </label>
+                    <select id="question-difficulty-filter"
+                        name="difficulty"
+                        class="h-11 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 font-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
+                        <option value="">Tất cả độ khó</option>
+                        @foreach ($difficulties as $difficulty)
+                            <option value="{{ $difficulty->value }}" @selected($filters['difficulty'] === $difficulty->value)>{{ $difficulty->label() }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant" for="question-access-filter">
+                        Gói truy cập
+                    </label>
+                    <select id="question-access-filter"
+                        name="is_free"
+                        class="h-11 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 font-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
+                        <option value="">Tất cả</option>
+                        <option value="1" @selected($filters['is_free'] === '1')>Miễn phí</option>
+                        <option value="0" @selected($filters['is_free'] === '0')>Premium</option>
+                    </select>
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant" for="question-reports-filter">
+                        Feedback
+                    </label>
+                    <select id="question-reports-filter"
+                        name="has_reports"
+                        class="h-11 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 font-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
+                        <option value="">Tất cả</option>
+                        <option value="1" @selected(($filters['has_reports'] ?? null) === '1')>Có feedback</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center gap-2 sm:col-span-1">
+                    <button type="submit"
+                        id="btn-apply-filters"
+                        class="inline-flex h-11 w-full items-center justify-center rounded-xl bg-primary px-4 font-label-md font-semibold text-on-primary hover:bg-primary/90">
+                        Lọc
+                    </button>
+
+                    @if ($hasActiveFilters)
+                        <a href="{{ route('admin.questions.index') }}"
+                            id="btn-reset-filters"
+                            title="Xóa bộ lọc"
+                            class="inline-flex size-11 shrink-0 items-center justify-center rounded-xl border border-outline-variant bg-surface text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface"
+                            aria-label="Xóa toàn bộ lọc hiện tại">
+                            <span class="material-symbols-outlined text-[18px]" aria-hidden="true">refresh</span>
+                        </a>
+                    @endif
+                </div>
+            </form>
+        </section>
+
+        {{-- Section 3: Bảng dữ liệu câu hỏi - Scroll trái phải đồng đều --}}
+        <section aria-labelledby="heading-questions-list" class="overflow-hidden rounded-2xl border border-outline-variant bg-surface shadow-sm">
+            <h2 id="heading-questions-list" class="sr-only">Danh sách câu hỏi y khoa</h2>
+
+            {{-- Toolbar điều hướng cuộn ngang bảng cân xứng --}}
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant bg-surface-container-low/60 px-5 py-3 text-xs text-on-surface-variant">
+                <div class="flex items-center gap-2 font-medium">
+                    <span>Hiển thị <strong>{{ number_format($questions->count()) }}</strong> / <strong>{{ number_format($questions->total()) }}</strong> câu hỏi</span>
+                    @if ($questions->hasPages())
+                        <span>· Trang {{ $questions->currentPage() }} / {{ $questions->lastPage() }}</span>
+                    @endif
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <span class="hidden text-[11px] text-on-surface-variant/80 lg:inline">
+                        <span class="material-symbols-outlined align-middle text-[14px]" aria-hidden="true">swap_horiz</span>
+                        Cuộn ngang xem đầy đủ các cột:
+                    </span>
+                    <div class="inline-flex items-center rounded-lg border border-outline-variant bg-surface p-0.5 shadow-xs">
+                        <button type="button"
+                            @click="scrollTable(-300)"
+                            :disabled="!canScrollLeft"
+                            id="btn-scroll-table-left"
+                            class="flex size-7 items-center justify-center rounded text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface disabled:cursor-not-allowed disabled:opacity-30"
+                            aria-label="Cuộn bảng sang trái">
+                            <span class="material-symbols-outlined text-[18px]" aria-hidden="true">chevron_left</span>
+                        </button>
+                        <span class="h-3.5 w-px bg-outline-variant"></span>
+                        <button type="button"
+                            @click="scrollTable(300)"
+                            :disabled="!canScrollRight"
+                            id="btn-scroll-table-right"
+                            class="flex size-7 items-center justify-center rounded text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface disabled:cursor-not-allowed disabled:opacity-30"
+                            aria-label="Cuộn bảng sang phải">
+                            <span class="material-symbols-outlined text-[18px]" aria-hidden="true">chevron_right</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Khung cuộn ngang mượt mà, đồng đều --}}
+            <div
+                x-ref="tableContainer"
+                @scroll.passive="updateScrollState()"
+                id="questions-table-scroll-container"
+                class="relative w-full overflow-x-auto scroll-smooth focus:outline-none"
+                tabindex="0"
+                aria-label="Vùng cuộn bảng dữ liệu câu hỏi"
+            >
+                <table id="questions-data-table"
+                    aria-label="Bảng danh sách câu hỏi ngân hàng"
+                    class="w-full min-w-[1250px] border-collapse text-left font-body-sm text-on-surface">
+                    <caption class="sr-only">Danh sách câu hỏi ngân hàng, chi tiết độ khó, trạng thái kiểm duyệt và thống kê tỷ lệ đúng</caption>
+                    <thead class="border-b border-outline-variant bg-surface-container-low text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
+                        <tr>
+                            <th scope="col" class="w-[380px] min-w-[320px] px-5 py-3.5">Nội dung câu hỏi</th>
+                            <th scope="col" class="w-[220px] min-w-[180px] px-4 py-3.5" x-show="cols.taxonomy" x-cloak>Danh mục y khoa</th>
+                            <th scope="col" class="w-[110px] min-w-[100px] px-4 py-3.5 text-center" x-show="cols.difficulty" x-cloak>Độ khó</th>
+                            @if ($isReviewer)
+                                <th scope="col" class="w-[150px] min-w-[130px] px-4 py-3.5" x-show="cols.creator" x-cloak>Người tạo</th>
+                            @endif
+                            <th scope="col" class="w-[150px] min-w-[130px] px-4 py-3.5" x-show="cols.status" x-cloak>Trạng thái</th>
+                            <th scope="col" class="w-[110px] min-w-[100px] px-4 py-3.5 text-center" x-show="cols.access" x-cloak>Truy cập</th>
+                            <th scope="col" class="w-[110px] min-w-[90px] px-4 py-3.5 text-end" x-show="cols.attempts" x-cloak>Lượt làm</th>
+                            <th scope="col" class="w-[100px] min-w-[90px] px-4 py-3.5 text-end" x-show="cols.correct_rate" x-cloak>% đúng</th>
+                            <th scope="col" class="w-[100px] min-w-[90px] px-4 py-3.5 text-end whitespace-nowrap" x-show="cols.reports" x-cloak>Feedback</th>
+                            <th scope="col" class="w-[160px] min-w-[150px] px-5 py-3.5 text-end">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-outline-variant/60">
+                        @forelse ($questions as $question)
+                            @php $listStats = $question->listStats(); @endphp
+                            <tr class="transition-colors hover:bg-surface-container-lowest">
+                                <td class="w-[380px] min-w-[320px] px-5 py-4 align-top">
+                                    <a href="{{ route('admin.questions.edit', $question) }}"
+                                        class="group block"
+                                        aria-label="Chỉnh sửa câu hỏi {{ $question->code ?: $question->id }}">
+                                        @if (filled($question->code))
+                                            <p class="mb-0.5 font-mono text-xs font-semibold text-primary group-hover:underline">
+                                                {{ $question->code }}
+                                            </p>
+                                        @endif
+                                        <p class="line-clamp-2 font-medium leading-snug text-on-surface transition-colors group-hover:text-primary"
+                                            title="{{ strip_tags($question->stem) }}">
+                                            {{ \Illuminate\Support\Str::limit(strip_tags($question->stem), 140) }}
+                                        </p>
+                                        <p class="mt-1 font-label-sm text-on-surface-variant">
+                                            Phiên bản {{ $question->version > 0 ? $question->version : '—' }} · Cập nhật {{ $question->updated_at?->diffForHumans() }}
+                                        </p>
+                                    </a>
+                                </td>
+
+                                <td class="w-[220px] min-w-[180px] px-4 py-4 align-top" x-show="cols.taxonomy" x-cloak>
+                                    @if($question->medicalTaxonomyNodes->isNotEmpty())
+                                        <div class="flex max-w-[200px] flex-wrap gap-1">
+                                            @foreach ($question->medicalTaxonomyNodes->take(2) as $node)
+                                                <span class="inline-flex items-center whitespace-nowrap rounded-md bg-surface-container-high px-2 py-0.5 text-xs font-medium text-on-surface">
+                                                    {{ $node->name }}
+                                                </span>
+                                            @endforeach
+                                            @if ($question->medicalTaxonomyNodes->count() > 2)
+                                                <span class="inline-flex items-center rounded-md bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary"
+                                                    title="{{ $question->medicalTaxonomyNodes->slice(2)->pluck('name')->join(', ') }}">
+                                                    +{{ $question->medicalTaxonomyNodes->count() - 2 }}
+                                                </span>
+                                            @endif
+                                        </div>
+                                    @else
+                                        <span class="text-on-surface-variant/60">—</span>
                                     @endif
-                                    <p class="line-clamp-2 font-medium text-on-surface transition-colors group-hover:text-primary">
-                                        {{ \Illuminate\Support\Str::limit(strip_tags($question->stem), 140) }}
-                                    </p>
-                                    <p class="mt-1 font-label-sm text-on-surface-variant">
-                                        Phiên bản {{ $question->version > 0 ? $question->version : '—' }} · Cập nhật {{ $question->updated_at?->diffForHumans() }}
-                                    </p>
-                                </a>
-                            </td>
-                            <td class="px-4 py-4" x-show="cols.taxonomy" x-cloak>
-                                @if($question->medicalTaxonomyNodes->isNotEmpty())
-                                    <div class="flex max-w-56 flex-wrap gap-1">
-                                        @foreach ($question->medicalTaxonomyNodes->take(2) as $node)
-                                            <span class="inline-flex items-center whitespace-nowrap rounded-lg bg-surface-container-high px-2.5 py-1 text-xs font-semibold text-on-surface">
-                                                {{ $node->name }}
-                                            </span>
-                                        @endforeach
-                                        @if ($question->medicalTaxonomyNodes->count() > 2)
-                                            <span class="inline-flex items-center rounded-lg bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">
-                                                +{{ $question->medicalTaxonomyNodes->count() - 2 }}
-                                            </span>
+                                </td>
+
+                                <td class="w-[110px] min-w-[100px] px-4 py-4 text-center align-top whitespace-nowrap" x-show="cols.difficulty" x-cloak>
+                                    <span class="inline-block rounded-md bg-surface-container-high px-2 py-0.5 text-xs font-semibold text-on-surface-variant">
+                                        {{ $question->difficulty->label() }}
+                                    </span>
+                                </td>
+
+                                @if ($isReviewer)
+                                    <td class="w-[150px] min-w-[130px] px-4 py-4 align-top whitespace-nowrap" x-show="cols.creator" x-cloak>
+                                        <span class="text-xs font-medium text-on-surface">{{ $question->creator?->name ?? 'Dữ liệu hệ thống' }}</span>
+                                    </td>
+                                @endif
+
+                                <td class="w-[150px] min-w-[130px] px-4 py-4 align-top whitespace-nowrap" x-show="cols.status" x-cloak>
+                                    @php
+                                        $badgeClass = match($question->status) {
+                                            \Modules\QuestionBank\Enums\QuestionStatus::Published => 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300',
+                                            \Modules\QuestionBank\Enums\QuestionStatus::InReview => 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300',
+                                            \Modules\QuestionBank\Enums\QuestionStatus::Rejected => 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300',
+                                            \Modules\QuestionBank\Enums\QuestionStatus::Private => 'bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300',
+                                            \Modules\QuestionBank\Enums\QuestionStatus::Draft => 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+                                            \Modules\QuestionBank\Enums\QuestionStatus::Retired => 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300',
+                                        };
+                                    @endphp
+                                    <div class="flex flex-col items-start gap-1">
+                                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold {{ $badgeClass }}">
+                                            {{ $question->status->label() }}
+                                        </span>
+                                        @if ($question->pendingReviewRequest && $question->status !== \Modules\QuestionBank\Enums\QuestionStatus::InReview)
+                                            @if ($isReviewer)
+                                                <a href="{{ route('admin.questions.reviews.show', $question->pendingReviewRequest) }}"
+                                                    class="inline-flex items-center gap-0.5 text-xs font-semibold text-amber-700 hover:underline">
+                                                    {{ $question->pendingReviewRequest->action->label() }} chờ duyệt
+                                                </a>
+                                            @else
+                                                <span class="text-xs font-semibold text-amber-700">
+                                                    {{ $question->pendingReviewRequest->action->label() }} chờ duyệt
+                                                </span>
+                                            @endif
+                                        @elseif ($question->pendingReviewRequest && $isReviewer)
+                                            <a href="{{ route('admin.questions.reviews.show', $question->pendingReviewRequest) }}"
+                                                class="inline-flex items-center gap-0.5 text-xs font-semibold text-primary hover:underline">
+                                                Mở duyệt
+                                            </a>
                                         @endif
                                     </div>
-                                @else
-                                    <span class="text-on-surface-variant/60">—</span>
-                                @endif
-                            </td>
-                            <td class="px-4 py-4 whitespace-nowrap" x-show="cols.difficulty" x-cloak>
-                                <span class="text-xs font-semibold text-on-surface-variant">
-                                    {{ $question->difficulty->label() }}
-                                </span>
-                            </td>
-                            @if ($isReviewer)
-                                <td class="px-4 py-4 whitespace-nowrap" x-show="cols.creator" x-cloak>
-                                    <span class="font-medium">{{ $question->creator?->name ?? 'Dữ liệu hệ thống' }}</span>
                                 </td>
-                            @endif
-                            <td class="px-4 py-4 whitespace-nowrap" x-show="cols.status" x-cloak>
-                                @php
-                                    $badgeClass = match($question->status) {
-                                        \Modules\QuestionBank\Enums\QuestionStatus::Published => 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300',
-                                        \Modules\QuestionBank\Enums\QuestionStatus::InReview => 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300',
-                                        \Modules\QuestionBank\Enums\QuestionStatus::Rejected => 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300',
-                                        \Modules\QuestionBank\Enums\QuestionStatus::Private => 'bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300',
-                                        \Modules\QuestionBank\Enums\QuestionStatus::Draft => 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
-                                        \Modules\QuestionBank\Enums\QuestionStatus::Retired => 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300',
-                                    };
-                                @endphp
-                                <div class="flex flex-col items-start gap-1">
-                                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold {{ $badgeClass }}">
-                                        {{ $question->status->label() }}
-                                    </span>
-                                    @if ($question->pendingReviewRequest && $question->status !== \Modules\QuestionBank\Enums\QuestionStatus::InReview)
-                                        @if ($isReviewer)
-                                            <a href="{{ route('admin.questions.reviews.show', $question->pendingReviewRequest) }}"
-                                                class="inline-flex items-center gap-0.5 text-xs font-semibold text-amber-700 hover:underline">
-                                                {{ $question->pendingReviewRequest->action->label() }} chờ duyệt
-                                            </a>
-                                        @else
-                                            <span class="text-xs font-semibold text-amber-700">
-                                                {{ $question->pendingReviewRequest->action->label() }} chờ duyệt
-                                            </span>
-                                        @endif
-                                    @elseif ($question->pendingReviewRequest && $isReviewer)
-                                        <a href="{{ route('admin.questions.reviews.show', $question->pendingReviewRequest) }}"
-                                            class="inline-flex items-center gap-0.5 text-xs font-semibold text-primary hover:underline">
-                                            Mở duyệt
-                                        </a>
-                                    @endif
-                                </div>
-                            </td>
-                            <td class="px-4 py-4 whitespace-nowrap" x-show="cols.access" x-cloak>
-                                @if($question->is_free)
-                                    <span class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary">
-                                        Miễn phí
-                                    </span>
-                                @else
-                                    <span class="inline-flex items-center gap-1 rounded-full bg-secondary/10 px-2.5 py-0.5 text-xs font-bold text-secondary">
-                                        Premium
-                                    </span>
-                                @endif
-                            </td>
-                            <td class="px-4 py-4 whitespace-nowrap text-end tabular-nums text-on-surface" x-show="cols.attempts" x-cloak>
-                                {{ number_format($listStats['total_attempts']) }}
-                            </td>
-                            <td class="px-4 py-4 whitespace-nowrap text-end tabular-nums" x-show="cols.correct_rate" x-cloak>
-                                @if ($listStats['correct_rate'] === null || $listStats['total_attempts'] === 0)
-                                    <span class="text-on-surface-variant/60">—</span>
-                                @else
-                                    {{ number_format($listStats['correct_rate'] * 100, 1) }}%
-                                @endif
-                            </td>
-                            <td class="px-4 py-4 whitespace-nowrap text-end tabular-nums" x-show="cols.reports" x-cloak>
-                                @if ($listStats['total_reports'] > 0)
-                                    <span class="inline-flex items-center justify-end rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-bold text-red-800">
-                                        {{ number_format($listStats['total_reports']) }}
-                                    </span>
-                                @else
-                                    <span class="text-on-surface-variant/60">0</span>
-                                @endif
-                            </td>
-                            <td class="sticky right-0 z-10 whitespace-nowrap bg-surface px-5 py-4 text-end shadow-[-1px_0_0_0_var(--color-outline-variant)] group-hover/row:bg-surface-container-lowest">
-                                <div class="inline-flex items-center gap-3">
-                                    <a href="{{ route('admin.questions.stats', $question) }}"
-                                        class="inline-flex items-center gap-1 text-sm font-semibold text-on-surface-variant hover:text-primary hover:underline"
-                                        title="Thống kê chi tiết">
-                                        <span class="material-symbols-outlined text-[16px]">analytics</span>
-                                        Thống kê
-                                    </a>
-                                    <a href="{{ route('admin.questions.edit', $question) }}"
-                                        class="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
-                                        <span class="material-symbols-outlined text-[16px]">edit</span>
-                                        Sửa
-                                    </a>
-                                </div>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="10" class="px-5 py-12 text-center">
-                                <div class="mx-auto flex size-12 items-center justify-center rounded-full bg-surface-container-high text-on-surface-variant">
-                                    <span class="material-symbols-outlined text-[28px]">search_off</span>
-                                </div>
-                                <p class="mt-3 font-label-lg font-semibold text-on-surface">Không tìm thấy câu hỏi nào</p>
-                                <p class="text-body-sm text-on-surface-variant">Thử thay đổi bộ lọc tìm kiếm hoặc tạo câu hỏi mới.</p>
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-    </div>
 
-    <div class="mt-5">{{ $questions->links() }}</div>
+                                <td class="w-[110px] min-w-[100px] px-4 py-4 text-center align-top whitespace-nowrap" x-show="cols.access" x-cloak>
+                                    @if($question->is_free)
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary">
+                                            Miễn phí
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-secondary/10 px-2.5 py-0.5 text-xs font-bold text-secondary">
+                                            Premium
+                                        </span>
+                                    @endif
+                                </td>
+
+                                <td class="w-[110px] min-w-[90px] px-4 py-4 text-end align-top tabular-nums whitespace-nowrap text-on-surface" x-show="cols.attempts" x-cloak>
+                                    {{ number_format($listStats['total_attempts']) }}
+                                </td>
+
+                                <td class="w-[100px] min-w-[90px] px-4 py-4 text-end align-top tabular-nums whitespace-nowrap" x-show="cols.correct_rate" x-cloak>
+                                    @if ($listStats['correct_rate'] === null || $listStats['total_attempts'] === 0)
+                                        <span class="text-on-surface-variant/60">—</span>
+                                    @else
+                                        {{ number_format($listStats['correct_rate'] * 100, 1) }}%
+                                    @endif
+                                </td>
+
+                                <td class="w-[100px] min-w-[90px] px-4 py-4 text-end align-top tabular-nums whitespace-nowrap" x-show="cols.reports" x-cloak>
+                                    @php
+                                        $realFeedback = (int) ($question->feedback_count ?? 0);
+                                        $pendingFeedback = (int) ($question->pending_feedback_count ?? 0);
+                                        $totalFeedback = max($realFeedback, (int) ($listStats['total_reports'] ?? 0));
+                                    @endphp
+                                    @if ($totalFeedback > 0)
+                                        <a href="{{ route('admin.question-feedback.index', ['question_id' => $question->id]) }}"
+                                            class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold transition-all hover:scale-105 {{ $pendingFeedback > 0 ? 'bg-amber-100 text-amber-900 hover:bg-amber-200 dark:bg-amber-950 dark:text-amber-200' : 'bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-950 dark:text-red-300' }}"
+                                            title="{{ $pendingFeedback > 0 ? $pendingFeedback . ' feedback chờ xử lý' : 'Xem ' . $totalFeedback . ' feedback' }}">
+                                            @if ($pendingFeedback > 0)
+                                                <span class="size-1.5 rounded-full bg-amber-500 animate-pulse" aria-hidden="true"></span>
+                                            @endif
+                                            {{ number_format($totalFeedback) }}
+                                        </a>
+                                    @else
+                                        <span class="text-on-surface-variant/50">0</span>
+                                    @endif
+                                </td>
+
+                                <td class="w-[160px] min-w-[150px] px-5 py-4 text-end align-top whitespace-nowrap">
+                                    <div class="inline-flex items-center justify-end gap-2.5">
+                                        <a href="{{ route('admin.questions.stats', $question) }}"
+                                            class="inline-flex items-center gap-1 text-xs font-semibold text-on-surface-variant hover:text-primary hover:underline"
+                                            title="Xem thống kê làm bài câu hỏi">
+                                            <span class="material-symbols-outlined text-[15px]" aria-hidden="true">analytics</span>
+                                            Thống kê
+                                        </a>
+                                        <a href="{{ route('admin.questions.edit', $question) }}"
+                                            class="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                                            title="Sửa nội dung câu hỏi">
+                                            <span class="material-symbols-outlined text-[15px]" aria-hidden="true">edit</span>
+                                            Sửa
+                                        </a>
+                                        @can(\App\Support\Enums\Permission::QuestionCreate->value)
+                                             <form method="post" action="{{ route('admin.questions.clone', $question) }}" class="inline">
+                                                 @csrf
+                                                 <button type="submit" onclick="return confirm('Tạo bản sao mới từ câu hỏi này?')"
+                                                     class="inline-flex items-center gap-1 text-xs font-semibold text-on-surface-variant hover:text-primary hover:underline"
+                                                     title="Nhân bản câu hỏi thành bản nháp mới">
+                                                     <span class="material-symbols-outlined text-[15px]" aria-hidden="true">content_copy</span>
+                                                     Clone
+                                                 </button>
+                                             </form>
+                                         @endcan
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="10" class="px-5 py-12 text-center">
+                                    <div class="mx-auto flex size-12 items-center justify-center rounded-full bg-surface-container-high text-on-surface-variant">
+                                        <span class="material-symbols-outlined text-[28px]" aria-hidden="true">search_off</span>
+                                    </div>
+                                    <p class="mt-3 font-label-lg font-semibold text-on-surface">Không tìm thấy câu hỏi nào</p>
+                                    <p class="mt-1 text-body-sm text-on-surface-variant">Thử điều chỉnh hoặc xóa bộ lọc tìm kiếm để xem danh sách câu hỏi.</p>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        {{-- Section 4: Phân trang chuẩn semantic --}}
+        @if ($questions->hasPages())
+            <nav aria-label="Điều hướng phân trang danh sách câu hỏi" class="pt-2">
+                {{ $questions->links() }}
+            </nav>
+        @endif
     </div>
 
     <script>
@@ -367,7 +526,7 @@
                 { key: 'access', label: 'Truy cập' },
                 { key: 'attempts', label: 'Lượt làm' },
                 { key: 'correct_rate', label: '% đúng' },
-                { key: 'reports', label: 'Báo lỗi' },
+                { key: 'reports', label: 'Feedback' },
             ];
 
             const load = () => {
@@ -388,13 +547,17 @@
                 toggleableColumns,
                 cols: load(),
                 panelStyle: '',
+                canScrollLeft: false,
+                canScrollRight: false,
                 toggle(key) {
                     this.cols[key] = ! this.cols[key];
                     this.persist();
+                    this.$nextTick(() => this.updateScrollState());
                 },
                 reset() {
                     this.cols = { ...defaults };
                     this.persist();
+                    this.$nextTick(() => this.updateScrollState());
                 },
                 persist() {
                     try {
@@ -403,9 +566,7 @@
                 },
                 placePanel() {
                     const btn = this.$refs.columnTrigger;
-                    if (! btn) {
-                        return;
-                    }
+                    if (! btn) return;
                     const rect = btn.getBoundingClientRect();
                     const panelWidth = 256;
                     const gap = 8;
@@ -413,6 +574,17 @@
                     left = Math.max(12, Math.min(left, window.innerWidth - panelWidth - 12));
                     const top = Math.min(rect.bottom + gap, window.innerHeight - 12);
                     this.panelStyle = `top:${top}px;left:${left}px;`;
+                },
+                scrollTable(offset) {
+                    const el = this.$refs.tableContainer;
+                    if (!el) return;
+                    el.scrollBy({ left: offset, behavior: 'smooth' });
+                },
+                updateScrollState() {
+                    const el = this.$refs.tableContainer;
+                    if (!el) return;
+                    this.canScrollLeft = el.scrollLeft > 10;
+                    this.canScrollRight = el.scrollLeft < (el.scrollWidth - el.clientWidth - 10);
                 },
                 init() {
                     this.$watch('open', (value) => {
@@ -424,12 +596,16 @@
                         if (this.open) {
                             this.placePanel();
                         }
+                        this.updateScrollState();
                     });
                     window.addEventListener('scroll', () => {
                         if (this.open) {
                             this.placePanel();
                         }
                     }, true);
+                    this.$nextTick(() => {
+                        this.updateScrollState();
+                    });
                 },
             };
         }

@@ -199,6 +199,10 @@ class StudyPlan extends Model
             'difficulty' => null,
             'question_statuses' => [],
             'question_status_mode' => 'latest',
+            'blueprint_id' => null,
+            'blueprint_section_id' => null,
+            'core_clinical_topic_ids' => [],
+            'tag_ids' => [],
         ];
 
         if (isset($scope['medical_taxonomy_node_ids']) || isset($scope['topic_ids']) || isset($scope['exam_tags'])) {

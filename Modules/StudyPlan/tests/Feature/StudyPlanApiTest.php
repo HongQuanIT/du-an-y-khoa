@@ -44,6 +44,11 @@ final class StudyPlanApiTest extends TestCase
             'node_type' => 'system',
             'sort_order' => 0,
         ]);
+
+        Question::factory()->count(10)->create([
+            'status' => QuestionStatus::Published,
+            'is_free' => true,
+        ])->each(fn (Question $question) => $question->medicalTaxonomyNodes()->sync([$this->topic->id]));
     }
 
     public function test_a_plan_can_be_created_and_read_back(): void
