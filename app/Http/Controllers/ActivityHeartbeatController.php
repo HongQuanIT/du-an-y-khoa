@@ -16,13 +16,19 @@ final class ActivityHeartbeatController extends Controller
         abort_unless(config('audit.activity.enabled', true), 404);
 
         $validated = $request->validate([
+            'event' => ['required', 'in:start,leave'],
             'session_id' => ['required', 'uuid'],
             'area' => ['required', 'string', 'max:180', 'regex:/^\/[A-Za-z0-9_\-\/.%]*$/'],
         ]);
 
         /** @var User $user */
         $user = $request->user();
-        $tracker->heartbeat($user, $validated['session_id'], $validated['area'], $request);
+
+        if ($validated['event'] === 'start') {
+            $tracker->start($user, $validated['session_id'], $validated['area'], $request);
+        } else {
+            $tracker->leave($user, $validated['session_id'], $validated['area'], $request);
+        }
 
         return response()->json(['ok' => true]);
     }

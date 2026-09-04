@@ -352,12 +352,12 @@ final class AdminAuditArchitectureTest extends TestCase
         UserActivitySession::query()->create([
             'user_id' => $student->id,
             'session_id' => fake()->uuid(),
-            'area' => '/qbank/session/42',
+            'area' => '/qbank/session/{id}',
             'portal' => 'student',
             'started_at' => now()->subMinutes(5),
             'last_seen_at' => now(),
-            'duration_seconds' => 305,
-            'heartbeat_count' => 6,
+            'duration_seconds' => 0,
+            'heartbeat_count' => 1,
             'ip' => '127.0.0.1',
             'device_type' => 'desktop',
             'device_name' => 'Mac',
@@ -369,11 +369,14 @@ final class AdminAuditArchitectureTest extends TestCase
             ->get(route('admin.users.show', $student))
             ->assertOk()
             ->assertViewHas('activities', fn ($activities): bool => $activities->count() === 1)
-            ->assertSee('Hoạt động gần đây của người dùng')
-            ->assertSee('/qbank/session/42')
-            ->assertSee('5 phút 5 giây')
-            ->assertSee('Mac · macOS · Chrome')
-            ->assertSee('127.0.0.1')
+            ->assertSee('Hoạt động gần đây')
+            ->assertSee('Đã mở phiên làm bài QBank')
+            ->assertDontSee('trong khoảng')
+            ->assertSee('Cổng học viên')
+            ->assertSee('Chrome trên macOS')
+            ->assertSee('IP 127.0.0.1')
+            ->assertDontSee('/qbank/session')
+            ->assertDontSee('Thời lượng')
             ->assertDontSee('Audit gần đây');
     }
 

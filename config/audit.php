@@ -6,8 +6,10 @@ return [
 
     'activity' => [
         'enabled' => env('AUDIT_ACTIVITY_ENABLED', true),
-        'heartbeat_seconds' => (int) env('AUDIT_ACTIVITY_HEARTBEAT_SECONDS', 120),
+        // Abandoned "start" without "leave" (crash) is flushed after this idle window.
         'idle_seconds' => (int) env('AUDIT_ACTIVITY_IDLE_SECONDS', 300),
+        // Same normalized screen within this window updates one row (refresh-safe).
+        'coalesce_minutes' => (int) env('AUDIT_ACTIVITY_COALESCE_MINUTES', 30),
         'redis_connection' => env('AUDIT_ACTIVITY_REDIS_CONNECTION', 'default'),
     ],
 

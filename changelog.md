@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-09-04
+
+### Fix — Hoạt động gần đây user (admin)
+- Feed tiếng Việt theo màn hình cụ thể (`ActivityArea` / `UserActivityPresenter`), không còn nhãn chung “trang quản trị”.
+- Bỏ poll heartbeat và bỏ đo thời lượng; chỉ `start` + `leave` (tối đa 2 request/trang).
+- Chuẩn hóa path `{id}` và gộp cùng màn hình trong 30 phút để tránh duplicate khi refresh.
+
 ## 2026-09-03
 
 ### Fix — Live Classroom realtime (Payload too large + giật video)

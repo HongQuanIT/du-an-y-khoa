@@ -92,44 +92,21 @@
     </div>
 
     <section class="mt-6 rounded-xl border border-outline-variant bg-surface p-5">
-        <h3 class="mb-3 font-headline-sm text-headline-sm text-on-surface">Hoạt động gần đây của người dùng</h3>
-        <div class="overflow-x-auto">
-            <table class="min-w-full text-left font-body-sm text-body-sm">
-                <thead class="border-b border-outline-variant font-label-md text-label-md text-on-surface-variant">
-                    <tr>
-                        <th class="py-2 pe-4">Bắt đầu</th>
-                        <th class="py-2 pe-4">Hoạt động gần nhất</th>
-                        <th class="py-2 pe-4">Khu vực</th>
-                        <th class="py-2 pe-4">Thời lượng</th>
-                        <th class="py-2">Thiết bị / IP</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse ($activities as $activity)
-                        <tr class="border-b border-outline-variant/50">
-                            <td class="whitespace-nowrap py-2 pe-4 text-on-surface-variant">{{ $activity->started_at?->format('d/m/Y H:i') }}</td>
-                            <td class="whitespace-nowrap py-2 pe-4 text-on-surface-variant">{{ $activity->last_seen_at?->format('d/m/Y H:i') }}</td>
-                            <td class="py-2 pe-4">
-                                <span class="font-semibold text-on-surface">{{ match ($activity->portal) { 'admin' => 'Admin', 'teach' => 'Giảng viên', default => 'Học viên' } }}</span>
-                                <span class="mt-0.5 block max-w-xs truncate text-on-surface-variant" title="{{ $activity->area }}">{{ $activity->area }}</span>
-                            </td>
-                            <td class="whitespace-nowrap py-2 pe-4 text-on-surface-variant">
-                                @if ($activity->duration_seconds >= 60)
-                                    {{ intdiv($activity->duration_seconds, 60) }} phút {{ $activity->duration_seconds % 60 }} giây
-                                @else
-                                    {{ $activity->duration_seconds }} giây
-                                @endif
-                            </td>
-                            <td class="py-2 text-on-surface-variant">
-                                <span>{{ collect([$activity->device_name, $activity->operating_system, $activity->browser])->filter()->join(' · ') ?: 'Không xác định' }}</span>
-                                <span class="mt-0.5 block">{{ $activity->ip ?: '—' }}</span>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr><td colspan="5" class="py-6 text-on-surface-variant">Người dùng chưa có hoạt động nào được ghi nhận.</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
+        <div class="mb-1 flex flex-wrap items-end justify-between gap-2">
+            <h3 class="font-headline-sm text-headline-sm text-on-surface">Hoạt động gần đây</h3>
+            <p class="font-label-sm text-label-sm text-on-surface-variant">Màn hình đã mở · cùng trang trong 30 phút được gộp một dòng</p>
         </div>
+        <ul class="divide-y divide-outline-variant/60">
+            @forelse ($activities as $activity)
+                @php($row = \App\Support\Audit\UserActivityPresenter::present($activity))
+                <li class="py-3 first:pt-1 last:pb-0">
+                    <p class="font-label-sm text-label-sm text-on-surface-variant" title="{{ $row['when_exact'] }}">{{ $row['when'] }}</p>
+                    <p class="mt-0.5 font-body-md text-body-md text-on-surface">{{ $row['summary'] }}</p>
+                    <p class="mt-0.5 font-body-sm text-body-sm text-on-surface-variant">{{ $row['detail'] }}</p>
+                </li>
+            @empty
+                <li class="py-6 font-body-sm text-body-sm text-on-surface-variant">Chưa ghi nhận hoạt động gần đây của người dùng này.</li>
+            @endforelse
+        </ul>
     </section>
 </x-layouts.admin>
