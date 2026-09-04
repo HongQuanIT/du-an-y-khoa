@@ -112,6 +112,9 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
         Route::middleware('permission:'.Permission::SystemManage->value)->group(function (): void {
             Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
             Route::post('/settings', [SettingController::class, 'update'])->name('settings.update');
+        });
+
+        Route::middleware('permission:'.Permission::SupportManage->value)->group(function (): void {
             Route::get('/support', [SupportConversationController::class, 'index'])->name('support.index');
             Route::get('/support/badge', [SupportConversationController::class, 'badge'])->name('support.badge');
             Route::get('/support/{conversation}', [SupportConversationController::class, 'show'])->name('support.show');
@@ -119,7 +122,9 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
             Route::post('/support/{conversation}/seen', [SupportConversationController::class, 'seen'])->name('support.seen');
             Route::post('/support/{conversation}/messages', [SupportConversationController::class, 'message'])->name('support.messages.store');
             Route::post('/support/{conversation}/resolve', [SupportConversationController::class, 'resolve'])->name('support.resolve');
+        });
 
+        Route::middleware('permission:'.Permission::NotificationBroadcast->value)->group(function (): void {
             Route::get('/notifications/broadcast', [AdminBroadcastController::class, 'create'])
                 ->name('notifications.broadcast');
             Route::post('/notifications/broadcast', [AdminBroadcastController::class, 'store'])
@@ -144,12 +149,15 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
             Route::get('/audit/{audit}', [AuditLogController::class, 'show'])->name('audit.show');
         });
 
-        Route::middleware('permission:'.Permission::ClassroomOversee->value)->group(function (): void {
-            Route::get('/classrooms', [ClassroomOversightController::class, 'index'])->name('classrooms.index');
+        Route::middleware('permission:'.Permission::ClassroomCreateOnBehalf->value)->group(function (): void {
             Route::get('/classrooms/create', [ClassroomOversightController::class, 'create'])->name('classrooms.create');
             Route::get('/classrooms/content/questions', [ClassroomOversightController::class, 'contentQuestions'])
                 ->name('classrooms.content.questions');
             Route::post('/classrooms', [ClassroomOversightController::class, 'store'])->name('classrooms.store');
+        });
+
+        Route::middleware('permission:'.Permission::ClassroomOversee->value)->group(function (): void {
+            Route::get('/classrooms', [ClassroomOversightController::class, 'index'])->name('classrooms.index');
             Route::get('/classrooms/{classroom}', [ClassroomOversightController::class, 'show'])
                 ->name('classrooms.show');
             Route::post('/classrooms/{classroom}/sessions', [ClassroomOversightController::class, 'scheduleLive'])
@@ -326,7 +334,7 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
             Route::put('/cms/menus/{menu}', [MenuController::class, 'update'])->name('cms.menus.update');
         });
 
-        Route::middleware('permission:'.Permission::ReportExport->value)->group(function (): void {
+        Route::middleware('permission:'.Permission::ReportView->value.'|'.Permission::ReportExport->value)->group(function (): void {
             Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
             Route::post('/reports/cache/warm-all', [ReportController::class, 'queueWarmAll'])
                 ->name('reports.cache.warm-all');
@@ -334,21 +342,24 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
                 ->name('reports.cache.warm-all-reset');
             Route::get('/reports/cache/warm-all/status', [ReportController::class, 'warmAllStatusJson'])
                 ->name('reports.cache.warm-all-status');
+            Route::get('/reports/{category}', [ReportController::class, 'showCategory'])->name('reports.show-category');
+            Route::post('/reports/{category}/{report}/refresh', [ReportController::class, 'refresh'])
+                ->name('reports.refresh');
+            Route::get('/reports/{category}/{report}/refresh-status', [ReportController::class, 'refreshStatus'])
+                ->name('reports.refresh-status');
+            Route::get('/reports/{category}/{report}', [ReportController::class, 'showReport'])->name('reports.show');
+        });
+
+        Route::middleware('permission:'.Permission::ReportExport->value)->group(function (): void {
             Route::post('/reports/schedules/{schedule}/toggle', [ReportController::class, 'toggleSchedule'])
                 ->name('reports.schedules.toggle');
             Route::post('/reports/schedules/{schedule}/toggle-email', [ReportController::class, 'toggleScheduleEmail'])
                 ->name('reports.schedules.toggle-email');
             Route::post('/reports/schedules/{schedule}/destroy', [ReportController::class, 'destroySchedule'])
                 ->name('reports.schedules.destroy');
-            Route::get('/reports/{category}', [ReportController::class, 'showCategory'])->name('reports.show-category');
             Route::post('/reports/{category}/{report}/schedules', [ReportController::class, 'storeSchedule'])
                 ->name('reports.schedules.store');
-            Route::post('/reports/{category}/{report}/refresh', [ReportController::class, 'refresh'])
-                ->name('reports.refresh');
-            Route::get('/reports/{category}/{report}/refresh-status', [ReportController::class, 'refreshStatus'])
-                ->name('reports.refresh-status');
             Route::get('/reports/{category}/{report}/export', [ReportController::class, 'export'])->name('reports.export');
-            Route::get('/reports/{category}/{report}', [ReportController::class, 'showReport'])->name('reports.show');
         });
 
         Route::middleware('permission:'.Permission::BillingManage->value)->group(function (): void {

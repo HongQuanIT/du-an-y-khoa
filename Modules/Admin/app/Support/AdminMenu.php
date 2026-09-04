@@ -124,7 +124,7 @@ final class AdminMenu
                 'label' => 'Báo cáo',
                 'icon' => 'analytics',
                 'route' => 'admin.reports.index',
-                'permission' => Permission::ReportExport->value,
+                'permission' => Permission::ReportView->value,
                 'match' => 'admin.reports.*',
             ],
             [

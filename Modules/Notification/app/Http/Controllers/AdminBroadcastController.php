@@ -15,7 +15,7 @@ final class AdminBroadcastController extends Controller
 {
     public function create(Request $request): View
     {
-        abort_unless($request->user()?->can(Permission::SystemManage->value), 403);
+        abort_unless($request->user()?->can(Permission::NotificationBroadcast->value), 403);
 
         return view('notification::admin.broadcast', [
             'title' => 'Gửi thông báo hệ thống',
@@ -24,7 +24,7 @@ final class AdminBroadcastController extends Controller
 
     public function store(Request $request, BroadcastSystemNotificationAction $action): RedirectResponse
     {
-        abort_unless($request->user()?->can(Permission::SystemManage->value), 403);
+        abort_unless($request->user()?->can(Permission::NotificationBroadcast->value), 403);
 
         $data = $request->validate([
             'title' => ['required', 'string', 'max:160'],

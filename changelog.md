@@ -2,6 +2,12 @@
 
 ## 2026-09-04
 
+### Feat — RBAC P0/P1: bổ sung permission theo hành động
+- Thêm `question.submit`, `question.retire`, `classroom.create_on_behalf`, `report.view`, `notification.broadcast`, `support.manage`.
+- Seeder: CE có submit + `library.publish`; Admin/SA bỏ review/submit/ops lớp/portal CTV; giữ publish + retire.
+- Gate SA không bypass create/update/submit/review; wire route/policy/UI theo permission mới.
+- Cập nhật SRS RBAC §4; test Content Editor / publish / reports / notification.
+
 ### Feat — QBank workflow 2 lớp + trùng lặp + RBAC publisher
 - Duyệt 2 lớp: Content Editor soạn → GV duyệt trên `/teach` → Admin/SA xuất bản (+version); snapshot `published_version` cho learner.
 - Admin/Super Admin không `question.create`/`update` (tránh xung đột biên tập); chỉ publish / private / retire / xoá; Gate Super Admin không bypass 2 quyền này.

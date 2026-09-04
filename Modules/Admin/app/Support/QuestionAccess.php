@@ -27,6 +27,16 @@ final class QuestionAccess
         return $user->can(Permission::QuestionCreate->value);
     }
 
+    public static function canSubmit(User $user): bool
+    {
+        return $user->can(Permission::QuestionSubmit->value);
+    }
+
+    public static function canRetire(User $user): bool
+    {
+        return $user->can(Permission::QuestionRetire->value);
+    }
+
     /**
      * @deprecated Use canPublish() — kept for blade/controllers still naming "reviewer".
      */

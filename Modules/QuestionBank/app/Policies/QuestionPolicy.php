@@ -60,4 +60,14 @@ final class QuestionPolicy
     {
         return $user->can(Permission::QuestionPublish->value);
     }
+
+    public function submit(User $user): bool
+    {
+        return $user->can(Permission::QuestionSubmit->value);
+    }
+
+    public function retire(User $user): bool
+    {
+        return $user->can(Permission::QuestionRetire->value);
+    }
 }

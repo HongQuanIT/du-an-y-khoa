@@ -342,6 +342,8 @@ final class QuestionController extends Controller
                 )
             ),
             'canPublish' => $this->actor()->can(Permission::QuestionPublish->value),
+            'canSubmit' => $this->actor()->can(Permission::QuestionSubmit->value),
+            'canRetire' => $this->actor()->can(Permission::QuestionRetire->value),
             'canDelete' => $question->exists && $this->actor()->can(Permission::QuestionDelete->value),
             'canClone' => $question->exists && $this->actor()->can(Permission::QuestionCreate->value),
             'isReviewer' => $isReviewer,
@@ -357,25 +359,29 @@ final class QuestionController extends Controller
     private function workflowStatuses(QuestionStatus $current, bool $isReviewer): array
     {
         $canUpdate = $this->actor()->can(Permission::QuestionUpdate->value);
+        $canSubmit = $this->actor()->can(Permission::QuestionSubmit->value);
         $canPublish = $this->actor()->can(Permission::QuestionPublish->value);
+        $canRetire = $this->actor()->can(Permission::QuestionRetire->value);
         unset($isReviewer);
 
         return match ($current) {
-            QuestionStatus::Draft => $canUpdate
+            QuestionStatus::Draft => $canSubmit
                 ? [QuestionStatus::InReview]
                 : [],
-            QuestionStatus::InReview => $canUpdate
+            QuestionStatus::InReview => $canSubmit
                 ? [QuestionStatus::Draft]
                 : [],
             QuestionStatus::PendingPublish => $canPublish
                 ? [QuestionStatus::Published, QuestionStatus::Private, QuestionStatus::Rejected]
                 : [],
-            QuestionStatus::Published => $canPublish
-                ? [QuestionStatus::Private, QuestionStatus::Retired]
-                : ($canUpdate ? [QuestionStatus::Draft, QuestionStatus::InReview] : []),
-            QuestionStatus::Private => $canPublish
-                ? [QuestionStatus::Published, QuestionStatus::Retired]
-                : ($canUpdate ? [QuestionStatus::Draft, QuestionStatus::InReview] : []),
+            QuestionStatus::Published => array_values(array_filter([
+                $canPublish ? QuestionStatus::Private : null,
+                $canRetire ? QuestionStatus::Retired : null,
+            ])),
+            QuestionStatus::Private => array_values(array_filter([
+                $canPublish ? QuestionStatus::Published : null,
+                $canRetire ? QuestionStatus::Retired : null,
+            ])),
             QuestionStatus::Rejected, QuestionStatus::Retired => $canUpdate
                 ? [QuestionStatus::Draft]
                 : [],

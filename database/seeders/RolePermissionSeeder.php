@@ -69,22 +69,11 @@ class RolePermissionSeeder extends Seeder
     private function permissionsFor(RoleEnum $role): array
     {
         return match ($role) {
-            // Super Admin: toàn quyền trừ soạn/sửa nội dung câu hỏi (tránh xung đột với content_editor).
-            RoleEnum::SuperAdmin => array_values(array_filter(
-                PermissionEnum::values(),
-                static fn (string $permission): bool => ! in_array($permission, [
-                    PermissionEnum::QuestionCreate->value,
-                    PermissionEnum::QuestionUpdate->value,
-                ], true),
-            )),
-
-            // Admin: oversight + publish/private/retire/xoá QBank, không soạn/sửa nội dung.
+            // Super Admin / Admin: oversight + publish; không soạn nội dung / không duyệt lớp 1 / không portal CTV / learner.
+            RoleEnum::SuperAdmin,
             RoleEnum::Admin => array_values(array_filter(
                 PermissionEnum::values(),
-                static fn (string $permission): bool => ! in_array($permission, [
-                    PermissionEnum::QuestionCreate->value,
-                    PermissionEnum::QuestionUpdate->value,
-                ], true),
+                static fn (string $permission): bool => ! in_array($permission, self::staffDeniedPermissions(), true),
             )),
 
             RoleEnum::ContentEditor => [
@@ -94,6 +83,7 @@ class RolePermissionSeeder extends Seeder
                 PermissionEnum::QuestionView->value,
                 PermissionEnum::QuestionCreate->value,
                 PermissionEnum::QuestionUpdate->value,
+                PermissionEnum::QuestionSubmit->value,
                 PermissionEnum::QuestionDelete->value,
                 PermissionEnum::TopicView->value,
                 PermissionEnum::TopicCreate->value,
@@ -101,6 +91,7 @@ class RolePermissionSeeder extends Seeder
                 PermissionEnum::TopicDelete->value,
                 PermissionEnum::LibraryView->value,
                 PermissionEnum::LibraryEdit->value,
+                PermissionEnum::LibraryPublish->value,
                 PermissionEnum::ExamManage->value,
             ],
 
@@ -135,5 +126,41 @@ class RolePermissionSeeder extends Seeder
                 PermissionEnum::LiveJoin->value,
             ],
         };
+    }
+
+    /**
+     * Abilities Admin/Super Admin must not inherit from "almost all".
+     *
+     * @return list<string>
+     */
+    private static function staffDeniedPermissions(): array
+    {
+        return [
+            // Content editor only — avoid edit conflict with working copy.
+            PermissionEnum::QuestionCreate->value,
+            PermissionEnum::QuestionUpdate->value,
+            PermissionEnum::QuestionSubmit->value,
+            // Instructor layer-1 only.
+            PermissionEnum::QuestionReview->value,
+            // Learner session / feature surface.
+            PermissionEnum::SessionStart->value,
+            PermissionEnum::SessionSubmit->value,
+            PermissionEnum::SessionReview->value,
+            PermissionEnum::AiUse->value,
+            PermissionEnum::AnalyticsAdvanced->value,
+            PermissionEnum::ExamTake->value,
+            // Instructor day-to-day classroom ops (oversight uses oversee / create_on_behalf).
+            PermissionEnum::ClassroomCreate->value,
+            PermissionEnum::ClassroomManage->value,
+            PermissionEnum::ClassroomModerate->value,
+            PermissionEnum::ClassroomJoin->value,
+            PermissionEnum::LiveStart->value,
+            PermissionEnum::LiveJoin->value,
+            // Partner portal (admin uses admin.partners.*).
+            PermissionEnum::PartnerPortal->value,
+            PermissionEnum::PartnerCodesManage->value,
+            PermissionEnum::PartnerReferralsView->value,
+            PermissionEnum::PartnerCommissionsView->value,
+        ];
     }
 }

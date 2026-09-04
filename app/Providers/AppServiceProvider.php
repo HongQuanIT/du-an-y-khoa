@@ -91,8 +91,8 @@ class AppServiceProvider extends ServiceProvider
 
     /**
      * Super Admin should behave as full-access even if cached permissions lag behind.
-     * Exception: question.create / question.update stay with content_editor only
-     * so SA không sửa nội dung và tránh xung đột biên tập (SRS module 35).
+     * Exception: question.create / update / submit / review stay with content_editor / instructor
+     * so SA không soạn nội dung và không duyệt lớp 1 (SRS module 35).
      */
     private function configureAuthorization(): void
     {
@@ -101,9 +101,12 @@ class AppServiceProvider extends ServiceProvider
                 return null;
             }
 
+            // Content-editor / instructor-only abilities — SA không bypass.
             if (in_array($ability, [
                 Permission::QuestionCreate->value,
                 Permission::QuestionUpdate->value,
+                Permission::QuestionSubmit->value,
+                Permission::QuestionReview->value,
             ], true)) {
                 return null;
             }

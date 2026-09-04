@@ -8,7 +8,7 @@
                 </p>
             </div>
             <div class="flex flex-wrap items-center gap-2">
-                @if (request()->routeIs('admin.*') && auth()->user()?->can(\App\Support\Enums\Permission::SystemManage->value))
+                @if (request()->routeIs('admin.*') && auth()->user()?->can(\App\Support\Enums\Permission::NotificationBroadcast->value))
                     <a href="{{ route('admin.notifications.broadcast') }}"
                         class="rounded-lg border border-outline-variant px-4 py-2 font-label-md text-label-md text-on-surface hover:bg-surface-container-low">
                         Gửi hệ thống
