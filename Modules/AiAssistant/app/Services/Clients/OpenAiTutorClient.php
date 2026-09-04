@@ -8,28 +8,41 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Psr7\Utils;
 use Modules\AiAssistant\Contracts\AiTutorClient;
 use Modules\AiAssistant\Contracts\TutorReply;
+use Modules\AiAssistant\Support\AiTutorSettings;
 use RuntimeException;
 
 /**
  * Streams from the OpenAI Chat Completions API (SSE). Parsed chunks are handed
  * to $onDelta as they arrive; the full text + usage are returned at the end.
+ *
+ * Multiple system messages keep a stable prefix (rules) ahead of dynamic CONTEXT
+ * so OpenAI automatic prompt caching can reuse the shared prefix across requests.
  */
 final class OpenAiTutorClient implements AiTutorClient
 {
-    public function stream(string $system, array $messages, callable $onDelta, ?callable $shouldStop = null): TutorReply
+    public function stream(string|array $system, array $messages, callable $onDelta, ?callable $shouldStop = null): TutorReply
     {
         $apiKey = (string) config('services.openai.api_key');
         if ($apiKey === '') {
             throw new RuntimeException('OpenAI API key is not configured.');
         }
 
+        $systemParts = is_array($system) ? $system : [$system];
+        $systemMessages = [];
+        foreach ($systemParts as $part) {
+            $content = trim((string) $part);
+            if ($content !== '') {
+                $systemMessages[] = ['role' => 'system', 'content' => $content];
+            }
+        }
+
         $payload = [
-            'model' => config('aiassistant.tutor_model', 'gpt-4.1'),
+            'model' => AiTutorSettings::tutorModel(),
             'stream' => true,
             'stream_options' => ['include_usage' => true],
-            'max_tokens' => (int) config('aiassistant.max_output_tokens', 900),
+            'max_tokens' => AiTutorSettings::maxOutputTokens(),
             'messages' => array_merge(
-                [['role' => 'system', 'content' => $system]],
+                $systemMessages,
                 array_map(static fn (array $m): array => [
                     'role' => $m['role'],
                     'content' => $m['content'],

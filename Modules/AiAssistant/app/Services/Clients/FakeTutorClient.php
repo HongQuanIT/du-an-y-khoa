@@ -14,7 +14,7 @@ use Modules\AiAssistant\Contracts\TutorReply;
  */
 final class FakeTutorClient implements AiTutorClient
 {
-    public function stream(string $system, array $messages, callable $onDelta, ?callable $shouldStop = null): TutorReply
+    public function stream(string|array $system, array $messages, callable $onDelta, ?callable $shouldStop = null): TutorReply
     {
         $prompt = '';
         foreach (array_reverse($messages) as $message) {

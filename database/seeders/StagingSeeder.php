@@ -9,6 +9,7 @@ use Modules\Admin\Database\Seeders\CmsPageSeeder;
 use Modules\Admin\Database\Seeders\FaqSeeder;
 use Modules\Admin\Database\Seeders\MenuSeeder;
 use Modules\Admin\Database\Seeders\SettingsSeeder;
+use Modules\AiAssistant\Database\Seeders\AiTutorSettingsSeeder;
 use Modules\Billing\Database\Seeders\BillingDatabaseSeeder;
 use Modules\Partner\Database\Seeders\PartnerSettingsSeeder;
 use Modules\QuestionBank\Database\Seeders\MedicalKnowledgeTaxonomySeeder;
@@ -39,6 +40,7 @@ class StagingSeeder extends Seeder
 
             SettingsSeeder::class,
             PartnerSettingsSeeder::class,
+            AiTutorSettingsSeeder::class,
             CmsPageSeeder::class,
             MenuSeeder::class,
             FaqSeeder::class,

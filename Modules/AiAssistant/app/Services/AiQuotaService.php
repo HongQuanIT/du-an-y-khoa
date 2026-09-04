@@ -5,28 +5,52 @@ declare(strict_types=1);
 namespace Modules\AiAssistant\Services;
 
 use App\Models\User;
+use App\Support\Auth\Staff;
 use App\Support\Enums\Entitlement;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
 use Modules\AiAssistant\Exceptions\QuotaExceededException;
 use Modules\AiAssistant\Models\AiUsage;
+use Modules\AiAssistant\Support\AiTutorSettings;
 
 /**
- * Daily free-tier quota for AI Tutor.
+ * Daily AI Tutor quota ledger (`ai_usage`).
  *
- * The `ai_usage` table is the source of truth; increments are atomic at the DB
- * level so concurrent requests cannot over-spend. Users with the `ai.tutor`
- * entitlement (Premium/staff) are unlimited and never touch the ledger.
+ * Tiers:
+ * - Staff: unlimited (no ledger writes)
+ * - Premium (`ai.tutor`): soft-cap `premium_daily_limit` (default 100)
+ * - Free: `free_daily_limit` (default 10)
  */
 final class AiQuotaService
 {
     public function isUnlimited(User $user): bool
     {
-        return $user->hasEntitlement(Entitlement::AiTutor->value);
+        return Staff::isStaff($user);
     }
 
+    public function isPremium(User $user): bool
+    {
+        return ! $this->isUnlimited($user)
+            && $user->hasEntitlement(Entitlement::AiTutor->value);
+    }
+
+    public function limitFor(User $user): int
+    {
+        if ($this->isUnlimited($user)) {
+            return 0;
+        }
+
+        if ($this->isPremium($user)) {
+            return AiTutorSettings::premiumDailyLimit();
+        }
+
+        return AiTutorSettings::freeDailyLimit();
+    }
+
+    /** @deprecated Prefer limitFor(User) — kept for callers that only need Free default. */
     public function limit(): int
     {
-        return (int) config('aiassistant.free_daily_limit', 10);
+        return AiTutorSettings::freeDailyLimit();
     }
 
     public function used(User $user): int
@@ -43,7 +67,7 @@ final class AiQuotaService
             return PHP_INT_MAX;
         }
 
-        return max(0, $this->limit() - $this->used($user));
+        return max(0, $this->limitFor($user) - $this->used($user));
     }
 
     public function hasQuota(User $user): bool
@@ -62,19 +86,15 @@ final class AiQuotaService
             return;
         }
 
-        $today = Carbon::today()->toDateString();
-        $limit = $this->limit();
+        $today = Carbon::today();
+        $limit = $this->limitFor($user);
 
-        // Ensure the row exists without racing on the unique key.
-        AiUsage::query()->firstOrCreate(
-            ['user_id' => $user->getKey(), 'date' => $today],
-            ['count' => 0],
-        );
+        $this->ensureUsageRow($user, $today);
 
         // Atomic guarded increment: only bumps while still under the limit.
         $affected = AiUsage::query()
             ->where('user_id', $user->getKey())
-            ->where('date', $today)
+            ->whereDate('date', $today)
             ->where('count', '<', $limit)
             ->increment('count');
 
@@ -92,9 +112,31 @@ final class AiQuotaService
 
         AiUsage::query()
             ->where('user_id', $user->getKey())
-            ->where('date', Carbon::today()->toDateString())
+            ->whereDate('date', Carbon::today())
             ->where('count', '>', 0)
             ->decrement('count');
+    }
+
+    private function ensureUsageRow(User $user, Carbon $today): void
+    {
+        $exists = AiUsage::query()
+            ->where('user_id', $user->getKey())
+            ->whereDate('date', $today)
+            ->exists();
+
+        if ($exists) {
+            return;
+        }
+
+        try {
+            AiUsage::query()->create([
+                'user_id' => $user->getKey(),
+                'date' => $today->toDateString(),
+                'count' => 0,
+            ]);
+        } catch (UniqueConstraintViolationException) {
+            // Concurrent request created the row.
+        }
     }
 
     /** @return array{remaining: int|null, limit: int, unlimited: bool, resets_at: string} */
@@ -104,7 +146,7 @@ final class AiQuotaService
 
         return [
             'remaining' => $unlimited ? null : $this->remaining($user),
-            'limit' => $this->limit(),
+            'limit' => $this->limitFor($user),
             'unlimited' => $unlimited,
             'resets_at' => Carbon::tomorrow()->startOfDay()->toIso8601String(),
         ];

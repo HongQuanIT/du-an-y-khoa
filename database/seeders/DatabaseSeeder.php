@@ -10,6 +10,7 @@ use Modules\Admin\Database\Seeders\CmsPageSeeder;
 use Modules\Admin\Database\Seeders\FaqSeeder;
 use Modules\Admin\Database\Seeders\MenuSeeder;
 use Modules\Admin\Database\Seeders\SettingsSeeder;
+use Modules\AiAssistant\Database\Seeders\AiTutorSettingsSeeder;
 use Modules\Billing\Database\Seeders\BillingDatabaseSeeder;
 use Modules\Library\Database\Seeders\LibraryDatabaseSeeder;
 use Modules\Partner\Database\Seeders\PartnerDatabaseSeeder;
@@ -50,6 +51,7 @@ class DatabaseSeeder extends Seeder
 
         $this->call(SettingsSeeder::class);
         $this->call(PartnerSettingsSeeder::class);
+        $this->call(AiTutorSettingsSeeder::class);
         $this->call(FaqSeeder::class);
         $this->call(CmsPageSeeder::class);
         $this->call(BannerSeeder::class);

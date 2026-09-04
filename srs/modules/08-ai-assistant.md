@@ -79,13 +79,13 @@ Ngoại lệ: hết quota → paywall; ngoài y khoa → từ chối + gợi ý;
 - **Nguồn sự thật:** đáp án đúng / giải thích Q-bank do server gắn vào context pack. LLM **không** được đổi key.
 - **RAG:** retrieval Library (và câu liên quan) → tổng hợp, **bắt buộc citation nội bộ**.
 - **1-tap auto-start:** mở drawer luôn gửi đúng một preset theo trạng thái (xem spec).
-- **Quota:** Free N lượt/ngày; Premium cao/không giới hạn; Redis theo user+ngày. 1 auto-start = 1 lượt.
+- **Quota:** Free N lượt/ngày; Premium soft-cap cao (Admin **Cài đặt → AI Tutor** / env `AI_TUTOR_PREMIUM_DAILY_LIMIT`, mặc định 100); Staff unlimited; ledger `ai_usage` theo user+ngày. 1 auto-start = 1 lượt. Runtime ưu tiên settings DB hơn env.
 - **Guardrail:** chỉ y khoa học tập; không kê đơn / tư vấn ca bệnh cá nhân; disclaimer; tách CSKH (45).
 - **Exam:** không context pack có `is_correct`/explanation trước khi nộp.
 - **Gating:** không lộ explanation Premium cho Free qua AI Tutor.
 - **Logging:** thread/message để lịch sử + cải thiện; ẩn PII.
 
-**Kiến trúc model (khuyến nghị):** Tutor LLM frontier (Claude Sonnet hoặc GPT-5) + guardrail rẻ (`gpt-4.1-mini` sẵn có). Không fine-tune model y khoa chuyên biệt cho v1.
+**Kiến trúc model (khuyến nghị):** Tutor mặc định `gpt-4.1-mini` (env `AI_TUTOR_MODEL`); có thể nâng frontier khi cần. Guardrail rẻ tùy chọn (`gpt-4.1-mini`). Không fine-tune model y khoa chuyên biệt cho v1. Output cache auto-start + cắt history + minify CONTEXT để giảm token.
 
 ## 6. Database
 Xem `04-mo-hinh-du-lieu.md` nhóm AI Tutor: `ai_threads`, `ai_messages`, `ai_usage`. Embeddings: Meilisearch hybrid / dịch vụ vector ngoài (MySQL không pgvector).
@@ -112,7 +112,7 @@ Lỗi: `429` quota, `SUBSCRIPTION_REQUIRED`, `422`, `409` exam leak, `403`.
 - **Cache:** retrieval; câu trả lời FAQ giống nhau (cùng question_id + preset + đã nộp).
 
 ## 9. Phân quyền
-- Entitlement `ai.tutor`; permission `ai.use`. Free: quota nhỏ. Premium: cao/không giới hạn.
+- Entitlement `ai.tutor`; permission `ai.use`. Free: quota nhỏ. Premium: soft-cap cao/ngày. Staff: unlimited.
 - Editor/Instructor có thể dùng AI Tutor để đối chiếu nội dung (không thay editor soạn câu).
 
 ## 10. Edge Cases
