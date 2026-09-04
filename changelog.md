@@ -2,6 +2,12 @@
 
 ## 2026-09-04
 
+### Perf — AI Tutor giảm token/quota + Admin settings
+- Soft-cap Premium 100/ngày (Staff unlimited); default model `gpt-4.1-mini`; cắt history; minify CONTEXT; cache output auto-start.
+- Prompt tách static/CONTEXT (prompt cache OpenAI); follow-up dùng `CONTEXT_REF`; Idempotency-Key khi auto-send.
+- Admin → Cài đặt → tab **AI Tutor**: quota Free/Premium, cache, TTL, model, max tokens (ghi đè env).
+- Unit/feature tests quota, prompt, cache, settings.
+
 ### Fix — Hoạt động gần đây user (admin)
 - Feed tiếng Việt theo màn hình cụ thể (`ActivityArea` / `UserActivityPresenter`), không còn nhãn chung “trang quản trị”.
 - Bỏ poll heartbeat và bỏ đo thời lượng; chỉ `start` + `leave` (tối đa 2 request/trang).
