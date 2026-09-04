@@ -19,7 +19,7 @@ final class CreateRoleAction
     use AsAction;
 
     /** @param list<int|string> $permissionIds */
-    public function handle(User $actor, string $name, PortalGroup $portal, array $permissionIds): RoleModel
+    public function handle(User $actor, string $name, string $displayName, PortalGroup $portal, array $permissionIds): RoleModel
     {
         abort_unless($actor->hasRole(Role::SuperAdmin->value), 403, 'Chỉ Super Admin được tạo role.');
 
@@ -28,12 +28,13 @@ final class CreateRoleAction
             ->whereIn('id', $permissionIds)
             ->get();
 
-        $role = DB::transaction(function () use ($name, $portal, $permissions): RoleModel {
+        $role = DB::transaction(function () use ($name, $displayName, $portal, $permissions): RoleModel {
             $role = RoleModel::query()->create([
                 'name' => $name,
                 'guard_name' => 'web',
                 'portal' => $portal->value,
             ]);
+            $role->forceFill(['display_name' => $displayName])->save();
             $role->syncPermissions($permissions);
 
             return $role;

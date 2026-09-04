@@ -13,46 +13,73 @@
 
     <x-admin.flash />
 
-    <form method="post" action="{{ $isNew ? route('admin.blueprints.store') : route('admin.blueprints.update', $blueprint) }}" class="max-w-3xl space-y-6">
+    <form method="post" action="{{ $isNew ? route('admin.blueprints.store') : route('admin.blueprints.update', $blueprint) }}" class="max-w-4xl space-y-6">
         @csrf @unless($isNew) @method('PUT') @endunless
-        <div class="space-y-4 rounded-xl border border-outline-variant bg-surface p-5">
-            <h2 class="font-label-md font-semibold">Thông tin ma trận</h2>
-            <div>
-                <label class="mb-1 block text-xs font-semibold">Tên *</label>
-                <input name="name" value="{{ old('name', $blueprint->name) }}" required class="w-full rounded-lg bg-surface-container-low px-3 py-2" @disabled(! $canUpdate)>
-            </div>
-            <div class="grid grid-cols-2 gap-4">
+        <section class="rounded-xl border border-outline-variant bg-surface p-5 shadow-sm" aria-labelledby="blueprint-information-heading">
+            <div class="mb-6 flex items-start gap-3 border-b border-outline-variant pb-4">
+                <span class="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary" aria-hidden="true">
+                    <span class="material-symbols-outlined text-[22px]">account_tree</span>
+                </span>
                 <div>
-                    <label class="mb-1 block text-xs font-semibold">Slug</label>
-                    <input name="slug" value="{{ old('slug', $blueprint->slug) }}" class="w-full rounded-lg bg-surface-container-low px-3 py-2" @disabled(! $canUpdate)>
-                </div>
-                <div>
-                    <label class="mb-1 block text-xs font-semibold">Code</label>
-                    <input name="code" value="{{ old('code', $blueprint->code) }}" class="w-full rounded-lg bg-surface-container-low px-3 py-2" @disabled(! $canUpdate)>
+                    <h2 id="blueprint-information-heading" class="font-headline-sm text-headline-sm text-on-surface">Thông tin ma trận</h2>
+                    <p class="mt-1 font-body-sm text-on-surface-variant">Thiết lập tên hiển thị, mã nhận diện và thứ tự của ma trận đề thi.</p>
                 </div>
             </div>
+
+            <div class="space-y-5">
             <div>
-                <label class="mb-1 block text-xs font-semibold">Mô tả</label>
-                <textarea name="description" rows="3" class="w-full rounded-lg bg-surface-container-low px-3 py-2" @disabled(! $canUpdate)>{{ old('description', $blueprint->description) }}</textarea>
+                <label class="mb-1.5 block font-label-sm font-medium text-on-surface-variant" for="blueprint-name">Tên ma trận <span class="text-error">*</span></label>
+                <input id="blueprint-name" name="name" value="{{ old('name', $blueprint->name) }}" required
+                    class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-body-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-70" @disabled(! $canUpdate)>
+                @error('name') <p class="mt-1.5 font-label-sm text-error">{{ $message }}</p> @enderror
             </div>
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
                 <div>
-                    <label class="mb-1 block text-xs font-semibold">Trạng thái</label>
-                    <select name="status" class="w-full rounded-lg bg-surface-container-low px-3 py-2" @disabled(! $canUpdate)>
+                    <label class="mb-1.5 block font-label-sm font-medium text-on-surface-variant" for="blueprint-slug">Đường dẫn định danh</label>
+                    <input id="blueprint-slug" name="slug" value="{{ old('slug', $blueprint->slug) }}" placeholder="vi-du-ma-tran"
+                        class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-mono text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-70" @disabled(! $canUpdate)>
+                    @error('slug') <p class="mt-1.5 font-label-sm text-error">{{ $message }}</p> @enderror
+                </div>
+                <div>
+                    <label class="mb-1.5 block font-label-sm font-medium text-on-surface-variant" for="blueprint-code">Mã nội bộ</label>
+                    <input id="blueprint-code" name="code" value="{{ old('code', $blueprint->code) }}" placeholder="medical_practice_licensing_exam"
+                        class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-mono text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-70" @disabled(! $canUpdate)>
+                    @error('code') <p class="mt-1.5 font-label-sm text-error">{{ $message }}</p> @enderror
+                </div>
+            </div>
+            <div>
+                <label class="mb-1.5 block font-label-sm font-medium text-on-surface-variant" for="blueprint-description">Mô tả</label>
+                <textarea id="blueprint-description" name="description" rows="4" placeholder="Mô tả phạm vi nội dung, số phần và chủ đề của ma trận…"
+                    class="block w-full resize-y rounded-lg border border-outline-variant bg-surface-container-low px-3 py-2.5 font-body-sm text-on-surface outline-none transition placeholder:text-on-surface-variant focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-70" @disabled(! $canUpdate)>{{ old('description', $blueprint->description) }}</textarea>
+                @error('description') <p class="mt-1.5 font-label-sm text-error">{{ $message }}</p> @enderror
+            </div>
+            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <div>
+                    <label class="mb-1.5 block font-label-sm font-medium text-on-surface-variant" for="blueprint-status">Trạng thái</label>
+                    <select id="blueprint-status" name="status" class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-body-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-70" @disabled(! $canUpdate)>
                         @foreach ($statuses as $status)
-                            <option value="{{ $status->value }}" @selected(old('status', $blueprint->status?->value) === $status->value)>{{ $status->value }}</option>
+                            <option value="{{ $status->value }}" @selected(old('status', $blueprint->status?->value) === $status->value)>{{ $status->value === 'active' ? 'Đang hoạt động' : 'Ngừng sử dụng' }}</option>
                         @endforeach
                     </select>
+                    @error('status') <p class="mt-1.5 font-label-sm text-error">{{ $message }}</p> @enderror
                 </div>
                 <div>
-                    <label class="mb-1 block text-xs font-semibold">Thứ tự</label>
-                    <input type="number" name="sort_order" min="0" value="{{ old('sort_order', $blueprint->sort_order ?? 0) }}" class="w-full rounded-lg bg-surface-container-low px-3 py-2" @disabled(! $canUpdate)>
+                    <label class="mb-1.5 block font-label-sm font-medium text-on-surface-variant" for="blueprint-sort-order">Thứ tự hiển thị</label>
+                    <input id="blueprint-sort-order" type="number" name="sort_order" min="0" value="{{ old('sort_order', $blueprint->sort_order ?? 0) }}"
+                        class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-body-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-70" @disabled(! $canUpdate)>
+                    @error('sort_order') <p class="mt-1.5 font-label-sm text-error">{{ $message }}</p> @enderror
                 </div>
             </div>
             @if ($canUpdate)
-                <button type="submit" class="rounded-lg bg-primary px-4 py-2 font-semibold text-on-primary">Lưu ma trận</button>
+                <div class="flex items-center justify-end border-t border-outline-variant pt-5">
+                    <button type="submit" class="inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-5 font-label-md font-medium text-on-primary transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary/30">
+                        <span class="material-symbols-outlined text-[18px]" aria-hidden="true">save</span>
+                        Lưu thay đổi
+                    </button>
+                </div>
             @endif
-        </div>
+            </div>
+        </section>
     </form>
 
     @if (! $isNew)
@@ -82,7 +109,7 @@
                                     <div class="flex items-center gap-2 text-xs">
                                         <span class="rounded bg-secondary-container px-2 py-0.5 text-on-secondary-container">{{ $topic->medicalTaxonomyNodes->count() }} node y khoa</span>
                                         @if ($canUpdate)
-                                            <button type="button" @click="open = !open" class="font-semibold text-primary" x-text="open ? 'Đóng' : 'Mapping'"></button>
+                                            <button type="button" @click="open = !open" class="font-semibold text-primary" x-text="open ? 'Đóng' : 'Liên kết danh mục'"></button>
                                         @endif
                                     </div>
                                 </div>
@@ -94,10 +121,10 @@
                                 @endif
 
                                 <div x-show="open" x-cloak class="mt-3 space-y-2 border-t border-outline-variant/60 pt-3">
-                                    <p class="text-xs text-on-surface-variant">Gán node danh mục y khoa cho chủ đề lâm sàng này.</p>
+                                    <p class="text-xs text-on-surface-variant">Gán mục danh mục y khoa cho chủ đề lâm sàng này.</p>
                                     <input type="search" x-model="nodeSearch"
                                         @input.debounce.300ms="fetch(`{{ route('admin.taxonomy.lookups.medical-nodes') }}?q=${encodeURIComponent(nodeSearch)}`).then(r => r.json()).then(j => nodeResults = j.data ?? [])"
-                                        placeholder="Tìm node danh mục y khoa..."
+                                        placeholder="Tìm mục danh mục y khoa..."
                                         class="w-full rounded-lg bg-surface-container-low px-3 py-2 text-sm">
                                     <div class="max-h-36 space-y-1 overflow-y-auto rounded-lg border border-outline-variant p-2">
                                         <template x-for="node in nodeResults" :key="node.id">
@@ -116,7 +143,7 @@
                                             <template x-for="id in selectedNodeIds" :key="'map-'+id">
                                                 <input type="hidden" name="medical_taxonomy_node_ids[]" :value="id">
                                             </template>
-                                            <button type="submit" class="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-on-primary">Lưu mapping</button>
+                                            <button type="submit" class="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-on-primary">Lưu liên kết</button>
                                         </form>
                                     @endif
                                 </div>

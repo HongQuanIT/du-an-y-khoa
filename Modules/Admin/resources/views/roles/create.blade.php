@@ -65,7 +65,7 @@
                 {{-- 1. Chọn Portal --}}
                 <div>
                     <label for="portal_select" class="mb-2 block font-label-md font-semibold text-on-surface">
-                        Cổng truy cập (Portal) <span class="text-error">*</span>
+                        Cổng truy cập <span class="text-error">*</span>
                     </label>
                     <select id="portal_select" name="portal" x-model="portal" @change="onPortalChange()" required
                         class="h-11 w-full max-w-md rounded-xl border border-outline-variant bg-surface-container-lowest px-3 text-sm font-semibold text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
@@ -77,16 +77,28 @@
                     @error('portal')<p class="mt-1.5 text-xs text-error">{{ $message }}</p>@enderror
                 </div>
 
-                {{-- 2. Đặt tên Role --}}
-                <div>
+                {{-- 2. Đặt tên hiển thị và mã định danh --}}
+                <div class="grid gap-5 sm:grid-cols-2">
+                    <div>
+                    <label for="display_name" class="mb-2 block font-label-md font-semibold text-on-surface">
+                        Tên hiển thị <span class="text-error">*</span>
+                    </label>
+                    <input id="display_name" name="display_name" value="{{ old('display_name') }}" required maxlength="120"
+                        placeholder="Ví dụ: Biên tập viên chuyên môn"
+                        class="h-11 w-full max-w-md rounded-xl border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
+                    <p class="mt-1.5 text-xs text-on-surface-variant">Tên này được hiển thị trên toàn bộ giao diện quản trị.</p>
+                    @error('display_name')<p class="mt-1.5 text-xs text-error">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
                     <label for="name" class="mb-2 block font-label-md font-semibold text-on-surface">
-                        Tên vai trò <span class="text-error">*</span>
+                        Mã định danh <span class="text-error">*</span>
                     </label>
                     <input id="name" name="name" x-model="name" required maxlength="80"
-                        placeholder="Ví dụ: medical_reviewer hoặc btv_chuyen_mon"
+                        placeholder="bien_tap_vien_chuyen_mon"
                         class="h-11 w-full max-w-md rounded-xl border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
-                    <p class="mt-1.5 text-xs text-on-surface-variant">Tên định danh chữ thường, số, dấu gạch dưới hoặc gạch ngang.</p>
+                    <p class="mt-1.5 text-xs text-on-surface-variant">Dùng chữ thường, số, dấu gạch dưới hoặc gạch ngang.</p>
                     @error('name')<p class="mt-1.5 text-xs text-error">{{ $message }}</p>@enderror
+                    </div>
                 </div>
 
                 {{-- 3. Danh sách quyền (Load theo portal) --}}

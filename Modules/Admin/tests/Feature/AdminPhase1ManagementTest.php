@@ -128,6 +128,7 @@ final class AdminPhase1ManagementTest extends TestCase
             ->post(route('admin.roles.store'), [
                 'portal' => PortalGroup::Admin->value,
                 'name' => 'medical_reviewer',
+                'display_name' => 'Người duyệt nội dung y khoa',
                 'permissions' => $permissions,
             ])
             ->assertRedirect();
@@ -136,12 +137,13 @@ final class AdminPhase1ManagementTest extends TestCase
         $this->assertTrue($role->hasPermissionTo('question.update'));
         $this->assertTrue($role->hasPermissionTo('cms.manage'));
         $this->assertSame(PortalGroup::Admin->value, $role->portal);
+        $this->assertSame('Người duyệt nội dung y khoa', $role->display_name);
         $this->assertDatabaseHas('audit_logs', ['action' => 'admin.role.created']);
 
         $this->actingAsStaff($super)
             ->get(route('admin.roles.index'))
             ->assertOk()
-            ->assertSee('medical_reviewer');
+            ->assertSee('Người duyệt nội dung y khoa');
     }
 
     public function test_admin_cannot_create_custom_role(): void
@@ -170,6 +172,7 @@ final class AdminPhase1ManagementTest extends TestCase
             'name' => 'nguoi_nhap_lieu',
             'guard_name' => 'web',
             'portal' => PortalGroup::Admin->value,
+            'display_name' => 'Người nhập liệu',
         ]);
     }
 

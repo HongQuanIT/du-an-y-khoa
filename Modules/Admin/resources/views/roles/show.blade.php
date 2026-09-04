@@ -1,11 +1,12 @@
 @php
     $enum = \App\Support\Enums\Role::tryFrom($role->name);
+    $roleLabel = \Modules\Admin\Support\PermissionCatalog::roleLabel($role);
     $rolePortal = $enum?->portal()
         ?? \App\Support\Enums\PortalGroup::tryFrom((string) $role->portal);
 @endphp
 
-<x-layouts.admin title="Vai trò {{ $role->name }}">
-    <x-admin.page-header :title="$enum?->label() ?? $role->name" :description="'Mã định danh: '.$role->name.' · Cổng truy cập: '.($rolePortal?->label() ?? '—')">
+<x-layouts.admin title="Vai trò {{ $roleLabel }}">
+    <x-admin.page-header :title="$roleLabel" :description="'Mã định danh: '.$role->name.' · Cổng truy cập: '.($rolePortal?->label() ?? '—')">
         <x-slot:actions>
             <a href="{{ route('admin.roles.index') }}"
                 class="rounded-lg px-3 py-2 font-label-md text-on-surface-variant hover:bg-surface-container-low">← Danh sách</a>
