@@ -1,14 +1,14 @@
 @php
     $statusTone = [
-        'pending' => 'bg-amber-50 text-amber-700 border-amber-200',
-        'reviewing' => 'bg-sky-50 text-sky-700 border-sky-200',
-        'resolved' => 'bg-emerald-50 text-emerald-700 border-emerald-200',
-        'dismissed' => 'bg-surface-container-high text-on-surface-variant border-outline-variant',
+        'pending' => 'border-outline-variant text-on-surface',
+        'reviewing' => 'border-outline-variant text-on-surface',
+        'resolved' => 'border-outline-variant text-on-surface',
+        'dismissed' => 'border-outline-variant text-on-surface-variant',
     ];
 @endphp
 
 <x-layouts.admin title="Phản hồi câu hỏi">
-    <x-admin.page-header title="Quản lý feedback câu hỏi"
+    <x-admin.page-header title="Quản lý phản hồi câu hỏi"
         description="Xem, lọc và xử lý phản hồi của học viên về câu hỏi, kiến thức và đáp án." />
 
     <x-admin.flash />
@@ -16,7 +16,7 @@
     <div class="mb-6 grid gap-3 sm:grid-cols-4">
         @foreach ($statuses as $value => $label)
             <a href="{{ route('admin.question-feedback.index', ['status' => $value]) }}"
-                class="rounded-xl border border-outline-variant bg-surface p-4 transition hover:border-primary hover:bg-primary/5">
+                class="rounded-xl border border-outline-variant bg-surface p-4 transition hover:bg-surface-container-low">
                 <p class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">{{ $label }}</p>
                 <p class="mt-2 text-2xl font-bold text-on-surface">{{ number_format((int) ($statusCounts[$value] ?? 0)) }}</p>
             </a>
@@ -24,7 +24,7 @@
     </div>
 
     <form method="get" action="{{ route('admin.question-feedback.index') }}" role="search"
-        aria-label="Lọc feedback câu hỏi"
+        aria-label="Lọc phản hồi câu hỏi"
         class="mb-6 grid grid-cols-1 items-end gap-4 rounded-xl border border-outline-variant bg-surface p-4 md:grid-cols-12">
         <label class="md:col-span-4">
             <span class="mb-1.5 block text-sm font-medium text-on-surface-variant">Tìm kiếm</span>
@@ -87,10 +87,10 @@
                         <tr class="align-top">
                             <td class="max-w-md px-4 py-4">
                                 <div class="mb-2 flex flex-wrap gap-1.5">
-                                    <span class="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                                    <span class="rounded-full border border-outline-variant px-2 py-0.5 text-xs font-medium text-on-surface">
                                         {{ $targets[$feedback->target] ?? $feedback->target }}
                                     </span>
-                                    <span class="rounded-full bg-tertiary/10 px-2 py-0.5 text-xs font-semibold text-tertiary">
+                                    <span class="rounded-full border border-outline-variant px-2 py-0.5 text-xs font-medium text-on-surface">
                                         {{ $categories[$feedback->category] ?? $feedback->category }}
                                     </span>
                                 </div>
@@ -160,7 +160,7 @@
                     @empty
                         <tr>
                             <td colspan="5" class="px-4 py-10 text-center text-on-surface-variant">
-                                Chưa có feedback phù hợp.
+                                Chưa có phản hồi phù hợp.
                             </td>
                         </tr>
                     @endforelse

@@ -73,7 +73,7 @@
     }"
 >
     <div>
-        <p class="mb-2 font-label-sm text-label-sm text-on-surface-variant">1. Chọn cổng truy cập</p>
+        <p class="mb-2 font-label-sm font-medium text-on-surface-variant">Cổng truy cập</p>
         <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
             @foreach ($portalsWithRoles as $item)
                 @php $portal = $item['portal']; @endphp
@@ -82,9 +82,11 @@
                     :class="portal === '{{ $portal->value }}'
                         ? 'border-primary bg-primary/5 ring-1 ring-primary'
                         : 'border-outline-variant hover:bg-surface-container-low'"
-                    class="rounded-xl border px-3 py-3 text-start transition">
-                    <div class="font-label-md text-label-md text-on-surface">{{ $portal->label() }}</div>
-                    <div class="mt-0.5 font-label-sm text-label-sm text-on-surface-variant">{{ $portal->loginPath() }}</div>
+                    class="relative min-h-14 rounded-lg border px-3 py-2.5 text-start transition focus:outline-none focus:ring-2 focus:ring-primary/20">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="font-label-md font-medium text-on-surface">{{ $portal->label() }}</span>
+                        <span x-show="portal === '{{ $portal->value }}'" class="material-symbols-outlined text-[18px] text-primary" aria-hidden="true">check_circle</span>
+                    </div>
                 </button>
             @endforeach
         </div>
@@ -94,12 +96,12 @@
     </div>
 
     <div x-show="portal" x-cloak>
-        <p class="mb-2 font-label-sm text-label-sm text-on-surface-variant">2. Chọn vai trò</p>
+        <p class="mb-2 font-label-sm font-medium text-on-surface-variant">Vai trò</p>
         <template x-if="rolesForPortal().length === 1">
-            <p class="font-body-sm text-body-sm text-on-surface">
-                <span x-text="rolesForPortal()[0]?.label"></span>
-                <span class="text-on-surface-variant"> — tự chọn vì cổng truy cập chỉ có một vai trò.</span>
-            </p>
+            <div class="flex items-center gap-2 rounded-lg border border-outline-variant bg-surface-container-low px-3 py-2.5">
+                <span class="material-symbols-outlined text-[18px] text-primary" aria-hidden="true">badge</span>
+                <span class="font-label-md font-medium text-on-surface" x-text="rolesForPortal()[0]?.label"></span>
+            </div>
         </template>
         <div class="space-y-2" x-show="rolesForPortal().length > 1">
             <template x-for="item in rolesForPortal()" :key="item.value">

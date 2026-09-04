@@ -8,87 +8,125 @@
 
     <x-admin.flash />
 
-    <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <section class="rounded-xl border border-outline-variant bg-surface p-5 lg:col-span-2 space-y-4">
-            <h3 class="font-headline-sm text-headline-sm text-on-surface">Thông tin</h3>
-            <dl class="grid grid-cols-1 gap-3 sm:grid-cols-2 font-body-sm text-body-sm">
+    <div class="grid grid-cols-1 items-start gap-6 xl:grid-cols-12">
+        <section class="rounded-xl border border-outline-variant bg-surface p-5 shadow-sm xl:col-span-8" aria-labelledby="user-information-heading">
+            <div class="mb-5 flex items-center gap-3 border-b border-outline-variant pb-4">
+                <span class="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary" aria-hidden="true">
+                    <span class="material-symbols-outlined text-[22px]">person</span>
+                </span>
                 <div>
-                    <dt class="font-label-sm text-label-sm text-on-surface-variant">ID</dt>
-                    <dd class="text-on-surface">{{ $user->id }}</dd>
+                    <h2 id="user-information-heading" class="font-headline-sm text-headline-sm text-on-surface">Thông tin tài khoản</h2>
+                    <p class="mt-0.5 font-body-sm text-on-surface-variant">Thông tin định danh và quyền truy cập hiện tại.</p>
+                </div>
+            </div>
+            <dl class="grid grid-cols-1 gap-x-8 gap-y-5 font-body-sm sm:grid-cols-2">
+                <div>
+                    <dt class="font-label-sm text-on-surface-variant">Mã người dùng</dt>
+                    <dd class="mt-1 font-medium text-on-surface">#{{ $user->id }}</dd>
                 </div>
                 <div>
-                    <dt class="font-label-sm text-label-sm text-on-surface-variant">Portal</dt>
-                    <dd class="text-on-surface">{{ \App\Support\Enums\Role::tryFromName($user->primaryRoleName())?->portal()->label() ?? '—' }}</dd>
+                    <dt class="font-label-sm text-on-surface-variant">Cổng truy cập</dt>
+                    <dd class="mt-1 font-medium text-on-surface">{{ \App\Support\Enums\Role::tryFromName($user->primaryRoleName())?->portal()->label() ?? '—' }}</dd>
                 </div>
                 <div>
-                    <dt class="font-label-sm text-label-sm text-on-surface-variant">Vai trò</dt>
-                    <dd class="text-on-surface">{{ \App\Support\Enums\Role::tryFromName($user->primaryRoleName())?->label() ?? '—' }}</dd>
+                    <dt class="font-label-sm text-on-surface-variant">Vai trò</dt>
+                    <dd class="mt-1 font-medium text-on-surface">{{ \App\Support\Enums\Role::tryFromName($user->primaryRoleName())?->label() ?? '—' }}</dd>
                 </div>
                 <div>
-                    <dt class="font-label-sm text-label-sm text-on-surface-variant">Trạng thái</dt>
-                    <dd class="text-on-surface">{{ ($user->status ?? \App\Support\Enums\UserStatus::Active)->label() }}</dd>
+                    <dt class="font-label-sm text-on-surface-variant">Trạng thái</dt>
+                    <dd class="mt-1"><span class="inline-flex rounded-full bg-surface-container px-2.5 py-1 font-label-sm font-medium text-on-surface">{{ ($user->status ?? \App\Support\Enums\UserStatus::Active)->label() }}</span></dd>
                 </div>
                 <div>
-                    <dt class="font-label-sm text-label-sm text-on-surface-variant">Email verified</dt>
-                    <dd class="text-on-surface">{{ $user->email_verified_at?->timezone(config('app.timezone'))->format('d/m/Y H:i') ?? 'Chưa' }}</dd>
+                    <dt class="font-label-sm text-on-surface-variant">Xác minh email</dt>
+                    <dd class="mt-1 font-medium text-on-surface">{{ $user->email_verified_at?->timezone(config('app.timezone'))->format('d/m/Y H:i') ?? 'Chưa xác minh' }}</dd>
                 </div>
                 <div>
-                    <dt class="font-label-sm text-label-sm text-on-surface-variant">2FA</dt>
-                    <dd class="text-on-surface">{{ $user->hasTwoFactorEnabled() ? 'Đã bật' : 'Chưa' }}</dd>
+                    <dt class="font-label-sm text-on-surface-variant">Xác thực hai bước</dt>
+                    <dd class="mt-1 font-medium text-on-surface">{{ $user->hasTwoFactorEnabled() ? 'Đã bật' : 'Chưa bật' }}</dd>
                 </div>
                 <div>
-                    <dt class="font-label-sm text-label-sm text-on-surface-variant">Tạo lúc</dt>
-                    <dd class="text-on-surface">{{ $user->created_at?->format('d/m/Y H:i') }}</dd>
+                    <dt class="font-label-sm text-on-surface-variant">Ngày tạo</dt>
+                    <dd class="mt-1 font-medium text-on-surface">{{ $user->created_at?->timezone(config('app.timezone'))->format('d/m/Y H:i') }}</dd>
                 </div>
             </dl>
         </section>
 
-        <section class="rounded-xl border border-outline-variant bg-surface p-5 space-y-5">
-            <h3 class="font-headline-sm text-headline-sm text-on-surface">Thao tác</h3>
+        <aside class="space-y-4 xl:col-span-4" aria-labelledby="account-actions-heading">
+            <h2 id="account-actions-heading" class="sr-only">Thao tác quản lý tài khoản</h2>
 
             @if (! $canManage)
-                <p class="font-body-sm text-body-sm text-on-surface-variant">Bạn không thể quản lý tài khoản này (thiếu quyền hoặc tự thao tác).</p>
+                <div class="rounded-xl border border-outline-variant bg-surface p-5 shadow-sm">
+                    <h3 class="font-label-lg font-semibold text-on-surface">Không thể thao tác</h3>
+                    <p class="mt-2 font-body-sm text-on-surface-variant">Bạn không có quyền quản lý tài khoản này hoặc đây là tài khoản của chính bạn.</p>
+                </div>
             @else
-                <form method="post" action="{{ route('admin.users.role', $user) }}" class="space-y-3">
+                <form method="post" action="{{ route('admin.users.role', $user) }}" class="space-y-4 rounded-xl border border-outline-variant bg-surface p-5 shadow-sm">
                     @csrf
                     @method('PATCH')
-                    <p class="font-label-sm text-label-sm text-on-surface-variant">Đổi portal / vai trò</p>
+                    <div>
+                        <h3 class="font-label-lg font-semibold text-on-surface">Quyền truy cập</h3>
+                        <p class="mt-1 font-body-sm text-on-surface-variant">Chọn cổng truy cập và vai trò của người dùng.</p>
+                    </div>
                     @include('admin::partials.portal-role-picker', [
                         'assignableRoles' => $assignableRoles,
                         'selectedRole' => old('role', $user->primaryRoleName()),
                     ])
-                    <button type="submit" class="w-full rounded-lg bg-primary px-3 py-2 font-label-md text-on-primary">Lưu vai trò</button>
+                    <button type="submit" class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 font-label-md font-medium text-on-primary transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary/30">
+                        <span class="material-symbols-outlined text-[18px]" aria-hidden="true">save</span>
+                        Lưu quyền truy cập
+                    </button>
                 </form>
 
-                <form method="post" action="{{ route('admin.users.status', $user) }}" class="space-y-2">
+                <form method="post" action="{{ route('admin.users.status', $user) }}" class="space-y-4 rounded-xl border border-outline-variant bg-surface p-5 shadow-sm">
                     @csrf
                     @method('PATCH')
-                    <label class="block font-label-sm text-label-sm text-on-surface-variant" for="status">Trạng thái</label>
-                    <select id="status" name="status" class="w-full rounded-lg bg-surface-container-low px-3 py-2 font-body-sm">
-                        @foreach ($statuses as $status)
-                            <option value="{{ $status->value }}" @selected(($user->status?->value ?? 'active') === $status->value)>{{ $status->label() }}</option>
-                        @endforeach
-                    </select>
-                    <input type="text" name="reason" placeholder="Lý do (tuỳ chọn)"
-                        class="w-full rounded-lg bg-surface-container-low px-3 py-2 font-body-sm">
-                    <button type="submit" class="w-full rounded-lg border border-outline-variant px-3 py-2 font-label-md text-on-surface hover:bg-surface-container-low">Cập nhật trạng thái</button>
+                    <div>
+                        <h3 class="font-label-lg font-semibold text-on-surface">Trạng thái tài khoản</h3>
+                        <p class="mt-1 font-body-sm text-on-surface-variant">Kiểm soát khả năng đăng nhập và sử dụng hệ thống.</p>
+                    </div>
+                    <div>
+                        <label class="mb-1.5 block font-label-sm font-medium text-on-surface-variant" for="status">Trạng thái mới</label>
+                        <select id="status" name="status" class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-body-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                            @foreach ($statuses as $status)
+                                <option value="{{ $status->value }}" @selected(($user->status?->value ?? 'active') === $status->value)>{{ $status->label() }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="mb-1.5 block font-label-sm font-medium text-on-surface-variant" for="status-reason">Lý do thay đổi <span class="font-normal">(tùy chọn)</span></label>
+                        <input id="status-reason" type="text" name="reason" placeholder="Nhập lý do"
+                            class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-body-sm text-on-surface outline-none placeholder:text-on-surface-variant focus:border-primary focus:ring-2 focus:ring-primary/20">
+                    </div>
+                    <button type="submit" class="inline-flex h-11 w-full items-center justify-center rounded-lg border border-outline-variant px-4 font-label-md font-medium text-on-surface transition hover:bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-primary/20">Cập nhật trạng thái</button>
                 </form>
 
-                <div class="flex flex-col gap-2 border-t border-outline-variant pt-4">
+                <section class="rounded-xl border border-outline-variant bg-surface p-5 shadow-sm" aria-labelledby="security-actions-heading">
+                    <div class="mb-4">
+                        <h3 id="security-actions-heading" class="font-label-lg font-semibold text-on-surface">Bảo mật tài khoản</h3>
+                        <p class="mt-1 font-body-sm text-on-surface-variant">Hỗ trợ người dùng khôi phục quyền truy cập.</p>
+                    </div>
+                    <div class="flex flex-col gap-2">
                     <form method="post" action="{{ route('admin.users.reset-password', $user) }}">
                         @csrf
-                        <button type="submit" class="w-full rounded-lg border border-outline-variant px-3 py-2 font-label-md text-on-surface hover:bg-surface-container-low"
-                            onclick="return confirm('Gửi email đặt lại mật khẩu?')">Gửi reset mật khẩu</button>
+                        <button type="submit" class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-outline-variant px-4 font-label-md font-medium text-on-surface transition hover:bg-surface-container-low"
+                            onclick="return confirm('Gửi email đặt lại mật khẩu?')">
+                            <span class="material-symbols-outlined text-[18px]" aria-hidden="true">key</span>
+                            Gửi email đặt lại mật khẩu
+                        </button>
                     </form>
                     @unless ($user->email_verified_at)
                         <form method="post" action="{{ route('admin.users.verify-email', $user) }}">
                             @csrf
-                            <button type="submit" class="w-full rounded-lg border border-outline-variant px-3 py-2 font-label-md text-on-surface hover:bg-surface-container-low">Xác minh email</button>
+                            <button type="submit" class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-outline-variant px-4 font-label-md font-medium text-on-surface transition hover:bg-surface-container-low">
+                                <span class="material-symbols-outlined text-[18px]" aria-hidden="true">mark_email_read</span>
+                                Xác minh email
+                            </button>
                         </form>
                     @endunless
-                </div>
+                    </div>
+                </section>
             @endif
-        </section>
+        </aside>
     </div>
 
     <section class="mt-6 rounded-xl border border-outline-variant bg-surface p-5">

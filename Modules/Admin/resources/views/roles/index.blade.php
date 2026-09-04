@@ -33,10 +33,10 @@
                         </thead>
                         <tbody>
                             @forelse ($group['roles'] as $role)
-                                @php $enum = \App\Support\Enums\Role::tryFrom($role->name); @endphp
+                                @php $roleLabel = \Modules\Admin\Support\PermissionCatalog::roleLabel($role); @endphp
                                 <tr class="border-b border-outline-variant/60 last:border-0">
                                     <td class="px-4 py-3">
-                                        <div class="font-label-md text-label-md text-on-surface">{{ $enum?->label() ?? $role->name }}</div>
+                                        <div class="font-label-md text-label-md text-on-surface">{{ $roleLabel }}</div>
                                         <div class="font-label-sm text-label-sm text-on-surface-variant">{{ $role->name }}</div>
                                     </td>
                                     <td class="px-4 py-3 text-on-surface-variant">{{ $role->users_count }}</td>

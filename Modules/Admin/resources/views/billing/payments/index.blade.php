@@ -5,23 +5,23 @@
     $statusMeta = [
         'pending' => [
             'label' => 'Chờ thanh toán',
-            'dot' => 'bg-amber-500',
-            'class' => 'bg-amber-50 text-amber-800 ring-amber-600/15',
+            'dot' => 'bg-on-surface-variant',
+            'class' => 'border-outline-variant text-on-surface',
         ],
         'completed' => [
             'label' => 'Thành công',
-            'dot' => 'bg-emerald-500',
-            'class' => 'bg-emerald-50 text-emerald-800 ring-emerald-600/15',
+            'dot' => 'bg-on-surface-variant',
+            'class' => 'border-outline-variant text-on-surface',
         ],
         'failed' => [
             'label' => 'Thất bại',
-            'dot' => 'bg-rose-500',
-            'class' => 'bg-rose-50 text-rose-800 ring-rose-600/15',
+            'dot' => 'bg-on-surface-variant',
+            'class' => 'border-outline-variant text-on-surface',
         ],
         'expired' => [
             'label' => 'Hết hạn',
-            'dot' => 'bg-slate-400',
-            'class' => 'bg-slate-100 text-slate-700 ring-slate-500/15',
+            'dot' => 'bg-on-surface-variant',
+            'class' => 'border-outline-variant text-on-surface-variant',
         ],
     ];
 @endphp
@@ -36,31 +36,32 @@
     <x-admin.flash />
 
     <form method="get" action="{{ route('admin.billing.payments.index') }}"
-        class="mb-6 grid grid-cols-1 gap-3 rounded-xl border border-outline-variant bg-surface p-4 sm:grid-cols-3">
-        <div>
-            <label class="mb-1 block font-label-sm text-on-surface-variant" for="status">Trạng thái</label>
+        role="search" aria-label="Lọc phiên thanh toán"
+        class="mb-6 grid grid-cols-1 items-end gap-4 rounded-xl border border-outline-variant bg-surface p-4 sm:grid-cols-2 xl:grid-cols-12">
+        <div class="xl:col-span-4">
+            <label class="mb-1.5 block font-label-sm font-medium text-on-surface-variant" for="status">Trạng thái</label>
             <select id="status" name="status"
-                class="w-full rounded-lg border-none bg-surface-container-low px-3 py-2 font-body-sm focus:ring-2 focus:ring-primary">
+                class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-body-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
                 <option value="">Tất cả</option>
                 @foreach ($statusLabels as $st => $label)
                     <option value="{{ $st }}" @selected($filters['status'] === $st)>{{ $label }}</option>
                 @endforeach
             </select>
         </div>
-        <div>
-            <label class="mb-1 block font-label-sm text-on-surface-variant" for="provider">Cổng</label>
+        <div class="xl:col-span-4">
+            <label class="mb-1.5 block font-label-sm font-medium text-on-surface-variant" for="provider">Cổng thanh toán</label>
             <select id="provider" name="provider"
-                class="w-full rounded-lg border-none bg-surface-container-low px-3 py-2 font-body-sm focus:ring-2 focus:ring-primary">
+                class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-body-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
                 <option value="">Tất cả</option>
                 @foreach (['fake', 'vnpay', 'momo', 'zalopay'] as $p)
                     <option value="{{ $p }}" @selected($filters['provider'] === $p)>{{ strtoupper($p) }}</option>
                 @endforeach
             </select>
         </div>
-        <div class="flex items-end gap-2">
-            <button type="submit" class="rounded-lg bg-primary px-4 py-2 font-label-md text-on-primary hover:opacity-90">Lọc</button>
+        <div class="flex gap-2 xl:col-span-4">
+            <button type="submit" class="inline-flex h-11 flex-1 items-center justify-center rounded-lg bg-primary px-4 font-label-md font-medium text-on-primary hover:opacity-90">Lọc</button>
             <a href="{{ route('admin.billing.payments.index') }}"
-                class="rounded-lg px-4 py-2 font-label-md text-on-surface-variant hover:bg-surface-container-low">Xóa lọc</a>
+                class="inline-flex h-11 flex-1 items-center justify-center rounded-lg border border-outline-variant px-4 font-label-md text-on-surface-variant hover:bg-surface-container-low">Xóa lọc</a>
         </div>
     </form>
 
@@ -84,11 +85,11 @@
                             $payment = $session->payments->first();
                             $meta = $statusMeta[$session->status] ?? [
                                 'label' => $session->status,
-                                'dot' => 'bg-slate-400',
-                                'class' => 'bg-slate-100 text-slate-700 ring-slate-500/15',
+                                'dot' => 'bg-on-surface-variant',
+                                'class' => 'border-outline-variant text-on-surface-variant',
                             ];
                         @endphp
-                        <tr class="transition-colors hover:bg-surface-container-lowest/80">
+                        <tr class="transition-colors hover:bg-surface-container-low">
                             <td class="px-4 py-3.5 align-middle">
                                 <p class="font-label-md font-semibold text-on-surface">#{{ $session->id }}</p>
                                 <p class="mt-0.5 font-mono text-[11px] text-on-surface-variant" title="{{ $session->uuid }}">
@@ -114,7 +115,7 @@
                                 </span>
                             </td>
                             <td class="px-4 py-3.5 align-middle">
-                                <span class="inline-flex max-w-full items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 font-label-sm font-semibold ring-1 ring-inset {{ $meta['class'] }}">
+                                <span class="inline-flex max-w-full items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 font-label-sm font-medium {{ $meta['class'] }}">
                                     <span class="size-1.5 shrink-0 rounded-full {{ $meta['dot'] }}"></span>
                                     {{ $meta['label'] }}
                                 </span>

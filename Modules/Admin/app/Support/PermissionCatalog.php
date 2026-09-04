@@ -8,6 +8,7 @@ use App\Support\Enums\Permission as PermissionEnum;
 use App\Support\Enums\PortalGroup;
 use App\Support\Enums\Role as RoleEnum;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -16,6 +17,21 @@ use Spatie\Permission\Models\Role;
  */
 final class PermissionCatalog
 {
+    public static function roleLabel(Role $role): string
+    {
+        $systemRole = RoleEnum::tryFrom($role->name);
+
+        if ($systemRole !== null) {
+            return $systemRole->label();
+        }
+
+        $displayName = trim((string) ($role->display_name ?? ''));
+
+        return $displayName !== ''
+            ? $displayName
+            : Str::headline(str_replace(['_', '.', '-'], ' ', $role->name));
+    }
+
     /**
      * @return array<string, array{
      *     portal: PortalGroup,
@@ -63,8 +79,7 @@ final class PermissionCatalog
         $map = [];
 
         foreach ($roles as $role) {
-            $enum = RoleEnum::tryFrom($role->name);
-            $label = $enum?->label() ?? $role->name;
+            $label = self::roleLabel($role);
 
             foreach ($role->permissions as $permission) {
                 $map[$permission->name][] = $label;

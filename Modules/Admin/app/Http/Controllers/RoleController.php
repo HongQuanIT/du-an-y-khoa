@@ -57,12 +57,10 @@ final class RoleController extends Controller
             $allowedPermissionIds = $permissionIdsByPortal->get($portal, []);
 
             return [$portal => collect($group['roles'])->map(function (Role $role) use ($allowedPermissionIds): array {
-                $enum = RoleEnum::tryFrom($role->name);
-
                 return [
                     'id' => (int) $role->getKey(),
                     'name' => $role->name,
-                    'label' => $enum?->label() ?? $role->name,
+                    'label' => PermissionCatalog::roleLabel($role),
                     'permissions' => $role->permissions->pluck('id')
                         ->map(fn ($id): int => (int) $id)
                         ->intersect($allowedPermissionIds)
@@ -86,6 +84,7 @@ final class RoleController extends Controller
 
         // Accept human-friendly or pasted names and normalize them to the
         // stable slug format used by Spatie roles.
+        $displayName = trim((string) $request->input('display_name', $request->input('name')));
         $normalizedName = Str::of((string) $request->input('name'))
             ->trim()
             ->lower()
@@ -93,7 +92,7 @@ final class RoleController extends Controller
             ->replaceMatches('/[^a-z0-9._-]+/', '_')
             ->trim('._-')
             ->toString();
-        $request->merge(['name' => $normalizedName]);
+        $request->merge(['name' => $normalizedName, 'display_name' => $displayName]);
 
         $data = $request->validate([
             'portal' => ['required', Rule::enum(PortalGroup::class)],
@@ -101,6 +100,7 @@ final class RoleController extends Controller
                 'required', 'string', 'min:2', 'max:80', 'regex:/^[a-z][a-z0-9._-]*$/',
                 Rule::unique('roles', 'name')->where('guard_name', 'web'),
             ],
+            'display_name' => ['required', 'string', 'min:2', 'max:120'],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['integer', 'distinct', 'exists:permissions,id'],
             'template_role_id' => ['nullable', 'integer', 'exists:roles,id'],
@@ -134,7 +134,7 @@ final class RoleController extends Controller
             }
         }
 
-        $role = $action->handle($this->actor(), $data['name'], $portal, $selectedPermissionIds);
+        $role = $action->handle($this->actor(), $data['name'], $data['display_name'], $portal, $selectedPermissionIds);
 
         return redirect()->route('admin.roles.show', $role)->with('status', 'Đã tạo role mới.');
     }
@@ -199,6 +199,19 @@ final class RoleController extends Controller
                 ->filter()
                 ->values()
                 ->all();
+        }
+
+        foreach ($roleModels->values() as $role) {
+            if (RoleEnum::tryFrom($role->name) !== null) {
+                continue;
+            }
+
+            $portal = PortalGroup::tryFrom((string) $role->portal) ?? PortalGroup::Admin;
+            $rolesByPortal[$portal->value][] = [
+                'id' => $role->id,
+                'name' => $role->name,
+                'label' => PermissionCatalog::roleLabel($role),
+            ];
         }
 
         return view('admin::permissions.index', [
