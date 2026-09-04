@@ -1,10 +1,10 @@
 <x-layouts.admin title="Vai trò">
     <x-admin.page-header title="Vai trò & quyền"
-        description="Role được nhóm theo 4 portal. Super Admin cập nhật ma trận permission.">
+        description="Vai trò được nhóm theo 4 cổng truy cập. Quản trị viên cấp cao cập nhật ma trận quyền.">
         <x-slot:actions>
             @if ($canCreate)
                 <a href="{{ route('admin.roles.create') }}"
-                    class="rounded-lg bg-primary px-3 py-2 font-label-md text-on-primary hover:opacity-90">Tạo role</a>
+                    class="rounded-lg bg-primary px-3 py-2 font-label-md text-on-primary hover:opacity-90">Tạo vai trò</a>
             @endif
             <a href="{{ route('admin.permissions.index') }}"
                 class="rounded-lg border border-outline-variant px-3 py-2 font-label-md text-label-md text-on-surface hover:bg-surface-container-low">Danh mục permission</a>
@@ -25,7 +25,7 @@
                     <table class="min-w-full text-left font-body-sm text-body-sm">
                         <thead class="border-b border-outline-variant font-label-md text-label-md text-on-surface-variant">
                             <tr>
-                                <th class="px-4 py-3">Role</th>
+                                <th class="px-4 py-3">Vai trò</th>
                                 <th class="px-4 py-3">Người dùng</th>
                                 <th class="px-4 py-3">Permissions</th>
                                 <th class="px-4 py-3"></th>
@@ -47,7 +47,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="4" class="px-4 py-6 text-on-surface-variant">Chưa có role trong portal này.</td>
+                                    <td colspan="4" class="px-4 py-6 text-on-surface-variant">Chưa có vai trò trong cổng truy cập này.</td>
                                 </tr>
                             @endforelse
                         </tbody>

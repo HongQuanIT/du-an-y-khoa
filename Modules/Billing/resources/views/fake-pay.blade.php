@@ -2,10 +2,10 @@
     use Modules\Billing\Support\MoneyFormatter;
 @endphp
 
-<x-layouts.app title="Thanh toán thử (Fake)" description="Mô phỏng cổng thanh toán — chỉ dùng local/test.">
+<x-layouts.app title="Thanh toán thử" description="Mô phỏng cổng thanh toán — chỉ dùng trong môi trường phát triển và kiểm thử.">
     <div class="mx-auto max-w-md px-margin-mobile py-8 md:px-gutter md:py-12">
         <div class="rounded-xl border border-dashed border-outline-variant bg-surface-container-low/50 p-6">
-            <p class="font-label-sm text-label-sm uppercase tracking-wide text-on-surface-variant">Fake Gateway</p>
+            <p class="font-label-sm text-label-sm uppercase tracking-wide text-on-surface-variant">Cổng thanh toán thử</p>
             <h1 class="mt-2 font-headline-sm text-headline-sm text-on-surface">Mô phỏng thanh toán</h1>
             <p class="mt-2 font-body-md text-body-md text-on-surface-variant">
                 {{ $session->planPrice?->plan?->name }} — {{ $session->planPrice?->label }}

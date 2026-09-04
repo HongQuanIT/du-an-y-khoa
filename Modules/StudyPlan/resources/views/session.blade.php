@@ -800,7 +800,7 @@
                             <div class="relative w-full max-w-md rounded-2xl border border-outline-variant bg-white p-6 shadow-2xl transition-all"
                                 @click.stop>
                                 <div class="mb-4 flex items-center justify-between">
-                                    <h3 class="text-headline-sm font-bold text-on-surface">Save question in folder</h3>
+                                    <h3 class="text-headline-sm font-bold text-on-surface">Lưu câu hỏi vào thư mục</h3>
                                     <button type="button" @click="folderModalOpen = false"
                                         class="flex size-8 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface"
                                         aria-label="Đóng">
@@ -811,7 +811,7 @@
                                 <div class="relative mb-4">
                                     <input type="text" x-model="folderSearchQuery"
                                         @keydown.enter.prevent="canCreateQueryFolder && createFolderAndAttach()"
-                                        placeholder="Create or find folder"
+                                        placeholder="Tạo hoặc tìm thư mục"
                                         class="w-full rounded-xl border border-outline-variant bg-white px-4 py-2.5 pr-10 text-sm font-medium text-on-surface placeholder:text-on-surface-variant/60 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
                                     <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[20px] text-outline">search</span>
                                 </div>

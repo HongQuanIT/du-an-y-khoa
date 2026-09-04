@@ -69,7 +69,7 @@
             </p>
         </div>
         <div class="rounded-2xl border border-outline-variant bg-surface p-4 shadow-sm">
-            <p class="text-label-sm font-medium text-on-surface-variant">Tổng feedback</p>
+            <p class="text-label-sm font-medium text-on-surface-variant">Tổng phản hồi</p>
             <p class="mt-1 text-headline-sm font-bold tabular-nums {{ $stats['total_reports'] > 0 ? 'text-red-700 dark:text-red-300' : 'text-on-surface' }}">
                 {{ number_format($stats['total_reports']) }}
             </p>
@@ -85,7 +85,7 @@
                     <dd class="font-semibold tabular-nums text-on-surface">{{ number_format($stats['study_mode_attempts']) }}</dd>
                 </div>
                 <div class="flex items-center justify-between gap-4 border-b border-outline-variant/60 pb-3">
-                    <dt class="text-on-surface-variant">Exam mode</dt>
+                    <dt class="text-on-surface-variant">Chế độ thi</dt>
                     <dd class="font-semibold tabular-nums text-on-surface">{{ number_format($stats['exam_mode_attempts']) }}</dd>
                 </div>
                 <div class="flex items-center justify-between gap-4">
@@ -98,9 +98,9 @@
         </section>
 
         <section class="rounded-2xl border border-outline-variant bg-surface p-5 shadow-sm">
-            <h2 class="mb-4 font-label-md font-semibold text-on-surface">Feedback theo lý do</h2>
+            <h2 class="mb-4 font-label-md font-semibold text-on-surface">Phản hồi theo lý do</h2>
             @if ($stats['reports_by_reason'] === [])
-                <p class="text-sm text-on-surface-variant">Chưa có breakdown feedback trong cache.</p>
+                <p class="text-sm text-on-surface-variant">Chưa có thống kê chi tiết phản hồi trong bộ nhớ đệm.</p>
             @else
                 <dl class="space-y-3 text-sm">
                     @foreach ($stats['reports_by_reason'] as $reason => $count)

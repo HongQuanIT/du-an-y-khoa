@@ -34,7 +34,7 @@ final class QuestionController extends Controller
         $actor = $this->actor();
         $query = QuestionAccess::scopeVisibleTo(
             Question::query()
-                ->with(['medicalTaxonomyNodes', 'creator:id,name', 'pendingReviewRequest.requester:id,name'])
+                ->with(['medicalTaxonomyNodes', 'creator:id,name', 'pendingReviewRequest.requester:id,name', 'reviewRequests.reviewer:id,name', 'clonedFrom:id,code,stem'])
                 ->withCount([
                     'feedback',
                     'feedback as pending_feedback_count' => fn ($q) => $q->where('status', QuestionFeedback::STATUS_PENDING),
@@ -127,17 +127,31 @@ final class QuestionController extends Controller
         ])));
     }
 
-    public function store(Request $request, SaveAdminQuestionAction $action): RedirectResponse
-    {
+    public function store(
+        Request $request,
+        SaveAdminQuestionAction $action,
+        TransitionQuestionStatusAction $transition,
+    ): RedirectResponse {
         $this->authorizePermission(Permission::QuestionCreate);
 
         $question = $action->handle($this->actor(), null, $this->validatedPayload($request));
+        $requestedStatus = $request->filled('requested_status')
+            ? QuestionStatus::from($request->validate([
+                'requested_status' => ['required', 'string', Rule::in(QuestionStatus::values())],
+            ])['requested_status'])
+            : QuestionStatus::Draft;
+
+        if ($requestedStatus !== QuestionStatus::Draft) {
+            $transition->handle($this->actor(), $question, $requestedStatus);
+        }
 
         return redirect()
             ->route('admin.questions.edit', $question)
             ->with('status', QuestionAccess::isReviewer($this->actor())
-                ? 'Đã tạo câu hỏi nháp.'
-                : 'Đã tạo câu hỏi và gửi admin duyệt.');
+                ? 'Đã tạo câu hỏi với trạng thái: '.$requestedStatus->label().'.'
+                : ($requestedStatus === QuestionStatus::InReview
+                    ? 'Đã tạo câu hỏi và gửi admin duyệt.'
+                    : 'Đã tạo bản nháp câu hỏi.'));
     }
 
     public function edit(Question $question): View
@@ -154,6 +168,7 @@ final class QuestionController extends Controller
             'creator:id,name,email',
             'reviewer:id,name',
             'pendingReviewRequest.requester:id,name',
+            'latestRejectedReviewRequest.reviewer:id,name',
         ]);
 
         return view('admin::questions.form', $this->formData($question));
@@ -180,12 +195,34 @@ final class QuestionController extends Controller
         ]);
     }
 
-    public function update(Request $request, Question $question, SaveAdminQuestionAction $action): RedirectResponse
-    {
+    public function update(
+        Request $request,
+        Question $question,
+        SaveAdminQuestionAction $action,
+        TransitionQuestionStatusAction $transition,
+    ): RedirectResponse {
         $this->authorizePermission(Permission::QuestionUpdate);
         QuestionAccess::authorizeView($this->actor(), $question);
 
-        $action->handle($this->actor(), $question, $this->validatedPayload($request));
+        $question = $action->handle($this->actor(), $question, $this->validatedPayload($request));
+
+        if ($request->filled('requested_status')) {
+            $statusData = $request->validate([
+                'requested_status' => ['required', 'string', Rule::in(QuestionStatus::values())],
+                'rejection_reason' => ['nullable', 'string', 'max:2000'],
+            ]);
+
+            $transition->handle(
+                $this->actor(),
+                $question,
+                QuestionStatus::from($statusData['requested_status']),
+                $statusData['rejection_reason'] ?? null,
+            );
+
+            return back()->with('status', QuestionStatus::from($statusData['requested_status']) === QuestionStatus::InReview
+                ? 'Đã lưu câu hỏi và gửi admin duyệt.'
+                : 'Đã lưu câu hỏi và cập nhật trạng thái: '.QuestionStatus::from($statusData['requested_status'])->label());
+        }
 
         return back()->with('status', QuestionAccess::isReviewer($this->actor())
             ? 'Đã lưu câu hỏi.'
@@ -195,7 +232,7 @@ final class QuestionController extends Controller
                 QuestionStatus::Retired,
             ], true)
                 ? 'Đã gửi thay đổi để admin duyệt. Nội dung đang hiển thị chưa bị thay đổi.'
-                : 'Đã lưu nội dung và cập nhật yêu cầu chờ duyệt.'));
+                : 'Đã lưu bản nháp câu hỏi.'));
     }
 
     public function destroy(Question $question, RequestQuestionDeletionAction $action): RedirectResponse
@@ -257,8 +294,6 @@ final class QuestionController extends Controller
         $isReviewer = QuestionAccess::isReviewer($this->actor());
         $hasBlockingReview = $pendingReview !== null
             && $pendingReview->action !== QuestionReviewAction::Create;
-        $isLockedForEditor = ! $isReviewer && $question->exists
-            && $question->status === QuestionStatus::InReview;
 
         return [
             'question' => $question,
@@ -269,12 +304,13 @@ final class QuestionController extends Controller
             'difficulties' => Difficulty::cases(),
             'canUpdate' => ($this->actor()->can(Permission::QuestionUpdate->value)
                 || ($question->exists === false && $this->actor()->can(Permission::QuestionCreate->value)))
-                && ($isReviewer || (! $hasBlockingReview && ! $isLockedForEditor)),
+                && ($isReviewer || ! $hasBlockingReview),
             'canPublish' => $this->actor()->can(Permission::QuestionPublish->value),
             'canDelete' => $question->exists && $this->actor()->can(Permission::QuestionDelete->value),
             'canClone' => $question->exists && $this->actor()->can(Permission::QuestionCreate->value),
             'isReviewer' => $isReviewer,
             'pendingReview' => $pendingReview,
+            'latestRejectedReview' => $question->exists ? $question->latestRejectedReviewRequest : null,
             'canViewAudit' => $this->actor()->can(Permission::AuditView->value),
         ];
     }

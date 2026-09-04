@@ -15,7 +15,12 @@
                 <h1 class="font-headline-lg text-headline-lg text-on-surface">{{ $classroom->title }}</h1>
                 <p class="mt-2 text-on-surface-variant">
                     Giảng viên: <span class="font-semibold text-on-surface">{{ $classroom->host?->name ?? '—' }}</span>
-                    · {{ $classroom->purpose->label() }}
+                    · {{ match ($classroom->meta['content_source'] ?? null) {
+                        'questions' => 'Chữa câu hỏi',
+                        'exam' => 'Chữa đề thi',
+                        'feedback' => 'Chữa từ feedback',
+                        default => $classroom->purpose->label(),
+                    } }}
                     · {{ $classroom->status->label() }}
                 </p>
                 @if ($classroom->description)
@@ -39,8 +44,8 @@
                 <h2 class="font-headline-sm text-headline-sm text-on-surface">Các buổi học</h2>
                 <form method="post" action="{{ route('admin.classrooms.sessions.store', $classroom) }}" class="flex items-center gap-2">
                     @csrf
-                    <input name="title" required maxlength="200" placeholder="Tên phòng live" class="w-40 rounded-lg border border-outline-variant px-2.5 py-1.5 text-sm">
-                    <button class="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-on-primary">Tạo live</button>
+                    <input name="title" required maxlength="200" placeholder="Tên phòng trực tiếp" class="w-40 rounded-lg border border-outline-variant px-2.5 py-1.5 text-sm">
+                    <button class="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-on-primary">Tạo buổi trực tiếp</button>
                 </form>
             </div>
 
@@ -66,6 +71,10 @@
                                 </div>
                                 <p class="mt-1 text-xs text-on-surface-variant">
                                     {{ $session->scheduled_at?->timezone(config('app.timezone'))->format('d/m/Y H:i') ?? 'Chưa đặt lịch' }}
+                                    @if ($session->hasQuestionSet())
+                                        · {{ count($session->questionIds()) }} câu
+                                        · {{ ($session->question_set['source'] ?? null) === 'exam' ? 'Từ Exam' : (($session->question_set['source'] ?? null) === 'feedback' ? 'Từ feedback' : 'Ngân hàng câu hỏi') }}
+                                    @endif
                                 </p>
                             </div>
 

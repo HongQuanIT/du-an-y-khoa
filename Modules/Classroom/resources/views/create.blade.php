@@ -7,10 +7,10 @@
         <div>
             <a href="{{ route('classroom.index') }}" class="mb-4 inline-flex items-center gap-1 text-sm text-primary hover:underline">
                 <span class="material-symbols-outlined text-[18px]">arrow_back</span>
-                Classroom
+                Lớp học
             </a>
             <h1 class="font-headline-lg text-headline-lg text-on-surface">Tạo lớp chữa đề</h1>
-            <p class="mt-2 text-on-surface-variant">Host livestream chữa đề; học viên join bằng link hoặc mã.</p>
+            <p class="mt-2 text-on-surface-variant">Giảng viên phát trực tiếp buổi chữa đề; học viên tham gia bằng liên kết hoặc mã.</p>
         </div>
 
         <form method="post" action="{{ route('classroom.store') }}" class="space-y-5 rounded-2xl border border-outline-variant bg-surface p-6 shadow-sm">

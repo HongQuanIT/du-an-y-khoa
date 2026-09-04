@@ -43,8 +43,39 @@ final class RoleController extends Controller
         $this->authorizePermission(PermissionEnum::RoleManage);
         abort_unless($this->actor()->hasRole(RoleEnum::SuperAdmin->value), 403);
 
+        $roles = Role::query()
+            ->where('guard_name', 'web')
+            ->with('permissions:id,name')
+            ->orderBy('name')
+            ->get();
+        $permissionGroups = PermissionCatalog::groupedByPortal();
+        $permissionIdsByPortal = collect($permissionGroups)->map(
+            fn (array $group) => $group['permissions']->pluck('id')->map(fn ($id): int => (int) $id)->values()->all(),
+        );
+        $roleGroups = PermissionCatalog::rolesGroupedByPortal($roles);
+        $roleTemplatesByPortal = collect($roleGroups)->mapWithKeys(function (array $group, string $portal) use ($permissionIdsByPortal): array {
+            $allowedPermissionIds = $permissionIdsByPortal->get($portal, []);
+
+            return [$portal => collect($group['roles'])->map(function (Role $role) use ($allowedPermissionIds): array {
+                $enum = RoleEnum::tryFrom($role->name);
+
+                return [
+                    'id' => (int) $role->getKey(),
+                    'name' => $role->name,
+                    'label' => $enum?->label() ?? $role->name,
+                    'permissions' => $role->permissions->pluck('id')
+                        ->map(fn ($id): int => (int) $id)
+                        ->intersect($allowedPermissionIds)
+                        ->values()
+                        ->all(),
+                ];
+            })->values()->all()];
+        })->all();
+
         return view('admin::roles.create', [
-            'permissionGroups' => PermissionCatalog::groupedByPortal(),
+            'permissionGroups' => $permissionGroups,
+            'portals' => PortalGroup::cases(),
+            'roleTemplatesByPortal' => $roleTemplatesByPortal,
         ]);
     }
 
@@ -65,17 +96,45 @@ final class RoleController extends Controller
         $request->merge(['name' => $normalizedName]);
 
         $data = $request->validate([
+            'portal' => ['required', Rule::enum(PortalGroup::class)],
             'name' => [
                 'required', 'string', 'min:2', 'max:80', 'regex:/^[a-z][a-z0-9._-]*$/',
                 Rule::unique('roles', 'name')->where('guard_name', 'web'),
             ],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['integer', 'distinct', 'exists:permissions,id'],
+            'template_role_id' => ['nullable', 'integer', 'exists:roles,id'],
         ], [
             'name.regex' => 'Tên role chỉ dùng chữ thường, số, dấu chấm, gạch ngang hoặc gạch dưới.',
         ]);
 
-        $role = $action->handle($this->actor(), $data['name'], $data['permissions'] ?? []);
+        $portal = PortalGroup::from($data['portal']);
+        $allowedPermissionIds = PermissionCatalog::groupedByPortal()[$portal->value]['permissions']
+            ->pluck('id')
+            ->map(fn ($id): int => (int) $id)
+            ->all();
+        $selectedPermissionIds = array_map('intval', $data['permissions'] ?? []);
+
+        if (array_diff($selectedPermissionIds, $allowedPermissionIds) !== []) {
+            return back()
+                ->withErrors(['permissions' => 'Chỉ được chọn permission thuộc portal đã chọn.'])
+                ->withInput();
+        }
+
+        if (! empty($data['template_role_id'])) {
+            $template = Role::query()->findOrFail($data['template_role_id']);
+            $templatePortal = RoleEnum::tryFrom($template->name)?->portal()
+                ?? PortalGroup::tryFrom((string) $template->portal)
+                ?? PortalGroup::Admin;
+
+            if ($templatePortal !== $portal) {
+                return back()
+                    ->withErrors(['template_role_id' => 'Role mẫu không thuộc portal đã chọn.'])
+                    ->withInput();
+            }
+        }
+
+        $role = $action->handle($this->actor(), $data['name'], $portal, $selectedPermissionIds);
 
         return redirect()->route('admin.roles.show', $role)->with('status', 'Đã tạo role mới.');
     }
@@ -87,7 +146,9 @@ final class RoleController extends Controller
         $role->load('permissions');
 
         $systemRole = RoleEnum::tryFrom($role->name);
-        $focusPortal = $systemRole?->portal() ?? PortalGroup::Admin;
+        $focusPortal = $systemRole?->portal()
+            ?? PortalGroup::tryFrom((string) $role->portal)
+            ?? PortalGroup::Admin;
 
         return view('admin::roles.show', [
             'role' => $role,

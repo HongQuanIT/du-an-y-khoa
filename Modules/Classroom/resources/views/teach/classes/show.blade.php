@@ -62,7 +62,7 @@
                     </a>
                     @if ($canClose)
                         <form method="post" action="{{ route('teach.classes.close', $classroom) }}"
-                            onsubmit="return confirm('Đóng lớp này? Trạng thái sẽ chuyển sang Đã đóng và học viên không thể tham gia hoặc vào buổi live mới.')">
+                            onsubmit="return confirm('Đóng lớp này? Trạng thái sẽ chuyển sang Đã đóng và học viên không thể tham gia hoặc vào buổi trực tiếp mới.')">
                             @csrf
                             <button type="submit"
                                 class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-primary px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/5">
@@ -139,7 +139,7 @@
                 <div>
                     <h2 id="closed-status-title" class="font-semibold text-on-surface">Lớp đã đóng</h2>
                     <p class="mt-1 text-sm leading-5 text-on-surface-variant">
-                        Lớp không còn nhận học viên và không thể lên lịch hoặc bắt đầu buổi live. Lịch sử vẫn được giữ; bạn có thể mở lại lớp mà không cần duyệt lại nếu nội dung không thay đổi đáng kể.
+                        Lớp không còn nhận học viên và không thể lên lịch hoặc bắt đầu buổi trực tiếp. Lịch sử vẫn được giữ; bạn có thể mở lại lớp mà không cần duyệt lại nếu nội dung không thay đổi đáng kể.
                     </p>
                 </div>
             </section>
@@ -150,7 +150,7 @@
             <section id="live-management" aria-labelledby="live-management-title" class="scroll-mt-24 rounded-xl border border-outline-variant bg-surface p-5 md:p-6">
                 <div class="mb-4">
                     <p class="text-xs font-semibold uppercase tracking-wide text-primary">Nội dung giảng dạy</p>
-                    <h2 id="live-management-title" class="mt-1 font-title-lg text-title-lg font-bold text-on-surface">Quản lý buổi live</h2>
+                    <h2 id="live-management-title" class="mt-1 font-title-lg text-title-lg font-bold text-on-surface">Quản lý buổi trực tiếp</h2>
                     <p class="mt-1 text-sm leading-5 text-on-surface-variant">
                         @if ($classroom->purpose === \Modules\Classroom\Enums\ClassroomPurpose::ExamReview)
                             Lên lịch, chọn đề thi cần chữa và quản lý quá trình phát trực tiếp của lớp.
@@ -167,7 +167,7 @@
                             @csrf
                             <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px_160px]">
                                 <label for="session-title">
-                                    <span class="mb-1 block text-sm font-medium text-on-surface">Tiêu đề buổi live <span class="text-error">*</span></span>
+                                    <span class="mb-1 block text-sm font-medium text-on-surface">Tiêu đề buổi trực tiếp <span class="text-error">*</span></span>
                                     <input id="session-title" name="title" value="{{ old('title') }}" required maxlength="200"
                                         placeholder="Ví dụ: Chữa đề Nội khoa"
                                         class="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2 font-body-sm text-on-surface">
@@ -245,7 +245,7 @@
                                         </template>
                                         <div x-show="selected.length === 0" class="rounded-lg border border-dashed border-outline-variant px-4 py-10 text-center">
                                             <span class="material-symbols-outlined text-3xl text-on-surface-variant">playlist_add</span>
-                                            <p class="mt-2 font-body-sm text-on-surface-variant">Chưa chọn câu hỏi. Buổi live vẫn có thể tạo không kèm đề.</p>
+                                            <p class="mt-2 font-body-sm text-on-surface-variant">Chưa chọn câu hỏi. Buổi trực tiếp vẫn có thể tạo không kèm đề.</p>
                                         </div>
                                     </div>
                                 </div>
@@ -338,7 +338,7 @@
 	                                                class="flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm font-medium text-on-surface hover:border-primary">
 	                                                <span class="inline-flex min-w-0 items-center gap-2">
 	                                                    <span class="material-symbols-outlined text-[18px] text-on-surface-variant">reviews</span>
-	                                                    <span class="truncate" x-text="feedbackFilterLabel()">Feedback</span>
+                                                    <span class="truncate" x-text="feedbackFilterLabel()">Phản hồi</span>
 	                                                </span>
 	                                                <span class="material-symbols-outlined text-[18px] text-on-surface-variant transition-transform" :class="{ 'rotate-180': openFilter === 'feedback' }">expand_more</span>
 	                                            </button>
@@ -413,7 +413,7 @@
                                 </p>
                                 <button type="submit" @disabled($classroom->purpose === \Modules\Classroom\Enums\ClassroomPurpose::ExamReview && $publishedExams->isEmpty()) class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 font-label-md font-semibold text-on-primary hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
                                     <span class="material-symbols-outlined text-[20px]">event</span>
-                                    Lên lịch buổi live
+                                    Lên lịch buổi trực tiếp
                                 </button>
                             </div>
                         </form>
@@ -425,7 +425,7 @@
                                 <div class="relative flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-outline-variant bg-surface shadow-2xl">
                                     <header class="flex items-start justify-between gap-4 border-b border-outline-variant px-5 py-4">
                                         <div class="min-w-0">
-                                            <p class="text-xs font-semibold uppercase tracking-wide text-tertiary">Feedback học viên</p>
+                                            <p class="text-xs font-semibold uppercase tracking-wide text-tertiary">Phản hồi của học viên</p>
                                             <h2 id="feedback-modal-title" class="mt-1 line-clamp-2 font-title-md font-bold text-on-surface" x-text="feedbackQuestion?.stem || 'Chi tiết feedback'"></h2>
                                             <p class="mt-1 text-xs text-on-surface-variant" x-show="!feedbackLoading" x-text="feedbackTotal + ' phản hồi'"></p>
                                         </div>
@@ -436,7 +436,7 @@
                                     </header>
 
                                     <div class="min-h-0 flex-1 overflow-y-auto p-5">
-                                        <div x-show="feedbackLoading" class="py-12 text-center text-sm text-on-surface-variant">Đang tải chi tiết feedback...</div>
+                                        <div x-show="feedbackLoading" class="py-12 text-center text-sm text-on-surface-variant">Đang tải chi tiết phản hồi...</div>
                                         <div x-show="feedbackError" x-cloak class="rounded-lg border border-error/20 bg-error/5 px-4 py-3 text-sm text-error" x-text="feedbackError"></div>
                                         <div x-show="!feedbackLoading && !feedbackError" class="space-y-3">
                                             <template x-for="item in feedbackItems" :key="item.id">
@@ -459,9 +459,9 @@
                                                     </p>
                                                 </article>
                                             </template>
-                                            <p x-show="feedbackItems.length === 0" class="py-10 text-center text-sm text-on-surface-variant">Câu hỏi chưa có feedback.</p>
+                                            <p x-show="feedbackItems.length === 0" class="py-10 text-center text-sm text-on-surface-variant">Câu hỏi chưa có phản hồi.</p>
                                             <p x-show="feedbackTotal > feedbackItems.length" x-cloak class="text-center text-xs text-on-surface-variant">
-                                                Đang hiển thị <span x-text="feedbackItems.length"></span> feedback mới nhất trong tổng số <span x-text="feedbackTotal"></span>.
+                                                Đang hiển thị <span x-text="feedbackItems.length"></span> phản hồi mới nhất trong tổng số <span x-text="feedbackTotal"></span>.
                                             </p>
                                         </div>
                                     </div>
@@ -491,12 +491,12 @@
                             <div class="flex flex-wrap gap-2">
                                 <a href="{{ route('teach.classes.sessions.studio', [$classroom, $classroom->liveSession]) }}"
                                     class="inline-flex items-center gap-2 rounded-lg bg-error px-3 py-2 text-sm font-semibold text-on-error hover:opacity-90">
-                                    <span class="material-symbols-outlined text-[18px]">videocam</span>Vào Live Studio
+                                    <span class="material-symbols-outlined text-[18px]">videocam</span>Vào phòng điều khiển trực tiếp
                                 </a>
                                 <form method="post" action="{{ route('teach.classes.sessions.end', [$classroom, $classroom->liveSession]) }}"
-                                    onsubmit="return confirm('Bạn chắc chắn muốn kết thúc buổi live? Học viên sẽ bị ngắt khỏi phòng. Bạn vẫn có thể mở lại buổi này từ trang lớp nếu kết thúc nhầm.')">
+                                    onsubmit="return confirm('Bạn chắc chắn muốn kết thúc buổi trực tiếp? Học viên sẽ bị ngắt khỏi phòng. Bạn vẫn có thể mở lại buổi này từ trang lớp nếu kết thúc nhầm.')">
                                     @csrf
-                                    <button type="submit" class="rounded-lg border border-error px-3 py-2 text-sm font-semibold text-error hover:bg-error/5">Kết thúc live</button>
+                                    <button type="submit" class="rounded-lg border border-error px-3 py-2 text-sm font-semibold text-error hover:bg-error/5">Kết thúc buổi trực tiếp</button>
                                 </form>
                             </div>
                         </div>
@@ -535,13 +535,13 @@
                 @else
                     <div class="rounded-lg border border-dashed border-outline-variant bg-surface-container-lowest px-4 py-8 text-center">
                         <span class="material-symbols-outlined text-[32px] text-on-surface-variant">event</span>
-                        <p class="mt-2 font-body-sm text-body-sm text-on-surface-variant">Chưa có lịch live.</p>
+                        <p class="mt-2 font-body-sm text-body-sm text-on-surface-variant">Chưa có lịch trực tiếp.</p>
                     </div>
                 @endif
 
                 @if ($pastSessions->isNotEmpty())
                     <div class="mt-6 border-t border-outline-variant pt-4">
-                        <h3 class="mb-2 font-label-sm uppercase tracking-wide text-on-surface-variant">Lịch sử buổi live</h3>
+                        <h3 class="mb-2 font-label-sm uppercase tracking-wide text-on-surface-variant">Lịch sử buổi trực tiếp</h3>
                         <ul class="space-y-2">
                             @foreach ($pastSessions as $session)
                                 <li class="flex flex-col gap-2 rounded-lg bg-surface-container-lowest px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
@@ -555,12 +555,12 @@
                                     <div class="flex flex-wrap gap-2">
                                         @if (! $isClosed && $session->status === LiveSessionStatus::Ended)
                                             <form method="post" action="{{ route('teach.classes.sessions.start', [$classroom, $session]) }}"
-                                                onsubmit="return confirm('Mở lại buổi live này? Học viên có thể vào lại phòng và nội dung câu hỏi hiện tại sẽ được giữ nguyên.')">
+                                                onsubmit="return confirm('Mở lại buổi trực tiếp này? Học viên có thể vào lại phòng và nội dung câu hỏi hiện tại sẽ được giữ nguyên.')">
                                                 @csrf
                                                 <button type="submit"
                                                     class="inline-flex items-center justify-center gap-1 rounded-lg border border-primary px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/5">
                                                     <span class="material-symbols-outlined text-[17px]" aria-hidden="true">restart_alt</span>
-                                                    Mở lại buổi live
+                                                    Mở lại buổi trực tiếp
                                                 </button>
                                             </form>
                                         @endif
@@ -616,9 +616,9 @@
             <section class="rounded-xl border border-outline-variant bg-surface p-5">
                 <h2 class="font-title-md font-semibold text-on-surface">Bước tiếp theo</h2>
                 <ol class="mt-3 space-y-3 text-sm text-on-surface-variant">
-                    <li class="flex gap-2"><span class="font-semibold text-primary">1.</span><span>{{ $classroom->purpose === \Modules\Classroom\Enums\ClassroomPurpose::ExamReview ? 'Chọn đề thi cần chữa.' : 'Chọn các câu hỏi từ feedback.' }}</span></li>
+                    <li class="flex gap-2"><span class="font-semibold text-primary">1.</span><span>{{ $classroom->purpose === \Modules\Classroom\Enums\ClassroomPurpose::ExamReview ? 'Chọn đề thi cần chữa.' : 'Chọn các câu hỏi từ phản hồi.' }}</span></li>
                     <li class="flex gap-2"><span class="font-semibold text-primary">2.</span><span>Đặt tiêu đề, lịch dự kiến và kiểm tra bộ câu hỏi.</span></li>
-                    <li class="flex gap-2"><span class="font-semibold text-primary">3.</span><span>Mở Live Studio để kiểm tra thiết bị trước khi bắt đầu.</span></li>
+                    <li class="flex gap-2"><span class="font-semibold text-primary">3.</span><span>Mở phòng điều khiển trực tiếp để kiểm tra thiết bị trước khi bắt đầu.</span></li>
                 </ol>
             </section>
             </aside>

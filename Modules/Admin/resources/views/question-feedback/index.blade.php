@@ -7,7 +7,7 @@
     ];
 @endphp
 
-<x-layouts.admin title="Feedback câu hỏi">
+<x-layouts.admin title="Phản hồi câu hỏi">
     <x-admin.page-header title="Quản lý feedback câu hỏi"
         description="Xem, lọc và xử lý phản hồi của học viên về câu hỏi, kiến thức và đáp án." />
 
@@ -29,7 +29,7 @@
         <label class="md:col-span-4">
             <span class="mb-1.5 block text-sm font-medium text-on-surface-variant">Tìm kiếm</span>
             <input name="q" value="{{ $filters['q'] }}" type="search"
-                placeholder="Nội dung feedback, câu hỏi, người gửi"
+                placeholder="Nội dung phản hồi, câu hỏi, người gửi"
                 class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 text-sm text-on-surface">
         </label>
         <label class="md:col-span-2">
@@ -51,7 +51,7 @@
             </select>
         </label>
         <label class="md:col-span-2">
-            <span class="mb-1.5 block text-sm font-medium text-on-surface-variant">Loại feedback</span>
+            <span class="mb-1.5 block text-sm font-medium text-on-surface-variant">Loại phản hồi</span>
             <select name="category" class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 text-sm text-on-surface">
                 <option value="">Tất cả</option>
                 @foreach ($categories as $value => $label)
@@ -75,7 +75,7 @@
             <table class="min-w-full divide-y divide-outline-variant text-sm">
                 <thead class="bg-surface-container-low text-left text-xs uppercase tracking-wide text-on-surface-variant">
                     <tr>
-                        <th class="px-4 py-3">Feedback</th>
+                        <th class="px-4 py-3">Phản hồi</th>
                         <th class="px-4 py-3">Câu hỏi</th>
                         <th class="px-4 py-3">Người gửi</th>
                         <th class="px-4 py-3">Thời gian</th>

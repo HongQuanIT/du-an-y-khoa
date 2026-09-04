@@ -1,5 +1,5 @@
 <x-layouts.admin title="Tags">
-    <x-admin.page-header title="Tags" description="Metadata tags gắn với câu hỏi (ECG, Emergency, High-yield…).">
+    <x-admin.page-header title="Thẻ" description="Các thẻ phân loại gắn với câu hỏi (ECG, cấp cứu, trọng tâm…).">
         <x-slot:actions>
             @if ($canCreate)
                 <a href="{{ route('admin.tags.create') }}" class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 font-label-md font-semibold text-on-primary">

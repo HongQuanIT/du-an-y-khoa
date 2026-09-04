@@ -9,12 +9,12 @@
 
     // Dashboard, Q-Bank, StudyPlan, Flashcards are wired; the rest land as modules ship.
     $navItems = [
-        ['label' => 'Dashboard', 'icon' => 'dashboard', 'route' => 'dashboard'],
+        ['label' => 'Tổng quan', 'icon' => 'dashboard', 'route' => 'dashboard'],
         ['label' => 'Ngân hàng câu hỏi', 'icon' => 'quiz', 'route' => 'qbank.index', 'match' => 'qbank.*'],
         ['label' => 'Thư viện', 'icon' => 'library_books', 'route' => null],
-        ['label' => 'Flashcards', 'icon' => 'style', 'route' => 'flashcards.index', 'match' => 'flashcards.*'],
+        ['label' => 'Thẻ ghi nhớ', 'icon' => 'style', 'route' => 'flashcards.index', 'match' => 'flashcards.*'],
         ['label' => 'Kế hoạch học tập', 'icon' => 'event_note', 'route' => 'study-plan.index', 'match' => 'study-plan.*'],
-        ['label' => 'Classroom', 'icon' => 'cast_for_education', 'route' => 'classroom.index', 'match' => 'classroom.*'],
+        ['label' => 'Lớp học', 'icon' => 'cast_for_education', 'route' => 'classroom.index', 'match' => 'classroom.*'],
         ['label' => 'Phân tích', 'icon' => 'analytics', 'route' => null],
         ['label' => 'Kỳ thi', 'icon' => 'assignment', 'route' => 'exam.index', 'match' => 'exam.*'],
     ];
@@ -342,7 +342,7 @@
 
             <div x-show="search.query.trim() === ''" class="bg-surface-container-lowest p-2">
                 <div class="rounded-xl bg-surface p-2">
-                    <p class="px-1 pb-2 font-label-md text-label-md font-bold tracking-wide text-on-surface-variant uppercase">Search history</p>
+                    <p class="px-1 pb-2 font-label-md text-label-md font-bold tracking-wide text-on-surface-variant uppercase">Lịch sử tìm kiếm</p>
                     <div class="overflow-hidden rounded-xl border border-outline-variant/60 bg-white">
                         @forelse ($searchHistory as $historyItem)
                             <a href="{{ route('search.index', ['q' => $historyItem]) }}"
@@ -361,7 +361,7 @@
             </div>
 
             <div x-show="search.query.trim() !== ''" x-cloak class="border-b border-outline-variant bg-surface-container-lowest p-4">
-                <p class="mb-3 font-label-md text-label-md font-bold tracking-wide text-on-surface-variant uppercase">Search for</p>
+                <p class="mb-3 font-label-md text-label-md font-bold tracking-wide text-on-surface-variant uppercase">Tìm kiếm</p>
                 <button type="button" @click="search.submit()"
                     class="flex w-full items-center gap-3 rounded-xl border border-outline-variant bg-white px-4 py-3 text-left transition-colors hover:border-primary/40 hover:bg-primary/5">
                     <span class="material-symbols-outlined text-[20px] text-on-surface-variant">search</span>

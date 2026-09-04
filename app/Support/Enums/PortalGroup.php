@@ -24,7 +24,7 @@ enum PortalGroup: string
         return match ($this) {
             self::Learner => 'Học viên',
             self::Instructor => 'Giảng viên',
-            self::Admin => 'Admin',
+            self::Admin => 'Quản trị',
             self::Partner => 'Cộng tác viên',
         };
     }
@@ -32,10 +32,10 @@ enum PortalGroup: string
     public function description(): string
     {
         return match ($this) {
-            self::Learner => 'Portal học tập (/login): làm bài, session, tham gia lớp.',
-            self::Instructor => 'Portal giảng dạy (/teach): host và vận hành lớp chữa đề.',
-            self::Admin => 'Portal quản trị (/admin): CMS, user, RBAC, giám sát.',
-            self::Partner => 'Portal CTV (/partner): mã mời, referral, hoa hồng.',
+            self::Learner => 'Cổng học tập (/login): làm bài, quản lý phiên học và tham gia lớp.',
+            self::Instructor => 'Cổng giảng dạy (/teach): tổ chức và vận hành lớp chữa đề.',
+            self::Admin => 'Cổng quản trị (/admin): quản lý nội dung, người dùng, phân quyền và giám sát.',
+            self::Partner => 'Cổng cộng tác viên (/partner): mã mời, giới thiệu và hoa hồng.',
         };
     }
 

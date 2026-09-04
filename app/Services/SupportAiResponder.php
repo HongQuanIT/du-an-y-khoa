@@ -32,7 +32,7 @@ final class SupportAiResponder
 
         $text = mb_strtolower($message);
         if ($category === 'course' && (str_contains($text, 'truy cập') || str_contains($text, 'khóa học'))) {
-            return ['answer' => 'Bạn có thể vào mục Classroom hoặc trang khóa học để kiểm tra quyền truy cập. Nếu đã thanh toán mà vẫn chưa thấy nội dung, mình sẽ chuyển yêu cầu cho quản trị viên kiểm tra.', 'resolved' => true];
+            return ['answer' => 'Bạn có thể vào mục Lớp học hoặc trang khóa học để kiểm tra quyền truy cập. Nếu đã thanh toán mà vẫn chưa thấy nội dung, mình sẽ chuyển yêu cầu cho quản trị viên kiểm tra.', 'resolved' => true];
         }
         if ($category === 'account' && (str_contains($text, 'mật khẩu') || str_contains($text, 'đăng nhập'))) {
             return ['answer' => 'Bạn có thể dùng chức năng “Quên mật khẩu” tại trang đăng nhập để đặt lại mật khẩu. Không chia sẻ mật khẩu hoặc mã xác thực trong khung chat.', 'resolved' => true];

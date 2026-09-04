@@ -256,7 +256,7 @@ final class AdminAuditArchitectureTest extends TestCase
                 ->contains(fn (array $item): bool => $item['value'] === PlatformAuditAction::ClassroomLiveStarted->value)
                 && collect($suggestions)->doesntContain(fn (array $item): bool => $item['value'] === 'Giảng viên Nguyễn An'));
 
-        $this->get(route('admin.audit.index', ['action' => 'Bắt đầu buổi live']))
+        $this->get(route('admin.audit.index', ['action' => 'Bắt đầu buổi trực tiếp']))
             ->assertOk()
             ->assertViewHas('logs', fn ($logs): bool => $logs->count() === 1
                 && $logs->first()->id === $firstLog->id);
@@ -322,7 +322,7 @@ final class AdminAuditArchitectureTest extends TestCase
             ->assertOk()
             ->assertViewHas('logs', fn ($logs): bool => $logs->count() === 1
                 && $logs->first()->action === PlatformAuditAction::ClassroomLiveStarted->value)
-            ->assertSee('Bắt đầu buổi live');
+            ->assertSee('Bắt đầu buổi trực tiếp');
 
         $this->actingAsStaff($admin)
             ->get(route('admin.audit.index', ['related_user_id' => $student->id]))

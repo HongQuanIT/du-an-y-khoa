@@ -6,6 +6,7 @@ namespace Modules\Admin\Actions;
 
 use App\Models\User;
 use App\Support\Concerns\AsAction;
+use App\Support\Enums\PortalGroup;
 use App\Support\Enums\Role;
 use Illuminate\Support\Facades\DB;
 use Modules\Admin\Support\Auditor;
@@ -18,7 +19,7 @@ final class CreateRoleAction
     use AsAction;
 
     /** @param list<int|string> $permissionIds */
-    public function handle(User $actor, string $name, array $permissionIds): RoleModel
+    public function handle(User $actor, string $name, PortalGroup $portal, array $permissionIds): RoleModel
     {
         abort_unless($actor->hasRole(Role::SuperAdmin->value), 403, 'Chỉ Super Admin được tạo role.');
 
@@ -27,8 +28,12 @@ final class CreateRoleAction
             ->whereIn('id', $permissionIds)
             ->get();
 
-        $role = DB::transaction(function () use ($name, $permissions): RoleModel {
-            $role = RoleModel::query()->create(['name' => $name, 'guard_name' => 'web']);
+        $role = DB::transaction(function () use ($name, $portal, $permissions): RoleModel {
+            $role = RoleModel::query()->create([
+                'name' => $name,
+                'guard_name' => 'web',
+                'portal' => $portal->value,
+            ]);
             $role->syncPermissions($permissions);
 
             return $role;
@@ -37,6 +42,7 @@ final class CreateRoleAction
         app(PermissionRegistrar::class)->forgetCachedPermissions();
         Auditor::record('admin.role.created', $actor, $role, null, [
             'name' => $role->name,
+            'portal' => $portal->value,
             'permissions' => $permissions->pluck('name')->sort()->values()->all(),
         ]);
 

@@ -29,8 +29,8 @@
         </div>
         <ul class="mt-6 space-y-2 font-body-sm text-body-sm text-on-surface-variant">
             <li>• Phase B (xong): list + tạo lớp + trang chi tiết stub</li>
-            <li>• Phase B+: hàng chờ feedback QBank → gắn bộ câu hỏi</li>
-            <li>• Phase C: chữa theo exam / kỳ thi</li>
+            <li>• Giai đoạn B+: hàng chờ phản hồi ngân hàng câu hỏi → gắn bộ câu hỏi</li>
+            <li>• Giai đoạn C: chữa theo đề thi / kỳ thi</li>
         </ul>
     </section>
 </x-layouts.teach>

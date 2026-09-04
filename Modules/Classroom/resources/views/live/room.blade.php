@@ -66,7 +66,7 @@
                         aria-hidden="true"></div>
                     @if ($isObserver)
                         <div class="absolute inset-x-0 top-0 z-20 bg-amber-600/90 px-4 py-2 text-center text-xs text-white">
-                            Đang xem với tư cách quản trị — {{ $classroom->host?->name ? 'Giảng viên: '.$classroom->host->name : 'không điều khiển buổi live' }}.
+                            Đang xem với tư cách quản trị — {{ $classroom->host?->name ? 'Giảng viên: '.$classroom->host->name : 'không điều khiển buổi trực tiếp' }}.
                         </div>
                     @endif
                     <div data-lk-waiting
@@ -91,7 +91,7 @@
                 <div class="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
                     <div class="space-y-2">
                         <span class="material-symbols-outlined text-5xl text-white/60">replay</span>
-                        <p class="text-lg font-semibold">Buổi live đã kết thúc</p>
+                        <p class="text-lg font-semibold">Buổi học trực tiếp đã kết thúc</p>
                         <p class="text-sm text-white/60">Nội dung ghi hình không khả dụng.</p>
                     </div>
                 </div>
@@ -110,7 +110,7 @@
                             </button>
                         </form>
                     @else
-                        <p class="text-sm text-white/60">Host sẽ bắt đầu khi sẵn sàng.</p>
+                        <p class="text-sm text-white/60">Giảng viên sẽ bắt đầu khi sẵn sàng.</p>
                     @endif
                 </div>
             @else
@@ -138,7 +138,7 @@
                     class="flex-1 py-2.5 text-sm font-medium">Video</button>
                 <button type="button" @click="mobileTab = 'chat'"
                     :class="mobileTab === 'chat' ? 'border-b-2 border-primary text-primary' : 'text-on-surface-variant'"
-                    class="flex-1 py-2.5 text-sm font-medium">Chat</button>
+                    class="flex-1 py-2.5 text-sm font-medium">Trò chuyện</button>
                 @if ($canModerate && $session->hasQuestionSet())
                     <button type="button" data-live-tab="questions" @click="mobileTab = 'questions'"
                         :class="mobileTab === 'questions' ? 'border-b-2 border-primary text-primary' : 'text-on-surface-variant'"

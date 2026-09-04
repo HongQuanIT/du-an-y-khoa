@@ -42,7 +42,7 @@ final class AdminMediaLibraryTest extends TestCase
         $this->actingAsStaff($editor)
             ->get(route('admin.media.index'))
             ->assertOk()
-            ->assertSee('Thư viện Media');
+            ->assertSee('Thư viện tệp nội dung');
 
         $file = UploadedFile::fake()->image('hero.jpg', 640, 480);
 

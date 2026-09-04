@@ -8,7 +8,7 @@
         <a href="{{ route('admin.classrooms.create') }}"
             class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 font-label-md text-label-md font-semibold text-on-primary hover:opacity-90">
             <span class="material-symbols-outlined text-[18px]">add</span>
-            Tạo lớp cho giảng viên
+            Tạo lớp và nội dung
         </a>
     </div>
 
@@ -66,11 +66,11 @@
             <thead class="border-b border-outline-variant bg-surface-container-low font-label-md text-label-md text-on-surface-variant">
                 <tr>
                     <th class="px-4 py-3">Lớp</th>
-                    <th class="px-4 py-3">Host</th>
+                    <th class="px-4 py-3">Giảng viên</th>
                     <th class="px-4 py-3">Mục đích</th>
                     <th class="px-4 py-3">Trạng thái</th>
                     <th class="px-4 py-3">TV</th>
-                    <th class="px-4 py-3">Live</th>
+                    <th class="px-4 py-3">Trực tiếp</th>
                     <th class="px-4 py-3 text-end">Thao tác</th>
                 </tr>
             </thead>
@@ -87,7 +87,12 @@
                             {{ $classroom->host?->name ?? '—' }}
                         </td>
                         <td class="px-4 py-3 text-on-surface-variant">
-                            {{ $classroom->purpose?->label() ?? '—' }}
+                            {{ match ($classroom->meta['content_source'] ?? null) {
+                                'questions' => 'Chữa câu hỏi',
+                                'exam' => 'Chữa đề thi',
+                                'feedback' => 'Chữa từ feedback',
+                                default => $classroom->purpose?->label() ?? '—',
+                            } }}
                         </td>
                         <td class="px-4 py-3">
                             @if ($classroom->status === \Modules\Classroom\Enums\ClassroomStatus::PendingApproval)
@@ -102,7 +107,7 @@
                         <td class="px-4 py-3">
                             @if ($classroom->liveSession)
                                 <div class="space-y-1">
-                                    <span class="font-label-sm text-label-sm font-semibold text-error">LIVE</span>
+                                    <span class="font-label-sm text-label-sm font-semibold text-error">ĐANG TRỰC TIẾP</span>
                                     <div class="text-xs text-on-surface-variant">
                                         {{ $classroom->liveSession->title }}
                                     </div>

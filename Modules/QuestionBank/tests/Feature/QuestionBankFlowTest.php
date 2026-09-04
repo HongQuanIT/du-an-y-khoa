@@ -445,7 +445,7 @@ final class QuestionBankFlowTest extends TestCase
             })
             ->assertSee('Tóm tắt nhanh')
             ->assertSee('Tỷ lệ đúng theo chủ đề')
-            ->assertSee('data-testid="topic-accuracy-chart-scroll"', false)
+            ->assertSee('id="student-session-topic-accuracy"', false)
             ->assertSee('Phân tích chi tiết chủ đề')
             ->assertSee('Tổng quan từng câu')
             ->assertSee('Thời gian cho mỗi câu hỏi')

@@ -40,7 +40,7 @@
                         <span class="material-symbols-outlined">school</span>
                     </span>
                 </div>
-                <p class="mt-2 text-xs text-on-surface-variant">Tất cả lớp bạn làm host hoặc cohost</p>
+                <p class="mt-2 text-xs text-on-surface-variant">Tất cả lớp bạn làm giảng viên chính hoặc đồng giảng viên</p>
             </div>
 
             <div class="rounded-xl border border-outline-variant bg-surface p-4">
@@ -53,7 +53,7 @@
                         <span class="material-symbols-outlined">podcasts</span>
                     </span>
                 </div>
-                <p class="mt-2 text-xs text-on-surface-variant">Các buổi live đang diễn ra</p>
+                <p class="mt-2 text-xs text-on-surface-variant">Các buổi trực tiếp đang diễn ra</p>
             </div>
 
             <div class="rounded-xl border border-outline-variant bg-surface p-4">
@@ -66,7 +66,7 @@
                         <span class="material-symbols-outlined">event</span>
                     </span>
                 </div>
-                <p class="mt-2 text-xs text-on-surface-variant">Lớp đã có lịch live tiếp theo</p>
+                <p class="mt-2 text-xs text-on-surface-variant">Lớp đã có lịch trực tiếp tiếp theo</p>
             </div>
         </div>
     </section>

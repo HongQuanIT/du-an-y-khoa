@@ -70,7 +70,7 @@
                         </div>
                         <form method="get" action="{{ route('search.index') }}" class="flex flex-wrap gap-2">
                             <input type="hidden" name="q" value="{{ $query }}">
-                            @foreach (['' => 'Tất cả', 'article' => 'Bài viết', 'disease' => 'Bệnh', 'drug' => 'Thuốc', 'procedure' => 'Thủ thuật', 'classroom' => 'Classroom', 'exam' => 'Kỳ thi'] as $value => $label)
+                            @foreach (['' => 'Tất cả', 'article' => 'Bài viết', 'disease' => 'Bệnh', 'drug' => 'Thuốc', 'procedure' => 'Thủ thuật', 'classroom' => 'Lớp học', 'exam' => 'Kỳ thi'] as $value => $label)
                                 <button type="submit" name="type" value="{{ $value }}"
                                     @class([
                                         'rounded-full px-3 py-1.5 font-label-sm text-label-sm transition-colors',
@@ -101,7 +101,7 @@
                                     </span>
                                     @if (! $isFree)
                                         <span class="rounded-full bg-amber-100 px-2.5 py-1 font-label-sm text-label-sm text-amber-800">
-                                            Premium
+                                            Cao cấp
                                         </span>
                                     @endif
                                 </div>

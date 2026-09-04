@@ -663,7 +663,7 @@ final class GetAdminDashboardDataAction
             if ($feedbackPending >= 20) {
                 $alerts[] = $this->alert(
                     id: 'feedback_backlog_high',
-                    category: 'Feedback câu hỏi',
+                    category: 'Phản hồi câu hỏi',
                     severity: 'warning',
                     title: 'Hàng đợi feedback cao',
                     message: "{$feedbackPending} phản hồi đang chờ xử lý tại QBank.",
@@ -672,7 +672,7 @@ final class GetAdminDashboardDataAction
             } elseif ($feedbackPending > 0) {
                 $alerts[] = $this->alert(
                     id: 'feedback_backlog',
-                    category: 'Feedback câu hỏi',
+                    category: 'Phản hồi câu hỏi',
                     severity: 'info',
                     title: 'Feedback chờ xử lý',
                     message: "{$feedbackPending} phản hồi cần xem xét tại module Câu hỏi.",
@@ -681,7 +681,7 @@ final class GetAdminDashboardDataAction
             } else {
                 $alerts[] = $this->alert(
                     id: 'feedback_clear',
-                    category: 'Feedback câu hỏi',
+                    category: 'Phản hồi câu hỏi',
                     severity: 'ok',
                     title: 'Không còn feedback tồn',
                     message: 'Hàng đợi feedback câu hỏi đang trống.',

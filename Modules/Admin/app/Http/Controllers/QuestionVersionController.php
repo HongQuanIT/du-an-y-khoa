@@ -25,10 +25,8 @@ final class QuestionVersionController extends Controller
 
         $question->load('medicalTaxonomyNodes:id,name');
         $contentVersion = (int) ($question->versions()
-            ->where('event', '!=', 'status')
             ->max('version') ?? $question->version);
         $versions = $question->versions()
-            ->where('event', '!=', 'status')
             ->with('creator:id,name')
             ->paginate(15);
         $nodeNames = MedicalTaxonomyNode::query()

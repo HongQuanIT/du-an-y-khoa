@@ -102,7 +102,7 @@ final class AdminDashboardTest extends TestCase
             ->assertSee('Liên hệ mới')
             ->assertSee('Sức khỏe hệ thống')
             ->assertSee('Thanh toán')
-            ->assertSee('Feedback câu hỏi')
+            ->assertSee('Phản hồi câu hỏi')
             ->assertSee('Hoạt động quản trị gần đây')
             ->assertSee('Thao tác nhanh')
             ->assertSee('Cập nhật');
@@ -148,7 +148,7 @@ final class AdminDashboardTest extends TestCase
             ->get(route('admin.dashboard'))
             ->assertOk()
             ->assertSee('Feedback chờ xử lý')
-            ->assertSee('Feedback câu hỏi')
+            ->assertSee('Phản hồi câu hỏi')
             ->assertSee('ổn định');
     }
 

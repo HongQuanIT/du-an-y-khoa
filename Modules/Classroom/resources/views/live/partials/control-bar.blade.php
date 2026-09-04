@@ -7,7 +7,7 @@
         </button>
         <button type="button" data-live-react="like"
             class="inline-flex size-8 items-center justify-center rounded-full bg-white/10 text-sky-300 transition hover:bg-sky-500/30 hover:text-sky-200"
-            aria-label="Thả like" title="Thả like">
+            aria-label="Bày tỏ thích" title="Bày tỏ thích">
             <span class="material-symbols-outlined text-[18px]">thumb_up</span>
         </button>
     </div>

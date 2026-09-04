@@ -122,7 +122,7 @@ final class ProfileSettingsUxTest extends TestCase
             ->assertSee('Học viên', false)
             ->assertSee('Quân Đặng', false)
             ->assertDontSee('>Quản trị viên<', false)
-            ->assertSee('Dashboard')
+            ->assertSee('Tổng quan')
             ->assertSee('Ngân hàng câu hỏi')
             ->assertDontSee('Quản trị hệ thống');
     }

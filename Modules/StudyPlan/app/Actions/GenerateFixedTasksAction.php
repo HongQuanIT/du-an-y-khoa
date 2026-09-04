@@ -48,19 +48,22 @@ final class GenerateFixedTasksAction
 
             $topics = $plan->scopeTopicIds();
             $weekdays = $plan->studyWeekdays();
+            $allAvailableQuestions = array_values(array_unique($this->questionPool->questionIds($plan)));
+            if (empty($allAvailableQuestions)) {
+                return 0;
+            }
+
             $alreadyScheduled = $plan->tasks()
                 ->where('status', '!=', TaskStatus::Pending->value)
                 ->get()
                 ->flatMap(fn ($task) => (array) ($task->ref['question_ids'] ?? []))
                 ->map(fn ($id): string => (string) $id)
                 ->all();
-            $questionIds = array_values(array_diff(
-                $this->questionPool->questionIds($plan),
-                $alreadyScheduled,
-            ));
-            $dailyPools = array_chunk($questionIds, max(1, $plan->daily_goal_questions));
+
+            // First pass: questions that haven't been scheduled yet
+            $remainingPool = array_values(array_diff($allAvailableQuestions, $alreadyScheduled));
+            $dailyGoal = max(1, $plan->daily_goal_questions);
             $rows = [];
-            $index = 0;
             $now = Carbon::now();
 
             for ($date = $from->copy(); $date->lessThanOrEqualTo($until); $date->addDay()) {
@@ -68,11 +71,26 @@ final class GenerateFixedTasksAction
                     continue;
                 }
 
-                if (! isset($dailyPools[$index])) {
-                    break;
+                $questionsForDay = [];
+                while (count($questionsForDay) < $dailyGoal) {
+                    if (empty($remainingPool)) {
+                        // Refill from all available questions and shuffle for the next cycle
+                        $refill = $allAvailableQuestions;
+                        shuffle($refill);
+                        $remainingPool = array_values($refill);
+                    }
+
+                    $needed = $dailyGoal - count($questionsForDay);
+                    $chunk = array_splice($remainingPool, 0, $needed);
+                    if (empty($chunk)) {
+                        break;
+                    }
+                    $questionsForDay = array_merge($questionsForDay, $chunk);
                 }
 
-                $questionsForDay = $dailyPools[$index];
+                if (empty($questionsForDay)) {
+                    break;
+                }
 
                 $rows[] = [
                     'study_plan_id' => $plan->getKey(),
@@ -92,7 +110,7 @@ final class GenerateFixedTasksAction
                     'updated_at' => $now,
                 ];
 
-                if ($this->closesTheWeek($date, $weekdays) && isset($dailyPools[$index + 1])) {
+                if ($this->closesTheWeek($date, $weekdays)) {
                     $rows[] = [
                         'study_plan_id' => $plan->getKey(),
                         'date' => $date->toDateString(),
@@ -110,8 +128,6 @@ final class GenerateFixedTasksAction
                         'updated_at' => $now,
                     ];
                 }
-
-                $index++;
             }
 
             foreach (array_chunk($rows, 500) as $chunk) {

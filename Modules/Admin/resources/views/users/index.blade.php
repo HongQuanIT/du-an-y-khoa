@@ -19,7 +19,7 @@
                 class="w-full rounded-lg border-none bg-surface-container-low px-3 py-2 font-body-sm text-body-sm focus:ring-2 focus:ring-primary">
         </div>
         <div>
-            <label class="mb-1 block font-label-sm text-label-sm text-on-surface-variant" for="portal">Portal</label>
+            <label class="mb-1 block font-label-sm text-label-sm text-on-surface-variant" for="portal">Cổng truy cập</label>
             <select id="portal" name="portal"
                 class="w-full rounded-lg border-none bg-surface-container-low px-3 py-2 font-body-sm text-body-sm focus:ring-2 focus:ring-primary">
                 <option value="">Tất cả</option>
@@ -61,7 +61,7 @@
             <thead class="border-b border-outline-variant bg-surface-container-low font-label-md text-label-md text-on-surface-variant">
                 <tr>
                     <th class="px-4 py-3">Người dùng</th>
-                    <th class="px-4 py-3">Portal / Vai trò</th>
+                    <th class="px-4 py-3">Cổng truy cập / Vai trò</th>
                     <th class="px-4 py-3">Trạng thái</th>
                     <th class="px-4 py-3">Email</th>
                     <th class="px-4 py-3"></th>

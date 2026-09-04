@@ -7,7 +7,7 @@
     <div class="mb-4 flex items-center justify-between gap-3">
         <div>
             <h3 class="font-headline-sm text-headline-sm text-on-surface">Hoạt động quản trị gần đây</h3>
-            <p class="mt-0.5 font-body-sm text-body-sm text-on-surface-variant">10 hành động mới nhất từ nhật ký audit</p>
+            <p class="mt-0.5 font-body-sm text-body-sm text-on-surface-variant">10 hành động mới nhất từ nhật ký hệ thống</p>
         </div>
         @if ($viewAllHref)
             <a href="{{ $viewAllHref }}" class="font-label-sm text-label-sm text-primary hover:underline">Xem nhật ký</a>

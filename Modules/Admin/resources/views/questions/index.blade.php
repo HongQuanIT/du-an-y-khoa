@@ -4,6 +4,8 @@
         'difficulty' => false,
         'creator' => false,
         'status' => true,
+        'review_status' => true,
+        'origin' => false,
         'access' => true,
         'attempts' => true,
         'correct_rate' => false,
@@ -231,13 +233,13 @@
 
                 <div class="sm:col-span-2">
                     <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant" for="question-reports-filter">
-                        Feedback
+                        Phản hồi
                     </label>
                     <select id="question-reports-filter"
                         name="has_reports"
                         class="h-11 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 font-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
                         <option value="">Tất cả</option>
-                        <option value="1" @selected(($filters['has_reports'] ?? null) === '1')>Có feedback</option>
+                        <option value="1" @selected(($filters['has_reports'] ?? null) === '1')>Có phản hồi</option>
                     </select>
                 </div>
 
@@ -322,11 +324,13 @@
                             @if ($isReviewer)
                                 <th scope="col" class="w-[150px] min-w-[130px] px-4 py-3.5" x-show="cols.creator" x-cloak>Người tạo</th>
                             @endif
-                            <th scope="col" class="w-[150px] min-w-[130px] px-4 py-3.5" x-show="cols.status" x-cloak>Trạng thái</th>
+                            <th scope="col" class="w-[140px] min-w-[120px] px-4 py-3.5" x-show="cols.status" x-cloak>Trạng thái</th>
+                            <th scope="col" class="w-[140px] min-w-[120px] px-4 py-3.5" x-show="cols.review_status" x-cloak>Kiểm duyệt</th>
+                            <th scope="col" class="w-[160px] min-w-[140px] px-4 py-3.5" x-show="cols.origin" x-cloak>Nguồn gốc</th>
                             <th scope="col" class="w-[110px] min-w-[100px] px-4 py-3.5 text-center" x-show="cols.access" x-cloak>Truy cập</th>
                             <th scope="col" class="w-[110px] min-w-[90px] px-4 py-3.5 text-end" x-show="cols.attempts" x-cloak>Lượt làm</th>
                             <th scope="col" class="w-[100px] min-w-[90px] px-4 py-3.5 text-end" x-show="cols.correct_rate" x-cloak>% đúng</th>
-                            <th scope="col" class="w-[100px] min-w-[90px] px-4 py-3.5 text-end whitespace-nowrap" x-show="cols.reports" x-cloak>Feedback</th>
+                            <th scope="col" class="w-[100px] min-w-[90px] px-4 py-3.5 text-end whitespace-nowrap" x-show="cols.reports" x-cloak>Phản hồi</th>
                             <th scope="col" class="w-[160px] min-w-[150px] px-5 py-3.5 text-end">Thao tác</th>
                         </tr>
                     </thead>
@@ -340,7 +344,7 @@
                                         aria-label="Chỉnh sửa câu hỏi {{ $question->code ?: $question->id }}">
                                         @if (filled($question->code))
                                             <p class="mb-0.5 font-mono text-xs font-semibold text-primary group-hover:underline">
-                                                {{ $question->code }}
+                                                 {{ $question->code }}
                                             </p>
                                         @endif
                                         <p class="line-clamp-2 font-medium leading-snug text-on-surface transition-colors group-hover:text-primary"
@@ -385,39 +389,101 @@
                                     </td>
                                 @endif
 
-                                <td class="w-[150px] min-w-[130px] px-4 py-4 align-top whitespace-nowrap" x-show="cols.status" x-cloak>
+                                {{-- Cột 1: Trạng thái (Đã xuất bản, Nháp, Riêng tư, Ngừng dùng) --}}
+                                <td class="w-[140px] min-w-[120px] px-4 py-4 align-top whitespace-nowrap" x-show="cols.status" x-cloak>
                                     @php
-                                        $badgeClass = match($question->status) {
+                                        $pubBadgeClass = match($question->status) {
                                             \Modules\QuestionBank\Enums\QuestionStatus::Published => 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300',
-                                            \Modules\QuestionBank\Enums\QuestionStatus::InReview => 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300',
-                                            \Modules\QuestionBank\Enums\QuestionStatus::Rejected => 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300',
                                             \Modules\QuestionBank\Enums\QuestionStatus::Private => 'bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300',
-                                            \Modules\QuestionBank\Enums\QuestionStatus::Draft => 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
                                             \Modules\QuestionBank\Enums\QuestionStatus::Retired => 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300',
+                                            default => 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+                                        };
+
+                                        $pubLabel = match($question->status) {
+                                            \Modules\QuestionBank\Enums\QuestionStatus::Published => 'Đã xuất bản',
+                                            \Modules\QuestionBank\Enums\QuestionStatus::Private => 'Riêng tư',
+                                            \Modules\QuestionBank\Enums\QuestionStatus::Retired => 'Ngừng dùng',
+                                            default => 'Nháp',
                                         };
                                     @endphp
-                                    <div class="flex flex-col items-start gap-1">
-                                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold {{ $badgeClass }}">
-                                            {{ $question->status->label() }}
-                                        </span>
-                                        @if ($question->pendingReviewRequest && $question->status !== \Modules\QuestionBank\Enums\QuestionStatus::InReview)
-                                            @if ($isReviewer)
+                                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold {{ $pubBadgeClass }}">
+                                        {{ $pubLabel }}
+                                    </span>
+                                </td>
+
+                                {{-- Cột 2: Kiểm duyệt (Chờ duyệt, Đã duyệt, Từ chối) --}}
+                                <td class="w-[140px] min-w-[120px] px-4 py-4 align-top whitespace-nowrap" x-show="cols.review_status" x-cloak>
+                                    @php
+                                        $hasPending = $question->pendingReviewRequest !== null || $question->status === \Modules\QuestionBank\Enums\QuestionStatus::InReview;
+                                        $latestReview = $question->relationLoaded('reviewRequests')
+                                            ? $question->reviewRequests->sortByDesc('id')->first()
+                                            : null;
+                                        $isRejected = $question->status === \Modules\QuestionBank\Enums\QuestionStatus::Rejected
+                                            || filled($question->rejection_reason)
+                                            || ($latestReview && $latestReview->status === \Modules\QuestionBank\Enums\QuestionReviewStatus::Rejected);
+                                        $isApproved = in_array($question->status, [\Modules\QuestionBank\Enums\QuestionStatus::Published, \Modules\QuestionBank\Enums\QuestionStatus::Private], true);
+                                    @endphp
+
+                                    @if ($hasPending)
+                                        <div class="flex flex-col items-start gap-1">
+                                            <span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                                                Chờ duyệt
+                                            </span>
+                                            @if ($question->pendingReviewRequest && $isReviewer)
                                                 <a href="{{ route('admin.questions.reviews.show', $question->pendingReviewRequest) }}"
-                                                    class="inline-flex items-center gap-0.5 text-xs font-semibold text-amber-700 hover:underline">
-                                                    {{ $question->pendingReviewRequest->action->label() }} chờ duyệt
+                                                    class="inline-flex items-center gap-0.5 text-xs font-semibold text-primary hover:underline">
+                                                    Mở duyệt
+                                                </a>
+                                            @endif
+                                        </div>
+                                    @elseif ($isRejected)
+                                        @php
+                                            $reason = $question->rejection_reason ?? $latestReview?->review_note;
+                                        @endphp
+                                        <div class="flex flex-col items-start gap-1">
+                                            <span class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-bold text-red-800 dark:bg-red-950 dark:text-red-300"
+                                                @if(filled($reason)) title="Lý do: {{ $reason }}" @endif>
+                                                Từ chối
+                                            </span>
+                                        </div>
+                                    @elseif ($isApproved)
+                                        <span class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                                            Đã duyệt
+                                        </span>
+                                    @else
+                                        <span class="text-xs text-on-surface-variant/60">—</span>
+                                    @endif
+                                </td>
+
+                                {{-- Cột Nguồn gốc --}}
+                                <td class="w-[160px] min-w-[140px] px-4 py-4 align-top" x-show="cols.origin" x-cloak>
+                                    @if ($question->cloned_from_id === null)
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                                            <span class="material-symbols-outlined text-[12px]" aria-hidden="true">eco</span>
+                                            Câu hỏi gốc
+                                        </span>
+                                    @else
+                                        @php
+                                            $origin = $question->clonedFrom;
+                                            $originLabel = $origin?->code ?: ($origin ? \Illuminate\Support\Str::limit(strip_tags($origin->stem), 30) : 'ID: '.substr($question->cloned_from_id, 0, 8).'…');
+                                        @endphp
+                                        <div class="flex flex-col gap-0.5">
+                                            <span class="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-bold text-orange-800 dark:bg-orange-950 dark:text-orange-300 self-start">
+                                                <span class="material-symbols-outlined text-[12px]" aria-hidden="true">content_copy</span>
+                                                Cloned
+                                            </span>
+                                            @if ($origin)
+                                                <a href="{{ route('admin.questions.edit', $origin) }}"
+                                                    class="mt-0.5 text-[11px] font-medium text-primary hover:underline truncate max-w-[140px] block"
+                                                    title="Xem câu hỏi gốc: {{ strip_tags($origin->stem) }}"
+                                                    aria-label="Xem câu hỏi gốc {{ $originLabel }}">
+                                                    {{ $originLabel }}
                                                 </a>
                                             @else
-                                                <span class="text-xs font-semibold text-amber-700">
-                                                    {{ $question->pendingReviewRequest->action->label() }} chờ duyệt
-                                                </span>
+                                                <span class="mt-0.5 text-[11px] text-on-surface-variant/60 italic">Câu gốc đã xóa</span>
                                             @endif
-                                        @elseif ($question->pendingReviewRequest && $isReviewer)
-                                            <a href="{{ route('admin.questions.reviews.show', $question->pendingReviewRequest) }}"
-                                                class="inline-flex items-center gap-0.5 text-xs font-semibold text-primary hover:underline">
-                                                Mở duyệt
-                                            </a>
-                                        @endif
-                                    </div>
+                                        </div>
+                                    @endif
                                 </td>
 
                                 <td class="w-[110px] min-w-[100px] px-4 py-4 text-center align-top whitespace-nowrap" x-show="cols.access" x-cloak>
@@ -427,7 +493,7 @@
                                         </span>
                                     @else
                                         <span class="inline-flex items-center gap-1 rounded-full bg-secondary/10 px-2.5 py-0.5 text-xs font-bold text-secondary">
-                                            Premium
+                                            Cao cấp
                                         </span>
                                     @endif
                                 </td>
@@ -523,6 +589,8 @@
                 { key: 'difficulty', label: 'Độ khó' },
                 { key: 'creator', label: 'Người tạo' },
                 { key: 'status', label: 'Trạng thái' },
+                { key: 'review_status', label: 'Kiểm duyệt' },
+                { key: 'origin', label: 'Nguồn gốc' },
                 { key: 'access', label: 'Truy cập' },
                 { key: 'attempts', label: 'Lượt làm' },
                 { key: 'correct_rate', label: '% đúng' },

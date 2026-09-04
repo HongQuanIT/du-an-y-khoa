@@ -6,9 +6,9 @@
     $inUse = $media->usages->count();
 @endphp
 
-<x-layouts.admin title="Media — {{ $media->original_name ?: $media->uuid }}">
-    <x-admin.page-header :title="$media->original_name ?: 'Chi tiết media'"
-        description="Metadata, biến thể local và nơi đang sử dụng.">
+<x-layouts.admin title="Tệp nội dung — {{ $media->original_name ?: $media->uuid }}">
+    <x-admin.page-header :title="$media->original_name ?: 'Chi tiết tệp nội dung'"
+        description="Thông tin mô tả, các biến thể trên máy chủ và nơi đang sử dụng.">
         <x-slot:actions>
             <a href="{{ route('admin.media.index') }}"
                 class="inline-flex items-center rounded-lg px-3 py-2 font-label-md text-on-surface-variant hover:bg-surface-container-low">← Thư viện</a>
@@ -69,7 +69,7 @@
                     </p>
                     <p>MIME: <span class="text-on-surface">{{ $media->mime ?: '—' }}</span></p>
                     <p>Dung lượng: <span class="text-on-surface">{{ number_format(($media->size_bytes ?? 0) / 1024, 1) }} KB</span></p>
-                    <p>Disk: <span class="text-on-surface">{{ $media->isExternal() ? 'CDN / URL ngoài' : $media->disk }}</span></p>
+                    <p>Nơi lưu trữ: <span class="text-on-surface">{{ $media->isExternal() ? 'CDN / đường dẫn ngoài' : 'Máy chủ' }}</span></p>
                     @if ($media->isExternal())
                         <p class="break-all">URL: <a href="{{ $media->path }}" class="text-primary hover:underline" target="_blank" rel="noopener noreferrer">{{ $media->path }}</a></p>
                     @endif
@@ -81,11 +81,11 @@
                     @csrf
                     @method('PUT')
                     <div class="border-b border-outline-variant px-5 py-4">
-                        <h3 class="font-label-md text-on-surface">Metadata</h3>
+                        <h3 class="font-label-md text-on-surface">Thông tin mô tả</h3>
                     </div>
                     <div class="space-y-4 p-5">
                         <div>
-                            <label class="mb-1.5 block font-label-sm text-on-surface-variant" for="alt">Alt *</label>
+                            <label class="mb-1.5 block font-label-sm text-on-surface-variant" for="alt">Mô tả thay thế *</label>
                             <input id="alt" name="alt" type="text" required maxlength="255"
                                 value="{{ old('alt', $media->alt) }}"
                                 class="block w-full rounded-lg border-none bg-surface-container-low px-3 py-2 font-body-sm focus:ring-2 focus:ring-primary">
@@ -98,7 +98,7 @@
                                 class="block w-full rounded-lg border-none bg-surface-container-low px-3 py-2 font-body-sm focus:ring-2 focus:ring-primary">
                         </div>
                         <div>
-                            <label class="mb-1.5 block font-label-sm text-on-surface-variant" for="credit">Nguồn / credit</label>
+                            <label class="mb-1.5 block font-label-sm text-on-surface-variant" for="credit">Nguồn / ghi công</label>
                             <input id="credit" name="credit" type="text" maxlength="255"
                                 value="{{ old('credit', $media->credit) }}"
                                 class="block w-full rounded-lg border-none bg-surface-container-low px-3 py-2 font-body-sm focus:ring-2 focus:ring-primary">
@@ -106,7 +106,7 @@
                         <label class="flex items-center gap-2 font-label-sm text-on-surface">
                             <input type="hidden" name="is_premium" value="0">
                             <input type="checkbox" name="is_premium" value="1" @checked(old('is_premium', $media->is_premium))>
-                            Premium (không public `/storage`)
+                            Cao cấp (không công khai trong thư mục lưu trữ)
                         </label>
                         <button type="submit"
                             class="inline-flex rounded-lg bg-primary px-4 py-2 font-label-md text-on-primary hover:opacity-90">Lưu</button>
@@ -126,7 +126,7 @@
                             @foreach ($media->usages as $usage)
                                 <li class="text-on-surface">
                                     @if ($usage->usable instanceof CmsPage)
-                                        CMS: {{ $usage->usable->title }}
+                                        Trang nội dung: {{ $usage->usable->title }}
                                     @else
                                         {{ class_basename((string) $usage->usable_type) }} #{{ $usage->usable_id }}
                                     @endif
@@ -137,13 +137,13 @@
 
                     @if ($canManage)
                         <form method="post" action="{{ route('admin.media.destroy', $media) }}" class="mt-4"
-                            onsubmit="return confirm('Xóa media này? File trên đĩa sẽ bị gỡ.')">
+                            onsubmit="return confirm('Xóa tệp nội dung này? Tệp trên máy chủ sẽ bị gỡ.')">
                             @csrf
                             @method('DELETE')
                             <button type="submit"
                                 class="inline-flex rounded-lg border border-error/40 px-4 py-2 font-label-md text-error hover:bg-error/10"
                                 @disabled($inUse > 0)>
-                                {{ $inUse > 0 ? 'Đang dùng — không xóa được' : 'Xóa media' }}
+                                {{ $inUse > 0 ? 'Đang dùng — không xóa được' : 'Xóa tệp' }}
                             </button>
                         </form>
                     @endif

@@ -88,7 +88,7 @@
                     <span class="text-[10px] text-on-surface-variant" x-text="topic.section_name || ''"></span>
                 </label>
             </template>
-            <p x-show="coreTopicResults.length === 0" class="px-2 py-1 text-xs text-on-surface-variant">Chọn section hoặc tìm kiếm.</p>
+            <p x-show="coreTopicResults.length === 0" class="px-2 py-1 text-xs text-on-surface-variant">Chọn đề mục hoặc tìm kiếm.</p>
         </div>
         <div class="mt-2 flex flex-wrap gap-1.5">
             <template x-for="id in selectedCoreTopicIds" :key="'core-chip-'+id">
@@ -160,9 +160,9 @@
     </div>
 
     <div>
-        <label class="mb-1 block text-xs font-semibold text-on-surface-variant">Tags</label>
+        <label class="mb-1 block text-xs font-semibold text-on-surface-variant">Thẻ</label>
         <input type="search" x-model="tagSearch" @input.debounce.300ms="searchTags()"
-               placeholder="Tìm tag (ECG, Emergency…)"
+               placeholder="Tìm thẻ (ECG, cấp cứu…)"
                class="mb-2 h-10 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm">
         <div class="max-h-28 space-y-1 overflow-y-auto rounded-lg border border-outline-variant p-2">
             <template x-for="tag in tagResults" :key="tag.id">

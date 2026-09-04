@@ -73,7 +73,7 @@
     }"
 >
     <div>
-        <p class="mb-2 font-label-sm text-label-sm text-on-surface-variant">1. Chọn portal</p>
+        <p class="mb-2 font-label-sm text-label-sm text-on-surface-variant">1. Chọn cổng truy cập</p>
         <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
             @foreach ($portalsWithRoles as $item)
                 @php $portal = $item['portal']; @endphp
@@ -98,7 +98,7 @@
         <template x-if="rolesForPortal().length === 1">
             <p class="font-body-sm text-body-sm text-on-surface">
                 <span x-text="rolesForPortal()[0]?.label"></span>
-                <span class="text-on-surface-variant"> — tự chọn vì portal chỉ có một role.</span>
+                <span class="text-on-surface-variant"> — tự chọn vì cổng truy cập chỉ có một vai trò.</span>
             </p>
         </template>
         <div class="space-y-2" x-show="rolesForPortal().length > 1">
