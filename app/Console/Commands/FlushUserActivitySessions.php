@@ -4,17 +4,15 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
-use App\Models\UserActivitySession;
 use App\Support\Audit\ActivityTracker;
 use Illuminate\Console\Command;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Redis;
 
 final class FlushUserActivitySessions extends Command
 {
     protected $signature = 'activity:flush {--limit=1000}';
 
-    protected $description = 'Gom các heartbeat không còn hoạt động từ Redis vào user_activity_sessions';
+    protected $description = 'Gom các phiên start bị bỏ dở (không leave) từ Redis vào user_activity_sessions';
 
     public function handle(): int
     {
@@ -56,28 +54,7 @@ final class FlushUserActivitySessions extends Command
                 $activity[$values[$index]] = $values[$index + 1] ?? '';
             }
 
-            $startedAt = Carbon::createFromTimestamp((int) $activity['started_at']);
-            $lastSeenAt = Carbon::createFromTimestamp((int) $activity['last_seen_at']);
-
-            UserActivitySession::query()->updateOrCreate(
-                [
-                    'user_id' => (int) $activity['user_id'],
-                    'session_id' => $activity['session_id'],
-                    'area' => $activity['area'],
-                ],
-                [
-                    'portal' => $activity['portal'],
-                    'started_at' => $startedAt,
-                    'last_seen_at' => $lastSeenAt,
-                    'duration_seconds' => max(0, $startedAt->diffInSeconds($lastSeenAt)),
-                    'heartbeat_count' => max(1, (int) $activity['heartbeat_count']),
-                    'ip' => $activity['ip'] ?: null,
-                    'device_type' => $activity['device_type'] ?: null,
-                    'device_name' => $activity['device_name'] ?: null,
-                    'operating_system' => $activity['operating_system'] ?: null,
-                    'browser' => $activity['browser'] ?: null,
-                ],
-            );
+            app(ActivityTracker::class)->persistFromRedisHash($activity);
             $flushed++;
         }
 
