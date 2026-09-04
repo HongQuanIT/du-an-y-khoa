@@ -85,7 +85,7 @@
                 @endif
                 @if ($accessCounts->has('premium'))
                     <option value="0" @selected(($searchFilters['is_free'] ?? null) === false)>
-                        Premium · {{ data_get($accessCounts->get('premium'), 'count', 0) }}
+                        Cao cấp · {{ data_get($accessCounts->get('premium'), 'count', 0) }}
                     </option>
                 @endif
             </select>

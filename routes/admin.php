@@ -146,6 +146,8 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
         Route::middleware('permission:'.Permission::ClassroomOversee->value)->group(function (): void {
             Route::get('/classrooms', [ClassroomOversightController::class, 'index'])->name('classrooms.index');
             Route::get('/classrooms/create', [ClassroomOversightController::class, 'create'])->name('classrooms.create');
+            Route::get('/classrooms/content/questions', [ClassroomOversightController::class, 'contentQuestions'])
+                ->name('classrooms.content.questions');
             Route::post('/classrooms', [ClassroomOversightController::class, 'store'])->name('classrooms.store');
             Route::get('/classrooms/{classroom}', [ClassroomOversightController::class, 'show'])
                 ->name('classrooms.show');

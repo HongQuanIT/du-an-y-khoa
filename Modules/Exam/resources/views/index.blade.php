@@ -26,7 +26,7 @@
 
         <div class="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div class="max-w-3xl">
-                <p class="mb-2 text-sm font-bold uppercase tracking-wide text-primary">Exam simulation</p>
+                <p class="mb-2 text-sm font-bold uppercase tracking-wide text-primary">Mô phỏng kỳ thi</p>
                 <h1 class="font-headline-lg text-headline-lg font-bold text-on-surface">Kỳ thi</h1>
                 <p class="mt-3 text-sm leading-6 text-on-surface-variant sm:text-base">
                     Làm bài thi thử với cấu trúc mô phỏng kỳ thi thật. Thời gian sẽ được tính lùi giống hệt thi thật.

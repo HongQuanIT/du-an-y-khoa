@@ -67,21 +67,16 @@ final class SaveAdminQuestionAction
             if ($question === null) {
                 $question = new Question;
                 $question->status = QuestionStatus::Draft;
+                $question->version = 0;
                 $question->created_by = $actor->getKey();
             } else {
                 if (! $isReviewer && $this->requiresAdminApprovalBeforeApply($question->status)) {
-                    if ($question->status === QuestionStatus::InReview) {
-                        throw ValidationException::withMessages([
-                            'status' => 'Câu hỏi đang chờ duyệt. Hãy trả về nháp trước khi chỉnh sửa, hoặc chờ admin xử lý.',
-                        ]);
-                    }
-
                     $this->queueUpdate($actor, $question, $data);
 
                     return $question->fresh(['options', 'hints', 'medicalTaxonomyNodes', 'pendingReviewRequest']);
                 }
 
-                if (! $isReviewerUpdate) {
+                if ($question->status === QuestionStatus::Published) {
                     $this->captureVersion->handle($question, null, 'baseline');
                 }
             }
@@ -99,6 +94,8 @@ final class SaveAdminQuestionAction
                 ? array_values(array_map(fn (array $hint): string => $hint['content'], $hints))
                 : $this->resolveKeyInfo($question, $data['key_info'] ?? []);
 
+            $isPublishedUpdate = $question->exists && $question->status === QuestionStatus::Published;
+
             $question->fill([
                 'stem' => SafeHtml::fromEditor($data['stem']),
                 'stem_image_path' => $this->sanitizeStemImagePath($data['stem_image_path'] ?? null),
@@ -110,7 +107,7 @@ final class SaveAdminQuestionAction
                 'exam_flag' => (bool) ($data['exam_flag'] ?? false),
                 'updated_by' => $actor->getKey(),
             ]);
-            if (! $isReviewerUpdate) {
+            if ($isPublishedUpdate) {
                 $question->version = ($question->version ?: 0) + 1;
             }
             $question->save();
@@ -127,13 +124,10 @@ final class SaveAdminQuestionAction
             $this->syncOptions($question, $options);
 
             $question->load('options', 'hints', 'coreClinicalTopics', 'medicalTaxonomyNodes', 'tags');
-            if (! $isReviewerUpdate) {
+            if ($isPublishedUpdate) {
                 $this->captureVersion->handle($question, $actor);
             }
 
-            if (! $isReviewer) {
-                $reviewRequest = $this->queueCreationReview($actor, $question);
-            }
 
             Auditor::record(
                 $before === null ? AuditAction::QuestionCreated : AuditAction::QuestionUpdated,
@@ -169,7 +163,6 @@ final class SaveAdminQuestionAction
             QuestionStatus::Published,
             QuestionStatus::Private,
             QuestionStatus::Retired,
-            QuestionStatus::InReview,
         ], true);
     }
 
@@ -209,32 +202,6 @@ final class SaveAdminQuestionAction
         );
     }
 
-    private function queueCreationReview(User $actor, Question $question): QuestionReviewRequest
-    {
-        $pending = $question->reviewRequests()
-            ->where('status', QuestionReviewStatus::Pending->value)
-            ->latest('id')
-            ->first();
-
-        if ($pending !== null) {
-            if ($pending->action !== QuestionReviewAction::Create) {
-                throw ValidationException::withMessages([
-                    'review' => 'Câu hỏi đang có một yêu cầu khác chờ duyệt.',
-                ]);
-            }
-
-            $pending->forceFill(['updated_at' => now()])->save();
-
-            return $pending;
-        }
-
-        return QuestionReviewRequest::query()->create([
-            'question_id' => $question->getKey(),
-            'action' => QuestionReviewAction::Create,
-            'status' => QuestionReviewStatus::Pending,
-            'requested_by' => $actor->getKey(),
-        ]);
-    }
 
     private function sanitizeStemImagePath(?string $path): ?string
     {

@@ -56,12 +56,12 @@
     ];
 @endphp
 
-<x-layouts.app title="Flashcards">
+<x-layouts.app title="Thẻ ghi nhớ">
     <div class="p-8">
         <!-- Page Header -->
         <div class="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
             <div>
-                <h2 class="font-headline-lg text-headline-lg text-on-surface">Flashcards</h2>
+                <h2 class="font-headline-lg text-headline-lg text-on-surface">Thẻ ghi nhớ</h2>
                 <p class="mt-2 font-body-md text-body-md text-on-surface-variant sm:mt-6">
                     Hệ thống lặp lại ngắt quãng (SRS) giúp bạn ghi nhớ kiến thức bền vững.
                 </p>
@@ -266,7 +266,7 @@
                             <p class="text-sm font-bold text-primary">Mẹo học tập</p>
                         </div>
                         <p class="mb-4 text-sm leading-relaxed font-medium text-on-surface">
-                            Sử dụng phương pháp <span class="font-bold text-primary">"Active Recall"</span> trước khi
+                            Sử dụng phương pháp <span class="font-bold text-primary">“Chủ động gợi nhớ”</span> trước khi
                             lật flashcard để tăng hiệu quả ghi nhớ lên 300%.
                         </p>
                         <a href="#" class="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline">

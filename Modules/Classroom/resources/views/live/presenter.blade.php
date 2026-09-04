@@ -47,7 +47,7 @@
             <button type="button" data-q-next style="padding:0.5rem 1rem;border:1px solid #d1d5db;border-radius:0.5rem;background:#fff;cursor:pointer;">Sau →</button>
             <button type="button" data-q-clear-marks style="padding:0.5rem 1rem;border:1px solid #d1d5db;border-radius:0.5rem;background:#fff;cursor:pointer;color:#6b7280;">Xóa tô màu</button>
         </footer>
-        <p style="margin-top:1rem;font-size:0.75rem;color:#6b7280;">Cửa sổ này dùng để tham khảo hoặc đặt trên màn hình phụ. Học viên xem đề đồng bộ trong phòng live — không cần share cửa sổ này.</p>
+        <p style="margin-top:1rem;font-size:0.75rem;color:#6b7280;">Cửa sổ này dùng để tham khảo hoặc đặt trên màn hình phụ. Học viên xem đề đồng bộ trong phòng trực tiếp — không cần chia sẻ cửa sổ này.</p>
     @endif
     @vite(['resources/js/classroom/presenter-window.js'])
 </body>

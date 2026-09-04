@@ -23,7 +23,7 @@
         <div class="flex shrink-0 items-center gap-2 px-3">
             <label class="flex w-40 items-center gap-2 rounded-md bg-white px-2.5 py-1.5 xl:w-52">
                 <span class="material-symbols-outlined text-[17px] text-outline">search</span>
-                <input x-model="labQuery" type="search" placeholder="Search..."
+                <input x-model="labQuery" type="search" placeholder="Tìm kiếm..."
                     class="min-w-0 flex-1 bg-transparent text-body-sm outline-none">
             </label>
             <span class="h-6 w-px bg-outline-variant"></span>

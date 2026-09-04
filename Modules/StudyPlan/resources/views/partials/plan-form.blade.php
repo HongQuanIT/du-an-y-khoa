@@ -168,7 +168,7 @@
                 const body=new FormData(this.$refs.planForm);
                 body.set('mode','study'); body.set('source','custom'); body.set('count','1');
                 // Kỳ thi mục tiêu dùng để đặt tên/mốc kế hoạch, không phải bộ lọc
-                // phạm vi. Khi các hàng phạm vi đều là "Tất cả", phải đếm toàn kho.
+                // phạm vi. Khi các hàng phạm vi đều chọn tất cả, phải đếm toàn kho.
                 body.delete('exam_key');
                 body.delete('exam_tags[]');
                 const r=await fetch(this.countUrl,{method:'POST',headers:{Accept:'application/json','X-CSRF-TOKEN':@js(csrf_token())},body});
@@ -261,7 +261,8 @@
             }
             return count;
         },
-        totalQuestions() { const capacity=this.studyDaysUntilExam()*this.intensity; return this.matching===null?capacity:Math.min(capacity,this.matching); },
+        plannedQuestions() { return this.studyDaysUntilExam() * this.intensity; },
+        totalQuestions() { return this.matching !== null ? this.matching : 0; },
         daysUntilExam() {
             if (!this.date) return 0;
             const target = new Date(this.date + 'T00:00:00');
@@ -269,6 +270,10 @@
             today.setHours(0, 0, 0, 0);
             return Math.max(0, Math.round((target - today) / 86400000));
         },
+        isPoolInsufficient() { return this.matching !== null && this.matching < 5; },
+        isCyclingNeeded() { return this.matching !== null && this.matching >= 5 && this.matching < this.plannedQuestions(); },
+        isOverload() { return this.intensity > 80; },
+        canSubmit() { return !this.counting && this.days.length > 0 && this.date && this.intensity >= 5 && !this.isOverload() && !this.isPoolInsufficient() && this.studyDaysUntilExam() > 0; },
     }" x-init="refreshCount()" @change.debounce.300ms="refreshCount()" @keydown.escape.window="if (activeFilter) activeFilter = null; else if (modal) closeModal()">
     @csrf
     @isset($formMethod)
@@ -455,11 +460,11 @@
                             x-text="intensity + ' câu/ngày ~ ' + Math.round(intensity * 2.25) + ' phút'"></span>
                     </div>
                     <div class="mb-8 px-2">
-                        <input type="range" min="5" max="100" step="5" x-model.number="intensity"
+                        <input type="range" min="5" max="80" step="5" x-model.number="intensity"
                             class="h-2 w-full cursor-pointer appearance-none rounded-lg bg-surface-variant accent-primary">
                         <div class="mt-2 flex justify-between font-label-sm text-label-sm text-on-surface-variant">
                             <span>Thảnh thơi (5/ngày)</span>
-                            <span>Tập trung (100/ngày)</span>
+                            <span>Tập trung (80/ngày)</span>
                         </div>
                     </div>
 
@@ -468,42 +473,44 @@
                         <div class="flex flex-wrap gap-2">
                             @foreach ($weekdays as $iso => $label)
                                 <button type="button" @click="toggleDay({{ $iso }})"
-                                    class="flex size-10 items-center justify-center rounded-full font-label-md text-label-md transition-colors"
-                                    :class="days.includes({{ $iso }})
-                                        ? 'bg-[#e6f2f1] text-[#005c55] border border-[#0f766e]'
-                                        : 'bg-surface border border-outline-variant text-on-surface-variant'">
+                                    :class="days.includes({{ $iso }}) ? 'bg-primary text-white border-primary shadow-sm' : 'bg-surface text-on-surface-variant border-outline-variant hover:bg-surface-container-low'"
+                                    class="h-10 min-w-10 rounded-lg border font-label-md text-label-md transition-all">
                                     {{ $label }}
                                 </button>
                             @endforeach
                         </div>
                     </div>
 
-                    <h3 class="mb-3 font-label-md text-label-md text-on-surface">Chiến lược phân bổ</h3>
-                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-outline-variant p-4 transition-colors hover:bg-surface-container-lowest"
-                            :class="strategy === 'fixed' && 'ring-1 ring-primary border-primary'">
-                            <input type="radio" value="fixed" x-model="strategy"
-                                class="mt-1 text-primary focus:ring-primary">
-                            <div>
-                                <span class="block font-label-md text-label-md text-on-surface">Cố định</span>
-                                <span class="mt-1 block font-body-sm text-body-sm text-on-surface-variant">Số lượng câu
-                                    hỏi không đổi mỗi ngày.</span>
-                            </div>
-                        </label>
-                        <label class="relative flex cursor-pointer items-start gap-3 overflow-hidden rounded-lg border border-outline-variant bg-surface p-4 transition-colors hover:bg-surface-container-lowest"
-                            :class="strategy === 'adaptive' && 'ring-1 ring-primary border-primary'">
-                            <input type="radio" value="adaptive" x-model="strategy"
-                                class="mt-1 text-primary focus:ring-primary">
-                            <div class="relative z-10">
-                                <div class="flex items-center gap-2">
-                                    <span class="block font-label-md text-label-md text-on-surface">Thích ứng</span>
-                                    <span
-                                        class="premium-gradient rounded px-2 py-0.5 text-[10px] font-bold tracking-wide text-white uppercase">Premium</span>
+                    <!-- Strategy -->
+                    <div>
+                        <h3 class="mb-3 font-label-md text-label-md text-on-surface">Chiến lược học tập</h3>
+                        <div class="space-y-3">
+                            <label
+                                class="flex cursor-pointer items-start gap-3 rounded-xl border border-outline-variant bg-surface-container-lowest p-4 transition-colors hover:border-primary/40">
+                                <input type="radio" name="strategy_choice" value="fixed" x-model="strategy"
+                                    class="mt-1 size-4 border-outline-variant text-primary focus:ring-primary">
+                                <div>
+                                    <span class="block font-label-md text-label-md text-on-surface">Cố định (Fixed)</span>
+                                    <span class="mt-1 block font-body-sm text-body-sm text-on-surface-variant">Chia đều
+                                        khối lượng theo từng ngày học cố định.</span>
                                 </div>
-                                <span class="mt-1 block font-body-sm text-body-sm text-on-surface-variant">Tự động dồn
-                                    ngày lỡ và ưu tiên chủ đề đang yếu.</span>
-                            </div>
-                        </label>
+                            </label>
+                            <label
+                                class="flex cursor-pointer items-start gap-3 rounded-xl border border-outline-variant bg-surface-container-lowest p-4 transition-colors hover:border-primary/40">
+                                <input type="radio" name="strategy_choice" value="adaptive" x-model="strategy"
+                                    class="mt-1 size-4 border-outline-variant text-primary focus:ring-primary">
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-label-md text-label-md text-on-surface">Thích ứng
+                                            (Adaptive)</span>
+                                        <span
+                                            class="premium-gradient rounded px-2 py-0.5 text-[10px] font-bold tracking-wide text-white uppercase">Premium</span>
+                                    </div>
+                                    <span class="mt-1 block font-body-sm text-body-sm text-on-surface-variant">Tự động dồn
+                                        ngày lỡ và ưu tiên chủ đề đang yếu.</span>
+                                </div>
+                            </label>
+                        </div>
                     </div>
                 </section>
             </div>
@@ -519,9 +526,9 @@
                         <li class="flex items-start gap-3">
                             <span class="material-symbols-outlined mt-0.5 text-primary">summarize</span>
                             <div>
-                                <span class="block font-label-sm text-label-sm text-on-surface-variant">Tổng khối lượng</span>
+                                <span class="block font-label-sm text-label-sm text-on-surface-variant">Tổng câu hỏi trong phạm vi</span>
                                 <span class="block font-label-md text-label-md text-on-surface"
-                                    x-text="totalQuestions().toLocaleString('vi-VN') + ' câu hỏi'"></span>
+                                    x-text="counting ? 'Đang kiểm tra kho...' : totalQuestions().toLocaleString('vi-VN') + ' câu hỏi'"></span>
                             </div>
                         </li>
                         <li class="flex items-start gap-3">
@@ -541,9 +548,36 @@
                             </div>
                         </li>
                     </ul>
-                    <p class="mt-4 rounded-lg bg-error-container/20 p-3 text-body-sm text-error"
-                        x-show="daysUntilExam() > 0 && intensity >= 80" x-cloak>
-                        Cường độ cao — cân nhắc giảm số câu mỗi ngày hoặc dời ngày thi.
+
+                    <!-- Thông báo lỗi khi kho < 5 câu -->
+                    <div class="mt-4 rounded-lg border border-error/30 bg-error-container/20 p-3 text-body-sm text-error"
+                        x-show="isPoolInsufficient()" x-cloak>
+                        <div class="mb-1 flex items-center gap-1.5 font-bold">
+                            <span class="material-symbols-outlined text-[18px]">error</span>
+                            Phạm vi chưa đủ câu hỏi
+                        </div>
+                        Phạm vi đã chọn chỉ có <span class="font-bold" x-text="matching"></span> câu hỏi. Cần tối thiểu 5 câu để tạo kế hoạch học tập.
+                    </div>
+
+                    <!-- Thông báo chu kỳ lặp lại khi kho < tổng câu -->
+                    <div class="mt-4 rounded-lg border border-primary/20 bg-primary-container/10 p-3 text-body-sm text-primary"
+                        x-show="isCyclingNeeded()" x-cloak>
+                        <div class="mb-1 flex items-center gap-1.5 font-bold">
+                            <span class="material-symbols-outlined text-[18px]">autorenew</span>
+                            Chu kỳ lặp lại ngẫu nhiên
+                        </div>
+                        Phạm vi có <span class="font-bold" x-text="matching"></span> câu hỏi. Hệ thống sẽ xáo trộn và lặp lại câu hỏi qua các chu kỳ để hoàn thành mục tiêu <span class="font-bold" x-text="plannedQuestions()"></span> câu đến ngày thi.
+                    </div>
+
+                    <!-- Cảnh báo cường độ quá cao -->
+                    <div class="mt-4 rounded-lg border border-error/30 bg-error-container/20 p-3 text-body-sm text-error"
+                        x-show="isOverload()" x-cloak>
+                        Cường độ không được vượt quá 80 câu/ngày để tránh quá tải.
+                    </div>
+
+                    <p class="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-body-sm text-amber-700"
+                        x-show="daysUntilExam() > 0 && intensity >= 60 && intensity <= 80" x-cloak>
+                        Cường độ cao (~<span x-text="Math.round(intensity * 2.25)"></span> phút/ngày) — cân nhắc giảm số câu mỗi ngày hoặc dời ngày thi.
                     </p>
                 </div>
 
@@ -601,7 +635,9 @@
                         Quay lại
                     </a>
                     <button type="submit"
-                        class="flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary-container px-4 py-3 font-label-md text-label-md text-white shadow-sm transition-colors hover:bg-primary">
+                        :disabled="!canSubmit()"
+                        :class="!canSubmit() ? 'opacity-50 cursor-not-allowed bg-outline-variant text-on-surface-variant' : 'bg-primary-container text-white shadow-sm hover:bg-primary'"
+                        class="flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 font-label-md text-label-md transition-colors">
                         <span class="material-symbols-outlined text-sm">rocket_launch</span>
                         {{ $submitLabel }}
                     </button>

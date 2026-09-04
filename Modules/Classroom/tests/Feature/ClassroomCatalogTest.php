@@ -151,6 +151,37 @@ final class ClassroomCatalogTest extends TestCase
             ->assertSee(route('classroom.live', [$classroom, $session]), false);
     }
 
+    public function test_learner_classroom_detail_uses_semantic_content_structure(): void
+    {
+        $host = User::factory()->create(['name' => 'Giảng viên Minh']);
+        $host->assignRole(Role::Instructor->value);
+        $learner = User::factory()->create();
+        $learner->assignRole(Role::Student->value);
+        $classroom = $this->approvedClassroom($host, [
+            'title' => 'Lớp ôn tập Tim mạch',
+            'description' => 'Ôn tập kiến thức trọng tâm cùng giảng viên.',
+            'visibility' => 'public',
+        ]);
+        LiveSession::query()->create([
+            'classroom_id' => $classroom->getKey(),
+            'title' => 'Buổi chữa đề số 1',
+            'scheduled_at' => now()->addDay(),
+            'status' => LiveSessionStatus::Scheduled,
+        ]);
+
+        $this->actingAs($learner)
+            ->get(route('classroom.show', $classroom))
+            ->assertOk()
+            ->assertSee('<meta name="description"', false)
+            ->assertSee('<h1', false)
+            ->assertSee('aria-label="Điều hướng lớp học"', false)
+            ->assertSee('id="live-sessions-heading"', false)
+            ->assertSee('<ol', false)
+            ->assertSee('<article', false)
+            ->assertSee('<time datetime=', false)
+            ->assertSee('id="members-heading"', false);
+    }
+
 
     /** @param  array<string, mixed>  $data */
     private function approvedClassroom(User $host, array $data): Classroom

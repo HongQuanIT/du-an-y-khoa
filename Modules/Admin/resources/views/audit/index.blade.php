@@ -1,5 +1,5 @@
-<x-layouts.admin title="Audit">
-    <x-admin.page-header title="Audit log"
+<x-layouts.admin title="Nhật ký hoạt động">
+    <x-admin.page-header title="Nhật ký hoạt động"
         description="Nhật ký bất biến các thao tác nhạy cảm (chỉ đọc)." />
 
     <x-admin.flash />
@@ -104,7 +104,7 @@
                             @if ($log->actor)
                                 <a href="{{ route('admin.users.show', $log->actor) }}" class="text-primary hover:underline">{{ $log->actor->name }}</a>
                                 <div class="font-label-sm text-label-sm text-on-surface-variant">#{{ $log->actor_id }}</div>
-                                <div class="whitespace-nowrap font-label-sm text-label-sm text-on-surface-variant">{{ $log->actor_role ?? '—' }}</div>
+                                <div class="whitespace-nowrap font-label-sm text-label-sm text-on-surface-variant">{{ \App\Support\Enums\Role::tryFromName($log->actor_role)?->label() ?? '—' }}</div>
                             @else
                                 —
                             @endif
@@ -142,7 +142,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="px-4 py-10 text-center text-on-surface-variant">Chưa có bản ghi audit.</td>
+                        <td colspan="7" class="px-4 py-10 text-center text-on-surface-variant">Chưa có bản ghi nhật ký.</td>
                     </tr>
                 @endforelse
             </tbody>

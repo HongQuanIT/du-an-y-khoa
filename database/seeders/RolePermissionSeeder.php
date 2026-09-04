@@ -29,8 +29,9 @@ class RolePermissionSeeder extends Seeder
             }
 
             foreach (RoleEnum::cases() as $role) {
-                Role::findOrCreate($role->value, 'web')
-                    ->syncPermissions($this->permissionsFor($role));
+                $roleModel = Role::findOrCreate($role->value, 'web');
+                $roleModel->forceFill(['portal' => $role->portal()->value])->save();
+                $roleModel->syncPermissions($this->permissionsFor($role));
             }
         });
 

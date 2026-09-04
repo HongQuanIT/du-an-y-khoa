@@ -6,6 +6,7 @@ namespace Modules\Admin\Tests\Feature;
 
 use App\Models\User;
 use App\Support\Auth\TwoFactorSession;
+use App\Support\Enums\PortalGroup;
 use App\Support\Enums\Role;
 use App\Support\Enums\UserStatus;
 use Database\Seeders\RolePermissionSeeder;
@@ -51,7 +52,10 @@ final class AdminPhase1ManagementTest extends TestCase
         $student->assignRole(Role::Student->value);
 
         $this->actingAsStaff($admin)
-            ->patch(route('admin.users.role', $student), ['role' => Role::ContentEditor->value])
+            ->patch(route('admin.users.role', $student), [
+                'portal' => PortalGroup::Admin->value,
+                'role' => Role::ContentEditor->value,
+            ])
             ->assertRedirect();
 
         $this->assertTrue($student->fresh()->hasRole(Role::ContentEditor->value));
@@ -78,8 +82,11 @@ final class AdminPhase1ManagementTest extends TestCase
         $student->assignRole(Role::Student->value);
 
         $this->actingAsStaff($admin)
-            ->patch(route('admin.users.role', $student), ['role' => Role::SuperAdmin->value])
-            ->assertForbidden();
+            ->patch(route('admin.users.role', $student), [
+                'portal' => PortalGroup::Admin->value,
+                'role' => Role::SuperAdmin->value,
+            ])
+            ->assertSessionHasErrors('role');
     }
 
     public function test_content_editor_cannot_access_users(): void
@@ -113,20 +120,22 @@ final class AdminPhase1ManagementTest extends TestCase
     {
         $super = $this->staffUser(Role::SuperAdmin);
         $permissions = \Spatie\Permission\Models\Permission::query()
-            ->whereIn('name', ['question.view', 'question.update'])
+            ->whereIn('name', ['question.update', 'cms.manage'])
             ->pluck('id')
             ->all();
 
         $this->actingAsStaff($super)
             ->post(route('admin.roles.store'), [
+                'portal' => PortalGroup::Admin->value,
                 'name' => 'medical_reviewer',
                 'permissions' => $permissions,
             ])
             ->assertRedirect();
 
         $role = \Spatie\Permission\Models\Role::findByName('medical_reviewer', 'web');
-        $this->assertTrue($role->hasPermissionTo('question.view'));
         $this->assertTrue($role->hasPermissionTo('question.update'));
+        $this->assertTrue($role->hasPermissionTo('cms.manage'));
+        $this->assertSame(PortalGroup::Admin->value, $role->portal);
         $this->assertDatabaseHas('audit_logs', ['action' => 'admin.role.created']);
 
         $this->actingAsStaff($super)
@@ -151,13 +160,35 @@ final class AdminPhase1ManagementTest extends TestCase
         $super = $this->staffUser(Role::SuperAdmin);
 
         $this->actingAsStaff($super)
-            ->post(route('admin.roles.store'), ['name' => 'Người nhập liệu'])
+            ->post(route('admin.roles.store'), [
+                'portal' => PortalGroup::Admin->value,
+                'name' => 'Người nhập liệu',
+            ])
             ->assertRedirect();
 
         $this->assertDatabaseHas('roles', [
             'name' => 'nguoi_nhap_lieu',
             'guard_name' => 'web',
+            'portal' => PortalGroup::Admin->value,
         ]);
+    }
+
+    public function test_super_admin_cannot_create_role_with_permission_from_another_portal(): void
+    {
+        $super = $this->staffUser(Role::SuperAdmin);
+        $adminPermission = \Spatie\Permission\Models\Permission::findByName('cms.manage', 'web');
+
+        $this->actingAsStaff($super)
+            ->from(route('admin.roles.create'))
+            ->post(route('admin.roles.store'), [
+                'portal' => PortalGroup::Learner->value,
+                'name' => 'learner_reviewer',
+                'permissions' => [$adminPermission->id],
+            ])
+            ->assertRedirect(route('admin.roles.create'))
+            ->assertSessionHasErrors('permissions');
+
+        $this->assertDatabaseMissing('roles', ['name' => 'learner_reviewer']);
     }
 
     public function test_admin_cannot_sync_role_permissions(): void

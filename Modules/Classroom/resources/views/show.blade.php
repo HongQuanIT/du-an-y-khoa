@@ -3,13 +3,15 @@
     use Modules\Classroom\Enums\LiveSessionStatus;
 @endphp
 
-<x-layouts.app :title="$classroom->title">
-    <div class="mx-auto max-w-[1200px] space-y-8 p-6 md:p-8">
-        <div>
-            <a href="{{ route('classroom.index') }}" class="mb-4 inline-flex items-center gap-1 text-sm text-primary hover:underline">
-                <span class="material-symbols-outlined text-[18px]">arrow_back</span>
-                Classroom
-            </a>
+<x-layouts.app :title="$classroom->title" :description="Str::limit(strip_tags((string) ($classroom->description ?: 'Thông tin lớp học '.$classroom->title)), 155)">
+    <div class="mx-auto max-w-[1200px] space-y-8 p-4 sm:p-6 md:p-8">
+        <header class="border-b border-outline-variant pb-7">
+            <nav aria-label="Điều hướng lớp học" class="mb-5">
+                <a href="{{ route('classroom.index') }}" class="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+                    <span class="material-symbols-outlined text-[18px]" aria-hidden="true">arrow_back</span>
+                    Danh sách lớp học
+                </a>
+            </nav>
 
             @if (session('success'))
                 <div class="mb-4 rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm text-primary">
@@ -22,17 +24,18 @@
                 </div>
             @endif
 
-            <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div>
+            <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+                <div class="min-w-0 max-w-3xl">
                     <h1 class="font-headline-lg text-headline-lg text-on-surface">{{ $classroom->title }}</h1>
-                    <p class="mt-2 text-on-surface-variant">
-                        Host: <span class="font-medium text-on-surface">{{ $classroom->host?->name }}</span>
-                        · {{ $classroom->visibility->label() }}
-                        · {{ $classroom->activeMembers->count() }} thành viên
-                    </p>
                     @if ($classroom->description)
-                        <p class="mt-4 max-w-2xl text-on-surface">{{ $classroom->description }}</p>
+                        <p class="mt-3 text-base leading-7 text-on-surface-variant">{{ $classroom->description }}</p>
                     @endif
+                    <dl class="mt-5 grid grid-cols-2 gap-x-8 gap-y-4 text-sm sm:grid-cols-4">
+                        <div><dt class="text-on-surface-variant">Giảng viên</dt><dd class="mt-1 font-semibold text-on-surface">{{ $classroom->host?->name ?? 'Chưa cập nhật' }}</dd></div>
+                        <div><dt class="text-on-surface-variant">Hình thức</dt><dd class="mt-1 font-semibold text-on-surface">{{ $classroom->visibility->label() }}</dd></div>
+                        <div><dt class="text-on-surface-variant">Nội dung</dt><dd class="mt-1 font-semibold text-on-surface">{{ $classroom->purpose->label() }}</dd></div>
+                        <div><dt class="text-on-surface-variant">Thành viên</dt><dd class="mt-1 font-semibold text-on-surface">{{ $classroom->activeMembers->count() }} người</dd></div>
+                    </dl>
                     @if ($canManage && $classroom->join_code)
                         <p class="mt-3 inline-flex items-center gap-2 rounded-lg bg-surface-container-low px-3 py-1.5 text-sm text-on-surface-variant">
                             <span class="material-symbols-outlined text-[18px]">vpn_key</span>
@@ -41,7 +44,7 @@
                     @endif
                 </div>
 
-                <div class="flex flex-wrap gap-2">
+                <div class="flex shrink-0 flex-wrap gap-2 lg:pt-1" aria-label="Thao tác lớp học">
                     @if (! $isMember)
                         <form method="post" action="{{ route('classroom.join', $classroom) }}" class="flex flex-wrap items-end gap-2">
                             @csrf
@@ -65,12 +68,18 @@
                     @endif
                 </div>
             </div>
-        </div>
+        </header>
 
-        <div class="grid gap-8 lg:grid-cols-3">
+        <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
             <div class="space-y-6 lg:col-span-2">
-                <section class="rounded-2xl border border-outline-variant bg-surface p-5 shadow-sm">
-                    <h2 class="mb-4 font-headline-sm text-headline-sm text-on-surface">Buổi live</h2>
+                <section class="rounded-xl border border-outline-variant bg-surface p-5 sm:p-6" aria-labelledby="live-sessions-heading">
+                    <div class="mb-5 flex items-end justify-between gap-4 border-b border-outline-variant pb-4">
+                        <div>
+                            <h2 id="live-sessions-heading" class="font-headline-sm text-headline-sm text-on-surface">Các buổi học trực tiếp</h2>
+                            <p class="mt-1 text-sm text-on-surface-variant">Lịch học, nội dung câu hỏi và trạng thái từng buổi.</p>
+                        </div>
+                        <span class="shrink-0 text-sm text-on-surface-variant">{{ $classroom->sessions->count() }} buổi</span>
+                    </div>
 
                     @if ($canHostLive)
                         <form method="post" action="{{ route('classroom.sessions.store', $classroom) }}"
@@ -85,7 +94,7 @@
                                     value="{{ old('scheduled_at') }}">
                                 <select name="qbank_session_id"
                                     class="rounded-xl border-none bg-surface px-3 py-2 text-sm focus:ring-2 focus:ring-primary">
-                                    <option value="">— Import phiên luyện —</option>
+                                    <option value="">— Nhập phiên luyện —</option>
                                     @foreach ($qbankSessions as $qs)
                                         <option value="{{ $qs->id }}" @selected(old('qbank_session_id') === $qs->id)>
                                             {{ $qs->total }} câu · {{ $qs->created_at?->format('d/m/Y') }}
@@ -112,19 +121,20 @@
                             </button>
                         </form>
                         @unless ($canHostEntitlement)
-                            <p class="mb-4 text-sm text-error">Thiếu entitlement host — không thể start live mới.</p>
+                            <p class="mb-4 text-sm text-error">Tài khoản chưa có quyền tổ chức — không thể bắt đầu buổi trực tiếp mới.</p>
                         @endunless
                     @endif
 
                     @if ($classroom->sessions->isEmpty())
-                        <p class="text-sm text-on-surface-variant">Chưa có buổi live nào.</p>
+                        <p class="text-sm text-on-surface-variant">Chưa có buổi học trực tiếp nào.</p>
                     @else
-                        <ul class="divide-y divide-outline-variant">
+                        <ol class="divide-y divide-outline-variant" aria-label="Danh sách buổi học">
                             @foreach ($classroom->sessions as $sess)
-                                <li class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
-                                    <div>
+                                <li class="py-5 first:pt-0 last:pb-0">
+                                  <article class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                                    <div class="min-w-0">
                                         <div class="flex flex-wrap items-center gap-2">
-                                            <span class="font-medium text-on-surface">{{ $sess->title }}</span>
+                                            <h3 class="font-semibold text-on-surface">{{ $sess->title }}</h3>
                                             <span @class([
                                                 'rounded-full px-2 py-0.5 text-xs font-semibold',
                                                 'bg-error text-white' => $sess->status === LiveSessionStatus::Live,
@@ -134,9 +144,9 @@
                                                 {{ $sess->status->label() }}
                                             </span>
                                         </div>
-                                        <p class="mt-1 text-xs text-on-surface-variant">
+                                        <p class="mt-2 text-sm text-on-surface-variant">
                                             @if ($sess->scheduled_at)
-                                                Lịch: {{ $sess->scheduled_at->timezone(config('app.timezone'))->format('d/m/Y H:i') }}
+                                                <time datetime="{{ $sess->scheduled_at->toIso8601String() }}">{{ $sess->scheduled_at->timezone(config('app.timezone'))->format('H:i · d/m/Y') }}</time>
                                             @endif
                                             @if ($sess->hasQuestionSet())
                                                 · {{ count($sess->questionIds()) }} câu
@@ -158,13 +168,13 @@
                                                 </button>
                                             </form>
                                         @elseif ($canHostLive && ! ($canStartLive ?? false) && $sess->status === LiveSessionStatus::Scheduled)
-                                            <span class="rounded-lg bg-surface-container px-3 py-1.5 text-xs text-on-surface-variant" title="Chờ admin duyệt lớp">
+                                            <span class="rounded-lg bg-surface-container px-3 py-1.5 text-xs text-on-surface-variant" title="Chờ quản trị viên duyệt lớp">
                                                 Chờ duyệt lớp
                                             </span>
                                         @endif
                                         @if ($canHostLive && $sess->status === LiveSessionStatus::Live)
                                             <form method="post" action="{{ route('classroom.sessions.end', [$classroom, $sess]) }}"
-                                                onsubmit="return confirm('Kết thúc live? Chat sẽ khoá.')">
+                                                onsubmit="return confirm('Kết thúc buổi trực tiếp? Trò chuyện sẽ bị khóa.')">
                                                 @csrf
                                                 <button type="submit" class="rounded-lg bg-on-surface px-3 py-1.5 text-sm font-semibold text-white">
                                                     Kết thúc
@@ -172,21 +182,25 @@
                                             </form>
                                         @endif
                                     </div>
+                                  </article>
                                 </li>
                             @endforeach
-                        </ul>
+                        </ol>
                     @endif
                 </section>
             </div>
 
             <aside class="space-y-6">
-                <section class="rounded-2xl border border-outline-variant bg-surface p-5 shadow-sm">
-                    <h2 class="mb-4 font-headline-sm text-headline-sm text-on-surface">Thành viên</h2>
+                <section class="rounded-xl border border-outline-variant bg-surface p-5" aria-labelledby="members-heading">
+                    <div class="mb-4 flex items-center justify-between border-b border-outline-variant pb-3">
+                        <h2 id="members-heading" class="font-headline-sm text-headline-sm text-on-surface">Thành viên lớp</h2>
+                        <span class="text-sm text-on-surface-variant">{{ $classroom->activeMembers->count() }}</span>
+                    </div>
                     <ul class="max-h-60 space-y-3 overflow-y-auto">
                         @foreach ($classroom->activeMembers as $member)
                             <li class="flex items-center justify-between gap-2 text-sm">
                                 <span class="truncate text-on-surface">{{ $member->user?->name }}</span>
-                                <span class="shrink-0 text-xs text-on-surface-variant">{{ $member->role_in_class->value }}</span>
+                                <span class="shrink-0 text-xs text-on-surface-variant">{{ $member->role_in_class->value === 'host' ? 'Giảng viên' : 'Học viên' }}</span>
                             </li>
                         @endforeach
                     </ul>

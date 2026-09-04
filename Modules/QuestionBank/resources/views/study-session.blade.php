@@ -456,7 +456,7 @@
         <div class="relative w-full max-w-xl overflow-hidden rounded-xl bg-white shadow-2xl"
             @click.outside="flashcardOpen = false">
             <div class="flex items-center justify-between px-6 pt-6 pb-2">
-                <h2 class="text-xl font-bold text-on-surface">Flashcards</h2>
+                <h2 class="text-xl font-bold text-on-surface">Thẻ ghi nhớ</h2>
                 <button type="button" @click="flashcardOpen = false"
                     class="text-on-surface-variant transition-colors hover:text-on-surface">
                     <span class="material-symbols-outlined">close</span>

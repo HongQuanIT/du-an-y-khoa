@@ -6,7 +6,7 @@
         <div class="absolute inset-x-0 bottom-0 mx-auto flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-2xl border border-outline-variant bg-surface shadow-xl sm:inset-y-auto sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2 sm:rounded-2xl"
             role="dialog" aria-modal="true" aria-labelledby="media-picker-title">
             <div class="flex items-center justify-between border-b border-outline-variant px-5 py-3">
-                <h2 id="media-picker-title" class="font-label-md text-on-surface">Chọn media</h2>
+                <h2 id="media-picker-title" class="font-label-md text-on-surface">Chọn tệp nội dung</h2>
                 <button type="button" class="rounded-lg p-1.5 text-on-surface-variant hover:bg-surface-container-low" @click="close()" aria-label="Đóng">
                     <span class="material-symbols-outlined text-[22px]">close</span>
                 </button>
@@ -28,11 +28,11 @@
 
             <div class="min-h-[22rem] flex-1 overflow-y-auto p-5" x-show="tab === 'library'">
                 <input type="search" x-model="q" @input.debounce.300ms="load(true)"
-                    placeholder="Tìm theo tên hoặc alt…"
+                    placeholder="Tìm theo tên hoặc mô tả thay thế…"
                     class="mb-4 block w-full rounded-lg border-none bg-surface-container-low px-3 py-2 font-body-sm focus:ring-2 focus:ring-primary">
 
                 <p x-show="loading && items.length === 0" class="font-body-sm text-on-surface-variant">Đang tải…</p>
-                <p x-show="!loading && items.length === 0" class="font-body-sm text-on-surface-variant">Không có media phù hợp.</p>
+                <p x-show="!loading && items.length === 0" class="font-body-sm text-on-surface-variant">Không có tệp phù hợp.</p>
 
                 <div class="grid grid-cols-3 gap-2 sm:grid-cols-4">
                     <template x-for="item in items" :key="item.id">
@@ -63,8 +63,8 @@
                     @dragover.prevent="dragging = true"
                     @dragleave.prevent="dragging = false"
                     @drop.prevent="dragging = false; uploadFiles($event.dataTransfer.files)">
-                    <p class="font-label-md text-on-surface">Kéo thả ảnh / video vào đây</p>
-                    <p class="mt-1 font-body-sm text-on-surface-variant">Ảnh ≤ 10 MB · Video ≤ 100 MB · lưu local</p>
+                    <p class="font-label-md text-on-surface">Kéo thả ảnh / đoạn phim vào đây</p>
+                    <p class="mt-1 font-body-sm text-on-surface-variant">Ảnh ≤ 10 MB · Đoạn phim ≤ 100 MB · lưu trên máy chủ</p>
                     <button type="button" class="mt-4 rounded-lg bg-primary px-4 py-2 font-label-md text-on-primary" @click="$refs.file.click()">Chọn tệp</button>
                     <input type="file" class="hidden" x-ref="file" accept="image/*,video/mp4,video/webm,video/quicktime" multiple @change="uploadFiles($event.target.files)">
                 </div>
@@ -83,12 +83,12 @@
                 <label class="mb-1.5 block font-label-sm text-on-surface-variant" for="media-external-url">URL ảnh (https)</label>
                 <input id="media-external-url" type="url" x-model="externalUrl" placeholder="https://cdn.example.com/hero.webp"
                     class="block w-full rounded-lg border-none bg-surface-container-low px-3 py-2 font-body-sm focus:ring-2 focus:ring-primary">
-                <label class="mt-3 mb-1.5 block font-label-sm text-on-surface-variant">Alt (tuỳ chọn)</label>
+                <label class="mt-3 mb-1.5 block font-label-sm text-on-surface-variant">Mô tả thay thế (tùy chọn)</label>
                 <input type="text" x-model="externalAlt" maxlength="255" placeholder="Mô tả ảnh"
                     class="block w-full rounded-lg border-none bg-surface-container-low px-3 py-2 font-body-sm focus:ring-2 focus:ring-primary">
                 <label class="mt-3 flex items-start gap-2 font-body-sm text-on-surface">
                     <input type="checkbox" class="mt-0.5" x-model="importLocal">
-                    <span>Tải về máy chủ (ổn định hơn; bỏ chọn = dùng URL gốc, không lưu file)</span>
+                    <span>Tải về máy chủ (ổn định hơn; bỏ chọn = dùng đường dẫn gốc, không lưu tệp)</span>
                 </label>
                 <div class="mt-4 overflow-hidden rounded-xl border border-outline-variant bg-surface-container-low" x-show="externalUrl">
                     <img :src="externalUrl" alt="" class="max-h-48 w-full object-contain" x-on:error="externalPreviewError = true" x-on:load="externalPreviewError = false">
@@ -107,7 +107,7 @@
                 <button type="button"
                     class="rounded-lg bg-primary px-4 py-2 font-label-md text-on-primary disabled:opacity-40"
                     :disabled="!selected || !selected.ready"
-                    @click="confirm()">Dùng media này</button>
+                    @click="confirm()">Sử dụng tệp này</button>
             </div>
         </div>
     </div>

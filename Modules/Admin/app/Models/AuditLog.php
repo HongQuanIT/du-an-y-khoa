@@ -42,6 +42,23 @@ class AuditLog extends \App\Models\AuditLog
             ?? $this->action;
     }
 
+    public function userActivityLabel(): string
+    {
+        $label = $this->actionLabel();
+
+        if ($label !== $this->action) {
+            return $label;
+        }
+
+        return match (true) {
+            str_starts_with($this->action, 'media.') => 'Thao tác với tệp nội dung',
+            str_starts_with($this->action, 'notification.') => 'Thao tác với thông báo',
+            str_starts_with($this->action, 'cms.') => 'Thao tác với nội dung trang',
+            str_starts_with($this->action, 'admin.') => 'Thao tác trong trang quản trị',
+            default => 'Thực hiện thao tác trên hệ thống',
+        };
+    }
+
     public function deviceTypeLabel(): string
     {
         return match ($this->device_type) {
@@ -50,6 +67,34 @@ class AuditLog extends \App\Models\AuditLog
             'tablet' => 'Máy tính bảng',
             'bot' => 'Bot',
             default => 'Không xác định',
+        };
+    }
+
+    public function portalLabel(): string
+    {
+        return match ($this->portal) {
+            'admin' => 'Admin',
+            'teach' => 'Giảng viên',
+            'partner' => 'Cộng tác viên',
+            'api' => 'Ứng dụng',
+            'system' => 'Hệ thống',
+            default => 'Học viên',
+        };
+    }
+
+    public function categoryLabel(): string
+    {
+        return match ($this->category) {
+            'auth' => 'Tài khoản & đăng nhập',
+            'account' => 'Hồ sơ cá nhân',
+            'classroom' => 'Lớp học',
+            'learning' => 'Học tập',
+            'exam' => 'Bài thi',
+            'content' => 'Nội dung',
+            'billing' => 'Quyền lợi',
+            'security' => 'Bảo mật',
+            'system' => 'Hệ thống',
+            default => 'Hoạt động khác',
         };
     }
 }

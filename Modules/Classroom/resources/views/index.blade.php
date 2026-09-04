@@ -18,7 +18,7 @@
             <div>
                 <h1 class="font-headline-lg text-headline-lg text-on-surface">Lớp học</h1>
                 <p class="mt-2 font-body-md text-body-md text-on-surface-variant">
-                    Lớp chữa đề livestream — tham gia buổi live do giảng viên host.
+                    Lớp chữa đề trực tuyến — tham gia buổi trực tiếp do giảng viên tổ chức.
                 </p>
             </div>
         </div>
@@ -117,7 +117,7 @@
                     @if (($filter ?? '') !== '')
                         Không có lớp nào khớp bộ lọc này.
                     @else
-                        Chưa có lớp công khai. Giảng viên tạo lớp trên portal /teach; admin duyệt trước khi hiển thị.
+                        Chưa có lớp công khai. Giảng viên tạo lớp trong cổng giảng dạy; quản trị viên duyệt trước khi hiển thị.
                     @endif
                 </p>
             @else

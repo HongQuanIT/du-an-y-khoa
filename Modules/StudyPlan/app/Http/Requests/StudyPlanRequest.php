@@ -45,7 +45,7 @@ final class StudyPlanRequest extends FormRequest
         return [
             'exam_key' => ['required', 'string', 'in:'.implode(',', TargetExams::keys())],
             'exam_target_date' => ['required', 'date', 'after:today'],
-            'daily_goal_questions' => ['required', 'integer', 'min:5', 'max:200'],
+            'daily_goal_questions' => ['required', 'integer', 'min:5', 'max:80'],
             'medical_taxonomy_node_ids' => ['nullable', 'array'],
             'medical_taxonomy_node_ids.*' => ['integer', 'exists:medical_taxonomy_nodes,id'],
             'topic_ids' => ['nullable', 'array'],
@@ -82,7 +82,51 @@ final class StudyPlanRequest extends FormRequest
         return [
             'exam_target_date.after' => 'Ngày thi phải ở tương lai.',
             'study_days.required' => 'Chọn ít nhất một ngày học trong tuần.',
+            'daily_goal_questions.min' => 'Mục tiêu tối thiểu là 5 câu hỏi mỗi ngày.',
+            'daily_goal_questions.max' => 'Cường độ không được vượt quá 80 câu/ngày để tránh quá tải.',
         ];
+    }
+
+    public function withValidator(\Illuminate\Validation\Validator $validator): void
+    {
+        $validator->after(function (\Illuminate\Validation\Validator $validator): void {
+            if ($validator->failed()) {
+                return;
+            }
+
+            $user = $this->user();
+            if ($user === null) {
+                return;
+            }
+
+            $data = $this->toData();
+            $selector = app(\Modules\QuestionBank\Services\SessionQuestionSelector::class);
+            $poolData = new \Modules\QuestionBank\Data\CreateSessionData(
+                mode: \Modules\QuestionBank\Enums\SessionMode::Study,
+                source: \Modules\QuestionBank\Enums\SessionSource::Custom,
+                count: 1,
+                blueprintId: $data->blueprintId,
+                blueprintSectionId: $data->blueprintSectionId,
+                coreClinicalTopicIds: $data->coreClinicalTopicIds,
+                medicalTaxonomyNodeIds: $data->topicIds,
+                tagIds: $data->tagIds,
+                difficulties: $data->difficulties,
+                questionStatuses: $data->questionStatuses,
+                questionStatusMode: $data->questionStatusMode,
+                savedOnly: $data->savedOnly,
+                examKey: ($data->examTags[0] ?? null) ?: null,
+                articles: $data->articles,
+                symptoms: $data->symptoms,
+            );
+
+            $availableCount = $selector->countForSession($user, $poolData);
+
+            if ($availableCount === 0) {
+                $validator->errors()->add('topic_ids', 'Phạm vi đã chọn không có câu hỏi nào khả dụng trong hệ thống.');
+            } elseif ($availableCount < 5) {
+                $validator->errors()->add('topic_ids', "Phạm vi đã chọn chỉ có {$availableCount} câu hỏi khả dụng, cần tối thiểu 5 câu để tạo lộ trình học.");
+            }
+        });
     }
 
     public function toData(): StudyPlanData

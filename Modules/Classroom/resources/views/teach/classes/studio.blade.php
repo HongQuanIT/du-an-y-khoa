@@ -29,7 +29,7 @@
 <x-layouts.live
     :title="$session->title"
     :classroom-title="$classroom->title"
-    :session-title="'Live Studio - '.$session->title"
+    :session-title="'Phòng điều khiển trực tiếp - '.$session->title"
     :is-live="$session->status === LiveSessionStatus::Live"
     :exit-url="route('teach.classes.show', $classroom)"
 >
@@ -84,7 +84,7 @@
                             </button>
                             <button type="button" data-live-react="like"
                                 class="inline-flex size-8 items-center justify-center rounded-full bg-white/10 text-sky-300 transition hover:bg-sky-500/30 hover:text-sky-200"
-                                aria-label="Thả like" title="Thả like">
+                                aria-label="Bày tỏ thích" title="Bày tỏ thích">
                                 <span class="material-symbols-outlined text-[18px]">thumb_up</span>
                             </button>
                         </div>
@@ -109,7 +109,7 @@
 
                         <button type="button" data-lk-leave
                             class="inline-flex size-10 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
-                            aria-label="Rời Studio" title="Rời Studio nhưng không kết thúc live">
+                            aria-label="Rời phòng điều khiển" title="Rời phòng điều khiển nhưng không kết thúc buổi trực tiếp">
                             <span class="material-symbols-outlined text-[22px]">logout</span>
                         </button>
 
@@ -124,12 +124,12 @@
                             </form>
                         @elseif ($session->status === LiveSessionStatus::Live)
                             <form method="post" data-live-end-form action="{{ route('teach.classes.sessions.end', [$classroom, $session]) }}"
-                                onsubmit="return confirm('Bạn chắc chắn muốn kết thúc buổi live? Học viên sẽ bị ngắt khỏi phòng.')">
+                                onsubmit="return confirm('Bạn chắc chắn muốn kết thúc buổi trực tiếp? Học viên sẽ bị ngắt khỏi phòng.')">
                                 @csrf
                                 <button type="submit"
                                     class="inline-flex h-10 items-center gap-2 rounded-lg bg-error px-3 font-label-sm font-semibold text-white hover:opacity-90">
                                     <span class="material-symbols-outlined text-[20px]">stop_circle</span>
-                                    Kết thúc live
+                                    Kết thúc buổi trực tiếp
                                 </button>
                             </form>
                         @endif

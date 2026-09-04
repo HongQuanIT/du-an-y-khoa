@@ -36,7 +36,7 @@
             <p class="font-label-sm font-semibold uppercase tracking-wide text-primary">Quản lý lớp học</p>
             <h1 class="mt-1 font-headline-md text-headline-md font-bold text-on-surface">Tạo lớp chữa đề mới</h1>
             <p class="mt-2 max-w-3xl font-body-md text-body-md text-on-surface-variant">
-                Khai báo mục đích, nội dung và cách học viên tham gia. Sau khi tạo, lớp được gửi cho admin duyệt trước khi hiển thị cho học viên.
+                Khai báo mục đích, nội dung và cách học viên tham gia. Sau khi tạo, lớp được gửi cho quản trị viên duyệt trước khi hiển thị cho học viên.
             </p>
         </header>
 
@@ -53,7 +53,7 @@
                 </li>
                 <li class="flex items-center gap-3 rounded-lg border border-outline-variant bg-surface px-4 py-3">
                     <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface-container text-xs font-bold text-on-surface-variant">3</span>
-                    <span><strong class="block text-on-surface">Thiết lập buổi học</strong><span class="text-on-surface-variant">Gắn đề và lên lịch live</span></span>
+                    <span><strong class="block text-on-surface">Thiết lập buổi học</strong><span class="text-on-surface-variant">Gắn đề và lên lịch trực tiếp</span></span>
                 </li>
             </ol>
         </section>
@@ -109,7 +109,7 @@
                     <fieldset class="rounded-xl border border-outline-variant bg-surface p-5 md:p-6">
                         <legend class="px-1 font-title-md text-title-md font-semibold text-on-surface">2. Thông tin lớp học</legend>
                         <p class="mt-1 text-sm leading-6 text-on-surface-variant">
-                            Thông tin rõ ràng giúp admin duyệt nhanh và học viên hiểu đúng nội dung lớp.
+                            Thông tin rõ ràng giúp quản trị viên duyệt nhanh và học viên hiểu đúng nội dung lớp.
                         </p>
 
                         <div class="mt-5 space-y-5">
@@ -125,7 +125,7 @@
                                         'border-error' => $errors->has('title'),
                                         'border-outline-variant focus:border-primary' => ! $errors->has('title'),
                                     ])
-                                    placeholder="Ví dụ: Chữa feedback Nội khoa — tuần 12">
+                                    placeholder="Ví dụ: Chữa phản hồi Nội khoa — tuần 12">
                                 <p id="title-help" class="mt-1.5 text-sm text-on-surface-variant">Nên gồm chủ đề, hình thức chữa và mốc thời gian để dễ nhận biết.</p>
                                 @error('title')
                                     <p id="title-error" class="mt-1 text-sm text-error">{{ $message }}</p>
@@ -228,7 +228,7 @@
                         <ol class="mt-3 space-y-3 text-sm leading-5 text-on-surface-variant">
                             <li class="flex gap-3"><span class="font-semibold text-primary">1.</span><span>Hệ thống tạo mã lớp và thêm bạn làm giảng viên chủ trì.</span></li>
                             <li class="flex gap-3"><span class="font-semibold text-primary">2.</span><span>Admin kiểm tra nội dung, mục đích và chế độ tham gia.</span></li>
-                            <li class="flex gap-3"><span class="font-semibold text-primary">3.</span><span>Bạn chọn câu hỏi, đặt lịch và chuẩn bị Studio cho buổi live.</span></li>
+                            <li class="flex gap-3"><span class="font-semibold text-primary">3.</span><span>Bạn chọn câu hỏi, đặt lịch và chuẩn bị phòng điều khiển cho buổi trực tiếp.</span></li>
                             <li class="flex gap-3"><span class="font-semibold text-primary">4.</span><span>Học viên có thể thấy hoặc tham gia theo chế độ đã chọn.</span></li>
                         </ol>
                     </section>

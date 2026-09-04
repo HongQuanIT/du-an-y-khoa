@@ -17,6 +17,7 @@ use Modules\QuestionBank\Enums\QuestionReviewAction;
 use Modules\QuestionBank\Enums\QuestionReviewStatus;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
+use Modules\QuestionBank\Models\QuestionReviewRequest;
 
 /**
  * Transition publication workflow for a question.
@@ -97,15 +98,20 @@ final class TransitionQuestionStatusAction
             return $question->refresh();
         }
 
-        $this->captureVersion->handle($question, null, 'baseline');
+        $isPublishing = in_array($to, [QuestionStatus::Published, QuestionStatus::Private], true);
+
+        if ($isPublishing) {
+            $this->captureVersion->handle($question, null, 'baseline');
+        }
+
         $question->forceFill([
             'status' => $to,
-            'version' => $question->version + 1,
+            'version' => $isPublishing ? ($question->version + 1) : $question->version,
             'updated_by' => $actor->getKey(),
-            'reviewer_id' => in_array($to, [QuestionStatus::Published, QuestionStatus::Private], true)
+            'reviewer_id' => $isPublishing
                 ? $actor->getKey()
                 : $question->reviewer_id,
-            'rejection_reason' => in_array($to, [QuestionStatus::Published, QuestionStatus::Private], true)
+            'rejection_reason' => $isPublishing
                 ? null
                 : $question->rejection_reason,
         ])->save();
@@ -122,8 +128,21 @@ final class TransitionQuestionStatusAction
                 ]);
         }
 
-        $question->load(['options' => fn ($query) => $query->orderBy('order'), 'medicalTaxonomyNodes:id']);
-        $this->captureVersion->handle($question, $actor, 'status');
+        if ($to === QuestionStatus::InReview && ! QuestionAccess::isReviewer($actor)) {
+            $this->queueCreationReview($actor, $question);
+        }
+
+        if ($to === QuestionStatus::Draft && $from === QuestionStatus::InReview) {
+            $question->reviewRequests()
+                ->where('status', QuestionReviewStatus::Pending->value)
+                ->where('action', QuestionReviewAction::Create->value)
+                ->delete();
+        }
+
+        if ($isPublishing) {
+            $question->load(['options' => fn ($query) => $query->orderBy('order'), 'medicalTaxonomyNodes:id']);
+            $this->captureVersion->handle($question, $actor, 'status');
+        }
 
         Auditor::record(
             AuditAction::QuestionStatusChanged,
@@ -213,5 +232,32 @@ final class TransitionQuestionStatusAction
                 'status' => 'Câu exam pool cần bật exam_flag.',
             ]);
         }
+    }
+
+    private function queueCreationReview(User $actor, Question $question): QuestionReviewRequest
+    {
+        $pending = $question->reviewRequests()
+            ->where('status', QuestionReviewStatus::Pending->value)
+            ->latest('id')
+            ->first();
+
+        if ($pending !== null) {
+            if ($pending->action !== QuestionReviewAction::Create) {
+                throw ValidationException::withMessages([
+                    'review' => 'Câu hỏi đang có một yêu cầu khác chờ duyệt.',
+                ]);
+            }
+
+            $pending->forceFill(['updated_at' => now()])->save();
+
+            return $pending;
+        }
+
+        return QuestionReviewRequest::query()->create([
+            'question_id' => $question->getKey(),
+            'action' => QuestionReviewAction::Create,
+            'status' => QuestionReviewStatus::Pending,
+            'requested_by' => $actor->getKey(),
+        ]);
     }
 }

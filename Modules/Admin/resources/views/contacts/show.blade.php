@@ -161,7 +161,7 @@
             </div>
 
             <div class="rounded-xl border border-outline-variant bg-surface p-5">
-                <h3 class="mb-3 font-headline-sm text-headline-sm text-on-surface">Metadata</h3>
+                <h3 class="mb-3 font-headline-sm text-headline-sm text-on-surface">Thông tin bổ sung</h3>
                 <dl class="space-y-3 text-sm">
                     <div>
                         <dt class="text-on-surface-variant">Gửi lúc</dt>

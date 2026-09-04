@@ -64,15 +64,66 @@ final class AdminQuestionManagementTest extends TestCase
 
         $this->assertSame(QuestionStatus::Draft, $question->status);
         $this->assertSame($editor->id, $question->created_by);
-        $this->assertDatabaseHas('question_review_requests', [
+        $this->assertSame(0, $question->version);
+        $this->assertDatabaseMissing('question_review_requests', [
             'question_id' => $question->id,
-            'action' => QuestionReviewAction::Create->value,
-            'status' => QuestionReviewStatus::Pending->value,
-            'requested_by' => $editor->id,
         ]);
         $this->assertCount(4, $question->options);
         $this->assertSame(1, $question->options()->where('is_correct', true)->count());
         $this->assertDatabaseHas('audit_logs', ['action' => 'admin.question.create']);
+    }
+
+    public function test_admin_creates_question_from_status_bar_without_save_card(): void
+    {
+        $admin = $this->staffUser(Role::Admin);
+
+        $this->actingAsStaff($admin)
+            ->get(route('admin.questions.create'))
+            ->assertOk()
+            ->assertSee('Trạng thái:')
+            ->assertSee('Lưu nháp')
+            ->assertSee('Xuất bản')
+            ->assertSee('id="admin_sidebar_status_select"', false);
+
+        $this->actingAsStaff($admin)
+            ->post(route('admin.questions.store'), array_merge($this->payload(), [
+                'requested_status' => QuestionStatus::Published->value,
+            ]))
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(QuestionStatus::Published, Question::query()->firstOrFail()->status);
+    }
+
+    public function test_editor_sees_rejected_review_note_and_can_resubmit_question(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+        $admin = $this->staffUser(Role::Admin);
+
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.store'), array_merge($this->payload(), [
+                'requested_status' => QuestionStatus::InReview->value,
+            ]))
+            ->assertRedirect();
+
+        $question = Question::query()->firstOrFail();
+        $reviewRequest = QuestionReviewRequest::query()->firstOrFail();
+
+        $this->actingAsStaff($admin)
+            ->post(route('admin.questions.reviews.reject', $reviewRequest), [
+                'review_note' => 'Cần bổ sung giải thích cho các đáp án sai.',
+            ])
+            ->assertRedirect(route('admin.questions.edit', $question));
+
+        $this->actingAsStaff($editor)
+            ->get(route('admin.questions.edit', $question))
+            ->assertOk()
+            ->assertSee('Câu này bị từ chối bởi admin')
+            ->assertSee('Bị từ chối')
+            ->assertSee('Cần bổ sung giải thích cho các đáp án sai.')
+            ->assertSee($admin->name)
+            ->assertDontSee('Phiên bản')
+            ->assertSee('Bạn có thể chỉnh sửa câu hỏi bên dưới và lưu để gửi lại duyệt.');
     }
 
     public function test_editor_can_assign_multiple_topics_to_question(): void
@@ -131,7 +182,9 @@ final class AdminQuestionManagementTest extends TestCase
             ->assertDontSee('Ý chính cần gạch chân');
 
         $this->actingAsStaff($editor)
-            ->post(route('admin.questions.store'), $this->payload())
+            ->post(route('admin.questions.store'), array_merge($this->payload(), [
+                'requested_status' => QuestionStatus::InReview->value,
+            ]))
             ->assertRedirect();
 
         $reviewRequest = QuestionReviewRequest::query()->firstOrFail();
@@ -183,7 +236,9 @@ final class AdminQuestionManagementTest extends TestCase
         unset($payload['explanation']);
 
         $this->actingAsStaff($editor)
-            ->post(route('admin.questions.store'), $payload)
+            ->post(route('admin.questions.store'), array_merge($payload, [
+                'requested_status' => QuestionStatus::InReview->value,
+            ]))
             ->assertRedirect();
 
         $question = Question::query()->firstOrFail();
@@ -210,6 +265,7 @@ final class AdminQuestionManagementTest extends TestCase
         $this->actingAsStaff($editor)
             ->post(route('admin.questions.store'), array_merge($this->payload(), [
                 'stem_image_path' => 'questions/stem-version.png',
+                'requested_status' => QuestionStatus::InReview->value,
             ]))
             ->assertRedirect();
 
@@ -221,10 +277,10 @@ final class AdminQuestionManagementTest extends TestCase
             ->assertRedirect(route('admin.questions.edit', $question));
 
         $question->refresh();
-        $this->assertSame(2, $question->version);
+        $this->assertSame(1, $question->version);
         $this->assertDatabaseHas('question_versions', [
             'question_id' => $question->id,
-            'version' => 2,
+            'version' => 1,
             'event' => 'status',
         ]);
 
@@ -238,28 +294,36 @@ final class AdminQuestionManagementTest extends TestCase
             ->assertSee('Nhớ ECG sớm.')
             ->assertSee('Đáp án đúng')
             ->assertSee('Giải thích đáp án:')
-            ->assertSee('Đúng')
-            ->assertDontSee('Phiên bản 2')
-            ->assertDontSee('Đổi trạng thái');
+            ->assertSee('Đúng');
     }
 
     public function test_editor_can_view_history_and_restore_an_old_question_version(): void
     {
         $editor = $this->staffUser(Role::ContentEditor);
+        $admin = $this->staffUser(Role::Admin);
 
         $this->actingAsStaff($editor)
-            ->post(route('admin.questions.store'), $this->payload())
+            ->post(route('admin.questions.store'), array_merge($this->payload(), [
+                'requested_status' => QuestionStatus::InReview->value,
+            ]))
             ->assertRedirect();
 
         $question = Question::query()->firstOrFail();
+        $this->assertSame(0, $question->version);
+
+        $reviewRequest = QuestionReviewRequest::query()->firstOrFail();
+        $this->actingAsStaff($admin)
+            ->post(route('admin.questions.reviews.approve', $reviewRequest));
+
+        $question->refresh();
         $originalVersion = $question->version;
+        $this->assertSame(1, $originalVersion);
         $this->assertDatabaseHas('question_versions', [
             'question_id' => $question->id,
-            'version' => $originalVersion,
-            'event' => 'save',
+            'version' => 1,
         ]);
 
-        $this->actingAsStaff($editor)
+        $this->actingAsStaff($admin)
             ->put(route('admin.questions.update', $question), array_merge($this->payload(), [
                 'stem' => 'Nội dung đã chỉnh sửa ở phiên bản mới.',
                 'options' => [
@@ -270,26 +334,26 @@ final class AdminQuestionManagementTest extends TestCase
             ->assertRedirect();
 
         $question->refresh();
-        $this->assertSame($originalVersion + 1, $question->version);
+        $this->assertSame(2, $question->version);
 
-        $this->actingAsStaff($editor)
+        $this->actingAsStaff($admin)
             ->get(route('admin.questions.versions.index', $question))
             ->assertOk()
-            ->assertSee("Phiên bản {$originalVersion}")
-            ->assertSee("Phiên bản {$question->version}")
+            ->assertSee('Phiên bản 1')
+            ->assertSee('Phiên bản 2')
             ->assertSee('Khôi phục');
 
         $oldVersion = QuestionVersion::query()
             ->where('question_id', $question->id)
-            ->where('version', $originalVersion)
+            ->where('version', 1)
             ->firstOrFail();
 
-        $this->actingAsStaff($editor)
+        $this->actingAsStaff($admin)
             ->post(route('admin.questions.versions.restore', [$question, $oldVersion]))
             ->assertRedirect(route('admin.questions.edit', $question));
 
         $restored = $question->fresh(['options', 'medicalTaxonomyNodes']);
-        $this->assertSame($originalVersion + 2, $restored->version);
+        $this->assertSame(3, $restored->version);
         $this->assertSame(QuestionStatus::Draft, $restored->status);
         $this->assertSame(
             'Bệnh nhân 55 tuổi đau ngực. Chẩn đoán nào phù hợp nhất?',
@@ -298,13 +362,61 @@ final class AdminQuestionManagementTest extends TestCase
         $this->assertCount(4, $restored->options);
         $this->assertDatabaseHas('question_versions', [
             'question_id' => $question->id,
-            'version' => $restored->version,
+            'version' => 3,
             'event' => 'restore',
-            'restored_from_version' => $originalVersion,
+            'restored_from_version' => 1,
         ]);
         $this->assertDatabaseHas('audit_logs', [
             'action' => 'admin.question.version_restore',
             'auditable_id' => $question->id,
+        ]);
+    }
+
+    public function test_saving_draft_does_not_increment_version_until_admin_approves(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+        $admin = $this->staffUser(Role::Admin);
+
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.store'), $this->payload())
+            ->assertRedirect();
+
+        $question = Question::query()->firstOrFail();
+        $this->assertSame(0, $question->version);
+        $this->assertDatabaseMissing('question_versions', ['question_id' => $question->id]);
+        $this->assertDatabaseMissing('question_review_requests', ['question_id' => $question->id]);
+
+        $this->actingAsStaff($editor)
+            ->put(route('admin.questions.update', $question), array_merge($this->payload(), [
+                'stem' => 'Sửa nháp lần 1',
+            ]))
+            ->assertRedirect();
+
+        $question->refresh();
+        $this->assertSame(0, $question->version);
+        $this->assertDatabaseMissing('question_versions', ['question_id' => $question->id]);
+        $this->assertDatabaseMissing('question_review_requests', ['question_id' => $question->id]);
+
+        $this->actingAsStaff($editor)
+            ->put(route('admin.questions.update', $question), array_merge($this->payload(), [
+                'requested_status' => QuestionStatus::InReview->value,
+            ]))
+            ->assertRedirect();
+
+        $question->refresh();
+        $this->assertSame(QuestionStatus::InReview, $question->status);
+        $this->assertSame(0, $question->version);
+
+        $reviewRequest = QuestionReviewRequest::query()->where('question_id', $question->id)->firstOrFail();
+        $this->actingAsStaff($admin)
+            ->post(route('admin.questions.reviews.approve', $reviewRequest))
+            ->assertRedirect();
+
+        $question->refresh();
+        $this->assertSame(1, $question->version);
+        $this->assertDatabaseHas('question_versions', [
+            'question_id' => $question->id,
+            'version' => 1,
         ]);
     }
 
@@ -336,8 +448,14 @@ final class AdminQuestionManagementTest extends TestCase
         $this->actingAsStaff($admin)
             ->get(route('admin.questions.edit', $question))
             ->assertOk()
+            ->assertSee('<h1', false)
+            ->assertSee('aria-label="Thông tin câu hỏi"', false)
+            ->assertSee('aria-label="Quay lại danh sách câu hỏi"', false)
             ->assertDontSee('Gửi duyệt', false)
-            ->assertSee('Xuất bản', false);
+            ->assertSee('Xuất bản', false)
+            ->assertSee('Lưu thay đổi', false)
+            ->assertDontSee('Lưu câu hỏi')
+            ->assertSee('id="admin_sidebar_status_select"', false);
 
         $this->actingAsStaff($admin)
             ->post(route('admin.questions.transition', $question), [
@@ -354,6 +472,26 @@ final class AdminQuestionManagementTest extends TestCase
             ->assertRedirect();
 
         $this->assertSame(QuestionStatus::Published, $question->fresh()->status);
+    }
+
+    public function test_admin_status_selector_saves_editor_content_before_publishing(): void
+    {
+        $admin = $this->staffUser(Role::Admin);
+        $question = $this->makeDraftQuestion();
+        $question->forceFill(['explanation' => null])->save();
+
+        $this->actingAsStaff($admin)
+            ->put(route('admin.questions.update', $question), array_merge($this->payload(), [
+                'stem' => 'Nội dung vừa sửa trước khi xuất bản',
+                'requested_status' => QuestionStatus::Published->value,
+            ]))
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $question->refresh();
+        $this->assertSame(QuestionStatus::Published, $question->status);
+        $this->assertSame('Nội dung vừa sửa trước khi xuất bản', strip_tags($question->stem));
+        $this->assertSame('Đúng', strip_tags((string) $question->explanation));
     }
 
     public function test_admin_can_publish_question(): void
@@ -545,26 +683,29 @@ final class AdminQuestionManagementTest extends TestCase
         $this->assertSoftDeleted('questions', ['id' => $question->id]);
     }
 
-    public function test_editor_cannot_edit_question_while_in_review(): void
+    public function test_editor_can_edit_and_save_question_while_in_review(): void
     {
         $editor = $this->staffUser(Role::ContentEditor);
         $question = $this->makeDraftQuestion($editor);
-        $originalStem = strip_tags($question->stem);
 
         $question->forceFill(['status' => QuestionStatus::InReview])->save();
 
         $this->actingAsStaff($editor)
             ->get(route('admin.questions.edit', $question))
             ->assertOk()
-            ->assertSee('Câu hỏi đang chờ admin duyệt', false);
+            ->assertSee('Câu hỏi đang chờ admin duyệt', false)
+            ->assertSee('Lưu lại', false);
 
         $this->actingAsStaff($editor)
             ->put(route('admin.questions.update', $question), array_merge($this->payload(), [
-                'stem' => 'Thay đổi không được phép khi đang chờ duyệt.',
+                'stem' => 'Thay đổi được phép lưu lại khi đang chờ duyệt.',
             ]))
-            ->assertSessionHasErrors('status');
+            ->assertSessionHasNoErrors()
+            ->assertRedirect();
 
-        $this->assertSame($originalStem, strip_tags($question->fresh()->stem));
+        $this->assertSame('Thay đổi được phép lưu lại khi đang chờ duyệt.', strip_tags($question->fresh()->stem));
+        $this->assertSame(QuestionStatus::InReview, $question->fresh()->status);
+        $this->assertSame(0, $question->fresh()->version);
     }
 
     public function test_editor_clone_queues_admin_review_before_publish(): void

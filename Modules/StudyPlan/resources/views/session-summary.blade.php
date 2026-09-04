@@ -29,7 +29,19 @@
     ];
     $reviewUrl = $summaryConfig['review_url'];
     $detailUrl = $summaryConfig['back_url'];
-    $chartMinWidth = max(280, count($chartBars) * 104);
+    $topicChart = [[
+        'id' => 'student-session-topic-accuracy',
+        'title' => 'Tỷ lệ đúng theo chủ đề',
+        'subtitle' => 'Kết quả của phiên vừa hoàn thành',
+        'type' => 'bar',
+        'format' => 'percent',
+        'labels' => array_column($chartBars, 'label'),
+        'datasets' => [[
+            'label' => 'Tỷ lệ đúng',
+            'data' => array_column($chartBars, 'rate'),
+            'color' => '#0f766e',
+        ]],
+    ]];
     $questionTimeLabel = static function (int $totalSeconds): string {
         $totalSeconds = max(0, $totalSeconds);
 
@@ -146,37 +158,12 @@
             </div>
 
             @if ($chartBars !== [])
-                <div class="rounded-2xl border border-outline-variant bg-white p-4 shadow-sm sm:p-6 lg:col-span-12">
-                    <div class="mb-6 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
-                        <h2 class="font-headline-sm text-headline-sm">Tỷ lệ đúng theo chủ đề</h2>
-                        <div class="flex items-center gap-2">
-                            <div class="size-3 rounded bg-primary"></div>
-                            <span class="text-xs text-on-surface-variant">Tỷ lệ đúng (%)</span>
-                        </div>
-                    </div>
-
-                    <div class="overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest">
-                        <div class="overflow-x-auto overscroll-x-contain" data-testid="topic-accuracy-chart-scroll">
-                            <div class="grid h-72 w-full gap-4 px-4 pt-4"
-                                style="min-width: {{ $chartMinWidth }}px; grid-template-columns: repeat({{ count($chartBars) }}, minmax(80px, 1fr));">
-                                @foreach ($chartBars as $bar)
-                                    <div class="flex min-w-0 flex-col items-center">
-                                        <span class="flex h-7 items-start text-xs font-bold text-primary">
-                                            {{ $bar['rate'] }}%
-                                        </span>
-                                        <div class="flex min-h-0 w-full flex-1 items-end justify-center border-b border-outline-variant">
-                                            <div class="w-full max-w-[64px] rounded-t-lg bg-primary transition-all duration-500 hover:brightness-110"
-                                                style="height: {{ $bar['height'] }}%"></div>
-                                        </div>
-                                        <span class="flex h-12 w-full items-start justify-center overflow-hidden px-1 pt-2 text-center text-[10px] leading-tight font-medium break-words text-on-surface-variant md:text-xs"
-                                            title="{{ $bar['label'] }}">
-                                            {{ $bar['label'] }}
-                                        </span>
-                                    </div>
-                                @endforeach
-                            </div>
-                        </div>
-                    </div>
+                <div class="lg:col-span-12" data-admin-dashboard-charts data-charts='@json($topicChart)'>
+                    <x-admin.trend-chart
+                        id="student-session-topic-accuracy"
+                        title="Tỷ lệ đúng theo chủ đề"
+                        subtitle="Kết quả của phiên vừa hoàn thành"
+                        full-width />
                 </div>
             @endif
 
@@ -468,4 +455,8 @@
             </div>
         </div>
     </div>
+
+    @if ($chartBars !== [])
+        @vite('resources/js/admin/dashboard-charts.js')
+    @endif
 </x-layouts.app>

@@ -106,10 +106,10 @@ final class PermissionCatalog
             ];
         }
 
-        // Custom roles do not belong to the fixed product-role enum. Keep them
-        // visible and manageable in the Admin group.
+        // Custom roles persist their selected portal. Legacy records default to Admin.
         foreach ($byName->values() as $customRole) {
-            $grouped[PortalGroup::Admin->value]['roles'][] = $customRole;
+            $portal = PortalGroup::tryFrom((string) $customRole->portal) ?? PortalGroup::Admin;
+            $grouped[$portal->value]['roles'][] = $customRole;
         }
 
         return $grouped;

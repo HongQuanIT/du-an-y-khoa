@@ -1,6 +1,6 @@
-<x-layouts.admin title="Thư viện Media">
-    <x-admin.page-header title="Thư viện Media"
-        description="Ảnh/video local hoặc URL CDN. Dùng lại cho CMS, bài viết và câu hỏi.">
+<x-layouts.admin title="Thư viện tệp nội dung">
+    <x-admin.page-header title="Thư viện tệp nội dung"
+        description="Ảnh hoặc đoạn phim lưu trên máy chủ hay qua đường dẫn CDN. Có thể dùng lại cho trang nội dung, bài viết và câu hỏi.">
         @if ($canManage)
             <x-slot:actions>
                 <button type="button"
@@ -22,16 +22,16 @@
     <x-admin.flash />
 
     <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <x-admin.kpi-card label="Tổng media" :value="number_format($stats['total'])" hint="Ảnh + video" icon="perm_media" />
-        <x-admin.kpi-card label="Ảnh" :value="number_format($stats['images'])" hint="Biến thể thumb / webp" icon="image" />
-        <x-admin.kpi-card label="Video" :value="number_format($stats['videos'])" hint="Lưu local, chưa HLS" icon="movie" />
+        <x-admin.kpi-card label="Tổng tệp" :value="number_format($stats['total'])" hint="Ảnh + đoạn phim" icon="perm_media" />
+        <x-admin.kpi-card label="Ảnh" :value="number_format($stats['images'])" hint="Có ảnh thu nhỏ và WebP" icon="image" />
+        <x-admin.kpi-card label="Đoạn phim" :value="number_format($stats['videos'])" hint="Lưu trên máy chủ, chưa phát trực tuyến thích ứng" icon="movie" />
     </div>
 
     <form method="get" action="{{ route('admin.media.index') }}" class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end">
         <div class="min-w-0 flex-1">
             <label class="mb-1.5 block font-label-sm text-on-surface-variant" for="q">Tìm kiếm</label>
             <input id="q" name="q" type="search" value="{{ $filters['q'] }}"
-                placeholder="Tên file, alt…"
+                placeholder="Tên tệp, mô tả thay thế…"
                 class="block w-full rounded-lg border-none bg-surface-container-low px-3 py-2 font-body-sm text-body-sm focus:ring-2 focus:ring-primary">
         </div>
         <div class="sm:w-40">
@@ -61,8 +61,8 @@
     @if ($items->isEmpty())
         <div class="rounded-xl border border-dashed border-outline-variant bg-surface px-6 py-16 text-center">
             <span class="material-symbols-outlined text-[40px] text-on-surface-variant">photo_library</span>
-            <p class="mt-3 font-label-md text-on-surface">Chưa có media</p>
-            <p class="mt-1 font-body-sm text-on-surface-variant">Tải file lên hoặc dán URL ảnh CDN / ngoài.</p>
+            <p class="mt-3 font-label-md text-on-surface">Chưa có tệp nội dung</p>
+            <p class="mt-1 font-body-sm text-on-surface-variant">Tải tệp lên hoặc dán đường dẫn ảnh từ bên ngoài.</p>
         </div>
     @else
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">

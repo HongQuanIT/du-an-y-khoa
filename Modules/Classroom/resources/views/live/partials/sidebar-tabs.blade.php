@@ -7,7 +7,7 @@
         <div class="flex shrink-0 border-b border-outline-variant">
             <button type="button" @click="tab = 'chat'"
                 :class="tab === 'chat' ? 'border-b-2 border-primary text-primary' : 'text-on-surface-variant'"
-                class="flex-1 py-3 text-sm font-medium">Chat</button>
+                class="flex-1 py-3 text-sm font-medium">Trò chuyện</button>
             @if ($canModerate && $session->hasQuestionSet())
                 <button type="button" data-live-tab="questions" @click="tab = 'questions'"
                     :class="tab === 'questions' ? 'border-b-2 border-primary text-primary' : 'text-on-surface-variant'"
@@ -28,13 +28,13 @@
     >
         <div class="flex shrink-0 items-center justify-between gap-2 border-b border-outline-variant px-4 py-2">
             <div class="min-w-0">
-                <h2 class="text-sm font-semibold text-on-surface">Chat</h2>
+                <h2 class="text-sm font-semibold text-on-surface">Trò chuyện</h2>
                 <p data-live-chat-status
                     class="text-xs {{ $chatReadonly ? 'text-on-surface-variant' : ($session->chat_muted ? 'text-error' : 'hidden text-on-surface-variant') }}">
                     @if ($chatReadonly)
                         Chỉ đọc
                     @elseif ($session->chat_muted)
-                        Chat đang tắt — học viên không gửi được tin
+                        Trò chuyện đang tắt — học viên không gửi được tin
                     @endif
                 </p>
             </div>
@@ -52,7 +52,7 @@
                 @if ($canModerate && $session->status->value === 'live')
                     <button type="button" data-live-mute-chat data-chat-muted="{{ $session->chat_muted ? '1' : '0' }}"
                         class="rounded-lg border border-outline-variant px-2 py-1 text-xs font-medium text-on-surface hover:bg-surface-container-low">
-                        {{ $session->chat_muted ? 'Bật chat' : 'Tắt chat' }}
+                        {{ $session->chat_muted ? 'Bật trò chuyện' : 'Tắt trò chuyện' }}
                     </button>
                 @endif
             </div>
@@ -78,7 +78,7 @@
                     <div class="flex gap-2">
                         <select data-live-msg-type name="type"
                             class="rounded-lg border-none bg-surface-container-low px-2 py-2 text-xs text-on-surface focus:ring-2 focus:ring-primary">
-                            <option value="chat">Chat</option>
+                            <option value="chat">Trò chuyện</option>
                             <option value="question">Hỏi</option>
                         </select>
                         <input data-live-msg-input type="text" name="body" required maxlength="2000"
@@ -100,7 +100,7 @@
             </div>
             <p data-live-chat-muted-hint
                 class="{{ ($canModerate || ! $session->chat_muted) ? 'hidden' : '' }} border-t border-outline-variant px-4 py-3 text-center text-xs text-on-surface-variant">
-                Host đã tắt chat. Bạn vẫn xem được lịch sử tin nhắn.
+                Giảng viên đã tắt trò chuyện. Bạn vẫn xem được lịch sử tin nhắn.
             </p>
         @endif
     </div>

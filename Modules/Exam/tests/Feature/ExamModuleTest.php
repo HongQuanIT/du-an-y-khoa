@@ -58,7 +58,7 @@ final class ExamModuleTest extends TestCase
         $this->actingAs($this->user)
             ->get(route('exam.index'))
             ->assertOk()
-            ->assertSee('Exam simulation')
+            ->assertSee('Mô phỏng kỳ thi')
             ->assertSee('resident')
             ->assertSee('nbme')
             ->assertSee('Nâng cấp để bắt đầu');

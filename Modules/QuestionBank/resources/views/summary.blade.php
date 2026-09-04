@@ -49,9 +49,9 @@
     <div class="mx-auto max-w-6xl p-4 md:p-8">
         <div class="mb-8">
             <nav class="mb-2 flex gap-2 text-xs text-on-surface-variant">
-                <a href="{{ route('qbank.index') }}" class="hover:text-primary">Question Bank</a>
+                <a href="{{ route('qbank.index') }}" class="hover:text-primary">Ngân hàng câu hỏi</a>
                 <span>/</span>
-                <span>Session #1284</span>
+                <span>Phiên #1284</span>
                 <span>/</span>
                 <span class="font-medium text-primary">Summary</span>
             </nav>

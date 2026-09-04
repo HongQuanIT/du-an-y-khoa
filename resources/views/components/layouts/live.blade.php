@@ -38,7 +38,7 @@
             @if ($isLive)
                 <span class="inline-flex items-center gap-1.5 rounded-full bg-error px-2.5 py-1 text-xs font-bold uppercase tracking-wide">
                     <span class="size-1.5 animate-pulse rounded-full bg-white"></span>
-                    Live
+                    Trực tiếp
                 </span>
                 <span class="inline-flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 text-xs text-white/90"
                     title="Số người trong phòng">

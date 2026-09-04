@@ -167,7 +167,7 @@
                     'email_plan' => ['title' => 'Nhắc kế hoạch học (email)', 'hint' => 'Nhiệm vụ Study Plan đến hạn.'],
                     'email_product' => ['title' => 'Cập nhật sản phẩm', 'hint' => 'Tính năng mới và mẹo học tập.'],
                     'push_reminders' => ['title' => 'Nhắc học trong app', 'hint' => 'Session, study plan, streak.'],
-                    'push_classroom' => ['title' => 'Lớp & Live', 'hint' => 'Live bắt đầu, bản ghi, duyệt lớp.'],
+                    'push_classroom' => ['title' => 'Lớp học & trực tiếp', 'hint' => 'Buổi trực tiếp bắt đầu, bản ghi, duyệt lớp.'],
                     'push_support' => ['title' => 'Hỗ trợ', 'hint' => 'Phản hồi từ đội hỗ trợ.'],
                     'push_billing' => ['title' => 'Thanh toán & gói', 'hint' => 'Thanh toán, hết hạn, đổi gói.'],
                 ] as $key => $meta)

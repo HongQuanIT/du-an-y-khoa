@@ -10,14 +10,21 @@ use App\Support\Enums\Role;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Modules\Admin\Actions\ApproveClassroomAction;
 use Modules\Auth\Models\TwoFactorSecret;
 use Modules\Auth\Services\TotpService;
-use Modules\Admin\Actions\ApproveClassroomAction;
 use Modules\Classroom\Actions\CreateClassroomAction;
 use Modules\Classroom\Enums\ClassroomPurpose;
 use Modules\Classroom\Enums\ClassroomStatus;
 use Modules\Classroom\Enums\LiveSessionStatus;
+use Modules\Classroom\Models\Classroom;
 use Modules\Classroom\Models\LiveSession;
+use Modules\Exam\Enums\ExamStatus;
+use Modules\Exam\Models\Exam;
+use Modules\QuestionBank\Enums\Difficulty;
+use Modules\QuestionBank\Models\Question;
+use Modules\QuestionBank\Models\QuestionFeedback;
+use Modules\QuestionBank\Models\QuestionSession;
 use Tests\TestCase;
 
 final class AdminClassroomOversightTest extends TestCase
@@ -194,6 +201,163 @@ final class AdminClassroomOversightTest extends TestCase
             'actor_id' => $admin->id,
             'action' => 'classroom.approve',
         ]);
+    }
+
+    public function test_admin_can_create_classroom_with_premium_question_content(): void
+    {
+        $admin = $this->staffWith2fa(Role::Admin);
+        $host = User::factory()->create();
+        $host->assignRole(Role::Instructor->value);
+        $question = Question::factory()->create([
+            'stem' => 'Câu premium do admin chọn để chữa',
+            'is_free' => false,
+            'difficulty' => Difficulty::Hard,
+        ]);
+        Question::factory()->create([
+            'stem' => 'Câu dễ không thuộc kết quả lọc',
+            'difficulty' => Difficulty::Easy,
+        ]);
+
+        $this->actingAs($admin)
+            ->withSession([TwoFactorSession::KEY => now()->timestamp])
+            ->get(route('admin.classrooms.create'))
+            ->assertOk()
+            ->assertSee('Ngân hàng câu hỏi')
+            ->assertSee('Bài thi Exam')
+            ->assertSee('Câu cần chữa feedback')
+            ->assertSee('Tất cả chủ đề lâm sàng')
+            ->assertSee('Tất cả phân loại y khoa')
+            ->assertSee('Tất cả độ khó')
+            ->assertSee('Tạo lớp và nạp nội dung');
+
+        $this->actingAs($admin)
+            ->withSession([TwoFactorSession::KEY => now()->timestamp])
+            ->getJson(route('admin.classrooms.content.questions', ['q' => 'premium']))
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $question->id);
+
+        $this->actingAs($admin)
+            ->withSession([TwoFactorSession::KEY => now()->timestamp])
+            ->getJson(route('admin.classrooms.content.questions', ['difficulty' => Difficulty::Hard->value]))
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.id', $question->id)
+            ->assertJsonPath('data.0.difficulty', Difficulty::Hard->label());
+
+        $this->actingAs($admin)
+            ->withSession([TwoFactorSession::KEY => now()->timestamp])
+            ->post(route('admin.classrooms.store'), [
+                'host_user_id' => $host->id,
+                'title' => 'Lớp có nội dung sẵn',
+                'description' => 'Admin chuẩn bị nội dung trước cho giảng viên.',
+                'purpose' => ClassroomPurpose::FeedbackReview->value,
+                'visibility' => 'public',
+                'content_source' => 'questions',
+                'session_title' => 'Buổi chữa câu premium',
+                'expected_duration_minutes' => 60,
+                'question_ids' => [$question->id],
+            ])
+            ->assertRedirect();
+
+        $classroom = Classroom::query()->where('title', 'Lớp có nội dung sẵn')->firstOrFail();
+        $session = $classroom->sessions()->firstOrFail();
+
+        $this->assertSame(ClassroomStatus::Active, $classroom->status);
+        $this->assertSame('manual', $session->question_set['source']);
+        $this->assertSame([$question->id], $session->questionIds());
+
+        $this->actingAs($admin)
+            ->withSession([TwoFactorSession::KEY => now()->timestamp])
+            ->get(route('admin.classrooms.show', $classroom))
+            ->assertOk()
+            ->assertSee('1 câu')
+            ->assertSee('Ngân hàng câu hỏi');
+    }
+
+    public function test_admin_can_create_classroom_from_published_exam(): void
+    {
+        $admin = $this->staffWith2fa(Role::SuperAdmin);
+        $host = User::factory()->create();
+        $host->assignRole(Role::Instructor->value);
+        $question = Question::factory()->create();
+        $exam = Exam::query()->create([
+            'title' => 'Exam Nội khoa tổng hợp',
+            'duration_minutes' => 90,
+            'status' => ExamStatus::Published,
+            'is_published' => true,
+        ]);
+        $exam->questions()->attach($question->id, ['order' => 1]);
+
+        $this->actingAs($admin)
+            ->withSession([TwoFactorSession::KEY => now()->timestamp])
+            ->post(route('admin.classrooms.store'), [
+                'host_user_id' => $host->id,
+                'title' => 'Lớp chữa Exam',
+                'purpose' => ClassroomPurpose::FeedbackReview->value,
+                'visibility' => 'unlisted',
+                'content_source' => 'exam',
+                'session_title' => 'Chữa Exam Nội khoa',
+                'exam_id' => $exam->id,
+            ])
+            ->assertRedirect();
+
+        $classroom = Classroom::query()->where('title', 'Lớp chữa Exam')->firstOrFail();
+        $session = $classroom->sessions()->firstOrFail();
+
+        $this->assertSame(ClassroomPurpose::ExamReview, $classroom->purpose);
+        $this->assertSame($exam->id, $session->linked_exam_id);
+        $this->assertSame('exam', $session->question_set['source']);
+        $this->assertSame([$question->id], $session->questionIds());
+    }
+
+    public function test_admin_can_load_feedback_questions_and_create_review_classroom(): void
+    {
+        $admin = $this->staffWith2fa(Role::Admin);
+        $host = User::factory()->create();
+        $host->assignRole(Role::Instructor->value);
+        $student = User::factory()->create();
+        $question = Question::factory()->create(['stem' => 'Câu hô hấp đang có feedback cần chữa']);
+        $questionSession = QuestionSession::factory()->for($student)->create([
+            'question_ids' => [$question->id],
+        ]);
+        QuestionFeedback::query()->create([
+            'user_id' => $student->id,
+            'question_id' => $question->id,
+            'question_session_id' => $questionSession->id,
+            'target' => 'question',
+            'category' => 'incorrect',
+            'message' => 'Nội dung cần được giảng viên giải thích lại.',
+            'status' => QuestionFeedback::STATUS_PENDING,
+        ]);
+
+        $this->actingAs($admin)
+            ->withSession([TwoFactorSession::KEY => now()->timestamp])
+            ->getJson(route('admin.classrooms.content.questions', ['source' => 'feedback']))
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $question->id)
+            ->assertJsonPath('data.0.feedback_count', 1);
+
+        $this->actingAs($admin)
+            ->withSession([TwoFactorSession::KEY => now()->timestamp])
+            ->post(route('admin.classrooms.store'), [
+                'host_user_id' => $host->id,
+                'title' => 'Lớp chữa feedback',
+                'purpose' => ClassroomPurpose::FeedbackReview->value,
+                'visibility' => 'public',
+                'content_source' => 'feedback',
+                'session_title' => 'Chữa feedback hô hấp',
+                'question_ids' => [$question->id],
+            ])
+            ->assertRedirect();
+
+        $session = Classroom::query()
+            ->where('title', 'Lớp chữa feedback')
+            ->firstOrFail()
+            ->sessions()
+            ->firstOrFail();
+
+        $this->assertSame('feedback', $session->question_set['source']);
+        $this->assertSame([$question->id], $session->questionIds());
     }
 
     public function test_content_editor_cannot_oversee_classrooms(): void

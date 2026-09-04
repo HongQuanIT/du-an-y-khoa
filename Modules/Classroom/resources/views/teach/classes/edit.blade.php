@@ -16,7 +16,7 @@
             <p class="text-sm font-semibold uppercase tracking-wide text-primary">Quản lý lớp học</p>
             <h1 class="mt-1 font-headline-md text-headline-md font-bold text-on-surface">Chỉnh sửa thông tin lớp</h1>
             <p class="mt-2 text-sm leading-6 text-on-surface-variant">
-                Thay đổi tên, mô tả, loại buổi hoặc chế độ tham gia được xem là thay đổi quan trọng và lớp sẽ cần admin duyệt lại.
+                Thay đổi tên, mô tả, loại buổi hoặc chế độ tham gia được xem là thay đổi quan trọng và lớp sẽ cần quản trị viên duyệt lại.
                 Thay đổi riêng giới hạn thành viên không làm mất trạng thái đã duyệt.
             </p>
         </header>

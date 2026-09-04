@@ -27,9 +27,9 @@ enum Role: string
             self::Student => 'Học viên',
             self::Instructor => 'Giảng viên',
             self::Partner => 'Cộng tác viên',
-            self::ContentEditor => 'Content Creator',
+            self::ContentEditor => 'Biên tập viên nội dung',
             self::Admin => 'Quản trị viên',
-            self::SuperAdmin => 'Super Admin',
+            self::SuperAdmin => 'Quản trị viên cấp cao',
         };
     }
 
@@ -108,4 +108,3 @@ enum Role: string
         return self::tryFrom($name);
     }
 }
-

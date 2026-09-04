@@ -60,7 +60,7 @@ final class AdminMenu
                 'match' => 'admin.questions.*',
             ],
             [
-                'label' => 'Feedback câu hỏi',
+                'label' => 'Phản hồi câu hỏi',
                 'icon' => 'rate_review',
                 'route' => 'admin.question-feedback.index',
                 'permission' => Permission::QuestionView->value,
@@ -100,7 +100,7 @@ final class AdminMenu
                 'match' => 'admin.library.*',
             ],
             [
-                'label' => 'CMS',
+                'label' => 'Quản lý nội dung',
                 'icon' => 'article',
                 'route' => 'admin.cms.pages.index',
                 'permission' => Permission::CmsManage->value,
@@ -114,7 +114,7 @@ final class AdminMenu
                 'match' => 'admin.contacts.*',
             ],
             [
-                'label' => 'Media',
+                'label' => 'Tệp nội dung',
                 'icon' => 'perm_media',
                 'route' => 'admin.media.index',
                 'permission' => Permission::MediaView->value,

@@ -74,16 +74,22 @@ final class StudyPlanFlowTest extends TestCase
 
     public function test_wizard_uses_the_same_taxonomy_scope_picker_as_question_bank(): void
     {
-        $this->actingAs($this->user)
-            ->get(route('study-plan.create'))
+        $response = $this->actingAs($this->user)
+            ->get(route('study-plan.create'));
+
+        $response
             ->assertOk()
             ->assertSee('Ma trận đề thi')
             ->assertSee('Chủ đề lâm sàng (128)')
             ->assertSee('Chuyên khoa &amp; danh mục y khoa', false)
             ->assertSee('Tags');
+
+        preg_match('/<form[^>]+x-data="([^"]*)"/s', (string) $response->getContent(), $matches);
+        $this->assertArrayHasKey(1, $matches, 'Không tìm thấy cấu hình Alpine của form kế hoạch.');
+        $this->assertStringContainsString('daysUntilExam()', html_entity_decode($matches[1]));
     }
 
-    public function test_plan_uses_each_available_question_once_and_caps_the_last_day(): void
+    public function test_plan_cycles_and_randomizes_questions_across_all_days_until_deadline(): void
     {
         Question::query()->orderByDesc('id')->limit(2)->get()->each->delete();
 
@@ -93,22 +99,25 @@ final class StudyPlanFlowTest extends TestCase
             ->orderBy('date')
             ->get();
 
-        $this->assertCount(2, $tasks);
-        $this->assertSame([5, 5], $tasks->pluck('target')->all());
+        $this->assertCount(11, $tasks);
+        foreach ($tasks as $task) {
+            $this->assertSame(5, $task->target);
+            $this->assertCount(5, $task->ref['question_ids']);
+        }
 
         $scheduledIds = $tasks
             ->flatMap(fn (StudyPlanTask $task): array => $task->ref['question_ids'] ?? [])
             ->all();
 
-        $this->assertCount(10, $scheduledIds);
-        $this->assertCount(10, array_unique($scheduledIds));
+        $this->assertCount(55, $scheduledIds);
+        $this->assertSame(10, count(array_unique($scheduledIds)));
     }
 
     public function test_plan_session_combines_multiple_difficulty_levels(): void
     {
-        $questions = Question::query()->orderBy('id')->limit(2)->get();
-        $questions[0]->update(['difficulty' => 'very_easy']);
-        $questions[1]->update(['difficulty' => 'very_hard']);
+        $questions = Question::query()->orderBy('id')->limit(6)->get();
+        $questions->slice(0, 3)->each->update(['difficulty' => 'very_easy']);
+        $questions->slice(3, 3)->each->update(['difficulty' => 'very_hard']);
         $payload = array_merge($this->wizardPayload(), [
             'difficulties' => ['very_easy', 'very_hard'],
         ]);
@@ -136,7 +145,7 @@ final class StudyPlanFlowTest extends TestCase
             ->all();
 
         $this->assertEqualsCanonicalizing(['very_easy', 'very_hard'], $selectedDifficulties);
-        $this->assertCount(2, $session->question_ids);
+        $this->assertCount(5, $session->question_ids);
     }
 
     public function test_wizard_rejects_a_past_exam_date(): void
@@ -327,7 +336,7 @@ final class StudyPlanFlowTest extends TestCase
             ->assertSee('Phân tích kết quả')
             ->assertSee('Xem lại từng câu')
             ->assertSee('Tỷ lệ đúng theo chủ đề')
-            ->assertSee('data-testid="topic-accuracy-chart-scroll"', false)
+            ->assertSee('id="student-session-topic-accuracy"', false)
             ->assertSee('Tổng quan từng câu')
             ->assertSee('Thời gian cho mỗi câu hỏi')
             ->assertSee('Thống kê đồng nghiệp')
@@ -554,6 +563,31 @@ final class StudyPlanFlowTest extends TestCase
         $this->actingAs($intruder)
             ->get(route('study-plan.detail', $plan))
             ->assertForbidden();
+    }
+
+    public function test_wizard_rejects_plan_when_available_questions_in_scope_is_less_than_five(): void
+    {
+        Question::query()->delete();
+        $this->seedQuestions(3); // Only 3 questions
+
+        $response = $this->actingAs($this->user)
+            ->post(route('study-plan.store'), $this->wizardPayload());
+
+        $response->assertSessionHasErrors('topic_ids');
+        $this->assertSame(0, StudyPlan::count());
+    }
+
+    public function test_wizard_rejects_plan_when_daily_goal_exceeds_eighty(): void
+    {
+        $payload = array_merge($this->wizardPayload(), [
+            'daily_goal_questions' => 90,
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->post(route('study-plan.store'), $payload);
+
+        $response->assertSessionHasErrors('daily_goal_questions');
+        $this->assertSame(0, StudyPlan::count());
     }
 
     /**

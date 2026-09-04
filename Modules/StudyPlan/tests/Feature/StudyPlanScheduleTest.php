@@ -40,11 +40,13 @@ final class StudyPlanScheduleTest extends TestCase
             'node_type' => 'system',
             'sort_order' => 0,
         ]);
-        $question = Question::factory()->create([
+        $questions = Question::factory()->count(5)->create([
             'status' => QuestionStatus::Published,
             'is_free' => true,
         ]);
-        $question->medicalTaxonomyNodes()->sync([$this->topic->id]);
+        foreach ($questions as $question) {
+            $question->medicalTaxonomyNodes()->sync([$this->topic->id]);
+        }
     }
 
     public function test_a_task_can_be_moved_to_another_day(): void

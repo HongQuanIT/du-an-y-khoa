@@ -59,6 +59,10 @@ class Question extends Model
     use Searchable;
     use SoftDeletes;
 
+    protected $attributes = [
+        'version' => 0,
+    ];
+
     protected $fillable = [
         'code',
         'stem',
@@ -264,6 +268,14 @@ class Question extends Model
         return $this->hasOne(QuestionReviewRequest::class)
             ->where('status', QuestionReviewStatus::Pending->value)
             ->latestOfMany();
+    }
+
+    /** @return HasOne<QuestionReviewRequest, $this> */
+    public function latestRejectedReviewRequest(): HasOne
+    {
+        return $this->hasOne(QuestionReviewRequest::class)
+            ->where('status', QuestionReviewStatus::Rejected->value)
+            ->latestOfMany('reviewed_at');
     }
 
     public function stemImageUrl(): ?string

@@ -230,7 +230,7 @@ final class TeachClassroomTest extends TestCase
         $this->actingAs($instructor)
             ->get(route('teach.classes.show', $classroom))
             ->assertOk()
-            ->assertSee('Feedback học viên')
+            ->assertSee('Phản hồi của học viên')
             ->assertSee('@click.stop="openFeedback(question)"', false)
             ->assertSee('Chi tiết feedback');
 
@@ -341,7 +341,7 @@ final class TeachClassroomTest extends TestCase
         $this->actingAs($instructor)
             ->get(route('teach.classes.sessions.studio', [$classroom, $session]))
             ->assertOk()
-            ->assertSee('Live Studio')
+            ->assertSee('Phòng điều khiển trực tiếp')
             ->assertSee('data-live-room', false);
 
         $this->actingAs($instructor)
@@ -407,7 +407,7 @@ final class TeachClassroomTest extends TestCase
         $this->actingAs($instructor)
             ->get(route('teach.classes.show', $classroom))
             ->assertOk()
-            ->assertSee('Mở lại buổi live')
+            ->assertSee('Mở lại buổi trực tiếp')
             ->assertSee(route('teach.classes.sessions.start', [$classroom, $session]), false);
 
         $originalStartedAt = $session->fresh()->started_at;
@@ -428,7 +428,7 @@ final class TeachClassroomTest extends TestCase
         $this->actingAs($instructor)
             ->get(route('teach.classes.sessions.studio', [$classroom, $session]))
             ->assertOk()
-            ->assertSee('Live Studio');
+            ->assertSee('Phòng điều khiển trực tiếp');
     }
 
     public function test_instructor_can_schedule_a_live_session_with_more_than_fifty_questions(): void

@@ -159,8 +159,19 @@
                     </div>
                 @else
                     @php
-                        $barCount = count($chartBars);
-                        $chartMinWidth = max(280, $barCount * 52);
+                        $progressChart = [[
+                            'id' => 'student-dashboard-learning-progress',
+                            'title' => 'Tỷ lệ đúng theo ngày',
+                            'subtitle' => $progressRange === '7d' ? '7 ngày gần nhất' : ($progressRange === 'all' ? 'Toàn bộ thời gian' : '30 ngày gần nhất'),
+                            'type' => 'bar',
+                            'format' => 'percent',
+                            'labels' => array_column($chartBars, 'label'),
+                            'datasets' => [[
+                                'label' => 'Tỷ lệ đúng',
+                                'data' => array_column($chartBars, 'rate'),
+                                'color' => '#0f766e',
+                            ]],
+                        ]];
                     @endphp
 
                     <dl class="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3" aria-label="Tổng quan tiến trình học tập">
@@ -178,44 +189,12 @@
                         </div>
                     </dl>
 
-                    <figure class="rounded-xl border border-outline-variant bg-surface-container-lowest p-4"
-                        aria-describedby="learning-progress-caption">
-                        <div class="overflow-x-auto overscroll-x-contain" data-testid="dashboard-progress-chart-scroll">
-                            <div class="grid h-72 w-full gap-3 px-2 pt-4"
-                                style="min-width: {{ $chartMinWidth }}px; grid-template-columns: repeat({{ $barCount }}, minmax(36px, 1fr));">
-                                @foreach ($chartBars as $bar)
-                                    @php $isToday = $bar['date'] === now()->toDateString(); @endphp
-                                    <div class="group flex min-w-0 flex-col items-center" tabindex="0"
-                                        title="{{ $bar['display_date'] }}: {{ $bar['correct'] }}/{{ $bar['questions'] }} câu đúng ({{ $bar['rate'] }}%)"
-                                        aria-label="{{ $bar['display_date'] }}: đúng {{ $bar['correct'] }} trên {{ $bar['questions'] }} câu, tỷ lệ {{ $bar['rate'] }} phần trăm">
-                                        <span @class([
-                                            'flex h-7 items-start text-xs font-bold',
-                                            'text-primary' => $isToday,
-                                            'text-on-surface-variant' => ! $isToday,
-                                        ])>{{ $bar['rate'] }}%</span>
-                                        <div class="flex min-h-0 w-full flex-1 items-end justify-center border-b border-outline-variant">
-                                            @if ($bar['questions'] > 0)
-                                                <div @class([
-                                                    'w-full max-w-[64px] rounded-t-lg transition-all duration-300 group-hover:brightness-110',
-                                                    'bg-primary' => $isToday,
-                                                    'bg-primary-container' => ! $isToday,
-                                                ]) style="height: {{ max(4, $bar['rate']) }}%"></div>
-                                            @endif
-                                        </div>
-                                        <time datetime="{{ $bar['date'] }}" @class([
-                                            'flex h-12 w-full items-start justify-center overflow-hidden px-1 pt-2 text-center text-[10px] leading-tight font-medium break-words md:text-xs',
-                                            'font-bold text-primary' => $isToday,
-                                            'text-on-surface-variant' => ! $isToday,
-                                        ]) title="{{ $bar['display_date'] }}">{{ $bar['label'] }}</time>
-                                    </div>
-                                @endforeach
-                            </div>
-                        </div>
-
-                        <figcaption id="learning-progress-caption" class="mt-2 text-xs text-on-surface-variant">
-                            Tỷ lệ đúng theo ngày (%). Di chuột hoặc dùng phím Tab để xem số câu đúng và tổng số câu.
-                        </figcaption>
-                    </figure>
+                    <div data-admin-dashboard-charts data-charts='@json($progressChart)'>
+                        <x-admin.trend-chart
+                            id="student-dashboard-learning-progress"
+                            title="Tỷ lệ đúng theo ngày"
+                            :subtitle="$progressChart[0]['subtitle']" />
+                    </div>
 
                     <details class="mt-4 rounded-lg border border-outline-variant">
                         <summary class="cursor-pointer px-4 py-3 text-sm font-semibold text-on-surface focus-visible:outline-2 focus-visible:outline-primary">
@@ -448,4 +427,8 @@
             @endif
         </div>
     </div>
+
+    @if ($progressSummary['questions'] > 0)
+        @vite('resources/js/admin/dashboard-charts.js')
+    @endif
 </x-layouts.app>
