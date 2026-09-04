@@ -23,6 +23,7 @@ use Modules\QuestionBank\Database\Factories\QuestionFactory;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionReviewStatus;
 use Modules\QuestionBank\Enums\QuestionStatus;
+use Modules\QuestionBank\Support\ServePublishedQuestion;
 
 /**
  * A single QBank question (reference implementation of the module pattern).
@@ -42,11 +43,17 @@ use Modules\QuestionBank\Enums\QuestionStatus;
  * @property int|null $created_by
  * @property int|null $updated_by
  * @property int|null $reviewer_id
+ * @property int|null $instructor_id
+ * @property int|null $publisher_id
+ * @property int|null $published_version
  * @property string|null $rejection_reason
+ * @property string|null $rejected_by_role
  * @property string|null $cloned_from_id
  * @property int|null $cloned_from_version
  * @property array<string, mixed>|null $stats_cache
  * @property Carbon|null $stats_updated_at
+ * @property string|null $content_fingerprint
+ * @property Carbon|null $similarity_checked_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -77,11 +84,17 @@ class Question extends Model
         'created_by',
         'updated_by',
         'reviewer_id',
+        'instructor_id',
+        'publisher_id',
+        'published_version',
         'rejection_reason',
+        'rejected_by_role',
         'cloned_from_id',
         'cloned_from_version',
         'stats_cache',
         'stats_updated_at',
+        'content_fingerprint',
+        'similarity_checked_at',
     ];
 
     protected $casts = [
@@ -91,9 +104,11 @@ class Question extends Model
         'is_free' => 'boolean',
         'exam_flag' => 'boolean',
         'version' => 'integer',
+        'published_version' => 'integer',
         'cloned_from_version' => 'integer',
         'stats_cache' => 'array',
         'stats_updated_at' => 'datetime',
+        'similarity_checked_at' => 'datetime',
     ];
 
     /**
@@ -208,6 +223,18 @@ class Question extends Model
         return $this->hasMany(QuestionOption::class, 'question_id');
     }
 
+    /** @return HasMany<QuestionSimilarityMatch, $this> */
+    public function similarityMatchesAsLow(): HasMany
+    {
+        return $this->hasMany(QuestionSimilarityMatch::class, 'question_id_low');
+    }
+
+    /** @return HasMany<QuestionSimilarityMatch, $this> */
+    public function similarityMatchesAsHigh(): HasMany
+    {
+        return $this->hasMany(QuestionSimilarityMatch::class, 'question_id_high');
+    }
+
     /** @return HasMany<QuestionFeedback, $this> */
     public function feedback(): HasMany
     {
@@ -242,6 +269,18 @@ class Question extends Model
     public function reviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewer_id');
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function instructor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'instructor_id');
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function publisher(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'publisher_id');
     }
 
     /** @return BelongsTo<Question, $this> */
@@ -339,30 +378,42 @@ class Question extends Model
      */
     public function toSearchableArray(): array
     {
+        $source = $this;
+        if (ServePublishedQuestion::needsOverlay($this)) {
+            $source = ServePublishedQuestion::overlay(
+                static::query()->with([
+                    'coreClinicalTopics:id',
+                    'medicalTaxonomyNodes:id',
+                    'tags:id',
+                    'options',
+                ])->find($this->getKey()) ?? $this,
+            );
+        }
+
         $plainStem = strip_tags(html_entity_decode(
-            (string) $this->stem,
+            (string) $source->stem,
             ENT_QUOTES | ENT_HTML5,
             'UTF-8',
         ));
         $plainStem = trim(preg_replace('/\s+/u', ' ', $plainStem) ?? $plainStem);
 
-        $coreClinicalTopicIds = ($this->relationLoaded('coreClinicalTopics')
-            ? $this->coreClinicalTopics
-            : $this->coreClinicalTopics()->get())
+        $coreClinicalTopicIds = ($source->relationLoaded('coreClinicalTopics')
+            ? $source->coreClinicalTopics
+            : $source->coreClinicalTopics()->get())
             ->pluck('id')
             ->map(fn ($id): int => (int) $id)
             ->values()
             ->all();
 
-        $medicalTaxonomyNodeIds = ($this->relationLoaded('medicalTaxonomyNodes')
-            ? $this->medicalTaxonomyNodes
-            : $this->medicalTaxonomyNodes()->get())
+        $medicalTaxonomyNodeIds = ($source->relationLoaded('medicalTaxonomyNodes')
+            ? $source->medicalTaxonomyNodes
+            : $source->medicalTaxonomyNodes()->get())
             ->pluck('id')
             ->map(fn ($id): int => (int) $id)
             ->values()
             ->all();
 
-        $tagIds = ($this->relationLoaded('tags') ? $this->tags : $this->tags()->get())
+        $tagIds = ($source->relationLoaded('tags') ? $source->tags : $source->tags()->get())
             ->pluck('id')
             ->map(fn ($id): int => (int) $id)
             ->values()
@@ -371,18 +422,23 @@ class Question extends Model
         return [
             'id' => $this->getKey(),
             'stem' => $plainStem,
-            'difficulty' => $this->difficulty->value,
+            'difficulty' => $source->difficulty->value,
             'core_clinical_topic_ids' => $coreClinicalTopicIds,
             'medical_taxonomy_node_ids' => $medicalTaxonomyNodeIds,
             'tag_ids' => $tagIds,
-            'is_free' => $this->is_free,
+            'is_free' => ServePublishedQuestion::publishedIsFree($this),
         ];
     }
 
-    /** Only published questions are searchable. */
+    /** Only live (or last published snapshot) questions are searchable. */
     public function shouldBeSearchable(): bool
     {
-        return $this->status === QuestionStatus::Published;
+        return ServePublishedQuestion::isAvailable($this);
+    }
+
+    public function isAvailableInQbank(): bool
+    {
+        return ServePublishedQuestion::isAvailable($this);
     }
 
     public function isExamPool(): bool

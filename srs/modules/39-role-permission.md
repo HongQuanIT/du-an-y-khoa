@@ -32,7 +32,7 @@ Giao diện quản lý vai trò & quyền: tạo/sửa role, gán permission, xe
 
 ## 4. Luồng người dùng
 ```
-Super Admin → tạo role "Reviewer" → gán permission (question.publish, library.publish)
+Super Admin → gán permission theo lớp: `question.review` (instructor), `question.publish` (super_admin), `library.publish` (admin/super_admin)
  → gán user vào role → audit ghi → hiệu lực ngay (invalidate cache quyền).
 ```
 

@@ -12,6 +12,7 @@ enum QuestionStatus: string
 
     case Draft = 'draft';
     case InReview = 'in_review';
+    case PendingPublish = 'pending_publish';
     case Published = 'published';
     case Rejected = 'rejected';
     case Private = 'private';
@@ -21,7 +22,8 @@ enum QuestionStatus: string
     {
         return match ($this) {
             self::Draft => 'Nháp',
-            self::InReview => 'Chờ duyệt',
+            self::InReview => 'Chờ giảng viên duyệt',
+            self::PendingPublish => 'Chờ xuất bản',
             self::Published => 'Đã xuất bản',
             self::Rejected => 'Từ chối',
             self::Private => 'Riêng tư (exam)',

@@ -76,7 +76,7 @@ Ngoại lệ:
 - **Trạng thái câu theo user:** unseen/incorrect/correct/omitted/marked (từ `question_status`).
 - **Gating:** Free chỉ `is_free` + quota/ngày; Premium full. Server enforce.
 - **Random/ordering:** shuffle hoặc theo độ khó tăng dần (tùy chọn).
-- **Exclude:** câu `retired`/`rejected`/`draft`/`in_review`/`private` (kể cả `exam_flag`); chỉ `published` + gating tier.
+- **Exclude:** câu chưa từng live hoặc đã `retired`/`private` (kể cả `exam_flag`). Include khi có `published_version` (snapshot live) — kể cả lúc working copy đang `draft`/`in_review`/`pending_publish`/`rejected` để tái bản; learner **không** đọc working copy chưa publish. Gating tier vẫn áp dụng.
 - **Topic filter:** hỗ trợ chọn topic cha → đếm/lọc cả câu thuộc topic con (cây phân cấp).
 - **Saved filters:** lưu snapshot tiêu chí.
 - **Adaptive option (Premium):** hệ thống tự chọn câu theo weak topics + spaced repetition.

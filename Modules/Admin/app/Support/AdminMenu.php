@@ -82,7 +82,7 @@ final class AdminMenu
                 'label' => 'Kỳ thi',
                 'icon' => 'assignment',
                 'route' => 'admin.exams.index',
-                'permission' => Permission::QuestionView->value,
+                'permission' => Permission::ExamManage->value,
                 'match' => 'admin.exams.*',
             ],
             [

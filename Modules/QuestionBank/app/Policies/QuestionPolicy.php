@@ -8,8 +8,8 @@ use App\Models\User;
 use App\Support\Enums\Entitlement;
 use App\Support\Enums\Permission;
 use App\Support\Enums\Role;
-use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
+use Modules\QuestionBank\Support\ServePublishedQuestion;
 
 /**
  * Authorization for questions. Combines RBAC permission + Premium entitlement:
@@ -20,7 +20,7 @@ final class QuestionPolicy
 {
     public function view(User $user, Question $question): bool
     {
-        if ($question->status !== QuestionStatus::Published) {
+        if (! ServePublishedQuestion::isAvailable($question)) {
             return $user->hasAnyRole([
                 Role::SuperAdmin->value,
                 Role::Admin->value,
@@ -28,7 +28,9 @@ final class QuestionPolicy
             ]) && $user->can(Permission::QuestionView->value);
         }
 
-        if ($question->is_free || $user->hasEntitlement(Entitlement::QbankFull->value)) {
+        $isFree = ServePublishedQuestion::publishedIsFree($question);
+
+        if ($isFree || $user->hasEntitlement(Entitlement::QbankFull->value)) {
             return true;
         }
 

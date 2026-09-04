@@ -14,6 +14,7 @@ use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Repositories\QuestionRepository;
 use Modules\QuestionBank\Support\QuestionFilterBuilder;
+use Modules\QuestionBank\Support\ServePublishedQuestion;
 use Throwable;
 
 /**
@@ -75,11 +76,11 @@ final class ListQuestionsAction
                         fn ($search) => $search->where('is_free', $data->freeOnly),
                     )
                     ->query(fn (EloquentBuilder $query) => $this->filters->apply(
-                        $query->with([
+                        ServePublishedQuestion::scopeAvailable($query->with([
                             'coreClinicalTopics:id',
                             'medicalTaxonomyNodes:id',
                             'tags:id',
-                        ])->where('status', QuestionStatus::Published),
+                        ])),
                         blueprintId: $data->blueprintId,
                         blueprintSectionId: $data->blueprintSectionId,
                         coreClinicalTopicIds: $data->coreClinicalTopicIds,
@@ -95,6 +96,8 @@ final class ListQuestionsAction
                 if ($paginator->count() === 0) {
                     return $this->questions->paginatePublished($data);
                 }
+
+                ServePublishedQuestion::overlayMany($paginator->getCollection());
 
                 return $paginator;
             } catch (Throwable $exception) {

@@ -9,6 +9,7 @@ use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionOption;
 use Modules\QuestionBank\Models\QuestionSession;
 use Modules\QuestionBank\Models\QuestionSessionSnapshot;
+use Modules\QuestionBank\Support\ServePublishedQuestion;
 use RuntimeException;
 
 /** Capture and rehydrate immutable question content for session runtime/review. */
@@ -25,6 +26,7 @@ final class QuestionSessionSnapshots
             ->whereIn('id', $questionIds)
             ->get()
             ->keyBy(fn (Question $question): string => (string) $question->getKey());
+        ServePublishedQuestion::overlayMany($questions);
 
         foreach ($questionIds as $position => $questionId) {
             $question = $questions->get($questionId);
@@ -37,7 +39,7 @@ final class QuestionSessionSnapshots
                 ['session_id' => $session->getKey(), 'question_id' => $questionId],
                 [
                     'position' => $position,
-                    'question_version' => (int) $question->version,
+                    'question_version' => (int) ($question->published_version ?: $question->version),
                     'payload' => $this->payload($question, (string) $session->getKey()),
                 ],
             );
@@ -63,6 +65,7 @@ final class QuestionSessionSnapshots
             ->whereIn('id', $missingIds)
             ->get()
             ->keyBy(fn (Question $question): string => (string) $question->getKey());
+        ServePublishedQuestion::overlayMany($liveQuestions);
 
         foreach (array_values($questionIds) as $position => $questionId) {
             $snapshot = $originalSnapshots->get($questionId);
@@ -88,7 +91,7 @@ final class QuestionSessionSnapshots
                 'session_id' => $target->getKey(),
                 'question_id' => $questionId,
                 'position' => $position,
-                'question_version' => (int) $question->version,
+                'question_version' => (int) ($question->published_version ?: $question->version),
                 'payload' => $this->payload($question, (string) $target->getKey()),
             ]);
         }

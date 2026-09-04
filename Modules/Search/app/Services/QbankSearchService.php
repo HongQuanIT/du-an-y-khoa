@@ -11,6 +11,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Log;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
+use Modules\QuestionBank\Support\ServePublishedQuestion;
 use Modules\Search\Contracts\ScopedSearchProvider;
 use Modules\Search\Data\ScopedSearchResult;
 use Modules\Search\Data\SearchQueryData;
@@ -116,8 +117,9 @@ final class QbankSearchService implements ScopedSearchProvider
 
         $questions = $this->accessibleQuestionQuery($filters)
             ->whereIn('id', $ids)
-            ->get(['id', 'stem', 'difficulty', 'is_free'])
+            ->get()
             ->keyBy(fn (Question $question): string => (string) $question->getKey());
+        ServePublishedQuestion::overlayMany($questions);
 
         $items = [];
 
@@ -151,7 +153,9 @@ final class QbankSearchService implements ScopedSearchProvider
         $facets = $this->databaseFacets($matched);
         $paginator = $matched
             ->orderByDesc('created_at')
-            ->paginate($data->perPage, ['id', 'stem', 'difficulty', 'is_free'], 'page', $data->page);
+            ->paginate($data->perPage, ['*'], 'page', $data->page);
+
+        ServePublishedQuestion::overlayMany($paginator->getCollection());
 
         $paginator->setCollection($paginator->getCollection()->map(function (Question $question) use ($data): array {
             $title = $this->plainText((string) $question->stem);
@@ -177,23 +181,45 @@ final class QbankSearchService implements ScopedSearchProvider
      */
     private function accessibleQuestionQuery(array $filters): Builder
     {
-        return Question::query()
-            ->with('medicalTaxonomyNodes:id')
-            ->where('status', QuestionStatus::Published)
+        $query = ServePublishedQuestion::scopeAvailable(
+            Question::query()->with('medicalTaxonomyNodes:id'),
+        );
+
+        return $query
             ->when(
                 array_key_exists('difficulty', $filters),
-                fn (Builder $query) => $query->where('difficulty', $filters['difficulty']),
+                fn (Builder $builder) => $builder->where('difficulty', $filters['difficulty']),
             )
             ->when(
                 array_key_exists('medical_taxonomy_node_id', $filters),
-                fn (Builder $query) => $query->whereHas(
+                fn (Builder $builder) => $builder->whereHas(
                     'medicalTaxonomyNodes',
                     fn (Builder $nodes) => $nodes->where('medical_taxonomy_nodes.id', $filters['medical_taxonomy_node_id']),
                 ),
             )
             ->when(
                 array_key_exists('is_free', $filters),
-                fn (Builder $query) => $query->where('is_free', $filters['is_free']),
+                function (Builder $builder) use ($filters): void {
+                    $freeOnly = (bool) $filters['is_free'];
+                    $builder->where(function (Builder $gate) use ($freeOnly): void {
+                        $gate->where(function (Builder $published) use ($freeOnly): void {
+                            $published->where('status', QuestionStatus::Published)
+                                ->where('is_free', $freeOnly);
+                        })->orWhere(function (Builder $revision) use ($freeOnly): void {
+                            $revision->where('status', '!=', QuestionStatus::Published)
+                                ->whereNotNull('published_version')
+                                ->whereHas(
+                                    'versions',
+                                    fn (Builder $versions) => $versions
+                                        ->whereColumn('question_versions.version', 'questions.published_version')
+                                        ->whereRaw(
+                                            'CAST(json_extract(snapshot, \'$.is_free\') AS INTEGER) = ?',
+                                            [$freeOnly ? 1 : 0],
+                                        ),
+                                );
+                        });
+                    });
+                },
             );
     }
 
@@ -208,13 +234,30 @@ final class QbankSearchService implements ScopedSearchProvider
         return $this->accessibleQuestionQuery($filters)
             ->where(function (Builder $builder) use ($terms): void {
                 foreach ($terms as $index => $term) {
-                    $sql = "stem LIKE ? ESCAPE '!'";
-                    $bindings = [SearchText::likePattern($term)];
+                    $pattern = SearchText::likePattern($term);
+                    $clause = function (Builder $match) use ($pattern): void {
+                        $match->where(function (Builder $published) use ($pattern): void {
+                            $published->where('status', QuestionStatus::Published)
+                                ->whereRaw("stem LIKE ? ESCAPE '!'", [$pattern]);
+                        })->orWhere(function (Builder $revision) use ($pattern): void {
+                            $revision->where('status', '!=', QuestionStatus::Published)
+                                ->whereNotNull('published_version')
+                                ->where(function (Builder $inner) use ($pattern): void {
+                                    $inner->whereRaw("stem LIKE ? ESCAPE '!'", [$pattern])
+                                        ->orWhereHas(
+                                            'versions',
+                                            fn (Builder $versions) => $versions
+                                                ->whereColumn('question_versions.version', 'questions.published_version')
+                                                ->whereRaw("json_extract(snapshot, '$.stem') LIKE ? ESCAPE '!'", [$pattern]),
+                                        );
+                                });
+                        });
+                    };
 
                     if ($index === 0) {
-                        $builder->whereRaw($sql, $bindings);
+                        $builder->where($clause);
                     } else {
-                        $builder->orWhereRaw($sql, $bindings);
+                        $builder->orWhere($clause);
                     }
                 }
             });

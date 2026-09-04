@@ -18,6 +18,12 @@
             'match' => 'teach.classes.*',
         ],
         [
+            'label' => 'Duyệt câu hỏi',
+            'icon' => 'fact_check',
+            'route' => 'teach.questions.reviews.index',
+            'match' => 'teach.questions.reviews.*',
+        ],
+        [
             'label' => 'Thông báo',
             'icon' => 'notifications',
             'route' => 'teach.notifications.index',

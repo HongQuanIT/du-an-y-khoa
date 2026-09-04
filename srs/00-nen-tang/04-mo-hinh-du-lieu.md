@@ -68,16 +68,19 @@ Chuẩn RBAC: `roles(id,name,slug)`, `permissions(id,name,slug)`, `permission_ro
 | lead_in | TEXT | câu hỏi dẫn ("Chẩn đoán phù hợp nhất?") |
 | type | VARCHAR | single_best/multi/matching |
 | difficulty | VARCHAR | easy/medium/hard (hoặc 1–5) |
-| status | VARCHAR | draft / in_review / published / rejected / private / retired |
+| status | VARCHAR | draft / in_review / pending_publish / published / rejected / private / retired |
 | exam_flag | BOOL default false | `true` = câu dành cho exam pool (kèm `private`) |
 | is_free | BOOL | dùng cho preview free tier |
 | explanation | LONGTEXT | giải thích tổng |
 | references | JSON | nguồn (guideline, sách) |
 | lab_values | JSON | chỉ số tham chiếu kèm câu |
 | media_ids | JSON | ảnh/video đính kèm |
-| version | INT | số version hiện tại (denormalized; chi tiết ở `question_versions`) |
-| reviewer_id | FK null | người duyệt/từ chối gần nhất |
+| version | INT | version đã publish gần nhất (0 nếu chưa từng); chi tiết ở `question_versions` |
+| published_version | INT null | version đang phục vụ Qbank (snapshot); null = chưa live |
+| instructor_id | FK null | giảng viên duyệt/từ chối lớp 1 gần nhất |
+| publisher_id | FK null | Super Admin publish gần nhất (lớp 2) |
 | rejection_reason | TEXT null | khi status = rejected |
+| rejected_by_role | VARCHAR null | `instructor` \| `super_admin` |
 | stats_cache | JSON | attempts, correct_rate, reports… — **rollup job**; list admin chỉ đọc field này |
 | stats_updated_at | TIMESTAMP null | lần rollup gần nhất |
 | cloned_from_id | FK null | câu nguồn khi clone |
@@ -88,7 +91,7 @@ Chuẩn RBAC: `roles(id,name,slug)`, `permissions(id,name,slug)`, `permission_ro
 Index: `status`, `exam_flag`, `(status, exam_flag, created_at)`, `difficulty`, `is_free`. Full-text → Meilisearch (chỉ `published`).
 
 ### QuestionVersion
-`id, question_id FK, version_number INT, reviewer_id FK, snapshot JSON, created_at`. Unique `(question_id, version_number)`. Tạo khi **reviewer approve/publish** — không tạo khi edit draft/in_review.
+`id, question_id FK, version_number INT, instructor_id FK, publisher_id FK, snapshot JSON, created_at`. Unique `(question_id, version_number)`. **Chỉ tạo khi Super Admin publish** (`pending_publish` → `published`) — không tạo khi Creator sửa working copy hay khi giảng viên approve/reject. Xem Module 35 §5.2–5.3.
 
 ### QuestionOption
 `id, question_id FK, label(A/B/...), content TEXT, is_correct BOOL, explanation TEXT (vì sao đúng/sai), order INT, timestamps`.

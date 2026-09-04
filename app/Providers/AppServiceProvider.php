@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Services\SettingService;
+use App\Support\Enums\Permission;
 use App\Support\Enums\Role;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
@@ -90,15 +91,24 @@ class AppServiceProvider extends ServiceProvider
 
     /**
      * Super Admin should behave as full-access even if cached permissions lag behind.
+     * Exception: question.create / question.update stay with content_editor only
+     * so SA không sửa nội dung và tránh xung đột biên tập (SRS module 35).
      */
     private function configureAuthorization(): void
     {
         Gate::before(function ($user, string $ability): ?bool {
-            if ($user !== null && method_exists($user, 'hasRole') && $user->hasRole(Role::SuperAdmin->value)) {
-                return true;
+            if ($user === null || ! method_exists($user, 'hasRole') || ! $user->hasRole(Role::SuperAdmin->value)) {
+                return null;
             }
 
-            return null;
+            if (in_array($ability, [
+                Permission::QuestionCreate->value,
+                Permission::QuestionUpdate->value,
+            ], true)) {
+                return null;
+            }
+
+            return true;
         });
     }
 }

@@ -15,8 +15,8 @@ use Modules\Personalization\Models\Bookmark;
 use Modules\Personalization\Models\BookmarkFolder;
 use Modules\Personalization\Models\BookmarkFolderItem;
 use Modules\QuestionBank\Actions\CreateSessionFromBookmarksAction;
-use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
+use Modules\QuestionBank\Support\ServePublishedQuestion;
 use RuntimeException;
 
 /** Learner-owned list of saved Q-Bank question collections & folders. */
@@ -93,7 +93,10 @@ final class QuestionBookmarkPageController extends Controller
         $items = $bookmarks->getCollection()->map(function (Bookmark $bookmark) use ($questions): array {
             $question = $questions->get((string) $bookmark->bookmarkable_id);
             $available = $question instanceof Question
-                && $question->status === QuestionStatus::Published;
+                && ServePublishedQuestion::isAvailable($question);
+            if ($question instanceof Question && ServePublishedQuestion::needsOverlay($question)) {
+                ServePublishedQuestion::overlay($question);
+            }
             $preview = $question instanceof Question
                 ? Str::limit(SafeHtml::plainText((string) $question->stem), 180)
                 : 'Câu hỏi không còn khả dụng.';

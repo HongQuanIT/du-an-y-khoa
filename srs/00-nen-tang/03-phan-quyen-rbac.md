@@ -58,8 +58,11 @@ Chú thích: ✅ full · 🔓 giới hạn/preview · ➖ không có · 🔒 c�
 | Gán role `instructor` | ➖ | ➖ | ➖ | ➖ | ➖ | ➖ | 🔓 | ✅ |
 | 🔵 Tạo lớp org, giao bài *(Phase 2)* | ➖ | ➖ | ➖ | ✅ | ➖ | ✅ | ✅ | ✅ |
 | 🔵 Xem tiến độ học viên org *(Phase 2)* | ➖ | ➖ | ➖ | ✅ | ➖ | ✅ | ✅ | ✅ |
-| CRUD nội dung câu hỏi | ➖ | ➖ | ➖ | ➖ | ✅ | ➖ | ✅ | ✅ |
-| Duyệt/publish nội dung | ➖ | ➖ | ➖ | ➖ | 🔓 | ➖ | ✅ | ✅ |
+| CRUD nội dung câu hỏi (working copy) | ➖ | ➖ | ➖ | ➖ | ✅ | ➖ | ✅ | ✅ |
+| Gửi duyệt câu hỏi (submit lớp 1) | ➖ | ➖ | ➖ | ➖ | ✅ | ➖ | ✅ | ✅ |
+| Duyệt chuyên môn câu hỏi (approve/reject lớp 1) | ➖ | ➖ | ➖ | ✅ | ➖ | ➖ | 👁 | 👁 |
+| Publish câu hỏi lên Qbank (lớp 2, +version) | ➖ | ➖ | ➖ | ➖ | ➖ | ➖ | ➖ | ✅ |
+| Duyệt/publish nội dung thư viện (khác Qbank) | ➖ | ➖ | ➖ | ➖ | 🔓 | ➖ | ✅ | ✅ |
 | 🔵 Quản lý thành viên tổ chức *(Phase 2)* | ➖ | ➖ | ➖ | ➖ | ➖ | ✅ | ✅ | ✅ |
 | 🔵 Quản lý license/ghế *(Phase 2)* | ➖ | ➖ | ➖ | ➖ | ➖ | ✅ | ✅ | ✅ |
 | Quản lý toàn bộ user | ➖ | ➖ | ➖ | ➖ | ➖ | ➖ | ✅ | ✅ |
@@ -73,7 +76,7 @@ Chú thích: ✅ full · 🔓 giới hạn/preview · ➖ không có · 🔒 c�
 Định dạng: `{resource}.{action}` — ví dụ:
 
 ```
-question.view, question.create, question.update, question.delete, question.publish
+question.view, question.create, question.update, question.delete, question.submit, question.review, question.publish, question.retire
 session.start, session.submit, session.review
 library.view, library.edit, library.publish
 user.view, user.manage, user.impersonate
@@ -92,8 +95,8 @@ Catalog `/admin/permissions` và ma trận role nhóm theo **4 portal** (không 
 | Portal | Roles | Permission chính |
 |--------|-------|------------------|
 | Học viên | `student` | `session.*`, `exam.take`, `classroom.join`, `live.join`, `question.view`, `library.view`, … |
-| Giảng viên | `instructor` | `classroom.create/manage/moderate`, `live.start`, … |
-| Admin | `content_editor`, `admin`, `super_admin` | CMS, user/RBAC, oversight, billing, `admin.partners.*`, … |
+| Giảng viên | `instructor` | `classroom.create/manage/moderate`, `live.start`, `question.review` (hàng đợi `/teach/questions/reviews`), … |
+| Admin | `content_editor`, `admin`, `super_admin` | CMS, user/RBAC, oversight, billing, `admin.partners.*`, … — **`question.publish` chỉ `super_admin`** |
 | Cộng tác viên | `partner` | `partner.portal`, `partner.codes.manage`, `partner.referrals.view`, `partner.commissions.view` |
 
 - Mỗi permission có **một portal chính** (catalog). Ability dùng chung vẫn hiện badge “cũng dùng bởi …” theo ma trận role.

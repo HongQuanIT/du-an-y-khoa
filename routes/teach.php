@@ -13,6 +13,7 @@ use Modules\Classroom\Http\Controllers\LiveRoomApiController;
 use Modules\Classroom\Http\Controllers\LiveTextMarksController;
 use Modules\Classroom\Http\Controllers\TeachClassroomController;
 use Modules\Classroom\Http\Controllers\TeachProfileController;
+use Modules\Classroom\Http\Controllers\TeachQuestionReviewController;
 use Modules\Notification\Http\Controllers\NotificationController;
 
 /*
@@ -105,4 +106,13 @@ Route::middleware(['auth', 'instructor', 'instructor.2fa'])->group(function (): 
     Route::put('/profile/password', [TeachProfileController::class, 'updatePassword'])->name('profile.password');
     Route::put('/profile/avatar', [TeachProfileController::class, 'updateAvatar'])->name('profile.avatar');
     Route::delete('/profile/avatar', [TeachProfileController::class, 'destroyAvatar'])->name('profile.avatar.destroy');
+
+    Route::get('/questions/reviews', [TeachQuestionReviewController::class, 'index'])
+        ->name('questions.reviews.index');
+    Route::get('/questions/reviews/{question}', [TeachQuestionReviewController::class, 'show'])
+        ->name('questions.reviews.show');
+    Route::post('/questions/reviews/{question}/approve', [TeachQuestionReviewController::class, 'approve'])
+        ->name('questions.reviews.approve');
+    Route::post('/questions/reviews/{question}/reject', [TeachQuestionReviewController::class, 'reject'])
+        ->name('questions.reviews.reject');
 });

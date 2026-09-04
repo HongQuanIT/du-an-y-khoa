@@ -4,9 +4,10 @@
     use Modules\QuestionBank\Enums\QuestionStatus;
 
     $eventLabels = [
-        'baseline' => 'Phiên bản ban đầu',
+        'baseline' => 'Phiên bản trước khi tái bản',
         'save' => 'Cập nhật nội dung',
         'status' => 'Đổi trạng thái',
+        'publish' => 'Xuất bản',
         'restore' => 'Khôi phục phiên bản',
     ];
 @endphp
@@ -25,7 +26,11 @@
             </p>
         </div>
         <span class="inline-flex shrink-0 items-center rounded-full bg-primary/10 px-3 py-1.5 text-sm font-semibold text-primary">
-            Hiện tại: phiên bản {{ $contentVersion }}
+            @if ($contentVersion > 0)
+                Hiện tại: phiên bản {{ $contentVersion }}
+            @else
+                Chưa có phiên bản
+            @endif
         </span>
     </div>
 
@@ -167,7 +172,7 @@
             </article>
         @empty
             <div class="rounded-2xl border border-outline-variant bg-surface p-10 text-center text-on-surface-variant">
-                Chưa có lịch sử phiên bản.
+                Chưa có lịch sử phiên bản. Phiên bản đầu tiên chỉ được tạo khi Admin xuất bản cấp cuối.
             </div>
         @endforelse
     </div>
