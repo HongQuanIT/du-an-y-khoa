@@ -19,8 +19,10 @@ enum Permission: string
     case QuestionCreate = 'question.create';
     case QuestionUpdate = 'question.update';
     case QuestionDelete = 'question.delete';
+    case QuestionSubmit = 'question.submit';
     case QuestionReview = 'question.review';
     case QuestionPublish = 'question.publish';
+    case QuestionRetire = 'question.retire';
     case TopicView = 'topic.view';
     case TopicCreate = 'topic.create';
     case TopicUpdate = 'topic.update';
@@ -43,6 +45,7 @@ enum Permission: string
     case RoleManage = 'role.manage';
     case PermissionManage = 'permission.manage';
     case AuditView = 'audit.view';
+    case ReportView = 'report.view';
     case ReportExport = 'report.export';
     case CmsManage = 'cms.manage';
     case MediaView = 'media.view';
@@ -51,9 +54,12 @@ enum Permission: string
     case ContactManage = 'contact.manage';
     case SystemManage = 'system.manage';
     case FeatureFlagManage = 'feature_flag.manage';
+    case NotificationBroadcast = 'notification.broadcast';
+    case SupportManage = 'support.manage';
 
     // Classroom / live review (Module 44)
     case ClassroomCreate = 'classroom.create';
+    case ClassroomCreateOnBehalf = 'classroom.create_on_behalf';
     case ClassroomManage = 'classroom.manage';
     case ClassroomJoin = 'classroom.join';
     case ClassroomModerate = 'classroom.moderate';

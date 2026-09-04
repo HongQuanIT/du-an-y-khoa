@@ -506,7 +506,7 @@ final class GetAdminDashboardDataAction
             );
         }
 
-        if ($viewer->can(Permission::SystemManage->value)) {
+        if ($viewer->can(Permission::SupportManage->value)) {
             $supportPending = SupportConversation::pendingAdminAttentionCountFor($viewer);
             if ($supportPending > 0) {
                 $kpis[] = $this->kpi(
@@ -753,7 +753,7 @@ final class GetAdminDashboardDataAction
             }
         }
 
-        if ($viewer->can(Permission::SystemManage->value)) {
+        if ($viewer->can(Permission::SupportManage->value)) {
             $supportPending = SupportConversation::pendingAdminAttentionCountFor($viewer);
             if ($supportPending > 0) {
                 $alerts[] = $this->alert(
@@ -888,7 +888,7 @@ final class GetAdminDashboardDataAction
             }
         }
 
-        if ($viewer->can(Permission::ReportExport->value) && ! $viewer->can(Permission::SystemManage->value)) {
+        if ($viewer->can(Permission::ReportView->value) && ! $viewer->can(Permission::SystemManage->value)) {
             $reportMeta = AdminReportCache::meta();
             $alerts[] = $this->alert(
                 id: 'report_cache_visibility',
@@ -995,7 +995,7 @@ final class GetAdminDashboardDataAction
             ];
         }
 
-        if ($viewer->can(Permission::ReportExport->value) && Route::has('admin.reports.index')) {
+        if ($viewer->can(Permission::ReportView->value) && Route::has('admin.reports.index')) {
             $actions[] = [
                 'label' => 'Trung tâm báo cáo',
                 'icon' => 'analytics',

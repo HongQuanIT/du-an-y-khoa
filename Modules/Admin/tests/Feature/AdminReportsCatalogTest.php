@@ -115,6 +115,7 @@ final class AdminReportsCatalogTest extends TestCase
     public function test_content_editor_without_report_permission_is_forbidden(): void
     {
         $editor = $this->staffUser(Role::ContentEditor);
+        $this->assertFalse($editor->can(Permission::ReportView->value));
         $this->assertFalse($editor->can(Permission::ReportExport->value));
 
         $this->actingAsStaff($editor)
@@ -134,7 +135,10 @@ final class AdminReportsCatalogTest extends TestCase
     public function test_admin_without_billing_cannot_open_revenue_report(): void
     {
         $editor = $this->staffUser(Role::ContentEditor);
-        $editor->givePermissionTo(Permission::ReportExport->value);
+        $editor->givePermissionTo([
+            Permission::ReportView->value,
+            Permission::ReportExport->value,
+        ]);
 
         $this->assertFalse($editor->can(Permission::BillingManage->value));
 

@@ -5,11 +5,13 @@
     <x-admin.flash />
 
     <div class="mb-6 flex justify-end">
-        <a href="{{ route('admin.classrooms.create') }}"
-            class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 font-label-md text-label-md font-semibold text-on-primary hover:opacity-90">
-            <span class="material-symbols-outlined text-[18px]">add</span>
-            Tạo lớp và nội dung
-        </a>
+        @can(\App\Support\Enums\Permission::ClassroomCreateOnBehalf->value)
+            <a href="{{ route('admin.classrooms.create') }}"
+                class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 font-label-md text-label-md font-semibold text-on-primary hover:opacity-90">
+                <span class="material-symbols-outlined text-[18px]">add</span>
+                Tạo lớp và nội dung
+            </a>
+        @endcan
     </div>
 
     @if ($pendingCount > 0)

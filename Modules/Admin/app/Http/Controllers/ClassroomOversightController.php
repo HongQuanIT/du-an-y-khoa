@@ -40,7 +40,7 @@ final class ClassroomOversightController extends Controller
 {
     public function create(Request $request): View
     {
-        $this->authorizePermission(Permission::ClassroomOversee);
+        $this->authorizePermission(Permission::ClassroomCreateOnBehalf);
 
         $selectedQuestionIds = array_values(array_filter(array_map(
             'strval',
@@ -87,7 +87,7 @@ final class ClassroomOversightController extends Controller
 
     public function contentQuestions(Request $request): JsonResponse
     {
-        $this->authorizePermission(Permission::ClassroomOversee);
+        $this->authorizePermission(Permission::ClassroomCreateOnBehalf);
 
         $source = $request->string('source')->toString();
         $search = trim($request->string('q')->toString());
@@ -153,7 +153,7 @@ final class ClassroomOversightController extends Controller
         ApproveClassroomAction $approve,
         ScheduleLiveSessionAction $schedule,
     ): RedirectResponse {
-        $this->authorizePermission(Permission::ClassroomOversee);
+        $this->authorizePermission(Permission::ClassroomCreateOnBehalf);
         $data = $request->validate([
             'host_user_id' => ['required', 'integer', 'exists:users,id'],
             'title' => ['required', 'string', 'max:200'],

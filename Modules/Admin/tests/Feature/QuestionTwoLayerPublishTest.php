@@ -45,8 +45,16 @@ final class QuestionTwoLayerPublishTest extends TestCase
 
         $this->assertFalse($admin->can(Permission::QuestionUpdate->value));
         $this->assertFalse($admin->can(Permission::QuestionCreate->value));
+        $this->assertFalse($admin->can(Permission::QuestionSubmit->value));
+        $this->assertFalse($admin->can(Permission::QuestionReview->value));
         $this->assertTrue($admin->can(Permission::QuestionPublish->value));
+        $this->assertTrue($admin->can(Permission::QuestionRetire->value));
         $this->assertTrue($admin->can(Permission::QuestionDelete->value));
+        $this->assertTrue($admin->can(Permission::ClassroomCreateOnBehalf->value));
+        $this->assertTrue($admin->can(Permission::ReportView->value));
+        $this->assertTrue($admin->can(Permission::SupportManage->value));
+        $this->assertTrue($admin->can(Permission::NotificationBroadcast->value));
+        $this->assertFalse($admin->can(Permission::ClassroomCreate->value));
 
         $this->actingAsStaff($admin)
             ->get(route('admin.questions.create'))
@@ -64,7 +72,10 @@ final class QuestionTwoLayerPublishTest extends TestCase
 
         $this->assertFalse($superAdmin->can(Permission::QuestionUpdate->value));
         $this->assertFalse($superAdmin->can(Permission::QuestionCreate->value));
+        $this->assertFalse($superAdmin->can(Permission::QuestionSubmit->value));
+        $this->assertFalse($superAdmin->can(Permission::QuestionReview->value));
         $this->assertTrue($superAdmin->can(Permission::QuestionPublish->value));
+        $this->assertTrue($superAdmin->can(Permission::QuestionRetire->value));
         $this->assertTrue($superAdmin->can(Permission::QuestionDelete->value));
 
         $this->actingAsStaff($superAdmin)

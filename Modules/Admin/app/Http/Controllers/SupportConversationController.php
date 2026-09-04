@@ -159,6 +159,6 @@ final class SupportConversationController extends Controller
 
     private function authorizeAccess(): void
     {
-        abort_unless(auth()->user()?->can(Permission::SystemManage->value), 403);
+        abort_unless(auth()->user()?->can(Permission::SupportManage->value), 403);
     }
 }

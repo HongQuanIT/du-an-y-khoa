@@ -218,7 +218,7 @@ final class ReportController extends Controller
 
     public function export(Request $request, string $category, string $report, GetAdminReportDataAction $action): StreamedResponse
     {
-        $this->authorizeReportAccess();
+        $this->authorizeReportExport();
 
         $match = AdminReportCatalog::findReport($category, $report);
         abort_if($match === null, 404);
@@ -257,7 +257,7 @@ final class ReportController extends Controller
         string $report,
         SaveReportScheduleAction $action,
     ): RedirectResponse {
-        $this->authorizeReportAccess();
+        $this->authorizeReportExport();
 
         $match = AdminReportCatalog::findReport($category, $report);
         abort_if($match === null, 404);
@@ -288,7 +288,7 @@ final class ReportController extends Controller
 
     public function toggleSchedule(ReportSchedule $schedule, ToggleReportScheduleAction $action): RedirectResponse
     {
-        $this->authorizeReportAccess();
+        $this->authorizeReportExport();
         $this->authorizeSchedule($schedule);
 
         $action->handle($schedule);
@@ -300,7 +300,7 @@ final class ReportController extends Controller
 
     public function toggleScheduleEmail(ReportSchedule $schedule, ToggleReportScheduleEmailAction $action): RedirectResponse
     {
-        $this->authorizeReportAccess();
+        $this->authorizeReportExport();
         $this->authorizeSchedule($schedule);
 
         $action->handle($schedule);
@@ -312,7 +312,7 @@ final class ReportController extends Controller
 
     public function destroySchedule(ReportSchedule $schedule, DeleteReportScheduleAction $action): RedirectResponse
     {
-        $this->authorizeReportAccess();
+        $this->authorizeReportExport();
         $this->authorizeSchedule($schedule);
 
         $action->handle($schedule);
@@ -321,6 +321,15 @@ final class ReportController extends Controller
     }
 
     private function authorizeReportAccess(): void
+    {
+        $actor = $this->actor();
+        abort_unless(
+            $actor->can(Permission::ReportView->value) || $actor->can(Permission::ReportExport->value),
+            403,
+        );
+    }
+
+    private function authorizeReportExport(): void
     {
         abort_unless($this->actor()->can(Permission::ReportExport->value), 403);
     }

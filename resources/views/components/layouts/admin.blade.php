@@ -4,7 +4,7 @@
 
 @php
     $navItems = \Modules\Admin\Support\AdminMenu::for(auth()->user());
-    $canSupportInbox = auth()->user()?->can(\App\Support\Enums\Permission::SystemManage->value)
+    $canSupportInbox = auth()->user()?->can(\App\Support\Enums\Permission::SupportManage->value)
         && \Illuminate\Support\Facades\Route::has('admin.support.index');
     $supportBadgeCount = $canSupportInbox
         ? \App\Models\SupportConversation::pendingAdminAttentionCountFor(auth()->user())

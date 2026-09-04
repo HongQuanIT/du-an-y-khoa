@@ -221,11 +221,19 @@ final class TransitionQuestionStatusAction
             return;
         }
 
-        // Lớp 2 — publish / reject-publish / retire
+        // Retire — tách khỏi publish.
+        if ($to === QuestionStatus::Retired) {
+            if (! $actor->can(Permission::QuestionRetire->value)) {
+                abort(403, 'Cần quyền question.retire.');
+            }
+
+            return;
+        }
+
+        // Lớp 2 — publish / reject-publish / private
         $needsPublishPermission = in_array($to, [
             QuestionStatus::Published,
             QuestionStatus::Private,
-            QuestionStatus::Retired,
             QuestionStatus::Rejected,
         ], true);
 
@@ -281,7 +289,19 @@ final class TransitionQuestionStatusAction
             return;
         }
 
-        // Submit / withdraw: question.update
+        // Submit / withdraw: draft ↔ in_review
+        if (
+            ($from === QuestionStatus::Draft && $to === QuestionStatus::InReview)
+            || ($from === QuestionStatus::InReview && $to === QuestionStatus::Draft)
+        ) {
+            if (! $actor->can(Permission::QuestionSubmit->value)) {
+                abort(403, 'Cần quyền question.submit.');
+            }
+
+            return;
+        }
+
+        // Rejected / retired → draft (creator resumes editing)
         if (! $actor->can(Permission::QuestionUpdate->value)) {
             abort(403, 'Cần quyền question.update.');
         }

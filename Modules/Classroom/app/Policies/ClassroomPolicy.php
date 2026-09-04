@@ -6,8 +6,7 @@ namespace Modules\Classroom\Policies;
 
 use App\Models\User;
 use App\Support\Enums\Entitlement;
-use App\Support\Enums\Role;
-use Modules\Classroom\Enums\ClassroomStatus;
+use App\Support\Enums\Permission;
 use Modules\Classroom\Enums\ClassroomVisibility;
 use Modules\Classroom\Enums\MemberStatus;
 use Modules\Classroom\Models\Classroom;
@@ -21,7 +20,7 @@ final class ClassroomPolicy
 
     public function view(User $user, Classroom $classroom): bool
     {
-        if ($user->hasAnyRole([Role::Admin->value, Role::SuperAdmin->value])) {
+        if ($user->can(Permission::ClassroomOversee->value)) {
             return true;
         }
 
@@ -40,16 +39,24 @@ final class ClassroomPolicy
         return false;
     }
 
-    /** Instructors create their own classrooms; administrators may create for instructors. */
+    /** Instructors create their own; staff create on behalf of an instructor host. */
     public function create(User $user): bool
     {
-        return $user->hasAnyRole([Role::Instructor->value, Role::Admin->value, Role::SuperAdmin->value]);
+        return $user->can(Permission::ClassroomCreate->value)
+            || $user->can(Permission::ClassroomCreateOnBehalf->value);
     }
 
     public function update(User $user, Classroom $classroom): bool
     {
+        if ($user->can(Permission::ClassroomOversee->value)) {
+            return true;
+        }
+
         return $classroom->isHostOrCohost($user)
-            || $user->hasAnyRole([Role::Admin->value, Role::SuperAdmin->value]);
+            && (
+                $user->can(Permission::ClassroomManage->value)
+                || $user->hasEntitlement(Entitlement::ClassroomHost->value)
+            );
     }
 
     public function join(User $user, Classroom $classroom): bool
@@ -64,11 +71,13 @@ final class ClassroomPolicy
             return false;
         }
 
-        if ($classroom->visibility === ClassroomVisibility::InviteOnly) {
-            return $member?->status === MemberStatus::Invited;
+        if ($classroom->visibility === ClassroomVisibility::InviteOnly
+            && $member?->status !== MemberStatus::Invited) {
+            return false;
         }
 
-        return true;
+        return $user->can(Permission::ClassroomJoin->value)
+            || $user->can(Permission::ClassroomOversee->value);
     }
 
     public function manageLive(User $user, Classroom $classroom): bool
@@ -77,8 +86,9 @@ final class ClassroomPolicy
             return false;
         }
 
-        return $user->hasAnyRole([Role::Admin->value, Role::SuperAdmin->value])
-            || $user->hasRole(Role::Instructor->value)
+        return $user->can(Permission::ClassroomOversee->value)
+            || $user->can(Permission::LiveStart->value)
+            || $user->can(Permission::ClassroomManage->value)
             || $user->hasEntitlement(Entitlement::ClassroomHost->value);
     }
 

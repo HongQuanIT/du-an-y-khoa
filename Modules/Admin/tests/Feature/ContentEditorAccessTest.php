@@ -34,11 +34,14 @@ final class ContentEditorAccessTest extends TestCase
             Permission::QuestionView,
             Permission::QuestionCreate,
             Permission::QuestionUpdate,
+            Permission::QuestionSubmit,
             Permission::CmsManage,
             Permission::MediaView,
             Permission::TopicView,
             Permission::ExamManage,
             Permission::LibraryView,
+            Permission::LibraryEdit,
+            Permission::LibraryPublish,
         ] as $permission) {
             $this->assertTrue(
                 $editor->can($permission->value),
@@ -48,6 +51,12 @@ final class ContentEditorAccessTest extends TestCase
 
         $this->assertFalse($editor->can(Permission::UserView->value));
         $this->assertFalse($editor->can(Permission::QuestionPublish->value));
+        $this->assertFalse($editor->can(Permission::QuestionRetire->value));
+        $this->assertFalse($editor->can(Permission::QuestionReview->value));
+        $this->assertFalse($editor->can(Permission::ReportView->value));
+        $this->assertFalse($editor->can(Permission::SupportManage->value));
+        $this->assertFalse($editor->can(Permission::NotificationBroadcast->value));
+        $this->assertFalse($editor->can(Permission::ClassroomCreateOnBehalf->value));
     }
 
     public function test_content_editor_can_open_content_modules(): void

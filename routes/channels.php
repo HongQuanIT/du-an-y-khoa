@@ -28,7 +28,7 @@ Broadcast::channel('support-conversation.{conversation}', function ($user, Suppo
 });
 
 Broadcast::channel('support-admin', function ($user) {
-    return Staff::isStaff($user) && $user->can(Permission::SystemManage->value);
+    return Staff::isStaff($user) && $user->can(Permission::SupportManage->value);
 });
 
 Broadcast::channel('classroom.{classroomUuid}', function ($user, string $classroomUuid) {

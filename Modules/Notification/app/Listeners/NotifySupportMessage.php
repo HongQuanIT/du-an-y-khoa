@@ -12,7 +12,7 @@ use Modules\Notification\Actions\CreateUserNotificationAction;
 
 /**
  * - Staff reply → notify conversation owner (personalized).
- * - User message needing admin → notify staff with SystemManage (inbox hint).
+ * - User message needing admin → notify staff with SupportManage (inbox hint).
  */
 final class NotifySupportMessage
 {
@@ -50,7 +50,7 @@ final class NotifySupportMessage
             return;
         }
 
-        $staff = User::permission(Permission::SystemManage->value)->get();
+        $staff = User::permission(Permission::SupportManage->value)->get();
         $url = route('admin.support.show', $conversation);
 
         foreach ($staff as $admin) {

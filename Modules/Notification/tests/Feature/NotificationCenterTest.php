@@ -91,7 +91,7 @@ final class NotificationCenterTest extends TestCase
 
         $admin = User::factory()->create();
         $admin->assignRole(Role::Admin->value);
-        $admin->givePermissionTo(Permission::SystemManage->value);
+        $admin->givePermissionTo(Permission::NotificationBroadcast->value);
 
         $learner = User::factory()->create();
         $learner->assignRole(Role::Student->value);
