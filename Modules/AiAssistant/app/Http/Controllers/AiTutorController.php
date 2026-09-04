@@ -298,11 +298,16 @@ final class AiTutorController extends Controller
 
     private function quotaExceeded(): JsonResponse
     {
+        $user = request()->user();
+        $message = $user !== null && $this->quota->isPremium($user)
+            ? 'Bạn đã dùng hết lượt AI Tutor hôm nay. Quota sẽ reset vào ngày mai.'
+            : 'Bạn đã dùng hết lượt AI Tutor hôm nay. Nâng cấp để dùng nhiều hơn.';
+
         return ApiResponse::error(
             'QUOTA_EXCEEDED',
-            'Bạn đã dùng hết lượt AI Tutor hôm nay. Nâng cấp để dùng không giới hạn.',
+            $message,
             429,
-            [$this->quota->snapshot(request()->user())],
+            [$this->quota->snapshot($user)],
         );
     }
 }

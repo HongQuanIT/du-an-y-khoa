@@ -34,7 +34,7 @@ final class QuestionController extends Controller
         $actor = $this->actor();
         $query = QuestionAccess::scopeVisibleTo(
             Question::query()
-                ->with(['medicalTaxonomyNodes', 'creator:id,name', 'pendingReviewRequest.requester:id,name', 'reviewRequests.reviewer:id,name', 'clonedFrom:id,code,stem'])
+                ->with(['medicalTaxonomyNodes', 'creator:id,name', 'instructor:id,name', 'publisher:id,name', 'pendingReviewRequest.requester:id,name', 'reviewRequests.reviewer:id,name', 'clonedFrom:id,code,stem'])
                 ->withCount([
                     'feedback',
                     'feedback as pending_feedback_count' => fn ($q) => $q->where('status', QuestionFeedback::STATUS_PENDING),
@@ -147,10 +147,10 @@ final class QuestionController extends Controller
 
         return redirect()
             ->route('admin.questions.edit', $question)
-            ->with('status', QuestionAccess::isReviewer($this->actor())
+            ->with('status', QuestionAccess::canPublish($this->actor()) && ! QuestionAccess::canEdit($this->actor())
                 ? 'Đã tạo câu hỏi với trạng thái: '.$requestedStatus->label().'.'
                 : ($requestedStatus === QuestionStatus::InReview
-                    ? 'Đã tạo câu hỏi và gửi admin duyệt.'
+                    ? 'Đã tạo câu hỏi và gửi giảng viên duyệt.'
                     : 'Đã tạo bản nháp câu hỏi.'));
     }
 
@@ -166,6 +166,8 @@ final class QuestionController extends Controller
             'medicalTaxonomyNodes',
             'tags',
             'creator:id,name,email',
+            'instructor:id,name',
+            'publisher:id,name',
             'reviewer:id,name',
             'pendingReviewRequest.requester:id,name',
             'latestRejectedReviewRequest.reviewer:id,name',
@@ -204,6 +206,32 @@ final class QuestionController extends Controller
         $this->authorizePermission(Permission::QuestionUpdate);
         QuestionAccess::authorizeView($this->actor(), $question);
 
+        // Chờ xuất bản: không lưu nội dung qua form soạn — chỉ chuyển trạng thái (nếu có).
+        if ($question->status === QuestionStatus::PendingPublish) {
+            if ($request->filled('requested_status')) {
+                $statusData = $request->validate([
+                    'requested_status' => ['required', 'string', Rule::in(QuestionStatus::values())],
+                    'rejection_reason' => ['nullable', 'string', 'max:2000'],
+                ]);
+
+                $transition->handle(
+                    $this->actor(),
+                    $question,
+                    QuestionStatus::from($statusData['requested_status']),
+                    $statusData['rejection_reason'] ?? null,
+                );
+
+                return back()->with(
+                    'status',
+                    'Đã cập nhật trạng thái: '.QuestionStatus::from($statusData['requested_status'])->label(),
+                );
+            }
+
+            return back()->withErrors([
+                'status' => 'Câu đang chờ xuất bản. Dùng nút «Duyệt & xuất bản» hoặc «Từ chối xuất bản» bên phải.',
+            ]);
+        }
+
         $question = $action->handle($this->actor(), $question, $this->validatedPayload($request));
 
         if ($request->filled('requested_status')) {
@@ -220,19 +248,14 @@ final class QuestionController extends Controller
             );
 
             return back()->with('status', QuestionStatus::from($statusData['requested_status']) === QuestionStatus::InReview
-                ? 'Đã lưu câu hỏi và gửi admin duyệt.'
+                ? 'Đã lưu câu hỏi và gửi giảng viên duyệt.'
                 : 'Đã lưu câu hỏi và cập nhật trạng thái: '.QuestionStatus::from($statusData['requested_status'])->label());
         }
 
-        return back()->with('status', QuestionAccess::isReviewer($this->actor())
-            ? 'Đã lưu câu hỏi.'
-            : (in_array($question->status, [
-                QuestionStatus::Published,
-                QuestionStatus::Private,
-                QuestionStatus::Retired,
-            ], true)
-                ? 'Đã gửi thay đổi để admin duyệt. Nội dung đang hiển thị chưa bị thay đổi.'
-                : 'Đã lưu bản nháp câu hỏi.'));
+        return back()->with('status', match (true) {
+            $question->status === QuestionStatus::Draft && $question->published_version => 'Đã lưu bản làm việc. Ngân hàng vẫn phục vụ phiên bản đã xuất bản cho đến khi giảng viên duyệt và admin xuất bản lại.',
+            default => 'Đã lưu bản nháp câu hỏi.',
+        });
     }
 
     public function destroy(Question $question, RequestQuestionDeletionAction $action): RedirectResponse
@@ -302,9 +325,22 @@ final class QuestionController extends Controller
                 ? $this->workflowStatuses($question->status, $isReviewer)
                 : [],
             'difficulties' => Difficulty::cases(),
-            'canUpdate' => ($this->actor()->can(Permission::QuestionUpdate->value)
-                || ($question->exists === false && $this->actor()->can(Permission::QuestionCreate->value)))
-                && ($isReviewer || ! $hasBlockingReview),
+            'canUpdate' => (
+                ($question->exists === false && $this->actor()->can(Permission::QuestionCreate->value))
+                || ($this->actor()->can(Permission::QuestionUpdate->value) && ! $hasBlockingReview)
+            ),
+            // Nội dung khóa khi chờ xuất bản / đã retire — chỉ dùng panel xuất bản hoặc chuyển trạng thái riêng.
+            'canEditContent' => (
+                ($question->exists === false && $this->actor()->can(Permission::QuestionCreate->value))
+                || (
+                    $this->actor()->can(Permission::QuestionUpdate->value)
+                    && ! $hasBlockingReview
+                    && ! in_array($question->status, [
+                        QuestionStatus::PendingPublish,
+                        QuestionStatus::Retired,
+                    ], true)
+                )
+            ),
             'canPublish' => $this->actor()->can(Permission::QuestionPublish->value),
             'canDelete' => $question->exists && $this->actor()->can(Permission::QuestionDelete->value),
             'canClone' => $question->exists && $this->actor()->can(Permission::QuestionCreate->value),
@@ -322,17 +358,24 @@ final class QuestionController extends Controller
     {
         $canUpdate = $this->actor()->can(Permission::QuestionUpdate->value);
         $canPublish = $this->actor()->can(Permission::QuestionPublish->value);
+        unset($isReviewer);
 
         return match ($current) {
-            QuestionStatus::Draft => $isReviewer && $canPublish
-                ? [QuestionStatus::Published, QuestionStatus::Private]
-                : ($canUpdate ? [QuestionStatus::InReview] : []),
-            QuestionStatus::InReview => $isReviewer && $canPublish
-                ? [QuestionStatus::Published, QuestionStatus::Rejected]
-                : ($canUpdate ? [QuestionStatus::Draft] : []),
-            QuestionStatus::Published, QuestionStatus::Private => $canPublish
-                ? [QuestionStatus::Retired]
+            QuestionStatus::Draft => $canUpdate
+                ? [QuestionStatus::InReview]
                 : [],
+            QuestionStatus::InReview => $canUpdate
+                ? [QuestionStatus::Draft]
+                : [],
+            QuestionStatus::PendingPublish => $canPublish
+                ? [QuestionStatus::Published, QuestionStatus::Private, QuestionStatus::Rejected]
+                : [],
+            QuestionStatus::Published => $canPublish
+                ? [QuestionStatus::Private, QuestionStatus::Retired]
+                : ($canUpdate ? [QuestionStatus::Draft, QuestionStatus::InReview] : []),
+            QuestionStatus::Private => $canPublish
+                ? [QuestionStatus::Published, QuestionStatus::Retired]
+                : ($canUpdate ? [QuestionStatus::Draft, QuestionStatus::InReview] : []),
             QuestionStatus::Rejected, QuestionStatus::Retired => $canUpdate
                 ? [QuestionStatus::Draft]
                 : [],

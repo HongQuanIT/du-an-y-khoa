@@ -19,6 +19,7 @@ enum Permission: string
     case QuestionCreate = 'question.create';
     case QuestionUpdate = 'question.update';
     case QuestionDelete = 'question.delete';
+    case QuestionReview = 'question.review';
     case QuestionPublish = 'question.publish';
     case TopicView = 'topic.view';
     case TopicCreate = 'topic.create';
@@ -99,7 +100,8 @@ enum Permission: string
             self::ClassroomCreate,
             self::ClassroomManage,
             self::ClassroomModerate,
-            self::LiveStart => PortalGroup::Instructor,
+            self::LiveStart,
+            self::QuestionReview => PortalGroup::Instructor,
 
             self::PartnerPortal,
             self::PartnerCodesManage,

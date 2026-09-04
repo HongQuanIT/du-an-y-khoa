@@ -12,17 +12,15 @@ use Illuminate\Validation\ValidationException;
 use Modules\Admin\Enums\AuditAction;
 use Modules\Admin\Support\Auditor;
 use Modules\Admin\Support\AuditSnapshot;
-use Modules\Admin\Support\QuestionAccess;
 use Modules\QuestionBank\Enums\Difficulty;
-use Modules\QuestionBank\Enums\QuestionReviewAction;
-use Modules\QuestionBank\Enums\QuestionReviewStatus;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
+use Modules\QuestionBank\Jobs\RefreshQuestionSimilarityJob;
 use Modules\QuestionBank\Models\MedicalTaxonomyNode;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionHint;
 use Modules\QuestionBank\Models\QuestionOption;
-use Modules\QuestionBank\Models\QuestionReviewRequest;
+use Modules\QuestionBank\Services\QuestionContentFingerprint;
 
 /**
  * Create or update a question + options (admin editor).
@@ -33,6 +31,7 @@ final class SaveAdminQuestionAction
 
     public function __construct(
         private readonly CaptureQuestionVersionAction $captureVersion,
+        private readonly QuestionContentFingerprint $fingerprint,
     ) {}
 
     /**
@@ -60,9 +59,8 @@ final class SaveAdminQuestionAction
 
         return DB::transaction(function () use ($actor, $question, $data, $options): Question {
             $before = $question ? AuditSnapshot::question($question) : null;
-            $isReviewer = QuestionAccess::isReviewer($actor);
-            $isReviewerUpdate = $question !== null && $isReviewer;
             $reviewRequest = null;
+            $demoteLiveToDraft = false;
 
             if ($question === null) {
                 $question = new Question;
@@ -70,14 +68,22 @@ final class SaveAdminQuestionAction
                 $question->version = 0;
                 $question->created_by = $actor->getKey();
             } else {
-                if (! $isReviewer && $this->requiresAdminApprovalBeforeApply($question->status)) {
-                    $this->queueUpdate($actor, $question, $data);
-
-                    return $question->fresh(['options', 'hints', 'medicalTaxonomyNodes', 'pendingReviewRequest']);
+                if ($question->status === QuestionStatus::PendingPublish) {
+                    throw ValidationException::withMessages([
+                        'status' => 'Câu đang chờ xuất bản. Không chỉnh sửa — Admin xuất bản hoặc từ chối trước.',
+                    ]);
                 }
 
-                if ($question->status === QuestionStatus::Published) {
-                    $this->captureVersion->handle($question, null, 'baseline');
+                if ($question->status === QuestionStatus::Retired) {
+                    throw ValidationException::withMessages([
+                        'status' => 'Câu đã ngừng dùng. Nhân bản nếu cần soạn lại.',
+                    ]);
+                }
+
+                // Mọi sửa trên câu đang live: working copy → draft; QBank giữ snapshot published_version.
+                if (in_array($question->status, [QuestionStatus::Published, QuestionStatus::Private], true)) {
+                    $this->freezePublishedSnapshot($question);
+                    $demoteLiveToDraft = true;
                 }
             }
 
@@ -94,8 +100,6 @@ final class SaveAdminQuestionAction
                 ? array_values(array_map(fn (array $hint): string => $hint['content'], $hints))
                 : $this->resolveKeyInfo($question, $data['key_info'] ?? []);
 
-            $isPublishedUpdate = $question->exists && $question->status === QuestionStatus::Published;
-
             $question->fill([
                 'stem' => SafeHtml::fromEditor($data['stem']),
                 'stem_image_path' => $this->sanitizeStemImagePath($data['stem_image_path'] ?? null),
@@ -107,8 +111,11 @@ final class SaveAdminQuestionAction
                 'exam_flag' => (bool) ($data['exam_flag'] ?? false),
                 'updated_by' => $actor->getKey(),
             ]);
-            if ($isPublishedUpdate) {
-                $question->version = ($question->version ?: 0) + 1;
+            if ($demoteLiveToDraft) {
+                $question->status = QuestionStatus::Draft;
+                $question->instructor_id = null;
+                $question->rejection_reason = null;
+                $question->rejected_by_role = null;
             }
             $question->save();
             $this->syncTaxonomyRelations($question, $data);
@@ -124,10 +131,9 @@ final class SaveAdminQuestionAction
             $this->syncOptions($question, $options);
 
             $question->load('options', 'hints', 'coreClinicalTopics', 'medicalTaxonomyNodes', 'tags');
-            if ($isPublishedUpdate) {
-                $this->captureVersion->handle($question, $actor);
-            }
 
+            $this->fingerprint->persist($question);
+            RefreshQuestionSimilarityJob::dispatch((string) $question->getKey());
 
             Auditor::record(
                 $before === null ? AuditAction::QuestionCreated : AuditAction::QuestionUpdated,
@@ -138,11 +144,30 @@ final class SaveAdminQuestionAction
                 metadata: $reviewRequest !== null ? [
                     'review_request_id' => $reviewRequest->getKey(),
                     'review_action' => $reviewRequest->action->value,
-                ] : null,
+                ] : ($demoteLiveToDraft ? [
+                    'working_copy' => true,
+                    'published_version' => $question->published_version,
+                ] : null),
             );
 
             return $question;
         });
+    }
+
+    /** Đảm bảo snapshot live tồn tại trước khi sửa working copy. */
+    private function freezePublishedSnapshot(Question $question): void
+    {
+        $publishedVersion = (int) ($question->published_version ?: $question->version);
+        if ($publishedVersion <= 0) {
+            $publishedVersion = 1;
+        }
+
+        $question->forceFill([
+            'version' => $publishedVersion,
+            'published_version' => $publishedVersion,
+        ])->save();
+
+        $this->captureVersion->handle($question, null, 'baseline');
     }
 
     /** @param array<string, mixed> $data */
@@ -156,52 +181,6 @@ final class SaveAdminQuestionAction
             ]);
         }
     }
-
-    private function requiresAdminApprovalBeforeApply(QuestionStatus $status): bool
-    {
-        return in_array($status, [
-            QuestionStatus::Published,
-            QuestionStatus::Private,
-            QuestionStatus::Retired,
-        ], true);
-    }
-
-    /** @param array<string, mixed> $data */
-    private function queueUpdate(User $actor, Question $question, array $data): void
-    {
-        if ($question->reviewRequests()
-            ->where('status', QuestionReviewStatus::Pending->value)
-            ->whereIn('action', [
-                QuestionReviewAction::Update->value,
-                QuestionReviewAction::Delete->value,
-            ])
-            ->exists()) {
-            throw ValidationException::withMessages([
-                'review' => 'Câu hỏi đang có một yêu cầu chờ duyệt. Vui lòng chờ admin xử lý trước khi gửi thay đổi mới.',
-            ]);
-        }
-
-        $reviewRequest = QuestionReviewRequest::query()->create([
-            'question_id' => $question->getKey(),
-            'action' => QuestionReviewAction::Update,
-            'payload' => $data,
-            'status' => QuestionReviewStatus::Pending,
-            'requested_by' => $actor->getKey(),
-        ]);
-
-        Auditor::record(
-            AuditAction::QuestionUpdateRequested,
-            $actor,
-            $question,
-            AuditSnapshot::question($question),
-            AuditSnapshot::questionPayload($data),
-            metadata: [
-                'review_request_id' => $reviewRequest->getKey(),
-                'review_action' => QuestionReviewAction::Update->value,
-            ],
-        );
-    }
-
 
     private function sanitizeStemImagePath(?string $path): ?string
     {

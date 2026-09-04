@@ -7,9 +7,9 @@ namespace Modules\QuestionBank\Repositories;
 use App\Support\Repositories\EloquentRepository;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Modules\QuestionBank\Data\ListQuestionsData;
-use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Support\QuestionFilterBuilder;
+use Modules\QuestionBank\Support\ServePublishedQuestion;
 
 /**
  * @extends EloquentRepository<Question>
@@ -37,12 +37,30 @@ final class QuestionRepository extends EloquentRepository
                 'coreClinicalTopics:id,name',
                 'medicalTaxonomyNodes:id,name',
                 'tags:id,name',
-            ])
-            ->where('status', QuestionStatus::Published);
+            ]);
+        ServePublishedQuestion::scopeAvailable($query);
 
         if ($data->query) {
             $pattern = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $data->query).'%';
-            $query->whereRaw("stem LIKE ? ESCAPE '!'", [$pattern]);
+            $query->where(function ($builder) use ($pattern): void {
+                $builder->where(function ($published) use ($pattern): void {
+                    $published->where('status', \Modules\QuestionBank\Enums\QuestionStatus::Published)
+                        ->whereRaw("stem LIKE ? ESCAPE '!'", [$pattern]);
+                })->orWhere(function ($revision) use ($pattern): void {
+                    $revision->where('status', '!=', \Modules\QuestionBank\Enums\QuestionStatus::Published)
+                        ->whereNotNull('published_version')
+                        ->where(function ($match) use ($pattern): void {
+                            // Match working-copy or published snapshot text; overlay serves snapshot.
+                            $match->whereRaw("stem LIKE ? ESCAPE '!'", [$pattern])
+                                ->orWhereHas(
+                                    'versions',
+                                    fn ($versions) => $versions
+                                        ->whereColumn('question_versions.version', 'questions.published_version')
+                                        ->whereRaw("json_extract(snapshot, '$.stem') LIKE ? ESCAPE '!'", [$pattern]),
+                                );
+                        });
+                });
+            });
         }
 
         $this->filters->apply(
@@ -56,9 +74,42 @@ final class QuestionRepository extends EloquentRepository
         );
 
         if ($data->freeOnly !== null) {
-            $query->where('is_free', $data->freeOnly);
+            $freeOnly = $data->freeOnly;
+            $query->where(function ($builder) use ($freeOnly): void {
+                $builder->where(function ($published) use ($freeOnly): void {
+                    $published->where('status', \Modules\QuestionBank\Enums\QuestionStatus::Published)
+                        ->where('is_free', $freeOnly);
+                })->orWhere(function ($revision) use ($freeOnly): void {
+                    $revision->where('status', '!=', \Modules\QuestionBank\Enums\QuestionStatus::Published)
+                        ->whereNotNull('published_version')
+                        ->where(function ($gate) use ($freeOnly): void {
+                            $gate->whereHas(
+                                'versions',
+                                fn ($versions) => $versions
+                                    ->whereColumn('question_versions.version', 'questions.published_version')
+                                    ->whereRaw(
+                                        'CAST(json_extract(snapshot, \'$.is_free\') AS INTEGER) = ?',
+                                        [$freeOnly ? 1 : 0],
+                                    ),
+                            )->orWhere(function ($fallback) use ($freeOnly): void {
+                                // Fallback when snapshot missing is_free key.
+                                $fallback->where('is_free', $freeOnly)
+                                    ->whereDoesntHave(
+                                        'versions',
+                                        fn ($versions) => $versions->whereColumn(
+                                            'question_versions.version',
+                                            'questions.published_version',
+                                        ),
+                                    );
+                            });
+                        });
+                });
+            });
         }
 
-        return $query->orderByDesc('created_at')->paginate($data->perPage);
+        $paginator = $query->orderByDesc('created_at')->paginate($data->perPage);
+        ServePublishedQuestion::overlayMany($paginator->getCollection());
+
+        return $paginator;
     }
 }

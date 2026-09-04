@@ -90,7 +90,8 @@ final class AdminSettingsTest extends TestCase
             ->assertOk()
             ->assertSee('Cài đặt hệ thống')
             ->assertSee('Cấu hình chung')
-            ->assertSee('Báo cáo');
+            ->assertSee('Báo cáo')
+            ->assertSee('AI Tutor');
 
         $this->flushSession();
         $this->actingAsStaff($admin)
@@ -127,6 +128,15 @@ final class AdminSettingsTest extends TestCase
                         'overwrite_attribution' => '0',
                         'require_active_partner' => '1',
                     ],
+                    'ai_tutor' => [
+                        'free_daily_limit' => '5',
+                        'premium_daily_limit' => '50',
+                        'history_max_messages' => '6',
+                        'response_cache' => '1',
+                        'response_cache_ttl_days' => '7',
+                        'tutor_model' => 'gpt-4.1-mini',
+                        'max_output_tokens' => '800',
+                    ],
                 ],
             ])
             ->assertRedirect()
@@ -146,10 +156,19 @@ final class AdminSettingsTest extends TestCase
             'type' => 'integer',
         ]);
 
+        $this->assertDatabaseHas('settings', [
+            'group' => 'ai_tutor',
+            'key' => 'free_daily_limit',
+            'value' => '5',
+            'type' => 'integer',
+        ]);
+
         $this->assertFalse(setting('features.maintenance_mode'));
         $this->assertSame(25, setting('features.free_test_question_limit'));
         $this->assertSame(7, setting('reports.cache_warm_interval_days'));
         $this->assertSame(7, \Modules\Admin\Support\AdminReportCache::warmIntervalDays());
+        $this->assertSame(5, \Modules\AiAssistant\Support\AiTutorSettings::freeDailyLimit());
+        $this->assertSame(50, \Modules\AiAssistant\Support\AiTutorSettings::premiumDailyLimit());
     }
 
     public function test_student_cannot_access_admin_settings(): void

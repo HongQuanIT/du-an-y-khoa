@@ -15,6 +15,8 @@ use Modules\AiAssistant\Models\AiThread;
 use Modules\AiAssistant\Services\AiQuotaService;
 use Modules\AiAssistant\Services\ContextPackBuilder;
 use Modules\AiAssistant\Services\TutorPromptFactory;
+use Modules\AiAssistant\Services\TutorResponseCache;
+use Modules\AiAssistant\Support\AiTutorSettings;
 use Modules\QuestionBank\Models\QuestionSession;
 use Throwable;
 
@@ -31,6 +33,7 @@ final class RunTutorReplyAction
         private readonly ContextPackBuilder $contextBuilder,
         private readonly TutorPromptFactory $prompts,
         private readonly AiQuotaService $quota,
+        private readonly TutorResponseCache $responseCache,
     ) {}
 
     public static function stopCacheKey(string $messageId): string
@@ -40,8 +43,6 @@ final class RunTutorReplyAction
 
     public function handle(AiThread $thread, AiMessage $assistant, bool $broadcast): AiMessage
     {
-        $userId = (int) $thread->user_id;
-
         if ($broadcast) {
             $this->emit($assistant, AiStreamEvent::START, ['role' => 'assistant']);
         }
@@ -49,7 +50,25 @@ final class RunTutorReplyAction
         $assistant->update(['status' => AiMessage::STATUS_STREAMING]);
 
         try {
-            [$system, $history] = $this->buildPrompt($thread, $assistant);
+            [$system, $history, $pack, $cacheable] = $this->buildPrompt($thread, $assistant);
+
+            if ($cacheable) {
+                $cached = $this->responseCache->get($thread, $pack);
+                if ($cached !== null) {
+                    $reply = new TutorReply(
+                        content: $cached['content'],
+                        citations: $cached['citations'],
+                        tokensIn: 0,
+                        tokensOut: 0,
+                    );
+
+                    if ($broadcast && $reply->content !== '') {
+                        $this->emit($assistant, AiStreamEvent::DELTA, ['delta' => $reply->content]);
+                    }
+
+                    return $this->finish($thread, $assistant, $reply, $broadcast, storeCache: false, pack: $pack);
+                }
+            }
 
             $reply = $this->client->stream(
                 $system,
@@ -62,7 +81,14 @@ final class RunTutorReplyAction
                 fn (): bool => Cache::get(self::stopCacheKey($assistant->getKey()), false) === true,
             );
 
-            return $this->finish($thread, $assistant, $reply, $broadcast);
+            return $this->finish(
+                $thread,
+                $assistant,
+                $reply,
+                $broadcast,
+                storeCache: $cacheable && ! $reply->stopped,
+                pack: $pack,
+            );
         } catch (Throwable $e) {
             $user = $thread->user;
             if ($user instanceof User) {
@@ -87,8 +113,17 @@ final class RunTutorReplyAction
         }
     }
 
-    private function finish(AiThread $thread, AiMessage $assistant, TutorReply $reply, bool $broadcast): AiMessage
-    {
+    /**
+     * @param  array<string, mixed>  $pack
+     */
+    private function finish(
+        AiThread $thread,
+        AiMessage $assistant,
+        TutorReply $reply,
+        bool $broadcast,
+        bool $storeCache,
+        array $pack,
+    ): AiMessage {
         $assistant->update([
             'status' => $reply->stopped ? AiMessage::STATUS_STOPPED : AiMessage::STATUS_DONE,
             'content' => $reply->content,
@@ -96,6 +131,10 @@ final class RunTutorReplyAction
             'tokens_in' => $reply->tokensIn,
             'tokens_out' => $reply->tokensOut,
         ]);
+
+        if ($storeCache && ! $reply->stopped && trim($reply->content) !== '') {
+            $this->responseCache->put($thread, $pack, $reply->content, $reply->citations);
+        }
 
         if ($broadcast) {
             if ($reply->citations !== []) {
@@ -115,43 +154,125 @@ final class RunTutorReplyAction
     }
 
     /**
-     * @return array{0: string, 1: array<int, array{role: string, content: string}>}
+     * @return array{0: list<string>, 1: array<int, array{role: string, content: string}>, 2: array<string, mixed>, 3: bool}
      */
     private function buildPrompt(AiThread $thread, AiMessage $assistant): array
     {
         $preset = $thread->preset ? TutorPreset::tryFrom($thread->preset) : null;
-        $pack = [];
+        $pack = $this->resolvePack($thread);
 
+        $priorAssistantDone = $thread->messages()
+            ->where('id', '!=', $assistant->getKey())
+            ->where('role', AiMessage::ROLE_ASSISTANT)
+            ->whereIn('status', [AiMessage::STATUS_DONE, AiMessage::STATUS_STOPPED])
+            ->exists();
+
+        $includeFullContext = ! $priorAssistantDone;
+        $system = $this->prompts->systemMessages(
+            $pack,
+            $preset ?? TutorPreset::AnalyzeWithoutSpoiler,
+            $includeFullContext,
+        );
+
+        $history = $this->truncateHistory($thread, $assistant);
+
+        $latestUser = $this->latestUserContent($history);
+        $cacheable = $includeFullContext
+            && $this->responseCache->isCacheableAutoStart($thread, $latestUser, $pack);
+
+        return [$system, $history, $pack, $cacheable];
+    }
+
+    /** @return array<string, mixed> */
+    private function resolvePack(AiThread $thread): array
+    {
         if ($thread->context_type === 'question' && $thread->session_id && $thread->context_id) {
             $session = QuestionSession::query()->find($thread->session_id);
             if ($session instanceof QuestionSession) {
-                $built = $this->contextBuilder->forQuestion(
+                $preset = $thread->preset ? TutorPreset::tryFrom($thread->preset) : null;
+
+                return $this->contextBuilder->forQuestion(
                     $thread->user,
                     $session,
                     (string) $thread->context_id,
                     $preset,
-                );
-                $pack = $built['pack'];
+                )['pack'];
             }
         }
 
-        $system = $this->prompts->systemPrompt($pack, $preset ?? TutorPreset::AnalyzeWithoutSpoiler);
+        // Minimal pack so follow-ups still get CONTEXT_REF when session snapshot is unavailable.
+        if ($thread->context_id !== null) {
+            return [
+                'question_id' => (string) $thread->context_id,
+                'answered' => false,
+            ];
+        }
 
-        $history = $thread->messages()
+        return [];
+    }
+
+    /**
+     * Newest N user/assistant messages; always keeps the latest user turn.
+     *
+     * @return array<int, array{role: string, content: string}>
+     */
+    private function truncateHistory(AiThread $thread, AiMessage $assistant): array
+    {
+        $max = AiTutorSettings::historyMaxMessages();
+
+        $rows = AiMessage::query()
+            ->where('thread_id', $thread->getKey())
             ->where('id', '!=', $assistant->getKey())
             ->whereIn('role', [AiMessage::ROLE_USER, AiMessage::ROLE_ASSISTANT])
             ->whereIn('status', [AiMessage::STATUS_DONE, AiMessage::STATUS_STOPPED])
-            ->orderBy('created_at')
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->limit($max)
             ->get()
+            ->sortBy([
+                ['created_at', 'asc'],
+                ['id', 'asc'],
+            ])
+            ->values();
+
+        $hasUser = $rows->contains(fn (AiMessage $m): bool => $m->role === AiMessage::ROLE_USER);
+        if (! $hasUser) {
+            $latestUser = AiMessage::query()
+                ->where('thread_id', $thread->getKey())
+                ->where('id', '!=', $assistant->getKey())
+                ->where('role', AiMessage::ROLE_USER)
+                ->where('status', AiMessage::STATUS_DONE)
+                ->orderByDesc('created_at')
+                ->first();
+            if ($latestUser !== null) {
+                $rows = $rows->push($latestUser)->sortBy([
+                    ['created_at', 'asc'],
+                    ['id', 'asc'],
+                ])->values();
+                if ($rows->count() > $max) {
+                    $rows = $rows->slice(-$max)->values();
+                }
+            }
+        }
+
+        return $rows
             ->map(fn (AiMessage $m): array => [
                 'role' => $m->role,
                 'content' => (string) $m->content,
             ])
-            ->values()
             ->all();
+    }
 
-        // The just-created user message is `done` by default, so it is included above.
-        return [$system, $history];
+    /** @param array<int, array{role: string, content: string}> $history */
+    private function latestUserContent(array $history): string
+    {
+        for ($i = count($history) - 1; $i >= 0; $i--) {
+            if (($history[$i]['role'] ?? '') === AiMessage::ROLE_USER) {
+                return (string) ($history[$i]['content'] ?? '');
+            }
+        }
+
+        return '';
     }
 
     /** @param array<string, mixed> $payload */

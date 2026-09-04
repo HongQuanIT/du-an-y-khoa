@@ -42,7 +42,7 @@ final class TransitionQuestionStatusAction
             return $question;
         }
 
-        $this->assertTransitionAllowed($actor, $from, $to);
+        $this->assertTransitionAllowed($actor, $question, $from, $to);
         $this->assertReadyForStatus($question, $to);
 
         $before = AuditSnapshot::question($question);
@@ -57,7 +57,11 @@ final class TransitionQuestionStatusAction
             $question->forceFill([
                 'status' => $to,
                 'reviewer_id' => $actor->getKey(),
+                'publisher_id' => $from === QuestionStatus::PendingPublish ? $actor->getKey() : $question->publisher_id,
                 'rejection_reason' => trim((string) $rejectionReason),
+                'rejected_by_role' => $from === QuestionStatus::PendingPublish
+                    ? 'admin'
+                    : ($question->rejected_by_role ?? 'admin'),
                 'updated_by' => $actor->getKey(),
             ])->save();
 
@@ -80,6 +84,7 @@ final class TransitionQuestionStatusAction
             $question->forceFill([
                 'status' => $to,
                 'rejection_reason' => null,
+                'rejected_by_role' => null,
                 'updated_by' => $actor->getKey(),
             ])->save();
 
@@ -100,20 +105,30 @@ final class TransitionQuestionStatusAction
 
         $isPublishing = in_array($to, [QuestionStatus::Published, QuestionStatus::Private], true);
 
-        if ($isPublishing) {
+        // Chỉ snapshot bản đã từng publish; câu mới (version 0) chưa có phiên bản.
+        if ($isPublishing && (int) $question->version > 0) {
             $this->captureVersion->handle($question, null, 'baseline');
         }
 
+        $nextVersion = $isPublishing ? ((int) $question->version + 1) : (int) $question->version;
+
         $question->forceFill([
             'status' => $to,
-            'version' => $isPublishing ? ($question->version + 1) : $question->version,
+            'version' => $nextVersion,
+            'published_version' => $isPublishing ? $nextVersion : $question->published_version,
             'updated_by' => $actor->getKey(),
             'reviewer_id' => $isPublishing
                 ? $actor->getKey()
                 : $question->reviewer_id,
+            'publisher_id' => $isPublishing
+                ? $actor->getKey()
+                : $question->publisher_id,
             'rejection_reason' => $isPublishing
                 ? null
                 : $question->rejection_reason,
+            'rejected_by_role' => $isPublishing
+                ? null
+                : $question->rejected_by_role,
         ])->save();
 
         if ($to === QuestionStatus::Published && QuestionAccess::isReviewer($actor)) {
@@ -141,7 +156,7 @@ final class TransitionQuestionStatusAction
 
         if ($isPublishing) {
             $question->load(['options' => fn ($query) => $query->orderBy('order'), 'medicalTaxonomyNodes:id']);
-            $this->captureVersion->handle($question, $actor, 'status');
+            $this->captureVersion->handle($question, $actor, 'publish');
         }
 
         Auditor::record(
@@ -159,14 +174,32 @@ final class TransitionQuestionStatusAction
         return $question->refresh();
     }
 
-    private function assertTransitionAllowed(User $actor, QuestionStatus $from, QuestionStatus $to): void
-    {
+    private function assertTransitionAllowed(
+        User $actor,
+        Question $question,
+        QuestionStatus $from,
+        QuestionStatus $to,
+    ): void {
         $map = [
-            QuestionStatus::Draft->value => [QuestionStatus::InReview, QuestionStatus::Published, QuestionStatus::Private],
-            QuestionStatus::InReview->value => [QuestionStatus::Draft, QuestionStatus::Published, QuestionStatus::Rejected],
-            QuestionStatus::Published->value => [QuestionStatus::Retired, QuestionStatus::InReview],
+            QuestionStatus::Draft->value => [QuestionStatus::InReview],
+            QuestionStatus::InReview->value => [
+                QuestionStatus::Draft,
+                QuestionStatus::PendingPublish,
+            ],
+            QuestionStatus::PendingPublish->value => [
+                QuestionStatus::Published,
+                QuestionStatus::Private,
+                QuestionStatus::Rejected,
+            ],
+            QuestionStatus::Published->value => [
+                QuestionStatus::Private,
+                QuestionStatus::Retired,
+            ],
             QuestionStatus::Rejected->value => [QuestionStatus::Draft],
-            QuestionStatus::Private->value => [QuestionStatus::Retired, QuestionStatus::InReview],
+            QuestionStatus::Private->value => [
+                QuestionStatus::Published,
+                QuestionStatus::Retired,
+            ],
             QuestionStatus::Retired->value => [QuestionStatus::Draft],
         ];
 
@@ -178,6 +211,17 @@ final class TransitionQuestionStatusAction
             ]);
         }
 
+        // Lớp 1 — chỉ role giảng viên + question.review. Admin không duyệt thay.
+        if ($to === QuestionStatus::PendingPublish) {
+            if (! $actor->hasRole(\App\Support\Enums\Role::Instructor->value)
+                || ! $actor->can(Permission::QuestionReview->value)) {
+                abort(403, 'Chỉ giảng viên có quyền question.review được duyệt lớp 1.');
+            }
+
+            return;
+        }
+
+        // Lớp 2 — publish / reject-publish / retire
         $needsPublishPermission = in_array($to, [
             QuestionStatus::Published,
             QuestionStatus::Private,
@@ -185,33 +229,79 @@ final class TransitionQuestionStatusAction
             QuestionStatus::Rejected,
         ], true);
 
-        if ($needsPublishPermission && ! $actor->can(Permission::QuestionPublish->value)) {
-            abort(403, 'Cần quyền question.publish.');
+        if ($needsPublishPermission) {
+            if (! $actor->can(Permission::QuestionPublish->value)) {
+                abort(403, 'Cần quyền question.publish.');
+            }
+
+            if ($to === QuestionStatus::Published) {
+                if ($from === QuestionStatus::Private) {
+                    return;
+                }
+
+                if ($from !== QuestionStatus::PendingPublish) {
+                    throw ValidationException::withMessages([
+                        'status' => 'Chỉ xuất bản được câu đã được giảng viên duyệt (chờ xuất bản).',
+                    ]);
+                }
+
+                if ($question->instructor_id === null) {
+                    throw ValidationException::withMessages([
+                        'status' => 'Thiếu giảng viên duyệt lớp 1 — không thể xuất bản.',
+                    ]);
+                }
+
+                if ((int) $question->instructor_id === (int) $actor->getKey()) {
+                    throw ValidationException::withMessages([
+                        'status' => 'Cần ít nhất 2 người duyệt: người xuất bản phải khác giảng viên đã duyệt.',
+                    ]);
+                }
+            }
+
+            if ($to === QuestionStatus::Private && $from === QuestionStatus::PendingPublish) {
+                if ($question->instructor_id === null) {
+                    throw ValidationException::withMessages([
+                        'status' => 'Thiếu giảng viên duyệt lớp 1 — không thể đưa vào kho đề thi.',
+                    ]);
+                }
+
+                if ((int) $question->instructor_id === (int) $actor->getKey()) {
+                    throw ValidationException::withMessages([
+                        'status' => 'Cần ít nhất 2 người duyệt: người xuất bản phải khác giảng viên đã duyệt.',
+                    ]);
+                }
+            }
+
+            if ($to === QuestionStatus::Rejected && $from !== QuestionStatus::PendingPublish) {
+                throw ValidationException::withMessages([
+                    'status' => 'Admin chỉ từ chối được câu đang chờ xuất bản. Từ chối lớp 1 thuộc giảng viên.',
+                ]);
+            }
+
+            return;
         }
 
-        if (! $needsPublishPermission && ! $actor->can(Permission::QuestionUpdate->value)) {
+        // Submit / withdraw: question.update
+        if (! $actor->can(Permission::QuestionUpdate->value)) {
             abort(403, 'Cần quyền question.update.');
-        }
-
-        // Admin/SuperAdmin xuất bản trực tiếp — không dùng bước "Gửi duyệt".
-        if ($to === QuestionStatus::InReview && QuestionAccess::isReviewer($actor)) {
-            throw ValidationException::withMessages([
-                'status' => 'Admin có toàn quyền xuất bản trực tiếp, không cần gửi duyệt.',
-            ]);
         }
     }
 
     private function assertReadyForStatus(Question $question, QuestionStatus $to): void
     {
-        if (! in_array($to, [QuestionStatus::InReview, QuestionStatus::Published, QuestionStatus::Private], true)) {
+        if (! in_array($to, [
+            QuestionStatus::InReview,
+            QuestionStatus::PendingPublish,
+            QuestionStatus::Published,
+            QuestionStatus::Private,
+        ], true)) {
             return;
         }
-
         $question->loadMissing('options');
 
-        if (SafeHtml::isBlank($question->stem) || SafeHtml::isBlank($question->explanation)) {
+        if (SafeHtml::isBlank($question->stem)) {
             throw ValidationException::withMessages([
-                'status' => 'Cần nội dung câu hỏi và giải thích cho đáp án đúng trước khi gửi duyệt / xuất bản.',
+                'status' => 'Vui lòng nhập nội dung câu hỏi trước khi gửi duyệt / xuất bản.',
             ]);
         }
 

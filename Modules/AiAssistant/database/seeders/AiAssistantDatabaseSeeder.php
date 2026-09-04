@@ -6,11 +6,10 @@ use Illuminate\Database\Seeder;
 
 class AiAssistantDatabaseSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        // $this->call([]);
+        $this->call([
+            AiTutorSettingsSeeder::class,
+        ]);
     }
 }

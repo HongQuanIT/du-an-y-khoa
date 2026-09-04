@@ -21,7 +21,7 @@ final class ResilientTutorClient implements AiTutorClient
         private readonly AiTutorClient $fallback,
     ) {}
 
-    public function stream(string $system, array $messages, callable $onDelta, ?callable $shouldStop = null): TutorReply
+    public function stream(string|array $system, array $messages, callable $onDelta, ?callable $shouldStop = null): TutorReply
     {
         try {
             return $this->primary->stream($system, $messages, $onDelta, $shouldStop);

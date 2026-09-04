@@ -143,13 +143,16 @@ erDiagram
         text lead_in
         string type "single_best/multi/matching"
         string difficulty
-        string status "draft/in_review/published/retired"
+        string status "draft/in_review/pending_publish/published/rejected/private/retired"
         bool is_free
         longtext explanation
         json references
         json lab_values
         json media_ids
         int version
+        int published_version
+        bigint instructor_id FK
+        bigint publisher_id FK
         json stats_cache
         timestamp deleted_at
     }
@@ -190,7 +193,8 @@ erDiagram
         bigint question_id FK
         int version_number
         json snapshot
-        bigint reviewer_id FK
+        bigint instructor_id FK
+        bigint publisher_id FK
         timestamp created_at
     }
     QUESTION_SESSION {

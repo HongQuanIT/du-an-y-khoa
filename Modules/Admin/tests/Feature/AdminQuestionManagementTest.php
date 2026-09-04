@@ -76,29 +76,35 @@ final class AdminQuestionManagementTest extends TestCase
     public function test_admin_creates_question_from_status_bar_without_save_card(): void
     {
         $admin = $this->staffUser(Role::Admin);
+        $editor = $this->staffUser(Role::ContentEditor);
 
         $this->actingAsStaff($admin)
+            ->get(route('admin.questions.create'))
+            ->assertForbidden();
+
+        $this->actingAsStaff($editor)
             ->get(route('admin.questions.create'))
             ->assertOk()
             ->assertSee('Trạng thái:')
             ->assertSee('Lưu nháp')
-            ->assertSee('Xuất bản')
+            ->assertSee('Gửi duyệt')
+            ->assertDontSee('Xuất bản')
             ->assertSee('id="admin_sidebar_status_select"', false);
 
-        $this->actingAsStaff($admin)
+        $this->actingAsStaff($editor)
             ->post(route('admin.questions.store'), array_merge($this->payload(), [
-                'requested_status' => QuestionStatus::Published->value,
+                'requested_status' => QuestionStatus::InReview->value,
             ]))
             ->assertRedirect()
             ->assertSessionHasNoErrors();
 
-        $this->assertSame(QuestionStatus::Published, Question::query()->firstOrFail()->status);
+        $this->assertSame(QuestionStatus::InReview, Question::query()->firstOrFail()->status);
     }
 
     public function test_editor_sees_rejected_review_note_and_can_resubmit_question(): void
     {
         $editor = $this->staffUser(Role::ContentEditor);
-        $admin = $this->staffUser(Role::Admin);
+        $instructor = $this->instructorUser();
 
         $this->actingAsStaff($editor)
             ->post(route('admin.questions.store'), array_merge($this->payload(), [
@@ -107,13 +113,9 @@ final class AdminQuestionManagementTest extends TestCase
             ->assertRedirect();
 
         $question = Question::query()->firstOrFail();
-        $reviewRequest = QuestionReviewRequest::query()->firstOrFail();
 
-        $this->actingAsStaff($admin)
-            ->post(route('admin.questions.reviews.reject', $reviewRequest), [
-                'review_note' => 'Cần bổ sung giải thích cho các đáp án sai.',
-            ])
-            ->assertRedirect(route('admin.questions.edit', $question));
+        app(\Modules\QuestionBank\Actions\InstructorReviewQuestionAction::class)
+            ->reject($instructor, $question->fresh(), 'Cần bổ sung giải thích cho các đáp án sai.');
 
         $this->actingAsStaff($editor)
             ->get(route('admin.questions.edit', $question))
@@ -121,7 +123,7 @@ final class AdminQuestionManagementTest extends TestCase
             ->assertSee('Câu này bị từ chối bởi admin')
             ->assertSee('Bị từ chối')
             ->assertSee('Cần bổ sung giải thích cho các đáp án sai.')
-            ->assertSee($admin->name)
+            ->assertSee($instructor->name)
             ->assertDontSee('Phiên bản')
             ->assertSee('Bạn có thể chỉnh sửa câu hỏi bên dưới và lưu để gửi lại duyệt.');
     }
@@ -231,7 +233,6 @@ final class AdminQuestionManagementTest extends TestCase
     public function test_admin_can_approve_legacy_question_using_correct_option_explanation(): void
     {
         $editor = $this->staffUser(Role::ContentEditor);
-        $admin = $this->staffUser(Role::Admin);
         $payload = $this->payload();
         unset($payload['explanation']);
 
@@ -246,11 +247,11 @@ final class AdminQuestionManagementTest extends TestCase
 
         // Simulate a request created before the general-explanation field existed.
         $question->forceFill(['explanation' => null])->save();
-        $reviewRequest = QuestionReviewRequest::query()->firstOrFail();
+        $correctExplanation = strip_tags((string) $question->options()->where('is_correct', true)->value('explanation'));
+        $question->forceFill(['explanation' => $correctExplanation])->save();
 
-        $this->actingAsStaff($admin)
-            ->post(route('admin.questions.reviews.approve', $reviewRequest))
-            ->assertRedirect(route('admin.questions.edit', $question));
+        $this->approveByInstructor($question);
+        $this->publishByAdmin($question);
 
         $question->refresh();
         $this->assertSame(QuestionStatus::Published, $question->status);
@@ -260,7 +261,6 @@ final class AdminQuestionManagementTest extends TestCase
     public function test_editor_version_history_shows_full_content_without_admin_approval_version(): void
     {
         $editor = $this->staffUser(Role::ContentEditor);
-        $admin = $this->staffUser(Role::Admin);
 
         $this->actingAsStaff($editor)
             ->post(route('admin.questions.store'), array_merge($this->payload(), [
@@ -270,18 +270,24 @@ final class AdminQuestionManagementTest extends TestCase
             ->assertRedirect();
 
         $question = Question::query()->firstOrFail();
-        $reviewRequest = QuestionReviewRequest::query()->firstOrFail();
 
-        $this->actingAsStaff($admin)
-            ->post(route('admin.questions.reviews.approve', $reviewRequest))
-            ->assertRedirect(route('admin.questions.edit', $question));
+        $this->approveByInstructor($question);
+        $question->refresh();
+        $this->assertSame(0, $question->version);
+        $this->assertSame(QuestionStatus::PendingPublish, $question->status);
+
+        $this->publishByAdmin($question);
 
         $question->refresh();
         $this->assertSame(1, $question->version);
         $this->assertDatabaseHas('question_versions', [
             'question_id' => $question->id,
             'version' => 1,
-            'event' => 'status',
+            'event' => 'publish',
+        ]);
+        $this->assertDatabaseMissing('question_versions', [
+            'question_id' => $question->id,
+            'version' => 0,
         ]);
 
         $this->actingAsStaff($editor)
@@ -300,7 +306,7 @@ final class AdminQuestionManagementTest extends TestCase
     public function test_editor_can_view_history_and_restore_an_old_question_version(): void
     {
         $editor = $this->staffUser(Role::ContentEditor);
-        $admin = $this->staffUser(Role::Admin);
+        $publisher = $this->staffUser(Role::Admin);
 
         $this->actingAsStaff($editor)
             ->post(route('admin.questions.store'), array_merge($this->payload(), [
@@ -311,9 +317,8 @@ final class AdminQuestionManagementTest extends TestCase
         $question = Question::query()->firstOrFail();
         $this->assertSame(0, $question->version);
 
-        $reviewRequest = QuestionReviewRequest::query()->firstOrFail();
-        $this->actingAsStaff($admin)
-            ->post(route('admin.questions.reviews.approve', $reviewRequest));
+        $this->approveByInstructor($question);
+        $this->publishByAdmin($question, $publisher);
 
         $question->refresh();
         $originalVersion = $question->version;
@@ -323,7 +328,7 @@ final class AdminQuestionManagementTest extends TestCase
             'version' => 1,
         ]);
 
-        $this->actingAsStaff($admin)
+        $this->actingAsStaff($editor)
             ->put(route('admin.questions.update', $question), array_merge($this->payload(), [
                 'stem' => 'Nội dung đã chỉnh sửa ở phiên bản mới.',
                 'options' => [
@@ -334,21 +339,34 @@ final class AdminQuestionManagementTest extends TestCase
             ->assertRedirect();
 
         $question->refresh();
-        $this->assertSame(2, $question->version);
+        $this->assertSame(QuestionStatus::Draft, $question->status);
+        $this->assertSame(1, (int) $question->version);
+        $this->assertSame(1, (int) $question->published_version);
 
-        $this->actingAsStaff($admin)
+        $this->actingAsStaff($editor)
             ->get(route('admin.questions.versions.index', $question))
             ->assertOk()
             ->assertSee('Phiên bản 1')
-            ->assertSee('Phiên bản 2')
-            ->assertSee('Khôi phục');
+            ->assertDontSee('Phiên bản 2');
+
+        // Publish working copy as v2, then restore v1 into a new draft working copy.
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.transition', $question), [
+                'status' => QuestionStatus::InReview->value,
+            ])
+            ->assertRedirect();
+        $this->approveByInstructor($question->fresh());
+        $this->publishByAdmin($question->fresh(), $publisher);
+
+        $question->refresh();
+        $this->assertSame(2, (int) $question->version);
 
         $oldVersion = QuestionVersion::query()
             ->where('question_id', $question->id)
             ->where('version', 1)
             ->firstOrFail();
 
-        $this->actingAsStaff($admin)
+        $this->actingAsStaff($editor)
             ->post(route('admin.questions.versions.restore', [$question, $oldVersion]))
             ->assertRedirect(route('admin.questions.edit', $question));
 
@@ -375,7 +393,6 @@ final class AdminQuestionManagementTest extends TestCase
     public function test_saving_draft_does_not_increment_version_until_admin_approves(): void
     {
         $editor = $this->staffUser(Role::ContentEditor);
-        $admin = $this->staffUser(Role::Admin);
 
         $this->actingAsStaff($editor)
             ->post(route('admin.questions.store'), $this->payload())
@@ -407,10 +424,12 @@ final class AdminQuestionManagementTest extends TestCase
         $this->assertSame(QuestionStatus::InReview, $question->status);
         $this->assertSame(0, $question->version);
 
-        $reviewRequest = QuestionReviewRequest::query()->where('question_id', $question->id)->firstOrFail();
-        $this->actingAsStaff($admin)
-            ->post(route('admin.questions.reviews.approve', $reviewRequest))
-            ->assertRedirect();
+        $this->approveByInstructor($question);
+        $question->refresh();
+        $this->assertSame(QuestionStatus::PendingPublish, $question->status);
+        $this->assertSame(0, $question->version);
+
+        $this->publishByAdmin($question);
 
         $question->refresh();
         $this->assertSame(1, $question->version);
@@ -418,6 +437,28 @@ final class AdminQuestionManagementTest extends TestCase
             'question_id' => $question->id,
             'version' => 1,
         ]);
+    }
+
+    public function test_editor_can_submit_for_review_without_correct_option_explanation(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+        $question = $this->makeDraftQuestion($editor);
+
+        $this->actingAsStaff($editor)
+            ->put(route('admin.questions.update', $question), array_merge($this->payload(), [
+                'options' => [
+                    ['content' => 'ACS', 'is_correct' => '1', 'explanation' => ''],
+                    ['content' => 'GERD', 'is_correct' => '0', 'explanation' => ''],
+                    ['content' => 'Lo lắng', 'is_correct' => '0'],
+                    ['content' => 'Viêm phổi', 'is_correct' => '0'],
+                ],
+                'requested_status' => QuestionStatus::InReview->value,
+            ]))
+            ->assertRedirect();
+
+        $question->refresh();
+        $this->assertSame(QuestionStatus::InReview, $question->status);
+        $this->assertTrue(\App\Support\Html\SafeHtml::isBlank($question->explanation));
     }
 
     public function test_editor_can_submit_for_review_but_cannot_publish(): void
@@ -434,16 +475,20 @@ final class AdminQuestionManagementTest extends TestCase
         $this->assertSame(QuestionStatus::InReview, $question->fresh()->status);
 
         $this->actingAsStaff($editor)
+            ->from(route('admin.questions.edit', $question))
             ->post(route('admin.questions.transition', $question), [
                 'status' => QuestionStatus::Published->value,
             ])
-            ->assertForbidden();
+            ->assertSessionHasErrors('status');
+
+        $this->assertSame(QuestionStatus::InReview, $question->fresh()->status);
     }
 
     public function test_admin_publishes_directly_without_submit_for_review(): void
     {
         $admin = $this->staffUser(Role::Admin);
-        $question = $this->makeDraftQuestion();
+        $editor = $this->staffUser(Role::ContentEditor);
+        $question = $this->makeDraftQuestion($editor);
 
         $this->actingAsStaff($admin)
             ->get(route('admin.questions.edit', $question))
@@ -452,18 +497,33 @@ final class AdminQuestionManagementTest extends TestCase
             ->assertSee('aria-label="Thông tin câu hỏi"', false)
             ->assertSee('aria-label="Quay lại danh sách câu hỏi"', false)
             ->assertDontSee('Gửi duyệt', false)
-            ->assertSee('Xuất bản', false)
-            ->assertSee('Lưu thay đổi', false)
+            ->assertDontSee('Xuất bản', false)
+            ->assertDontSee('Lưu thay đổi', false)
             ->assertDontSee('Lưu câu hỏi')
-            ->assertSee('id="admin_sidebar_status_select"', false);
+            ->assertDontSee('id="admin_sidebar_status_select"', false);
 
         $this->actingAsStaff($admin)
+            ->from(route('admin.questions.edit', $question))
             ->post(route('admin.questions.transition', $question), [
-                'status' => QuestionStatus::InReview->value,
+                'status' => QuestionStatus::Published->value,
             ])
             ->assertSessionHasErrors('status');
 
         $this->assertSame(QuestionStatus::Draft, $question->fresh()->status);
+
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.transition', $question), [
+                'status' => QuestionStatus::InReview->value,
+            ])
+            ->assertRedirect();
+
+        $this->approveByInstructor($question);
+
+        $this->actingAsStaff($admin)
+            ->get(route('admin.questions.edit', $question->fresh()))
+            ->assertOk()
+            ->assertSee('Xuất bản', false)
+            ->assertSee('Xuất bản (lớp 2)', false);
 
         $this->actingAsStaff($admin)
             ->post(route('admin.questions.transition', $question), [
@@ -476,28 +536,44 @@ final class AdminQuestionManagementTest extends TestCase
 
     public function test_admin_status_selector_saves_editor_content_before_publishing(): void
     {
-        $admin = $this->staffUser(Role::Admin);
-        $question = $this->makeDraftQuestion();
+        $editor = $this->staffUser(Role::ContentEditor);
+        $question = $this->makeDraftQuestion($editor);
         $question->forceFill(['explanation' => null])->save();
 
-        $this->actingAsStaff($admin)
+        $this->actingAsStaff($editor)
             ->put(route('admin.questions.update', $question), array_merge($this->payload(), [
                 'stem' => 'Nội dung vừa sửa trước khi xuất bản',
-                'requested_status' => QuestionStatus::Published->value,
+                'requested_status' => QuestionStatus::InReview->value,
             ]))
             ->assertRedirect()
             ->assertSessionHasNoErrors();
 
         $question->refresh();
-        $this->assertSame(QuestionStatus::Published, $question->status);
+        $this->assertSame(QuestionStatus::InReview, $question->status);
         $this->assertSame('Nội dung vừa sửa trước khi xuất bản', strip_tags($question->stem));
         $this->assertSame('Đúng', strip_tags((string) $question->explanation));
+
+        $this->approveByInstructor($question);
+        $this->publishByAdmin($question);
+
+        $question->refresh();
+        $this->assertSame(QuestionStatus::Published, $question->status);
+        $this->assertSame('Nội dung vừa sửa trước khi xuất bản', strip_tags($question->stem));
     }
 
     public function test_admin_can_publish_question(): void
     {
         $admin = $this->staffUser(Role::Admin);
-        $question = $this->makeDraftQuestion();
+        $editor = $this->staffUser(Role::ContentEditor);
+        $question = $this->makeDraftQuestion($editor);
+
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.transition', $question), [
+                'status' => QuestionStatus::InReview->value,
+            ])
+            ->assertRedirect();
+
+        $this->approveByInstructor($question);
 
         $this->actingAsStaff($admin)
             ->post(route('admin.questions.transition', $question), [
@@ -507,40 +583,45 @@ final class AdminQuestionManagementTest extends TestCase
 
         $question->refresh();
         $this->assertSame(QuestionStatus::Published, $question->status);
-        $this->assertSame($admin->id, $question->reviewer_id);
+        $this->assertSame($admin->id, $question->publisher_id);
         $this->assertGreaterThan(0, $question->version);
         $this->assertDatabaseHas('question_versions', [
             'question_id' => $question->id,
             'version' => $question->version,
-            'event' => 'status',
+            'event' => 'publish',
         ]);
         $this->assertDatabaseHas('audit_logs', ['action' => 'admin.question.status_change']);
     }
 
     public function test_admin_saving_question_content_does_not_increment_version_until_publishing(): void
     {
-        $admin = $this->staffUser(Role::Admin);
-        $question = $this->makeDraftQuestion($admin);
+        $editor = $this->staffUser(Role::ContentEditor);
+        $question = $this->makeDraftQuestion($editor);
         $versionBeforeSave = $question->version;
 
-        $this->actingAsStaff($admin)
+        $this->actingAsStaff($editor)
             ->put(route('admin.questions.update', $question), array_merge($this->payload(), [
-                'stem' => 'Nội dung đã được admin chỉnh sửa nhưng chưa duyệt.',
+                'stem' => 'Nội dung đã được biên tập chỉnh sửa nhưng chưa duyệt.',
             ]))
             ->assertRedirect();
 
         $question->refresh();
         $this->assertSame($versionBeforeSave, $question->version);
         $this->assertSame(
-            'Nội dung đã được admin chỉnh sửa nhưng chưa duyệt.',
+            'Nội dung đã được biên tập chỉnh sửa nhưng chưa duyệt.',
             strip_tags((string) $question->stem),
         );
 
-        $this->actingAsStaff($admin)
+        $this->actingAsStaff($editor)
             ->post(route('admin.questions.transition', $question), [
-                'status' => QuestionStatus::Published->value,
+                'status' => QuestionStatus::InReview->value,
             ])
             ->assertRedirect();
+
+        $this->approveByInstructor($question);
+        $this->assertSame($versionBeforeSave, $question->fresh()->version);
+
+        $this->publishByAdmin($question);
 
         $this->assertSame($versionBeforeSave + 1, $question->fresh()->version);
     }
@@ -548,8 +629,16 @@ final class AdminQuestionManagementTest extends TestCase
     public function test_admin_can_reject_question_in_review(): void
     {
         $admin = $this->staffUser(Role::Admin);
-        $question = $this->makeDraftQuestion();
-        $question->forceFill(['status' => QuestionStatus::InReview])->save();
+        $editor = $this->staffUser(Role::ContentEditor);
+        $question = $this->makeDraftQuestion($editor);
+
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.transition', $question), [
+                'status' => QuestionStatus::InReview->value,
+            ])
+            ->assertRedirect();
+
+        $this->approveByInstructor($question);
 
         $this->actingAsStaff($admin)
             ->post(route('admin.questions.transition', $question), [
@@ -566,24 +655,25 @@ final class AdminQuestionManagementTest extends TestCase
 
     public function test_rejected_question_cannot_be_edited_until_back_to_draft(): void
     {
-        $admin = $this->staffUser(Role::Admin);
-        $question = $this->makeDraftQuestion();
+        $editor = $this->staffUser(Role::ContentEditor);
+        $question = $this->makeDraftQuestion($editor);
         $question->forceFill([
             'status' => QuestionStatus::Rejected,
             'rejection_reason' => 'Cần bổ sung guideline.',
         ])->save();
 
-        $this->actingAsStaff($admin)
+        $this->actingAsStaff($editor)
+            ->from(route('admin.questions.edit', $question))
             ->put(route('admin.questions.update', $question), $this->payload())
             ->assertSessionHasErrors('status');
 
-        $this->actingAsStaff($admin)
+        $this->actingAsStaff($editor)
             ->post(route('admin.questions.transition', $question), [
                 'status' => QuestionStatus::Draft->value,
             ])
             ->assertRedirect();
 
-        $this->actingAsStaff($admin)
+        $this->actingAsStaff($editor)
             ->put(route('admin.questions.update', $question), array_merge($this->payload(), [
                 'stem' => 'Nội dung đã sửa sau khi từ chối.',
             ]))
@@ -592,19 +682,29 @@ final class AdminQuestionManagementTest extends TestCase
         $this->assertSame('Nội dung đã sửa sau khi từ chối.', strip_tags($question->fresh()->stem));
     }
 
-    public function test_admin_can_clone_question(): void
+    public function test_only_content_editor_can_clone_question(): void
     {
         $admin = $this->staffUser(Role::Admin);
-        $question = $this->makePublishedQuestion();
+        $superAdmin = $this->staffUser(Role::SuperAdmin);
+        $editor = $this->staffUser(Role::ContentEditor);
+        $question = $this->makePublishedQuestion(createdBy: $editor);
 
         $this->actingAsStaff($admin)
+            ->post(route('admin.questions.clone', $question))
+            ->assertForbidden();
+
+        $this->actingAsStaff($superAdmin)
+            ->post(route('admin.questions.clone', $question))
+            ->assertForbidden();
+
+        $this->actingAsStaff($editor)
             ->post(route('admin.questions.clone', $question))
             ->assertRedirect();
 
         $clone = Question::query()->where('cloned_from_id', $question->id)->firstOrFail();
         $this->assertSame(QuestionStatus::Draft, $clone->status);
         $this->assertSame($question->version, $clone->cloned_from_version);
-        $this->assertSame($admin->id, $clone->created_by);
+        $this->assertSame($editor->id, $clone->created_by);
         $this->assertCount(4, $clone->options);
         $this->assertDatabaseHas('audit_logs', [
             'action' => 'admin.question.clone',
@@ -636,30 +736,31 @@ final class AdminQuestionManagementTest extends TestCase
             ->assertSee('Câu hỏi bí mật của creator B', false);
     }
 
-    public function test_creator_update_is_not_applied_until_admin_approves(): void
+    public function test_creator_edit_published_becomes_working_copy_and_needs_instructor_then_admin(): void
     {
         $creator = $this->staffUser(Role::ContentEditor);
-        $admin = $this->staffUser(Role::Admin);
         $question = $this->makePublishedQuestion(createdBy: $creator);
         $originalStem = strip_tags($question->stem);
 
         $this->actingAsStaff($creator)
             ->put(route('admin.questions.update', $question), array_merge($this->payload(), [
-                'stem' => 'Nội dung mới phải chờ admin duyệt.',
+                'stem' => 'Nội dung mới phải chờ GV rồi admin xuất bản.',
             ]))
             ->assertRedirect();
 
-        $this->assertSame($originalStem, strip_tags($question->fresh()->stem));
-        $reviewRequest = QuestionReviewRequest::query()->where('question_id', $question->id)->firstOrFail();
-        $this->assertSame(QuestionReviewAction::Update, $reviewRequest->action);
-        $this->assertSame(QuestionReviewStatus::Pending, $reviewRequest->status);
+        $question->refresh();
+        $this->assertSame(QuestionStatus::Draft, $question->status);
+        $this->assertSame(1, (int) $question->published_version);
+        $this->assertSame('Nội dung mới phải chờ GV rồi admin xuất bản.', strip_tags($question->stem));
+        $this->assertDatabaseMissing('question_review_requests', [
+            'question_id' => $question->id,
+            'action' => QuestionReviewAction::Update->value,
+            'status' => QuestionReviewStatus::Pending->value,
+        ]);
 
-        $this->actingAsStaff($admin)
-            ->post(route('admin.questions.reviews.approve', $reviewRequest))
-            ->assertRedirect(route('admin.questions.edit', $question));
-
-        $this->assertSame('Nội dung mới phải chờ admin duyệt.', strip_tags($question->fresh()->stem));
-        $this->assertSame(QuestionReviewStatus::Approved, $reviewRequest->fresh()->status);
+        // Learner vẫn thấy bản cũ qua snapshot.
+        $served = \Modules\QuestionBank\Support\ServePublishedQuestion::overlay($question->fresh(['options']));
+        $this->assertSame($originalStem, strip_tags($served->stem));
     }
 
     public function test_creator_delete_is_soft_deleted_only_after_admin_approves(): void
@@ -693,7 +794,7 @@ final class AdminQuestionManagementTest extends TestCase
         $this->actingAsStaff($editor)
             ->get(route('admin.questions.edit', $question))
             ->assertOk()
-            ->assertSee('Câu hỏi đang chờ admin duyệt', false)
+            ->assertSee('Câu hỏi đang chờ giảng viên duyệt', false)
             ->assertSee('Lưu lại', false);
 
         $this->actingAsStaff($editor)
@@ -727,7 +828,7 @@ final class AdminQuestionManagementTest extends TestCase
         ]);
     }
 
-    public function test_editor_cannot_submit_second_update_while_pending_review(): void
+    public function test_editor_can_keep_editing_working_copy_while_awaiting_instructor(): void
     {
         $editor = $this->staffUser(Role::ContentEditor);
         $question = $this->makePublishedQuestion(createdBy: $editor);
@@ -738,11 +839,17 @@ final class AdminQuestionManagementTest extends TestCase
             ]))
             ->assertRedirect();
 
+        $this->assertSame(QuestionStatus::Draft, $question->fresh()->status);
+
         $this->actingAsStaff($editor)
             ->put(route('admin.questions.update', $question), array_merge($this->payload(), [
                 'stem' => 'Thay đổi lần hai.',
             ]))
-            ->assertSessionHasErrors('review');
+            ->assertRedirect()
+            ->assertSessionDoesntHaveErrors();
+
+        $this->assertSame('Thay đổi lần hai.', strip_tags($question->fresh()->stem));
+        $this->assertSame(1, (int) $question->fresh()->published_version);
     }
 
     public function test_questions_index_filters_by_status(): void
@@ -872,7 +979,6 @@ final class AdminQuestionManagementTest extends TestCase
     public function test_admin_create_publish_and_student_can_find_question_in_qbank(): void
     {
         $editor = $this->staffUser(Role::ContentEditor);
-        $admin = $this->staffUser(Role::Admin);
         $student = $this->studentUser();
 
         $this->actingAsStaff($editor)
@@ -884,11 +990,14 @@ final class AdminQuestionManagementTest extends TestCase
         $this->assertSame(4, $question->options()->count());
         $this->assertSame(1, $question->options()->where('is_correct', true)->count());
 
-        $this->actingAsStaff($admin)
+        $this->actingAsStaff($editor)
             ->post(route('admin.questions.transition', $question), [
-                'status' => QuestionStatus::Published->value,
+                'status' => QuestionStatus::InReview->value,
             ])
             ->assertRedirect();
+
+        $this->approveByInstructor($question);
+        $this->publishByAdmin($question);
 
         $published = $question->fresh(['options', 'medicalTaxonomyNodes']);
         $this->assertSame(QuestionStatus::Published, $published->status);
@@ -912,52 +1021,117 @@ final class AdminQuestionManagementTest extends TestCase
         $this->assertTrue(Str::contains(strip_tags($published->stem), 'đau ngực'));
     }
 
-    public function test_admin_can_update_published_question_and_student_sees_the_new_content(): void
+    public function test_edit_published_keeps_qbank_on_old_version_until_admin_publishes(): void
     {
+        $editor = $this->staffUser(Role::ContentEditor);
         $admin = $this->staffUser(Role::Admin);
         $student = $this->studentUser();
-        $question = $this->makePublishedQuestion(isFree: true);
+        $question = $this->makePublishedQuestion(isFree: true, createdBy: $editor);
 
-        $this->actingAsStaff($admin)
+        $this->actingAsStaff($editor)
             ->put(route('admin.questions.update', $question), array_merge($this->payload(), [
                 'stem' => 'Bệnh nhân 55 tuổi đau ngực, khó thở tăng dần. Chẩn đoán nào phù hợp nhất?',
+                'requested_status' => QuestionStatus::InReview->value,
             ]))
             ->assertRedirect();
 
-        $updated = $question->fresh(['options', 'medicalTaxonomyNodes']);
-        $this->assertSame(QuestionStatus::Published, $updated->status);
+        $question->refresh();
+        $this->assertSame(QuestionStatus::InReview, $question->status);
+        $this->assertSame(1, (int) $question->published_version);
         $this->assertSame(
             'Bệnh nhân 55 tuổi đau ngực, khó thở tăng dần. Chẩn đoán nào phù hợp nhất?',
-            strip_tags($updated->stem),
+            strip_tags($question->stem),
         );
+
+        $this->actingAs($student)
+            ->get(route('qbank.index', ['q' => 'đau ngực']))
+            ->assertOk()
+            ->assertSee('Chẩn đoán nào phù hợp nhất?', false)
+            ->assertDontSee('khó thở tăng dần', false);
+
+        $this->approveByInstructor($question);
+        $this->publishByAdmin($question);
+
+        $question->refresh();
+        $this->assertSame(QuestionStatus::Published, $question->status);
+        $this->assertSame(2, (int) $question->version);
+        $this->assertSame(2, (int) $question->published_version);
 
         $this->actingAs($student)
             ->get(route('qbank.index', ['q' => 'khó thở']))
             ->assertOk()
-            ->assertSee('Tìm trong ngân hàng câu hỏi')
             ->assertSee('<mark>khó thở</mark>', false);
     }
 
-    public function test_admin_can_turn_free_question_into_premium_and_student_cannot_see_it(): void
+    public function test_admin_reject_publish_keeps_previous_qbank_version(): void
     {
+        $editor = $this->staffUser(Role::ContentEditor);
         $admin = $this->staffUser(Role::Admin);
         $student = $this->studentUser();
-        $question = $this->makePublishedQuestion(isFree: true);
+        $question = $this->makePublishedQuestion(isFree: true, createdBy: $editor);
 
-        $this->actingAsStaff($admin)
+        $this->actingAsStaff($editor)
             ->put(route('admin.questions.update', $question), array_merge($this->payload(), [
-                'is_free' => '0',
+                'stem' => 'Nội dung đề xuất bị từ chối xuất bản.',
+                'requested_status' => QuestionStatus::InReview->value,
             ]))
             ->assertRedirect();
 
+        $this->approveByInstructor($question);
+
+        $this->actingAsStaff($admin)
+            ->post(route('admin.questions.transition', $question), [
+                'status' => QuestionStatus::Rejected->value,
+                'rejection_reason' => 'Chưa đạt chất lượng xuất bản',
+            ])
+            ->assertRedirect();
+
+        $question->refresh();
+        $this->assertSame(QuestionStatus::Rejected, $question->status);
+        $this->assertSame(1, (int) $question->published_version);
+
+        $this->actingAs($student)
+            ->get(route('qbank.index', ['q' => 'đau ngực']))
+            ->assertOk()
+            ->assertSee('Chẩn đoán nào phù hợp nhất?', false)
+            ->assertDontSee('Nội dung đề xuất bị từ chối', false);
+    }
+
+    public function test_turning_free_question_premium_requires_full_publish_pipeline(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+        $student = $this->studentUser();
+        $question = $this->makePublishedQuestion(isFree: true, createdBy: $editor);
+
+        $this->actingAsStaff($editor)
+            ->put(route('admin.questions.update', $question), array_merge($this->payload(), [
+                'is_free' => '0',
+                'requested_status' => QuestionStatus::InReview->value,
+            ]))
+            ->assertRedirect();
+
+        $question->refresh();
+        $this->assertFalse($question->is_free);
+        $this->assertSame(QuestionStatus::InReview, $question->status);
+
+        // QBank vẫn phục vụ snapshot free cũ.
+        $this->actingAs($student)
+            ->get(route('qbank.index', ['q' => 'đau ngực']))
+            ->assertOk()
+            ->assertSee('Chẩn đoán nào phù hợp nhất?', false);
+
+        $this->approveByInstructor($question);
+        $this->publishByAdmin($question);
+
         $updated = $question->fresh();
         $this->assertFalse($updated->is_free);
+        $this->assertSame(QuestionStatus::Published, $updated->status);
 
         $this->actingAs($student)
             ->get(route('qbank.index', ['q' => 'đau ngực']))
             ->assertOk()
             ->assertSee('Không tìm thấy câu hỏi phù hợp')
-            ->assertDontSee('Bệnh nhân 55 tuổi đau ngực', false);
+            ->assertDontSee('Chẩn đoán nào phù hợp nhất?', false);
     }
 
     public function test_editor_can_upload_question_image_and_save_it_with_question(): void
@@ -1062,6 +1236,8 @@ final class AdminQuestionManagementTest extends TestCase
             'difficulty' => Difficulty::Medium,
             'status' => QuestionStatus::Published,
             'is_free' => $isFree,
+            'version' => 1,
+            'published_version' => 1,
             'created_by' => $createdBy?->id,
         ]);
         $question->medicalTaxonomyNodes()->sync([$this->topic->id]);
@@ -1080,7 +1256,34 @@ final class AdminQuestionManagementTest extends TestCase
             ]);
         }
 
-        return $question->fresh(['options', 'medicalTaxonomyNodes']);
+        $question = $question->fresh(['options', 'medicalTaxonomyNodes']);
+        app(\Modules\Admin\Actions\CaptureQuestionVersionAction::class)->handle($question, $createdBy, 'publish');
+
+        return $question;
+    }
+
+    private function instructorUser(): User
+    {
+        $user = User::factory()->create();
+        $user->assignRole(Role::Instructor->value);
+
+        return $user;
+    }
+
+    private function approveByInstructor(Question $question, ?User $instructor = null): Question
+    {
+        $instructor ??= $this->instructorUser();
+
+        return app(\Modules\QuestionBank\Actions\InstructorReviewQuestionAction::class)
+            ->approve($instructor, $question->fresh());
+    }
+
+    private function publishByAdmin(Question $question, ?User $admin = null): Question
+    {
+        $admin ??= $this->staffUser(Role::Admin);
+
+        return app(\Modules\Admin\Actions\TransitionQuestionStatusAction::class)
+            ->handle($admin, $question->fresh(), QuestionStatus::Published);
     }
 
     private function staffUser(Role $role): User

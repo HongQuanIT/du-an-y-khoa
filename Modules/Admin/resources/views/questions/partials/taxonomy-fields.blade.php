@@ -45,6 +45,7 @@
          selectedMedicalNodeIds: @js($selectedMedicalNodeIds),
          selectedTags: @js(collect($selectedTags)->keyBy('id')->all()),
          selectedTagIds: @js($selectedTagIds),
+         nodeTypeLabels: @js(\Modules\QuestionBank\Support\MedicalTaxonomyNodeTypes::LABELS),
          urls: {
              blueprints: @js(route('admin.taxonomy.lookups.blueprints')),
              sections: @js(url('/admin/taxonomy/lookups/blueprints')),
@@ -116,7 +117,7 @@
                         <input type="checkbox" :checked="selectedMedicalNodeIds.includes(node.id)"
                                @change="toggleMedicalNode(node)" class="size-4 rounded text-primary">
                         <span class="min-w-0 flex-1" x-text="node.name"></span>
-                        <span class="text-[10px] uppercase text-on-surface-variant" x-text="node.node_type || ''"></span>
+                        <span class="text-[10px] text-on-surface-variant" x-text="nodeTypeLabel(node.node_type)"></span>
                     </label>
                 </template>
             </div>
@@ -142,7 +143,7 @@
                     <input type="checkbox" :checked="selectedMedicalNodeIds.includes(node.id)"
                            @change="toggleMedicalNode(node)" class="size-4 rounded text-primary">
                     <span x-text="node.name"></span>
-                    <span class="text-[10px] uppercase text-on-surface-variant" x-text="node.node_type || ''"></span>
+                    <span class="text-[10px] text-on-surface-variant" x-text="nodeTypeLabel(node.node_type)"></span>
                 </label>
             </template>
         </div>
@@ -202,11 +203,15 @@
             tagSearch: '',
             tagResults: [],
             nodeGroups: [
-                { key: 'disease', label: 'Disease / Condition', placeholder: 'Tìm disease…', types: ['disease', 'condition'], search: '', results: [] },
-                { key: 'symptom', label: 'Symptoms', placeholder: 'Tìm symptom…', types: ['symptom'], search: '', results: [] },
-                { key: 'finding', label: 'Clinical / Lab findings', placeholder: 'Tìm finding…', types: ['sign', 'clinical_finding', 'lab_finding', 'imaging_finding'], search: '', results: [] },
-                { key: 'concept', label: 'Concepts', placeholder: 'Tìm concept…', types: ['concept'], search: '', results: [] },
+                { key: 'disease', label: 'Bệnh / Tình trạng', placeholder: 'Tìm bệnh, hội chứng…', types: ['disease', 'condition'], search: '', results: [] },
+                { key: 'symptom', label: 'Triệu chứng', placeholder: 'Tìm triệu chứng…', types: ['symptom'], search: '', results: [] },
+                { key: 'finding', label: 'Phát hiện lâm sàng / xét nghiệm', placeholder: 'Tìm phát hiện, xét nghiệm, hình ảnh…', types: ['sign', 'clinical_finding', 'lab_finding', 'imaging_finding'], search: '', results: [] },
+                { key: 'concept', label: 'Khái niệm', placeholder: 'Tìm khái niệm…', types: ['concept'], search: '', results: [] },
             ],
+            nodeTypeLabel(type) {
+                if (! type) return '';
+                return this.nodeTypeLabels?.[type] || type;
+            },
             async init() {
                 await this.loadBlueprints();
                 for (const group of this.nodeGroups) {

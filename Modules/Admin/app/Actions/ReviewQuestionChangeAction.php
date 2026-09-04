@@ -21,13 +21,18 @@ use Modules\QuestionBank\Models\QuestionReviewRequest;
 final class ReviewQuestionChangeAction
 {
     public function __construct(
-        private readonly SaveAdminQuestionAction $saveQuestion,
         private readonly TransitionQuestionStatusAction $transitionStatus,
     ) {}
 
     public function approve(User $reviewer, QuestionReviewRequest $reviewRequest, ?string $note = null): Question
     {
-        abort_unless(QuestionAccess::isReviewer($reviewer), 403);
+        abort_unless(QuestionAccess::canPublish($reviewer), 403);
+
+        if ($reviewRequest->action === QuestionReviewAction::Create) {
+            throw ValidationException::withMessages([
+                'review' => 'Admin không duyệt thay giảng viên. Câu hỏi mới phải do giảng viên duyệt trên cổng /teach, sau đó admin mới xuất bản.',
+            ]);
+        }
 
         return DB::transaction(function () use ($reviewer, $reviewRequest, $note): Question {
             $reviewRequest = QuestionReviewRequest::query()->lockForUpdate()->findOrFail($reviewRequest->getKey());
@@ -68,7 +73,13 @@ final class ReviewQuestionChangeAction
 
     public function reject(User $reviewer, QuestionReviewRequest $reviewRequest, ?string $note = null): Question
     {
-        abort_unless(QuestionAccess::isReviewer($reviewer), 403);
+        abort_unless(QuestionAccess::canPublish($reviewer), 403);
+
+        if ($reviewRequest->action === QuestionReviewAction::Create) {
+            throw ValidationException::withMessages([
+                'review' => 'Admin không từ chối thay giảng viên. Hãy để giảng viên xử lý trên cổng /teach.',
+            ]);
+        }
 
         return DB::transaction(function () use ($reviewer, $reviewRequest, $note): Question {
             $reviewRequest = QuestionReviewRequest::query()->lockForUpdate()->findOrFail($reviewRequest->getKey());
@@ -134,13 +145,11 @@ final class ReviewQuestionChangeAction
 
     private function approveUpdate(User $reviewer, Question $question, QuestionReviewRequest $reviewRequest): void
     {
-        /** @var array<string, mixed>|null $payload */
-        $payload = $reviewRequest->payload;
-        if ($payload === null) {
-            throw ValidationException::withMessages(['review' => 'Yêu cầu chỉnh sửa không có dữ liệu.']);
-        }
+        unset($reviewer, $question, $reviewRequest);
 
-        $this->saveQuestion->handle($reviewer, $question, $payload);
+        throw ValidationException::withMessages([
+            'review' => 'Không duyệt thay đổi nội dung tại đây. Mọi create/edit phải do giảng viên duyệt trên /teach, sau đó admin xuất bản để tăng phiên bản.',
+        ]);
     }
 
     private function approveDeletion(User $reviewer, Question $question): void

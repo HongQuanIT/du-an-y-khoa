@@ -9,13 +9,13 @@ use App\Support\Concerns\AsAction;
 use App\Support\Enums\Entitlement;
 use Illuminate\Support\Facades\DB;
 use Modules\Personalization\Models\Bookmark;
-use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Enums\SessionMode;
 use Modules\QuestionBank\Enums\SessionSource;
 use Modules\QuestionBank\Enums\SessionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionSession;
 use Modules\QuestionBank\Services\QuestionSessionSnapshots;
+use Modules\QuestionBank\Support\ServePublishedQuestion;
 use RuntimeException;
 
 /** Start a study session from the learner's saved questions. */
@@ -46,8 +46,7 @@ final class CreateSessionFromBookmarksAction
             static fn (string $id): bool => isset($owned[$id]),
         ));
 
-        $available = Question::query()
-            ->where('status', QuestionStatus::Published)
+        $available = ServePublishedQuestion::scopeAvailable(Question::query())
             ->whereIn('id', $ownedIds)
             ->pluck('id')
             ->map(static fn (mixed $id): string => (string) $id)

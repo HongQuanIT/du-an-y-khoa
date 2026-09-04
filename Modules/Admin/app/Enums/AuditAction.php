@@ -26,6 +26,8 @@ enum AuditAction: string
     case QuestionVersionRestored = 'admin.question.version_restore';
     case QuestionReviewApproved = 'admin.question.review_approved';
     case QuestionReviewRejected = 'admin.question.review_rejected';
+    case QuestionInstructorApproved = 'teach.question.instructor_approved';
+    case QuestionInstructorRejected = 'teach.question.instructor_rejected';
 
     public function group(): string
     {
@@ -49,6 +51,8 @@ enum AuditAction: string
             self::QuestionVersionRestored => 'Khôi phục phiên bản câu hỏi',
             self::QuestionReviewApproved => 'Phê duyệt thay đổi câu hỏi',
             self::QuestionReviewRejected => 'Từ chối thay đổi câu hỏi',
+            self::QuestionInstructorApproved => 'Giảng viên duyệt câu hỏi',
+            self::QuestionInstructorRejected => 'Giảng viên từ chối câu hỏi',
         };
     }
 }

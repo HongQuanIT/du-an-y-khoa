@@ -2,6 +2,19 @@
 
 ## 2026-09-04
 
+### Feat — QBank workflow 2 lớp + trùng lặp + RBAC publisher
+- Duyệt 2 lớp: Content Editor soạn → GV duyệt trên `/teach` → Admin/SA xuất bản (+version); snapshot `published_version` cho learner.
+- Admin/Super Admin không `question.create`/`update` (tránh xung đột biên tập); chỉ publish / private / retire / xoá; Gate Super Admin không bypass 2 quyền này.
+- Kiểm tra trùng lặp per-question (≥30%): panel form, trang chi tiết, job/command quét fingerprint + similarity.
+- Panel trùng lặp nằm ngoài vùng khóa UI; nhãn taxonomy form câu hỏi sang tiếng Việt (Bệnh / Tình trạng…).
+- SRS Module 35 / RBAC cập nhật; test feature + unit kèm theo.
+
+### Perf — AI Tutor giảm token/quota + Admin settings
+- Soft-cap Premium 100/ngày (Staff unlimited); default model `gpt-4.1-mini`; cắt history; minify CONTEXT; cache output auto-start.
+- Prompt tách static/CONTEXT (prompt cache OpenAI); follow-up dùng `CONTEXT_REF`; Idempotency-Key khi auto-send.
+- Admin → Cài đặt → tab **AI Tutor**: quota Free/Premium, cache, TTL, model, max tokens (ghi đè env).
+- Unit/feature tests quota, prompt, cache, settings.
+
 ### Fix — Hoạt động gần đây user (admin)
 - Feed tiếng Việt theo màn hình cụ thể (`ActivityArea` / `UserActivityPresenter`), không còn nhãn chung “trang quản trị”.
 - Bỏ poll heartbeat và bỏ đo thời lượng; chỉ `start` + `leave` (tối đa 2 request/trang).

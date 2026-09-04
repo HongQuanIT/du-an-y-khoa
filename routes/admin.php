@@ -22,6 +22,7 @@ use Modules\Admin\Http\Controllers\EditorImageUploadController;
 use Modules\Admin\Http\Controllers\ExamController;
 use Modules\Admin\Http\Controllers\MedicalTaxonomyController;
 use Modules\Admin\Http\Controllers\QuestionController;
+use Modules\Admin\Http\Controllers\QuestionDuplicateController;
 use Modules\Admin\Http\Controllers\QuestionFeedbackController;
 use Modules\Admin\Http\Controllers\QuestionReviewController;
 use Modules\Admin\Http\Controllers\ReportController;
@@ -192,6 +193,10 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
             Route::get('/question-feedback', [QuestionFeedbackController::class, 'index'])->name('question-feedback.index');
             Route::get('/questions/{question}', [QuestionController::class, 'edit']);
             Route::get('/questions/{question}/edit', [QuestionController::class, 'edit'])->name('questions.edit');
+            Route::get('/questions/{question}/duplicates', [QuestionDuplicateController::class, 'show'])
+                ->name('questions.duplicates.show');
+            Route::post('/questions/{question}/check-duplicates', [QuestionDuplicateController::class, 'check'])
+                ->name('questions.check-duplicates');
             Route::get('/questions/{question}/stats', [QuestionController::class, 'stats'])->name('questions.stats');
             Route::get('/questions/{question}/versions', [QuestionVersionController::class, 'index'])
                 ->name('questions.versions.index');
@@ -201,13 +206,15 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
             Route::put('/questions/{question}', [QuestionController::class, 'update'])->name('questions.update');
             Route::patch('/question-feedback/{feedback}/status', [QuestionFeedbackController::class, 'updateStatus'])
                 ->name('question-feedback.update-status');
-            Route::post('/questions/{question}/transition', [QuestionController::class, 'transition'])
-                ->name('questions.transition');
             Route::post(
                 '/questions/{question}/versions/{version}/restore',
                 [QuestionVersionController::class, 'restore'],
             )->scopeBindings()->name('questions.versions.restore');
         });
+
+        Route::post('/questions/{question}/transition', [QuestionController::class, 'transition'])
+            ->middleware('permission:'.Permission::QuestionUpdate->value.'|'.Permission::QuestionPublish->value)
+            ->name('questions.transition');
 
         Route::middleware('permission:'.Permission::QuestionPublish->value)->group(function (): void {
             Route::get('/question-reviews/{reviewRequest}', [QuestionReviewController::class, 'show'])
@@ -263,14 +270,16 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
             ->name('tags.destroy');
 
         // --- Exams ---
-        Route::get('/exams/questions/search', [ExamController::class, 'searchQuestions'])->name('exams.questions.search');
-        Route::get('/exams/topic-eligibility', [ExamController::class, 'topicEligibility'])->name('exams.topic-eligibility');
-        Route::get('/exams', [ExamController::class, 'index'])->name('exams.index');
-        Route::get('/exams/create', [ExamController::class, 'create'])->name('exams.create');
-        Route::post('/exams', [ExamController::class, 'store'])->name('exams.store');
-        Route::get('/exams/{exam}/edit', [ExamController::class, 'edit'])->name('exams.edit');
-        Route::put('/exams/{exam}', [ExamController::class, 'update'])->name('exams.update');
-        Route::delete('/exams/{exam}', [ExamController::class, 'destroy'])->name('exams.destroy');
+        Route::middleware('permission:'.Permission::ExamManage->value)->group(function (): void {
+            Route::get('/exams/questions/search', [ExamController::class, 'searchQuestions'])->name('exams.questions.search');
+            Route::get('/exams/topic-eligibility', [ExamController::class, 'topicEligibility'])->name('exams.topic-eligibility');
+            Route::get('/exams', [ExamController::class, 'index'])->name('exams.index');
+            Route::get('/exams/create', [ExamController::class, 'create'])->name('exams.create');
+            Route::post('/exams', [ExamController::class, 'store'])->name('exams.store');
+            Route::get('/exams/{exam}/edit', [ExamController::class, 'edit'])->name('exams.edit');
+            Route::put('/exams/{exam}', [ExamController::class, 'update'])->name('exams.update');
+            Route::delete('/exams/{exam}', [ExamController::class, 'destroy'])->name('exams.destroy');
+        });
 
         Route::post('/editor/images', EditorImageUploadController::class)
             ->middleware('throttle:30,1')

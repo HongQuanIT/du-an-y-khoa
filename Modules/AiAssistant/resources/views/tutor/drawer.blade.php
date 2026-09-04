@@ -106,9 +106,13 @@
             this.ensureRealtime();
 
             try {
+                const extraHeaders = {};
+                if (isAuto) {
+                    extraHeaders['Idempotency-Key'] = 'msg:' + this.threadId + ':' + (preset || 'auto');
+                }
                 const res = await fetch(this.cfg.routes.threads + '/' + this.threadId + '/messages', {
                     method: 'POST',
-                    headers: this.headers(),
+                    headers: this.headers(extraHeaders),
                     body: JSON.stringify({ content, preset }),
                 });
                 const body = await res.json();

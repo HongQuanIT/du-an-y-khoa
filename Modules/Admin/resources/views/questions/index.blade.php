@@ -352,7 +352,7 @@
                                             {{ \Illuminate\Support\Str::limit(strip_tags($question->stem), 140) }}
                                         </p>
                                         <p class="mt-1 font-label-sm text-on-surface-variant">
-                                            Phiên bản {{ $question->version > 0 ? $question->version : '—' }} · Cập nhật {{ $question->updated_at?->diffForHumans() }}
+                                            {{ $question->version > 0 ? 'Phiên bản '.$question->version : 'Chưa có phiên bản' }} · Cập nhật {{ $question->updated_at?->diffForHumans() }}
                                         </p>
                                     </a>
                                 </td>
@@ -394,62 +394,53 @@
                                     @php
                                         $pubBadgeClass = match($question->status) {
                                             \Modules\QuestionBank\Enums\QuestionStatus::Published => 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300',
+                                            \Modules\QuestionBank\Enums\QuestionStatus::PendingPublish => 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300',
+                                            \Modules\QuestionBank\Enums\QuestionStatus::InReview => 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300',
+                                            \Modules\QuestionBank\Enums\QuestionStatus::Rejected => 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300',
                                             \Modules\QuestionBank\Enums\QuestionStatus::Private => 'bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300',
                                             \Modules\QuestionBank\Enums\QuestionStatus::Retired => 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300',
                                             default => 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
                                         };
 
-                                        $pubLabel = match($question->status) {
-                                            \Modules\QuestionBank\Enums\QuestionStatus::Published => 'Đã xuất bản',
-                                            \Modules\QuestionBank\Enums\QuestionStatus::Private => 'Riêng tư',
-                                            \Modules\QuestionBank\Enums\QuestionStatus::Retired => 'Ngừng dùng',
-                                            default => 'Nháp',
-                                        };
+                                        $pubLabel = $question->status->label();
+                                        if ($question->published_version && $question->status !== \Modules\QuestionBank\Enums\QuestionStatus::Published) {
+                                            $pubLabel .= ' · QBank v'.$question->published_version;
+                                        }
                                     @endphp
                                     <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold {{ $pubBadgeClass }}">
                                         {{ $pubLabel }}
                                     </span>
                                 </td>
 
-                                {{-- Cột 2: Kiểm duyệt (Chờ duyệt, Đã duyệt, Từ chối) --}}
+                                {{-- Cột 2: Kiểm duyệt (lớp GV / xuất bản) --}}
                                 <td class="w-[140px] min-w-[120px] px-4 py-4 align-top whitespace-nowrap" x-show="cols.review_status" x-cloak>
                                     @php
-                                        $hasPending = $question->pendingReviewRequest !== null || $question->status === \Modules\QuestionBank\Enums\QuestionStatus::InReview;
-                                        $latestReview = $question->relationLoaded('reviewRequests')
-                                            ? $question->reviewRequests->sortByDesc('id')->first()
-                                            : null;
-                                        $isRejected = $question->status === \Modules\QuestionBank\Enums\QuestionStatus::Rejected
-                                            || filled($question->rejection_reason)
-                                            || ($latestReview && $latestReview->status === \Modules\QuestionBank\Enums\QuestionReviewStatus::Rejected);
-                                        $isApproved = in_array($question->status, [\Modules\QuestionBank\Enums\QuestionStatus::Published, \Modules\QuestionBank\Enums\QuestionStatus::Private], true);
+                                        $reviewBadge = match ($question->status) {
+                                            \Modules\QuestionBank\Enums\QuestionStatus::InReview => ['Chờ GV duyệt', 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'],
+                                            \Modules\QuestionBank\Enums\QuestionStatus::PendingPublish => ['GV đã duyệt · chờ XB', 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300'],
+                                            \Modules\QuestionBank\Enums\QuestionStatus::Rejected => ['Từ chối', 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'],
+                                            \Modules\QuestionBank\Enums\QuestionStatus::Published, \Modules\QuestionBank\Enums\QuestionStatus::Private => ['Đã xuất bản', 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'],
+                                            default => null,
+                                        };
                                     @endphp
 
-                                    @if ($hasPending)
+                                    @if ($reviewBadge)
                                         <div class="flex flex-col items-start gap-1">
-                                            <span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-                                                Chờ duyệt
+                                            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold {{ $reviewBadge[1] }}">
+                                                {{ $reviewBadge[0] }}
                                             </span>
-                                            @if ($question->pendingReviewRequest && $isReviewer)
-                                                <a href="{{ route('admin.questions.reviews.show', $question->pendingReviewRequest) }}"
+                                            @if ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::PendingPublish && $isReviewer)
+                                                <a href="{{ route('admin.questions.edit', $question) }}"
                                                     class="inline-flex items-center gap-0.5 text-xs font-semibold text-primary hover:underline">
-                                                    Mở duyệt
+                                                    Duyệt xuất bản
                                                 </a>
                                             @endif
+                                            @if ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::InReview && $question->instructor)
+                                                <span class="text-[11px] text-on-surface-variant">GV: {{ $question->instructor->name }}</span>
+                                            @elseif ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::PendingPublish && $question->instructor)
+                                                <span class="text-[11px] text-on-surface-variant">GV: {{ $question->instructor->name }}</span>
+                                            @endif
                                         </div>
-                                    @elseif ($isRejected)
-                                        @php
-                                            $reason = $question->rejection_reason ?? $latestReview?->review_note;
-                                        @endphp
-                                        <div class="flex flex-col items-start gap-1">
-                                            <span class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-bold text-red-800 dark:bg-red-950 dark:text-red-300"
-                                                @if(filled($reason)) title="Lý do: {{ $reason }}" @endif>
-                                                Từ chối
-                                            </span>
-                                        </div>
-                                    @elseif ($isApproved)
-                                        <span class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                                            Đã duyệt
-                                        </span>
                                     @else
                                         <span class="text-xs text-on-surface-variant/60">—</span>
                                     @endif

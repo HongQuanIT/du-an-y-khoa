@@ -22,6 +22,7 @@ use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionStatus as UserQuestionStatusModel;
 use Modules\QuestionBank\Support\QuestionFilterBuilder;
+use Modules\QuestionBank\Support\ServePublishedQuestion;
 
 /**
  * Picks published questions for a custom / exam / weak-topics session.
@@ -149,9 +150,9 @@ final class SessionQuestionSelector
             $selectedNodeIds !== [] ? $selectedNodeIds : $this->weakNodeIds($userId),
         );
 
-        $accessibleQuestions = Question::query()
-            ->select('id')
-            ->where('status', QuestionStatus::Published)
+        $accessibleQuestions = ServePublishedQuestion::scopeAvailable(
+            Question::query()->select('id'),
+        )
             ->when(! $canUsePremium, fn ($query) => $query->where('is_free', true))
             ->when(
                 $expandedNodeIds !== [],
@@ -326,8 +327,7 @@ final class SessionQuestionSelector
         ?CreateSessionData $data = null,
         ?int $userId = null,
     ): Builder {
-        $query = Question::query()
-            ->where('status', QuestionStatus::Published)
+        $query = ServePublishedQuestion::scopeAvailable(Question::query())
             ->when(! $canUsePremium, fn ($query) => $query->where('is_free', true))
             ->when(
                 $topicIds !== [],
@@ -460,8 +460,7 @@ final class SessionQuestionSelector
 
         if (in_array('unanswered', $statuses, true)) {
             $answered = $attempts->pluck('question_id')->unique()->all();
-            $unanswered = Question::query()
-                ->where('status', QuestionStatus::Published)
+            $unanswered = ServePublishedQuestion::scopeAvailable(Question::query())
                 ->when(! $canUsePremium, fn ($query) => $query->where('is_free', true))
                 ->when($answered !== [], fn ($query) => $query->whereNotIn('id', $answered))
                 ->pluck('id');

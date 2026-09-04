@@ -21,7 +21,7 @@ class RolePermissionSeeder extends Seeder
 {
     public function run(): void
     {
-        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->flushPermissionCache();
 
         DB::transaction(function (): void {
             foreach (PermissionEnum::values() as $permission) {
@@ -35,13 +35,31 @@ class RolePermissionSeeder extends Seeder
             }
         });
 
-        // Ensure PHP-FPM / Redis do not keep a stale permission map after seed.
+        // Flush again after sync so PHP-FPM / Redis never keep a stale map.
+        $this->flushPermissionCache();
+    }
+
+    private function flushPermissionCache(): void
+    {
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         try {
             Artisan::call('permission:cache-reset');
         } catch (\Throwable) {
             // Command may be unavailable in some test boots; forgetCached is enough.
+        }
+
+        // Belt-and-suspenders: clear the configured cache key on the default store
+        // (Redis in Docker) in case registrar flush and artisan diverge.
+        try {
+            $key = (string) config('permission.cache.key', 'spatie.permission.cache');
+            \Illuminate\Support\Facades\Cache::forget($key);
+            $store = config('permission.cache.store');
+            if (is_string($store) && $store !== '' && $store !== 'default') {
+                \Illuminate\Support\Facades\Cache::store($store)->forget($key);
+            }
+        } catch (\Throwable) {
+            // Ignore cache-store failures during early boot / tests.
         }
     }
 
@@ -51,7 +69,23 @@ class RolePermissionSeeder extends Seeder
     private function permissionsFor(RoleEnum $role): array
     {
         return match ($role) {
-            RoleEnum::SuperAdmin, RoleEnum::Admin => PermissionEnum::values(),
+            // Super Admin: toàn quyền trừ soạn/sửa nội dung câu hỏi (tránh xung đột với content_editor).
+            RoleEnum::SuperAdmin => array_values(array_filter(
+                PermissionEnum::values(),
+                static fn (string $permission): bool => ! in_array($permission, [
+                    PermissionEnum::QuestionCreate->value,
+                    PermissionEnum::QuestionUpdate->value,
+                ], true),
+            )),
+
+            // Admin: oversight + publish/private/retire/xoá QBank, không soạn/sửa nội dung.
+            RoleEnum::Admin => array_values(array_filter(
+                PermissionEnum::values(),
+                static fn (string $permission): bool => ! in_array($permission, [
+                    PermissionEnum::QuestionCreate->value,
+                    PermissionEnum::QuestionUpdate->value,
+                ], true),
+            )),
 
             RoleEnum::ContentEditor => [
                 PermissionEnum::CmsManage->value,
@@ -72,6 +106,7 @@ class RolePermissionSeeder extends Seeder
 
             RoleEnum::Instructor => [
                 PermissionEnum::QuestionView->value,
+                PermissionEnum::QuestionReview->value,
                 PermissionEnum::LibraryView->value,
                 PermissionEnum::ClassroomCreate->value,
                 PermissionEnum::ClassroomManage->value,

@@ -132,7 +132,7 @@
                 @endif
                 <div>
                     <dt class="text-on-surface-variant">Phiên bản</dt>
-                    <dd class="mt-0.5 font-semibold text-on-surface">{{ $question->version > 0 ? $question->version : '—' }}</dd>
+                    <dd class="mt-0.5 font-semibold text-on-surface">{{ $question->version > 0 ? $question->version : 'Chưa có' }}</dd>
                 </div>
                 <div class="sm:col-span-2">
                     <dt class="text-on-surface-variant">Danh mục y khoa</dt>

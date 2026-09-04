@@ -11,7 +11,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 use Modules\Admin\Actions\RestoreQuestionVersionAction;
 use Modules\Admin\Support\QuestionAccess;
-use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\MedicalTaxonomyNode;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionVersion;
@@ -47,8 +46,7 @@ final class QuestionVersionController extends Controller
             'versions' => $versions,
             'nodeNames' => $nodeNames,
             'contentVersion' => $contentVersion,
-            'canRestore' => $this->actor()->can(Permission::QuestionUpdate->value)
-                && (QuestionAccess::isReviewer($this->actor()) || $question->status === QuestionStatus::Draft),
+            'canRestore' => $this->actor()->can(Permission::QuestionUpdate->value),
         ]);
     }
 
@@ -59,11 +57,6 @@ final class QuestionVersionController extends Controller
     ): RedirectResponse {
         abort_unless($this->actor()->can(Permission::QuestionUpdate->value), 403);
         QuestionAccess::authorizeView($this->actor(), $question);
-        abort_if(
-            ! QuestionAccess::isReviewer($this->actor()) && $question->status !== QuestionStatus::Draft,
-            403,
-            'Khôi phục phiên bản cũ trên câu đã xuất bản hoặc đang chờ duyệt cần admin thực hiện.',
-        );
 
         $restored = $action->handle($this->actor(), $question, $version);
 

@@ -78,6 +78,10 @@ abstract class TestCase extends BaseTestCase
             'DB_DATABASE' => ':memory:',
             'DB_URL' => '',
             'QUEUE_CONNECTION' => 'sync',
+            // Docker Compose injects CACHE_STORE=redis; without forcing array,
+            // Spatie permission cache poisons the shared Redis used by the live app.
+            'CACHE_STORE' => 'array',
+            'SESSION_DRIVER' => 'array',
         ];
 
         foreach ($forced as $key => $value) {
