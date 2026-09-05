@@ -85,14 +85,6 @@ class RolePermissionSeeder extends Seeder
                 PermissionEnum::QuestionUpdate->value,
                 PermissionEnum::QuestionSubmit->value,
                 PermissionEnum::QuestionDelete->value,
-                PermissionEnum::TopicView->value,
-                PermissionEnum::TopicCreate->value,
-                PermissionEnum::TopicUpdate->value,
-                PermissionEnum::TopicDelete->value,
-                PermissionEnum::LibraryView->value,
-                PermissionEnum::LibraryEdit->value,
-                PermissionEnum::LibraryPublish->value,
-                PermissionEnum::ExamManage->value,
             ],
 
             RoleEnum::Instructor => [

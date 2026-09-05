@@ -101,50 +101,141 @@
 
                     <ul class="mb-4 space-y-3 text-sm">
                         @forelse ($section->coreClinicalTopics as $topic)
-                            <li class="rounded-lg border border-outline-variant/60 p-3" x-data="{ open: false, nodeSearch: '', nodeResults: [], selectedNodeIds: @json($topic->medicalTaxonomyNodes->pluck('id')->all()) }">
+                            @php
+                                $topicNodes = $topic->medicalTaxonomyNodes->map(fn ($n) => [
+                                    'id' => (int) $n->id,
+                                    'name' => $n->name,
+                                    'node_type' => $n->node_type,
+                                ])->values()->all();
+                            @endphp
+                            <li
+                                class="rounded-lg border border-outline-variant/60 p-3"
+                                x-data="blueprintTopicNodeMapper({
+                                    lookupUrl: @js(route('admin.taxonomy.lookups.medical-nodes')),
+                                    syncUrl: @js(route('admin.core-clinical-topics.medical-nodes.sync', $topic)),
+                                    csrfToken: @js(csrf_token()),
+                                    canUpdate: @js((bool) $canUpdate),
+                                    nodeTypeLabels: @js(\Modules\QuestionBank\Support\MedicalTaxonomyNodeTypes::LABELS),
+                                    initialNodes: @js(collect($topicNodes)->keyBy('id')->all()),
+                                })"
+                            >
                                 <div class="flex flex-wrap items-start justify-between gap-2">
                                     <button type="button" @click="open = !open" class="text-left font-medium hover:text-primary">
                                         <span class="text-on-surface-variant">{{ $topic->sort_order }}.</span> {{ $topic->name }}
                                     </button>
                                     <div class="flex items-center gap-2 text-xs">
-                                        <span class="rounded bg-secondary-container px-2 py-0.5 text-on-secondary-container">{{ $topic->medicalTaxonomyNodes->count() }} node y khoa</span>
+                                        <span
+                                            class="rounded bg-secondary-container px-2 py-0.5 text-on-secondary-container"
+                                            x-text="selectedNodeIds.length + ' node y khoa'"
+                                        >{{ count($topicNodes) }} node y khoa</span>
                                         @if ($canUpdate)
                                             <button type="button" @click="open = !open" class="font-semibold text-primary" x-text="open ? 'Đóng' : 'Liên kết danh mục'"></button>
                                         @endif
                                     </div>
                                 </div>
 
-                                @if ($topic->medicalTaxonomyNodes->isNotEmpty() && ! $canUpdate)
-                                    <p class="mt-2 text-xs text-on-surface-variant">
-                                        {{ $topic->medicalTaxonomyNodes->pluck('name')->join(', ') }}
-                                    </p>
-                                @endif
+                                {{-- Preview tags when collapsed --}}
+                                <div
+                                    x-show="!open && selectedNodeIds.length > 0"
+                                    class="mt-2 flex flex-wrap gap-1.5"
+                                >
+                                    <template x-for="id in selectedNodeIds" :key="'preview-'+id">
+                                        <span class="inline-flex max-w-full items-center gap-1 rounded-md bg-surface-container px-2 py-0.5 text-xs text-on-surface">
+                                            <span class="truncate" x-text="selectedNodes[id]?.name || ('#'+id)"></span>
+                                        </span>
+                                    </template>
+                                </div>
 
-                                <div x-show="open" x-cloak class="mt-3 space-y-2 border-t border-outline-variant/60 pt-3">
-                                    <p class="text-xs text-on-surface-variant">Gán mục danh mục y khoa cho chủ đề lâm sàng này.</p>
-                                    <input type="search" x-model="nodeSearch"
-                                        @input.debounce.300ms="fetch(`{{ route('admin.taxonomy.lookups.medical-nodes') }}?q=${encodeURIComponent(nodeSearch)}`).then(r => r.json()).then(j => nodeResults = j.data ?? [])"
-                                        placeholder="Tìm mục danh mục y khoa..."
-                                        class="w-full rounded-lg bg-surface-container-low px-3 py-2 text-sm">
-                                    <div class="max-h-36 space-y-1 overflow-y-auto rounded-lg border border-outline-variant p-2">
-                                        <template x-for="node in nodeResults" :key="node.id">
-                                            <label class="flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-surface-container-low">
-                                                <input type="checkbox" :checked="selectedNodeIds.includes(node.id)"
-                                                    @change="selectedNodeIds.includes(node.id) ? selectedNodeIds.splice(selectedNodeIds.indexOf(node.id), 1) : selectedNodeIds.push(node.id)"
-                                                    class="size-4 rounded text-primary">
-                                                <span x-text="node.name" class="text-sm"></span>
-                                                <span class="text-[10px] uppercase text-on-surface-variant" x-text="node.node_type || ''"></span>
-                                            </label>
+                                <div x-show="open" x-cloak class="mt-3 space-y-3 border-t border-outline-variant/60 pt-3">
+                                    <p class="text-xs text-on-surface-variant">Gán mục danh mục y khoa cho chủ đề lâm sàng này. Tìm và thêm; lưu khi xong.</p>
+
+                                    {{-- Selected tags --}}
+                                    <div x-show="selectedNodeIds.length > 0" class="flex flex-wrap gap-1.5">
+                                        <template x-for="id in selectedNodeIds" :key="'chip-'+id">
+                                            <span class="inline-flex max-w-full items-center gap-1 rounded-lg bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
+                                                <span class="truncate" x-text="selectedNodes[id]?.name || ('#'+id)"></span>
+                                                <span
+                                                    class="shrink-0 text-[10px] font-normal text-primary/70"
+                                                    x-show="selectedNodes[id]?.node_type"
+                                                    x-text="nodeTypeLabel(selectedNodes[id]?.node_type)"
+                                                ></span>
+                                                @if ($canUpdate)
+                                                    <button
+                                                        type="button"
+                                                        @click="removeNode(id)"
+                                                        class="inline-flex size-5 shrink-0 items-center justify-center rounded-md text-primary/70 transition hover:bg-primary/15 hover:text-primary"
+                                                        :aria-label="'Xóa ' + (selectedNodes[id]?.name || id)"
+                                                    >
+                                                        <span class="material-symbols-outlined text-[14px]" aria-hidden="true">close</span>
+                                                    </button>
+                                                @endif
+                                            </span>
                                         </template>
                                     </div>
+
                                     @if ($canUpdate)
-                                        <form method="post" action="{{ route('admin.core-clinical-topics.medical-nodes.sync', $topic) }}">
-                                            @csrf @method('PUT')
-                                            <template x-for="id in selectedNodeIds" :key="'map-'+id">
-                                                <input type="hidden" name="medical_taxonomy_node_ids[]" :value="id">
-                                            </template>
-                                            <button type="submit" class="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-on-primary">Lưu liên kết</button>
-                                        </form>
+                                        <div class="relative">
+                                            <div class="relative">
+                                                <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-on-surface-variant" aria-hidden="true">
+                                                    <span class="material-symbols-outlined text-[18px]">search</span>
+                                                </span>
+                                                <input
+                                                    type="search"
+                                                    x-model="nodeSearch"
+                                                    @input.debounce.300ms="searchNodes()"
+                                                    @keydown.enter.prevent="nodeResults.length && addNode(nodeResults[0])"
+                                                    @keydown.escape.prevent="clearSearch()"
+                                                    placeholder="Tìm mục danh mục y khoa…"
+                                                    autocomplete="off"
+                                                    class="h-10 w-full rounded-lg border border-outline-variant bg-surface-container-low py-2 pl-10 pr-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                                >
+                                            </div>
+
+                                            <div
+                                                x-show="nodeResults.length > 0"
+                                                x-cloak
+                                                class="absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-outline-variant bg-surface py-1 shadow-md"
+                                                role="listbox"
+                                            >
+                                                <template x-for="node in nodeResults" :key="node.id">
+                                                    <button
+                                                        type="button"
+                                                        role="option"
+                                                        @click="addNode(node)"
+                                                        class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition hover:bg-surface-container-low"
+                                                        :class="isSelected(node.id) && 'bg-primary/5'"
+                                                    >
+                                                        <span class="material-symbols-outlined text-[16px] text-on-surface-variant" aria-hidden="true"
+                                                              x-text="isSelected(node.id) ? 'check_circle' : 'add_circle'"></span>
+                                                        <span class="min-w-0 flex-1 truncate font-medium" x-text="node.name"></span>
+                                                        <span class="shrink-0 text-[10px] uppercase text-on-surface-variant" x-text="nodeTypeLabel(node.node_type)"></span>
+                                                    </button>
+                                                </template>
+                                            </div>
+
+                                            <p
+                                                x-show="nodeSearch.trim().length > 0 && !searching && nodeResults.length === 0"
+                                                x-cloak
+                                                class="mt-1.5 text-xs text-on-surface-variant"
+                                            >Không tìm thấy mục phù hợp.</p>
+                                        </div>
+
+                                        <div class="flex flex-wrap items-center justify-end gap-3 border-t border-outline-variant/60 pt-3">
+                                            <p
+                                                class="mr-auto min-h-[1.25rem] text-xs"
+                                                :class="statusError ? 'text-error' : (statusMessage ? 'text-primary' : 'text-on-surface-variant')"
+                                                x-text="statusMessage || (isDirty ? 'Có thay đổi chưa lưu' : '')"
+                                            ></p>
+                                            <button
+                                                type="button"
+                                                @click="save()"
+                                                :disabled="!isDirty || saving"
+                                                class="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3.5 text-xs font-semibold text-on-primary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                                            >
+                                                <span class="material-symbols-outlined text-[16px]" aria-hidden="true" x-text="saving ? 'progress_activity' : 'save'"></span>
+                                                <span x-text="saving ? 'Đang lưu…' : 'Lưu liên kết'"></span>
+                                            </button>
+                                        </div>
                                     @endif
                                 </div>
                             </li>
@@ -174,4 +265,144 @@
             @endif
         </div>
     @endif
+
+    @once
+        <script>
+            function blueprintTopicNodeMapper(config) {
+                const initialNodes = { ...(config.initialNodes || {}) };
+                const initialIds = Object.keys(initialNodes).map((id) => Number(id)).sort((a, b) => a - b);
+
+                return {
+                    open: false,
+                    nodeSearch: '',
+                    nodeResults: [],
+                    searching: false,
+                    saving: false,
+                    statusMessage: '',
+                    statusError: false,
+                    canUpdate: Boolean(config.canUpdate),
+                    lookupUrl: config.lookupUrl,
+                    syncUrl: config.syncUrl,
+                    csrfToken: config.csrfToken,
+                    nodeTypeLabels: config.nodeTypeLabels || {},
+                    selectedNodes: { ...initialNodes },
+                    selectedNodeIds: [...initialIds],
+                    savedIds: [...initialIds],
+
+                    get isDirty() {
+                        const current = [...this.selectedNodeIds].map(Number).sort((a, b) => a - b);
+                        if (current.length !== this.savedIds.length) {
+                            return true;
+                        }
+
+                        return current.some((id, index) => id !== this.savedIds[index]);
+                    },
+
+                    nodeTypeLabel(type) {
+                        if (! type) {
+                            return '';
+                        }
+
+                        return this.nodeTypeLabels[type] || type;
+                    },
+
+                    isSelected(id) {
+                        return this.selectedNodeIds.includes(Number(id));
+                    },
+
+                    clearSearch() {
+                        this.nodeSearch = '';
+                        this.nodeResults = [];
+                    },
+
+                    async searchNodes() {
+                        const q = this.nodeSearch.trim();
+                        if (q.length < 1) {
+                            this.nodeResults = [];
+                            this.searching = false;
+                            return;
+                        }
+
+                        this.searching = true;
+                        try {
+                            const response = await fetch(`${this.lookupUrl}?q=${encodeURIComponent(q)}`, {
+                                headers: { Accept: 'application/json' },
+                            });
+                            const json = await response.json();
+                            this.nodeResults = json.data ?? [];
+                        } catch {
+                            this.nodeResults = [];
+                        } finally {
+                            this.searching = false;
+                        }
+                    },
+
+                    addNode(node) {
+                        const id = Number(node.id);
+                        if (this.isSelected(id)) {
+                            this.removeNode(id);
+                            return;
+                        }
+
+                        this.selectedNodeIds.push(id);
+                        this.selectedNodes[id] = {
+                            id,
+                            name: node.name,
+                            node_type: node.node_type || null,
+                        };
+                        this.statusMessage = '';
+                        this.clearSearch();
+                    },
+
+                    removeNode(id) {
+                        const nodeId = Number(id);
+                        this.selectedNodeIds = this.selectedNodeIds.filter((item) => item !== nodeId);
+                        delete this.selectedNodes[nodeId];
+                        this.statusMessage = '';
+                    },
+
+                    async save() {
+                        if (! this.isDirty || this.saving) {
+                            return;
+                        }
+
+                        this.saving = true;
+                        this.statusMessage = '';
+                        this.statusError = false;
+
+                        try {
+                            const body = new FormData();
+                            body.append('_token', this.csrfToken);
+                            body.append('_method', 'PUT');
+                            this.selectedNodeIds.forEach((id) => {
+                                body.append('medical_taxonomy_node_ids[]', String(id));
+                            });
+
+                            const response = await fetch(this.syncUrl, {
+                                method: 'POST',
+                                headers: {
+                                    Accept: 'application/json',
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                },
+                                body,
+                            });
+
+                            if (! response.ok) {
+                                throw new Error('save_failed');
+                            }
+
+                            this.savedIds = [...this.selectedNodeIds].map(Number).sort((a, b) => a - b);
+                            this.statusMessage = 'Đã lưu liên kết.';
+                            this.statusError = false;
+                        } catch {
+                            this.statusMessage = 'Không lưu được. Thử lại.';
+                            this.statusError = true;
+                        } finally {
+                            this.saving = false;
+                        }
+                    },
+                };
+            }
+        </script>
+    @endonce
 </x-layouts.admin>

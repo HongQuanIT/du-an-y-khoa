@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-09-05
+
+### Fix — UX liên kết node y khoa trên form Blueprint
+- Panel chọn node: hiện tag có nút xoá; ẩn khung trống khi chưa có kết quả/chưa chọn.
+- Lưu mapping bằng AJAX (không reload trang); nút Lưu theo trạng thái dirty.
+- Endpoint sync trả JSON khi request `expectsJson`.
+
+### Fix — Content Editor bỏ quyền Topic/Library/Exam
+- Seeder: Content Editor chỉ giữ CMS, media và CRUD/submit câu hỏi.
+- Gỡ `topic.*`, `library.*`, `exam.manage` khỏi ma trận quyền CE.
+
 ## 2026-09-04
 
 ### Feat — RBAC P0/P1: bổ sung permission theo hành động
