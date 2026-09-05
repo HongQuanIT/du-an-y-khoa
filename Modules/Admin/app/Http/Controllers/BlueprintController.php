@@ -7,6 +7,7 @@ namespace Modules\Admin\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Support\Enums\Permission;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -126,7 +127,7 @@ final class BlueprintController extends Controller
         return back()->with('status', 'Đã thêm core clinical topic.');
     }
 
-    public function syncCoreTopicMedicalNodes(Request $request, CoreClinicalTopic $topic): RedirectResponse
+    public function syncCoreTopicMedicalNodes(Request $request, CoreClinicalTopic $topic): RedirectResponse|JsonResponse
     {
         $this->authorizePermission(Permission::TopicUpdate);
 
@@ -136,6 +137,18 @@ final class BlueprintController extends Controller
         ]);
 
         $topic->medicalTaxonomyNodes()->sync($data['medical_taxonomy_node_ids'] ?? []);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Đã cập nhật mapping medical nodes cho core topic.',
+                'data' => [
+                    'medical_taxonomy_node_ids' => collect($data['medical_taxonomy_node_ids'] ?? [])
+                        ->map(fn ($id): int => (int) $id)
+                        ->values()
+                        ->all(),
+                ],
+            ]);
+        }
 
         return back()->with('status', 'Đã cập nhật mapping medical nodes cho core topic.');
     }
