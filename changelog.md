@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-09-05
+
+### Fix — Content Editor bỏ quyền Topic/Library/Exam
+- Seeder: Content Editor chỉ giữ CMS, media và CRUD/submit câu hỏi.
+- Gỡ `topic.*`, `library.*`, `exam.manage` khỏi ma trận quyền CE.
+
 ## 2026-09-04
 
 ### Feat — RBAC P0/P1: bổ sung permission theo hành động
