@@ -64,7 +64,7 @@ final class BlueprintController extends Controller
     public function edit(Blueprint $blueprint): View
     {
         $this->authorizePermission(Permission::TopicView);
-        $blueprint->load(['sections.coreClinicalTopics.medicalTaxonomyNodes']);
+        $blueprint->load(['sections.coreClinicalTopics.medicalTaxonomyNodes', 'sections.coreClinicalTopics.tags']);
 
         return view('admin::blueprints.form', $this->formData($blueprint));
     }
@@ -103,7 +103,16 @@ final class BlueprintController extends Controller
             'sort_order' => (int) ($data['sort_order'] ?? 0),
         ]);
 
-        return back()->with('status', 'Đã thêm section.');
+        return back()->with('status', 'Đã thêm phần.');
+    }
+
+    public function destroySection(BlueprintSection $section): RedirectResponse
+    {
+        $this->authorizePermission(Permission::TopicDelete);
+
+        $section->delete();
+
+        return back()->with('status', 'Đã xóa phần và các chủ đề lâm sàng bên trong.');
     }
 
     public function storeCoreTopic(Request $request, BlueprintSection $section): RedirectResponse
@@ -124,7 +133,16 @@ final class BlueprintController extends Controller
             'sort_order' => (int) ($data['sort_order'] ?? 0),
         ]);
 
-        return back()->with('status', 'Đã thêm core clinical topic.');
+        return back()->with('status', 'Đã thêm chủ đề lâm sàng.');
+    }
+
+    public function destroyCoreTopic(CoreClinicalTopic $topic): RedirectResponse
+    {
+        $this->authorizePermission(Permission::TopicDelete);
+
+        $topic->delete();
+
+        return back()->with('status', 'Đã xóa chủ đề lâm sàng.');
     }
 
     public function syncCoreTopicMedicalNodes(Request $request, CoreClinicalTopic $topic): RedirectResponse|JsonResponse
@@ -134,15 +152,22 @@ final class BlueprintController extends Controller
         $data = $request->validate([
             'medical_taxonomy_node_ids' => ['nullable', 'array'],
             'medical_taxonomy_node_ids.*' => ['integer', 'exists:medical_taxonomy_nodes,id'],
+            'tag_ids' => ['nullable', 'array'],
+            'tag_ids.*' => ['integer', 'exists:tags,id'],
         ]);
 
         $topic->medicalTaxonomyNodes()->sync($data['medical_taxonomy_node_ids'] ?? []);
+        $topic->tags()->sync($data['tag_ids'] ?? []);
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'Đã cập nhật mapping medical nodes cho core topic.',
+                'message' => 'Đã cập nhật liên kết danh mục và tag cho chủ đề lâm sàng.',
                 'data' => [
                     'medical_taxonomy_node_ids' => collect($data['medical_taxonomy_node_ids'] ?? [])
+                        ->map(fn ($id): int => (int) $id)
+                        ->values()
+                        ->all(),
+                    'tag_ids' => collect($data['tag_ids'] ?? [])
                         ->map(fn ($id): int => (int) $id)
                         ->values()
                         ->all(),
@@ -150,7 +175,7 @@ final class BlueprintController extends Controller
             ]);
         }
 
-        return back()->with('status', 'Đã cập nhật mapping medical nodes cho core topic.');
+        return back()->with('status', 'Đã cập nhật liên kết danh mục và tag cho chủ đề lâm sàng.');
     }
 
     /** @return array<string, mixed> */

@@ -211,8 +211,8 @@ final class TeachClassroomTest extends TestCase
         $respiratoryQuestion = Question::factory()->free()->withOptions()->create([
             'stem' => 'Câu hỏi lọc theo Hô hấp',
         ]);
-        $cardiologyQuestion->coreClinicalTopics()->attach($coreTopic->getKey());
         $cardiologyQuestion->medicalTaxonomyNodes()->attach($cardiology->getKey());
+        $coreTopic->medicalTaxonomyNodes()->sync([$cardiology->getKey()]);
         $cardiologyQuestion->tags()->attach($tag->getKey());
         $respiratoryQuestion->medicalTaxonomyNodes()->attach($respiratory->getKey());
         $questionSession = QuestionSession::factory()->for($student)->create([

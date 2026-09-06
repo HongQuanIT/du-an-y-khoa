@@ -77,7 +77,6 @@ final class ListQuestionsAction
                     )
                     ->query(fn (EloquentBuilder $query) => $this->filters->apply(
                         ServePublishedQuestion::scopeAvailable($query->with([
-                            'coreClinicalTopics:id',
                             'medicalTaxonomyNodes:id',
                             'tags:id',
                         ])),

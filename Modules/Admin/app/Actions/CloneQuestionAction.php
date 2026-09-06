@@ -34,7 +34,6 @@ final class CloneQuestionAction
             $source->loadMissing([
                 'options' => fn ($q) => $q->orderBy('order'),
                 'medicalTaxonomyNodes:id',
-                'coreClinicalTopics:id',
                 'tags:id',
                 'hints',
             ]);
@@ -80,16 +79,6 @@ final class CloneQuestionAction
             ]);
             $clone->save();
             $clone->medicalTaxonomyNodes()->sync($medicalNodeIds);
-
-            $coreIds = collect($snapshot['core_clinical_topic_ids'] ?? [])
-                ->map(fn ($id): int => (int) $id)
-                ->filter()
-                ->unique()
-                ->values()
-                ->all();
-            if ($coreIds !== []) {
-                $clone->coreClinicalTopics()->sync($coreIds);
-            }
 
             $tagIds = collect($snapshot['tag_ids'] ?? [])
                 ->map(fn ($id): int => (int) $id)

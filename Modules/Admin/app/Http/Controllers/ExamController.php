@@ -292,7 +292,8 @@ final class ExamController extends Controller
             $questionIds = Question::query()
                 ->where('status', QuestionStatus::Private)
                 ->where('exam_flag', true)
-                ->whereHas('coreClinicalTopics', fn ($query) => $query->where('core_clinical_topics.id', $examTopic->core_clinical_topic_id))
+                ->tap(fn ($query) => app(\Modules\QuestionBank\Support\QuestionFilterBuilder::class)
+                    ->whereMatchesCoreClinicalTopic($query, (int) $examTopic->core_clinical_topic_id))
                 ->whereNotIn('id', $usedQuestionIds)
                 ->orderByDesc('created_at')
                 ->limit($needed)
@@ -327,7 +328,8 @@ final class ExamController extends Controller
         return Question::query()
             ->where('status', QuestionStatus::Private)
             ->where('exam_flag', true)
-            ->whereHas('coreClinicalTopics', fn ($query) => $query->where('core_clinical_topics.id', $coreClinicalTopicId))
+            ->tap(fn ($query) => app(\Modules\QuestionBank\Support\QuestionFilterBuilder::class)
+                ->whereMatchesCoreClinicalTopic($query, $coreClinicalTopicId))
             ->count();
     }
 

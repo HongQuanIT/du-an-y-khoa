@@ -7,17 +7,17 @@ namespace Modules\QuestionBank\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Support\Http\Responses\ApiResponse;
 use App\Support\ScopeFilters;
-use App\Support\TargetExams;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Validation\ValidationException;
 use Modules\QuestionBank\Actions\CreateQuestionSessionAction;
-use Modules\QuestionBank\Http\Requests\CreateQuestionSessionRequest;
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
-use Modules\QuestionBank\Models\CoreClinicalTopic;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
+use Modules\QuestionBank\Http\Requests\CreateQuestionSessionRequest;
+use Modules\QuestionBank\Models\Blueprint;
+use Modules\QuestionBank\Models\MedicalTaxonomyNode;
 use Modules\QuestionBank\Services\SessionQuestionSelector;
+use Modules\QuestionBank\Support\QuestionFilterBuilder;
 use RuntimeException;
 
 /** Custom Q-Bank session builder and create endpoint. */
@@ -39,31 +39,35 @@ final class CustomSessionController extends Controller
                 ->get()
             : collect();
 
+        $exams = Blueprint::query()
+            ->where('status', TaxonomyStatus::Active)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get(['id', 'name', 'code', 'description']);
+
+        $blueprintScopes = app(QuestionFilterBuilder::class)
+            ->taxonomyScopesForBlueprints($exams->pluck('id')->all());
+
         return view('questionbank::custom-session', [
             'specialties' => MedicalTaxonomyNode::query()->where('node_type', 'specialty')->orderBy('sort_order')->orderBy('name')->get(),
             'systems' => MedicalTaxonomyNode::query()->where('node_type', 'system')->orderBy('sort_order')->orderBy('name')->get(),
-            'exams' => TargetExams::selectable(),
+            'exams' => $exams
+                ->map(fn (Blueprint $blueprint): array => [
+                    'id' => (int) $blueprint->id,
+                    'title' => $blueprint->name,
+                    'hint' => filled($blueprint->description)
+                        ? (string) $blueprint->description
+                        : 'Ma trận đề thi — lọc câu hỏi theo danh mục đã map.',
+                    'icon' => match ($blueprint->code) {
+                        'medical_practice_licensing_exam' => 'stethoscope',
+                        default => 'assignment',
+                    },
+                ])
+                ->values()
+                ->all(),
+            'blueprintScopes' => $blueprintScopes,
             'articles' => ScopeFilters::articles(),
             'symptoms' => ScopeFilters::symptoms(),
-            'coreTopics' => CoreClinicalTopic::query()
-                ->where('status', TaxonomyStatus::Active)
-                ->with('section:id,name,sort_order')
-                ->get(['id', 'blueprint_section_id', 'name', 'slug', 'sort_order'])
-                ->sortBy(fn (CoreClinicalTopic $topic): string => sprintf(
-                    '%05d:%05d:%s',
-                    $topic->section?->sort_order ?? PHP_INT_MAX,
-                    $topic->sort_order,
-                    $topic->name,
-                ))
-                ->map(fn (CoreClinicalTopic $topic): array => [
-                    'id' => $topic->id,
-                    'blueprint_section_id' => $topic->blueprint_section_id,
-                    'name' => $topic->name,
-                    'slug' => $topic->slug,
-                    'section_name' => $topic->section?->name,
-                    'section_sort_order' => $topic->section?->sort_order,
-                ])
-                ->values(),
             'bookmarkFolders' => $bookmarkFolders,
         ]);
     }

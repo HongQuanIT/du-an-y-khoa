@@ -102,9 +102,97 @@ final class TaxonomyArchitectureTest extends TestCase
         $this->assertCount(1, $nodeA->fresh()->coreClinicalTopics);
     }
 
-    public function test_question_pivot_relationships_are_unique(): void
+    public function test_blueprint_filter_matches_via_mapping_without_direct_pivot(): void
     {
         [$coreTopic, $nodeA] = $this->seedCoreTopicAndNodes();
+        $coreTopic->medicalTaxonomyNodes()->sync([$nodeA->id]);
+
+        $match = Question::factory()->create(['status' => QuestionStatus::Published]);
+        $match->medicalTaxonomyNodes()->sync([$nodeA->id]);
+        $other = Question::factory()->create(['status' => QuestionStatus::Published]);
+
+        $repo = app(QuestionRepository::class);
+        $byCore = $repo->paginatePublished(new ListQuestionsData(
+            coreClinicalTopicIds: [$coreTopic->id],
+        ));
+
+        $this->assertTrue($byCore->contains('id', $match->id));
+        $this->assertFalse($byCore->contains('id', $other->id));
+        $this->assertSame(0, $match->coreClinicalTopics()->count());
+        $this->assertTrue($match->inferredCoreClinicalTopics()->contains('id', $coreTopic->id));
+    }
+
+    public function test_blueprint_filter_matches_via_tag_mapping(): void
+    {
+        [$coreTopic] = $this->seedCoreTopicAndNodes();
+        $tag = Tag::query()->create([
+            'name' => 'STEMI Tag Map',
+            'slug' => 'stemi-tag-map',
+            'status' => TaxonomyStatus::Active,
+        ]);
+        $coreTopic->tags()->sync([$tag->id]);
+
+        $match = Question::factory()->create(['status' => QuestionStatus::Published]);
+        $match->tags()->sync([$tag->id]);
+        $other = Question::factory()->create(['status' => QuestionStatus::Published]);
+
+        $repo = app(QuestionRepository::class);
+        $byCore = $repo->paginatePublished(new ListQuestionsData(
+            coreClinicalTopicIds: [$coreTopic->id],
+        ));
+
+        $this->assertTrue($byCore->contains('id', $match->id));
+        $this->assertFalse($byCore->contains('id', $other->id));
+        $this->assertTrue($match->inferredCoreClinicalTopics()->contains('id', $coreTopic->id));
+    }
+
+    public function test_blueprint_taxonomy_scope_includes_ancestors_for_ui_filters(): void
+    {
+        $taxonomy = $this->makeMedicalTaxonomy('scope-test-taxonomy');
+        $system = $this->makeMedicalNode([
+            'taxonomy' => $taxonomy,
+            'name' => 'Hệ tim mạch',
+            'slug' => 'he-tim-mach-scope',
+            'node_type' => 'system',
+        ]);
+        $specialty = $this->makeMedicalNode([
+            'taxonomy' => $taxonomy,
+            'parent_id' => $system->id,
+            'name' => 'Tim mạch',
+            'slug' => 'tim-mach-scope',
+            'node_type' => 'specialty',
+        ]);
+        $disease = $this->makeMedicalNode([
+            'taxonomy' => $taxonomy,
+            'parent_id' => $specialty->id,
+            'name' => 'STEMI scope',
+            'slug' => 'stemi-scope',
+            'node_type' => 'disease',
+        ]);
+        $otherSystem = $this->makeMedicalNode([
+            'taxonomy' => $taxonomy,
+            'name' => 'Hệ bài tiết',
+            'slug' => 'he-bai-tiet-scope',
+            'node_type' => 'system',
+        ]);
+
+        [$coreTopic] = $this->seedCoreTopicAndNodes();
+        $coreTopic->medicalTaxonomyNodes()->sync([$disease->id]);
+
+        $scopes = app(\Modules\QuestionBank\Support\QuestionFilterBuilder::class)
+            ->taxonomyScopesForBlueprints([$coreTopic->section->blueprint_id]);
+
+        $scope = $scopes[$coreTopic->section->blueprint_id];
+        $this->assertContains($system->id, $scope['systemIds']);
+        $this->assertContains($specialty->id, $scope['specialtyIds']);
+        $this->assertContains($disease->id, $scope['nodeIds']);
+        $this->assertNotContains($otherSystem->id, $scope['systemIds']);
+        $this->assertNotContains($otherSystem->id, $scope['nodeIds']);
+    }
+
+    public function test_question_pivot_relationships_are_unique(): void
+    {
+        [, $nodeA] = $this->seedCoreTopicAndNodes();
         $tag = Tag::query()->create([
             'name' => 'ECG',
             'slug' => 'ecg',
@@ -114,29 +202,26 @@ final class TaxonomyArchitectureTest extends TestCase
         $question = Question::factory()->create([
             'status' => QuestionStatus::Published,
         ]);
-        $question->coreClinicalTopics()->sync([$coreTopic->id]);
         $question->medicalTaxonomyNodes()->sync([$nodeA->id]);
         $question->tags()->sync([$tag->id]);
 
-        $question->coreClinicalTopics()->syncWithoutDetaching([$coreTopic->id]);
         $question->medicalTaxonomyNodes()->syncWithoutDetaching([$nodeA->id]);
         $question->tags()->syncWithoutDetaching([$tag->id]);
 
-        $this->assertSame(1, $question->coreClinicalTopics()->count());
         $this->assertSame(1, $question->medicalTaxonomyNodes()->count());
         $this->assertSame(1, $question->tags()->count());
     }
 
-    public function test_repository_filters_by_blueprint_taxonomy_and_tags(): void
+    public function test_repository_filters_by_blueprint_via_medical_mapping(): void
     {
         [$coreTopic, $nodeA] = $this->seedCoreTopicAndNodes();
+        $coreTopic->medicalTaxonomyNodes()->sync([$nodeA->id]);
         $tag = Tag::query()->create(['name' => 'Emergency', 'slug' => 'emergency', 'status' => TaxonomyStatus::Active]);
 
         $match = Question::factory()->create([
             'difficulty' => Difficulty::Hard,
             'status' => QuestionStatus::Published,
         ]);
-        $match->coreClinicalTopics()->sync([$coreTopic->id]);
         $match->medicalTaxonomyNodes()->sync([$nodeA->id]);
         $match->tags()->sync([$tag->id]);
 

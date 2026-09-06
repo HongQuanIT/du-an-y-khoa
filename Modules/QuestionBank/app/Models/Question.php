@@ -191,10 +191,26 @@ class Question extends Model
         };
     }
 
-    /** @return BelongsToMany<CoreClinicalTopic, $this> */
+    /**
+     * Legacy direct pivot — deprecated. Prefer inferred topics via medical taxonomy mapping.
+     *
+     * @return BelongsToMany<CoreClinicalTopic, $this>
+     * @deprecated Use inferredCoreClinicalTopics() / QuestionFilterBuilder
+     */
     public function coreClinicalTopics(): BelongsToMany
     {
         return $this->belongsToMany(CoreClinicalTopic::class, 'question_blueprint_topics')->withTimestamps();
+    }
+
+    /**
+     * Core clinical topics projected from medical taxonomy ↔ blueprint mapping.
+     *
+     * @return \Illuminate\Support\Collection<int, CoreClinicalTopic>
+     */
+    public function inferredCoreClinicalTopics(): \Illuminate\Support\Collection
+    {
+        return app(\Modules\QuestionBank\Support\QuestionFilterBuilder::class)
+            ->inferredCoreClinicalTopicsForQuestion($this);
     }
 
     /** @return BelongsToMany<MedicalTaxonomyNode, $this> */
@@ -382,7 +398,6 @@ class Question extends Model
         if (ServePublishedQuestion::needsOverlay($this)) {
             $source = ServePublishedQuestion::overlay(
                 static::query()->with([
-                    'coreClinicalTopics:id',
                     'medicalTaxonomyNodes:id',
                     'tags:id',
                     'options',
@@ -397,14 +412,6 @@ class Question extends Model
         ));
         $plainStem = trim(preg_replace('/\s+/u', ' ', $plainStem) ?? $plainStem);
 
-        $coreClinicalTopicIds = ($source->relationLoaded('coreClinicalTopics')
-            ? $source->coreClinicalTopics
-            : $source->coreClinicalTopics()->get())
-            ->pluck('id')
-            ->map(fn ($id): int => (int) $id)
-            ->values()
-            ->all();
-
         $medicalTaxonomyNodeIds = ($source->relationLoaded('medicalTaxonomyNodes')
             ? $source->medicalTaxonomyNodes
             : $source->medicalTaxonomyNodes()->get())
@@ -412,6 +419,9 @@ class Question extends Model
             ->map(fn ($id): int => (int) $id)
             ->values()
             ->all();
+
+        $coreClinicalTopicIds = app(\Modules\QuestionBank\Support\QuestionFilterBuilder::class)
+            ->inferredCoreClinicalTopicIds($medicalTaxonomyNodeIds);
 
         $tagIds = ($source->relationLoaded('tags') ? $source->tags : $source->tags()->get())
             ->pluck('id')

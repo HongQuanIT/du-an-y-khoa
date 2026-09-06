@@ -33,4 +33,15 @@ class Tag extends Model
     {
         return $this->belongsToMany(Question::class, 'question_tags')->withTimestamps();
     }
+
+    /** @return BelongsToMany<CoreClinicalTopic, $this> */
+    public function coreClinicalTopics(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            CoreClinicalTopic::class,
+            'core_topic_tags',
+            'tag_id',
+            'core_clinical_topic_id',
+        )->withTimestamps();
+    }
 }

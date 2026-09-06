@@ -37,10 +37,14 @@ final class AuditSnapshot
         $question->loadMissing([
             'options' => fn ($query) => $query->orderBy('order'),
             'hints' => fn ($query) => $query->orderBy('sort_order'),
-            'coreClinicalTopics:id',
             'medicalTaxonomyNodes:id',
             'tags:id',
         ]);
+
+        $inferredCoreIds = app(\Modules\QuestionBank\Support\QuestionFilterBuilder::class)
+            ->inferredCoreClinicalTopicIds(
+                $question->medicalTaxonomyNodes->pluck('id')->map(fn ($id): int => (int) $id)->all(),
+            );
 
         return [
             'id' => (string) $question->getKey(),
@@ -52,12 +56,7 @@ final class AuditSnapshot
             'attending_tip' => self::safeContent($question->attending_tip, 8000),
             'difficulty' => $question->difficulty->value,
             'status' => $question->status->value,
-            'core_clinical_topic_ids' => $question->coreClinicalTopics
-                ->pluck('id')
-                ->map(fn ($id): int => (int) $id)
-                ->sort()
-                ->values()
-                ->all(),
+            'core_clinical_topic_ids' => collect($inferredCoreIds)->sort()->values()->all(),
             'medical_taxonomy_node_ids' => $question->medicalTaxonomyNodes
                 ->pluck('id')
                 ->map(fn ($id): int => (int) $id)
@@ -128,7 +127,6 @@ final class AuditSnapshot
                 ->all(),
             'attending_tip' => self::safeContent($payload['attending_tip'] ?? null, 8000),
             'difficulty' => $payload['difficulty'] ?? null,
-            'core_clinical_topic_ids' => self::sortedIds($payload['core_clinical_topic_ids'] ?? []),
             'medical_taxonomy_node_ids' => self::sortedIds($payload['medical_taxonomy_node_ids'] ?? []),
             'medical_taxonomy_links' => collect((array) ($payload['medical_taxonomy_links'] ?? []))
                 ->filter(fn (mixed $link): bool => is_array($link) && isset($link['id']))

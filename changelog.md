@@ -1,5 +1,28 @@
 # Changelog
 
+## 2026-09-06
+
+### Feat — Blueprint Liên kết: danh mục hoặc tag
+- Đổi nhãn **Liên kết danh mục** → **Liên kết**; panel có tab Danh mục / Tag.
+- Pivot `core_topic_tags`; sync CCT lưu cả medical nodes + tags.
+- Filter / suy ra CCT khớp câu hỏi qua danh mục **hoặc** tag đã map.
+
+### Feat — Blueprint: xóa Phần & Chủ đề lâm sàng
+- Thêm endpoint xóa phần / chủ đề lâm sàng (quyền `topic.delete`).
+- Form sửa ma trận: nút xóa + popup xác nhận kiểu SaaS (overlay, alertdialog, Hủy / Xóa).
+- Xóa phần cascade các chủ đề bên trong; gỡ mapping danh mục y khoa.
+
+### Fix — QBank create: Kỳ thi = ma trận; bỏ lọc thừa
+- Bộ lọc **Kỳ thi** giữ UI thẻ như cũ, dữ liệu load từ ma trận đề thi (`blueprint_id`).
+- Chọn kỳ thi → Hệ cơ quan / Chuyên khoa / danh mục chỉ hiện mục thuộc scope ma trận (map + ancestor/descendant); bỏ chọn ngoài phạm vi.
+- Gỡ hàng lọc trùng Ma trận đề thi, Chủ đề lâm sàng, Tags trên `/qbank/create`.
+
+### Fix — Câu hỏi khớp ma trận qua danh mục y khoa (không gắn CCT trực tiếp)
+- Authoring: chỉ gắn medical taxonomy (+ tags); form câu hỏi bỏ picker CCT bắt buộc.
+- Filter / exam / classroom / Meilisearch index: suy ra CCT qua `core_topic_medical_taxonomy_nodes` (mở rộng descendant khi lọc).
+- Ma trận mới chỉ cần map CCT ↔ danh mục — không gắn lại từng câu hỏi.
+- Demo seeder + tests đồng bộ mô hình mới.
+
 ## 2026-09-05
 
 ### Fix — UX liên kết node y khoa trên form Blueprint

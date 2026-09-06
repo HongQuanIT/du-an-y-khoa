@@ -1,5 +1,5 @@
 <x-layouts.admin title="Ma trận đề thi">
-    <x-admin.page-header title="Ma trận đề thi" description="Ma trận → Phần → Chủ đề lâm sàng (128 chủ đề).">
+    <x-admin.page-header title="Ma trận đề thi" description="Ma trận → Phần → Chủ đề lâm sàng. Map CCT ↔ danh mục y khoa; câu hỏi khớp qua danh mục (không gắn trực tiếp).">
         <x-slot:actions>
             @if ($canCreate)
                 <a href="{{ route('admin.blueprints.create') }}" class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 font-label-md font-semibold text-on-primary">

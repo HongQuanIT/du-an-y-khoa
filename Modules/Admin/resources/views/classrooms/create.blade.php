@@ -7,7 +7,7 @@
         'code' => $question->code,
         'text' => trim(strip_tags(html_entity_decode($question->stem, ENT_QUOTES | ENT_HTML5, 'UTF-8'))),
         'topic' => $question->medicalTaxonomyNodes->pluck('name')->join(', ') ?: 'Tổng hợp',
-        'core_topic' => $question->coreClinicalTopics->pluck('name')->join(', '),
+        'core_topic' => $question->inferredCoreClinicalTopics()->pluck('name')->join(', '),
         'difficulty' => $question->difficulty->label(),
         'feedback_count' => (int) ($question->open_feedback_count ?? 0),
         'edit_url' => route('admin.questions.edit', $question),
