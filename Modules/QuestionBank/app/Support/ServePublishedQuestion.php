@@ -83,6 +83,8 @@ final class ServePublishedQuestion
             return $question;
         }
 
+        $question->loadMissing(['options' => fn ($query) => $query->orderBy('order')]);
+
         return self::applySnapshot($question, $version->snapshot ?? []);
     }
 
@@ -108,6 +110,7 @@ final class ServePublishedQuestion
             $version = ($versions->get($question->getKey()) ?? collect())
                 ->firstWhere('version', (int) $question->published_version);
             if ($version !== null) {
+                $question->loadMissing(['options' => fn ($query) => $query->orderBy('order')]);
                 self::applySnapshot($question, $version->snapshot ?? []);
             }
         }
@@ -136,19 +139,43 @@ final class ServePublishedQuestion
         ]);
         $question->syncOriginal();
 
+        $liveById = $question->relationLoaded('options')
+            ? $question->options->keyBy(fn (QuestionOption $o): int => (int) $o->getKey())
+            : collect();
+        $liveByContentOrder = $question->relationLoaded('options')
+            ? $question->options->keyBy(
+                fn (QuestionOption $o): string => self::optionMatchKey((string) $o->content, (int) $o->order),
+            )
+            : collect();
+
         $options = collect((array) ($snapshot['options'] ?? []))
             ->values()
-            ->map(function (array $row, int $index) use ($question): QuestionOption {
+            ->map(function (array $row, int $index) use ($question, $liveById, $liveByContentOrder): QuestionOption {
+                $content = (string) ($row['content'] ?? '');
+                $order = (int) ($row['order'] ?? ($index + 1));
                 $option = new QuestionOption([
                     'question_id' => $question->getKey(),
                     'label' => (string) ($row['label'] ?? chr(65 + $index)),
-                    'content' => (string) ($row['content'] ?? ''),
+                    'content' => $content,
                     'is_correct' => (bool) ($row['is_correct'] ?? false),
                     'explanation' => $row['explanation'] ?? null,
-                    'order' => (int) ($row['order'] ?? ($index + 1)),
+                    'order' => $order,
                 ]);
-                if (isset($row['id'])) {
-                    $option->id = (int) $row['id'];
+
+                $resolvedId = isset($row['id']) ? (int) $row['id'] : null;
+                if ($resolvedId === null || $resolvedId <= 0) {
+                    $match = $liveByContentOrder->get(self::optionMatchKey($content, $order));
+                    $resolvedId = $match instanceof QuestionOption ? (int) $match->getKey() : null;
+                } elseif (! $liveById->has($resolvedId) && $liveByContentOrder->isNotEmpty()) {
+                    // Snapshot id may be stale after option recreate — fall back to content+order.
+                    $match = $liveByContentOrder->get(self::optionMatchKey($content, $order));
+                    if ($match instanceof QuestionOption) {
+                        $resolvedId = (int) $match->getKey();
+                    }
+                }
+
+                if ($resolvedId !== null && $resolvedId > 0) {
+                    $option->id = $resolvedId;
                     $option->exists = true;
                 }
 
@@ -158,5 +185,10 @@ final class ServePublishedQuestion
         $question->setRelation('options', $options);
 
         return $question;
+    }
+
+    private static function optionMatchKey(string $content, int $order): string
+    {
+        return $order.'|'.md5($content);
     }
 }

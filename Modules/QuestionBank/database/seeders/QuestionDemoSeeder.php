@@ -125,7 +125,7 @@ final class QuestionDemoSeeder extends Seeder
 
     private function syncRelations(Question $question, int $taxonomyId): void
     {
-        // CCT inferred via core_topic_medical_taxonomy_nodes — do not attach question_blueprint_topics.
+        // CCT inferred via core_topic_medical_taxonomy_nodes / core_topic_tags — no direct Q↔CCT pivot.
 
         $nodeLinks = [
             'tim-mach' => ['relationship_type' => 'contextual', 'is_primary' => false],

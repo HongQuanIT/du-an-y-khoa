@@ -58,11 +58,13 @@ Nguồn sự thật: **context pack** (stem, options, giải thích chính thứ
 
 ```text
 question_id, code, version, topics[]
-stem, lead_in, options[{label, content, is_correct, explanation?}]
+stem, lead_in, options[{id, label, content, is_correct, explanation?}]
 official_explanation, key_info[], attending_tip?
 user_selected_labels[], is_correct_attempt
 library_hits[]   // RAG: id, title, slug, excerpt
 ```
+
+`options[].label` / `user_selected_labels` = **display letters của session snapshot** (sau khi đảo), không phải chữ cái author trên DB. Identity đáp án vẫn là `options[].id`.
 
 **Chưa nộp (Study)**
 

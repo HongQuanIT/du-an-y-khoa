@@ -1,0 +1,265 @@
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "fontFamily": "Inter, system-ui, sans-serif",
+    "fontSize": "13px",
+    "primaryColor": "#f8fafc",
+    "primaryTextColor": "#0f172a",
+    "primaryBorderColor": "#334155",
+    "lineColor": "#64748b",
+    "secondaryColor": "#e2e8f0",
+    "tertiaryColor": "#f1f5f9"
+  },
+  "er": { "layoutDirection": "TB", "entityPadding": 12 }
+}}%%
+erDiagram
+  %% ===== Content =====
+  users ||--o{ questions : "created_by / reviewer / …"
+  questions ||--o{ question_options : has
+  questions ||--o{ question_hints : has
+  questions ||--o{ question_versions : has
+  questions ||--o{ question_scopes : has
+  questions ||--o{ question_review_requests : has
+  questions ||--o{ question_feedback : has
+  questions ||--o{ question_similarity_matches : "pair low/high"
+  questions ||--o| questions : cloned_from_id
+
+  %% ===== Taxonomy / Blueprint =====
+  blueprints ||--o{ blueprint_sections : has
+  blueprint_sections ||--o{ core_clinical_topics : has
+  medical_taxonomies ||--o{ medical_taxonomy_nodes : has
+  medical_taxonomy_nodes ||--o{ medical_taxonomy_nodes : parent_id
+
+  questions ||--o{ question_medical_topics : tagged
+  medical_taxonomy_nodes ||--o{ question_medical_topics : tagged
+  questions ||--o{ question_tags : tagged
+  tags ||--o{ question_tags : tagged
+  core_clinical_topics ||--o{ core_topic_medical_taxonomy_nodes : maps
+  medical_taxonomy_nodes ||--o{ core_topic_medical_taxonomy_nodes : maps
+  core_clinical_topics ||--o{ core_topic_tags : tagged
+  tags ||--o{ core_topic_tags : tagged
+
+  %% ===== Runtime =====
+  users ||--o{ question_sessions : owns
+  exams ||--o{ question_sessions : "exam_id optional"
+  question_sessions ||--o{ question_session_snapshots : has
+  question_sessions ||--o{ question_attempts : has
+  question_sessions ||--o{ question_feedback : has
+  users ||--o{ question_attempts : owns
+  users ||--o{ question_status : tracks
+  questions ||--o{ question_status : tracks
+  users ||--o{ question_feedback : owns
+  question_options ||--o{ question_feedback : "optional option"
+
+  %% ===== Exam =====
+  blueprints ||--o{ exams : "blueprint_id"
+  exams ||--o{ exam_topics : has
+  core_clinical_topics ||--o{ exam_topics : allocates
+  exams ||--o{ exam_question : contains
+  questions ||--o{ exam_question : contains
+  core_clinical_topics ||--o{ exam_question : "optional CCT"
+
+  users {
+    bigint id PK
+  }
+
+  questions {
+    uuid id PK
+    string code UK
+    uuid cloned_from_id FK
+    string difficulty
+    string status
+    bool is_free
+    bool exam_flag
+    uint version
+    uint published_version
+    json key_info
+    json stats_cache
+    char64 content_fingerprint
+    softDeletes deleted_at
+  }
+
+  question_options {
+    bigint id PK "identity for grading"
+    uuid question_id FK
+    string label "authoring-only letter"
+    text content
+    bool is_correct
+    uint order "author order"
+  }
+
+  question_hints {
+    bigint id PK
+    uuid question_id FK
+    text content
+    uint sort_order
+    string status
+  }
+
+  question_versions {
+    bigint id PK
+    uuid question_id FK
+    uint version
+    json snapshot
+    string event
+  }
+
+  question_scopes {
+    bigint id PK
+    uuid question_id FK
+    string scope_type
+    string scope_key
+  }
+
+  question_review_requests {
+    bigint id PK
+    uuid question_id FK
+    string action
+    string status
+    bigint requested_by FK
+  }
+
+  question_feedback {
+    bigint id PK
+    uuid question_id FK
+    uuid question_session_id FK
+    bigint user_id FK
+    bigint question_option_id FK
+    string target
+    string category
+    string status
+  }
+
+  question_similarity_matches {
+    bigint id PK
+    uuid question_id_low FK
+    uuid question_id_high FK
+    decimal score
+    string severity
+  }
+
+  blueprints {
+    bigint id PK
+    string slug UK
+    string code UK
+    string status
+  }
+
+  blueprint_sections {
+    bigint id PK
+    bigint blueprint_id FK
+    string slug
+    string status
+  }
+
+  core_clinical_topics {
+    bigint id PK
+    bigint blueprint_section_id FK
+    string slug
+    string status
+  }
+
+  medical_taxonomies {
+    bigint id PK
+    string code UK
+    string status
+  }
+
+  medical_taxonomy_nodes {
+    bigint id PK
+    bigint medical_taxonomy_id FK
+    bigint parent_id FK
+    string slug
+    string node_type
+    string status
+  }
+
+  tags {
+    bigint id PK
+    string slug UK
+    string type
+    string status
+  }
+
+  question_medical_topics {
+    uuid question_id FK
+    bigint medical_taxonomy_node_id FK
+    string relationship_type
+    bool is_primary
+  }
+
+  question_tags {
+    uuid question_id FK
+    bigint tag_id FK
+  }
+
+  core_topic_medical_taxonomy_nodes {
+    bigint core_clinical_topic_id FK
+    bigint medical_taxonomy_node_id FK
+  }
+
+  core_topic_tags {
+    bigint core_clinical_topic_id FK
+    bigint tag_id FK
+  }
+
+  question_sessions {
+    uuid id PK
+    bigint user_id FK
+    bigint exam_id FK
+    string mode
+    string status
+    string source
+    json filters
+    json question_ids
+    softDeletes deleted_at
+  }
+
+  question_session_snapshots {
+    bigint id PK
+    uuid session_id FK
+    uuid question_id "no FK"
+    uint position
+    json payload
+  }
+
+  question_attempts {
+    bigint id PK
+    uuid session_id FK
+    bigint user_id FK
+    uuid question_id "no FK"
+    json selected_option_ids
+    bool is_correct
+  }
+
+  question_status {
+    bigint id PK
+    bigint user_id FK
+    uuid question_id FK
+    string status
+    uint attempts_count
+  }
+
+  exams {
+    bigint id PK
+    bigint blueprint_id FK
+    string title
+    string status
+    bool is_published
+  }
+
+  exam_topics {
+    bigint id PK
+    bigint exam_id FK
+    bigint core_clinical_topic_id FK
+    int question_count
+    json difficulty_counts
+  }
+
+  exam_question {
+    bigint id PK
+    bigint exam_id FK
+    uuid question_id FK
+    bigint core_clinical_topic_id FK
+    int order
+  }

@@ -29,6 +29,7 @@ final class LiveQuestionPanelService
         $questions = $this->questionsById($ids);
         $currentId = $ids[$index] ?? null;
         $revealed = $session->revealedOptionIds();
+        $sessionKey = (string) $session->getKey();
 
         return [
             'total' => count($ids),
@@ -37,6 +38,7 @@ final class LiveQuestionPanelService
             'question' => $currentId !== null
                 ? $this->serializeQuestion(
                     $questions->get($currentId),
+                    $sessionKey,
                     $revealed,
                 )
                 : null,
@@ -58,15 +60,16 @@ final class LiveQuestionPanelService
         }
 
         $questions = $this->questionsById($ids);
+        $sessionKey = (string) $session->getKey();
 
         return collect($ids)
-            ->map(function (string $id) use ($questions): ?array {
+            ->map(function (string $id) use ($questions, $sessionKey): ?array {
                 $question = $questions->get($id);
                 if ($question === null) {
                     return null;
                 }
 
-                return $this->serializeQuestion($question, revealAll: true);
+                return $this->serializeQuestion($question, $sessionKey, revealAll: true);
             })
             ->filter()
             ->values()
@@ -112,6 +115,7 @@ final class LiveQuestionPanelService
      */
     private function serializeQuestion(
         ?Question $question,
+        string $sessionKey,
         array $revealedOptionIds = [],
         bool $revealAll = false,
     ): ?array {
@@ -129,7 +133,8 @@ final class LiveQuestionPanelService
             $keyInfoRenderer->resolvePhrases((string) $question->stem, (array) ($question->key_info ?? [])),
         );
 
-        $options = $question->options->sortBy('order')->values()->map(
+        // Same seeded shuffle as QBank sessions — display letters remapped; grading uses option ids.
+        $options = $question->optionsForSession($sessionKey)->map(
             function ($opt) use ($revealedLookup, $revealAll, &$correctRevealed, &$optionRevealed): array {
                 $optionId = (int) $opt->getKey();
                 $revealed = $revealAll || isset($revealedLookup[$optionId]);
@@ -142,6 +147,7 @@ final class LiveQuestionPanelService
 
                 return [
                     'id' => $optionId,
+                    'label' => (string) $opt->label,
                     'content' => SafeHtml::forDisplay((string) $opt->content),
                     'is_correct' => $revealed ? (bool) $opt->is_correct : null,
                     'explanation' => $revealed

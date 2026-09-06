@@ -39,17 +39,6 @@ class CoreClinicalTopic extends Model
         return $this->belongsTo(BlueprintSection::class, 'blueprint_section_id');
     }
 
-    /**
-     * Legacy direct pivot — deprecated.
-     *
-     * @return BelongsToMany<Question, $this>
-     * @deprecated Prefer whereHas('medicalTaxonomyNodes.questions')
-     */
-    public function questions(): BelongsToMany
-    {
-        return $this->belongsToMany(Question::class, 'question_blueprint_topics')->withTimestamps();
-    }
-
     /** @return BelongsToMany<MedicalTaxonomyNode, $this> */
     public function medicalTaxonomyNodes(): BelongsToMany
     {

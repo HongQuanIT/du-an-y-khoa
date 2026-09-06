@@ -118,7 +118,6 @@ final class TaxonomyArchitectureTest extends TestCase
 
         $this->assertTrue($byCore->contains('id', $match->id));
         $this->assertFalse($byCore->contains('id', $other->id));
-        $this->assertSame(0, $match->coreClinicalTopics()->count());
         $this->assertTrue($match->inferredCoreClinicalTopics()->contains('id', $coreTopic->id));
     }
 

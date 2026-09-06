@@ -13,6 +13,10 @@ use Modules\QuestionBank\Database\Factories\QuestionOptionFactory;
 /**
  * A single answer choice belonging to a question.
  *
+ * Identity for grading/attempts is `id`. `label` is authoring-only (denormalized
+ * from `order`); display letters A/B/C… are remapped per session via
+ * Question::optionsForSession().
+ *
  * @property int $id
  * @property string $question_id
  * @property string $label

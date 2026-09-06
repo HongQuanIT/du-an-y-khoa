@@ -408,7 +408,7 @@ export function mountLiveRoom(root) {
 
                     const letter = document.createElement('span');
                     letter.className = 'font-medium';
-                    letter.textContent = `${String.fromCharCode(65 + i)}. `;
+                    letter.textContent = `${opt.label || String.fromCharCode(65 + i)}. `;
 
                     const content = document.createElement('div');
                     content.className = 'prose prose-sm min-w-0 flex-1 select-text text-on-surface';

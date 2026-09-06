@@ -95,7 +95,6 @@ final class QuestionArchitectureDemoTest extends TestCase
         $inferred = $question->inferredCoreClinicalTopics();
         $this->assertTrue($inferred->contains(fn ($t) => $t->name === 'Đau ngực'));
         $this->assertTrue($inferred->contains(fn ($t) => $t->section?->name === 'Hệ tim mạch'));
-        $this->assertSame(0, $question->coreClinicalTopics()->count());
         $this->assertTrue($question->medicalTaxonomyNodes->contains(fn ($n) => $n->slug === 'stemi'));
         $this->assertTrue($question->medicalTaxonomyNodes->contains(fn ($n) => $n->node_type === 'symptom' && $n->name === 'Đau ngực'));
         $this->assertTrue($question->medicalTaxonomyNodes->contains(fn ($n) => $n->node_type === 'clinical_finding'));
