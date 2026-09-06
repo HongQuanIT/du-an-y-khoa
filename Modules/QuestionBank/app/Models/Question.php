@@ -192,17 +192,6 @@ class Question extends Model
     }
 
     /**
-     * Legacy direct pivot — deprecated. Prefer inferred topics via medical taxonomy mapping.
-     *
-     * @return BelongsToMany<CoreClinicalTopic, $this>
-     * @deprecated Use inferredCoreClinicalTopics() / QuestionFilterBuilder
-     */
-    public function coreClinicalTopics(): BelongsToMany
-    {
-        return $this->belongsToMany(CoreClinicalTopic::class, 'question_blueprint_topics')->withTimestamps();
-    }
-
-    /**
      * Core clinical topics projected from medical taxonomy ↔ blueprint mapping.
      *
      * @return \Illuminate\Support\Collection<int, CoreClinicalTopic>
@@ -366,10 +355,11 @@ class Question extends Model
      */
     public function optionsForSession(string $sessionKey): Collection
     {
+        // Always start from author order so the seeded shuffle is stable across loads.
         $options = ($this->relationLoaded('options')
-            ? $this->options
+            ? $this->options->sortBy(fn (QuestionOption $option): int => (int) $option->order)->values()
             : $this->options()->orderBy('order')->get()
-        )->values()->all();
+        )->all();
 
         $seed = hexdec(substr(hash('sha256', $sessionKey.'|'.$this->getKey()), 0, 8));
         for ($i = count($options) - 1; $i > 0; $i--) {
@@ -381,6 +371,7 @@ class Question extends Model
         $labels = range('A', 'Z');
 
         return collect($options)->values()->map(function (QuestionOption $option, int $index) use ($labels) {
+            // Display letter only — identity for grading remains option id.
             $option->setAttribute('label', $labels[$index] ?? (string) ($index + 1));
 
             return $option;

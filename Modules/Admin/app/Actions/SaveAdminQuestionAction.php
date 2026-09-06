@@ -306,9 +306,7 @@ final class SaveAdminQuestionAction
     /** @param  array<string, mixed>  $data */
     private function syncTaxonomyRelations(Question $question, array $data): void
     {
-        // Blueprint CCT is inferred via medical taxonomy mapping — do not store a direct pivot.
-        $question->coreClinicalTopics()->detach();
-
+        // Blueprint CCT is inferred via medical taxonomy / tag mapping — no direct Q↔CCT pivot.
         $question->medicalTaxonomyNodes()->sync($this->buildMedicalNodeSyncPayload($data));
 
         if (array_key_exists('tag_ids', $data)) {

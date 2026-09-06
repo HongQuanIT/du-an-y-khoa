@@ -2,6 +2,21 @@
 
 ## 2026-09-06
 
+### Fix — Chuẩn hóa đáp án đảo thứ tự (identity = option id)
+- Version snapshot bắt buộc lưu `options[].id`; overlay published resolve id thiếu qua content+order.
+- Session/live shuffle: luôn `orderBy(order)` trước seed; classroom trả `label` display từ API.
+- Admin form + SRS/ERD: chữ A/B/C chỉ authoring/display — không gắn cứng với nội dung.
+
+### Chore — Drop pivot `question_blueprint_topics`
+- CCT chỉ suy ra qua `core_topic_medical_taxonomy_nodes` / `core_topic_tags` + medical/tag trên câu hỏi.
+- Gỡ relation deprecated trên `Question` / `CoreClinicalTopic`; admin save không còn detach pivot.
+- Thêm ERD hiện tại: `srs/00-nen-tang/erd-images/qbank-current-erd.svg`.
+
+### Feat — Tạo kỳ thi: phân bổ theo ma trận × mức độ
+- Form `/admin/exams/create`: chọn Blueprint → chọn Section → bảng CCT với 5 mức độ (Rất dễ → Rất khó) + eligible realtime.
+- Lưu `exams.blueprint_id` và `exam_topics.difficulty_counts`; generate lấy exam pool theo CCT × difficulty.
+- Ẩn chọn câu thủ công khi đang dùng phân bổ ma trận; giữ fallback khi không phân bổ.
+
 ### Feat — Blueprint Liên kết: danh mục hoặc tag
 - Đổi nhãn **Liên kết danh mục** → **Liên kết**; panel có tab Danh mục / Tag.
 - Pivot `core_topic_tags`; sync CCT lưu cả medical nodes + tags.

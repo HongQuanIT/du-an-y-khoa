@@ -1,6 +1,13 @@
 @php
+    use Modules\Exam\Models\ExamTopic;
+    use Modules\QuestionBank\Enums\Difficulty;
+
     $isNew = ! $exam->exists;
     $availableQuestions = $availableQuestions ?? collect();
+    $difficultyLevels = $difficultyLevels ?? array_map(
+        fn (Difficulty $case): array => ['value' => $case->value, 'label' => $case->label()],
+        Difficulty::cases(),
+    );
     $selectedQuestionIds = old('questions');
     $questionSource = is_array($selectedQuestionIds)
         ? $availableQuestions->whereIn('id', $selectedQuestionIds)
@@ -25,17 +32,47 @@
     $statusValue = old('status', $exam->status?->value ?? 'draft');
     $published = $statusValue === 'published';
     $duration = (int) old('duration_minutes', $exam->duration_minutes ?? 90);
+    $initialBlueprintId = old('blueprint_id', $exam->blueprint_id);
+    $initialSectionIds = old('section_ids');
+    if (! is_array($initialSectionIds)) {
+        $initialSectionIds = $exam->exists && $exam->relationLoaded('examTopics')
+            ? $exam->examTopics
+                ->map(fn ($row) => $row->coreClinicalTopic?->blueprint_section_id)
+                ->filter()
+                ->unique()
+                ->values()
+                ->all()
+            : [];
+    }
     $initialExamTopics = old('exam_topics');
     if (! is_array($initialExamTopics)) {
         $initialExamTopics = $exam->exists && $exam->relationLoaded('examTopics')
             ? $exam->examTopics->map(fn ($row) => [
                 'core_clinical_topic_id' => $row->core_clinical_topic_id,
+                'difficulty_counts' => ExamTopic::normalizeDifficultyCounts($row->difficulty_counts, $row->question_count),
                 'question_count' => $row->question_count,
                 'sort_order' => $row->sort_order,
                 'topic_name' => $row->coreClinicalTopic?->name,
+                'section_id' => $row->coreClinicalTopic?->blueprint_section_id,
                 'section_name' => $row->coreClinicalTopic?->section?->name,
             ])->values()->all()
             : [];
+    } else {
+        $initialExamTopics = collect($initialExamTopics)->map(function ($row) {
+            $counts = ExamTopic::normalizeDifficultyCounts(
+                is_array($row['difficulty_counts'] ?? null) ? $row['difficulty_counts'] : null
+            );
+
+            return [
+                'core_clinical_topic_id' => $row['core_clinical_topic_id'] ?? null,
+                'difficulty_counts' => $counts,
+                'question_count' => ExamTopic::sumDifficultyCounts($counts),
+                'sort_order' => $row['sort_order'] ?? 0,
+                'topic_name' => $row['topic_name'] ?? '',
+                'section_id' => $row['section_id'] ?? null,
+                'section_name' => $row['section_name'] ?? '',
+            ];
+        })->values()->all();
     }
 @endphp
 
@@ -62,8 +99,8 @@
                 </h1>
                 <p class="mt-1 max-w-2xl font-body-sm text-on-surface-variant">
                     {{ $isNew
-                        ? 'Nhập thông tin, chọn câu hỏi và lưu nháp hoặc xuất bản ngay trong một trang.'
-                        : 'Cấu hình nội dung hiển thị, thời gian, câu hỏi và trạng thái kỳ thi trong cùng một màn.' }}
+                        ? 'Chọn ma trận đề thi, phân bổ số câu theo chủ đề và mức độ — hệ thống tự lấy từ exam pool.'
+                        : 'Cập nhật thông tin, phân bổ ma trận và trạng thái kỳ thi.' }}
                 </p>
             </div>
 
@@ -96,7 +133,7 @@
         <section class="grid grid-cols-1 gap-3 md:grid-cols-4">
             <div class="rounded-lg border border-outline-variant bg-surface px-4 py-3">
                 <p class="font-label-sm text-on-surface-variant">Số câu</p>
-                <p class="mt-1 font-headline-sm text-headline-sm text-on-surface" x-text="selected.length">{{ $questionsCount }}</p>
+                <p class="mt-1 font-headline-sm text-headline-sm text-on-surface" x-text="configuredTotal || selected.length">{{ $questionsCount }}</p>
             </div>
             <div class="rounded-lg border border-outline-variant bg-surface px-4 py-3">
                 <p class="font-label-sm text-on-surface-variant">Thời gian</p>
@@ -198,7 +235,7 @@
                     <div class="border-b border-outline-variant px-5 py-4">
                         <h2 class="font-label-lg text-on-surface">Phân bổ theo ma trận đề thi</h2>
                         <p class="mt-1 font-label-sm text-on-surface-variant">
-                            Cấu hình số câu theo chủ đề lâm sàng — hệ thống tự lấy từ exam pool (<code>private</code> + <code>exam_flag</code>).
+                            Chọn ma trận → chọn phần → nhập số câu theo từng mức độ. Hệ thống lấy từ exam pool (<code>private</code> + <code>exam_flag</code>).
                         </p>
                     </div>
                     <div class="space-y-4 p-5">
@@ -206,76 +243,115 @@
                             <p class="rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-sm text-error">{{ $message }}</p>
                         @enderror
 
-                        <div class="overflow-x-auto rounded-lg border border-outline-variant">
+                        <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                            <div>
+                                <label class="mb-1.5 block font-label-sm text-on-surface-variant" for="blueprint_id">Ma trận đề thi</label>
+                                <select id="blueprint_id" name="blueprint_id" x-model="blueprintId" @change="onBlueprintChange()"
+                                    class="block w-full rounded-lg border-none bg-surface-container-low px-3 py-2 font-body-sm text-on-surface focus:ring-2 focus:ring-primary">
+                                    <option value="">— Chọn ma trận —</option>
+                                    <template x-for="bp in blueprints" :key="bp.id">
+                                        <option :value="String(bp.id)" x-text="bp.name"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div class="flex items-end">
+                                <p class="font-label-sm text-on-surface-variant" x-show="isLoadingSections || isLoadingTopics">
+                                    <span class="material-symbols-outlined align-middle animate-spin text-[16px]">progress_activity</span>
+                                    Đang tải…
+                                </p>
+                            </div>
+                        </div>
+
+                        <div x-show="blueprintId && sections.length" class="space-y-2">
+                            <p class="font-label-sm text-on-surface-variant">Chọn phần (section) để phân bổ</p>
+                            <div class="flex flex-wrap gap-2">
+                                <template x-for="section in sections" :key="section.id">
+                                    <label class="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-outline-variant px-3 py-2 font-label-sm hover:bg-surface-container-low"
+                                        :class="selectedSectionIds.includes(Number(section.id)) ? 'border-primary bg-primary/5' : ''">
+                                        <input type="checkbox" name="section_ids[]" :value="section.id"
+                                            :checked="selectedSectionIds.includes(Number(section.id))"
+                                            @change="toggleSection(section.id)"
+                                            class="rounded border-outline-variant text-primary focus:ring-primary">
+                                        <span x-text="section.name"></span>
+                                    </label>
+                                </template>
+                            </div>
+                        </div>
+
+                        <div x-show="allocationRows.length" class="overflow-x-auto rounded-lg border border-outline-variant">
                             <table class="min-w-full text-sm">
                                 <thead class="bg-surface-container-low text-left text-xs uppercase text-on-surface-variant">
                                     <tr>
-                                        <th class="px-3 py-2">Chủ đề</th>
-                                        <th class="px-3 py-2 w-28">Số câu</th>
-                                        <th class="px-3 py-2 w-28">Eligible</th>
-                                        <th class="px-3 py-2 w-16"></th>
+                                        <th class="px-3 py-2 sticky left-0 bg-surface-container-low min-w-[200px]">Chủ đề</th>
+                                        <template x-for="level in difficultyLevels" :key="'h-' + level.value">
+                                            <th class="px-2 py-2 text-center whitespace-nowrap" x-text="level.label"></th>
+                                        </template>
+                                        <th class="px-3 py-2 text-center">Tổng</th>
+                                        <th class="px-3 py-2 text-center min-w-[140px]">Eligible</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <template x-for="(row, index) in examTopics" :key="'topic-row-' + index">
-                                        <tr class="border-t border-outline-variant/60">
-                                            <td class="px-3 py-2">
-                                                <input type="hidden" :name="'exam_topics[' + index + '][core_clinical_topic_id]'" :value="row.core_clinical_topic_id || ''">
-                                                <input type="hidden" :name="'exam_topics[' + index + '][sort_order]'" :value="index">
-                                                <div class="relative">
-                                                    <input type="search" x-model="row.topicSearch" @focus="row.showPicker = true"
-                                                        @input.debounce.300ms="searchExamTopic(index)"
-                                                        :placeholder="row.topic_name || 'Tìm core clinical topic...'"
-                                                        class="w-full rounded-lg bg-surface-container-low px-3 py-2 text-sm">
-                                                    <div x-show="row.showPicker" @click.outside="row.showPicker = false"
-                                                        class="absolute z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-outline-variant bg-white shadow-lg">
-                                                        <template x-for="item in row.topicResults" :key="item.id">
-                                                            <button type="button" @click="selectExamTopic(index, item)"
-                                                                class="block w-full px-3 py-2 text-left text-sm hover:bg-surface-container-low">
-                                                                <span x-text="item.name"></span>
-                                                                <span x-show="item.section_name" class="ml-1 text-xs text-on-surface-variant" x-text="'(' + item.section_name + ')'"></span>
-                                                            </button>
-                                                        </template>
-                                                    </div>
-                                                </div>
-                                                <p x-show="row.section_name" class="mt-1 text-xs text-on-surface-variant" x-text="row.section_name"></p>
-                                            </td>
-                                            <td class="px-3 py-2">
-                                                <input type="number" min="1" :name="'exam_topics[' + index + '][question_count]'"
-                                                    x-model.number="row.question_count" @change="refreshEligibility()"
-                                                    class="w-full rounded-lg bg-surface-container-low px-2 py-2 text-center">
-                                            </td>
-                                            <td class="px-3 py-2 text-center font-semibold"
-                                                :class="row.eligible !== null && row.question_count > row.eligible ? 'text-error' : 'text-on-surface'"
-                                                x-text="row.eligible ?? '…'"></td>
-                                            <td class="px-3 py-2 text-center">
-                                                <button type="button" @click="removeExamTopic(index)" class="text-error hover:underline">Xóa</button>
-                                            </td>
-                                        </tr>
+                                    <template x-for="(group, gIndex) in groupedAllocation" :key="'sec-' + group.section_id">
+                                        <template x-for="(row, rowIndex) in group.rows" :key="'cct-' + row.core_clinical_topic_id">
+                                            <tr class="border-t border-outline-variant/60">
+                                                <td class="px-3 py-2 sticky left-0 bg-surface">
+                                                    <input type="hidden" :name="'exam_topics[' + row.formIndex + '][core_clinical_topic_id]'" :value="row.core_clinical_topic_id">
+                                                    <input type="hidden" :name="'exam_topics[' + row.formIndex + '][sort_order]'" :value="row.formIndex">
+                                                    <p class="font-label-md text-on-surface" x-text="row.topic_name"></p>
+                                                    <p class="text-xs text-on-surface-variant" x-text="row.section_name"></p>
+                                                </td>
+                                                <template x-for="level in difficultyLevels" :key="'c-' + row.core_clinical_topic_id + '-' + level.value">
+                                                    <td class="px-1 py-2">
+                                                        <input type="number" min="0"
+                                                            :name="'exam_topics[' + row.formIndex + '][difficulty_counts][' + level.value + ']'"
+                                                            x-model.number="row.difficulty_counts[level.value]"
+                                                            @change="refreshEligibility()"
+                                                            class="w-14 rounded-lg bg-surface-container-low px-1 py-1.5 text-center text-sm">
+                                                    </td>
+                                                </template>
+                                                <td class="px-3 py-2 text-center font-semibold" x-text="rowTotal(row)"></td>
+                                                <td class="px-3 py-2 text-center text-xs">
+                                                    <template x-if="row.eligible">
+                                                        <div class="space-y-0.5">
+                                                            <template x-for="level in difficultyLevels" :key="'e-' + row.core_clinical_topic_id + '-' + level.value">
+                                                                <div x-show="Number(row.difficulty_counts[level.value] || 0) > 0"
+                                                                    :class="Number(row.difficulty_counts[level.value] || 0) > (row.eligible.by_difficulty?.[level.value] ?? 0) ? 'text-error font-semibold' : 'text-on-surface-variant'">
+                                                                    <span x-text="level.label"></span>:
+                                                                    <span x-text="row.eligible.by_difficulty?.[level.value] ?? 0"></span>
+                                                                </div>
+                                                            </template>
+                                                            <div class="font-semibold text-on-surface" x-text="'Σ ' + (row.eligible.total ?? 0)"></div>
+                                                        </div>
+                                                    </template>
+                                                    <span x-show="!row.eligible" class="text-on-surface-variant">…</span>
+                                                </td>
+                                            </tr>
+                                        </template>
                                     </template>
                                 </tbody>
                             </table>
                         </div>
 
-                        <div class="flex flex-wrap items-center justify-between gap-3">
-                            <button type="button" @click="addExamTopic()"
-                                class="inline-flex items-center gap-1 rounded-lg border border-outline-variant px-3 py-2 text-sm font-semibold hover:bg-surface-container-low">
-                                <span class="material-symbols-outlined text-[18px]">add</span>
-                                Thêm chủ đề
-                            </button>
-                            <p class="text-sm text-on-surface-variant">
-                                Tổng cấu hình: <strong x-text="examTopics.reduce((sum, row) => sum + (Number(row.question_count) || 0), 0)"></strong> câu
+                        <div class="flex flex-wrap items-center justify-between gap-3" x-show="blueprintId">
+                            <p class="text-sm text-on-surface-variant" x-show="!selectedSectionIds.length">
+                                Chọn ít nhất một phần để hiện chủ đề phân bổ.
+                            </p>
+                            <p class="text-sm text-on-surface-variant" x-show="selectedSectionIds.length && !allocationRows.length && !isLoadingTopics">
+                                Không có chủ đề lâm sàng trong các phần đã chọn.
+                            </p>
+                            <p class="ml-auto text-sm text-on-surface-variant">
+                                Tổng cấu hình: <strong x-text="configuredTotal">0</strong> câu
                             </p>
                         </div>
                     </div>
                 </section>
 
-                <section class="overflow-hidden rounded-lg border border-outline-variant bg-surface">
+                <section class="overflow-hidden rounded-lg border border-outline-variant bg-surface" x-show="!usesMatrixAllocation">
                         <div class="flex flex-col gap-3 border-b border-outline-variant px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
                             <div>
                                 <h2 class="font-label-lg text-on-surface">Đề thi (chọn thủ công — tùy chọn)</h2>
                                 <p class="mt-1 font-label-sm text-on-surface-variant">
-                                    Đã chọn <span x-text="selected.length">{{ $questionsCount }}</span> câu.
+                                    Dùng khi không phân bổ theo ma trận. Đã chọn <span x-text="selected.length">{{ $questionsCount }}</span> câu.
                                 </p>
                             </div>
 
@@ -342,7 +418,7 @@
 
                                     <div x-show="selected.length === 0" class="rounded-lg border border-dashed border-outline-variant px-4 py-12 text-center">
                                         <p class="font-label-md text-on-surface">Chưa có câu hỏi nào</p>
-                                        <p class="mt-1 font-label-sm text-on-surface-variant">Chọn câu hỏi từ thư viện bên phải để tạo đề.</p>
+                                        <p class="mt-1 font-label-sm text-on-surface-variant">Chọn câu hỏi từ thư viện bên phải hoặc phân bổ theo ma trận.</p>
                                     </div>
                                 </div>
                             </div>
@@ -377,6 +453,13 @@
                             </aside>
                         </div>
                 </section>
+
+                <section x-show="usesMatrixAllocation" class="rounded-lg border border-outline-variant bg-surface-container-lowest px-5 py-4">
+                    <p class="font-label-md text-on-surface">Đang dùng phân bổ ma trận</p>
+                    <p class="mt-1 font-body-sm text-on-surface-variant">
+                        Hệ thống sẽ tự chọn câu từ exam pool theo chủ đề × mức độ khi lưu. Chọn câu thủ công bị ẩn để tránh nhầm lẫn.
+                    </p>
+                </section>
             </main>
 
             <aside class="space-y-4 xl:sticky xl:top-24 xl:self-start">
@@ -388,8 +471,8 @@
                             <span class="font-body-sm text-on-surface">Thông tin kỳ thi</span>
                         </div>
                         <div class="flex items-center gap-3">
-                            <span class="material-symbols-outlined text-[20px]" :class="selected.length > 0 ? 'text-primary' : 'text-outline'">check_circle</span>
-                            <span class="font-body-sm text-on-surface">Có ít nhất 1 câu hỏi</span>
+                            <span class="material-symbols-outlined text-[20px]" :class="(configuredTotal > 0 || selected.length > 0) ? 'text-primary' : 'text-outline'">check_circle</span>
+                            <span class="font-body-sm text-on-surface">Có phân bổ hoặc câu hỏi</span>
                         </div>
                         <div class="flex items-center gap-3">
                             <span class="material-symbols-outlined text-[20px]" :class="duration > 0 ? 'text-primary' : 'text-outline'">check_circle</span>
@@ -403,88 +486,174 @@
 
     <script>
         function examQuestions() {
+            const difficultyLevels = @json($difficultyLevels);
+            const emptyCounts = () => Object.fromEntries(difficultyLevels.map((level) => [level.value, 0]));
+
             return {
                 available: @json($availableQuestionsMapped),
                 selected: @json($questionRows),
-                examTopics: @json($initialExamTopics).map((row) => ({
-                    core_clinical_topic_id: row.core_clinical_topic_id ?? null,
-                    question_count: row.question_count ?? 1,
-                    sort_order: row.sort_order ?? 0,
-                    topic_name: row.topic_name ?? '',
-                    section_name: row.section_name ?? '',
-                    topicSearch: row.topic_name ?? '',
-                    topicResults: [],
-                    showPicker: false,
-                    eligible: null,
-                })),
-                topicSearchUrl: @json(route('admin.taxonomy.lookups.core-topics.search')),
+                difficultyLevels,
+                blueprints: [],
+                sections: [],
+                blueprintId: @json($initialBlueprintId ? (string) $initialBlueprintId : ''),
+                selectedSectionIds: @json(array_map('intval', $initialSectionIds)),
+                savedTopicAllocations: @json($initialExamTopics),
+                allocationRows: [],
+                blueprintsUrl: @json(route('admin.taxonomy.lookups.blueprints')),
+                sectionsUrlTemplate: @json(route('admin.taxonomy.lookups.sections', ['blueprint' => '__BP__'])),
+                topicsUrl: @json(route('admin.taxonomy.lookups.core-topics.search')),
                 eligibilityUrl: @json(route('admin.exams.topic-eligibility')),
                 search: '',
                 duration: @json($duration),
                 draggingIndex: null,
                 isSearching: false,
+                isLoadingSections: false,
+                isLoadingTopics: false,
                 searchTimeout: null,
-                init() {
+                eligibilityTimeout: null,
+                async init() {
                     this.$watch('search', (value) => {
                         this.fetchQuestions(value);
                     });
-                    this.refreshEligibility();
+                    await this.loadBlueprints();
+                    if (this.blueprintId) {
+                        await this.loadSections(false);
+                        if (this.selectedSectionIds.length) {
+                            await this.loadTopicsFromSections(true);
+                        }
+                    }
                 },
-                addExamTopic() {
-                    this.examTopics.push({
-                        core_clinical_topic_id: null,
-                        question_count: 1,
-                        sort_order: this.examTopics.length,
-                        topic_name: '',
-                        section_name: '',
-                        topicSearch: '',
-                        topicResults: [],
-                        showPicker: false,
-                        eligible: null,
+                get usesMatrixAllocation() {
+                    return this.configuredTotal > 0;
+                },
+                get configuredTotal() {
+                    return this.allocationRows.reduce((sum, row) => sum + this.rowTotal(row), 0);
+                },
+                get groupedAllocation() {
+                    const map = new Map();
+                    this.allocationRows.forEach((row, index) => {
+                        row.formIndex = index;
+                        const key = Number(row.section_id) || 0;
+                        if (!map.has(key)) {
+                            map.set(key, {
+                                section_id: key,
+                                section_name: row.section_name || '',
+                                rows: [],
+                            });
+                        }
+                        map.get(key).rows.push(row);
                     });
+                    return Array.from(map.values());
                 },
-                removeExamTopic(index) {
-                    this.examTopics.splice(index, 1);
-                    this.refreshEligibility();
+                rowTotal(row) {
+                    return this.difficultyLevels.reduce(
+                        (sum, level) => sum + (Number(row.difficulty_counts?.[level.value]) || 0),
+                        0,
+                    );
                 },
-                async searchExamTopic(index) {
-                    const row = this.examTopics[index];
-                    const q = (row.topicSearch || '').trim();
-                    if (q.length < 2) {
-                        row.topicResults = [];
+                async loadBlueprints() {
+                    const res = await fetch(this.blueprintsUrl);
+                    const json = await res.json();
+                    this.blueprints = json.data ?? [];
+                },
+                async onBlueprintChange() {
+                    this.selectedSectionIds = [];
+                    this.sections = [];
+                    this.allocationRows = [];
+                    this.savedTopicAllocations = [];
+                    if (!this.blueprintId) {
                         return;
                     }
-                    const res = await fetch(`${this.topicSearchUrl}?q=${encodeURIComponent(q)}`);
-                    const json = await res.json();
-                    row.topicResults = json.data ?? [];
-                    row.showPicker = true;
+                    await this.loadSections(true);
                 },
-                selectExamTopic(index, item) {
-                    const row = this.examTopics[index];
-                    row.core_clinical_topic_id = item.id;
-                    row.topic_name = item.name;
-                    row.section_name = item.section_name || '';
-                    row.topicSearch = item.name;
-                    row.showPicker = false;
-                    this.refreshEligibility();
+                async loadSections() {
+                    if (!this.blueprintId) {
+                        return;
+                    }
+                    this.isLoadingSections = true;
+                    try {
+                        const url = this.sectionsUrlTemplate.replace('__BP__', encodeURIComponent(this.blueprintId));
+                        const res = await fetch(url);
+                        const json = await res.json();
+                        this.sections = json.data ?? [];
+                    } finally {
+                        this.isLoadingSections = false;
+                    }
+                },
+                async toggleSection(sectionId) {
+                    const id = Number(sectionId);
+                    const idx = this.selectedSectionIds.indexOf(id);
+                    if (idx >= 0) {
+                        this.selectedSectionIds.splice(idx, 1);
+                    } else {
+                        this.selectedSectionIds.push(id);
+                    }
+                    await this.loadTopicsFromSections(false);
+                },
+                async loadTopicsFromSections(preserveSavedCounts) {
+                    if (!this.selectedSectionIds.length) {
+                        this.allocationRows = [];
+                        return;
+                    }
+
+                    this.isLoadingTopics = true;
+                    try {
+                        const params = new URLSearchParams();
+                        this.selectedSectionIds.forEach((id) => params.append('section_ids[]', String(id)));
+                        const res = await fetch(`${this.topicsUrl}?${params}`);
+                        const json = await res.json();
+                        const topics = json.data ?? [];
+                        const previous = new Map(
+                            this.allocationRows.map((row) => [Number(row.core_clinical_topic_id), row]),
+                        );
+                        const saved = new Map(
+                            (this.savedTopicAllocations || []).map((row) => [Number(row.core_clinical_topic_id), row]),
+                        );
+
+                        this.allocationRows = topics.map((topic) => {
+                            const id = Number(topic.id);
+                            const prev = previous.get(id);
+                            const fromSaved = preserveSavedCounts ? saved.get(id) : null;
+                            const counts = { ...emptyCounts(), ...(prev?.difficulty_counts || fromSaved?.difficulty_counts || {}) };
+                            this.difficultyLevels.forEach((level) => {
+                                counts[level.value] = Number(counts[level.value] || 0);
+                            });
+
+                            return {
+                                core_clinical_topic_id: id,
+                                topic_name: topic.name,
+                                section_id: topic.blueprint_section_id,
+                                section_name: topic.section_name || '',
+                                difficulty_counts: counts,
+                                eligible: prev?.eligible ?? null,
+                                formIndex: 0,
+                            };
+                        });
+
+                        this.refreshEligibility();
+                    } finally {
+                        this.isLoadingTopics = false;
+                    }
                 },
                 async refreshEligibility() {
-                    const ids = this.examTopics
-                        .map((row) => Number(row.core_clinical_topic_id))
-                        .filter((id) => id > 0);
-                    if (!ids.length) {
-                        this.examTopics.forEach((row) => { row.eligible = null; });
-                        return;
-                    }
-                    const params = new URLSearchParams();
-                    ids.forEach((id) => params.append('core_clinical_topic_ids[]', String(id)));
-                    const res = await fetch(`${this.eligibilityUrl}?${params}`);
-                    const json = await res.json();
-                    const counts = json.data ?? {};
-                    this.examTopics.forEach((row) => {
-                        const id = Number(row.core_clinical_topic_id);
-                        row.eligible = id > 0 ? (counts[id] ?? 0) : null;
-                    });
+                    clearTimeout(this.eligibilityTimeout);
+                    this.eligibilityTimeout = setTimeout(async () => {
+                        const ids = this.allocationRows
+                            .map((row) => Number(row.core_clinical_topic_id))
+                            .filter((id) => id > 0);
+                        if (!ids.length) {
+                            return;
+                        }
+                        const params = new URLSearchParams();
+                        ids.forEach((id) => params.append('core_clinical_topic_ids[]', String(id)));
+                        const res = await fetch(`${this.eligibilityUrl}?${params}`);
+                        const json = await res.json();
+                        const counts = json.data ?? {};
+                        this.allocationRows.forEach((row) => {
+                            const id = Number(row.core_clinical_topic_id);
+                            row.eligible = id > 0 ? (counts[id] ?? null) : null;
+                        });
+                    }, 250);
                 },
                 fetchQuestions(term) {
                     this.isSearching = true;
@@ -508,8 +677,8 @@
                 },
                 addQuestion(question) {
                     if (!question || this.selected.find((item) => item.id == question.id)) return;
-                    this.selected.push({ 
-                        id: question.id, 
+                    this.selected.push({
+                        id: question.id,
                         text: question.text,
                         topic: question.topic,
                         topics: question.topics || [],

@@ -94,7 +94,9 @@ Index: `status`, `exam_flag`, `(status, exam_flag, created_at)`, `difficulty`, `
 `id, question_id FK, version_number INT, instructor_id FK, publisher_id FK, snapshot JSON, created_at`. Unique `(question_id, version_number)`. **Chỉ tạo khi Super Admin publish** (`pending_publish` → `published`) — không tạo khi Creator sửa working copy hay khi giảng viên approve/reject. Xem Module 35 §5.2–5.3.
 
 ### QuestionOption
-`id, question_id FK, label(A/B/...), content TEXT, is_correct BOOL, explanation TEXT (vì sao đúng/sai), order INT, timestamps`.
+`id` (identity — dùng để chấm/`selected_option_ids`), `question_id` FK, `label` (chữ A/B/… **authoring-only**, denormal theo `order`; **không** phải identity), `content` TEXT, `is_correct` BOOL, `explanation` TEXT (vì sao đúng/sai), `order` INT (thứ tự author trên form), timestamps.
+
+Khi tạo session / live classroom: đáp án được đảo theo seed ổn định (`sessionKey|questionId`); chữ A/B/C **gán lại theo vị trí hiển thị**. Snapshot phiên lưu `options[].id` + display `label`. Chấm điểm luôn so khớp `option.id`, không dựa vào chữ cái.
 
 ### Topic (chuyên ngành/chủ đề — **phân cấp cha–con**)
 `id, parent_id FK null, name, slug, type(specialty/system/subtopic), order, icon, depth INT null, timestamps`.

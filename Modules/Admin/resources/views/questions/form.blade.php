@@ -239,10 +239,16 @@
 
                 {{-- Đáp án --}}
                 <div class="rounded-2xl border border-outline-variant bg-surface p-5">
-                    <div class="mb-4 flex items-center justify-between">
-                        <h2 class="font-label-lg font-semibold text-on-surface">Đáp án</h2>
+                    <div class="mb-4 flex items-center justify-between gap-3">
+                        <div>
+                            <h2 class="font-label-lg font-semibold text-on-surface">Đáp án</h2>
+                            <p class="mt-1 text-xs text-on-surface-variant">
+                                Chữ A/B/C chỉ là thứ tự trên form. Khi học viên làm bài, thứ tự đáp án sẽ được đảo;
+                                hệ thống chấm theo nội dung (id), không theo chữ cái. Không viết “đáp án A” trong stem/giải thích — mô tả theo nội dung lựa chọn.
+                            </p>
+                        </div>
                         <button type="button" @click="add()"
-                                class="inline-flex items-center gap-1 rounded-lg border border-outline-variant px-3 py-1.5 text-sm font-semibold text-on-surface hover:bg-surface-container-low">
+                                class="inline-flex shrink-0 items-center gap-1 rounded-lg border border-outline-variant px-3 py-1.5 text-sm font-semibold text-on-surface hover:bg-surface-container-low">
                             <span class="material-symbols-outlined text-[16px]">add</span>Thêm
                         </button>
                     </div>

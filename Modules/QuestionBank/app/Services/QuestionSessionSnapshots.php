@@ -22,7 +22,10 @@ final class QuestionSessionSnapshots
     {
         $questionIds = array_values(array_map('strval', $session->question_ids ?? []));
         $questions = Question::query()
-            ->with(['options', 'medicalTaxonomyNodes'])
+            ->with([
+                'options' => fn ($query) => $query->orderBy('order'),
+                'medicalTaxonomyNodes',
+            ])
             ->whereIn('id', $questionIds)
             ->get()
             ->keyBy(fn (Question $question): string => (string) $question->getKey());
@@ -61,7 +64,10 @@ final class QuestionSessionSnapshots
             ->values()
             ->all();
         $liveQuestions = Question::query()
-            ->with(['options', 'medicalTaxonomyNodes'])
+            ->with([
+                'options' => fn ($query) => $query->orderBy('order'),
+                'medicalTaxonomyNodes',
+            ])
             ->whereIn('id', $missingIds)
             ->get()
             ->keyBy(fn (Question $question): string => (string) $question->getKey());
@@ -134,7 +140,10 @@ final class QuestionSessionSnapshots
 
         if ($missing !== []) {
             $liveQuestions = Question::withTrashed()
-                ->with(['options', 'medicalTaxonomyNodes'])
+                ->with([
+                    'options' => fn ($query) => $query->orderBy('order'),
+                    'medicalTaxonomyNodes',
+                ])
                 ->whereIn('id', $missing)
                 ->get()
                 ->keyBy(fn (Question $question): string => (string) $question->getKey());

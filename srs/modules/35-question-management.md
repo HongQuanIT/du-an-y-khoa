@@ -168,12 +168,18 @@ Tránh N+1: eager load creator / instructor / publisher trên list; **không** j
 
 ### 5.7 Kiểm tra trùng lặp (lexical — phase 1)
 - **Mục đích:** trên form edit một câu, mở **trang chi tiết** để quét ngân hàng xem câu nào trùng / gần trùng. **Không** chặn workflow cứng (chỉ cảnh báo).
-- **Chuẩn hóa:** HTML→plain, lowercase, bỏ dấu (VN/EN), collapse whitespace; options sort theo nội dung để fingerprint ổn định khi đổi thứ tự.
+- **Chuẩn hóa:** HTML→plain, lowercase, bỏ dấu (VN/EN), collapse whitespace; options sort theo nội dung để fingerprint ổn định khi đổi thứ tự hiển thị.
 - **Exact:** `content_fingerprint` = SHA-256(stem_norm + options_sorted + correct flags) trên `questions`.
 - **Near-dup scoring:** % = stem ~70% + options bag ~30% (Jaccard token / similar_text); chỉ lưu / hiển thị cặp **≥30%**.
 - **Mức độ (`DuplicateSeverity`):** Exact 100% · VeryHigh ≥90% · High ≥75% · Medium ≥60% · Low ≥30%.
 - **UI:** nút “Kiểm tra trùng lặp” trên form → `GET /admin/questions/{id}/duplicates` (KPI + bảng chi tiết + stem/options câu gốc); **Quét lại** = `POST .../check-duplicates`.
 - **Job phụ:** `RefreshQuestionSimilarityJob` sau save. Import dedup (§5.8) tái sử dụng cùng scorer sau.
+
+### 5.7b Đáp án có thể đảo thứ tự
+- Editor: chữ A/B/C chỉ là preview theo vị trí form (`order` / denormalized `label`).
+- **Không** viết “đáp án A/B…” trong stem/giải thích như nghĩa gắn cứng — mô tả theo nội dung lựa chọn.
+- Runtime (QBank session + live classroom): đảo theo seed; chấm/`selected_option_ids` / reveal dùng `option.id`.
+- Version snapshot (`question_versions.snapshot.options[]`) **bắt buộc** có `id` để overlay published vẫn chấm được.
 
 ### 5.8 Khác
 - **Validation nội dung:** đúng ≥1 (single: đúng 1), giải thích bắt buộc, chủ đề ≥1 — bắt buộc trước `submit` và trước `publish`.

@@ -87,7 +87,8 @@ Ngoại lệ:
 ```
 
 ## 5. Business Logic
-- **Chấm điểm:** so `selected_option_ids` với `is_correct`. Multi: đúng khi khớp hoàn toàn (hoặc partial theo cấu hình).
+- **Đảo thứ tự đáp án:** khi tạo session, options được Fisher–Yates theo seed ổn định `sessionId|questionId`; chữ A/B/C **gán lại theo vị trí hiển thị** trong `question_session_snapshots.payload`. Identity đáp án = `question_options.id` (và nội dung), không gắn cứng với chữ cái author.
+- **Chấm điểm:** so `selected_option_ids` với các option `is_correct` (theo **id**). Multi: đúng khi khớp hoàn toàn (hoặc partial theo cấu hình). Không dùng `label` để chấm.
 - **Study vs Exam:** Study chấm & hiện giải thích ngay; Exam hoãn tới khi nộp; ẩn hint/explanation.
 - **Timer (exam):** đếm ngược `time_limit_seconds`; hết giờ auto-submit; lưu server-side để chống gian lận.
 - **Autosave:** mỗi answer ghi ngay (`QuestionAttempt`) + cập nhật `paused_state`.
@@ -100,7 +101,7 @@ Ngoại lệ:
 
 ## 6. Database
 - `question_sessions`, `question_attempts`, `question_status` (xem mục 4 data model).
-- Đọc `questions` + `question_options` (không gửi `is_correct` cho FE trước khi chấm).
+- Đọc `questions` + `question_options` qua snapshot phiên (không gửi `is_correct` cho FE trước khi chấm). Snapshot luôn có `options[].id` + display `label`.
 - Ghi tương tác: `bookmarks`, `highlights`, `notes`, `flashcards`, `question_reports`.
 
 ## 7. API

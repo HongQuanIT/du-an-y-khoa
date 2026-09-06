@@ -54,7 +54,8 @@ final class CaptureQuestionVersionAction
             'is_free' => (bool) $question->is_free,
             'exam_flag' => (bool) $question->exam_flag,
             'options' => $question->options->map(fn (QuestionOption $option): array => [
-                'label' => (string) $option->label,
+                'id' => (int) $option->getKey(),
+                'label' => (string) $option->label, // authoring letter only; display remapped per session
                 'content' => (string) $option->content,
                 'is_correct' => (bool) $option->is_correct,
                 'explanation' => $option->explanation,
