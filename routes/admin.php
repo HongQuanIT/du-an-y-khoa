@@ -273,6 +273,14 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
             ->middleware('permission:'.Permission::TopicDelete->value)
             ->name('blueprints.destroy');
 
+        Route::delete('/blueprint-sections/{section}', [BlueprintController::class, 'destroySection'])
+            ->middleware('permission:'.Permission::TopicDelete->value)
+            ->name('blueprint-sections.destroy');
+
+        Route::delete('/core-clinical-topics/{topic}', [BlueprintController::class, 'destroyCoreTopic'])
+            ->middleware('permission:'.Permission::TopicDelete->value)
+            ->name('core-clinical-topics.destroy');
+
         Route::delete('/tags/{tag}', [TagController::class, 'destroy'])
             ->middleware('permission:'.Permission::TopicDelete->value)
             ->name('tags.destroy');

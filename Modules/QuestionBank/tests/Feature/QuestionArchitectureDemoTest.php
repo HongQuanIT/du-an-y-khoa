@@ -85,15 +85,17 @@ final class QuestionArchitectureDemoTest extends TestCase
         $this->assertStringContainsString('STEMI', $correct->content);
     }
 
-    public function test_demo_question_links_blueprint_and_taxonomy(): void
+    public function test_demo_question_links_taxonomy_and_infers_blueprint(): void
     {
         $question = Question::query()
             ->where('code', 'CARDIO-STEMI-001')
-            ->with(['coreClinicalTopics.section', 'medicalTaxonomyNodes', 'tags', 'hints'])
+            ->with(['medicalTaxonomyNodes', 'tags', 'hints'])
             ->firstOrFail();
 
-        $this->assertTrue($question->coreClinicalTopics->contains(fn ($t) => $t->name === 'Đau ngực'));
-        $this->assertTrue($question->coreClinicalTopics->contains(fn ($t) => $t->section?->name === 'Hệ tim mạch'));
+        $inferred = $question->inferredCoreClinicalTopics();
+        $this->assertTrue($inferred->contains(fn ($t) => $t->name === 'Đau ngực'));
+        $this->assertTrue($inferred->contains(fn ($t) => $t->section?->name === 'Hệ tim mạch'));
+        $this->assertSame(0, $question->coreClinicalTopics()->count());
         $this->assertTrue($question->medicalTaxonomyNodes->contains(fn ($n) => $n->slug === 'stemi'));
         $this->assertTrue($question->medicalTaxonomyNodes->contains(fn ($n) => $n->node_type === 'symptom' && $n->name === 'Đau ngực'));
         $this->assertTrue($question->medicalTaxonomyNodes->contains(fn ($n) => $n->node_type === 'clinical_finding'));
@@ -161,10 +163,6 @@ final class QuestionArchitectureDemoTest extends TestCase
 
         $question = Question::query()->where('code', 'CARDIO-STEMI-001')->firstOrFail();
 
-        $this->assertSame(
-            $question->coreClinicalTopics()->count(),
-            $question->coreClinicalTopics()->distinct('core_clinical_topics.id')->count('core_clinical_topics.id'),
-        );
         $this->assertSame(
             $question->medicalTaxonomyNodes()->count(),
             $question->medicalTaxonomyNodes()->distinct('medical_taxonomy_nodes.id')->count('medical_taxonomy_nodes.id'),

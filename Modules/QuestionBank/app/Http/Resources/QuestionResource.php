@@ -25,13 +25,16 @@ final class QuestionResource extends JsonResource
                 'stem' => $this->stem,
                 'difficulty' => $this->difficulty->value,
                 'status' => $this->status->value,
-                'core_clinical_topic_ids' => ($this->relationLoaded('coreClinicalTopics')
-                    ? $this->coreClinicalTopics
-                    : $this->coreClinicalTopics()->get())
-                    ->pluck('id')
-                    ->map(fn ($id): int => (int) $id)
-                    ->values()
-                    ->all(),
+                'core_clinical_topic_ids' => app(\Modules\QuestionBank\Support\QuestionFilterBuilder::class)
+                    ->inferredCoreClinicalTopicIds(
+                        ($this->relationLoaded('medicalTaxonomyNodes')
+                            ? $this->medicalTaxonomyNodes
+                            : $this->medicalTaxonomyNodes()->get())
+                            ->pluck('id')
+                            ->map(fn ($id): int => (int) $id)
+                            ->values()
+                            ->all(),
+                    ),
                 'medical_taxonomy_node_ids' => ($this->relationLoaded('medicalTaxonomyNodes')
                     ? $this->medicalTaxonomyNodes
                     : $this->medicalTaxonomyNodes()->get())

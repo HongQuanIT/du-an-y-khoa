@@ -39,7 +39,12 @@ class CoreClinicalTopic extends Model
         return $this->belongsTo(BlueprintSection::class, 'blueprint_section_id');
     }
 
-    /** @return BelongsToMany<Question, $this> */
+    /**
+     * Legacy direct pivot — deprecated.
+     *
+     * @return BelongsToMany<Question, $this>
+     * @deprecated Prefer whereHas('medicalTaxonomyNodes.questions')
+     */
     public function questions(): BelongsToMany
     {
         return $this->belongsToMany(Question::class, 'question_blueprint_topics')->withTimestamps();
@@ -53,6 +58,17 @@ class CoreClinicalTopic extends Model
             'core_topic_medical_taxonomy_nodes',
             'core_clinical_topic_id',
             'medical_taxonomy_node_id',
+        )->withTimestamps();
+    }
+
+    /** @return BelongsToMany<Tag, $this> */
+    public function tags(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Tag::class,
+            'core_topic_tags',
+            'core_clinical_topic_id',
+            'tag_id',
         )->withTimestamps();
     }
 }

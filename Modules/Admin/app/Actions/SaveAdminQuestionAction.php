@@ -41,7 +41,6 @@ final class SaveAdminQuestionAction
      *     key_info: array<int, string>,
      *     attending_tip: ?string,
      *     difficulty: string,
-     *     core_clinical_topic_ids?: list<int>,
      *     medical_taxonomy_node_ids?: list<int>,
      *     medical_taxonomy_links?: list<array{id: int, relationship_type?: ?string, is_primary?: ?bool}>,
      *     tag_ids?: list<int>,
@@ -130,7 +129,7 @@ final class SaveAdminQuestionAction
             }
             $this->syncOptions($question, $options);
 
-            $question->load('options', 'hints', 'coreClinicalTopics', 'medicalTaxonomyNodes', 'tags');
+            $question->load('options', 'hints', 'medicalTaxonomyNodes', 'tags');
 
             $this->fingerprint->persist($question);
             RefreshQuestionSimilarityJob::dispatch((string) $question->getKey());
@@ -307,15 +306,8 @@ final class SaveAdminQuestionAction
     /** @param  array<string, mixed>  $data */
     private function syncTaxonomyRelations(Question $question, array $data): void
     {
-        if (array_key_exists('core_clinical_topic_ids', $data)) {
-            $coreIds = collect($data['core_clinical_topic_ids'])
-                ->map(fn ($id): int => (int) $id)
-                ->filter(fn (int $id): bool => $id > 0)
-                ->unique()
-                ->values()
-                ->all();
-            $question->coreClinicalTopics()->sync($coreIds);
-        }
+        // Blueprint CCT is inferred via medical taxonomy mapping — do not store a direct pivot.
+        $question->coreClinicalTopics()->detach();
 
         $question->medicalTaxonomyNodes()->sync($this->buildMedicalNodeSyncPayload($data));
 

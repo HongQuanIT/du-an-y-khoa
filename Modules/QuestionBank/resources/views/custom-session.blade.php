@@ -2,10 +2,9 @@
     /**
      * @var \Illuminate\Support\Collection<int, \Modules\QuestionBank\Models\MedicalTaxonomyNode> $specialties
      * @var \Illuminate\Support\Collection<int, \Modules\QuestionBank\Models\MedicalTaxonomyNode> $systems
-     * @var array<string, array{title: string, icon: string, hint: string}> $exams
+     * @var list<array{id: int, title: string, icon: string, hint: string}> $exams
      * @var array<int, array{id: string, name: string}> $articles
      * @var array<int, array{id: string, name: string}> $symptoms
-     * @var \Illuminate\Support\Collection<int, array{id: int, blueprint_section_id: int, name: string, slug: string, section_name: string|null}> $coreTopics
      */
     $initialMode = old('mode', request('mode', 'study'));
     $initialSource = old('source', request('source', 'custom'));
@@ -19,14 +18,10 @@
     $initialTopics = array_map('intval', (array) old('medical_taxonomy_node_ids', request('medical_taxonomy_node_ids', [])));
     $initialStatusMode = old('question_status_mode', request('question_status_mode', 'latest'));
     $initialSavedOnly = (bool) old('saved_only', request()->boolean('saved_only'));
-    $initialExam = (string) old('exam_key', request('exam_key', ''));
+    $initialBlueprintId = old('blueprint_id', request('blueprint_id'));
     $initialArticles = array_values((array) old('articles', request('articles', [])));
     $initialSymptoms = array_values((array) old('symptoms', request('symptoms', [])));
-    $initialBlueprintId = old('blueprint_id', request('blueprint_id'));
-    $initialBlueprintSectionId = old('blueprint_section_id', request('blueprint_section_id'));
-    $initialCoreClinicalTopicIds = array_map('intval', (array) old('core_clinical_topic_ids', request('core_clinical_topic_ids', [])));
     $initialMedicalNodeIds = array_map('intval', (array) old('medical_taxonomy_node_ids', request('medical_taxonomy_node_ids', [])));
-    $initialTagIds = array_map('intval', (array) old('tag_ids', request('tag_ids', [])));
     $sessionName = 'Phiên tùy chỉnh từ ' . now()->translatedFormat('j M, H:i');
 
     $statusOptions = [
@@ -42,7 +37,10 @@
     $selectedTopicIds = array_map('strval', $initialTopics);
     $systemIds = $systems->pluck('id')->map(fn ($id) => (string) $id)->values()->all();
     $specialtyIds = $specialties->pluck('id')->map(fn ($id) => (string) $id)->values()->all();
-    $examTitles = collect($exams)->map(fn (array $exam) => $exam['title'])->all();
+    $examTitles = collect($exams)->mapWithKeys(fn (array $exam) => [(int) $exam['id'] => $exam['title']])->all();
+    $initialBlueprintName = $initialBlueprintId && isset($examTitles[(int) $initialBlueprintId])
+        ? $examTitles[(int) $initialBlueprintId]
+        : '';
     $articleTitles = collect($articles)->pluck('name', 'id')->all();
     $symptomTitles = collect($symptoms)->pluck('name', 'id')->all();
 @endphp
@@ -62,33 +60,20 @@
             systemIds: {{ Illuminate\Support\Js::from($systemIds)->toHtml() }},
             specialtyIds: {{ Illuminate\Support\Js::from($specialtyIds)->toHtml() }},
             savedOnly: {{ Illuminate\Support\Js::from($initialSavedOnly)->toHtml() }},
-            examKey: {{ Illuminate\Support\Js::from($initialExam)->toHtml() }},
+            blueprintId: {{ Illuminate\Support\Js::from($initialBlueprintId ? (int) $initialBlueprintId : null)->toHtml() }},
+            blueprintName: {{ Illuminate\Support\Js::from($initialBlueprintName)->toHtml() }},
             examTitles: {{ Illuminate\Support\Js::from($examTitles)->toHtml() }},
+            blueprintScopes: {{ Illuminate\Support\Js::from($blueprintScopes)->toHtml() }},
             articles: {{ Illuminate\Support\Js::from($initialArticles)->toHtml() }},
             articleTitles: {{ Illuminate\Support\Js::from($articleTitles)->toHtml() }},
             symptoms: {{ Illuminate\Support\Js::from($initialSymptoms)->toHtml() }},
             symptomTitles: {{ Illuminate\Support\Js::from($symptomTitles)->toHtml() }},
-            blueprintId: {{ Illuminate\Support\Js::from($initialBlueprintId ? (int) $initialBlueprintId : null)->toHtml() }},
-            blueprintName: '',
-            blueprintSectionId: {{ Illuminate\Support\Js::from($initialBlueprintSectionId ? (int) $initialBlueprintSectionId : null)->toHtml() }},
-            blueprintSectionName: '',
-            coreClinicalTopicIds: {{ Illuminate\Support\Js::from($initialCoreClinicalTopicIds)->toHtml() }},
-            coreClinicalTopicLabels: {},
             medicalTaxonomyNodeIds: {{ Illuminate\Support\Js::from($initialMedicalNodeIds)->toHtml() }},
             medicalNodeLabels: {},
-            tagIds: {{ Illuminate\Support\Js::from($initialTagIds)->toHtml() }},
-            tagLabels: {},
             taxonomySearch: '',
-            blueprintResults: [],
-            blueprintSectionResults: [],
-            coreTopicResults: {{ Illuminate\Support\Js::from($coreTopics)->toHtml() }},
             medicalNodeResults: [],
-            tagResults: [],
             taxonomyUrls: {
-                blueprints: {{ Illuminate\Support\Js::from(route('qbank.taxonomy.lookups.blueprints', absolute: false))->toHtml() }},
-                coreTopicsSearch: {{ Illuminate\Support\Js::from(route('qbank.taxonomy.lookups.core-topics.search', absolute: false))->toHtml() }},
                 medicalNodes: {{ Illuminate\Support\Js::from(route('qbank.taxonomy.lookups.medical-nodes', absolute: false))->toHtml() }},
-                tags: {{ Illuminate\Support\Js::from(route('qbank.taxonomy.lookups.tags', absolute: false))->toHtml() }},
             },
             folderId: null,
             folderName: '',
@@ -148,36 +133,7 @@
                 this.activeFilter = filter;
                 this.filterSearch = '';
                 this.taxonomySearch = '';
-                if (filter === 'blueprint') this.fetchBlueprints();
-                if (filter === 'blueprintSection' && this.blueprintId) this.fetchBlueprintSections();
                 if (filter === 'medicalNodes') this.fetchMedicalNodes();
-                if (filter === 'tags') this.fetchTags();
-            },
-            async fetchBlueprints() {
-                const q = this.taxonomySearch.trim();
-                const url = q ? `${this.taxonomyUrls.blueprints}?q=${encodeURIComponent(q)}` : this.taxonomyUrls.blueprints;
-                const res = await fetch(url, { headers: { Accept: 'application/json' } });
-                const json = await res.json();
-                this.blueprintResults = json.data ?? [];
-            },
-            async fetchBlueprintSections() {
-                if (!this.blueprintId) return;
-                const q = this.taxonomySearch.trim();
-                const base = this.taxonomyUrls.blueprints + '/' + this.blueprintId + '/sections';
-                const url = q ? `${base}?q=${encodeURIComponent(q)}` : base;
-                const res = await fetch(url, { headers: { Accept: 'application/json' } });
-                const json = await res.json();
-                this.blueprintSectionResults = json.data ?? [];
-            },
-            async fetchCoreTopics() {
-                const params = new URLSearchParams();
-                if (this.blueprintId) params.set('blueprint_id', String(this.blueprintId));
-                if (this.blueprintSectionId) params.set('blueprint_section_id', String(this.blueprintSectionId));
-                const q = this.taxonomySearch.trim();
-                if (q.length >= 2) params.set('q', q);
-                const res = await fetch(`${this.taxonomyUrls.coreTopicsSearch}?${params}`, { headers: { Accept: 'application/json' } });
-                const json = await res.json();
-                this.coreTopicResults = json.data ?? [];
             },
             async fetchMedicalNodes() {
                 const q = this.taxonomySearch.trim();
@@ -186,47 +142,8 @@
                 const url = `${this.taxonomyUrls.medicalNodes}?${params}`;
                 const res = await fetch(url, { headers: { Accept: 'application/json' } });
                 const json = await res.json();
-                this.medicalNodeResults = json.data ?? [];
-            },
-            async fetchTags() {
-                const q = this.taxonomySearch.trim();
-                const url = q ? `${this.taxonomyUrls.tags}?q=${encodeURIComponent(q)}` : this.taxonomyUrls.tags;
-                const res = await fetch(url, { headers: { Accept: 'application/json' } });
-                const json = await res.json();
-                this.tagResults = json.data ?? [];
-            },
-            selectBlueprint(item) {
-                this.blueprintId = item.id;
-                this.blueprintName = item.name;
-                this.blueprintSectionId = null;
-                this.blueprintSectionName = '';
-                this.$nextTick(() => this.refreshCount());
-            },
-            clearBlueprint() {
-                this.blueprintId = null;
-                this.blueprintName = '';
-                this.clearBlueprintSection();
-            },
-            selectBlueprintSection(item) {
-                this.blueprintSectionId = item.id;
-                this.blueprintSectionName = item.name;
-                this.$nextTick(() => this.refreshCount());
-            },
-            clearBlueprintSection() {
-                this.blueprintSectionId = null;
-                this.blueprintSectionName = '';
-                this.$nextTick(() => this.refreshCount());
-            },
-            toggleCoreTopic(item) {
-                const idx = this.coreClinicalTopicIds.indexOf(item.id);
-                if (idx >= 0) {
-                    this.coreClinicalTopicIds.splice(idx, 1);
-                    delete this.coreClinicalTopicLabels[item.id];
-                } else {
-                    this.coreClinicalTopicIds.push(item.id);
-                    this.coreClinicalTopicLabels[item.id] = item.name;
-                }
-                this.$nextTick(() => this.refreshCount());
+                const rows = json.data ?? [];
+                this.medicalNodeResults = rows.filter((item) => this.isNodeAllowedForExam(item.id));
             },
             toggleMedicalNode(item) {
                 const idx = this.medicalTaxonomyNodeIds.indexOf(item.id);
@@ -239,53 +156,9 @@
                 }
                 this.$nextTick(() => this.refreshCount());
             },
-            toggleTag(item) {
-                const idx = this.tagIds.indexOf(item.id);
-                if (idx >= 0) {
-                    this.tagIds.splice(idx, 1);
-                    delete this.tagLabels[item.id];
-                } else {
-                    this.tagIds.push(item.id);
-                    this.tagLabels[item.id] = item.name;
-                }
-                this.$nextTick(() => this.refreshCount());
-            },
-            blueprintLabel() {
-                return this.blueprintName || (this.blueprintId ? 'Đã chọn' : 'Tất cả');
-            },
-            blueprintSectionLabel() {
-                return this.blueprintSectionName || (this.blueprintSectionId ? 'Đã chọn' : 'Tất cả');
-            },
-            coreTopicLabel() {
-                if (!this.coreClinicalTopicIds.length) return 'Tất cả';
-                if (this.coreClinicalTopicIds.length === 1) {
-                    const id = this.coreClinicalTopicIds[0];
-                    return this.coreClinicalTopicLabels[id] || '1 đã chọn';
-                }
-                return this.coreClinicalTopicIds.length + ' đã chọn';
-            },
-            groupedCoreTopics() {
-                const groups = [];
-                const bySection = new Map();
-                this.coreTopicResults.forEach((topic) => {
-                    const key = String(topic.blueprint_section_id ?? 'other');
-                    if (!bySection.has(key)) {
-                        const group = { id: key, name: topic.section_name || 'Chủ đề khác', topics: [] };
-                        bySection.set(key, group);
-                        groups.push(group);
-                    }
-                    bySection.get(key).topics.push(topic);
-                });
-
-                return groups;
-            },
             medicalNodeLabel() {
                 if (!this.medicalTaxonomyNodeIds.length) return 'Tất cả';
                 return this.medicalTaxonomyNodeIds.length + ' đã chọn';
-            },
-            tagLabel() {
-                if (!this.tagIds.length) return 'Tất cả';
-                return this.tagIds.length + ' đã chọn';
             },
             selectedCount(ids) {
                 return this.selectedTopics.filter((id) => ids.includes(String(id))).length;
@@ -330,7 +203,58 @@
                 return this.difficultyLabels[this.difficulties[0]];
             },
             examLabel() {
-                return this.examTitles[this.examKey] || 'Tất cả';
+                if (this.blueprintName) return this.blueprintName;
+                if (this.blueprintId && this.examTitles[this.blueprintId]) return this.examTitles[this.blueprintId];
+                return this.blueprintId ? 'Đã chọn' : 'Tất cả';
+            },
+            currentBlueprintScope() {
+                if (!this.blueprintId) return null;
+                return this.blueprintScopes[this.blueprintId] || this.blueprintScopes[String(this.blueprintId)] || null;
+            },
+            isNodeAllowedForExam(nodeId) {
+                const scope = this.currentBlueprintScope();
+                if (!scope) return true;
+                const id = Number(nodeId);
+                return (scope.nodeIds || []).some((item) => Number(item) === id);
+            },
+            isSystemAllowedForExam(nodeId) {
+                const scope = this.currentBlueprintScope();
+                if (!scope) return true;
+                const id = Number(nodeId);
+                return (scope.systemIds || []).some((item) => Number(item) === id);
+            },
+            isSpecialtyAllowedForExam(nodeId) {
+                const scope = this.currentBlueprintScope();
+                if (!scope) return true;
+                const id = Number(nodeId);
+                return (scope.specialtyIds || []).some((item) => Number(item) === id);
+            },
+            pruneFiltersToBlueprint() {
+                const scope = this.currentBlueprintScope();
+                if (!this.blueprintId) return;
+                if (!scope || !(scope.nodeIds || []).length) {
+                    this.selectedTopics = [];
+                    this.medicalTaxonomyNodeIds = [];
+                    this.medicalNodeLabels = {};
+                    return;
+                }
+                const allowed = new Set((scope.nodeIds || []).map((id) => String(id)));
+                this.selectedTopics = this.selectedTopics.filter((id) => allowed.has(String(id)));
+                this.medicalTaxonomyNodeIds = this.medicalTaxonomyNodeIds.filter((id) => allowed.has(String(id)));
+                Object.keys(this.medicalNodeLabels).forEach((id) => {
+                    if (!allowed.has(String(id))) delete this.medicalNodeLabels[id];
+                });
+            },
+            selectExam(id, title) {
+                this.blueprintId = id;
+                this.blueprintName = title;
+                this.pruneFiltersToBlueprint();
+                this.$nextTick(() => this.refreshCount());
+            },
+            clearExam() {
+                this.blueprintId = null;
+                this.blueprintName = '';
+                this.$nextTick(() => this.refreshCount());
             },
             articleLabel() {
                 if (!this.articles.length) return 'Tất cả';
@@ -352,19 +276,12 @@
                 this.statuses = [];
                 this.selectedTopics = [];
                 this.savedOnly = false;
-                this.examKey = '';
-                this.articles = [];
-                this.symptoms = [];
                 this.blueprintId = null;
                 this.blueprintName = '';
-                this.blueprintSectionId = null;
-                this.blueprintSectionName = '';
-                this.coreClinicalTopicIds = [];
-                this.coreClinicalTopicLabels = {};
+                this.articles = [];
+                this.symptoms = [];
                 this.medicalTaxonomyNodeIds = [];
                 this.medicalNodeLabels = {};
-                this.tagIds = [];
-                this.tagLabels = {};
                 this.activeFilter = null;
                 this.$nextTick(() => this.refreshCount());
             },
@@ -374,7 +291,7 @@
         @keydown.escape.window="activeFilter = null" @submit="submitting = true">
         @csrf
         <input type="hidden" name="source" :value="source">
-        <input type="hidden" name="exam_key" :value="examKey" :disabled="!examKey">
+        <input type="hidden" name="blueprint_id" :value="blueprintId ?? ''" :disabled="!blueprintId">
         <template x-for="article in articles" :key="'article-' + article">
             <input type="hidden" name="articles[]" :value="article">
         </template>
@@ -384,16 +301,8 @@
         <input type="hidden" name="question_status_mode" value="{{ $initialStatusMode }}">
         <input type="hidden" name="saved_only" :value="savedOnly ? '1' : '0'">
         <input type="hidden" name="folder_id" :value="folderId ?? ''">
-        <input type="hidden" name="blueprint_id" :value="blueprintId ?? ''" :disabled="!blueprintId">
-        <input type="hidden" name="blueprint_section_id" :value="blueprintSectionId ?? ''" :disabled="!blueprintSectionId">
-        <template x-for="id in coreClinicalTopicIds" :key="'core-' + id">
-            <input type="hidden" name="core_clinical_topic_ids[]" :value="id">
-        </template>
         <template x-for="id in medicalTaxonomyNodeIds" :key="'med-' + id">
             <input type="hidden" name="medical_taxonomy_node_ids[]" :value="id">
-        </template>
-        <template x-for="id in tagIds" :key="'tag-' + id">
-            <input type="hidden" name="tag_ids[]" :value="id">
         </template>
 
         <div class="mx-auto w-full max-w-[1440px] flex-1 overflow-y-auto p-4 pb-8 md:p-8">
@@ -556,7 +465,7 @@
                              <div class="space-y-2.5 max-h-80 overflow-y-auto pr-1">
                                  <!-- Option: Tất cả câu hỏi đã lưu -->
                                  <button type="button"
-                                     @click="savedOnly = true; folderId = null; folderName = 'Tất cả câu đã lưu'; selectedTopics = []; articles = []; symptoms = []; examKey = ''; foldersModalOpen = false; refreshCount()"
+                                     @click="savedOnly = true; folderId = null; folderName = 'Tất cả câu đã lưu'; selectedTopics = []; articles = []; symptoms = []; blueprintId = null; blueprintName = ''; foldersModalOpen = false; refreshCount()"
                                      :class="savedOnly && !folderId ? 'border-primary bg-primary/5 text-primary font-bold' : 'border-outline-variant hover:bg-surface-container-low text-on-surface'"
                                      class="flex w-full items-center justify-between rounded-xl border p-4 text-left transition-all">
                                      <div class="flex items-center gap-3">
@@ -572,7 +481,7 @@
                                  <!-- User Collections -->
                                  <template x-for="f in folders" :key="f.id">
                                      <button type="button"
-                                         @click="savedOnly = true; folderId = f.id; folderName = f.name; selectedTopics = []; articles = []; symptoms = []; examKey = ''; foldersModalOpen = false; refreshCount()"
+                                         @click="savedOnly = true; folderId = f.id; folderName = f.name; selectedTopics = []; articles = []; symptoms = []; blueprintId = null; blueprintName = ''; foldersModalOpen = false; refreshCount()"
                                          :class="folderId == f.id ? 'border-primary bg-primary/5 text-primary font-bold' : 'border-outline-variant hover:bg-surface-container-low text-on-surface'"
                                          class="flex w-full items-center justify-between rounded-xl border p-4 text-left transition-all">
                                          <div class="flex items-center gap-3">
@@ -729,11 +638,7 @@
                             specialties: 'Chuyên khoa',
                             difficulty: 'Độ khó',
                             statuses: 'Trạng thái',
-                            blueprint: 'Ma trận đề thi',
-                            blueprintSection: 'Phần ma trận',
-                            coreTopics: 'Chủ đề lâm sàng',
                             medicalNodes: 'Danh mục y khoa',
-                            tags: 'Tags',
                         })[activeFilter] || 'Bộ lọc'"></h3>
                     <button type="button" @click="activeFilter = null"
                         class="rounded-full p-2 transition-colors hover:bg-surface-container" aria-label="Đóng">
@@ -744,24 +649,28 @@
                 <div class="custom-scrollbar space-y-4 overflow-y-auto p-4">
                     <div x-show="activeFilter === 'exams'" class="space-y-4">
                         <p class="text-sm text-on-surface-variant">
-                            Chọn kỳ thi mục tiêu giống với phạm vi trong Kế hoạch học tập.
+                            Chọn kỳ thi (ma trận đề thi). Các bộ lọc Hệ cơ quan / Chuyên khoa / danh mục sẽ chỉ hiện mục thuộc ma trận này.
                         </p>
                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
-                            @foreach ($exams as $key => $exam)
-                                <button type="button" @click="examKey = '{{ $key }}'"
+                            @forelse ($exams as $exam)
+                                <button type="button" @click="selectExam({{ (int) $exam['id'] }}, {{ Illuminate\Support\Js::from($exam['title'])->toHtml() }})"
                                     class="relative cursor-pointer rounded-lg border p-4 text-left transition-colors"
-                                    :class="examKey === '{{ $key }}'
+                                    :class="blueprintId === {{ (int) $exam['id'] }}
                                         ? 'border-2 border-primary bg-[#f0fdfa]'
                                         : 'border-outline-variant bg-surface hover:border-primary/50'">
-                                    <span class="absolute top-4 right-4 text-primary" x-show="examKey === '{{ $key }}'" x-cloak>
+                                    <span class="absolute top-4 right-4 text-primary" x-show="blueprintId === {{ (int) $exam['id'] }}" x-cloak>
                                         <span class="material-symbols-outlined fill-1">check_circle</span>
                                     </span>
                                     <span class="material-symbols-outlined mb-2 text-3xl"
-                                        :class="examKey === '{{ $key }}' ? 'text-primary' : 'text-on-surface-variant'">{{ $exam['icon'] }}</span>
+                                        :class="blueprintId === {{ (int) $exam['id'] }} ? 'text-primary' : 'text-on-surface-variant'">{{ $exam['icon'] }}</span>
                                     <span class="mb-1 block pr-7 font-label-md text-label-md text-on-surface">{{ $exam['title'] }}</span>
                                     <span class="block font-body-sm text-body-sm text-on-surface-variant">{{ $exam['hint'] }}</span>
                                 </button>
-                            @endforeach
+                            @empty
+                                <p class="col-span-full rounded-lg bg-surface-container-low p-4 text-sm text-on-surface-variant">
+                                    Chưa có ma trận đề thi. Tạo tại Admin → Ma trận đề thi.
+                                </p>
+                            @endforelse
                         </div>
                     </div>
 
@@ -825,7 +734,7 @@
                         <div x-show="activeFilter === 'systems'" class="space-y-1">
                             @forelse ($systems as $topic)
                                 <label data-search="{{ Str::lower($topic->name) }}"
-                                    x-show="$el.dataset.search.includes(filterSearch.toLocaleLowerCase())"
+                                    x-show="isSystemAllowedForExam({{ (int) $topic->id }}) && $el.dataset.search.includes(filterSearch.toLocaleLowerCase())"
                                     class="flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-surface-container-low">
                                     <input type="checkbox" name="medical_taxonomy_node_ids[]" value="{{ $topic->id }}" x-model="selectedTopics"
                                         :disabled="source === 'weak_topics'"
@@ -835,12 +744,16 @@
                             @empty
                                 <p class="rounded-lg bg-surface-container-low p-3 text-sm text-on-surface-variant">Chưa có dữ liệu hệ cơ quan.</p>
                             @endforelse
+                            <p x-show="blueprintId && !(currentBlueprintScope()?.systemIds || []).length"
+                                class="rounded-lg bg-surface-container-low p-3 text-sm text-on-surface-variant">
+                                Kỳ thi này chưa map hệ cơ quan nào. Liên kết danh mục trên ma trận đề thi.
+                            </p>
                         </div>
 
                         <div x-show="activeFilter === 'specialties'" class="space-y-1">
                             @forelse ($specialties as $topic)
                                 <label data-search="{{ Str::lower($topic->name) }}"
-                                    x-show="$el.dataset.search.includes(filterSearch.toLocaleLowerCase())"
+                                    x-show="isSpecialtyAllowedForExam({{ (int) $topic->id }}) && $el.dataset.search.includes(filterSearch.toLocaleLowerCase())"
                                     class="flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-surface-container-low">
                                     <input type="checkbox" name="medical_taxonomy_node_ids[]" value="{{ $topic->id }}" x-model="selectedTopics"
                                         :disabled="source === 'weak_topics'"
@@ -850,6 +763,10 @@
                             @empty
                                 <p class="rounded-lg bg-surface-container-low p-3 text-sm text-on-surface-variant">Chưa có dữ liệu chuyên khoa.</p>
                             @endforelse
+                            <p x-show="blueprintId && !(currentBlueprintScope()?.specialtyIds || []).length"
+                                class="rounded-lg bg-surface-container-low p-3 text-sm text-on-surface-variant">
+                                Kỳ thi này chưa map chuyên khoa nào. Liên kết danh mục trên ma trận đề thi.
+                            </p>
                         </div>
                     </div>
 
@@ -888,7 +805,7 @@
 
                 <div class="flex items-center justify-between border-t border-outline-variant bg-surface-container-lowest p-4">
                     <button type="button"
-                        @click="activeFilter === 'exams' ? examKey = '' : activeFilter === 'articles' ? articles = [] : activeFilter === 'symptoms' ? symptoms = [] : activeFilter === 'systems' ? clearTopics(systemIds) : activeFilter === 'specialties' ? clearTopics(specialtyIds) : activeFilter === 'difficulty' ? difficulties = [] : statuses = []; $nextTick(() => refreshCount())"
+                        @click="activeFilter === 'exams' ? clearExam() : activeFilter === 'articles' ? articles = [] : activeFilter === 'symptoms' ? symptoms = [] : activeFilter === 'systems' ? clearTopics(systemIds) : activeFilter === 'specialties' ? clearTopics(specialtyIds) : activeFilter === 'difficulty' ? difficulties = [] : activeFilter === 'medicalNodes' ? (medicalTaxonomyNodeIds = [], medicalNodeLabels = {}) : statuses = []; $nextTick(() => refreshCount())"
                         class="text-sm font-bold text-primary hover:underline">Đặt lại</button>
                     <button type="button" @click="activeFilter = null"
                         class="rounded-lg bg-primary px-8 py-2 font-bold text-white transition-opacity hover:opacity-90">Xong</button>

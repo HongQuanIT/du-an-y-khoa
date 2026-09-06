@@ -279,10 +279,9 @@ final class TeachClassroomController extends Controller
             ->all();
 
         // Chỉ trả về câu đã xuất bản và đúng quyền QBank của giảng viên.
+        $filters = app(\Modules\QuestionBank\Support\QuestionFilterBuilder::class);
         $questions = Question::query()
             ->with([
-                'coreClinicalTopics:id,name,blueprint_section_id',
-                'coreClinicalTopics.section:id,name',
                 'latestFeedback.user:id,name',
                 'medicalTaxonomyNodes:id,name,node_type',
                 'tags:id,name',
@@ -302,12 +301,12 @@ final class TeachClassroomController extends Controller
                     $questions
                         ->whereRaw("stem LIKE ? ESCAPE '!'", [$pattern])
                         ->orWhereHas(
-                            'coreClinicalTopics',
-                            fn ($topics) => $topics->whereRaw("name LIKE ? ESCAPE '!'", [$pattern]),
-                        )
-                        ->orWhereHas(
                             'medicalTaxonomyNodes',
                             fn ($nodes) => $nodes->whereRaw("name LIKE ? ESCAPE '!'", [$pattern]),
+                        )
+                        ->orWhereHas(
+                            'medicalTaxonomyNodes.coreClinicalTopics',
+                            fn ($topics) => $topics->whereRaw("name LIKE ? ESCAPE '!'", [$pattern]),
                         )
                         ->orWhereHas(
                             'tags',
@@ -315,10 +314,10 @@ final class TeachClassroomController extends Controller
                         );
                 });
             })
-            ->when($coreTopicIds !== [], function ($query) use ($coreTopicIds): void {
-                $query->whereHas(
-                    'coreClinicalTopics',
-                    fn ($topics) => $topics->whereIn('core_clinical_topics.id', $coreTopicIds),
+            ->when($coreTopicIds !== [], function ($query) use ($filters, $coreTopicIds): void {
+                $filters->apply(
+                    $query,
+                    coreClinicalTopicIds: $coreTopicIds,
                 );
             })
             ->when($topicIds !== [], function ($query) use ($topicIds): void {
@@ -353,7 +352,7 @@ final class TeachClassroomController extends Controller
 
         $coreTopicOptions = CoreClinicalTopic::query()
             ->with(['section:id,name'])
-            ->whereHas('questions', $availableQuestionScope)
+            ->whereHas('medicalTaxonomyNodes.questions', $availableQuestionScope)
             ->orderBy('name')
             ->limit(80)
             ->get(['id', 'blueprint_section_id', 'name']);
@@ -407,34 +406,38 @@ final class TeachClassroomController extends Controller
                     ['value' => 'other', 'label' => 'Khác'],
                 ],
             ],
-            'questions' => $questions->map(fn (Question $question): array => [
-                'id' => (string) $question->getKey(),
-                'stem' => trim(strip_tags(html_entity_decode($question->stem, ENT_QUOTES | ENT_HTML5, 'UTF-8'))),
-                'difficulty' => $question->difficulty->label(),
-                'topic' => $question->medicalTaxonomyNodes->pluck('name')->join(', ') ?: 'Tổng hợp',
-                'core_topics' => $question->coreClinicalTopics->map(fn (CoreClinicalTopic $topic): array => [
-                    'id' => (int) $topic->getKey(),
-                    'name' => $topic->name,
-                    'section_name' => $topic->section?->name,
-                ])->values(),
-                'topics' => $question->medicalTaxonomyNodes->pluck('name')->values(),
-                'medical_taxonomy_node_ids' => $question->medicalTaxonomyNodes->pluck('id')->map(fn ($id): int => (int) $id)->values(),
-                'topic_ids' => $question->medicalTaxonomyNodes->pluck('id')->map(fn ($id): int => (int) $id)->values(),
-                'tags' => $question->tags->map(fn (Tag $tag): array => [
-                    'id' => (int) $tag->getKey(),
-                    'name' => $tag->name,
-                ])->values(),
-                'feedback_count' => (int) ($question->feedback_count ?? 0),
-                'pending_feedback_count' => (int) ($question->pending_feedback_count ?? 0),
-                'latest_feedback' => $question->latestFeedback ? [
-                    'target' => QuestionFeedback::targetLabels()[$question->latestFeedback->target] ?? $question->latestFeedback->target,
-                    'category' => QuestionFeedback::categoryLabels()[$question->latestFeedback->category] ?? $question->latestFeedback->category,
-                    'status' => QuestionFeedback::statusLabels()[$question->latestFeedback->status] ?? $question->latestFeedback->status,
-                    'message' => $question->latestFeedback->message,
-                    'user' => $question->latestFeedback->user?->name,
-                    'created_at' => $question->latestFeedback->created_at?->format('d/m/Y H:i'),
-                ] : null,
-            ])->values(),
+            'questions' => $questions->map(function (Question $question) use ($filters): array {
+                $inferred = $filters->inferredCoreClinicalTopicsForQuestion($question);
+
+                return [
+                    'id' => (string) $question->getKey(),
+                    'stem' => trim(strip_tags(html_entity_decode($question->stem, ENT_QUOTES | ENT_HTML5, 'UTF-8'))),
+                    'difficulty' => $question->difficulty->label(),
+                    'topic' => $question->medicalTaxonomyNodes->pluck('name')->join(', ') ?: 'Tổng hợp',
+                    'core_topics' => $inferred->map(fn (CoreClinicalTopic $topic): array => [
+                        'id' => (int) $topic->getKey(),
+                        'name' => $topic->name,
+                        'section_name' => $topic->section?->name,
+                    ])->values(),
+                    'topics' => $question->medicalTaxonomyNodes->pluck('name')->values(),
+                    'medical_taxonomy_node_ids' => $question->medicalTaxonomyNodes->pluck('id')->map(fn ($id): int => (int) $id)->values(),
+                    'topic_ids' => $question->medicalTaxonomyNodes->pluck('id')->map(fn ($id): int => (int) $id)->values(),
+                    'tags' => $question->tags->map(fn (Tag $tag): array => [
+                        'id' => (int) $tag->getKey(),
+                        'name' => $tag->name,
+                    ])->values(),
+                    'feedback_count' => (int) ($question->feedback_count ?? 0),
+                    'pending_feedback_count' => (int) ($question->pending_feedback_count ?? 0),
+                    'latest_feedback' => $question->latestFeedback ? [
+                        'target' => QuestionFeedback::targetLabels()[$question->latestFeedback->target] ?? $question->latestFeedback->target,
+                        'category' => QuestionFeedback::categoryLabels()[$question->latestFeedback->category] ?? $question->latestFeedback->category,
+                        'status' => QuestionFeedback::statusLabels()[$question->latestFeedback->status] ?? $question->latestFeedback->status,
+                        'message' => $question->latestFeedback->message,
+                        'user' => $question->latestFeedback->user?->name,
+                        'created_at' => $question->latestFeedback->created_at?->format('d/m/Y H:i'),
+                    ] : null,
+                ];
+            })->values(),
         ]);
     }
 

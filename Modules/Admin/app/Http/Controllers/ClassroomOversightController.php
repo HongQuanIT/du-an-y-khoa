@@ -57,7 +57,7 @@ final class ClassroomOversightController extends Controller
                 ->orderBy('title')
                 ->get(['id', 'title', 'description', 'duration_minutes']),
             'selectedQuestions' => Question::query()
-                ->with(['coreClinicalTopics:id,name', 'medicalTaxonomyNodes:id,name'])
+                ->with(['medicalTaxonomyNodes:id,name'])
                 ->withCount(['feedback as open_feedback_count' => fn ($query) => $query->whereIn('status', [
                     QuestionFeedback::STATUS_PENDING,
                     QuestionFeedback::STATUS_REVIEWING,
@@ -74,7 +74,10 @@ final class ClassroomOversightController extends Controller
                     ]))->count(),
             ],
             'coreTopicOptions' => CoreClinicalTopic::query()
-                ->whereHas('questions', fn ($query) => $query->where('status', QuestionStatus::Published->value))
+                ->whereHas(
+                    'medicalTaxonomyNodes.questions',
+                    fn ($query) => $query->where('status', QuestionStatus::Published->value),
+                )
                 ->orderBy('name')
                 ->get(['id', 'name']),
             'medicalTopicOptions' => MedicalTaxonomyNode::query()
@@ -94,18 +97,16 @@ final class ClassroomOversightController extends Controller
         $coreTopicId = $request->integer('core_topic_id');
         $medicalTopicId = $request->integer('medical_topic_id');
         $difficulty = $request->string('difficulty')->toString();
+        $filters = app(\Modules\QuestionBank\Support\QuestionFilterBuilder::class);
 
         $questions = Question::query()
-            ->with(['coreClinicalTopics:id,name', 'medicalTaxonomyNodes:id,name'])
+            ->with(['medicalTaxonomyNodes:id,name'])
             ->withCount(['feedback as open_feedback_count' => fn ($query) => $query->whereIn('status', [
                 QuestionFeedback::STATUS_PENDING,
                 QuestionFeedback::STATUS_REVIEWING,
             ])])
             ->where('status', QuestionStatus::Published->value)
-            ->when($coreTopicId > 0, fn ($query) => $query->whereHas(
-                'coreClinicalTopics',
-                fn ($topics) => $topics->where('core_clinical_topics.id', $coreTopicId),
-            ))
+            ->when($coreTopicId > 0, fn ($query) => $filters->whereMatchesCoreClinicalTopic($query, $coreTopicId))
             ->when($medicalTopicId > 0, fn ($query) => $query->whereHas(
                 'medicalTaxonomyNodes',
                 fn ($topics) => $topics->where('medical_taxonomy_nodes.id', $medicalTopicId),
@@ -134,7 +135,7 @@ final class ClassroomOversightController extends Controller
                 'code' => $question->code,
                 'text' => trim(strip_tags(html_entity_decode($question->stem, ENT_QUOTES | ENT_HTML5, 'UTF-8'))),
                 'topic' => $question->medicalTaxonomyNodes->pluck('name')->join(', ') ?: 'Tổng hợp',
-                'core_topic' => $question->coreClinicalTopics->pluck('name')->join(', '),
+                'core_topic' => $question->inferredCoreClinicalTopics()->pluck('name')->join(', '),
                 'difficulty' => $question->difficulty->label(),
                 'feedback_count' => (int) ($question->open_feedback_count ?? 0),
                 'edit_url' => route('admin.questions.edit', $question),

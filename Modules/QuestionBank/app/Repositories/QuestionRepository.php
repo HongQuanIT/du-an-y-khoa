@@ -34,7 +34,6 @@ final class QuestionRepository extends EloquentRepository
     {
         $query = $this->query()
             ->with([
-                'coreClinicalTopics:id,name',
                 'medicalTaxonomyNodes:id,name',
                 'tags:id,name',
             ]);

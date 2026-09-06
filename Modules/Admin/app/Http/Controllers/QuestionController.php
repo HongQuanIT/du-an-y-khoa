@@ -58,7 +58,8 @@ final class QuestionController extends Controller
         }
 
         if ($coreTopicId = $request->query('core_clinical_topic_id')) {
-            $query->whereHas('coreClinicalTopics', fn ($q) => $q->whereKey((int) $coreTopicId));
+            app(\Modules\QuestionBank\Support\QuestionFilterBuilder::class)
+                ->whereMatchesCoreClinicalTopic($query, (int) $coreTopicId);
         }
 
         if ($medicalNodeId = $request->query('medical_taxonomy_node_id')) {
@@ -162,7 +163,6 @@ final class QuestionController extends Controller
         $question->load([
             'options' => fn ($q) => $q->orderBy('order'),
             'hints' => fn ($q) => $q->orderBy('sort_order'),
-            'coreClinicalTopics.section',
             'medicalTaxonomyNodes',
             'tags',
             'creator:id,name,email',
@@ -409,8 +409,6 @@ final class QuestionController extends Controller
             'key_info' => ['nullable', 'string'],
             'attending_tip' => ['nullable', 'string'],
             'difficulty' => ['required', Rule::in(Difficulty::values())],
-            'core_clinical_topic_ids' => ['nullable', 'array'],
-            'core_clinical_topic_ids.*' => ['integer', 'distinct', 'exists:core_clinical_topics,id'],
             'medical_taxonomy_node_ids' => ['required', 'array', 'min:1'],
             'medical_taxonomy_node_ids.*' => ['required', 'integer', 'distinct', 'exists:medical_taxonomy_nodes,id'],
             'tag_ids' => ['nullable', 'array'],
@@ -460,8 +458,6 @@ final class QuestionController extends Controller
             'key_info' => $this->parseKeyInfo($data['key_info'] ?? null),
             'attending_tip' => $data['attending_tip'] ?? null,
             'difficulty' => $data['difficulty'],
-            'core_clinical_topic_ids' => collect($data['core_clinical_topic_ids'] ?? [])
-                ->map(fn ($id): int => (int) $id)->unique()->values()->all(),
             'medical_taxonomy_node_ids' => collect($data['medical_taxonomy_node_ids'] ?? [])
                 ->map(fn ($id): int => (int) $id)->unique()->values()->all(),
             'tag_ids' => collect($data['tag_ids'] ?? [])

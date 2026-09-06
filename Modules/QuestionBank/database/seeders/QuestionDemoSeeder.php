@@ -32,7 +32,7 @@ final class QuestionDemoSeeder extends Seeder
         $question = $this->upsertQuestion();
         $this->syncOptions($question);
         $this->syncHints($question);
-        $this->syncRelations($question, (int) $coreTopicId, (int) $taxonomyId);
+        $this->syncRelations($question, (int) $taxonomyId);
     }
 
     private function upsertQuestion(): Question
@@ -123,9 +123,9 @@ final class QuestionDemoSeeder extends Seeder
         $question->hints()->whereNotIn('id', $keepIds)->delete();
     }
 
-    private function syncRelations(Question $question, int $coreTopicId, int $taxonomyId): void
+    private function syncRelations(Question $question, int $taxonomyId): void
     {
-        $question->coreClinicalTopics()->sync([$coreTopicId]);
+        // CCT inferred via core_topic_medical_taxonomy_nodes — do not attach question_blueprint_topics.
 
         $nodeLinks = [
             'tim-mach' => ['relationship_type' => 'contextual', 'is_primary' => false],

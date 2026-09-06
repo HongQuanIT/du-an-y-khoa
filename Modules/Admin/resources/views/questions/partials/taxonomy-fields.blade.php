@@ -1,17 +1,4 @@
 @php
-    $selectedCoreTopics = $question->relationLoaded('coreClinicalTopics')
-        ? $question->coreClinicalTopics->map(fn ($t) => [
-            'id' => $t->id,
-            'name' => $t->name,
-            'section_name' => $t->section?->name,
-        ])->values()->all()
-        : [];
-
-    $selectedCoreTopicIds = collect(old(
-        'core_clinical_topic_ids',
-        collect($selectedCoreTopics)->pluck('id')->all(),
-    ))->map(fn ($id) => (int) $id)->unique()->values()->all();
-
     $medicalNodes = $question->relationLoaded('medicalTaxonomyNodes')
         ? $question->medicalTaxonomyNodes
         : collect();
@@ -35,74 +22,56 @@
         'tag_ids',
         collect($selectedTags)->pluck('id')->all(),
     ))->map(fn ($id) => (int) $id)->unique()->values()->all();
+
+    $inferredCoreTopics = $question->exists
+        ? $question->inferredCoreClinicalTopics()->map(fn ($t) => [
+            'id' => $t->id,
+            'name' => $t->name,
+            'section_name' => $t->section?->name,
+        ])->values()->all()
+        : [];
 @endphp
 
 <div class="space-y-4 border-t border-outline-variant pt-3"
      x-data="questionTaxonomyPicker({
-         selectedCoreTopics: @js(collect($selectedCoreTopics)->keyBy('id')->all()),
-         selectedCoreTopicIds: @js($selectedCoreTopicIds),
          selectedMedicalNodes: @js(collect($selectedMedicalNodes)->keyBy('id')->all()),
          selectedMedicalNodeIds: @js($selectedMedicalNodeIds),
          selectedTags: @js(collect($selectedTags)->keyBy('id')->all()),
          selectedTagIds: @js($selectedTagIds),
+         inferredCoreTopics: @js($inferredCoreTopics),
          nodeTypeLabels: @js(\Modules\QuestionBank\Support\MedicalTaxonomyNodeTypes::LABELS),
          urls: {
-             blueprints: @js(route('admin.taxonomy.lookups.blueprints')),
-             sections: @js(url('/admin/taxonomy/lookups/blueprints')),
-             coreTopics: @js(route('admin.taxonomy.lookups.core-topics.search')),
              medicalNodes: @js(route('admin.taxonomy.lookups.medical-nodes')),
              tags: @js(route('admin.taxonomy.lookups.tags')),
          },
      })">
     <p class="text-[11px] leading-4 text-on-surface-variant">
-        Phân loại độc lập: ma trận đề thi (17 đề mục / 128 vấn đề), phân loại y khoa, và thẻ.
+        Gắn câu hỏi vào <strong>danh mục y khoa</strong> (bắt buộc) và thẻ.
+        Chủ đề lâm sàng trên ma trận đề thi được suy ra tự động qua liên kết CCT ↔ danh mục/tag — không gắn trực tiếp từng câu.
     </p>
 
-    {{-- Blueprint core clinical topics --}}
-    <div>
-        <label class="mb-1 block text-xs font-semibold text-on-surface-variant">Chủ đề lâm sàng (Ma trận đề thi) *</label>
-        <div class="mb-2 grid grid-cols-1 gap-2">
-            <select x-model="blueprintId" @change="loadSections()"
-                    class="h-10 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm">
-                <option value="">— Chọn kỳ thi / ma trận đề thi —</option>
-                <template x-for="bp in blueprints" :key="bp.id">
-                    <option :value="bp.id" x-text="bp.name"></option>
-                </template>
-            </select>
-            <select x-model="sectionId" @change="loadSectionTopics()" :disabled="!blueprintId"
-                    class="h-10 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm disabled:opacity-50">
-                <option value="">— Chọn đề mục —</option>
-                <template x-for="sec in sections" :key="sec.id">
-                    <option :value="sec.id" x-text="sec.name"></option>
-                </template>
-            </select>
+    @if (count($inferredCoreTopics) > 0)
+        <div class="rounded-lg border border-outline-variant/70 bg-surface-container-low/60 p-3">
+            <p class="mb-1.5 text-xs font-semibold text-on-surface-variant">Chủ đề lâm sàng (suy ra từ ma trận)</p>
+            <div class="flex flex-wrap gap-1.5">
+                @foreach ($inferredCoreTopics as $topic)
+                    <span class="inline-flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
+                        {{ $topic['name'] }}
+                        @if (! empty($topic['section_name']))
+                            <span class="font-normal text-primary/70">· {{ $topic['section_name'] }}</span>
+                        @endif
+                    </span>
+                @endforeach
+            </div>
+            <p class="mt-1.5 text-[11px] text-on-surface-variant">
+                Đổi mapping tại Ma trận đề thi → Liên kết. Ma trận mới chỉ cần map thêm, không gắn lại câu hỏi.
+            </p>
         </div>
-        <input type="search" x-model="coreTopicSearch" @input.debounce.300ms="searchCoreTopics()"
-               placeholder="Hoặc tìm chủ đề lâm sàng (≥2 ký tự)..."
-               class="mb-2 h-10 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm">
-        <div class="max-h-36 space-y-1 overflow-y-auto rounded-lg border border-outline-variant p-2">
-            <template x-for="topic in coreTopicResults" :key="topic.id">
-                <label class="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm hover:bg-surface-container-low">
-                    <input type="checkbox" :checked="selectedCoreTopicIds.includes(topic.id)"
-                           @change="toggleCoreTopic(topic)" class="size-4 rounded text-primary">
-                    <span class="min-w-0 flex-1" x-text="topic.name"></span>
-                    <span class="text-[10px] text-on-surface-variant" x-text="topic.section_name || ''"></span>
-                </label>
-            </template>
-            <p x-show="coreTopicResults.length === 0" class="px-2 py-1 text-xs text-on-surface-variant">Chọn đề mục hoặc tìm kiếm.</p>
+    @else
+        <div class="rounded-lg border border-dashed border-outline-variant p-3 text-[11px] text-on-surface-variant">
+            Chưa suy ra chủ đề lâm sàng nào. Map CCT ↔ danh mục/tag trên trang Ma trận đề thi sau khi gắn danh mục hoặc tag cho câu hỏi.
         </div>
-        <div class="mt-2 flex flex-wrap gap-1.5">
-            <template x-for="id in selectedCoreTopicIds" :key="'core-chip-'+id">
-                <span class="inline-flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
-                    <span x-text="selectedCoreTopics[id]?.name || ('#'+id)"></span>
-                    <button type="button" @click="removeCoreTopic(id)" class="material-symbols-outlined text-[14px]">close</button>
-                </span>
-            </template>
-        </div>
-        <template x-for="id in selectedCoreTopicIds" :key="'core-'+id">
-            <input type="hidden" name="core_clinical_topic_ids[]" :value="id">
-        </template>
-    </div>
+    @endif
 
     {{-- Typed medical taxonomy pickers --}}
     <template x-for="group in nodeGroups" :key="group.key">
@@ -133,7 +102,7 @@
     </template>
 
     <div>
-        <label class="mb-1 block text-xs font-semibold text-on-surface-variant">Phân loại y khoa (khác)</label>
+        <label class="mb-1 block text-xs font-semibold text-on-surface-variant">Phân loại y khoa (khác) *</label>
         <input type="search" x-model="generalNodeSearch" @input.debounce.300ms="searchGeneralNodes()"
                placeholder="Tìm danh mục (chuyên khoa, hệ cơ quan, thủ thuật…)"
                class="mb-2 h-10 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm">
@@ -158,6 +127,7 @@
         <template x-for="id in selectedMedicalNodeIds" :key="'med-'+id">
             <input type="hidden" name="medical_taxonomy_node_ids[]" :value="id">
         </template>
+        <p x-show="selectedMedicalNodeIds.length === 0" class="mt-1 text-xs text-error">Chọn ít nhất một mục danh mục y khoa.</p>
     </div>
 
     <div>
@@ -192,12 +162,6 @@
     function questionTaxonomyPicker(config) {
         return {
             ...config,
-            blueprints: [],
-            sections: [],
-            blueprintId: '',
-            sectionId: '',
-            coreTopicSearch: '',
-            coreTopicResults: [],
             generalNodeSearch: '',
             generalNodeResults: [],
             tagSearch: '',
@@ -213,63 +177,10 @@
                 return this.nodeTypeLabels?.[type] || type;
             },
             async init() {
-                await this.loadBlueprints();
                 for (const group of this.nodeGroups) {
                     await this.searchNodes(group);
                 }
                 await this.searchGeneralNodes();
-            },
-            async loadBlueprints() {
-                const res = await fetch(this.urls.blueprints);
-                const json = await res.json();
-                this.blueprints = json.data ?? [];
-                if (this.blueprints.length === 1) {
-                    this.blueprintId = String(this.blueprints[0].id);
-                    await this.loadSections();
-                }
-            },
-            async loadSections() {
-                this.sections = [];
-                this.sectionId = '';
-                this.coreTopicResults = [];
-                if (!this.blueprintId) return;
-                const res = await fetch(`${this.urls.sections}/${this.blueprintId}/sections`);
-                const json = await res.json();
-                this.sections = json.data ?? [];
-            },
-            async loadSectionTopics() {
-                if (!this.sectionId) { this.coreTopicResults = []; return; }
-                const res = await fetch(`${this.urls.coreTopics}?blueprint_section_id=${this.sectionId}`);
-                const json = await res.json();
-                this.coreTopicResults = json.data ?? [];
-            },
-            async searchCoreTopics() {
-                const q = this.coreTopicSearch.trim();
-                if (q.length < 2) {
-                    if (this.sectionId) await this.loadSectionTopics();
-                    else this.coreTopicResults = [];
-                    return;
-                }
-                const params = new URLSearchParams({ q });
-                if (this.blueprintId) params.set('blueprint_id', this.blueprintId);
-                if (this.sectionId) params.set('blueprint_section_id', this.sectionId);
-                const res = await fetch(`${this.urls.coreTopics}?${params}`);
-                const json = await res.json();
-                this.coreTopicResults = json.data ?? [];
-            },
-            toggleCoreTopic(topic) {
-                const idx = this.selectedCoreTopicIds.indexOf(topic.id);
-                if (idx >= 0) {
-                    this.selectedCoreTopicIds.splice(idx, 1);
-                    delete this.selectedCoreTopics[topic.id];
-                } else {
-                    this.selectedCoreTopicIds.push(topic.id);
-                    this.selectedCoreTopics[topic.id] = topic;
-                }
-            },
-            removeCoreTopic(id) {
-                this.selectedCoreTopicIds = this.selectedCoreTopicIds.filter(x => x !== id);
-                delete this.selectedCoreTopics[id];
             },
             async searchNodes(group) {
                 const q = group.search.trim();

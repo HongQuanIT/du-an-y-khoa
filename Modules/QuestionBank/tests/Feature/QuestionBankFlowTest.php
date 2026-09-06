@@ -20,6 +20,8 @@ use Modules\QuestionBank\Enums\QuestionStatus as PublicationStatus;
 use Modules\QuestionBank\Enums\SessionMode;
 use Modules\QuestionBank\Enums\SessionStatus;
 use Modules\QuestionBank\Enums\UserQuestionStatus;
+use Modules\QuestionBank\Enums\TaxonomyStatus;
+use Modules\QuestionBank\Models\Blueprint;
 use Modules\QuestionBank\Models\MedicalTaxonomyNode;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
@@ -64,6 +66,15 @@ final class QuestionBankFlowTest extends TestCase
         $this->createQuestion($this->topic, true, Difficulty::Easy, 'Câu miễn phí 2');
         $this->createQuestion($this->topic, false, Difficulty::Easy, 'Câu premium');
 
+        Blueprint::query()->create([
+            'name' => 'Kỳ thi đánh giá năng lực hành nghề Bác sĩ Y khoa',
+            'slug' => 'ky-thi-danh-gia-nang-luc',
+            'code' => 'medical_practice_licensing_exam',
+            'description' => 'Exam blueprint — 17 sections, 128 core clinical topics.',
+            'status' => TaxonomyStatus::Active,
+            'sort_order' => 1,
+        ]);
+
         $builderResponse = $this->actingAs($this->user)
             ->get(route('qbank.create'))
             ->assertOk()
@@ -75,9 +86,14 @@ final class QuestionBankFlowTest extends TestCase
                 'Chế độ học tập',
                 'Bắt đầu',
             ])
-            ->assertSee('Bác sĩ nội trú')
-            ->assertSee('USMLE Step 2 CK')
-            ->assertSee('NBME')
+            ->assertSee('Kỳ thi')
+            ->assertSee('Kỳ thi đánh giá năng lực hành nghề Bác sĩ Y khoa')
+            ->assertSee('danh mục y khoa')
+            ->assertDontSee('Chủ đề lâm sàng')
+            ->assertDontSee('>Tags</span>', false)
+            ->assertDontSee('>Ma trận đề thi</span>', false)
+            ->assertDontSee('Bác sĩ nội trú')
+            ->assertDontSee('USMLE Step 2 CK')
             ->assertSee('ABCDE approach')
             ->assertSee('Acute coronary syndromes')
             ->assertSee('Stroke')
