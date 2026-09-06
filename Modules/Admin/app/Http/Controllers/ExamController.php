@@ -15,8 +15,8 @@ use Modules\Exam\Models\Exam;
 use Modules\Exam\Models\ExamTopic;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionStatus;
-use Modules\QuestionBank\Models\CoreClinicalTopic;
 use Modules\QuestionBank\Models\Question;
+use Modules\QuestionBank\Support\QuestionFilterBuilder;
 
 final class ExamController extends Controller
 {
@@ -39,19 +39,20 @@ final class ExamController extends Controller
         $exam->setAttribute('questions_count', 0);
 
         $availableQuestions = $this->availableQuestions();
+        $difficultyLevels = $this->difficultyLevelsForView();
 
-        return view('admin::exams.form', compact('exam', 'availableQuestions'));
+        return view('admin::exams.form', compact('exam', 'availableQuestions', 'difficultyLevels'));
     }
 
     public function store(Request $request): RedirectResponse
     {
         $validated = $this->validatedExam($request);
         $status = ExamStatus::from($validated['status']);
-        $examTopicsInput = $validated['exam_topics'] ?? [];
+        $examTopicsInput = $this->normalizedExamTopicsInput($validated['exam_topics'] ?? []);
 
-        if ($status === ExamStatus::Published && count($examTopicsInput) === 0 && count($validated['questions'] ?? []) === 0) {
+        if ($status === ExamStatus::Published && $examTopicsInput === [] && count($validated['questions'] ?? []) === 0) {
             return back()
-                ->withErrors(['status' => 'Phải cấu hình chủ đề blueprint hoặc thêm ít nhất 1 câu hỏi trước khi xuất bản.'])
+                ->withErrors(['status' => 'Phải cấu hình phân bổ ma trận hoặc thêm ít nhất 1 câu hỏi trước khi xuất bản.'])
                 ->withInput();
         }
 
@@ -61,6 +62,7 @@ final class ExamController extends Controller
         }
 
         $exam = Exam::create([
+            'blueprint_id' => $validated['blueprint_id'] ?? null,
             'title' => $validated['title'],
             'description' => $validated['description'] ?? null,
             'duration_minutes' => $validated['duration_minutes'],
@@ -73,12 +75,16 @@ final class ExamController extends Controller
 
         $syncResult = $this->resolveQuestionSync($exam, $validated['questions'] ?? [], $examTopicsInput);
         if ($syncResult['errors'] !== []) {
+            $exam->delete();
+
             return back()->withErrors(['exam_topics' => implode(' ', $syncResult['errors'])])->withInput();
         }
 
         if ($status === ExamStatus::Published && count($syncResult['sync']) === 0) {
+            $exam->delete();
+
             return back()
-                ->withErrors(['status' => 'Phải có ít nhất 1 câu hỏi sau khi generate từ blueprint topics.'])
+                ->withErrors(['status' => 'Phải có ít nhất 1 câu hỏi sau khi generate từ ma trận đề thi.'])
                 ->withInput();
         }
 
@@ -93,26 +99,29 @@ final class ExamController extends Controller
         $exam->load([
             'questions' => fn ($q) => $q->with(['medicalTaxonomyNodes'])->orderBy('exam_question.order'),
             'examTopics.coreClinicalTopic.section',
+            'blueprint',
         ]);
 
         $availableQuestions = $this->availableQuestions();
+        $difficultyLevels = $this->difficultyLevelsForView();
 
-        return view('admin::exams.form', compact('exam', 'availableQuestions'));
+        return view('admin::exams.form', compact('exam', 'availableQuestions', 'difficultyLevels'));
     }
 
     public function update(Request $request, Exam $exam): RedirectResponse
     {
         $validated = $this->validatedExam($request);
         $status = ExamStatus::from($validated['status']);
-        $examTopicsInput = $validated['exam_topics'] ?? [];
+        $examTopicsInput = $this->normalizedExamTopicsInput($validated['exam_topics'] ?? []);
 
-        if ($status === ExamStatus::Published && count($examTopicsInput) === 0 && count($validated['questions'] ?? []) === 0) {
+        if ($status === ExamStatus::Published && $examTopicsInput === [] && count($validated['questions'] ?? []) === 0) {
             return back()
-                ->withErrors(['status' => 'Phải cấu hình chủ đề blueprint hoặc thêm ít nhất 1 câu hỏi trước khi xuất bản.'])
+                ->withErrors(['status' => 'Phải cấu hình phân bổ ma trận hoặc thêm ít nhất 1 câu hỏi trước khi xuất bản.'])
                 ->withInput();
         }
 
         $data = [
+            'blueprint_id' => $validated['blueprint_id'] ?? null,
             'title' => $validated['title'],
             'description' => $validated['description'] ?? null,
             'duration_minutes' => $validated['duration_minutes'],
@@ -135,7 +144,7 @@ final class ExamController extends Controller
 
         if ($status === ExamStatus::Published && count($syncResult['sync']) === 0) {
             return back()
-                ->withErrors(['status' => 'Phải có ít nhất 1 câu hỏi sau khi generate từ blueprint topics.'])
+                ->withErrors(['status' => 'Phải có ít nhất 1 câu hỏi sau khi generate từ ma trận đề thi.'])
                 ->withInput();
         }
 
@@ -161,7 +170,11 @@ final class ExamController extends Controller
 
         $counts = [];
         foreach ($topicIds as $topicId) {
-            $counts[$topicId] = $this->eligibleQuestionCount($topicId);
+            $byDifficulty = $this->eligibleQuestionCountsByDifficulty($topicId);
+            $counts[$topicId] = [
+                'total' => array_sum($byDifficulty),
+                'by_difficulty' => $byDifficulty,
+            ];
         }
 
         return response()->json(['data' => $counts]);
@@ -217,30 +230,53 @@ final class ExamController extends Controller
             ->get();
     }
 
+    /**
+     * @return list<array{value: string, label: string}>
+     */
+    private function difficultyLevelsForView(): array
+    {
+        return array_map(
+            fn (Difficulty $case): array => [
+                'value' => $case->value,
+                'label' => $case->label(),
+            ],
+            Difficulty::cases(),
+        );
+    }
+
     /** @return array<string, mixed> */
     private function validatedExam(Request $request): array
     {
-        return $request->validate([
+        $difficultyRules = [];
+        foreach (Difficulty::cases() as $case) {
+            $difficultyRules['exam_topics.*.difficulty_counts.'.$case->value] = 'nullable|integer|min:0';
+        }
+
+        return $request->validate(array_merge([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'duration_minutes' => 'required|integer|min:1',
             'icon' => 'nullable|file|image|max:2048',
             'status' => ['required', 'string', Rule::in(ExamStatus::values())],
+            'blueprint_id' => 'nullable|integer|exists:blueprints,id',
+            'section_ids' => 'nullable|array',
+            'section_ids.*' => 'integer|exists:blueprint_sections,id',
             'questions' => 'nullable|array',
             'questions.*' => 'exists:questions,id',
             'exam_topics' => 'nullable|array',
             'exam_topics.*.core_clinical_topic_id' => 'required_with:exam_topics|integer|exists:core_clinical_topics,id',
-            'exam_topics.*.question_count' => 'required_with:exam_topics|integer|min:1',
+            'exam_topics.*.difficulty_counts' => 'nullable|array',
             'exam_topics.*.sort_order' => 'nullable|integer|min:0',
-        ]);
+        ], $difficultyRules));
     }
 
     /**
-     * @param  array<int, array{core_clinical_topic_id?: mixed, question_count?: mixed, sort_order?: mixed}>  $rows
+     * @param  array<int, array<string, mixed>>  $rows
+     * @return array<int, array{core_clinical_topic_id: int, difficulty_counts: array<string, int>, question_count: int, sort_order: int}>
      */
-    private function syncExamTopics(Exam $exam, array $rows): void
+    private function normalizedExamTopicsInput(array $rows): array
     {
-        $exam->examTopics()->delete();
+        $normalized = [];
 
         foreach (array_values($rows) as $index => $row) {
             $topicId = (int) ($row['core_clinical_topic_id'] ?? 0);
@@ -248,10 +284,38 @@ final class ExamController extends Controller
                 continue;
             }
 
+            $counts = ExamTopic::normalizeDifficultyCounts(
+                is_array($row['difficulty_counts'] ?? null) ? $row['difficulty_counts'] : null
+            );
+            $total = ExamTopic::sumDifficultyCounts($counts);
+            if ($total <= 0) {
+                continue;
+            }
+
+            $normalized[] = [
+                'core_clinical_topic_id' => $topicId,
+                'difficulty_counts' => $counts,
+                'question_count' => $total,
+                'sort_order' => (int) ($row['sort_order'] ?? $index),
+            ];
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @param  array<int, array{core_clinical_topic_id: int, difficulty_counts: array<string, int>, question_count: int, sort_order: int}>  $rows
+     */
+    private function syncExamTopics(Exam $exam, array $rows): void
+    {
+        $exam->examTopics()->delete();
+
+        foreach (array_values($rows) as $index => $row) {
             ExamTopic::query()->create([
                 'exam_id' => $exam->id,
-                'core_clinical_topic_id' => $topicId,
-                'question_count' => max(1, (int) ($row['question_count'] ?? 1)),
+                'core_clinical_topic_id' => $row['core_clinical_topic_id'],
+                'difficulty_counts' => $row['difficulty_counts'],
+                'question_count' => $row['question_count'],
                 'sort_order' => (int) ($row['sort_order'] ?? $index),
             ]);
         }
@@ -284,51 +348,92 @@ final class ExamController extends Controller
         $syncData = [];
         $order = 1;
         $errors = [];
+        $filterBuilder = app(QuestionFilterBuilder::class);
 
         foreach ($exam->examTopics as $examTopic) {
-            $needed = $examTopic->question_count;
             $topicName = $examTopic->coreClinicalTopic?->name ?? ('#'.$examTopic->core_clinical_topic_id);
+            $counts = $examTopic->difficultyCountsOrEmpty();
 
-            $questionIds = Question::query()
-                ->where('status', QuestionStatus::Private)
-                ->where('exam_flag', true)
-                ->tap(fn ($query) => app(\Modules\QuestionBank\Support\QuestionFilterBuilder::class)
-                    ->whereMatchesCoreClinicalTopic($query, (int) $examTopic->core_clinical_topic_id))
-                ->whereNotIn('id', $usedQuestionIds)
-                ->orderByDesc('created_at')
-                ->limit($needed)
-                ->pluck('id');
+            foreach (Difficulty::cases() as $difficulty) {
+                $needed = $counts[$difficulty->value] ?? 0;
+                if ($needed <= 0) {
+                    continue;
+                }
 
-            if ($questionIds->count() < $needed) {
-                $missing = $needed - $questionIds->count();
-                $available = $this->eligibleQuestionCount($examTopic->core_clinical_topic_id);
-                $errors[] = sprintf(
-                    '%s cần %d câu nhưng chỉ có %d eligible (thiếu %d).',
-                    $topicName,
-                    $needed,
-                    $available,
-                    $missing,
-                );
-            }
+                $questionIds = Question::query()
+                    ->where('status', QuestionStatus::Private)
+                    ->where('exam_flag', true)
+                    ->where('difficulty', $difficulty->value)
+                    ->tap(fn ($query) => $filterBuilder->whereMatchesCoreClinicalTopic(
+                        $query,
+                        (int) $examTopic->core_clinical_topic_id,
+                    ))
+                    ->whereNotIn('id', $usedQuestionIds)
+                    ->orderByDesc('created_at')
+                    ->limit($needed)
+                    ->pluck('id');
 
-            foreach ($questionIds as $questionId) {
-                $syncData[(string) $questionId] = [
-                    'order' => $order++,
-                    'core_clinical_topic_id' => $examTopic->core_clinical_topic_id,
-                ];
-                $usedQuestionIds[] = (string) $questionId;
+                if ($questionIds->count() < $needed) {
+                    $available = $this->eligibleQuestionCountForDifficulty(
+                        (int) $examTopic->core_clinical_topic_id,
+                        $difficulty,
+                    );
+                    $errors[] = sprintf(
+                        '%s / %s cần %d câu nhưng chỉ có %d eligible (thiếu %d).',
+                        $topicName,
+                        $difficulty->label(),
+                        $needed,
+                        $available,
+                        $needed - $questionIds->count(),
+                    );
+                }
+
+                foreach ($questionIds as $questionId) {
+                    $syncData[(string) $questionId] = [
+                        'order' => $order++,
+                        'core_clinical_topic_id' => $examTopic->core_clinical_topic_id,
+                    ];
+                    $usedQuestionIds[] = (string) $questionId;
+                }
             }
         }
 
         return ['sync' => $syncData, 'errors' => $errors];
     }
 
-    private function eligibleQuestionCount(int $coreClinicalTopicId): int
+    /**
+     * @return array<string, int>
+     */
+    private function eligibleQuestionCountsByDifficulty(int $coreClinicalTopicId): array
+    {
+        $counts = ExamTopic::emptyDifficultyCounts();
+        $filterBuilder = app(QuestionFilterBuilder::class);
+
+        $rows = Question::query()
+            ->selectRaw('difficulty, COUNT(*) as aggregate')
+            ->where('status', QuestionStatus::Private)
+            ->where('exam_flag', true)
+            ->tap(fn ($query) => $filterBuilder->whereMatchesCoreClinicalTopic($query, $coreClinicalTopicId))
+            ->groupBy('difficulty')
+            ->pluck('aggregate', 'difficulty');
+
+        foreach ($rows as $difficulty => $aggregate) {
+            $key = (string) $difficulty;
+            if (array_key_exists($key, $counts)) {
+                $counts[$key] = (int) $aggregate;
+            }
+        }
+
+        return $counts;
+    }
+
+    private function eligibleQuestionCountForDifficulty(int $coreClinicalTopicId, Difficulty $difficulty): int
     {
         return Question::query()
             ->where('status', QuestionStatus::Private)
             ->where('exam_flag', true)
-            ->tap(fn ($query) => app(\Modules\QuestionBank\Support\QuestionFilterBuilder::class)
+            ->where('difficulty', $difficulty->value)
+            ->tap(fn ($query) => app(QuestionFilterBuilder::class)
                 ->whereMatchesCoreClinicalTopic($query, $coreClinicalTopicId))
             ->count();
     }

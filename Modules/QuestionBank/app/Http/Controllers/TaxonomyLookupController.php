@@ -85,6 +85,17 @@ final class TaxonomyLookupController extends Controller
             $query->where('blueprint_section_id', (int) $request->query('blueprint_section_id'));
         }
 
+        $sectionIds = collect($request->query('section_ids', []))
+            ->map(fn ($id): int => (int) $id)
+            ->filter(fn (int $id): bool => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($sectionIds !== []) {
+            $query->whereIn('blueprint_section_id', $sectionIds);
+        }
+
         if ($request->filled('q')) {
             $term = '%'.trim((string) $request->query('q')).'%';
             $query->where('name', 'like', $term);

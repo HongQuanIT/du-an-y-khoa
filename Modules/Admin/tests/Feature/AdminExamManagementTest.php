@@ -16,17 +16,21 @@ use Modules\Exam\Enums\ExamStatus;
 use Modules\Exam\Models\Exam;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionStatus;
+use Modules\QuestionBank\Enums\TaxonomyStatus;
+use Modules\QuestionBank\Models\Blueprint;
+use Modules\QuestionBank\Models\BlueprintSection;
+use Modules\QuestionBank\Models\CoreClinicalTopic;
+use Modules\QuestionBank\Models\MedicalTaxonomyNode;
 use Modules\QuestionBank\Models\Question;
-use Tests\TestCase;
 use Tests\Support\CreatesMedicalTaxonomy;
-
+use Tests\TestCase;
 
 final class AdminExamManagementTest extends TestCase
 {
     use CreatesMedicalTaxonomy;
     use RefreshDatabase;
 
-    private \Modules\QuestionBank\Models\MedicalTaxonomyNode $topic;
+    private MedicalTaxonomyNode $topic;
 
     protected function setUp(): void
     {
@@ -66,7 +70,7 @@ final class AdminExamManagementTest extends TestCase
         $this->assertSame(1, $exam->questions()->count());
     }
 
-    public function test_admin_create_page_includes_question_builder(): void
+    public function test_admin_create_page_includes_matrix_allocation_and_manual_fallback(): void
     {
         $admin = $this->staffUser(Role::Admin);
         $this->question('Câu hỏi có sẵn để thêm?', true);
@@ -75,8 +79,115 @@ final class AdminExamManagementTest extends TestCase
             ->get(route('admin.exams.create'))
             ->assertOk()
             ->assertSee('Tạo kỳ thi mới')
-            ->assertSee('Đề thi')
+            ->assertSee('Phân bổ theo ma trận đề thi')
+            ->assertSee('Đề thi (chọn thủ công — tùy chọn)')
             ->assertSee('Thư viện câu hỏi');
+    }
+
+    public function test_admin_can_create_exam_from_blueprint_difficulty_allocation(): void
+    {
+        $admin = $this->staffUser(Role::Admin);
+        [$blueprint, $section, $coreTopic] = $this->seedBlueprintTopicMappedTo($this->topic);
+
+        $easy = $this->examPoolQuestion('Easy pool 1', Difficulty::Easy);
+        $easy->medicalTaxonomyNodes()->sync([$this->topic->id]);
+        $mediumA = $this->examPoolQuestion('Medium pool 1', Difficulty::Medium);
+        $mediumA->medicalTaxonomyNodes()->sync([$this->topic->id]);
+        $mediumB = $this->examPoolQuestion('Medium pool 2', Difficulty::Medium);
+        $mediumB->medicalTaxonomyNodes()->sync([$this->topic->id]);
+
+        $response = $this->actingAsStaff($admin)
+            ->post(route('admin.exams.store'), [
+                'title' => 'Kỳ thi theo ma trận',
+                'description' => 'Generate theo độ khó',
+                'duration_minutes' => 90,
+                'status' => ExamStatus::Draft->value,
+                'blueprint_id' => $blueprint->id,
+                'section_ids' => [$section->id],
+                'exam_topics' => [
+                    [
+                        'core_clinical_topic_id' => $coreTopic->id,
+                        'sort_order' => 0,
+                        'difficulty_counts' => [
+                            'very_easy' => 0,
+                            'easy' => 1,
+                            'medium' => 2,
+                            'hard' => 0,
+                            'very_hard' => 0,
+                        ],
+                    ],
+                ],
+            ]);
+
+        $exam = Exam::query()->firstOrFail();
+        $response->assertRedirect(route('admin.exams.edit', $exam));
+
+        $this->assertSame($blueprint->id, $exam->blueprint_id);
+        $this->assertSame(1, $exam->examTopics()->count());
+
+        $examTopic = $exam->examTopics()->firstOrFail();
+        $this->assertSame(3, $examTopic->question_count);
+        $this->assertSame(1, $examTopic->difficulty_counts['easy']);
+        $this->assertSame(2, $examTopic->difficulty_counts['medium']);
+        $this->assertSame(3, $exam->questions()->count());
+        $this->assertTrue($exam->questions()->whereKey($easy->id)->exists());
+        $this->assertTrue($exam->questions()->whereKey($mediumA->id)->exists());
+        $this->assertTrue($exam->questions()->whereKey($mediumB->id)->exists());
+    }
+
+    public function test_admin_cannot_generate_when_difficulty_pool_is_short(): void
+    {
+        $admin = $this->staffUser(Role::Admin);
+        [$blueprint, $section, $coreTopic] = $this->seedBlueprintTopicMappedTo($this->topic);
+
+        $easy = $this->examPoolQuestion('Only one easy', Difficulty::Easy);
+        $easy->medicalTaxonomyNodes()->sync([$this->topic->id]);
+
+        $this->actingAsStaff($admin)
+            ->post(route('admin.exams.store'), [
+                'title' => 'Kỳ thi thiếu pool',
+                'description' => 'Thiếu câu',
+                'duration_minutes' => 90,
+                'status' => ExamStatus::Draft->value,
+                'blueprint_id' => $blueprint->id,
+                'section_ids' => [$section->id],
+                'exam_topics' => [
+                    [
+                        'core_clinical_topic_id' => $coreTopic->id,
+                        'difficulty_counts' => [
+                            'very_easy' => 0,
+                            'easy' => 2,
+                            'medium' => 0,
+                            'hard' => 0,
+                            'very_hard' => 0,
+                        ],
+                    ],
+                ],
+            ])
+            ->assertSessionHasErrors(['exam_topics']);
+
+        $this->assertSame(0, Exam::query()->count());
+    }
+
+    public function test_topic_eligibility_returns_counts_by_difficulty(): void
+    {
+        $admin = $this->staffUser(Role::Admin);
+        [, , $coreTopic] = $this->seedBlueprintTopicMappedTo($this->topic);
+
+        $easy = $this->examPoolQuestion('Elig easy', Difficulty::Easy);
+        $easy->medicalTaxonomyNodes()->sync([$this->topic->id]);
+        $hard = $this->examPoolQuestion('Elig hard', Difficulty::Hard);
+        $hard->medicalTaxonomyNodes()->sync([$this->topic->id]);
+
+        $this->actingAsStaff($admin)
+            ->get(route('admin.exams.topic-eligibility', [
+                'core_clinical_topic_ids' => [$coreTopic->id],
+            ]))
+            ->assertOk()
+            ->assertJsonPath('data.'.$coreTopic->id.'.total', 2)
+            ->assertJsonPath('data.'.$coreTopic->id.'.by_difficulty.easy', 1)
+            ->assertJsonPath('data.'.$coreTopic->id.'.by_difficulty.hard', 1)
+            ->assertJsonPath('data.'.$coreTopic->id.'.by_difficulty.medium', 0);
     }
 
     public function test_admin_can_see_exam_question_count_on_index_and_edit_pages(): void
@@ -178,7 +289,53 @@ final class AdminExamManagementTest extends TestCase
                 'stem' => $stem,
                 'difficulty' => Difficulty::Medium,
                 'status' => $published ? QuestionStatus::Published : QuestionStatus::Draft,
-                            ]);
+            ]);
+    }
+
+    private function examPoolQuestion(string $stem, Difficulty $difficulty): Question
+    {
+        return Question::factory()
+            ->free()
+            ->withOptions()
+            ->create([
+                'stem' => $stem,
+                'difficulty' => $difficulty,
+                'status' => QuestionStatus::Private,
+                'exam_flag' => true,
+            ]);
+    }
+
+    /**
+     * @return array{0: Blueprint, 1: BlueprintSection, 2: CoreClinicalTopic}
+     */
+    private function seedBlueprintTopicMappedTo(MedicalTaxonomyNode $node): array
+    {
+        $blueprint = Blueprint::query()->create([
+            'name' => 'Ma trận thi thử',
+            'slug' => 'ma-tran-thi-thu-'.uniqid(),
+            'status' => TaxonomyStatus::Active,
+            'sort_order' => 1,
+        ]);
+
+        $section = BlueprintSection::query()->create([
+            'blueprint_id' => $blueprint->id,
+            'name' => 'Hệ tim mạch',
+            'slug' => 'he-tim-mach-'.uniqid(),
+            'status' => TaxonomyStatus::Active,
+            'sort_order' => 1,
+        ]);
+
+        $coreTopic = CoreClinicalTopic::query()->create([
+            'blueprint_section_id' => $section->id,
+            'name' => 'Đau ngực',
+            'slug' => 'dau-nguc-'.uniqid(),
+            'status' => TaxonomyStatus::Active,
+            'sort_order' => 1,
+        ]);
+
+        $coreTopic->medicalTaxonomyNodes()->sync([$node->id]);
+
+        return [$blueprint, $section, $coreTopic];
     }
 
     private function staffUser(Role $role): User
