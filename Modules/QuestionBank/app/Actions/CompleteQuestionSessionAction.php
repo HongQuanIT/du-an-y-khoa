@@ -18,8 +18,8 @@ use Modules\QuestionBank\Enums\UserQuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionSession;
-use Modules\QuestionBank\Models\QuestionStatus as UserQuestionStatusModel;
 use Modules\QuestionBank\Services\QuestionGrader;
+use Modules\QuestionBank\Services\QuestionLearningState;
 use Modules\QuestionBank\Services\QuestionSessionSnapshots;
 use RuntimeException;
 
@@ -37,6 +37,7 @@ final class CompleteQuestionSessionAction
     public function __construct(
         private readonly QuestionGrader $grader,
         private readonly QuestionSessionSnapshots $snapshots,
+        private readonly QuestionLearningState $learningState,
     ) {}
 
     public function handle(QuestionSession $session): QuestionSession
@@ -92,7 +93,7 @@ final class CompleteQuestionSessionAction
                     }
 
                     if ($this->liveQuestionExists($question)) {
-                        $this->syncQuestionStatus(
+                        $this->learningState->record(
                             (int) $currentSession->user_id,
                             $question,
                             $attempt->is_correct
@@ -100,6 +101,7 @@ final class CompleteQuestionSessionAction
                                 : UserQuestionStatus::Incorrect,
                             $attempt->answered_at ?? $now,
                             $currentSession->mode === SessionMode::Exam || ! $wasGraded,
+                            (bool) $attempt->used_hint,
                         );
                     }
 
@@ -111,7 +113,7 @@ final class CompleteQuestionSessionAction
                 }
 
                 if ($this->liveQuestionExists($question)) {
-                    $this->syncQuestionStatus(
+                    $this->learningState->record(
                         (int) $currentSession->user_id,
                         $question,
                         UserQuestionStatus::Omitted,
@@ -186,35 +188,6 @@ final class CompleteQuestionSessionAction
             'intval',
             $attempt->selected_option_ids ?? [],
         )));
-    }
-
-    private function syncQuestionStatus(
-        int $userId,
-        Question $question,
-        UserQuestionStatus $nextStatus,
-        Carbon $attemptedAt,
-        bool $incrementAttempts,
-    ): void {
-        $status = UserQuestionStatusModel::firstOrNew([
-            'user_id' => $userId,
-            'question_id' => $question->getKey(),
-        ]);
-        $attemptsCount = (int) ($status->attempts_count ?? 0);
-
-        if ($incrementAttempts) {
-            $attemptsCount++;
-        } elseif (! $status->exists) {
-            $attemptsCount = 1;
-        }
-
-        $status->fill([
-            'status' => $nextStatus,
-            'attempts_count' => $attemptsCount,
-            'last_attempt_at' => $attemptedAt,
-            'last_correct_at' => $nextStatus === UserQuestionStatus::Correct
-                ? $attemptedAt
-                : $status->last_correct_at,
-        ])->save();
     }
 
     private function liveQuestionExists(Question $question): bool

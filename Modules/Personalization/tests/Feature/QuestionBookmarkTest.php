@@ -9,7 +9,10 @@ use App\Support\Enums\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Personalization\Models\Bookmark;
 use Modules\QuestionBank\Data\CreateSessionData;
+use Modules\QuestionBank\Enums\QuestionScopeType;
 use Modules\QuestionBank\Models\Question;
+use Modules\QuestionBank\Models\QuestionOption;
+use Modules\QuestionBank\Models\QuestionSession;
 use Modules\QuestionBank\Services\SessionQuestionSelector;
 use Modules\StudyPlan\Models\StudyPlan;
 use Modules\StudyPlan\Models\StudyPlanTask;
@@ -108,8 +111,12 @@ final class QuestionBookmarkTest extends TestCase
 
     public function test_study_plan_saved_only_uses_bookmarks(): void
     {
-        $saved = Question::factory()->create([]);
-        Question::factory()->create([]);
+        $saved = Question::factory()->free()->create([]);
+        Question::factory()->free()->create([]);
+        $saved->scopes()->create([
+            'scope_type' => QuestionScopeType::Exam,
+            'scope_key' => 'resident',
+        ]);
         $this->bookmark($saved);
 
         $plan = StudyPlan::factory()->create([
@@ -152,14 +159,14 @@ final class QuestionBookmarkTest extends TestCase
             'stem' => 'Câu hỏi bookmark để xem đáp án?',
             'explanation' => 'Giải thích dành cho câu đã lưu.',
         ]);
-        \Modules\QuestionBank\Models\QuestionOption::factory()->create([
+        QuestionOption::factory()->create([
             'question_id' => $saved->id,
             'label' => 'A',
             'content' => 'Đáp án sai của bookmark',
             'is_correct' => false,
             'order' => 0,
         ]);
-        \Modules\QuestionBank\Models\QuestionOption::factory()->correct()->create([
+        QuestionOption::factory()->correct()->create([
             'question_id' => $saved->id,
             'label' => 'B',
             'content' => 'Đáp án đúng của bookmark',
@@ -203,7 +210,7 @@ final class QuestionBookmarkTest extends TestCase
             ])
             ->assertRedirect();
 
-        $session = \Modules\QuestionBank\Models\QuestionSession::query()->firstOrFail();
+        $session = QuestionSession::query()->firstOrFail();
         $this->assertEqualsCanonicalizing(
             [(string) $first->id, (string) $second->id],
             $session->question_ids,
@@ -223,7 +230,7 @@ final class QuestionBookmarkTest extends TestCase
             ])
             ->assertRedirect();
 
-        $session = \Modules\QuestionBank\Models\QuestionSession::query()->firstOrFail();
+        $session = QuestionSession::query()->firstOrFail();
         $this->assertSame([(string) $owned->id], $session->question_ids);
     }
 

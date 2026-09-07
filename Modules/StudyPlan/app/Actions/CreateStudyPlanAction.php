@@ -44,6 +44,8 @@ final class CreateStudyPlanAction
                 'name' => $data->name,
                 'exam_key' => $data->examKey,
                 'exam_target_date' => $data->examTargetDate,
+                'hours_per_day' => $data->hoursPerDay,
+                'questions_per_hour' => 20,
                 'daily_goal_questions' => $data->dailyGoalQuestions,
                 'daily_goal_minutes' => $data->dailyGoalMinutes(),
                 'topic_scope' => $data->topicScopePayload(),

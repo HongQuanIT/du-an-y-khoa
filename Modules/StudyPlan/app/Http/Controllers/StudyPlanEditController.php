@@ -7,11 +7,11 @@ namespace Modules\StudyPlan\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
 use Modules\StudyPlan\Actions\DeleteStudyPlanAction;
 use Modules\StudyPlan\Actions\UpdateStudyPlanAction;
 use Modules\StudyPlan\Http\Requests\StudyPlanRequest;
 use Modules\StudyPlan\Models\StudyPlan;
+use Modules\StudyPlan\Support\StudyPlanTaxonomyOptions;
 use Modules\StudyPlan\Support\TargetExams;
 
 /**
@@ -22,6 +22,7 @@ final class StudyPlanEditController extends Controller
     public function __construct(
         private readonly UpdateStudyPlanAction $updatePlan,
         private readonly DeleteStudyPlanAction $deletePlan,
+        private readonly StudyPlanTaxonomyOptions $taxonomyOptions,
     ) {}
 
     public function edit(StudyPlan $plan): View
@@ -31,16 +32,9 @@ final class StudyPlanEditController extends Controller
         return view('studyplan::edit', [
             'plan' => $plan,
             'exams' => TargetExams::selectable(),
-            'specialties' => MedicalTaxonomyNode::query()
-                ->where('node_type', 'specialty')
-                ->orderBy('sort_order')
-                ->orderBy('name')
-                ->get(),
-            'systems' => MedicalTaxonomyNode::query()
-                ->where('node_type', 'system')
-                ->orderBy('sort_order')
-                ->orderBy('name')
-                ->get(),
+            'specialties' => $this->taxonomyOptions->specialties(),
+            'systems' => $this->taxonomyOptions->systems(),
+            'additionalTopicGroups' => $this->taxonomyOptions->additionalGroups(),
         ]);
     }
 

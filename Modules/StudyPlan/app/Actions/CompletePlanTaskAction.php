@@ -14,6 +14,7 @@ use Modules\QuestionBank\Enums\SessionStatus;
 use Modules\QuestionBank\Models\QuestionSession;
 use Modules\StudyPlan\Enums\TaskStatus;
 use Modules\StudyPlan\Events\StudyPlanActivity;
+use Modules\StudyPlan\Models\StudyPlanDay;
 use Modules\StudyPlan\Models\StudyPlanTask;
 
 /**
@@ -46,6 +47,12 @@ final class CompletePlanTaskAction
                 'status' => TaskStatus::Done,
                 'done' => $task->target,
             ])->save();
+
+            if ($task->studyPlanDayId() !== null) {
+                StudyPlanDay::query()
+                    ->whereKey($task->studyPlanDayId())
+                    ->update(['status' => TaskStatus::Done->value]);
+            }
 
             $this->closeSession($task);
         });

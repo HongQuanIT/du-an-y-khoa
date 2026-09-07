@@ -97,6 +97,13 @@ class StudyPlanTask extends Model
         return is_string($id) ? $id : null;
     }
 
+    public function studyPlanDayId(): ?int
+    {
+        $id = $this->ref['study_plan_day_id'] ?? null;
+
+        return is_numeric($id) ? (int) $id : null;
+    }
+
     /** @return array<int, int> */
     public function medicalTaxonomyNodeIds(): array
     {

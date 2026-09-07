@@ -8,12 +8,16 @@ use App\Models\User;
 use App\Support\Enums\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Modules\QuestionBank\Enums\QuestionScopeType;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Enums\SessionSource;
+use Modules\QuestionBank\Enums\UserQuestionStatus;
+use Modules\QuestionBank\Models\MedicalTaxonomyNode;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionOption;
 use Modules\QuestionBank\Models\QuestionSession;
+use Modules\QuestionBank\Services\QuestionLearningState;
 use Modules\StudyPlan\Actions\CompletePlanTaskAction;
 use Modules\StudyPlan\Enums\PlanStatus;
 use Modules\StudyPlan\Enums\TaskStatus;
@@ -21,9 +25,8 @@ use Modules\StudyPlan\Enums\TaskType;
 use Modules\StudyPlan\Models\StudyPlan;
 use Modules\StudyPlan\Models\StudyPlanTask;
 use Spatie\Permission\Models\Role as RoleModel;
-use Tests\TestCase;
 use Tests\Support\CreatesMedicalTaxonomy;
-
+use Tests\TestCase;
 
 /**
  * The Phase 1 vertical slice: create a plan, see today's task, answer its
@@ -36,7 +39,7 @@ final class StudyPlanFlowTest extends TestCase
 
     private User $user;
 
-    private \Modules\QuestionBank\Models\MedicalTaxonomyNode $topic;
+    private MedicalTaxonomyNode $topic;
 
     protected function setUp(): void
     {
@@ -66,30 +69,79 @@ final class StudyPlanFlowTest extends TestCase
         $response->assertRedirect(route('study-plan.detail', $plan));
 
         $this->assertSame($this->user->id, $plan->user_id);
-        $this->assertSame(5, $plan->daily_goal_questions);
+        $this->assertSame(10, $plan->daily_goal_questions);
+        $this->assertSame(12, $plan->total_question_pool);
+        $this->assertSame(12, $plan->selected_question_count);
+        $this->assertSame(100.0, $plan->coverage_percent);
         $this->assertSame([$this->topic->id], $plan->scopeTopicIds());
         $this->assertTrue($plan->tasks()->where('type', TaskType::Questions)->exists());
         $this->assertTrue($plan->tasks()->whereDate('date', Carbon::today())->exists());
     }
 
-    public function test_wizard_uses_the_same_taxonomy_scope_picker_as_question_bank(): void
+    public function test_wizard_shows_scope_schedule_and_realtime_coverage_controls(): void
     {
         $response = $this->actingAs($this->user)
             ->get(route('study-plan.create'));
 
         $response
             ->assertOk()
-            ->assertSee('Ma trận đề thi')
-            ->assertSee('Chủ đề lâm sàng (128)')
-            ->assertSee('Chuyên khoa &amp; danh mục y khoa', false)
-            ->assertSee('Tags');
+            ->assertSee('Hệ cơ quan')
+            ->assertSee('Chuyên ngành')
+            ->assertSee('Số giờ học mỗi ngày')
+            ->assertSee('Tạo kế hoạch học tập tùy chỉnh cho')
+            ->assertSee('Cho chúng tôi biết mục tiêu của bạn')
+            ->assertSee('Bao gồm câu hỏi tôi đã')
+            ->assertSee('Thiết lập lịch học')
+            ->assertSee('hệ thống tính rằng bạn cần học')
+            ->assertSee('Kế hoạch học tập này chỉ bao phủ')
+            ->assertSee('Ngày kết thúc là ngày mai nên lịch học đang rất gấp')
+            ->assertSee('Tiếp tục')
+            ->assertSee('Tạo kế hoạch');
 
         preg_match('/<form[^>]+x-data="([^"]*)"/s', (string) $response->getContent(), $matches);
         $this->assertArrayHasKey(1, $matches, 'Không tìm thấy cấu hình Alpine của form kế hoạch.');
-        $this->assertStringContainsString('daysUntilExam()', html_entity_decode($matches[1]));
+        $configuration = html_entity_decode($matches[1]);
+        $this->assertStringContainsString('studyCapacity()', $configuration);
+        $this->assertStringContainsString('deadlineRecommendedHours()', $configuration);
+        $this->assertStringContainsString('{ days: 70, hours: 4.5 }', $configuration);
+        $this->assertStringContainsString('{ days: 183, hours: 2 }', $configuration);
+        $this->assertStringContainsString('{ days: 366, hours: 1 }', $configuration);
+        $this->assertStringContainsString('{ days: 731, hours: 0.5 }', $configuration);
+        $this->assertStringContainsString('recommendedHoursPerDay()', $configuration);
+        $this->assertStringContainsString('applyRecommendedHours()', $configuration);
+        $this->assertStringContainsString('availableWeekdays()', $configuration);
+        $this->assertStringContainsString('syncDaysToDate()', $configuration);
+        $this->assertStringContainsString(
+            "' giờ, ' + days.length + ' ngày'",
+            html_entity_decode((string) $response->getContent()),
+        );
     }
 
-    public function test_plan_cycles_and_randomizes_questions_across_all_days_until_deadline(): void
+    public function test_wizard_exposes_all_active_admin_taxonomy_groups(): void
+    {
+        foreach ([
+            ['name' => 'Bệnh thử nghiệm', 'slug' => 'benh-thu-nghiem', 'node_type' => 'disease'],
+            ['name' => 'Triệu chứng thử nghiệm', 'slug' => 'trieu-chung-thu-nghiem', 'node_type' => 'symptom'],
+            ['name' => 'Xét nghiệm thử nghiệm', 'slug' => 'xet-nghiem-thu-nghiem', 'node_type' => 'lab_finding'],
+            ['name' => 'Khái niệm thử nghiệm', 'slug' => 'khai-niem-thu-nghiem', 'node_type' => 'concept'],
+        ] as $attributes) {
+            $this->makeMedicalNode($attributes);
+        }
+
+        $this->actingAs($this->user)
+            ->get(route('study-plan.create'))
+            ->assertOk()
+            ->assertSee('Bệnh và tình trạng')
+            ->assertSee('Triệu chứng và dấu hiệu')
+            ->assertSee('Phát hiện và cận lâm sàng')
+            ->assertSee('Kiến thức và can thiệp')
+            ->assertSee('Bệnh thử nghiệm')
+            ->assertSee('Triệu chứng thử nghiệm')
+            ->assertSee('Xét nghiệm thử nghiệm')
+            ->assertSee('Khái niệm thử nghiệm');
+    }
+
+    public function test_plan_freezes_unique_questions_and_distributes_them_across_study_days(): void
     {
         Question::query()->orderByDesc('id')->limit(2)->get()->each->delete();
 
@@ -99,21 +151,77 @@ final class StudyPlanFlowTest extends TestCase
             ->orderBy('date')
             ->get();
 
-        $this->assertCount(11, $tasks);
+        $this->assertCount(11, $plan->days);
+        $this->assertCount(10, $tasks);
+        $questionIds = [];
         foreach ($tasks as $task) {
-            $this->assertSame(5, $task->target);
-            $this->assertCount(5, $task->ref['question_ids']);
+            $this->assertArrayHasKey('question_ids', $task->ref);
+            $this->assertSame($task->target, count($task->ref['question_ids']));
+            $questionIds = array_merge($questionIds, $task->ref['question_ids']);
         }
-
-        $scheduledIds = $tasks
-            ->flatMap(fn (StudyPlanTask $task): array => $task->ref['question_ids'] ?? [])
-            ->all();
-
-        $this->assertCount(55, $scheduledIds);
-        $this->assertSame(10, count(array_unique($scheduledIds)));
+        $this->assertCount(10, $questionIds);
+        $this->assertCount(10, array_unique($questionIds));
     }
 
-    public function test_plan_session_combines_multiple_difficulty_levels(): void
+    public function test_capacity_shortage_prioritises_incorrect_then_unanswered_before_correct(): void
+    {
+        $questions = Question::query()->limit(12)->get();
+        $incorrectIds = $questions->take(3)->pluck('id')->map(fn ($id): string => (string) $id)->all();
+        $correctIds = $questions->slice(3, 4)->pluck('id')->map(fn ($id): string => (string) $id)->all();
+        $historySession = QuestionSession::factory()->for($this->user)->create();
+
+        foreach ($incorrectIds as $questionId) {
+            QuestionAttempt::factory()->incorrect()->create([
+                'session_id' => $historySession->getKey(),
+                'user_id' => $this->user->getKey(),
+                'question_id' => $questionId,
+                'used_hint' => false,
+            ]);
+        }
+
+        foreach ($correctIds as $questionId) {
+            QuestionAttempt::factory()->correct()->create([
+                'session_id' => $historySession->getKey(),
+                'user_id' => $this->user->getKey(),
+                'question_id' => $questionId,
+                'used_hint' => false,
+            ]);
+        }
+
+        $this->actingAs($this->user)
+            ->postJson(route('qbank.count'), [
+                'mode' => 'study',
+                'source' => 'custom',
+                'count' => 1,
+                'medical_taxonomy_node_ids' => [$this->topic->id],
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.total_in_scope', 12)
+            ->assertJsonPath('data.eligible_total', 8)
+            ->assertJsonPath('data.incorrect', 3)
+            ->assertJsonPath('data.unanswered', 5)
+            ->assertJsonPath('data.correct', 4);
+
+        $payload = array_merge($this->wizardPayload(), [
+            'exam_target_date' => Carbon::tomorrow()->toDateString(),
+            'study_days' => [Carbon::today()->dayOfWeekIso],
+        ]);
+        $this->actingAs($this->user)->post(route('study-plan.store'), $payload)->assertRedirect();
+        $plan = StudyPlan::firstOrFail();
+        $task = $this->todayTask($plan);
+
+        $this->actingAs($this->user)
+            ->post(route('study-plan.tasks.start', [$plan, $task]))
+            ->assertRedirect(route('study-plan.session', [$plan, $task]));
+
+        $selectedIds = QuestionSession::findOrFail($task->refresh()->sessionId())->question_ids;
+
+        $this->assertCount(8, $selectedIds);
+        $this->assertEmpty(array_diff($incorrectIds, $selectedIds));
+        $this->assertEmpty(array_intersect($correctIds, $selectedIds));
+    }
+
+    public function test_plan_pool_combines_multiple_difficulty_levels(): void
     {
         $questions = Question::query()->orderBy('id')->limit(6)->get();
         $questions->slice(0, 3)->each->update(['difficulty' => 'very_easy']);
@@ -135,8 +243,13 @@ final class StudyPlanFlowTest extends TestCase
             ->assertRedirect(route('study-plan.session', [$plan, $task]));
 
         $session = QuestionSession::firstOrFail();
+        $allocatedQuestionIds = $plan->days()
+            ->with('questions:id,study_plan_day_id,question_id')
+            ->get()
+            ->flatMap(fn ($day) => $day->questions->pluck('question_id'))
+            ->all();
         $selectedDifficulties = Question::query()
-            ->whereIn('id', $session->question_ids)
+            ->whereIn('id', $allocatedQuestionIds)
             ->get()
             ->pluck('difficulty')
             ->map(fn ($difficulty): string => $difficulty->value)
@@ -145,7 +258,7 @@ final class StudyPlanFlowTest extends TestCase
             ->all();
 
         $this->assertEqualsCanonicalizing(['very_easy', 'very_hard'], $selectedDifficulties);
-        $this->assertCount(5, $session->question_ids);
+        $this->assertCount($task->target, $session->question_ids);
     }
 
     public function test_wizard_rejects_a_past_exam_date(): void
@@ -164,12 +277,13 @@ final class StudyPlanFlowTest extends TestCase
     public function test_overview_lists_todays_task(): void
     {
         $plan = $this->createPlan();
+        $todayTarget = $this->todayTask($plan)->target;
 
         $this->actingAs($this->user)
             ->get(route('study-plan.index'))
             ->assertOk()
             ->assertSee($plan->name)
-            ->assertSee('Làm 5 câu Tim mạch')
+            ->assertSee("Làm {$todayTarget} câu Tim mạch")
             ->assertSee('Các lộ trình của bạn');
     }
 
@@ -228,8 +342,8 @@ final class StudyPlanFlowTest extends TestCase
 
         $this->assertSame(SessionSource::StudyPlan, $session->source);
         $this->assertSame($session->getKey(), $task->refresh()->sessionId());
-        $this->assertCount(5, $session->question_ids);
-        $this->assertSame(5, $session->snapshots()->count());
+        $this->assertCount($task->target, $session->question_ids);
+        $this->assertSame($task->target, $session->snapshots()->count());
 
         $this->actingAs($this->user)
             ->get(route('study-plan.session', [$plan, $task]))
@@ -274,6 +388,44 @@ final class StudyPlanFlowTest extends TestCase
             ->assertJsonPath('data.attending_tip_used', true);
     }
 
+    public function test_each_plan_session_reselects_questions_from_the_latest_learning_state(): void
+    {
+        $plan = $this->createPlan();
+        $task = $this->todayTask($plan);
+        $previouslyAssignedId = (string) $task->ref['question_ids'][0];
+        $historySession = QuestionSession::factory()->for($this->user)->create();
+
+        QuestionAttempt::factory()->correct()->create([
+            'session_id' => $historySession->getKey(),
+            'user_id' => $this->user->getKey(),
+            'question_id' => $previouslyAssignedId,
+            'used_hint' => false,
+            'answered_at' => now(),
+        ]);
+        app(QuestionLearningState::class)->record(
+            $this->user->id,
+            Question::findOrFail($previouslyAssignedId),
+            UserQuestionStatus::Correct,
+            now(),
+            false,
+        );
+
+        $this->actingAs($this->user)
+            ->post(route('study-plan.tasks.start', [$plan, $task]))
+            ->assertRedirect(route('study-plan.session', [$plan, $task]));
+
+        $session = QuestionSession::query()
+            ->where('source', SessionSource::StudyPlan)
+            ->firstOrFail();
+        $task->refresh();
+        $day = $plan->days()->findOrFail($task->ref['study_plan_day_id']);
+
+        $this->assertNotContains($previouslyAssignedId, $session->question_ids);
+        $this->assertSame($session->question_ids, $task->ref['question_ids']);
+        $this->assertSame($session->question_ids, $day->questions()->orderBy('order')->pluck('question_id')->all());
+        $this->assertSame(count($session->question_ids), $day->question_count);
+    }
+
     public function test_empty_attending_tip_does_not_render_knowledge_for_user(): void
     {
         $plan = $this->createPlan();
@@ -300,6 +452,7 @@ final class StudyPlanFlowTest extends TestCase
             ->assertDontSee('data-testid="attending-tip-panel"', false)
             ->assertDontSee('data-testid="attending-tip-used-badge"', false);
     }
+
     public function test_answering_every_question_completes_the_task(): void
     {
         $plan = $this->createPlan();
@@ -326,14 +479,15 @@ final class StudyPlanFlowTest extends TestCase
         $task->refresh();
 
         $this->assertSame(TaskStatus::Done, $task->status);
-        $this->assertSame(5, $task->done);
-        $this->assertSame(5, $plan->refresh()->questionsDone());
+        $this->assertSame($task->target, $task->done);
+        $this->assertSame($task->target, $plan->refresh()->questionsDone());
 
         $this->actingAs($this->user)
             ->get(route('study-plan.session.summary', [$plan, $task]))
             ->assertOk()
-            ->assertViewHas('questionOverview', fn (array $rows): bool => count($rows) === 5)
+            ->assertViewHas('questionOverview', fn (array $rows): bool => count($rows) === $task->target)
             ->assertSee('Phân tích kết quả')
+            ->assertSee('Tổng thời gian:')
             ->assertSee('Xem lại từng câu')
             ->assertSee('Tỷ lệ đúng theo chủ đề')
             ->assertSee('id="student-session-topic-accuracy"', false)
@@ -350,6 +504,95 @@ final class StudyPlanFlowTest extends TestCase
             ->assertSee('Q1')
             ->assertSee('study-plan-image.png')
             ->assertSee('imageViewerOpen');
+    }
+
+    public function test_session_timer_accumulates_attempt_time_and_summary_shows_total(): void
+    {
+        $plan = $this->createPlan();
+        $task = $this->todayTask($plan);
+        $this->actingAs($this->user)->post(route('study-plan.tasks.start', [$plan, $task]));
+
+        $session = QuestionSession::firstOrFail();
+        $questionId = $session->question_ids[0];
+        QuestionAttempt::factory()->correct()->create([
+            'session_id' => $session->getKey(),
+            'user_id' => $this->user->getKey(),
+            'question_id' => $questionId,
+            'time_spent_seconds' => 65,
+        ]);
+
+        $this->actingAs($this->user)
+            ->get(route('study-plan.session', [$plan, $task, 'index' => 0]))
+            ->assertOk()
+            ->assertViewHas('sessionElapsedSeconds', 65)
+            ->assertSee('data-testid="session-elapsed-time"', false)
+            ->assertSee('formatSessionTime');
+
+        $this->actingAs($this->user)
+            ->get(route('study-plan.session.summary', [$plan, $task]))
+            ->assertOk()
+            ->assertSee('Tổng thời gian: 1 phút 05 giây');
+    }
+
+    public function test_plan_detail_shows_daily_correct_hint_and_incorrect_percentages(): void
+    {
+        $plan = $this->createPlan();
+        $task = $this->todayTask($plan);
+
+        $this->actingAs($this->user)->post(route('study-plan.tasks.start', [$plan, $task]));
+
+        $session = QuestionSession::firstOrFail();
+        $questionIds = Question::query()->limit(3)->pluck('id')->map('strval')->values();
+        $session->forceFill([
+            'question_ids' => $questionIds->all(),
+            'total' => 3,
+            'answered_count' => 3,
+        ])->save();
+        $task->forceFill(['done' => 3, 'target' => 4])->save();
+
+        QuestionAttempt::factory()->correct()->create([
+            'session_id' => $session->getKey(),
+            'user_id' => $this->user->getKey(),
+            'question_id' => $questionIds[0],
+            'used_hint' => false,
+        ]);
+        QuestionAttempt::factory()->correct()->create([
+            'session_id' => $session->getKey(),
+            'user_id' => $this->user->getKey(),
+            'question_id' => $questionIds[1],
+            'used_hint' => true,
+        ]);
+        QuestionAttempt::factory()->incorrect()->create([
+            'session_id' => $session->getKey(),
+            'user_id' => $this->user->getKey(),
+            'question_id' => $questionIds[2],
+        ]);
+
+        $this->actingAs($this->user)
+            ->get(route('study-plan.detail', $plan))
+            ->assertOk()
+            ->assertViewHas('weeks', function (array $weeks): bool {
+                $outcomes = $weeks[0]['days'][0]['outcomes'] ?? null;
+
+                return $outcomes === [
+                    'correct' => 33,
+                    'correct_with_hints' => 33,
+                    'incorrect' => 33,
+                ];
+            })
+            ->assertViewHas('topicProgress', function (array $topics): bool {
+                $topic = $topics[0] ?? null;
+
+                return $topic !== null
+                    && $topic['name'] === 'Tim mạch'
+                    && $topic['completed'] === 3
+                    && $topic['total'] >= 3
+                    && $topic['percent'] === (int) round(3 / $topic['total'] * 100);
+            })
+            ->assertSee('data-testid="study-day-outcomes"', false)
+            ->assertSee('câu đúng có dùng gợi ý kiến thức')
+            ->assertSee('câu sai')
+            ->assertSee('Tiến độ kế hoạch học tập');
     }
 
     public function test_question_map_can_open_earlier_questions_after_finishing(): void
@@ -540,7 +783,7 @@ final class StudyPlanFlowTest extends TestCase
         CompletePlanTaskAction::run($task);
         CompletePlanTaskAction::run($task->refresh());
 
-        $this->assertSame(5, $task->refresh()->done);
+        $this->assertSame($task->target, $task->refresh()->done);
         $this->assertSame(1, $plan->refresh()->progress_cache['tasks_done']);
     }
 
@@ -565,7 +808,7 @@ final class StudyPlanFlowTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_wizard_rejects_plan_when_available_questions_in_scope_is_less_than_five(): void
+    public function test_wizard_accepts_a_small_non_empty_question_pool(): void
     {
         Question::query()->delete();
         $this->seedQuestions(3); // Only 3 questions
@@ -573,20 +816,47 @@ final class StudyPlanFlowTest extends TestCase
         $response = $this->actingAs($this->user)
             ->post(route('study-plan.store'), $this->wizardPayload());
 
-        $response->assertSessionHasErrors('topic_ids');
-        $this->assertSame(0, StudyPlan::count());
+        $response->assertRedirect();
+        $this->assertSame(3, StudyPlan::firstOrFail()->total_question_pool);
     }
 
-    public function test_wizard_rejects_plan_when_daily_goal_exceeds_eighty(): void
+    public function test_wizard_accepts_ten_hours_when_the_short_schedule_requires_it(): void
     {
         $payload = array_merge($this->wizardPayload(), [
-            'daily_goal_questions' => 90,
+            'hours_per_day' => 10,
         ]);
 
         $response = $this->actingAs($this->user)
             ->post(route('study-plan.store'), $payload);
 
-        $response->assertSessionHasErrors('daily_goal_questions');
+        $response->assertRedirect();
+        $this->assertSame(10.0, StudyPlan::firstOrFail()->hours_per_day);
+    }
+
+    public function test_wizard_rejects_more_than_ten_hours_per_day(): void
+    {
+        $payload = array_merge($this->wizardPayload(), [
+            'hours_per_day' => 11,
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->post(route('study-plan.store'), $payload);
+
+        $response->assertSessionHasErrors('hours_per_day');
+        $this->assertSame(0, StudyPlan::count());
+    }
+
+    public function test_wizard_rejects_schedule_without_an_actual_study_date(): void
+    {
+        $payload = array_merge($this->wizardPayload(), [
+            'exam_target_date' => Carbon::tomorrow()->toDateString(),
+            'study_days' => [Carbon::today()->addDays(2)->dayOfWeekIso],
+        ]);
+
+        $this->actingAs($this->user)
+            ->post(route('study-plan.store'), $payload)
+            ->assertSessionHasErrors('study_days');
+
         $this->assertSame(0, StudyPlan::count());
     }
 
@@ -630,7 +900,7 @@ final class StudyPlanFlowTest extends TestCase
                 'attending_tip' => "Kiến thức kiểm thử #{$i}.",
                 'difficulty' => 'medium',
                 'status' => QuestionStatus::Published,
-                                'is_free' => true,
+                'is_free' => true,
             ]);
 
             foreach (['A', 'B', 'C', 'D'] as $index => $label) {
@@ -644,6 +914,10 @@ final class StudyPlanFlowTest extends TestCase
             }
 
             $question->medicalTaxonomyNodes()->sync([$this->topic->id]);
+            $question->scopes()->create([
+                'scope_type' => QuestionScopeType::Exam,
+                'scope_key' => 'resident',
+            ]);
         }
     }
 }

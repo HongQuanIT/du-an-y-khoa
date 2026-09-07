@@ -16,8 +16,10 @@ use Modules\QuestionBank\Enums\SessionStatus;
 use Modules\QuestionBank\Models\QuestionSession;
 use Modules\QuestionBank\Services\QuestionSessionSnapshots;
 use Modules\StudyPlan\Events\StudyPlanActivity;
+use Modules\StudyPlan\Models\StudyPlanDay;
 use Modules\StudyPlan\Models\StudyPlanTask;
 use Modules\StudyPlan\Services\PlanQuestionSelector;
+use Modules\StudyPlan\Services\StudyPlanQuestionPool;
 use RuntimeException;
 
 /**
@@ -33,6 +35,7 @@ final class StartPlanTaskAction
     public function __construct(
         private readonly PlanQuestionSelector $selector,
         private readonly QuestionSessionSnapshots $snapshots,
+        private readonly StudyPlanQuestionPool $questionPool,
     ) {}
 
     public function handle(StudyPlanTask $task): QuestionSession
@@ -50,9 +53,7 @@ final class StartPlanTaskAction
         }
 
         $session = DB::transaction(function () use ($task, $questionIds): QuestionSession {
-            if (count($questionIds) < $task->target) {
-                $task->forceFill(['target' => count($questionIds)])->save();
-            }
+            $this->replaceDayAllocation($task, $questionIds);
 
             $session = QuestionSession::create([
                 'user_id' => $task->plan->user_id,
@@ -70,7 +71,11 @@ final class StartPlanTaskAction
             $this->snapshots->capture($session);
 
             $task->forceFill([
-                'ref' => array_merge($task->ref ?? [], ['session_id' => $session->getKey()]),
+                'target' => count($questionIds),
+                'ref' => array_merge($task->ref ?? [], [
+                    'question_ids' => $questionIds,
+                    'session_id' => $session->getKey(),
+                ]),
             ])->save();
 
             return $session;
@@ -92,6 +97,49 @@ final class StartPlanTaskAction
         );
 
         return $session;
+    }
+
+    /** @param list<string> $questionIds */
+    private function replaceDayAllocation(StudyPlanTask $task, array $questionIds): void
+    {
+        $dayId = $task->ref['study_plan_day_id'] ?? null;
+        if ($dayId === null) {
+            return;
+        }
+
+        $day = StudyPlanDay::query()
+            ->whereKey($dayId)
+            ->where('study_plan_id', $task->study_plan_id)
+            ->first();
+        if ($day === null) {
+            return;
+        }
+
+        $snapshots = $this->questionPool->candidates($task->plan)
+            ->whereIn('question_id', $questionIds)
+            ->keyBy('question_id');
+        $now = now();
+        $rows = collect($questionIds)
+            ->map(function (string $questionId, int $order) use ($day, $snapshots, $now): array {
+                $snapshot = $snapshots->get($questionId, []);
+
+                return [
+                    'study_plan_day_id' => $day->getKey(),
+                    'question_id' => $questionId,
+                    'order' => $order + 1,
+                    'source_status' => $snapshot['source_status'] ?? 'unanswered',
+                    'high_yield_score' => $snapshot['high_yield_score'] ?? 0,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            })
+            ->all();
+
+        $day->questions()->delete();
+        if ($rows !== []) {
+            DB::table('study_plan_questions')->insert($rows);
+        }
+        $day->forceFill(['question_count' => count($questionIds)])->save();
     }
 
     private function existingSession(StudyPlanTask $task): ?QuestionSession

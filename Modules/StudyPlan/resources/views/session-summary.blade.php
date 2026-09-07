@@ -109,7 +109,7 @@
                     <div class="flex flex-wrap items-center gap-3 border-t border-outline-variant pt-6">
                         <div class="flex items-center gap-2 rounded-lg bg-surface-container px-3 py-1.5">
                             <span class="material-symbols-outlined text-sm text-on-surface-variant">timer</span>
-                            <span class="text-sm font-medium">{{ $timeLabel }}</span>
+                            <span class="text-sm font-medium">Tổng thời gian: {{ $timeLabel }}</span>
                         </div>
                         @if ($flaggedCount > 0)
                             <div class="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-1.5 text-amber-700">

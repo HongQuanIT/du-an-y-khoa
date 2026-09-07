@@ -25,7 +25,6 @@
     $sessionName = 'Phiên tùy chỉnh từ ' . now()->translatedFormat('j M, H:i');
 
     $statusOptions = [
-        ['value' => 'unanswered', 'label' => 'Chưa trả lời', 'icon' => 'radio_button_unchecked'],
         ['value' => 'incorrect', 'label' => 'Làm sai', 'icon' => 'cancel'],
         ['value' => 'correct', 'label' => 'Làm đúng', 'icon' => 'check_circle'],
         ['value' => 'correct_with_hints', 'label' => 'Đúng có gợi ý', 'icon' => 'lightbulb'],
@@ -99,12 +98,29 @@
                 this.counting = true;
                 try {
                     const body = new FormData(this.$refs.builderForm);
-                    if (!body.has('count')) {
-                        body.set('count', String(Math.max(1, Number(this.count) || 1)));
-                    }
-                    // Explicitly override from Alpine state to avoid stale DOM values
+                    // Build count filters from Alpine state. Native form state
+                    // can briefly be stale immediately after a full reset.
+                    body.set('mode', this.mode);
+                    body.set('source', this.source);
+                    body.set('count', String(Math.max(1, Number(this.count) || 1)));
                     body.set('saved_only', this.savedOnly ? '1' : '0');
                     body.set('folder_id', this.folderId ? String(this.folderId) : '');
+                    body.set('blueprint_id', this.blueprintId ? String(this.blueprintId) : '');
+
+                    const arrays = {
+                        'difficulties[]': this.difficulties,
+                        'question_statuses[]': this.statuses,
+                        'articles[]': this.articles,
+                        'symptoms[]': this.symptoms,
+                        'medical_taxonomy_node_ids[]': [...new Set([
+                            ...this.selectedTopics,
+                            ...this.medicalTaxonomyNodeIds,
+                        ])],
+                    };
+                    Object.entries(arrays).forEach(([name, values]) => {
+                        body.delete(name);
+                        values.forEach((value) => body.append(name, String(value)));
+                    });
                     const response = await fetch(this.countUrl, {
                         method: 'POST',
                         headers: {
@@ -124,7 +140,7 @@
                     this.syncQuestionCount();
                 } catch (error) {
                     if (requestId !== this.countRequest) return;
-                    this.matching = 0;
+                    // Keep the last valid total visible on transient failures.
                 } finally {
                     if (requestId === this.countRequest) this.counting = false;
                 }
@@ -267,15 +283,22 @@
                 return this.symptoms.length + ' đã chọn';
             },
             resetBuilder() {
-                this.$refs.builderForm.reset();
+                // Invalidate an in-flight count response before clearing the
+                // state, otherwise an older request can restore stale totals.
+                this.countRequest++;
                 this.mode = 'study';
                 this.source = 'custom';
                 this.countTouched = false;
                 this.count = 1;
+                this.counting = false;
+                this.submitting = false;
                 this.difficulties = [];
                 this.statuses = [];
                 this.selectedTopics = [];
                 this.savedOnly = false;
+                this.folderId = null;
+                this.folderName = '';
+                this.foldersModalOpen = false;
                 this.blueprintId = null;
                 this.blueprintName = '';
                 this.articles = [];
@@ -283,6 +306,8 @@
                 this.medicalTaxonomyNodeIds = [];
                 this.medicalNodeLabels = {};
                 this.activeFilter = null;
+                this.filterSearch = '';
+                this.taxonomySearch = '';
                 this.$nextTick(() => this.refreshCount());
             },
         }"
@@ -587,7 +612,7 @@
                                         @blur="clampQuestionCount()" required
                                         class="w-20 rounded-lg border border-outline-variant py-2.5 text-center text-lg font-bold focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60">
                                     <span class="text-lg font-medium text-on-surface-variant">
-                                        / <span x-text="counting ? '…' : (matching ?? 0)"></span>
+                                        / <span x-text="counting && matching === null ? '…' : (matching ?? 0)"></span>
                                     </span>
                                 </div>
                             </div>

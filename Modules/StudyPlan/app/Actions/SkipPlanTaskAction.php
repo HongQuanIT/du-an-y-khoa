@@ -9,6 +9,7 @@ use App\Support\Audit\Auditor;
 use App\Support\Audit\Enums\AuditAction;
 use App\Support\Concerns\AsAction;
 use Modules\StudyPlan\Enums\TaskStatus;
+use Modules\StudyPlan\Models\StudyPlanDay;
 use Modules\StudyPlan\Models\StudyPlanTask;
 
 /**
@@ -29,6 +30,12 @@ final class SkipPlanTaskAction
         }
 
         $task->forceFill(['status' => TaskStatus::Skipped])->save();
+
+        if ($task->studyPlanDayId() !== null) {
+            StudyPlanDay::query()
+                ->whereKey($task->studyPlanDayId())
+                ->update(['status' => TaskStatus::Skipped->value]);
+        }
 
         $this->recalculateProgress->handle($task->plan);
 

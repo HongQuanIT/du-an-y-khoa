@@ -32,6 +32,8 @@ use Modules\QuestionBank\Models\QuestionSession;
 use Modules\QuestionBank\Models\QuestionSessionSnapshot;
 use Modules\QuestionBank\Models\QuestionStatus;
 use Modules\QuestionBank\Services\QuestionKeyInfoRenderer;
+use Modules\QuestionBank\Services\QuestionLearningState;
+use Modules\QuestionBank\Services\QuestionSessionSnapshots;
 use Spatie\Permission\Models\Role as RoleModel;
 use Tests\Support\CreatesMedicalTaxonomy;
 use Tests\TestCase;
@@ -107,6 +109,10 @@ final class QuestionBankFlowTest extends TestCase
             ->assertSee(':disabled="matching === 0"', false)
             ->assertSee(':max="Math.max(1, questionLimit())"', false)
             ->assertSee('@input="countTouched = true; clampQuestionCount()"', false)
+            ->assertSee('this.folderId = null;', false)
+            ->assertSee('this.countRequest++;', false)
+            ->assertSee('body.delete(name);', false)
+            ->assertDontSee('this.$refs.builderForm.reset();', false)
             ->assertDontSee('name="time_limit_minutes"', false)
             ->assertDontSeeText('const difficulty = form.querySelector');
 
@@ -139,6 +145,199 @@ final class QuestionBankFlowTest extends TestCase
         $session = QuestionSession::firstOrFail();
         $this->assertSame(25, $session->total);
         $this->assertSame(25, $session->filters['count']);
+    }
+
+    public function test_published_question_total_does_not_change_after_finishing_a_new_session(): void
+    {
+        $question = $this->createQuestion($this->topic, true, Difficulty::Easy, 'Tổng kho phải ổn định');
+        $payload = $this->sessionPayload(count: 1);
+
+        $this->actingAs($this->user)
+            ->postJson(route('qbank.count'), $payload)
+            ->assertOk()
+            ->assertJsonPath('data.count', 1)
+            ->assertJsonPath('data.total_in_scope', 1);
+
+        $this->actingAs($this->user)
+            ->post(route('qbank.store'), $payload)
+            ->assertRedirect();
+
+        $session = QuestionSession::query()->where('user_id', $this->user->id)->firstOrFail();
+        $correctOption = $question->options()->where('is_correct', true)->firstOrFail();
+
+        $this->actingAs($this->user)
+            ->post(route('qbank.session.answer', $session), [
+                'question_id' => $question->getKey(),
+                'option_ids' => [$correctOption->getKey()],
+            ])
+            ->assertRedirect();
+
+        $this->actingAs($this->user)
+            ->postJson(route('qbank.count'), $payload)
+            ->assertOk()
+            ->assertJsonPath('data.count', 1)
+            ->assertJsonPath('data.total_in_scope', 1);
+    }
+
+    public function test_incorrect_filter_does_not_repeat_duplicate_question_content(): void
+    {
+        $first = $this->createQuestion($this->topic, true, Difficulty::Easy, 'Nội dung bị import trùng');
+        $second = $this->createQuestion($this->topic, true, Difficulty::Easy, 'Nội dung bị import trùng');
+        $historySession = QuestionSession::create([
+            'user_id' => $this->user->id,
+            'mode' => SessionMode::Study,
+            'status' => SessionStatus::Completed,
+            'source' => 'custom',
+            'question_ids' => [$first->getKey(), $second->getKey()],
+            'total' => 2,
+        ]);
+
+        foreach ([$first, $second] as $question) {
+            QuestionAttempt::create([
+                'session_id' => $historySession->getKey(),
+                'user_id' => $this->user->id,
+                'question_id' => $question->getKey(),
+                'selected_option_ids' => [],
+                'is_correct' => false,
+            ]);
+        }
+
+        $payload = [
+            ...$this->sessionPayload(count: 2),
+            'question_statuses' => ['incorrect'],
+        ];
+
+        $this->actingAs($this->user)
+            ->postJson(route('qbank.count'), $payload)
+            ->assertOk()
+            ->assertJsonPath('data.count', 1);
+
+        $this->actingAs($this->user)
+            ->post(route('qbank.store'), $payload)
+            ->assertRedirect();
+
+        $session = QuestionSession::query()
+            ->where('user_id', $this->user->id)
+            ->where('status', SessionStatus::Active)
+            ->firstOrFail();
+        $this->assertSame(1, $session->total);
+        $this->assertCount(1, $session->question_ids);
+    }
+
+    public function test_unanswered_filter_automatically_starts_a_new_coverage_round(): void
+    {
+        $questions = collect([
+            $this->createQuestion($this->topic, true, Difficulty::Easy, 'Câu vòng 1'),
+            $this->createQuestion($this->topic, true, Difficulty::Easy, 'Câu vòng 2'),
+            $this->createQuestion($this->topic, true, Difficulty::Easy, 'Câu vòng 3'),
+        ]);
+        $historySession = QuestionSession::create([
+            'user_id' => $this->user->id,
+            'mode' => SessionMode::Study,
+            'status' => SessionStatus::Completed,
+            'source' => 'custom',
+            'question_ids' => $questions->pluck('id')->all(),
+            'total' => 3,
+        ]);
+
+        foreach ($questions as $question) {
+            QuestionAttempt::create([
+                'session_id' => $historySession->getKey(),
+                'user_id' => $this->user->id,
+                'question_id' => $question->getKey(),
+                'selected_option_ids' => [],
+                'is_correct' => true,
+            ]);
+            app(QuestionLearningState::class)->record(
+                $this->user->id,
+                $question,
+                UserQuestionStatus::Correct,
+                now(),
+                true,
+            );
+        }
+
+        $payload = [
+            ...$this->sessionPayload(count: 3),
+            'question_statuses' => ['unanswered'],
+        ];
+
+        // All three completed round one, so all three begin round two.
+        $this->actingAs($this->user)
+            ->postJson(route('qbank.count'), $payload)
+            ->assertOk()
+            ->assertJsonPath('data.count', 3);
+
+        $roundTwoSession = QuestionSession::create([
+            'user_id' => $this->user->id,
+            'mode' => SessionMode::Study,
+            'status' => SessionStatus::Completed,
+            'source' => 'custom',
+            'question_ids' => [$questions[0]->getKey()],
+            'total' => 1,
+        ]);
+        QuestionAttempt::create([
+            'session_id' => $roundTwoSession->getKey(),
+            'user_id' => $this->user->id,
+            'question_id' => $questions[0]->getKey(),
+            'selected_option_ids' => [],
+            'is_correct' => true,
+        ]);
+        app(QuestionLearningState::class)->record(
+            $this->user->id,
+            $questions[0],
+            UserQuestionStatus::Correct,
+            now(),
+            true,
+        );
+
+        // The first question is done in round two; two remain unanswered.
+        $this->actingAs($this->user)
+            ->postJson(route('qbank.count'), $payload)
+            ->assertOk()
+            ->assertJsonPath('data.count', 2);
+    }
+
+    public function test_skipped_attempts_remain_unanswered_in_the_current_coverage_round(): void
+    {
+        $questions = collect([
+            $this->createQuestion($this->topic, true, Difficulty::Easy, 'Câu bỏ trống 1'),
+            $this->createQuestion($this->topic, true, Difficulty::Easy, 'Câu bỏ trống 2'),
+            $this->createQuestion($this->topic, true, Difficulty::Easy, 'Câu bỏ trống 3'),
+        ]);
+        $session = QuestionSession::create([
+            'user_id' => $this->user->id,
+            'mode' => SessionMode::Exam,
+            'status' => SessionStatus::Completed,
+            'source' => 'custom',
+            'question_ids' => $questions->pluck('id')->all(),
+            'total' => 3,
+        ]);
+
+        foreach ($questions as $question) {
+            QuestionAttempt::create([
+                'session_id' => $session->getKey(),
+                'user_id' => $this->user->id,
+                'question_id' => $question->getKey(),
+                'selected_option_ids' => [],
+                'is_correct' => null,
+            ]);
+            app(QuestionLearningState::class)->record(
+                $this->user->id,
+                $question,
+                UserQuestionStatus::Omitted,
+                now(),
+                true,
+            );
+        }
+
+        $this->actingAs($this->user)
+            ->postJson(route('qbank.count'), [
+                ...$this->sessionPayload(count: 3),
+                'question_statuses' => ['unanswered'],
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.count', 3);
     }
 
     public function test_can_count_and_create_session_for_specific_folder(): void
@@ -594,7 +793,7 @@ final class QuestionBankFlowTest extends TestCase
             'correct_count' => 1,
         ]);
 
-        app(\Modules\QuestionBank\Services\QuestionSessionSnapshots::class)->capture($session);
+        app(QuestionSessionSnapshots::class)->capture($session);
 
         $this->actingAs($this->user)
             ->get(route('qbank.review', $session))
