@@ -10,7 +10,7 @@
     $plan = $plan ?? null;
     $systems = $systems ?? collect();
     $filters = $plan?->scopeFilters() ?? [
-        'medical_taxonomy_node_ids' => [],
+        'lesson_ids' => [],
         'exam_tags' => [],
         'articles' => [],
         'symptoms' => [],
@@ -25,7 +25,7 @@
         'tag_ids' => [],
     ];
 
-    $selectedTopicIds = array_map('intval', old('medical_taxonomy_node_ids', $filters['medical_taxonomy_node_ids'] ?? $filters['topic_ids'] ?? []));
+    $selectedTopicIds = array_map('intval', old('lesson_ids', $filters['lesson_ids'] ?? $filters['topic_ids'] ?? []));
     $specialtyIds = $specialties->pluck('id')->all();
     $systemIdList = $systems->pluck('id')->all();
     $defaultExam = old('exam_key', $plan?->exam_key ?? array_key_first($exams));
@@ -102,15 +102,18 @@
         blueprintSectionName: '',
         coreClinicalTopicIds: @js($initial['coreClinicalTopicIds']),
         coreClinicalTopicLabels: {},
-        medicalTaxonomyNodeIds: @js($selectedTopicIds),
-        medicalNodeLabels: {},
+        organSystemIds: [],
+        subjectIds: [],
+        lessonIds: @js($selectedTopicIds),
+        lessonLabels: {},
+        lessonResults: [],
         tagIds: @js($initial['tagIds']),
         tagLabels: {},
-        blueprintResults: [], blueprintSectionResults: [], coreTopicResults: [], medicalNodeResults: [], tagResults: [],
+        blueprintResults: [], blueprintSectionResults: [], coreTopicResults: [], tagResults: [],
         taxonomyUrls: {
             blueprints: @js(route('qbank.taxonomy.lookups.blueprints', absolute: false)),
             coreTopicsSearch: @js(route('qbank.taxonomy.lookups.core-topics.search', absolute: false)),
-            medicalNodes: @js(route('qbank.taxonomy.lookups.medical-nodes', absolute: false)),
+            lessons: @js(route('qbank.taxonomy.lookups.lessons', absolute: false)),
             tags: @js(route('qbank.taxonomy.lookups.tags', absolute: false)),
         },
         specialtyOptions: @js($specialtyOptions),
@@ -141,24 +144,24 @@
             this.activeFilter = filter; this.taxonomySearch = '';
             if (filter === 'blueprint') this.fetchBlueprints();
             if (filter === 'coreTopics') this.fetchCoreTopics();
-            if (filter === 'medicalNodes') this.fetchMedicalNodes();
+            if (filter === 'lessons') this.fetchLessons();
             if (filter === 'tags') this.fetchTags();
         },
         async fetchBlueprints() { const q=this.taxonomySearch.trim(); const r=await fetch(this.taxonomyUrls.blueprints+(q?'?q='+encodeURIComponent(q):'')); this.blueprintResults=(await r.json()).data??[]; },
         async fetchBlueprintSections() { if(!this.blueprintId)return; const q=this.taxonomySearch.trim(); const r=await fetch(this.taxonomyUrls.blueprints+'/'+this.blueprintId+'/sections'+(q?'?q='+encodeURIComponent(q):'')); this.blueprintSectionResults=(await r.json()).data??[]; },
         async fetchCoreTopics() { const p=new URLSearchParams(); if(this.blueprintId)p.set('blueprint_id',this.blueprintId); if(this.blueprintSectionId)p.set('blueprint_section_id',this.blueprintSectionId); if(this.taxonomySearch.trim().length>=2)p.set('q',this.taxonomySearch.trim()); const r=await fetch(this.taxonomyUrls.coreTopicsSearch+'?'+p); this.coreTopicResults=(await r.json()).data??[]; },
-        async fetchMedicalNodes() { const p=new URLSearchParams({include_descendants:'1'}); if(this.taxonomySearch.trim().length>=2)p.set('q',this.taxonomySearch.trim()); const r=await fetch(this.taxonomyUrls.medicalNodes+'?'+p); this.medicalNodeResults=(await r.json()).data??[]; },
+        async fetchLessons() { const p=new URLSearchParams(); if(this.taxonomySearch.trim().length>=2)p.set('q',this.taxonomySearch.trim()); const q=p.toString(); const r=await fetch(q?this.taxonomyUrls.lessons+'?'+q:this.taxonomyUrls.lessons); this.lessonResults=(await r.json()).data??[]; },
         async fetchTags() { const q=this.taxonomySearch.trim(); const r=await fetch(this.taxonomyUrls.tags+(q?'?q='+encodeURIComponent(q):'')); this.tagResults=(await r.json()).data??[]; },
         selectBlueprint(i){this.blueprintId=i.id;this.blueprintName=i.name;this.clearBlueprintSection();},
         clearBlueprint(){this.blueprintId=null;this.blueprintName='';this.clearBlueprintSection();},
         selectBlueprintSection(i){this.blueprintSectionId=i.id;this.blueprintSectionName=i.name;},
         clearBlueprintSection(){this.blueprintSectionId=null;this.blueprintSectionName='';},
         toggleCoreTopic(i){const n=this.coreClinicalTopicIds.indexOf(i.id);if(n>=0){this.coreClinicalTopicIds.splice(n,1);delete this.coreClinicalTopicLabels[i.id]}else{this.coreClinicalTopicIds.push(i.id);this.coreClinicalTopicLabels[i.id]=i.name}},
-        toggleMedicalNode(i){const n=this.medicalTaxonomyNodeIds.indexOf(i.id);if(n>=0){this.medicalTaxonomyNodeIds.splice(n,1);delete this.medicalNodeLabels[i.id]}else{this.medicalTaxonomyNodeIds.push(i.id);this.medicalNodeLabels[i.id]=i.name}},
+        toggleLesson(i){const n=this.lessonIds.indexOf(i.id);if(n>=0){this.lessonIds.splice(n,1);delete this.lessonLabels[i.id]}else{this.lessonIds.push(i.id);this.lessonLabels[i.id]=i.name}},
         toggleTag(i){const n=this.tagIds.indexOf(i.id);if(n>=0){this.tagIds.splice(n,1);delete this.tagLabels[i.id]}else{this.tagIds.push(i.id);this.tagLabels[i.id]=i.name}},
         blueprintLabel(){return this.blueprintName||(this.blueprintId?'Đã chọn':'Tất cả')},
         coreTopicLabel(){return this.coreClinicalTopicIds.length?this.coreClinicalTopicIds.length+' đã chọn':'Tất cả'},
-        medicalNodeLabel(){return this.medicalTaxonomyNodeIds.length?this.medicalTaxonomyNodeIds.length+' đã chọn':'Tất cả'},
+        lessonLabel(){return this.lessonIds.length?this.lessonIds.length+' đã chọn':'Tất cả'},
         tagLabel(){return this.tagIds.length?this.tagIds.length+' đã chọn':'Tất cả'},
         groupedCoreTopics(){const g=[];const m=new Map;this.coreTopicResults.forEach(t=>{const k=String(t.blueprint_section_id??'other');if(!m.has(k)){const x={id:k,name:t.section_name||'Chủ đề khác',topics:[]};m.set(k,x);g.push(x)}m.get(k).topics.push(t)});return g},
         async refreshCount(){
@@ -247,7 +250,7 @@
             if (i === -1) this.days.push(day);
             else this.days.splice(i, 1);
         },
-        topicIds() { return this.medicalTaxonomyNodeIds; },
+        topicIds() { return this.lessonIds; },
         studyDaysUntilExam() {
             if (!this.date || this.days.length === 0) return 0;
             const target = new Date(this.date + 'T00:00:00');
@@ -300,7 +303,7 @@
         <input type="hidden" name="tag_ids[]" :value="id">
     </template>
     <template x-for="id in topicIds()" :key="'topic-' + id">
-        <input type="hidden" name="medical_taxonomy_node_ids[]" :value="id">
+        <input type="hidden" name="lesson_ids[]" :value="id">
     </template>
     <template x-for="tag in examTags" :key="'exam-tag-' + tag">
         <input type="hidden" name="exam_tags[]" :value="tag">
@@ -651,7 +654,7 @@
         @click.self="activeFilter = null">
         <div class="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-xl bg-white shadow-xl">
             <div class="flex items-center justify-between border-b border-outline-variant p-4">
-                <h3 class="font-headline-sm text-on-surface" x-text="({blueprint:'Ma trận đề thi',coreTopics:'Chủ đề lâm sàng',medicalNodes:'Chuyên khoa & danh mục y khoa',tags:'Tags'})[activeFilter] || 'Bộ lọc'"></h3>
+                <h3 class="font-headline-sm text-on-surface" x-text="({blueprint:'Ma trận đề thi',coreTopics:'Chủ đề lâm sàng',lessons:'Bài học',tags:'Tags'})[activeFilter] || 'Bộ lọc'"></h3>
                 <button type="button" @click="activeFilter = null" class="rounded-full p-2 hover:bg-surface-container" aria-label="Đóng">
                     <span class="material-symbols-outlined">close</span>
                 </button>
@@ -660,7 +663,7 @@
                 @include('questionbank::partials.taxonomy-session-filter-modals')
             </div>
             <div class="flex items-center justify-between border-t border-outline-variant bg-surface-container-lowest p-4">
-                <button type="button" @click="activeFilter === 'blueprint' ? clearBlueprint() : activeFilter === 'coreTopics' ? (coreClinicalTopicIds = []) : activeFilter === 'medicalNodes' ? (medicalTaxonomyNodeIds = []) : (tagIds = [])"
+                <button type="button" @click="activeFilter === 'blueprint' ? clearBlueprint() : activeFilter === 'coreTopics' ? (coreClinicalTopicIds = []) : activeFilter === 'lessons' ? (lessonIds = [], lessonLabels = {}) : (tagIds = [])"
                     class="text-sm font-bold text-primary hover:underline">Đặt lại</button>
                 <button type="button" @click="activeFilter = null" class="rounded-lg bg-primary px-8 py-2 font-bold text-white">Xong</button>
             </div>

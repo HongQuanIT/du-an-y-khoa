@@ -23,8 +23,8 @@ CRUD & **workflow duyệt 2 lớp** câu hỏi: Content Creator soạn/sửa →
 ## 2. Phân tích giao diện
 | Thành phần | Chức năng | Hiển thị/Ẩn | Responsive |
 |-----------|-----------|-------------|-----------|
-| **Question table** | Filter (status/topic/difficulty/report), search, sort | List | Table |
-| **Question editor** | Rich editor stem, options, giải thích, references, lab values, media, topics/tags | Create/edit | Form nhiều section |
+| **Question table** | Filter (status/hệ cơ quan-môn học-bài học/difficulty/report), search, sort | List | Table |
+| **Question editor** | Rich editor stem, options, giải thích, references, lab values, media, bài học (≥1) + tags | Create/edit | Form nhiều section |
 | **Preview pane** | Xem như học viên (study/exam) | Editor | Split |
 | **Workflow bar** | Draft → Chờ GV → Chờ publish → Published / Rejected / Private | Editor | — |
 | **Metadata panel** | Creator, Instructor reviewer, Publisher, Created/Updated | Editor/Detail | Sidebar |
@@ -39,7 +39,7 @@ CRUD & **workflow duyệt 2 lớp** câu hỏi: Content Creator soạn/sửa →
 | **Empty/Loading/Error** | Chuẩn | Theo trạng thái | — |
 
 ## 3. Phân tích Component
-- `QuestionEditor`(validate: đúng ≥1 đáp án, đủ giải thích), `OptionEditor`, `TopicTreePicker`, `WorkflowStatusBar`, `VersionHistory`(read-only snapshots), `CloneQuestionAction`, `ImportWizard`(map/validate), `InstructorReviewQueue`, `PublishQueue`, `ReportQueue`, `QuestionPreview`, `DuplicateCheckPanel`(lexical fingerprint + % similarity trên form edit).
+- `QuestionEditor`(validate: đúng ≥1 đáp án, đủ giải thích), `OptionEditor`, `LessonPicker`(chọn ≥1 bài học; lọc tuỳ chọn theo hệ/môn), `TagPicker`, `WorkflowStatusBar`, `VersionHistory`(read-only snapshots), `CloneQuestionAction`, `ImportWizard`(map/validate), `InstructorReviewQueue`, `PublishQueue`, `ReportQueue`, `QuestionPreview`, `DuplicateCheckPanel`(lexical fingerprint + % similarity trên form edit).
 
 ## 4. Luồng người dùng
 
@@ -161,10 +161,10 @@ Tránh N+1: eager load creator / instructor / publisher trên list; **không** j
 - **Clone:** tạo `question` **mới** (`draft`), copy nội dung từ câu gốc hoặc từ snapshot version (`cloned_from_id`, `cloned_from_version` optional).
 - Câu gốc và attempt/history giữ nguyên; câu clone có lifecycle riêng (phải đi lại 2 lớp duyệt).
 
-### 5.6 Topic (chủ đề phân cấp cha–con)
-- `topics.parent_id` nullable → cây phân cấp (specialty → system → subtopic).
-- Admin UI editor: chọn topic dạng **tree picker** (cha/con).
-- Câu gắn ≥1 topic (khuyến nghị leaf); filter Qbank/exam pool: chọn topic **cha** → bao gồm câu thuộc **topic con** (descendants).
+### 5.6 Phân loại nội dung 3 cấp (Hệ cơ quan → Môn học → Bài học)
+- Phân loại chuẩn hóa DAG 3 cấp: `organ_systems` → `subjects` → `lessons` (đa cha qua `subject_organ_system`, `lesson_subject`), thay cho cây `topics` cũ.
+- Admin UI editor: chọn **Bài học** qua picker phân cấp (Hệ cơ quan → Môn học → Bài học).
+- Câu gắn **≥1 Bài học** (`question_lesson`); các bài ngang hàng, không phân biệt primary. Filter Qbank/exam pool: chọn Hệ cơ quan/Môn học **cha** → bao gồm câu thuộc **Bài học con** (suy qua pivot).
 
 ### 5.7 Kiểm tra trùng lặp (lexical — phase 1)
 - **Mục đích:** trên form edit một câu, mở **trang chi tiết** để quét ngân hàng xem câu nào trùng / gần trùng. **Không** chặn workflow cứng (chỉ cảnh báo).
@@ -182,7 +182,7 @@ Tránh N+1: eager load creator / instructor / publisher trên list; **không** j
 - Version snapshot (`question_versions.snapshot.options[]`) **bắt buộc** có `id` để overlay published vẫn chấm được.
 
 ### 5.8 Khác
-- **Validation nội dung:** đúng ≥1 (single: đúng 1), giải thích bắt buộc, chủ đề ≥1 — bắt buộc trước `submit` và trước `publish`.
+- **Validation nội dung:** đúng ≥1 (single: đúng 1), giải thích bắt buộc, Bài học ≥1 — bắt buộc trước `submit` và trước `publish`.
 - **Import:** map cột, validate, dedup, preview trước commit; rollback batch; sau import vẫn `draft` → Creator submit từng câu / hàng loạt vào lớp 1.
 - **Report handling:** open→reviewing→resolved/rejected; ảnh hưởng hiển thị (ẩn tạm nếu nghiêm trọng).
 - **Retire** thay vì xóa cứng (giữ lịch sử attempt) — chỉ Super Admin.
@@ -199,10 +199,10 @@ Tránh N+1: eager load creator / instructor / publisher trên list; **không** j
   - `exam_flag`, `cloned_from_id`, `cloned_from_version`, `created_by`, `updated_by`, timestamps
   - `content_fingerprint` CHAR(64) null + index; `similarity_checked_at` timestamp null
 - `question_similarity_matches`: `question_id_low`, `question_id_high` (UUID, low < high), `score`, `severity`, `signals` JSON, `detected_at`; unique cặp
-- `question_options`, `question_topics`, `question_tag`, `question_reports`
+- `question_options`, `question_lesson` (`question_id` uuid, `lesson_id`), `question_tags`, `question_reports`
 - `question_versions`: `question_id`, `version_number`, `instructor_id` FK, `publisher_id` FK, `snapshot` JSON, `created_at`; unique `(question_id, version_number)`; **chỉ tạo khi Super Admin publish**
 - `question_review_requests` (optional / giữ): theo dõi yêu cầu submit lớp 1; status pending/approved/rejected; **không** thay thế `questions.status`
-- `topics`: `parent_id FK null`
+- `organ_systems`, `subjects`, `lessons` (mỗi bảng: `id, name, slug UK, code null, description null, status, sort_order`); pivot `subject_organ_system`, `lesson_subject`
 - `import_batches(id, file, status, stats)`
 - `stats_cache` JSON + `stats_updated_at` trên `questions`
 
@@ -261,7 +261,7 @@ Validation nghiêm; `409` optimistic lock trên working copy; audit mọi mutate
 - **Duplicate check:** trang chi tiết per-question (`/duplicates`); lưu/hiển thị cặp ≥30%; candidate theo fingerprint + stem bucket.
 
 ## 15. Đề xuất cải tiến
-- AI hỗ trợ soạn; psychometrics; gán giảng viên theo chuyên khoa topic; so sánh diff working copy vs version live; SLA nhắc duyệt.
+- AI hỗ trợ soạn; psychometrics; gán giảng viên theo Môn học/chuyên khoa; so sánh diff working copy vs version live; SLA nhắc duyệt.
 
 ## 16. Phạm vi triển khai (Phase 2a MVP → mở rộng)
 
@@ -271,4 +271,4 @@ Validation nghiêm; `409` optimistic lock trên working copy; audit mọi mutate
 |-----|---------|
 | **2a MVP** | Status `pending_publish`; Creator submit; Instructor approve/reject trên `/teach`; Super Admin publish (+version); RBAC tách `question.review` / `question.publish`; metadata instructor/publisher |
 | **2b** | Report queue, preview học viên, version compare, rejection UI 2 nguồn, withdraw |
-| **2c** | Import batch, media picker (37), `SyncQuestionStatsJob`, gán GV theo topic |
+| **2c** | Import batch, media picker (37), `SyncQuestionStatsJob`, gán GV theo Môn học |

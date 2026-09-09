@@ -242,7 +242,7 @@ final class StudyPlanSessionController extends Controller
         foreach ($questionIds as $questionId) {
             $question = $questions[$questionId] ?? null;
             $attempt = $attempts->get($questionId);
-            $topicNames = $question?->medicalTaxonomyNodes
+            $topicNames = $question?->lessons
                 ->pluck('name')
                 ->map(fn ($name): string => (string) $name)
                 ->all() ?? [];

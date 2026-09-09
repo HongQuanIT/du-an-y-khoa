@@ -202,12 +202,51 @@ class Question extends Model
             ->inferredCoreClinicalTopicsForQuestion($this);
     }
 
-    /** @return BelongsToMany<MedicalTaxonomyNode, $this> */
-    public function medicalTaxonomyNodes(): BelongsToMany
+    /** @return BelongsToMany<Lesson, $this> */
+    public function lessons(): BelongsToMany
     {
-        return $this->belongsToMany(MedicalTaxonomyNode::class, 'question_medical_topics')
-            ->withPivot(['relationship_type', 'is_primary'])
+        return $this->belongsToMany(Lesson::class, 'question_lesson')
             ->withTimestamps();
+    }
+
+    /**
+     * Subjects inferred from attached lessons (lesson_subject).
+     *
+     * @return Collection<int, Subject>
+     */
+    public function inferredSubjects(): Collection
+    {
+        $lessons = $this->relationLoaded('lessons')
+            ? $this->lessons
+            : $this->lessons()->with('subjects')->get();
+
+        return $lessons
+            ->flatMap(function (Lesson $lesson): Collection {
+                return $lesson->relationLoaded('subjects')
+                    ? $lesson->subjects
+                    : $lesson->subjects()->get();
+            })
+            ->unique('id')
+            ->sortBy('name')
+            ->values();
+    }
+
+    /**
+     * Organ systems inferred via lessons → subjects → organ systems.
+     *
+     * @return Collection<int, OrganSystem>
+     */
+    public function inferredOrganSystems(): Collection
+    {
+        return $this->inferredSubjects()
+            ->flatMap(function (Subject $subject): Collection {
+                return $subject->relationLoaded('organSystems')
+                    ? $subject->organSystems
+                    : $subject->organSystems()->get();
+            })
+            ->unique('id')
+            ->sortBy('name')
+            ->values();
     }
 
     /** @return BelongsToMany<Tag, $this> */
@@ -389,7 +428,7 @@ class Question extends Model
         if (ServePublishedQuestion::needsOverlay($this)) {
             $source = ServePublishedQuestion::overlay(
                 static::query()->with([
-                    'medicalTaxonomyNodes:id',
+                    'lessons:id',
                     'tags:id',
                     'options',
                 ])->find($this->getKey()) ?? $this,
@@ -403,16 +442,16 @@ class Question extends Model
         ));
         $plainStem = trim(preg_replace('/\s+/u', ' ', $plainStem) ?? $plainStem);
 
-        $medicalTaxonomyNodeIds = ($source->relationLoaded('medicalTaxonomyNodes')
-            ? $source->medicalTaxonomyNodes
-            : $source->medicalTaxonomyNodes()->get())
+        $lessonIds = ($source->relationLoaded('lessons')
+            ? $source->lessons
+            : $source->lessons()->get())
             ->pluck('id')
             ->map(fn ($id): int => (int) $id)
             ->values()
             ->all();
 
         $coreClinicalTopicIds = app(\Modules\QuestionBank\Support\QuestionFilterBuilder::class)
-            ->inferredCoreClinicalTopicIds($medicalTaxonomyNodeIds);
+            ->inferredCoreClinicalTopicIds($lessonIds);
 
         $tagIds = ($source->relationLoaded('tags') ? $source->tags : $source->tags()->get())
             ->pluck('id')
@@ -425,7 +464,7 @@ class Question extends Model
             'stem' => $plainStem,
             'difficulty' => $source->difficulty->value,
             'core_clinical_topic_ids' => $coreClinicalTopicIds,
-            'medical_taxonomy_node_ids' => $medicalTaxonomyNodeIds,
+            'lesson_ids' => $lessonIds,
             'tag_ids' => $tagIds,
             'is_free' => ServePublishedQuestion::publishedIsFree($this),
         ];

@@ -97,7 +97,7 @@ final class ExamController extends Controller
     {
         $exam->loadCount('questions');
         $exam->load([
-            'questions' => fn ($q) => $q->with(['medicalTaxonomyNodes'])->orderBy('exam_question.order'),
+            'questions' => fn ($q) => $q->with(['lessons'])->orderBy('exam_question.order'),
             'examTopics.coreClinicalTopic.section',
             'blueprint',
         ]);
@@ -185,7 +185,7 @@ final class ExamController extends Controller
         $term = trim($request->input('q', ''));
 
         $query = Question::query()
-            ->with(['medicalTaxonomyNodes'])
+            ->with(['lessons'])
             ->latest();
 
         if ($term !== '') {
@@ -200,7 +200,7 @@ final class ExamController extends Controller
 
             $query->where(function ($q) use ($term, $difficulties) {
                 $q->where('stem', 'LIKE', "%{$term}%")
-                    ->orWhereHas('medicalTaxonomyNodes', function ($q2) use ($term) {
+                    ->orWhereHas('lessons', function ($q2) use ($term) {
                         $q2->where('name', 'LIKE', "%{$term}%");
                     });
 
@@ -213,8 +213,8 @@ final class ExamController extends Controller
         $questions = $query->limit(50)->get()->map(fn ($question) => [
             'id' => (string) $question->id,
             'text' => strip_tags($question->stem),
-            'topic' => $question->medicalTaxonomyNodes->pluck('name')->join(', ') ?: 'Tổng hợp',
-            'topics' => $question->medicalTaxonomyNodes->pluck('name')->values()->all(),
+            'topic' => $question->lessons->pluck('name')->join(', ') ?: 'Tổng hợp',
+            'topics' => $question->lessons->pluck('name')->values()->all(),
             'difficulty' => $question->difficulty?->label(),
         ])->values()->all();
 
@@ -224,7 +224,7 @@ final class ExamController extends Controller
     private function availableQuestions()
     {
         return Question::query()
-            ->with(['medicalTaxonomyNodes'])
+            ->with(['lessons'])
             ->latest()
             ->limit(50)
             ->get();

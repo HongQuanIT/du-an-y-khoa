@@ -101,9 +101,9 @@
         @endif
 
         <div class="mt-5 flex flex-wrap gap-2">
-            @foreach ($question->medicalTaxonomyNodes as $node)
+            @foreach ($question->lessons as $lesson)
                 <span class="inline-flex rounded-lg bg-surface-container-high px-2.5 py-1 text-xs font-semibold">
-                    {{ $node->name }}
+                    {{ $lesson->name }}
                 </span>
             @endforeach
             <span class="inline-flex rounded-lg bg-surface-container-high px-2.5 py-1 text-xs font-semibold">

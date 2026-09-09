@@ -31,24 +31,23 @@ final class StudyPlanApiTest extends TestCase
 
     private User $user;
 
-    private \Modules\QuestionBank\Models\MedicalTaxonomyNode $topic;
+    private \Modules\QuestionBank\Models\Lesson $topic;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->user = User::factory()->create();
-        $this->topic = $this->makeMedicalNode([
+        $this->topic = $this->makeLesson([
             'name' => 'Tim mạch',
             'slug' => 'tim-mach',
-            'node_type' => 'system',
             'sort_order' => 0,
         ]);
 
         Question::factory()->count(10)->create([
             'status' => QuestionStatus::Published,
             'is_free' => true,
-        ])->each(fn (Question $question) => $question->medicalTaxonomyNodes()->sync([$this->topic->id]));
+        ])->each(fn (Question $question) => $question->lessons()->sync([$this->topic->id]));
     }
 
     public function test_a_plan_can_be_created_and_read_back(): void
@@ -113,7 +112,7 @@ final class StudyPlanApiTest extends TestCase
         $this->seedQuestions(6);
 
         $plan = StudyPlan::factory()->for($this->user)->create([
-            'topic_scope' => [$this->topic->id],
+            'topic_scope' => ['lesson_ids' => [$this->topic->id]],
             'daily_goal_questions' => 10,
         ]);
 
@@ -121,7 +120,7 @@ final class StudyPlanApiTest extends TestCase
             'type' => TaskType::Review,
             'target' => 3,
             'date' => Carbon::today()->toDateString(),
-            'ref' => ['topic_ids' => [$this->topic->id], 'session_id' => null, 'mode' => 'study'],
+            'ref' => ['lesson_ids' => [$this->topic->id], 'session_id' => null, 'mode' => 'study'],
         ]);
 
         $this->actingAs($this->user, 'sanctum')
@@ -172,7 +171,7 @@ final class StudyPlanApiTest extends TestCase
             'exam_key' => 'resident',
             'exam_target_date' => Carbon::today()->addDays(7)->toDateString(),
             'daily_goal_questions' => 10,
-            'topic_ids' => [$this->topic->id],
+            'lesson_ids' => [$this->topic->id],
             'study_days' => [1, 2, 3, 4, 5, 6, 7],
             'strategy' => 'fixed',
         ];
@@ -210,7 +209,7 @@ final class StudyPlanApiTest extends TestCase
                 'order' => 1,
             ]);
 
-            $question->medicalTaxonomyNodes()->sync([$this->topic->id]);
+            $question->lessons()->sync([$this->topic->id]);
         }
     }
 }

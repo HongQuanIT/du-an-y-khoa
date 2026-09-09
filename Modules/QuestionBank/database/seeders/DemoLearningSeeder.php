@@ -25,8 +25,7 @@ use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionOption;
 use Modules\QuestionBank\Models\QuestionSession;
 use Modules\QuestionBank\Models\QuestionStatus as UserQuestionStatusModel;
-use Modules\QuestionBank\Models\MedicalTaxonomy;
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
+use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Services\QuestionSessionSnapshots;
 use Spatie\Permission\Models\Role as RoleModel;
 
@@ -56,7 +55,7 @@ class DemoLearningSeeder extends Seeder
     private function seedVm14kQuestions(): void
     {
         $flag = storage_path('app/questionbank_seed/vm14k.flag');
-        $topics = MedicalTaxonomyNode::query()->get()->keyBy('slug');
+        $topics = Lesson::query()->get()->keyBy('slug');
 
         if (app()->environment('testing') || ! is_file($flag)) {
             $dir = base_path('Modules/QuestionBank/database/seeders/data/vm14k');
@@ -121,8 +120,8 @@ class DemoLearningSeeder extends Seeder
                         $idx++;
                     }
 
-                    if ($topic instanceof MedicalTaxonomyNode) {
-                        $question->medicalTaxonomyNodes()->syncWithoutDetaching([$topic->id]);
+                    if ($topic instanceof Lesson) {
+                        $question->lessons()->syncWithoutDetaching([$topic->id]);
                     }
                 }
 
@@ -271,7 +270,7 @@ class DemoLearningSeeder extends Seeder
      * An unused generated placeholder is repurposed so re-running the demo seed
      * against an existing 200-question database does not increase the total.
      *
-     * @param  Collection<string, MedicalTaxonomyNode>  $topics
+     * @param  Collection<string, Lesson>  $topics
      */
     private function seedLongFormLayoutQuestion(Collection $topics): void
     {
@@ -340,24 +339,12 @@ TEXT;
 
         $urology = $topics->get('urology');
 
-        if (! $urology instanceof MedicalTaxonomyNode) {
-            $taxonomy = MedicalTaxonomy::query()->firstOrCreate(
-                ['code' => 'medlearn-medical-taxonomy'],
+        if (! $urology instanceof Lesson) {
+            $urology = Lesson::query()->firstOrCreate(
+                ['slug' => 'urology'],
                 [
-                    'name' => 'MedLearn Medical Taxonomy',
-                    'description' => null,
-                    'status' => \Modules\QuestionBank\Enums\TaxonomyStatus::Active,
-                ],
-            );
-            $urology = MedicalTaxonomyNode::query()->firstOrCreate(
-                [
-                    'medical_taxonomy_id' => $taxonomy->id,
-                    'slug' => 'urology',
-                ],
-                [
-                    'parent_id' => null,
                     'name' => 'Tiết niệu',
-                    'node_type' => 'system',
+                    'code' => 'urology',
                     'description' => null,
                     'sort_order' => 99,
                     'status' => \Modules\QuestionBank\Enums\TaxonomyStatus::Active,
@@ -365,7 +352,7 @@ TEXT;
             );
         }
 
-        $question->medicalTaxonomyNodes()->syncWithoutDetaching([$urology->id]);
+        $question->lessons()->syncWithoutDetaching([$urology->id]);
     }
 
     /**

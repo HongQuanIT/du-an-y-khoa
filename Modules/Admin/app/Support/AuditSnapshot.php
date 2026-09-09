@@ -7,7 +7,7 @@ namespace Modules\Admin\Support;
 use App\Models\User;
 use App\Support\Enums\UserStatus;
 use App\Support\Html\SafeHtml;
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
+use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionHint;
 use Modules\QuestionBank\Models\QuestionOption;
@@ -37,13 +37,17 @@ final class AuditSnapshot
         $question->loadMissing([
             'options' => fn ($query) => $query->orderBy('order'),
             'hints' => fn ($query) => $query->orderBy('sort_order'),
-            'medicalTaxonomyNodes:id',
             'tags:id',
         ]);
 
+        // Force-load lessons with `name` even if the relation was previously
+        // eager-loaded with only `id` (loadMissing would otherwise skip it),
+        // since the audit snapshot serializes lesson names below.
+        $question->load('lessons:id,name');
+
         $inferredCoreIds = app(\Modules\QuestionBank\Support\QuestionFilterBuilder::class)
             ->inferredCoreClinicalTopicIds(
-                $question->medicalTaxonomyNodes->pluck('id')->map(fn ($id): int => (int) $id)->all(),
+                $question->lessons->pluck('id')->map(fn ($id): int => (int) $id)->all(),
             );
 
         return [
@@ -57,17 +61,16 @@ final class AuditSnapshot
             'difficulty' => $question->difficulty->value,
             'status' => $question->status->value,
             'core_clinical_topic_ids' => collect($inferredCoreIds)->sort()->values()->all(),
-            'medical_taxonomy_node_ids' => $question->medicalTaxonomyNodes
+            'lesson_ids' => $question->lessons
                 ->pluck('id')
                 ->map(fn ($id): int => (int) $id)
                 ->sort()
                 ->values()
                 ->all(),
-            'medical_taxonomy_links' => $question->medicalTaxonomyNodes
-                ->map(fn (MedicalTaxonomyNode $node): array => [
-                    'id' => (int) $node->getKey(),
-                    'relationship_type' => $node->pivot?->relationship_type,
-                    'is_primary' => (bool) ($node->pivot?->is_primary ?? false),
+            'lesson_links' => $question->lessons
+                ->map(fn (Lesson $lesson): array => [
+                    'id' => (int) $lesson->getKey(),
+                    'name' => (string) $lesson->name,
                 ])
                 ->sortBy('id')
                 ->values()
@@ -127,15 +130,12 @@ final class AuditSnapshot
                 ->all(),
             'attending_tip' => self::safeContent($payload['attending_tip'] ?? null, 8000),
             'difficulty' => $payload['difficulty'] ?? null,
-            'medical_taxonomy_node_ids' => self::sortedIds($payload['medical_taxonomy_node_ids'] ?? []),
-            'medical_taxonomy_links' => collect((array) ($payload['medical_taxonomy_links'] ?? []))
+            'lesson_ids' => self::sortedIds($payload['lesson_ids'] ?? []),
+            'lesson_links' => collect((array) ($payload['lesson_links'] ?? []))
                 ->filter(fn (mixed $link): bool => is_array($link) && isset($link['id']))
                 ->map(fn (array $link): array => [
                     'id' => (int) $link['id'],
-                    'relationship_type' => isset($link['relationship_type'])
-                        ? mb_substr(trim((string) $link['relationship_type']), 0, 32)
-                        : null,
-                    'is_primary' => (bool) ($link['is_primary'] ?? false),
+                    'name' => isset($link['name']) ? (string) $link['name'] : null,
                 ])
                 ->sortBy('id')
                 ->values()

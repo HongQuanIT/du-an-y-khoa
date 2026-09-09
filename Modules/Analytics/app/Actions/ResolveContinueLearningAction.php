@@ -126,7 +126,7 @@ final class ResolveContinueLearningAction
     private function fromWeakTopic(User $user): ?array
     {
         $mastery = TopicMastery::query()
-            ->with('medicalTaxonomyNode:id,name')
+            ->with('lesson:id,name')
             ->where('user_id', $user->getKey())
             ->where('attempts', '>=', 3)
             ->orderBy('correct_rate')
@@ -138,12 +138,12 @@ final class ResolveContinueLearningAction
 
         return [
             'label' => 'Gợi ý tiếp theo',
-            'title' => 'Củng cố '.($mastery->medicalTaxonomyNode?->name ?? 'chủ đề còn yếu'),
+            'title' => 'Củng cố '.($mastery->lesson?->name ?? 'chủ đề còn yếu'),
             'hint' => sprintf('%d lượt làm · chính xác %d%%', $mastery->attempts, (int) round($mastery->correct_rate)),
             'progress' => (int) round($mastery->correct_rate),
             'url' => route('qbank.create', [
                 'source' => 'weak_topics',
-                'medical_taxonomy_node_ids' => [$mastery->medical_taxonomy_node_id],
+                'lesson_ids' => [$mastery->lesson_id],
             ]),
         ];
     }

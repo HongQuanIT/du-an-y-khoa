@@ -25,12 +25,12 @@ final class RecalculateTopicMasteryAction
     public function handle(int $userId): int
     {
         $rows = DB::table('question_attempts')
-            ->join('question_medical_topics', 'question_medical_topics.question_id', '=', 'question_attempts.question_id')
+            ->join('question_lesson', 'question_lesson.question_id', '=', 'question_attempts.question_id')
             ->where('question_attempts.user_id', $userId)
             ->whereNotNull('question_attempts.is_correct')
-            ->groupBy('question_medical_topics.medical_taxonomy_node_id')
+            ->groupBy('question_lesson.lesson_id')
             ->get([
-                'question_medical_topics.medical_taxonomy_node_id',
+                'question_lesson.lesson_id',
                 DB::raw('COUNT(*) as attempts'),
                 DB::raw('SUM(CASE WHEN question_attempts.is_correct THEN 1 ELSE 0 END) as correct'),
                 DB::raw('MAX(question_attempts.answered_at) as last_activity_at'),
@@ -44,7 +44,7 @@ final class RecalculateTopicMasteryAction
             TopicMastery::updateOrCreate(
                 [
                     'user_id' => $userId,
-                    'medical_taxonomy_node_id' => (int) $row->medical_taxonomy_node_id,
+                    'lesson_id' => (int) $row->lesson_id,
                 ],
                 [
                     'attempts' => $attempts,

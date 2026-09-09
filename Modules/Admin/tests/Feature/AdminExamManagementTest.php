@@ -20,7 +20,7 @@ use Modules\QuestionBank\Enums\TaxonomyStatus;
 use Modules\QuestionBank\Models\Blueprint;
 use Modules\QuestionBank\Models\BlueprintSection;
 use Modules\QuestionBank\Models\CoreClinicalTopic;
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
+use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
 use Tests\Support\CreatesMedicalTaxonomy;
 use Tests\TestCase;
@@ -30,7 +30,7 @@ final class AdminExamManagementTest extends TestCase
     use CreatesMedicalTaxonomy;
     use RefreshDatabase;
 
-    private MedicalTaxonomyNode $topic;
+    private Lesson $topic;
 
     protected function setUp(): void
     {
@@ -41,7 +41,6 @@ final class AdminExamManagementTest extends TestCase
         $this->topic = $this->makeMedicalNode([
             'name' => 'Nội tim mạch',
             'slug' => 'noi-tim-mach-exam-test',
-            'node_type' => 'specialty',
             'sort_order' => 1,
         ]);
     }
@@ -90,11 +89,11 @@ final class AdminExamManagementTest extends TestCase
         [$blueprint, $section, $coreTopic] = $this->seedBlueprintTopicMappedTo($this->topic);
 
         $easy = $this->examPoolQuestion('Easy pool 1', Difficulty::Easy);
-        $easy->medicalTaxonomyNodes()->sync([$this->topic->id]);
+        $easy->lessons()->sync([$this->topic->id]);
         $mediumA = $this->examPoolQuestion('Medium pool 1', Difficulty::Medium);
-        $mediumA->medicalTaxonomyNodes()->sync([$this->topic->id]);
+        $mediumA->lessons()->sync([$this->topic->id]);
         $mediumB = $this->examPoolQuestion('Medium pool 2', Difficulty::Medium);
-        $mediumB->medicalTaxonomyNodes()->sync([$this->topic->id]);
+        $mediumB->lessons()->sync([$this->topic->id]);
 
         $response = $this->actingAsStaff($admin)
             ->post(route('admin.exams.store'), [
@@ -141,7 +140,7 @@ final class AdminExamManagementTest extends TestCase
         [$blueprint, $section, $coreTopic] = $this->seedBlueprintTopicMappedTo($this->topic);
 
         $easy = $this->examPoolQuestion('Only one easy', Difficulty::Easy);
-        $easy->medicalTaxonomyNodes()->sync([$this->topic->id]);
+        $easy->lessons()->sync([$this->topic->id]);
 
         $this->actingAsStaff($admin)
             ->post(route('admin.exams.store'), [
@@ -175,9 +174,9 @@ final class AdminExamManagementTest extends TestCase
         [, , $coreTopic] = $this->seedBlueprintTopicMappedTo($this->topic);
 
         $easy = $this->examPoolQuestion('Elig easy', Difficulty::Easy);
-        $easy->medicalTaxonomyNodes()->sync([$this->topic->id]);
+        $easy->lessons()->sync([$this->topic->id]);
         $hard = $this->examPoolQuestion('Elig hard', Difficulty::Hard);
-        $hard->medicalTaxonomyNodes()->sync([$this->topic->id]);
+        $hard->lessons()->sync([$this->topic->id]);
 
         $this->actingAsStaff($admin)
             ->get(route('admin.exams.topic-eligibility', [
@@ -308,7 +307,7 @@ final class AdminExamManagementTest extends TestCase
     /**
      * @return array{0: Blueprint, 1: BlueprintSection, 2: CoreClinicalTopic}
      */
-    private function seedBlueprintTopicMappedTo(MedicalTaxonomyNode $node): array
+    private function seedBlueprintTopicMappedTo(Lesson $node): array
     {
         $blueprint = Blueprint::query()->create([
             'name' => 'Ma trận thi thử',
@@ -333,7 +332,7 @@ final class AdminExamManagementTest extends TestCase
             'sort_order' => 1,
         ]);
 
-        $coreTopic->medicalTaxonomyNodes()->sync([$node->id]);
+        $coreTopic->lessons()->sync([$node->id]);
 
         return [$blueprint, $section, $coreTopic];
     }

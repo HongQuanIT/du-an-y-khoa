@@ -583,14 +583,14 @@ final class GetAdminReportDataAction
     private function contentAccuracy(): array
     {
         $rows = TopicMastery::query()
-            ->select('medical_taxonomy_node_id')
+            ->select('lesson_id')
             ->selectRaw('SUM(attempts) as attempts_total')
             ->selectRaw('SUM(correct) as correct_total')
-            ->groupBy('medical_taxonomy_node_id')
+            ->groupBy('lesson_id')
             ->havingRaw('SUM(attempts) > 0')
             ->orderByDesc('attempts_total')
             ->limit(30)
-            ->with('medicalTaxonomyNode:id,name')
+            ->with('lesson:id,name')
             ->get();
 
         $totalAttempts = (int) $rows->sum('attempts_total');
@@ -601,7 +601,7 @@ final class GetAdminReportDataAction
         $labels = [];
         $values = [];
         foreach ($rows->take(12) as $row) {
-            $name = $row->medicalTaxonomyNode?->name ?? '#'.$row->medical_taxonomy_node_id;
+            $name = $row->lesson?->name ?? '#'.$row->lesson_id;
             $rate = round(((int) $row->correct_total) / max(1, (int) $row->attempts_total) * 100, 1);
             $labels[] = mb_strimwidth($name, 0, 18, '…');
             $values[] = $rate;
@@ -805,22 +805,22 @@ final class GetAdminReportDataAction
     private function learningWeakTopics(): array
     {
         $rows = TopicMastery::query()
-            ->select('medical_taxonomy_node_id')
+            ->select('lesson_id')
             ->selectRaw('SUM(attempts) as attempts_total')
             ->selectRaw('SUM(correct) as correct_total')
             ->selectRaw('AVG(mastery_level) as mastery_avg')
-            ->groupBy('medical_taxonomy_node_id')
+            ->groupBy('lesson_id')
             ->havingRaw('SUM(attempts) >= 5')
             ->orderByRaw('(SUM(correct) * 1.0 / SUM(attempts)) asc')
             ->limit(20)
-            ->with('medicalTaxonomyNode:id,name')
+            ->with('lesson:id,name')
             ->get();
 
         $table = [];
         $labels = [];
         $values = [];
         foreach ($rows as $row) {
-            $name = $row->medicalTaxonomyNode?->name ?? '#'.$row->medical_taxonomy_node_id;
+            $name = $row->lesson?->name ?? '#'.$row->lesson_id;
             $rate = round(((int) $row->correct_total) / max(1, (int) $row->attempts_total) * 100, 1);
             $labels[] = mb_strimwidth($name, 0, 18, '…');
             $values[] = $rate;

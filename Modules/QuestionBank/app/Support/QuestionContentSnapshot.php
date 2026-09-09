@@ -20,11 +20,11 @@ final class QuestionContentSnapshot
         $question->loadMissing([
             'options' => fn ($q) => $q->orderBy('order'),
             'hints',
-            'medicalTaxonomyNodes',
+            'lessons',
             'tags',
         ]);
 
-        $medicalNodeIds = $question->medicalTaxonomyNodes->pluck('id')->map(fn ($id): int => (int) $id)->values()->all();
+        $lessonIds = $question->lessons->pluck('id')->map(fn ($id): int => (int) $id)->values()->all();
 
         return [
             'code' => $question->code,
@@ -40,9 +40,9 @@ final class QuestionContentSnapshot
             'attending_tip' => $question->attending_tip,
             'difficulty' => $question->difficulty->value,
             'core_clinical_topic_ids' => app(QuestionFilterBuilder::class)
-                ->inferredCoreClinicalTopicIds($medicalNodeIds),
-            'medical_taxonomy_node_ids' => $medicalNodeIds,
-            'medical_taxonomy_node_names' => $question->medicalTaxonomyNodes->pluck('name')->values()->all(),
+                ->inferredCoreClinicalTopicIds($lessonIds),
+            'lesson_ids' => $lessonIds,
+            'lesson_names' => $question->lessons->pluck('name')->values()->all(),
             'tag_ids' => $question->tags->pluck('id')->map(fn ($id): int => (int) $id)->values()->all(),
             'is_free' => $question->is_free,
             'exam_flag' => $question->exam_flag,

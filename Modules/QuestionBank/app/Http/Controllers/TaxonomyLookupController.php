@@ -7,12 +7,14 @@ namespace Modules\QuestionBank\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
 use Modules\QuestionBank\Models\Blueprint;
 use Modules\QuestionBank\Models\BlueprintSection;
 use Modules\QuestionBank\Models\CoreClinicalTopic;
-use Modules\QuestionBank\Models\MedicalTaxonomy;
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
+use Modules\QuestionBank\Models\Lesson;
+use Modules\QuestionBank\Models\OrganSystem;
+use Modules\QuestionBank\Models\Subject;
 use Modules\QuestionBank\Models\Tag;
 
 /**
@@ -122,57 +124,99 @@ final class TaxonomyLookupController extends Controller
         return response()->json(['data' => $items]);
     }
 
-    public function medicalTaxonomyNodes(Request $request): JsonResponse
+    public function organSystems(Request $request): JsonResponse
     {
-        $parentId = $request->filled('parent_id') ? (int) $request->query('parent_id') : null;
-        $includeDescendants = $request->boolean('include_descendants');
-        $canonical = MedicalTaxonomy::canonical();
-
-        $query = MedicalTaxonomyNode::query()
+        $items = OrganSystem::query()
             ->where('status', TaxonomyStatus::Active)
+            ->when($request->filled('q'), function ($query) use ($request): void {
+                $term = '%'.trim((string) $request->query('q')).'%';
+                $query->where('name', 'like', $term);
+            })
             ->orderBy('sort_order')
-            ->orderBy('name');
+            ->orderBy('name')
+            ->limit(200)
+            ->get(['id', 'name', 'slug', 'code']);
 
-        if ($canonical !== null) {
-            $query->where('medical_taxonomy_id', $canonical->id);
-        }
+        return response()->json(['data' => $items]);
+    }
 
-        $types = [];
-        if ($request->filled('node_type')) {
-            $types = collect(explode(',', (string) $request->query('node_type')))
-                ->map(fn (string $type): string => trim($type))
-                ->filter()
-                ->values()
+    public function subjects(Request $request): JsonResponse
+    {
+        $query = Subject::query()
+            ->where('status', TaxonomyStatus::Active)
+            ->when($request->filled('q'), function ($builder) use ($request): void {
+                $term = '%'.trim((string) $request->query('q')).'%';
+                $builder->where('name', 'like', $term);
+            });
+
+        if ($request->filled('organ_system_id')) {
+            $organSystemId = (int) $request->query('organ_system_id');
+            $subjectIds = DB::table('subject_organ_system')
+                ->where('organ_system_id', $organSystemId)
+                ->pluck('subject_id')
                 ->all();
-
-            if ($types !== []) {
-                $query->whereIn('node_type', $types);
-            }
+            $query->whereIn('id', $subjectIds);
         }
 
-        if ($request->filled('q')) {
-            $term = '%'.trim((string) $request->query('q')).'%';
-            $query->where('name', 'like', $term)->limit(50);
-        } elseif ($types !== []) {
-            $query->limit(100);
-        } elseif ($includeDescendants) {
-            $query->limit(200);
-        } else {
-            $query->where('parent_id', $parentId)->limit(100);
+        $items = $query->orderBy('sort_order')->orderBy('name')->limit(300)
+            ->get(['id', 'name', 'slug', 'code']);
+
+        return response()->json(['data' => $items]);
+    }
+
+    public function lessons(Request $request): JsonResponse
+    {
+        $query = Lesson::query()
+            ->where('status', TaxonomyStatus::Active)
+            ->when($request->filled('q'), function ($builder) use ($request): void {
+                $term = '%'.trim((string) $request->query('q')).'%';
+                $builder->where('name', 'like', $term);
+            });
+
+        if ($request->filled('subject_id')) {
+            $subjectId = (int) $request->query('subject_id');
+            $lessonIds = DB::table('lesson_subject')
+                ->where('subject_id', $subjectId)
+                ->pluck('lesson_id')
+                ->all();
+            $query->whereIn('id', $lessonIds);
         }
 
-        $items = $query->get(['id', 'parent_id', 'medical_taxonomy_id', 'name', 'slug', 'node_type'])
-            ->map(fn (MedicalTaxonomyNode $node): array => [
-                'id' => $node->id,
-                'parent_id' => $node->parent_id,
-                'medical_taxonomy_id' => $node->medical_taxonomy_id,
-                'name' => $node->name,
-                'slug' => $node->slug,
-                'node_type' => $node->node_type,
-                'has_children' => MedicalTaxonomyNode::query()
-                    ->where('parent_id', $node->id)
-                    ->where('status', TaxonomyStatus::Active)
-                    ->exists(),
+        if ($request->filled('organ_system_id')) {
+            $organSystemId = (int) $request->query('organ_system_id');
+            $subjectIds = DB::table('subject_organ_system')
+                ->where('organ_system_id', $organSystemId)
+                ->pluck('subject_id')
+                ->all();
+            $lessonIds = DB::table('lesson_subject')
+                ->whereIn('subject_id', $subjectIds)
+                ->pluck('lesson_id')
+                ->all();
+            $query->whereIn('id', $lessonIds);
+        }
+
+        $limit = $request->filled('q') ? 50 : 300;
+
+        $items = $query
+            ->with([
+                'subjects:id,name',
+                'subjects.organSystems:id,name',
+            ])
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->limit($limit)
+            ->get(['id', 'name', 'slug', 'code'])
+            ->map(fn (Lesson $lesson): array => [
+                'id' => $lesson->id,
+                'name' => $lesson->name,
+                'slug' => $lesson->slug,
+                'code' => $lesson->code,
+                'subject_names' => $lesson->subjects->pluck('name')->unique()->values()->all(),
+                'organ_system_names' => $lesson->subjects
+                    ->flatMap(fn (Subject $subject) => $subject->organSystems->pluck('name'))
+                    ->unique()
+                    ->values()
+                    ->all(),
             ]);
 
         return response()->json(['data' => $items]);

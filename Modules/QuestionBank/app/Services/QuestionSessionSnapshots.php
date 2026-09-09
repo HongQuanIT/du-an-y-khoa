@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\QuestionBank\Services;
 
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
+use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionOption;
 use Modules\QuestionBank\Models\QuestionSession;
@@ -24,7 +24,7 @@ final class QuestionSessionSnapshots
         $questions = Question::query()
             ->with([
                 'options' => fn ($query) => $query->orderBy('order'),
-                'medicalTaxonomyNodes',
+                'lessons',
             ])
             ->whereIn('id', $questionIds)
             ->get()
@@ -66,7 +66,7 @@ final class QuestionSessionSnapshots
         $liveQuestions = Question::query()
             ->with([
                 'options' => fn ($query) => $query->orderBy('order'),
-                'medicalTaxonomyNodes',
+                'lessons',
             ])
             ->whereIn('id', $missingIds)
             ->get()
@@ -142,7 +142,7 @@ final class QuestionSessionSnapshots
             $liveQuestions = Question::withTrashed()
                 ->with([
                     'options' => fn ($query) => $query->orderBy('order'),
-                    'medicalTaxonomyNodes',
+                    'lessons',
                 ])
                 ->whereIn('id', $missing)
                 ->get()
@@ -164,7 +164,7 @@ final class QuestionSessionSnapshots
     /** @return array<string, mixed> */
     private function payload(Question $question, string $sessionKey): array
     {
-        $nodes = $question->medicalTaxonomyNodes;
+        $lessons = $question->lessons;
         $options = $question->optionsForSession($sessionKey);
 
         return [
@@ -176,22 +176,13 @@ final class QuestionSessionSnapshots
             'attending_tip' => $question->attending_tip,
             'difficulty' => $question->difficulty->value,
             'status' => $question->status->value,
-            'medical_taxonomy_node_ids' => $nodes->pluck('id')->map(fn ($id): int => (int) $id)->values()->all(),
+            'lesson_ids' => $lessons->pluck('id')->map(fn ($id): int => (int) $id)->values()->all(),
             'is_free' => (bool) $question->is_free,
             'version' => (int) $question->version,
-            'medical_taxonomy_nodes' => $nodes->map(fn (MedicalTaxonomyNode $node): array => [
-                'id' => (int) $node->getKey(),
-                'name' => (string) $node->name,
-                'slug' => (string) $node->slug,
-                'node_type' => (string) ($node->node_type ?? ''),
-                'is_primary' => (bool) ($node->pivot?->is_primary ?? false),
-            ])->values()->all(),
-            // Backward-compatible keys for older review UIs.
-            'topics' => $nodes->map(fn (MedicalTaxonomyNode $node): array => [
-                'id' => (int) $node->getKey(),
-                'name' => (string) $node->name,
-                'slug' => (string) $node->slug,
-                'type' => (string) ($node->node_type ?? ''),
+            'lessons' => $lessons->map(fn (Lesson $lesson): array => [
+                'id' => (int) $lesson->getKey(),
+                'name' => (string) $lesson->name,
+                'slug' => (string) $lesson->slug,
             ])->values()->all(),
             'options' => $options->map(fn (QuestionOption $option): array => [
                 'id' => (int) $option->getKey(),
@@ -230,31 +221,23 @@ final class QuestionSessionSnapshots
         });
         $question->setRelation('options', $options);
 
-        $nodesData = $payload['medical_taxonomy_nodes'] ?? $payload['topics'] ?? [];
-        if (! is_array($nodesData)) {
-            $nodesData = [];
+        $lessonsData = $payload['lessons'] ?? [];
+        if (! is_array($lessonsData)) {
+            $lessonsData = [];
         }
 
-        $nodes = collect($nodesData)->map(function (array $data): MedicalTaxonomyNode {
-            $node = new MedicalTaxonomyNode;
-            $node->forceFill([
+        $lessons = collect($lessonsData)->map(function (array $data): Lesson {
+            $lesson = new Lesson;
+            $lesson->forceFill([
                 'id' => $data['id'] ?? null,
                 'name' => $data['name'] ?? '',
                 'slug' => $data['slug'] ?? '',
-                'node_type' => $data['node_type'] ?? $data['type'] ?? null,
             ]);
 
-            // Preserve pivot meta so session chrome can prefer the primary topic.
-            if (array_key_exists('is_primary', $data)) {
-                $pivot = new \stdClass;
-                $pivot->is_primary = (bool) $data['is_primary'];
-                $node->setRelation('pivot', $pivot);
-            }
-
-            return $node;
+            return $lesson;
         })->values();
 
-        $question->setRelation('medicalTaxonomyNodes', $nodes);
+        $question->setRelation('lessons', $lessons);
 
         return $question;
     }

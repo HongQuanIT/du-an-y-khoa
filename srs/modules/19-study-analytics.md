@@ -3,7 +3,7 @@
 **Nhóm:** Personal · **Ưu tiên:** Cao · **Phụ thuộc:** Session (06), Weak Topics (20), Performance (21), Heatmap (22) · **Trạng thái:** ✅
 
 ## 0. Tóm tắt module
-Trang phân tích học tập tổng thể: tiến trình theo thời gian, correct rate theo chủ đề, thời gian học, so sánh peer (Premium), dự báo mục tiêu. Nguồn dữ liệu từ rollup (`daily_stats`, `topic_mastery`).
+Trang phân tích học tập tổng thể: tiến trình theo thời gian, correct rate theo Bài học/Môn học/Hệ cơ quan, thời gian học, so sánh peer (Premium), dự báo mục tiêu. Nguồn dữ liệu từ rollup (`daily_stats`, `topic_mastery` — rollup theo `lesson_id`).
 
 | Route | Màn hình |
 |-------|----------|
@@ -20,7 +20,7 @@ Trang phân tích học tập tổng thể: tiến trình theo thời gian, corr
 |-----------|-----------|-------------|-----------|
 | **KPI cards** | Tổng câu, correct rate, giờ học, streak | Luôn | Grid |
 | **Progress chart** | Correct rate/khối lượng theo thời gian | Tab progress | Chart.js |
-| **Topic performance** | Bar/table correct rate theo chủ đề | Tab topics | Cuộn |
+| **Topic performance** | Bar/table correct rate theo Bài học/Môn học/Hệ cơ quan | Tab topics | Cuộn |
 | **Time analysis** | Giờ học theo ngày/giờ trong ngày | Tab time | Chart |
 | **Peer comparison** | Percentile vs cohort (Premium) | Tab peer | Chart |
 | **Date range filter** | 7d/30d/all/custom | Luôn | — |
@@ -51,7 +51,7 @@ Premium: xem percentile so cohort → điều chỉnh Study Plan.
 | Method | URL | Response | Quyền |
 |--------|-----|----------|-------|
 | GET | `/api/v1/analytics/overview?range=` | KPI + trend | Auth |
-| GET | `/api/v1/analytics/topics?range=` | performance theo topic | Auth |
+| GET | `/api/v1/analytics/topics?range=` | performance theo Bài học/Môn học/Hệ cơ quan | Auth |
 | GET | `/api/v1/analytics/time?range=` | phân bố thời gian | Auth |
 | GET | `/api/v1/analytics/peer?range=` | percentile | Premium |
 | POST | `/api/v1/analytics/export` | job export | Premium |

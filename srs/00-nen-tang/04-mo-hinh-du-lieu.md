@@ -98,18 +98,26 @@ Index: `status`, `exam_flag`, `(status, exam_flag, created_at)`, `difficulty`, `
 
 Khi tạo session / live classroom: đáp án được đảo theo seed ổn định (`sessionKey|questionId`); chữ A/B/C **gán lại theo vị trí hiển thị**. Snapshot phiên lưu `options[].id` + display `label`. Chấm điểm luôn so khớp `option.id`, không dựa vào chữ cái.
 
-### Topic (chuyên ngành/chủ đề — **phân cấp cha–con**)
-`id, parent_id FK null, name, slug, type(specialty/system/subtopic), order, icon, depth INT null, timestamps`.
-- Cây không giới hạn độ sâu (khuyến nghị 2–3 cấp: chuyên ngành → hệ → subtopic).
-- Index: `parent_id`, `(parent_id, order)`.
-- Filter Qbank/exam: chọn topic **cha** → bao gồm mọi **topic con** (descendants).
-- Ví dụ: Nội → Tiêu hóa → Viêm gan.
+### Phân loại nội dung 3 cấp — **organ_systems → subjects → lessons** (DAG đa cha)
+Phân loại nội dung chuẩn hóa thành **DAG 3 cấp** (đa cha), thay cho cây `topics` cũ. Ba bảng có **cùng cấu trúc cột**:
+`id, name, slug UNIQUE, code null, description null, status(active/inactive), sort_order, timestamps`.
 
-### QuestionTopic (pivot)
-`question_id, topic_id, is_primary BOOL`.
+- **organ_systems** (Hệ cơ quan) — cấp trên cùng.
+- **subjects** (Môn học) — nhóm các bài học.
+- **lessons** (Bài học) — **đơn vị kiến thức chuẩn**; câu hỏi gắn ở đây.
 
-### Tag
-`id, name, slug, type(keyword/high_yield/...)`. Pivot `question_tag`.
+Quan hệ (đều many-to-many → DAG):
+- `lesson_subject` (`lesson_id`, `subject_id`, `sort_order`, timestamps) — 1 bài học thuộc **nhiều** môn học.
+- `subject_organ_system` (`subject_id`, `organ_system_id`, `sort_order`, timestamps) — 1 môn học thuộc **nhiều** hệ cơ quan.
+- ⇒ 1 bài học có thể thuộc **nhiều hệ cơ quan** (suy ra qua các môn học).
+- Filter Qbank/exam: chọn Hệ cơ quan → Môn học → Bài học; chọn cấp trên bao gồm mọi bài học con (qua pivot).
+- Ví dụ: Tiêu hóa (hệ) → Nội tiêu hóa (môn) → Viêm gan virus (bài).
+
+### QuestionLesson (pivot — câu hỏi ↔ bài học)
+`question_id (uuid), lesson_id, timestamps`. Câu hỏi gắn **≥1 bài học** (các bài ngang hàng, không phân biệt primary). Thay cho `question_topics` cũ.
+
+### Tag (trục gắn thẻ trực giao — triệu chứng/khái niệm…)
+`id, name, slug, type, description null, status`. `type` ∈ {symptom (Triệu chứng), sign (Dấu hiệu), clinical_finding, lab_finding, imaging_finding, concept (Khái niệm), procedure, drug, high_yield, other}. Pivot `question_tags`. **Trục độc lập** với phân loại 3 cấp — dùng lọc chéo theo triệu chứng/khái niệm, không thay thế Bài học.
 
 ### QuestionReport (báo lỗi câu hỏi)
 `id, question_id, user_id, reason(enum), detail TEXT, status(open/reviewing/resolved/rejected), resolved_by, resolution TEXT, timestamps`.
@@ -232,7 +240,7 @@ Có thể dùng `Article(type=procedure)` + field mở rộng: `steps JSON, indi
 `id, study_plan_id, date, type(questions/read/flashcards/review), target INT, done INT, status(pending/done/skipped), ref JSON, timestamps`.
 
 ### TopicMastery (Weak Topics / Heatmap nguồn)
-`id, user_id, topic_id, attempts, correct, correct_rate DECIMAL, mastery_level(0-5), last_activity_at, trend JSON, updated_at`. Unique `(user_id, topic_id)`.
+`id, user_id, lesson_id, attempts, correct, correct_rate DECIMAL, mastery_level(0-5), last_activity_at, trend JSON, updated_at`. Unique `(user_id, lesson_id)`. Mastery **rollup theo `lesson_id`** (Bài học); có thể tổng hợp lên Môn học/Hệ cơ quan qua pivot khi hiển thị.
 
 ### DailyStat (analytics rollup)
 `id, user_id, date, questions_answered, correct, minutes, sessions, avg_time, streak_flag, timestamps`. Unique `(user_id, date)`.
@@ -276,11 +284,14 @@ Index: `host_user_id`, `visibility`, `status`, `join_code`.
 ### Exam (đề mẫu/kỳ thi)
 `id, uuid, title, type(mock/self_assessment/org_exam), description, duration_minutes, pass_score, available_from/to, access_type, is_premium, status(draft/published/archived), created_by, timestamps, soft delete`.
 
-### ExamTopic (phân bổ câu theo chủ đề — admin config)
-`id, exam_id FK, topic_id FK, question_count INT, sort_order INT`. Unique `(exam_id, topic_id)`.
+### Blueprint / CoreClinicalTopic (ma trận thi — trục riêng)
+Ma trận thi tách khỏi phân loại nội dung: `blueprints` → `blueprint_sections` → `core_clinical_topics` (CCT). CCT **map sang Bài học** qua pivot `core_topic_lessons` (`core_clinical_topic_id`, `lesson_id`, timestamps) — thay cho `core_topic_medical_taxonomy_nodes` cũ; và map sang Tag qua `core_topic_tags`. Câu hỏi **không** gắn trực tiếp CCT; eligibility suy ra qua bài học/tag đã map.
+
+### ExamTopic (phân bổ câu theo CCT — admin config)
+`id, exam_id FK, core_clinical_topic_id FK, question_count INT, sort_order INT`. Unique `(exam_id, core_clinical_topic_id)`.
 
 ### ExamQuestion (câu đã generate — snapshot cố định)
-`id, exam_id FK, question_id FK, topic_id FK, sort_order INT`. Unique `(exam_id, question_id)`.
+`id, exam_id FK, question_id FK, core_clinical_topic_id FK null, sort_order INT`. Unique `(exam_id, question_id)`.
 
 ### ExamAttempt
 `id, uuid, exam_id, user_id, session_id FK, score, percentile, status(scheduled/in_progress/submitted/graded), started_at, submitted_at, timestamps`.
@@ -341,14 +352,14 @@ Index: `host_user_id`, `visibility`, `status`, `join_code`.
 
 ```
 User ─┬─< QuestionSession ─< QuestionAttempt >─ Question ─< QuestionOption
-      │                                   │           ├─< QuestionTopic >─ Topic
-      ├─< QuestionStatus >─ Question       │           └─< question_tag >─ Tag
+      │                                   │           ├─< QuestionLesson >─ Lesson >─< Subject >─< OrganSystem
+      ├─< QuestionStatus >─ Question       │           └─< question_tags >─ Tag
       ├─< Note (poly)                      └─ (flagged/report) QuestionReport
       ├─< Bookmark (poly) ─ BookmarkFolder
       ├─< Highlight (poly)
       ├─< Flashcard ─< FlashcardReview ; Flashcard ─ FlashcardDeck
       ├─< StudyPlan ─< StudyPlanTask
-      ├─< TopicMastery >─ Topic
+      ├─< TopicMastery >─ Lesson
       ├─< DailyStat
       ├─< ExamAttempt >─ Exam
       ├─ Subscription ─ Plan ; Subscription ─< Invoice ─< Payment

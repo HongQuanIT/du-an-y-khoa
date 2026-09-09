@@ -16,9 +16,8 @@ use Modules\QuestionBank\Enums\SessionMode;
 use Modules\QuestionBank\Enums\SessionSource;
 use Modules\QuestionBank\Enums\SessionStatus;
 use Modules\QuestionBank\Enums\UserQuestionStatus;
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
+use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\QuestionSession;
-use Modules\QuestionBank\Support\QuestionFilterBuilder;
 use RuntimeException;
 
 final class WeakTopicSessionController extends Controller
@@ -26,12 +25,11 @@ final class WeakTopicSessionController extends Controller
     public function __construct(
         private readonly CreateQuestionSessionAction $createSession,
         private readonly RepeatQuestionSessionAction $repeatSession,
-        private readonly QuestionFilterBuilder $filters,
     ) {}
 
     public function __invoke(
         Request $request,
-        MedicalTaxonomyNode $medicalTaxonomyNode,
+        Lesson $lesson,
     ): RedirectResponse {
         $validated = $request->validate([
             'count' => ['nullable', 'integer', 'min:1', 'max:20'],
@@ -40,7 +38,7 @@ final class WeakTopicSessionController extends Controller
 
         $examOrigin = $this->latestExamOrigin(
             (int) $request->user()->getKey(),
-            (int) $medicalTaxonomyNode->getKey(),
+            (int) $lesson->getKey(),
         );
 
         if ($examOrigin !== null) {
@@ -66,7 +64,7 @@ final class WeakTopicSessionController extends Controller
                 mode: SessionMode::Study,
                 source: SessionSource::WeakTopics,
                 count: $count,
-                medicalTaxonomyNodeIds: [(int) $medicalTaxonomyNode->getKey()],
+                lessonIds: [(int) $lesson->getKey()],
             ));
         } catch (RuntimeException $exception) {
             throw ValidationException::withMessages([
@@ -76,16 +74,15 @@ final class WeakTopicSessionController extends Controller
 
         return redirect()
             ->route('qbank.session', $session)
-            ->with('status', 'Đã tạo phiên luyện các câu cần cải thiện trong chủ đề '.$medicalTaxonomyNode->name.'.');
+            ->with('status', 'Đã tạo phiên luyện các câu cần cải thiện trong bài học '.$lesson->name.'.');
     }
 
     /** @return array{session: QuestionSession, question_ids: list<string>}|null */
-    private function latestExamOrigin(int $userId, int $medicalTaxonomyNodeId): ?array
+    private function latestExamOrigin(int $userId, int $lessonId): ?array
     {
-        $nodeIds = $this->filters->expandMedicalTaxonomyNodes([$medicalTaxonomyNodeId]);
         $rows = DB::table('question_attempts')
             ->join('question_sessions', 'question_sessions.id', '=', 'question_attempts.session_id')
-            ->join('question_medical_topics', 'question_medical_topics.question_id', '=', 'question_attempts.question_id')
+            ->join('question_lesson', 'question_lesson.question_id', '=', 'question_attempts.question_id')
             ->join('question_status', function ($join): void {
                 $join->on('question_status.question_id', '=', 'question_attempts.question_id')
                     ->on('question_status.user_id', '=', 'question_attempts.user_id');
@@ -96,7 +93,7 @@ final class WeakTopicSessionController extends Controller
             ->where('question_sessions.status', SessionStatus::Completed->value)
             ->where('question_status.status', UserQuestionStatus::Incorrect->value)
             ->whereColumn('question_status.last_attempt_at', 'question_attempts.answered_at')
-            ->whereIn('question_medical_topics.medical_taxonomy_node_id', $nodeIds)
+            ->where('question_lesson.lesson_id', $lessonId)
             ->orderByDesc('question_attempts.answered_at')
             ->orderByDesc('question_attempts.id')
             ->get(['question_attempts.session_id', 'question_attempts.question_id']);

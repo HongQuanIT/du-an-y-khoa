@@ -33,7 +33,7 @@ erDiagram
     QUESTION_SESSION ||--o{ QUESTION_ATTEMPT : "gồm"
     QUESTION ||--o{ QUESTION_OPTION : "có đáp án"
     QUESTION ||--o{ QUESTION_ATTEMPT : "được trả lời"
-    QUESTION }o--o{ TOPIC : "gắn chủ đề"
+    QUESTION }o--o{ LESSON : "gắn bài học"
 
     EXAM ||--o{ EXAM_ATTEMPT : "sinh"
     EXAM_ATTEMPT ||--|| QUESTION_SESSION : "dùng"
@@ -123,11 +123,12 @@ erDiagram
 ```mermaid
 erDiagram
     QUESTION ||--o{ QUESTION_OPTION : "có"
-    QUESTION }o--o{ TOPIC : "question_topic"
+    QUESTION }o--o{ LESSON : "question_lesson"
     QUESTION }o--o{ TAG : "question_tag"
     QUESTION ||--o{ QUESTION_REPORT : "bị báo lỗi"
     QUESTION ||--o{ QUESTION_VERSION : "phiên bản"
-    TOPIC ||--o{ TOPIC : "parent (phân cấp)"
+    LESSON }o--o{ SUBJECT : "lesson_subject"
+    SUBJECT }o--o{ ORGAN_SYSTEM : "subject_organ_system"
 
     USER ||--o{ QUESTION_SESSION : "tạo"
     QUESTION_SESSION ||--o{ QUESTION_ATTEMPT : "gồm"
@@ -165,19 +166,38 @@ erDiagram
         text explanation
         int order
     }
-    TOPIC {
+    ORGAN_SYSTEM {
         bigint id PK
-        bigint parent_id FK
         string name
-        string slug
-        string type "specialty/system/subtopic"
-        int order
+        string slug UK
+        string code "null"
+        text description "null"
+        string status "active/inactive"
+        int sort_order
+    }
+    SUBJECT {
+        bigint id PK
+        string name
+        string slug UK
+        string code "null"
+        text description "null"
+        string status "active/inactive"
+        int sort_order
+    }
+    LESSON {
+        bigint id PK
+        string name
+        string slug UK
+        string code "null"
+        text description "null"
+        string status "active/inactive"
+        int sort_order
     }
     TAG {
         bigint id PK
         string name
         string slug
-        string type
+        string type "symptom/sign/concept/high_yield/..."
     }
     QUESTION_REPORT {
         bigint id PK
@@ -446,8 +466,8 @@ erDiagram
 erDiagram
     USER ||--o{ STUDY_PLAN : "sở hữu"
     STUDY_PLAN ||--o{ STUDY_PLAN_TASK : "gồm"
-    USER ||--o{ TOPIC_MASTERY : "theo chủ đề"
-    TOPIC ||--o{ TOPIC_MASTERY : "được đo"
+    USER ||--o{ TOPIC_MASTERY : "theo bài học"
+    LESSON ||--o{ TOPIC_MASTERY : "được đo"
     USER ||--o{ DAILY_STAT : "theo ngày"
 
     STUDY_PLAN {
@@ -475,7 +495,7 @@ erDiagram
     TOPIC_MASTERY {
         bigint id PK
         bigint user_id FK
-        bigint topic_id FK
+        bigint lesson_id FK
         int attempts
         int correct
         decimal correct_rate
@@ -508,8 +528,9 @@ erDiagram
 erDiagram
     EXAM ||--o{ EXAM_TOPIC : "phan bo"
     EXAM ||--o{ EXAM_QUESTION : "snapshot cau"
-    EXAM_TOPIC }o--|| TOPIC : "topic_id"
+    EXAM_TOPIC }o--|| CORE_CLINICAL_TOPIC : "core_clinical_topic_id"
     EXAM_QUESTION }o--|| QUESTION : "question_id"
+    CORE_CLINICAL_TOPIC }o--o{ LESSON : "core_topic_lessons"
     EXAM ||--o{ EXAM_ATTEMPT : "sinh ra"
     USER ||--o{ EXAM_ATTEMPT : "thuc hien"
     EXAM_ATTEMPT ||--|| QUESTION_SESSION : "dung engine"
@@ -532,7 +553,7 @@ erDiagram
     EXAM_TOPIC {
         bigint id PK
         bigint exam_id FK
-        bigint topic_id FK
+        bigint core_clinical_topic_id FK
         int question_count
         int sort_order
     }
@@ -540,8 +561,15 @@ erDiagram
         bigint id PK
         bigint exam_id FK
         bigint question_id FK
-        bigint topic_id FK
+        bigint core_clinical_topic_id FK "null"
         int sort_order
+    }
+    CORE_CLINICAL_TOPIC {
+        bigint id PK
+        bigint blueprint_section_id FK
+        string name
+        string slug
+        string status
     }
     EXAM_ATTEMPT {
         bigint id PK

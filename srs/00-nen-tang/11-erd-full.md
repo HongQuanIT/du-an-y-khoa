@@ -22,11 +22,12 @@ erDiagram
 
     %% ===================== QUESTION & LEARNING =====================
     QUESTION ||--o{ QUESTION_OPTION : "co dap an"
-    QUESTION }o--o{ TOPIC : "question_topic"
+    QUESTION }o--o{ LESSON : "question_lesson"
     QUESTION }o--o{ TAG : "question_tag"
     QUESTION ||--o{ QUESTION_REPORT : "bi bao loi"
     QUESTION ||--o{ QUESTION_VERSION : "phien ban"
-    TOPIC ||--o{ TOPIC : "parent"
+    LESSON }o--o{ SUBJECT : "lesson_subject"
+    SUBJECT }o--o{ ORGAN_SYSTEM : "subject_organ_system"
     USER ||--o{ QUESTION_SESSION : "tao"
     QUESTION_SESSION ||--o{ QUESTION_ATTEMPT : "gom"
     QUESTION ||--o{ QUESTION_ATTEMPT : "duoc tra loi"
@@ -61,8 +62,8 @@ erDiagram
     %% ===================== STUDY PLAN & ANALYTICS =====================
     USER ||--o{ STUDY_PLAN : "so huu"
     STUDY_PLAN ||--o{ STUDY_PLAN_TASK : "gom"
-    USER ||--o{ TOPIC_MASTERY : "theo chu de"
-    TOPIC ||--o{ TOPIC_MASTERY : "duoc do"
+    USER ||--o{ TOPIC_MASTERY : "theo bai hoc"
+    LESSON ||--o{ TOPIC_MASTERY : "duoc do"
     USER ||--o{ DAILY_STAT : "theo ngay"
 
     %% ===================== EXAM =====================
@@ -146,16 +147,32 @@ erDiagram
         bool is_correct
         int order
     }
-    TOPIC {
+    ORGAN_SYSTEM {
         bigint id PK
-        bigint parent_id FK
         string name
-        string type
+        string slug UK
+        string status "active/inactive"
+        int sort_order
+    }
+    SUBJECT {
+        bigint id PK
+        string name
+        string slug UK
+        string status "active/inactive"
+        int sort_order
+    }
+    LESSON {
+        bigint id PK
+        string name
+        string slug UK
+        string status "active/inactive"
+        int sort_order
     }
     TAG {
         bigint id PK
         string name
         string slug
+        string type "symptom/sign/concept/high_yield/..."
     }
     QUESTION_REPORT {
         bigint id PK
@@ -343,7 +360,7 @@ erDiagram
     TOPIC_MASTERY {
         bigint id PK
         bigint user_id FK
-        bigint topic_id FK
+        bigint lesson_id FK
         decimal correct_rate
         int mastery_level
     }

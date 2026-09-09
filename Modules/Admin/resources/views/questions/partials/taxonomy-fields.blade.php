@@ -1,17 +1,28 @@
 @php
-    $medicalNodes = $question->relationLoaded('medicalTaxonomyNodes')
-        ? $question->medicalTaxonomyNodes
+    $lessons = $question->relationLoaded('lessons')
+        ? $question->lessons
         : collect();
 
-    $selectedMedicalNodes = $medicalNodes->map(fn ($n) => [
-        'id' => $n->id,
-        'name' => $n->name,
-        'node_type' => $n->node_type,
+    $selectedLessons = $lessons->map(fn ($l) => [
+        'id' => (int) $l->id,
+        'name' => $l->name,
+        'subject_names' => $l->relationLoaded('subjects')
+            ? $l->subjects->pluck('name')->unique()->values()->all()
+            : [],
+        'organ_system_names' => $l->relationLoaded('subjects')
+            ? $l->subjects
+                ->flatMap(fn ($s) => $s->relationLoaded('organSystems')
+                    ? $s->organSystems->pluck('name')
+                    : collect())
+                ->unique()
+                ->values()
+                ->all()
+            : [],
     ])->values()->all();
 
-    $selectedMedicalNodeIds = collect(old(
-        'medical_taxonomy_node_ids',
-        $medicalNodes->pluck('id')->all(),
+    $selectedLessonIds = collect(old(
+        'lesson_ids',
+        $lessons->pluck('id')->all(),
     ))->map(fn ($id) => (int) $id)->unique()->values()->all();
 
     $selectedTags = $question->relationLoaded('tags')
@@ -33,22 +44,117 @@
 @endphp
 
 <div class="space-y-4 border-t border-outline-variant pt-3"
-     x-data="questionTaxonomyPicker({
-         selectedMedicalNodes: @js(collect($selectedMedicalNodes)->keyBy('id')->all()),
-         selectedMedicalNodeIds: @js($selectedMedicalNodeIds),
+     x-data="questionLessonPicker({
+         selectedLessons: @js(collect($selectedLessons)->keyBy('id')->all()),
+         selectedLessonIds: @js($selectedLessonIds),
          selectedTags: @js(collect($selectedTags)->keyBy('id')->all()),
          selectedTagIds: @js($selectedTagIds),
          inferredCoreTopics: @js($inferredCoreTopics),
-         nodeTypeLabels: @js(\Modules\QuestionBank\Support\MedicalTaxonomyNodeTypes::LABELS),
          urls: {
-             medicalNodes: @js(route('admin.taxonomy.lookups.medical-nodes')),
+             organSystems: @js(route('admin.taxonomy.lookups.organ-systems')),
+             subjects: @js(route('admin.taxonomy.lookups.subjects')),
+             lessons: @js(route('admin.taxonomy.lookups.lessons')),
              tags: @js(route('admin.taxonomy.lookups.tags')),
          },
      })">
     <p class="text-[11px] leading-4 text-on-surface-variant">
-        Gắn câu hỏi vào <strong>danh mục y khoa</strong> (bắt buộc) và thẻ.
-        Chủ đề lâm sàng trên ma trận đề thi được suy ra tự động qua liên kết CCT ↔ danh mục/tag — không gắn trực tiếp từng câu.
+        Câu hỏi gắn một hoặc nhiều <strong>bài học</strong> (bắt buộc), không phân biệt chính/phụ.
+        Môn học và hệ cơ quan được suy ra từ bài học đã chọn — không gắn trực tiếp.
+        Chủ đề lâm sàng trên ma trận đề thi suy ra qua liên kết CCT ↔ bài học/tag.
     </p>
+
+    <div>
+        <label class="mb-1 block text-xs font-semibold text-on-surface-variant">Bài học *</label>
+        <input type="search" x-model="lessonSearch" @input.debounce.300ms="searchLessons()"
+               placeholder="Tìm bài học (tăng huyết áp, viêm phổi…)"
+               class="mb-2 h-10 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm">
+
+        <details class="mb-2 rounded-lg border border-outline-variant/70 bg-surface-container-low/40">
+            <summary class="cursor-pointer px-3 py-2 text-[11px] font-medium text-on-surface-variant">
+                Lọc tìm kiếm (tuỳ chọn) — hệ cơ quan / môn học
+            </summary>
+            <div class="grid grid-cols-1 gap-2 border-t border-outline-variant/60 p-3 sm:grid-cols-2">
+                <div>
+                    <label class="mb-1 block text-[11px] text-on-surface-variant">Hệ cơ quan</label>
+                    <select x-model.number="organSystemId" @change="onOrganSystemChange()"
+                            class="h-9 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm">
+                        <option :value="null">— Tất cả —</option>
+                        <template x-for="os in organSystems" :key="'os-'+os.id">
+                            <option :value="os.id" x-text="os.name"></option>
+                        </template>
+                    </select>
+                </div>
+                <div>
+                    <label class="mb-1 block text-[11px] text-on-surface-variant">Môn học</label>
+                    <select x-model.number="subjectId" @change="onSubjectChange()"
+                            class="h-9 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm">
+                        <option :value="null">— Tất cả —</option>
+                        <template x-for="s in subjects" :key="'sub-'+s.id">
+                            <option :value="s.id" x-text="s.name"></option>
+                        </template>
+                    </select>
+                </div>
+            </div>
+        </details>
+
+        <div class="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-outline-variant p-2">
+            <template x-for="lesson in lessonResults" :key="'lesson-'+lesson.id">
+                <label class="flex cursor-pointer items-start gap-2 rounded px-2 py-1.5 text-sm hover:bg-surface-container-low">
+                    <input type="checkbox" :checked="selectedLessonIds.includes(lesson.id)"
+                           @change="toggleLesson(lesson)" class="mt-0.5 size-4 rounded text-primary">
+                    <span class="min-w-0 flex-1">
+                        <span class="block font-medium" x-text="lesson.name"></span>
+                        <span class="block text-[11px] text-on-surface-variant"
+                              x-show="(lesson.subject_names || []).length || (lesson.organ_system_names || []).length"
+                              x-text="lessonContext(lesson)"></span>
+                    </span>
+                </label>
+            </template>
+            <p x-show="lessonResults.length === 0" class="px-2 py-1 text-[11px] text-on-surface-variant">
+                Không có bài học phù hợp.
+            </p>
+        </div>
+
+        <div class="mt-2 flex flex-wrap gap-1.5">
+            <template x-for="id in selectedLessonIds" :key="'lesson-chip-'+id">
+                <span class="inline-flex max-w-full items-center gap-1 rounded-lg bg-surface-container px-2 py-1 text-xs font-medium text-on-surface">
+                    <span class="min-w-0 truncate" x-text="selectedLessons[id]?.name || ('#'+id)"></span>
+                    <button type="button" @click="removeLesson(id)" class="material-symbols-outlined shrink-0 text-[14px]">close</button>
+                </span>
+            </template>
+        </div>
+        <p class="mt-1 text-[10px] text-on-surface-variant"
+           x-show="selectedLessonIds.length"
+           x-text="selectedLessonIds.map(id => lessonContext(selectedLessons[id] || {})).filter(Boolean).join(' · ')"></p>
+
+        <template x-for="id in selectedLessonIds" :key="'lesson-input-'+id">
+            <input type="hidden" name="lesson_ids[]" :value="id">
+        </template>
+        <p x-show="selectedLessonIds.length === 0" class="mt-1 text-xs text-error">Chọn ít nhất một bài học.</p>
+    </div>
+
+    <div class="rounded-lg border border-outline-variant/70 bg-surface-container-low/60 p-3"
+         x-show="inferredCurriculum.subjects.length || inferredCurriculum.organSystems.length">
+        <p class="mb-1.5 text-xs font-semibold text-on-surface-variant">Suy ra từ bài học đã chọn</p>
+        <div class="space-y-2">
+            <div x-show="inferredCurriculum.subjects.length">
+                <p class="mb-1 text-[10px] uppercase tracking-wide text-on-surface-variant">Môn học</p>
+                <div class="flex flex-wrap gap-1.5">
+                    <template x-for="name in inferredCurriculum.subjects" :key="'inf-sub-'+name">
+                        <span class="rounded-lg bg-surface-container-high px-2 py-1 text-xs text-on-surface" x-text="name"></span>
+                    </template>
+                </div>
+            </div>
+            <div x-show="inferredCurriculum.organSystems.length">
+                <p class="mb-1 text-[10px] uppercase tracking-wide text-on-surface-variant">Hệ cơ quan</p>
+                <div class="flex flex-wrap gap-1.5">
+                    <template x-for="name in inferredCurriculum.organSystems" :key="'inf-os-'+name">
+                        <span class="rounded-lg bg-surface-container-high px-2 py-1 text-xs text-on-surface" x-text="name"></span>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
 
     @if (count($inferredCoreTopics) > 0)
         <div class="rounded-lg border border-outline-variant/70 bg-surface-container-low/60 p-3">
@@ -69,66 +175,9 @@
         </div>
     @else
         <div class="rounded-lg border border-dashed border-outline-variant p-3 text-[11px] text-on-surface-variant">
-            Chưa suy ra chủ đề lâm sàng nào. Map CCT ↔ danh mục/tag trên trang Ma trận đề thi sau khi gắn danh mục hoặc tag cho câu hỏi.
+            Chưa suy ra chủ đề lâm sàng nào. Map CCT ↔ bài học/tag trên trang Ma trận đề thi sau khi gắn bài học hoặc tag cho câu hỏi.
         </div>
     @endif
-
-    {{-- Typed medical taxonomy pickers --}}
-    <template x-for="group in nodeGroups" :key="group.key">
-        <div>
-            <label class="mb-1 block text-xs font-semibold text-on-surface-variant" x-text="group.label"></label>
-            <input type="search" x-model="group.search" @input.debounce.300ms="searchNodes(group)"
-                   :placeholder="group.placeholder"
-                   class="mb-2 h-10 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm">
-            <div class="max-h-28 space-y-1 overflow-y-auto rounded-lg border border-outline-variant p-2">
-                <template x-for="node in group.results" :key="group.key+'-'+node.id">
-                    <label class="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm hover:bg-surface-container-low">
-                        <input type="checkbox" :checked="selectedMedicalNodeIds.includes(node.id)"
-                               @change="toggleMedicalNode(node)" class="size-4 rounded text-primary">
-                        <span class="min-w-0 flex-1" x-text="node.name"></span>
-                        <span class="text-[10px] text-on-surface-variant" x-text="nodeTypeLabel(node.node_type)"></span>
-                    </label>
-                </template>
-            </div>
-            <div class="mt-2 flex flex-wrap gap-1.5">
-                <template x-for="id in selectedMedicalNodeIds.filter(nid => group.types.includes(selectedMedicalNodes[nid]?.node_type))" :key="group.key+'-chip-'+id">
-                    <span class="inline-flex items-center gap-1 rounded-lg bg-surface-container px-2 py-1 text-xs font-medium text-on-surface">
-                        <span x-text="selectedMedicalNodes[id]?.name || ('#'+id)"></span>
-                        <button type="button" @click="removeMedicalNode(id)" class="material-symbols-outlined text-[14px]">close</button>
-                    </span>
-                </template>
-            </div>
-        </div>
-    </template>
-
-    <div>
-        <label class="mb-1 block text-xs font-semibold text-on-surface-variant">Phân loại y khoa (khác) *</label>
-        <input type="search" x-model="generalNodeSearch" @input.debounce.300ms="searchGeneralNodes()"
-               placeholder="Tìm danh mục (chuyên khoa, hệ cơ quan, thủ thuật…)"
-               class="mb-2 h-10 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm">
-        <div class="max-h-28 space-y-1 overflow-y-auto rounded-lg border border-outline-variant p-2">
-            <template x-for="node in generalNodeResults" :key="'gen-'+node.id">
-                <label class="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm hover:bg-surface-container-low">
-                    <input type="checkbox" :checked="selectedMedicalNodeIds.includes(node.id)"
-                           @change="toggleMedicalNode(node)" class="size-4 rounded text-primary">
-                    <span x-text="node.name"></span>
-                    <span class="text-[10px] text-on-surface-variant" x-text="nodeTypeLabel(node.node_type)"></span>
-                </label>
-            </template>
-        </div>
-        <div class="mt-2 flex flex-wrap gap-1.5">
-            <template x-for="id in selectedMedicalNodeIds.filter(nid => !['disease','condition','symptom','sign','clinical_finding','lab_finding','imaging_finding','concept'].includes(selectedMedicalNodes[nid]?.node_type))" :key="'gen-chip-'+id">
-                <span class="inline-flex items-center gap-1 rounded-lg bg-surface-container px-2 py-1 text-xs font-medium text-on-surface">
-                    <span x-text="selectedMedicalNodes[id]?.name || ('#'+id)"></span>
-                    <button type="button" @click="removeMedicalNode(id)" class="material-symbols-outlined text-[14px]">close</button>
-                </span>
-            </template>
-        </div>
-        <template x-for="id in selectedMedicalNodeIds" :key="'med-'+id">
-            <input type="hidden" name="medical_taxonomy_node_ids[]" :value="id">
-        </template>
-        <p x-show="selectedMedicalNodeIds.length === 0" class="mt-1 text-xs text-error">Chọn ít nhất một mục danh mục y khoa.</p>
-    </div>
 
     <div>
         <label class="mb-1 block text-xs font-semibold text-on-surface-variant">Thẻ</label>
@@ -159,59 +208,89 @@
 </div>
 
 <script>
-    function questionTaxonomyPicker(config) {
+    function questionLessonPicker(config) {
         return {
             ...config,
-            generalNodeSearch: '',
-            generalNodeResults: [],
+            organSystems: [],
+            organSystemId: null,
+            subjects: [],
+            subjectId: null,
+            lessonSearch: '',
+            lessonResults: [],
             tagSearch: '',
             tagResults: [],
-            nodeGroups: [
-                { key: 'disease', label: 'Bệnh / Tình trạng', placeholder: 'Tìm bệnh, hội chứng…', types: ['disease', 'condition'], search: '', results: [] },
-                { key: 'symptom', label: 'Triệu chứng', placeholder: 'Tìm triệu chứng…', types: ['symptom'], search: '', results: [] },
-                { key: 'finding', label: 'Phát hiện lâm sàng / xét nghiệm', placeholder: 'Tìm phát hiện, xét nghiệm, hình ảnh…', types: ['sign', 'clinical_finding', 'lab_finding', 'imaging_finding'], search: '', results: [] },
-                { key: 'concept', label: 'Khái niệm', placeholder: 'Tìm khái niệm…', types: ['concept'], search: '', results: [] },
-            ],
-            nodeTypeLabel(type) {
-                if (! type) return '';
-                return this.nodeTypeLabels?.[type] || type;
+            get inferredCurriculum() {
+                const subjects = new Set();
+                const organSystems = new Set();
+                for (const id of this.selectedLessonIds) {
+                    const lesson = this.selectedLessons[id];
+                    if (! lesson) continue;
+                    (lesson.subject_names || []).forEach(n => subjects.add(n));
+                    (lesson.organ_system_names || []).forEach(n => organSystems.add(n));
+                }
+                return {
+                    subjects: [...subjects].sort((a, b) => a.localeCompare(b, 'vi')),
+                    organSystems: [...organSystems].sort((a, b) => a.localeCompare(b, 'vi')),
+                };
+            },
+            lessonContext(lesson) {
+                if (! lesson) return '';
+                const parts = [];
+                const subjects = lesson.subject_names || [];
+                const systems = lesson.organ_system_names || [];
+                if (subjects.length) parts.push(subjects.join(', '));
+                if (systems.length) parts.push(systems.join(', '));
+                return parts.join(' · ');
             },
             async init() {
-                for (const group of this.nodeGroups) {
-                    await this.searchNodes(group);
-                }
-                await this.searchGeneralNodes();
+                await this.loadOrganSystems();
+                await this.loadSubjects();
+                await this.searchLessons();
             },
-            async searchNodes(group) {
-                const q = group.search.trim();
-                const params = new URLSearchParams({ node_type: group.types.join(',') });
-                if (q.length >= 1) params.set('q', q);
-                const res = await fetch(`${this.urls.medicalNodes}?${params}`);
+            async loadOrganSystems() {
+                const res = await fetch(this.urls.organSystems);
                 const json = await res.json();
-                group.results = json.data ?? [];
+                this.organSystems = json.data ?? [];
             },
-            async searchGeneralNodes() {
-                const q = this.generalNodeSearch.trim();
-                const url = q.length >= 1
-                    ? `${this.urls.medicalNodes}?q=${encodeURIComponent(q)}`
-                    : this.urls.medicalNodes;
+            async loadSubjects() {
+                const params = new URLSearchParams();
+                if (this.organSystemId) params.set('organ_system_id', this.organSystemId);
+                const url = params.toString() ? `${this.urls.subjects}?${params}` : this.urls.subjects;
                 const res = await fetch(url);
                 const json = await res.json();
-                this.generalNodeResults = (json.data ?? []).filter(n => !['disease','condition','symptom','sign','clinical_finding','lab_finding','imaging_finding','concept'].includes(n.node_type));
+                this.subjects = json.data ?? [];
             },
-            toggleMedicalNode(node) {
-                const idx = this.selectedMedicalNodeIds.indexOf(node.id);
+            async onOrganSystemChange() {
+                this.subjectId = null;
+                await this.loadSubjects();
+                await this.searchLessons();
+            },
+            async onSubjectChange() {
+                await this.searchLessons();
+            },
+            async searchLessons() {
+                const params = new URLSearchParams();
+                const q = this.lessonSearch.trim();
+                if (q.length >= 1) params.set('q', q);
+                if (this.subjectId) params.set('subject_id', this.subjectId);
+                if (this.organSystemId) params.set('organ_system_id', this.organSystemId);
+                const url = params.toString() ? `${this.urls.lessons}?${params}` : this.urls.lessons;
+                const res = await fetch(url);
+                const json = await res.json();
+                this.lessonResults = json.data ?? [];
+            },
+            toggleLesson(lesson) {
+                const idx = this.selectedLessonIds.indexOf(lesson.id);
                 if (idx >= 0) {
-                    this.selectedMedicalNodeIds.splice(idx, 1);
-                    delete this.selectedMedicalNodes[node.id];
+                    this.removeLesson(lesson.id);
                 } else {
-                    this.selectedMedicalNodeIds.push(node.id);
-                    this.selectedMedicalNodes[node.id] = node;
+                    this.selectedLessonIds.push(lesson.id);
+                    this.selectedLessons[lesson.id] = lesson;
                 }
             },
-            removeMedicalNode(id) {
-                this.selectedMedicalNodeIds = this.selectedMedicalNodeIds.filter(x => x !== id);
-                delete this.selectedMedicalNodes[id];
+            removeLesson(id) {
+                this.selectedLessonIds = this.selectedLessonIds.filter(x => x !== id);
+                delete this.selectedLessons[id];
             },
             async searchTags() {
                 const q = this.tagSearch.trim();

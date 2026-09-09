@@ -24,7 +24,7 @@ final class ContextualSearchTest extends TestCase
 
     private User $user;
 
-    private \Modules\QuestionBank\Models\MedicalTaxonomyNode $topic;
+    private \Modules\QuestionBank\Models\Lesson $topic;
 
     protected function setUp(): void
     {
@@ -33,10 +33,9 @@ final class ContextualSearchTest extends TestCase
         RoleModel::findOrCreate(Role::Student->value, 'web');
         $this->user = User::factory()->create();
         $this->user->assignRole(Role::Student->value);
-        $this->topic = $this->makeMedicalNode([
+        $this->topic = $this->makeLesson([
             'name' => 'Hô hấp',
             'slug' => 'ho-hap-contextual-search-test',
-            'node_type' => 'system',
             'sort_order' => 1,
         ]);
     }
@@ -93,26 +92,25 @@ final class ContextualSearchTest extends TestCase
 
     public function test_database_search_matches_a_secondary_pivot_topic_without_duplicate_results(): void
     {
-        $secondaryTopic = $this->makeMedicalNode([
+        $secondaryTopic = $this->makeLesson([
             'name' => 'Truyền nhiễm',
             'slug' => 'truyen-nhiem-contextual-search-test',
-            'node_type' => 'system',
             'sort_order' => 2,
         ]);
         $question = $this->question('Viêm phổi nhiễm khuẩn cần chọn kháng sinh', free: true);
-        $question->medicalTaxonomyNodes()->syncWithoutDetaching([$secondaryTopic->getKey()]);
+        $question->lessons()->syncWithoutDetaching([$secondaryTopic->getKey()]);
 
         $result = app(SearchScopeAction::class)->handle(new SearchQueryData(
             scope: 'qbank',
             query: 'viêm phổi',
-            filters: ['medical_taxonomy_node_id' => $secondaryTopic->getKey(), 'is_free' => true],
+            filters: ['lesson_id' => $secondaryTopic->getKey(), 'is_free' => true],
         ), $this->user);
 
         $this->assertCount(1, $result->items());
         $this->assertSame((string) $question->getKey(), $result->items()[0]['id']);
         $this->assertEqualsCanonicalizing(
             [$this->topic->getKey(), $secondaryTopic->getKey()],
-            $result->items()[0]['attributes']['medical_taxonomy_node_ids'],
+            $result->items()[0]['attributes']['lesson_ids'],
         );
     }
 
@@ -159,7 +157,7 @@ final class ContextualSearchTest extends TestCase
         $settings = config('scout.meilisearch.index-settings.'.Question::class);
 
         $this->assertTrue((bool) config('scout.after_commit'));
-        $this->assertSame(['difficulty', 'medical_taxonomy_node_ids', 'is_free'], $settings['filterableAttributes']);
+        $this->assertSame(['difficulty', 'lesson_ids', 'is_free'], $settings['filterableAttributes']);
         $this->assertContains('pneumonia', $settings['synonyms']['viêm phổi']);
         $this->assertSame(['stem'], $settings['searchableAttributes']);
     }
@@ -177,7 +175,7 @@ final class ContextualSearchTest extends TestCase
             'status' => $status,
             'is_free' => $free,
         ]), function (Question $question): void {
-            $question->medicalTaxonomyNodes()->sync([$this->topic->getKey()]);
+            $question->lessons()->sync([$this->topic->getKey()]);
         });
     }
 }

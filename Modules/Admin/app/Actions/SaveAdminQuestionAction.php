@@ -16,7 +16,6 @@ use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
 use Modules\QuestionBank\Jobs\RefreshQuestionSimilarityJob;
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionHint;
 use Modules\QuestionBank\Models\QuestionOption;
@@ -41,8 +40,8 @@ final class SaveAdminQuestionAction
      *     key_info: array<int, string>,
      *     attending_tip: ?string,
      *     difficulty: string,
-     *     medical_taxonomy_node_ids?: list<int>,
-     *     medical_taxonomy_links?: list<array{id: int, relationship_type?: ?string, is_primary?: ?bool}>,
+     *     lesson_ids?: list<int>,
+     *     lesson_links?: list<array{id: int}>,
      *     tag_ids?: list<int>,
      *     hints?: list<array{id?: int|null, content: string, sort_order?: int}>,
      *     is_free: bool,
@@ -54,7 +53,7 @@ final class SaveAdminQuestionAction
     {
         $options = $data['options'];
         $this->assertOptionsValid($options);
-        $this->assertMedicalTaxonomyPresent($data);
+        $this->assertLessonPresent($data);
 
         return DB::transaction(function () use ($actor, $question, $data, $options): Question {
             $before = $question ? AuditSnapshot::question($question) : null;
@@ -129,7 +128,7 @@ final class SaveAdminQuestionAction
             }
             $this->syncOptions($question, $options);
 
-            $question->load('options', 'hints', 'medicalTaxonomyNodes', 'tags');
+            $question->load('options', 'hints', 'lessons', 'tags');
 
             $this->fingerprint->persist($question);
             RefreshQuestionSimilarityJob::dispatch((string) $question->getKey());
@@ -170,13 +169,13 @@ final class SaveAdminQuestionAction
     }
 
     /** @param array<string, mixed> $data */
-    private function assertMedicalTaxonomyPresent(array $data): void
+    private function assertLessonPresent(array $data): void
     {
-        $sync = $this->buildMedicalNodeSyncPayload($data);
+        $sync = $this->buildLessonSyncPayload($data);
 
         if ($sync === []) {
             throw ValidationException::withMessages([
-                'medical_taxonomy_node_ids' => 'Vui lòng chọn ít nhất một mục danh mục y khoa.',
+                'lesson_ids' => 'Vui lòng chọn ít nhất một bài học.',
             ]);
         }
     }
@@ -306,8 +305,8 @@ final class SaveAdminQuestionAction
     /** @param  array<string, mixed>  $data */
     private function syncTaxonomyRelations(Question $question, array $data): void
     {
-        // Blueprint CCT is inferred via medical taxonomy / tag mapping — no direct Q↔CCT pivot.
-        $question->medicalTaxonomyNodes()->sync($this->buildMedicalNodeSyncPayload($data));
+        // Blueprint CCT is inferred via lesson / tag mapping — no direct Q↔CCT pivot.
+        $question->lessons()->sync($this->buildLessonSyncPayload($data));
 
         if (array_key_exists('tag_ids', $data)) {
             $tagIds = collect($data['tag_ids'])
@@ -321,77 +320,29 @@ final class SaveAdminQuestionAction
     }
 
     /**
+     * Build lesson IDs to sync. All attached lessons are equal (no primary).
+     *
      * @param  array<string, mixed>  $data
-     * @return array<int, array{relationship_type: ?string, is_primary: ?bool}>
+     * @return list<int>
      */
-    private function buildMedicalNodeSyncPayload(array $data): array
+    private function buildLessonSyncPayload(array $data): array
     {
-        /** @var array<int, array{relationship_type: ?string, is_primary: ?bool}> $sync */
-        $sync = [];
-
-        $links = $data['medical_taxonomy_links'] ?? null;
+        $links = $data['lesson_links'] ?? null;
         if (is_array($links) && $links !== []) {
-            foreach ($links as $link) {
-                $id = (int) ($link['id'] ?? 0);
-                if ($id <= 0) {
-                    continue;
-                }
-                $sync[$id] = [
-                    'relationship_type' => isset($link['relationship_type']) ? (string) $link['relationship_type'] : null,
-                    'is_primary' => array_key_exists('is_primary', $link) ? (bool) $link['is_primary'] : null,
-                ];
-            }
-
-            return $sync;
+            return collect($links)
+                ->map(fn ($link): int => (int) (is_array($link) ? ($link['id'] ?? 0) : $link))
+                ->filter(fn (int $id): bool => $id > 0)
+                ->unique()
+                ->values()
+                ->all();
         }
 
-        $ids = collect($data['medical_taxonomy_node_ids'] ?? [])
+        return collect($data['lesson_ids'] ?? [])
             ->map(fn ($id): int => (int) $id)
             ->filter(fn (int $id): bool => $id > 0)
             ->unique()
             ->values()
             ->all();
-
-        if ($ids === []) {
-            return [];
-        }
-
-        $nodes = MedicalTaxonomyNode::query()
-            ->whereIn('id', $ids)
-            ->get(['id', 'node_type'])
-            ->keyBy('id');
-
-        $primaryAssigned = false;
-
-        foreach ($ids as $id) {
-            $nodeType = (string) ($nodes->get($id)?->node_type ?? '');
-            [$relationshipType, $isPrimary] = $this->relationshipForNodeType($nodeType, $primaryAssigned);
-            if ($isPrimary === true) {
-                $primaryAssigned = true;
-            }
-
-            $sync[$id] = [
-                'relationship_type' => $relationshipType,
-                'is_primary' => $isPrimary,
-            ];
-        }
-
-        return $sync;
-    }
-
-    /**
-     * @return array{0: string, 1: ?bool}
-     */
-    private function relationshipForNodeType(string $nodeType, bool $primaryAssigned): array
-    {
-        return match ($nodeType) {
-            'disease', 'condition' => $primaryAssigned
-                ? ['related', false]
-                : ['primary', true],
-            'concept' => ['tested', false],
-            'symptom', 'sign', 'clinical_finding', 'lab_finding', 'imaging_finding' => ['related', false],
-            default => ['contextual', false],
-        };
     }
 
     /**

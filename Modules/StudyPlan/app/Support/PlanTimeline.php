@@ -6,7 +6,7 @@ namespace Modules\StudyPlan\Support;
 
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
+use Modules\QuestionBank\Models\Lesson;
 use Modules\StudyPlan\Enums\TaskStatus;
 use Modules\StudyPlan\Models\StudyPlan;
 use Modules\StudyPlan\Models\StudyPlanTask;
@@ -80,13 +80,13 @@ final class PlanTimeline
      */
     public function topicProgress(StudyPlan $plan): array
     {
-        $topicIds = $plan->scopeTopicIds();
+        $topicIds = $plan->effectiveLessonIds();
 
         if ($topicIds === []) {
             return [];
         }
 
-        $names = MedicalTaxonomyNode::query()->whereIn('id', $topicIds)->pluck('name', 'id');
+        $names = Lesson::query()->whereIn('id', $topicIds)->pluck('name', 'id');
         $tasks = $plan->tasks()->get();
         $progress = [];
 

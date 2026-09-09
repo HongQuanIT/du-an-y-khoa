@@ -6,7 +6,7 @@
         'id' => (string) $question->getKey(),
         'code' => $question->code,
         'text' => trim(strip_tags(html_entity_decode($question->stem, ENT_QUOTES | ENT_HTML5, 'UTF-8'))),
-        'topic' => $question->medicalTaxonomyNodes->pluck('name')->join(', ') ?: 'Tổng hợp',
+        'topic' => $question->lessons->pluck('name')->join(', ') ?: 'Tổng hợp',
         'core_topic' => $question->inferredCoreClinicalTopics()->pluck('name')->join(', '),
         'difficulty' => $question->difficulty->label(),
         'feedback_count' => (int) ($question->open_feedback_count ?? 0),

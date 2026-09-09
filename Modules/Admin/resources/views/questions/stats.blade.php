@@ -135,10 +135,10 @@
                     <dd class="mt-0.5 font-semibold text-on-surface">{{ $question->version > 0 ? $question->version : 'Chưa có' }}</dd>
                 </div>
                 <div class="sm:col-span-2">
-                    <dt class="text-on-surface-variant">Danh mục y khoa</dt>
+                    <dt class="text-on-surface-variant">Bài học</dt>
                     <dd class="mt-1 flex flex-wrap gap-1">
-                        @forelse ($question->medicalTaxonomyNodes as $node)
-                            <span class="rounded-lg bg-surface-container-high px-2.5 py-1 text-xs font-semibold text-on-surface">{{ $node->name }}</span>
+                        @forelse ($question->lessons as $lesson)
+                            <span class="rounded-lg bg-surface-container-high px-2.5 py-1 text-xs font-semibold text-on-surface">{{ $lesson->name }}</span>
                         @empty
                             <span class="text-on-surface-variant">—</span>
                         @endforelse

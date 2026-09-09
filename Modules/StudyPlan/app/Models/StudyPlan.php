@@ -140,17 +140,17 @@ class StudyPlan extends Model
     }
 
     /**
-     * Topic ids used to pick questions. Supports the legacy flat list and the
-     * richer scope payload written by the Amboss-style filter UI.
+     * Lesson ids (bài học) used to pick questions. Supports the flat list and the
+     * richer scope payload written by the filter UI.
      *
      * @return array<int, int>
      */
-    public function scopeMedicalTaxonomyNodeIds(): array
+    public function scopeLessonIds(): array
     {
         $scope = $this->topic_scope ?? [];
 
-        if (isset($scope['medical_taxonomy_node_ids']) && is_array($scope['medical_taxonomy_node_ids'])) {
-            return array_values(array_map('intval', $scope['medical_taxonomy_node_ids']));
+        if (isset($scope['lesson_ids']) && is_array($scope['lesson_ids'])) {
+            return array_values(array_map('intval', $scope['lesson_ids']));
         }
 
         if (isset($scope['topic_ids']) && is_array($scope['topic_ids'])) {
@@ -164,10 +164,79 @@ class StudyPlan extends Model
         return array_map('intval', $scope);
     }
 
-    /** @deprecated Use scopeMedicalTaxonomyNodeIds() */
+    /** @deprecated Use scopeLessonIds() */
+    public function scopeMedicalTaxonomyNodeIds(): array
+    {
+        return $this->scopeLessonIds();
+    }
+
+    /** @deprecated Use scopeLessonIds() */
     public function scopeTopicIds(): array
     {
-        return $this->scopeMedicalTaxonomyNodeIds();
+        return $this->scopeLessonIds();
+    }
+
+    /**
+     * Môn học (subjects) selected as scope.
+     *
+     * @return array<int, int>
+     */
+    public function scopeSubjectIds(): array
+    {
+        $scope = $this->topic_scope ?? [];
+
+        return isset($scope['subject_ids']) && is_array($scope['subject_ids'])
+            ? array_values(array_map('intval', $scope['subject_ids']))
+            : [];
+    }
+
+    /**
+     * Hệ cơ quan (organ systems) selected as scope.
+     *
+     * @return array<int, int>
+     */
+    public function scopeOrganSystemIds(): array
+    {
+        $scope = $this->topic_scope ?? [];
+
+        return isset($scope['organ_system_ids']) && is_array($scope['organ_system_ids'])
+            ? array_values(array_map('intval', $scope['organ_system_ids']))
+            : [];
+    }
+
+    /**
+     * Flatten the scope (direct lessons + lessons under selected subjects +
+     * lessons under selected organ systems) into a single lesson-id list.
+     *
+     * @return array<int, int>
+     */
+    public function effectiveLessonIds(): array
+    {
+        $lessonIds = $this->scopeLessonIds();
+        $subjectIds = $this->scopeSubjectIds();
+        $organSystemIds = $this->scopeOrganSystemIds();
+
+        if ($organSystemIds !== []) {
+            $subjectIds = array_merge(
+                $subjectIds,
+                \Modules\QuestionBank\Models\Subject::query()
+                    ->whereHas('organSystems', fn ($query) => $query->whereIn('organ_systems.id', $organSystemIds))
+                    ->pluck('id')
+                    ->all(),
+            );
+        }
+
+        if ($subjectIds !== []) {
+            $lessonIds = array_merge(
+                $lessonIds,
+                \Modules\QuestionBank\Models\Lesson::query()
+                    ->whereHas('subjects', fn ($query) => $query->whereIn('subjects.id', array_values(array_unique($subjectIds))))
+                    ->pluck('id')
+                    ->all(),
+            );
+        }
+
+        return array_values(array_unique(array_map('intval', $lessonIds)));
     }
 
     /**
@@ -189,8 +258,10 @@ class StudyPlan extends Model
     {
         $scope = $this->topic_scope ?? [];
         $defaults = [
-            'medical_taxonomy_node_ids' => [],
+            'lesson_ids' => [],
             'topic_ids' => [],
+            'subject_ids' => [],
+            'organ_system_ids' => [],
             'exam_tags' => [],
             'articles' => [],
             'symptoms' => [],
@@ -205,10 +276,12 @@ class StudyPlan extends Model
             'tag_ids' => [],
         ];
 
-        if (isset($scope['medical_taxonomy_node_ids']) || isset($scope['topic_ids']) || isset($scope['exam_tags'])) {
+        if (isset($scope['lesson_ids']) || isset($scope['topic_ids']) || isset($scope['subject_ids']) || isset($scope['organ_system_ids']) || isset($scope['exam_tags'])) {
             $filters = array_merge($defaults, array_intersect_key($scope, $defaults), [
-                'medical_taxonomy_node_ids' => $this->scopeMedicalTaxonomyNodeIds(),
-                'topic_ids' => $this->scopeMedicalTaxonomyNodeIds(),
+                'lesson_ids' => $this->scopeLessonIds(),
+                'topic_ids' => $this->scopeLessonIds(),
+                'subject_ids' => $this->scopeSubjectIds(),
+                'organ_system_ids' => $this->scopeOrganSystemIds(),
                 'saved_only' => (bool) ($scope['saved_only'] ?? false),
             ]);
 
@@ -229,7 +302,7 @@ class StudyPlan extends Model
             return $filters;
         }
 
-        return array_merge($defaults, ['medical_taxonomy_node_ids' => $this->scopeMedicalTaxonomyNodeIds(), 'topic_ids' => $this->scopeMedicalTaxonomyNodeIds()]);
+        return array_merge($defaults, ['lesson_ids' => $this->scopeLessonIds(), 'topic_ids' => $this->scopeLessonIds()]);
     }
 
     /** @return array<int, int> ISO weekdays; empty scope means every day. */

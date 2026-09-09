@@ -34,7 +34,7 @@ final class QuestionController extends Controller
         $actor = $this->actor();
         $query = QuestionAccess::scopeVisibleTo(
             Question::query()
-                ->with(['medicalTaxonomyNodes', 'creator:id,name', 'instructor:id,name', 'publisher:id,name', 'pendingReviewRequest.requester:id,name', 'reviewRequests.reviewer:id,name', 'clonedFrom:id,code,stem'])
+                ->with(['lessons', 'creator:id,name', 'instructor:id,name', 'publisher:id,name', 'pendingReviewRequest.requester:id,name', 'reviewRequests.reviewer:id,name', 'clonedFrom:id,code,stem'])
                 ->withCount([
                     'feedback',
                     'feedback as pending_feedback_count' => fn ($q) => $q->where('status', QuestionFeedback::STATUS_PENDING),
@@ -62,8 +62,8 @@ final class QuestionController extends Controller
                 ->whereMatchesCoreClinicalTopic($query, (int) $coreTopicId);
         }
 
-        if ($medicalNodeId = $request->query('medical_taxonomy_node_id')) {
-            $query->whereHas('medicalTaxonomyNodes', fn ($q) => $q->whereKey((int) $medicalNodeId));
+        if ($lessonId = $request->query('lesson_id')) {
+            $query->whereHas('lessons', fn ($q) => $q->whereKey((int) $lessonId));
         }
 
         if ($tagId = $request->query('tag_id')) {
@@ -102,7 +102,7 @@ final class QuestionController extends Controller
                 'status' => $request->query('status')
                     ?: ($request->query('review') === 'pending' ? QuestionStatus::InReview->value : null),
                 'difficulty' => $request->query('difficulty'),
-                'medical_taxonomy_node_id' => $request->query('medical_taxonomy_node_id'),
+                'lesson_id' => $request->query('lesson_id'),
                 'is_free' => $request->query('is_free'),
                 'has_reports' => $request->query('has_reports'),
             ],
@@ -163,7 +163,7 @@ final class QuestionController extends Controller
         $question->load([
             'options' => fn ($q) => $q->orderBy('order'),
             'hints' => fn ($q) => $q->orderBy('sort_order'),
-            'medicalTaxonomyNodes',
+            'lessons.subjects.organSystems',
             'tags',
             'creator:id,name,email',
             'instructor:id,name',
@@ -182,7 +182,7 @@ final class QuestionController extends Controller
         QuestionAccess::authorizeView($this->actor(), $question);
 
         $question->load([
-            'medicalTaxonomyNodes',
+            'lessons',
             'creator:id,name',
             'reviewer:id,name',
         ]);
@@ -395,7 +395,7 @@ final class QuestionController extends Controller
      *     key_info: array<int, string>,
      *     attending_tip: ?string,
      *     difficulty: string,
-     *     medical_taxonomy_node_ids: list<int>,
+     *     lesson_ids: list<int>,
      *     is_free: bool,
      *     exam_flag: bool,
      *     options: list<array{id?: int|null, content: string, is_correct: bool, explanation?: ?string}>
@@ -409,8 +409,8 @@ final class QuestionController extends Controller
             'key_info' => ['nullable', 'string'],
             'attending_tip' => ['nullable', 'string'],
             'difficulty' => ['required', Rule::in(Difficulty::values())],
-            'medical_taxonomy_node_ids' => ['required', 'array', 'min:1'],
-            'medical_taxonomy_node_ids.*' => ['required', 'integer', 'distinct', 'exists:medical_taxonomy_nodes,id'],
+            'lesson_ids' => ['required', 'array', 'min:1'],
+            'lesson_ids.*' => ['required', 'integer', 'distinct', 'exists:lessons,id'],
             'tag_ids' => ['nullable', 'array'],
             'tag_ids.*' => ['integer', 'distinct', 'exists:tags,id'],
             'hints' => ['nullable', 'array'],
@@ -425,8 +425,8 @@ final class QuestionController extends Controller
             'options.*.explanation' => ['nullable', 'string'],
         ], [
             'stem.required' => 'Vui lòng nhập nội dung câu hỏi.',
-            'medical_taxonomy_node_ids.required' => 'Vui lòng chọn ít nhất một mục danh mục y khoa.',
-            'medical_taxonomy_node_ids.min' => 'Vui lòng chọn ít nhất một mục danh mục y khoa.',
+            'lesson_ids.required' => 'Vui lòng chọn ít nhất một bài học.',
+            'lesson_ids.min' => 'Vui lòng chọn ít nhất một bài học.',
             'options.required' => 'Vui lòng thêm đáp án.',
             'options.min' => 'Cần ít nhất 2 đáp án.',
             'options.*.content.required' => 'Nội dung đáp án không được để trống.',
@@ -458,7 +458,7 @@ final class QuestionController extends Controller
             'key_info' => $this->parseKeyInfo($data['key_info'] ?? null),
             'attending_tip' => $data['attending_tip'] ?? null,
             'difficulty' => $data['difficulty'],
-            'medical_taxonomy_node_ids' => collect($data['medical_taxonomy_node_ids'] ?? [])
+            'lesson_ids' => collect($data['lesson_ids'] ?? [])
                 ->map(fn ($id): int => (int) $id)->unique()->values()->all(),
             'tag_ids' => collect($data['tag_ids'] ?? [])
                 ->map(fn ($id): int => (int) $id)->unique()->values()->all(),

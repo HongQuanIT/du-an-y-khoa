@@ -16,7 +16,7 @@ final class ListDashboardRecommendationsAction
     public function handle(User $user, int $limit = 4): array
     {
         $recommendations = TopicMastery::query()
-            ->with('medicalTaxonomyNode:id,name')
+            ->with('lesson:id,name')
             ->where('user_id', $user->getKey())
             ->where('attempts', '>=', 3)
             ->orderBy('correct_rate')
@@ -24,12 +24,12 @@ final class ListDashboardRecommendationsAction
             ->get()
             ->map(fn (TopicMastery $mastery): array => [
                 'eyebrow' => 'Chủ đề cần củng cố',
-                'title' => $mastery->medicalTaxonomyNode?->name ?? 'Kiến thức y khoa',
+                'title' => $mastery->lesson?->name ?? 'Kiến thức y khoa',
                 'description' => sprintf('%d lượt làm · chính xác %d%%', $mastery->attempts, (int) round($mastery->correct_rate)),
                 'icon' => 'cardiology',
                 'url' => route('qbank.create', [
                     'source' => 'weak_topics',
-                    'medical_taxonomy_node_ids' => [$mastery->medical_taxonomy_node_id],
+                    'lesson_ids' => [$mastery->lesson_id],
                 ]),
             ]);
 

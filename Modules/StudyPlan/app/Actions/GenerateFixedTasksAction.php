@@ -46,7 +46,7 @@ final class GenerateFixedTasksAction
                 ->whereDate('date', '>=', $from)
                 ->delete();
 
-            $topics = $plan->scopeTopicIds();
+            $topics = $plan->effectiveLessonIds();
             $weekdays = $plan->studyWeekdays();
             $allAvailableQuestions = array_values(array_unique($this->questionPool->questionIds($plan)));
             if (empty($allAvailableQuestions)) {
@@ -100,7 +100,7 @@ final class GenerateFixedTasksAction
                     'done' => 0,
                     'status' => TaskStatus::Pending->value,
                     'ref' => json_encode([
-                        'medical_taxonomy_node_ids' => $topics,
+                        'lesson_ids' => $topics,
                         'topic_ids' => $topics,
                         'question_ids' => $questionsForDay,
                         'session_id' => null,
@@ -119,7 +119,7 @@ final class GenerateFixedTasksAction
                         'done' => 0,
                         'status' => TaskStatus::Pending->value,
                         'ref' => json_encode([
-                            'medical_taxonomy_node_ids' => $topics,
+                            'lesson_ids' => $topics,
                             'topic_ids' => $topics,
                             'session_id' => null,
                             'mode' => 'study',

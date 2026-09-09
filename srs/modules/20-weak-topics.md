@@ -3,11 +3,11 @@
 **Nhóm:** Personal · **Ưu tiên:** Cao · **Phụ thuộc:** Analytics (19), Qbank (05), Study Plan (04) · **Trạng thái:** ✅
 
 ## 0. Tóm tắt module
-Phát hiện & liệt kê chủ đề yếu, ưu tiên ôn tập, tạo session luyện đúng điểm yếu bằng 1 chạm. Là "động cơ cá nhân hóa" của nền tảng.
+Phát hiện & liệt kê **Bài học** yếu (mastery rollup theo `lesson_id`, có thể tổng hợp lên Môn học/Hệ cơ quan), ưu tiên ôn tập, tạo session luyện đúng điểm yếu bằng 1 chạm. Là "động cơ cá nhân hóa" của nền tảng.
 
 | Route | Màn hình |
 |-------|----------|
-| `/weak-topics` | Danh sách chủ đề yếu |
+| `/weak-topics` | Danh sách Bài học yếu |
 | Widget | Dashboard |
 
 ## 1. Tổng quan
@@ -18,11 +18,11 @@ Phát hiện & liệt kê chủ đề yếu, ưu tiên ôn tập, tạo session 
 ## 2. Phân tích giao diện
 | Thành phần | Chức năng | Hiển thị/Ẩn | Responsive |
 |-----------|-----------|-------------|-----------|
-| **Weak topic list** | Chủ đề + correct rate + mastery + trend + số câu chưa làm | `/weak-topics` | List/table |
+| **Weak lesson list** | Bài học + correct rate + mastery + trend + số câu chưa làm | `/weak-topics` | List/table |
 | **Priority sort** | Sắp theo mức yếu/độ high-yield | Luôn | — |
 | **Practice CTA** | "Luyện ngay" tạo session | Mỗi item | Sticky mobile |
-| **Filter** | Theo chuyên ngành/hệ | Luôn | Chips |
-| **Recommended reading** | Bài Library cho chủ đề | Item expand | — |
+| **Filter** | Theo Môn học/Hệ cơ quan | Luôn | Chips |
+| **Recommended reading** | Bài Library cho Bài học | Item expand | — |
 | **Empty/Loading/Error/Paywall** | Chưa đủ dữ liệu; skeleton | Theo trạng thái | — |
 
 ## 3. Phân tích Component
@@ -35,21 +35,21 @@ Dashboard widget "3 chủ đề yếu" → /weak-topics → "Luyện ngay" Dư�
 ```
 
 ## 5. Business Logic
-- **Xác định weak:** `topic_mastery` với `correct_rate < ngưỡng` và/hoặc `mastery_level` thấp, cần `attempts ≥ min` (tránh nhiễu).
+- **Xác định weak:** `topic_mastery` (rollup theo `lesson_id` — Bài học) với `correct_rate < ngưỡng` và/hoặc `mastery_level` thấp, cần `attempts ≥ min` (tránh nhiễu).
 - **Priority score:** kết hợp mức yếu × high-yield × khối lượng còn lại × gần ngày thi.
-- **Practice preset:** tạo session filter `topic=X, status in (incorrect,omitted,unseen)`.
+- **Practice preset:** tạo session filter `lesson=X, status in (incorrect,omitted,unseen)`.
 - **Decay:** không hoạt động lâu → coi là "cần ôn lại".
 - **Gating:** Free xem top N; Premium đầy đủ + đề xuất reading/AI.
 
 ## 6. Database
-- Đọc `topic_mastery` (cập nhật qua job sau mỗi finish), `question_status`, `content_links` (reading).
+- Đọc `topic_mastery` (rollup theo `lesson_id`, cập nhật qua job sau mỗi finish), `question_status`, `content_links` (reading).
 
 ## 7. API
 | Method | URL | Response | Quyền |
 |--------|-----|----------|-------|
 | GET | `/api/v1/weak-topics?filter=` | list + priority | Auth |
-| POST | `/api/v1/weak-topics/{topicId}/practice` | session | Auth (gated) |
-| GET | `/api/v1/weak-topics/{topicId}/reading` | bài đề xuất | Auth |
+| POST | `/api/v1/weak-topics/{lessonId}/practice` | session | Auth (gated) |
+| GET | `/api/v1/weak-topics/{lessonId}/reading` | bài đề xuất | Auth |
 
 ## 8. State Management
 - Server: mastery rollup cache; recompute job. Client: filter/sort. Không realtime.

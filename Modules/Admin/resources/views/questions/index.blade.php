@@ -17,7 +17,7 @@
         || filled($filters['difficulty'])
         || filled($filters['is_free'])
         || filled($filters['has_reports'])
-        || filled($filters['medical_taxonomy_node_id']);
+        || filled($filters['lesson_id']);
 @endphp
 
 <x-layouts.admin :title="$isReviewer ? 'Ngân hàng câu hỏi — Quản trị nội dung' : 'Câu hỏi của tôi — Quản trị nội dung'">
@@ -367,20 +367,20 @@
                                 </td>
 
                                 <td class="w-[220px] min-w-[180px] px-4 py-4 align-top" x-show="cols.taxonomy" x-cloak>
-                                    @if($question->medicalTaxonomyNodes->isNotEmpty())
+                                    @if($question->lessons->isNotEmpty())
                                         <div class="flex max-w-full flex-wrap gap-1 overflow-hidden">
-                                            @foreach ($question->medicalTaxonomyNodes->take(2) as $node)
+                                            @foreach ($question->lessons->take(2) as $lesson)
                                                 <span
                                                     class="inline-flex max-w-full items-center truncate rounded-md bg-surface-container-high px-2 py-0.5 text-xs font-medium text-on-surface"
-                                                    title="{{ $node->name }}">
-                                                    {{ $node->name }}
+                                                    title="{{ $lesson->name }}">
+                                                    {{ $lesson->name }}
                                                 </span>
                                             @endforeach
-                                            @if ($question->medicalTaxonomyNodes->count() > 2)
+                                            @if ($question->lessons->count() > 2)
                                                 <span
                                                     class="inline-flex items-center rounded-md border border-outline-variant px-1.5 py-0.5 text-xs font-semibold text-on-surface-variant"
-                                                    title="{{ $question->medicalTaxonomyNodes->slice(2)->pluck('name')->join(', ') }}">
-                                                    +{{ $question->medicalTaxonomyNodes->count() - 2 }}
+                                                    title="{{ $question->lessons->slice(2)->pluck('name')->join(', ') }}">
+                                                    +{{ $question->lessons->count() - 2 }}
                                                 </span>
                                             @endif
                                         </div>

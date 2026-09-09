@@ -152,12 +152,12 @@ return [
                     'id',
                     'stem',
                     'difficulty',
-                    'medical_taxonomy_node_ids',
+                    'lesson_ids',
                     'is_free',
                 ],
                 'filterableAttributes' => [
                     'difficulty',
-                    'medical_taxonomy_node_ids',
+                    'lesson_ids',
                     'is_free',
                 ],
                 'synonyms' => [

@@ -278,37 +278,26 @@
 		                                                <p x-show="coreTopicOptions.length === 0" class="px-2 py-4 text-center text-xs text-on-surface-variant">Chưa có chủ đề lâm sàng.</p>
 		                                            </div>
 		                                        </div>
-		                                        <div class="relative" @click.outside="openFilter === 'medical' && closeFilter()">
-		                                            <button type="button" @click="toggleFilter('medical')" :aria-expanded="openFilter === 'medical'"
+		                                        <div class="relative" @click.outside="openFilter === 'lesson' && closeFilter()">
+		                                            <button type="button" @click="toggleFilter('lesson')" :aria-expanded="openFilter === 'lesson'"
 		                                                class="flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm font-medium text-on-surface hover:border-primary">
 		                                                <span class="inline-flex min-w-0 items-center gap-2">
-		                                                    <span class="material-symbols-outlined text-[18px] text-on-surface-variant">account_tree</span>
-		                                                    <span class="truncate" x-text="medicalNodeFilterLabel()">Phân loại y khoa</span>
+		                                                    <span class="material-symbols-outlined text-[18px] text-on-surface-variant">menu_book</span>
+		                                                    <span class="truncate" x-text="lessonFilterLabel()">Bài học</span>
 		                                                </span>
-		                                                <span class="material-symbols-outlined text-[18px] text-on-surface-variant transition-transform" :class="{ 'rotate-180': openFilter === 'medical' }">expand_more</span>
+		                                                <span class="material-symbols-outlined text-[18px] text-on-surface-variant transition-transform" :class="{ 'rotate-180': openFilter === 'lesson' }">expand_more</span>
 		                                            </button>
-		                                            <div x-show="openFilter === 'medical'" x-cloak x-transition.opacity.duration.100ms @click.stop
+		                                            <div x-show="openFilter === 'lesson'" x-cloak x-transition.opacity.duration.100ms @click.stop
 		                                                class="absolute z-20 mt-2 max-h-80 w-80 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-lg border border-outline-variant bg-surface p-2 shadow-lg">
-		                                                <template x-for="group in medicalGroups" :key="'medical-group-' + group.key">
-		                                                    <div class="border-b border-outline-variant py-2 last:border-b-0">
-		                                                        <p class="mb-1 flex items-center gap-1.5 px-2 text-[11px] font-bold uppercase tracking-wide text-on-surface-variant">
-		                                                            <span class="material-symbols-outlined text-[15px]" x-text="group.icon"></span>
-		                                                            <span x-text="group.label"></span>
-		                                                        </p>
-		                                                        <template x-for="node in medicalNodesByGroup(group.key)" :key="'medical-node-filter-' + node.id">
-		                                                            <label class="flex cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-surface-container-low">
-		                                                                <input type="checkbox" class="mt-0.5 size-4 rounded text-primary"
-		                                                                    :checked="selectedMedicalNodeIds.includes(node.id)"
-		                                                                    @change="toggleMedicalNode(node.id)">
-		                                                                <span class="min-w-0 flex-1 leading-5">
-		                                                                    <span class="block" x-text="node.name"></span>
-		                                                                    <span class="block text-[11px] text-on-surface-variant" x-text="node.node_type_label"></span>
-		                                                                </span>
-		                                                            </label>
-		                                                        </template>
-		                                                    </div>
+		                                                <template x-for="lesson in lessonOptions" :key="'lesson-filter-' + lesson.id">
+		                                                    <label class="flex cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-surface-container-low">
+		                                                        <input type="checkbox" class="mt-0.5 size-4 rounded text-primary"
+		                                                            :checked="selectedLessonIds.includes(lesson.id)"
+		                                                            @change="toggleLesson(lesson.id)">
+		                                                        <span class="min-w-0 flex-1 whitespace-normal leading-5" x-text="lesson.name"></span>
+		                                                    </label>
 		                                                </template>
-		                                                <p x-show="medicalNodeOptions.length === 0" class="px-2 py-4 text-center text-xs text-on-surface-variant">Chưa có phân loại y khoa.</p>
+		                                                <p x-show="lessonOptions.length === 0" class="px-2 py-4 text-center text-xs text-on-surface-variant">Chưa có bài học.</p>
 		                                            </div>
 		                                        </div>
 		                                        <div class="relative" @click.outside="openFilter === 'tags' && closeFilter()">
@@ -357,7 +346,7 @@
 		                                    </div>
 		                                    <div x-show="hasActiveFilters()" x-cloak class="mb-3 flex flex-wrap items-center gap-2 text-xs">
 		                                        <span class="rounded-full bg-primary/10 px-2.5 py-1 font-semibold text-primary" x-show="selectedCoreTopicIds.length" x-text="selectedCoreTopicIds.length + ' blueprint'"></span>
-		                                        <span class="rounded-full bg-surface-container px-2.5 py-1 font-semibold text-on-surface" x-show="selectedMedicalNodeIds.length" x-text="selectedMedicalNodeIds.length + ' taxonomy'"></span>
+		                                        <span class="rounded-full bg-surface-container px-2.5 py-1 font-semibold text-on-surface" x-show="selectedLessonIds.length" x-text="selectedLessonIds.length + ' bài học'"></span>
 		                                        <span class="rounded-full bg-amber-50 px-2.5 py-1 font-semibold text-amber-800" x-show="selectedTagIds.length" x-text="selectedTagIds.length + ' tag'"></span>
 		                                        <span class="rounded-full bg-tertiary/10 px-2.5 py-1 font-semibold text-tertiary" x-show="selectedFeedbackCategories.length" x-text="selectedFeedbackCategories.length + ' feedback'"></span>
 		                                        <button type="button" @click="clearFilters()" class="rounded-full px-2.5 py-1 font-semibold text-on-surface-variant hover:bg-surface-container-high hover:text-primary">Xóa lọc</button>
@@ -630,12 +619,11 @@
 		            availableQuestions: [],
 		            selected: [],
 		            coreTopicOptions: [],
-		            medicalGroups: [],
-		            medicalNodeOptions: [],
+		            lessonOptions: [],
 		            tagOptions: [],
 		            feedbackCategoryOptions: [],
 		            selectedCoreTopicIds: [],
-		            selectedMedicalNodeIds: [],
+		            selectedLessonIds: [],
 		            selectedTagIds: [],
 		            selectedFeedbackCategories: [],
 		            openFilter: null,
@@ -675,8 +663,8 @@
 		                    this.selectedCoreTopicIds.forEach((id) => {
 		                        url.searchParams.append('core_clinical_topic_ids[]', id);
 		                    });
-		                    this.selectedMedicalNodeIds.forEach((id) => {
-		                        url.searchParams.append('medical_taxonomy_node_ids[]', id);
+		                    this.selectedLessonIds.forEach((id) => {
+		                        url.searchParams.append('lesson_ids[]', id);
 		                    });
 		                    this.selectedTagIds.forEach((id) => {
 		                        url.searchParams.append('tag_ids[]', id);
@@ -697,9 +685,8 @@
 		                        const payload = await response.json();
 		                        this.availableQuestions = payload.data?.questions ?? [];
 		                        this.mergeCoreTopicOptions(payload.data?.filters?.core_topics ?? []);
-		                        this.mergeMedicalNodeOptions(payload.data?.filters?.medical_nodes ?? []);
+		                        this.mergeLessonOptions(payload.data?.filters?.lessons ?? []);
 		                        this.mergeTagOptions(payload.data?.filters?.tags ?? []);
-		                        this.medicalGroups = payload.data?.filters?.medical_groups ?? this.medicalGroups;
 		                        this.feedbackCategoryOptions = payload.data?.filters?.feedback_categories ?? this.feedbackCategoryOptions;
 		                    }
 	                } catch (error) {
@@ -720,10 +707,10 @@
 		                this.coreTopicOptions = Array.from(merged.values()).sort((a, b) => a.name.localeCompare(b.name, 'vi'));
 		            },
 
-		            mergeMedicalNodeOptions(nodes) {
-		                const merged = new Map(this.medicalNodeOptions.map((node) => [node.id, node]));
-		                nodes.forEach((node) => merged.set(node.id, node));
-		                this.medicalNodeOptions = Array.from(merged.values()).sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+		            mergeLessonOptions(lessons) {
+		                const merged = new Map(this.lessonOptions.map((lesson) => [lesson.id, lesson]));
+		                lessons.forEach((lesson) => merged.set(lesson.id, lesson));
+		                this.lessonOptions = Array.from(merged.values()).sort((a, b) => a.name.localeCompare(b.name, 'vi'));
 		            },
 
 		            mergeTagOptions(tags) {
@@ -740,11 +727,11 @@
 		                this.loadQuestions();
 		            },
 
-		            toggleMedicalNode(nodeId) {
-		                const id = Number(nodeId);
-		                this.selectedMedicalNodeIds = this.selectedMedicalNodeIds.includes(id)
-		                    ? this.selectedMedicalNodeIds.filter((item) => item !== id)
-		                    : [...this.selectedMedicalNodeIds, id];
+		            toggleLesson(lessonId) {
+		                const id = Number(lessonId);
+		                this.selectedLessonIds = this.selectedLessonIds.includes(id)
+		                    ? this.selectedLessonIds.filter((item) => item !== id)
+		                    : [...this.selectedLessonIds, id];
 		                this.loadQuestions();
 		            },
 
@@ -754,10 +741,6 @@
 		                    ? this.selectedTagIds.filter((item) => item !== id)
 		                    : [...this.selectedTagIds, id];
 		                this.loadQuestions();
-		            },
-
-		            medicalNodesByGroup(groupKey) {
-		                return this.medicalNodeOptions.filter((node) => node.group_key === groupKey);
 		            },
 
 		            toggleFeedbackCategory(category) {
@@ -781,18 +764,18 @@
 		                return `${this.selectedCoreTopicIds.length} chủ đề`;
 		            },
 
-		            medicalNodeFilterLabel() {
-		                if (this.selectedMedicalNodeIds.length === 0) {
-		                    return 'Phân loại y khoa';
+		            lessonFilterLabel() {
+		                if (this.selectedLessonIds.length === 0) {
+		                    return 'Bài học';
 		                }
 
-		                if (this.selectedMedicalNodeIds.length === 1) {
-		                    const node = this.medicalNodeOptions.find((item) => item.id === this.selectedMedicalNodeIds[0]);
+		                if (this.selectedLessonIds.length === 1) {
+		                    const lesson = this.lessonOptions.find((item) => item.id === this.selectedLessonIds[0]);
 
-		                    return node?.name ?? '1 phân loại';
+		                    return lesson?.name ?? '1 bài học';
 		                }
 
-		                return `${this.selectedMedicalNodeIds.length} phân loại`;
+		                return `${this.selectedLessonIds.length} bài học`;
 		            },
 
 		            tagFilterLabel() {
@@ -825,14 +808,14 @@
 
 		            hasActiveFilters() {
 		                return this.selectedCoreTopicIds.length > 0
-		                    || this.selectedMedicalNodeIds.length > 0
+		                    || this.selectedLessonIds.length > 0
 		                    || this.selectedTagIds.length > 0
 		                    || this.selectedFeedbackCategories.length > 0;
 		            },
 
 		            clearFilters() {
 		                this.selectedCoreTopicIds = [];
-		                this.selectedMedicalNodeIds = [];
+		                this.selectedLessonIds = [];
 		                this.selectedTagIds = [];
 		                this.selectedFeedbackCategories = [];
 		                this.loadQuestions();

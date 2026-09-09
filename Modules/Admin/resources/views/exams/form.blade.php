@@ -17,15 +17,15 @@
         ->map(fn ($question) => [
             'id' => (string) $question->id,
             'text' => strip_tags($question->stem),
-            'topic' => $question->medicalTaxonomyNodes->pluck('name')->join(', ') ?: 'Tổng hợp',
-            'topics' => $question->medicalTaxonomyNodes->pluck('name')->values()->all(),
+            'topic' => $question->lessons->pluck('name')->join(', ') ?: 'Tổng hợp',
+            'topics' => $question->lessons->pluck('name')->values()->all(),
             'difficulty' => $question->difficulty?->label(),
         ])->values()->all();
     $availableQuestionsMapped = $availableQuestions->map(fn ($question) => [
         'id' => (string) $question->id,
         'text' => strip_tags($question->stem),
-        'topic' => $question->medicalTaxonomyNodes->pluck('name')->join(', ') ?: 'Tổng hợp',
-        'topics' => $question->medicalTaxonomyNodes->pluck('name')->values()->all(),
+        'topic' => $question->lessons->pluck('name')->join(', ') ?: 'Tổng hợp',
+        'topics' => $question->lessons->pluck('name')->values()->all(),
         'difficulty' => $question->difficulty?->label(),
     ])->values()->all();
     $questionsCount = (int) ($exam->questions_count ?? count($questionRows));

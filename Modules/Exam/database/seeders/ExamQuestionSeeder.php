@@ -9,28 +9,23 @@ use Illuminate\Database\Seeder;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionScopeType;
 use Modules\QuestionBank\Enums\QuestionStatus;
+use Modules\QuestionBank\Enums\TaxonomyStatus;
+use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionOption;
 use Modules\QuestionBank\Models\QuestionScope;
-use Modules\QuestionBank\Models\MedicalTaxonomy;
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
 
 final class ExamQuestionSeeder extends Seeder
 {
     public function run(): void
     {
         Question::withoutSyncingToSearch(function (): void {
-            $taxonomy = MedicalTaxonomy::query()->firstOrCreate(
-                ['code' => 'exam-demo'],
-                ['name' => 'Exam demo taxonomy', 'status' => 'active'],
-            );
-            $topic = MedicalTaxonomyNode::query()->firstOrCreate(
-                ['medical_taxonomy_id' => $taxonomy->id, 'slug' => 'exam-demo-system'],
+            $lesson = Lesson::query()->firstOrCreate(
+                ['slug' => 'exam-demo-system'],
                 [
                     'name' => 'Hệ Tim mạch (exam demo)',
-                    'node_type' => 'system',
                     'sort_order' => 0,
-                    'status' => 'active',
+                    'status' => TaxonomyStatus::Active,
                 ],
             );
 
@@ -112,6 +107,8 @@ final class ExamQuestionSeeder extends Seeder
 
                 QuestionOption::query()->where('question_id', $question->getKey())->delete();
                 QuestionScope::query()->where('question_id', $question->getKey())->delete();
+
+                $question->lessons()->sync([$lesson->getKey()]);
 
                 foreach ($data['options'] as $optionIndex => $content) {
                     QuestionOption::query()->create([

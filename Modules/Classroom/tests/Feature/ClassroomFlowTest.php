@@ -314,10 +314,9 @@ final class ClassroomFlowTest extends TestCase
         $host = User::factory()->create();
         $host->assignRole(Role::Student->value);
 
-        $topic = $this->makeMedicalNode([
+        $topic = $this->makeLesson([
             'name' => 'Test',
             'slug' => 'test-topic',
-            'node_type' => 'system',
             'sort_order' => 1,
         ]);
 

@@ -80,21 +80,21 @@ final class AdaptiveReplanTest extends TestCase
 
     public function test_upcoming_tasks_target_the_weakest_topic(): void
     {
-        $strong = $this->makeMedicalNode(['name' => 'Hô hấp', 'slug' => 'ho-hap', 'node_type' => 'system', 'sort_order' => 0]);
-        $weak = $this->makeMedicalNode(['name' => 'Tim mạch', 'slug' => 'tim-mach', 'node_type' => 'system', 'sort_order' => 1]);
+        $strong = $this->makeLesson(['name' => 'Hô hấp', 'slug' => 'ho-hap', 'sort_order' => 0]);
+        $weak = $this->makeLesson(['name' => 'Tim mạch', 'slug' => 'tim-mach', 'sort_order' => 1]);
 
         $plan = StudyPlan::factory()->adaptive()->for($this->user)->create([
-            'topic_scope' => [$strong->id, $weak->id],
+            'topic_scope' => ['lesson_ids' => [$strong->id, $weak->id]],
         ]);
 
         $upcoming = StudyPlanTask::factory()->for($plan, 'plan')->create([
             'date' => Carbon::tomorrow()->toDateString(),
-            'ref' => ['topic_ids' => [$strong->id], 'session_id' => null, 'mode' => 'study'],
+            'ref' => ['lesson_ids' => [$strong->id], 'session_id' => null, 'mode' => 'study'],
         ]);
 
         TopicMastery::create([
             'user_id' => $this->user->id,
-            'medical_taxonomy_node_id' => $strong->id,
+            'lesson_id' => $strong->id,
             'attempts' => 10,
             'correct' => 9,
             'correct_rate' => 90,
@@ -102,7 +102,7 @@ final class AdaptiveReplanTest extends TestCase
         ]);
         TopicMastery::create([
             'user_id' => $this->user->id,
-            'medical_taxonomy_node_id' => $weak->id,
+            'lesson_id' => $weak->id,
             'attempts' => 10,
             'correct' => 3,
             'correct_rate' => 30,
@@ -111,7 +111,7 @@ final class AdaptiveReplanTest extends TestCase
 
         ReplanActivePlansJob::dispatchSync();
 
-        $this->assertSame([$weak->id], $upcoming->refresh()->topicIds());
+        $this->assertSame([$weak->id], $upcoming->refresh()->lessonIds());
     }
 
     public function test_fixed_plans_are_left_alone(): void

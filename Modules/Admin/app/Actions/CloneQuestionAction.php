@@ -33,7 +33,7 @@ final class CloneQuestionAction
         return DB::transaction(function () use ($actor, $source, $fromVersion): Question {
             $source->loadMissing([
                 'options' => fn ($q) => $q->orderBy('order'),
-                'medicalTaxonomyNodes:id',
+                'lessons:id',
                 'tags:id',
                 'hints',
             ]);
@@ -46,17 +46,16 @@ final class CloneQuestionAction
                 $snapshot = $this->captureVersion->snapshot($source);
             }
 
-            $medicalNodeIds = collect($snapshot['medical_taxonomy_node_ids'] ?? [])
+            $lessonIds = collect($snapshot['lesson_ids'] ?? $snapshot['medical_taxonomy_node_ids'] ?? [])
                 ->map(fn ($id): int => (int) $id)
                 ->filter()
                 ->unique()
                 ->values()
                 ->all();
 
-            if ($medicalNodeIds === []) {
-                $medicalNodeIds = $source->medicalTaxonomyNodes->pluck('id')
-                    ->map(fn ($id): int => (int) $id)
-                    ->values()
+            if ($lessonIds === []) {
+                $lessonIds = $source->lessons
+                    ->map(fn ($lesson): int => (int) $lesson->getKey())
                     ->all();
             }
 
@@ -78,7 +77,7 @@ final class CloneQuestionAction
                 'exam_flag' => (bool) ($snapshot['exam_flag'] ?? $source->exam_flag ?? false),
             ]);
             $clone->save();
-            $clone->medicalTaxonomyNodes()->sync($medicalNodeIds);
+            $clone->lessons()->sync($lessonIds);
 
             $tagIds = collect($snapshot['tag_ids'] ?? [])
                 ->map(fn ($id): int => (int) $id)
@@ -92,7 +91,7 @@ final class CloneQuestionAction
 
             $this->syncOptionsFromSnapshot($clone, $snapshot);
 
-            $clone->load('options', 'medicalTaxonomyNodes');
+            $clone->load('options', 'lessons');
 
             if (! QuestionAccess::isReviewer($actor)) {
                 QuestionReviewRequest::query()->create([

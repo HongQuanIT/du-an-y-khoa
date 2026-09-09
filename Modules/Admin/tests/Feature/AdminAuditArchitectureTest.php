@@ -76,7 +76,6 @@ final class AdminAuditArchitectureTest extends TestCase
         $topic = $this->makeMedicalNode([
             'name' => 'Hô hấp',
             'slug' => 'ho-hap-audit-test',
-            'node_type' => 'specialty',
             'sort_order' => 1,
         ]);
 
@@ -86,7 +85,7 @@ final class AdminAuditArchitectureTest extends TestCase
                 'explanation' => '<p>Giải thích audit</p><img src="/storage/questions/audit.png" alt="ECG">',
                 'attending_tip' => '<p>Gợi ý audit</p>',
                 'difficulty' => 'medium',
-                'medical_taxonomy_node_ids' => [$topic->id],
+                'lesson_ids' => [$topic->id],
                 'hints' => [
                     ['content' => '<p>Dấu hiệu gợi ý</p>', 'sort_order' => 0],
                 ],
@@ -107,7 +106,7 @@ final class AdminAuditArchitectureTest extends TestCase
         $this->assertNull($log->before);
         $this->assertSame('Ca lâm sàng audit', strip_tags($log->after['stem']));
         $this->assertSame('Vì sao đúng', strip_tags($log->after['explanation']));
-        $this->assertSame([$topic->id], $log->after['medical_taxonomy_node_ids']);
+        $this->assertSame([$topic->id], $log->after['lesson_ids']);
         $this->assertSame('Dấu hiệu gợi ý', strip_tags($log->after['hints'][0]['content']));
         $this->assertTrue($log->after['exam_flag']);
         $this->assertCount(2, $log->after['options']);

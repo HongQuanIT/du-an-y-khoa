@@ -12,7 +12,7 @@ use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionReviewAction;
 use Modules\QuestionBank\Enums\QuestionReviewStatus;
 use Modules\QuestionBank\Enums\QuestionStatus;
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
+use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionReviewRequest;
 use Tests\Support\CreatesMedicalTaxonomy;
@@ -23,17 +23,16 @@ final class TeachQuestionReviewTest extends TestCase
     use CreatesMedicalTaxonomy;
     use RefreshDatabase;
 
-    private MedicalTaxonomyNode $topic;
+    private Lesson $topic;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->seed(RolePermissionSeeder::class);
-        $this->topic = $this->makeMedicalNode([
+        $this->topic = $this->makeLesson([
             'name' => 'Nội tiết',
             'slug' => 'noi-tiet-teach-review',
-            'node_type' => 'specialty',
             'sort_order' => 1,
         ]);
     }
@@ -180,7 +179,7 @@ final class TeachQuestionReviewTest extends TestCase
             'explanation' => 'Explanation draft',
             'difficulty' => Difficulty::Easy,
         ]);
-        $question->medicalTaxonomyNodes()->sync([$this->topic->id]);
+        $question->lessons()->sync([$this->topic->id]);
 
         return $question;
     }
@@ -198,7 +197,7 @@ final class TeachQuestionReviewTest extends TestCase
             'created_by' => $creator->id,
             'version' => 0,
         ]);
-        $question->medicalTaxonomyNodes()->sync([$this->topic->id]);
+        $question->lessons()->sync([$this->topic->id]);
 
         foreach (['Virus', 'Vi khuẩn', 'Nấm', 'Ký sinh'] as $i => $content) {
             $question->options()->create([
@@ -217,6 +216,6 @@ final class TeachQuestionReviewTest extends TestCase
             'requested_by' => $creator->id,
         ]);
 
-        return $question->fresh(['options', 'medicalTaxonomyNodes']);
+        return $question->fresh(['options', 'lessons']);
     }
 }

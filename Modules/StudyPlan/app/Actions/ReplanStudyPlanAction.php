@@ -143,13 +143,13 @@ final class ReplanStudyPlanAction
         $weakTopics = TopicMastery::query()
             ->where('user_id', $plan->user_id)
             ->when(
-                $plan->scopeTopicIds() !== [],
-                fn ($query) => $query->whereIn('medical_taxonomy_node_id', $plan->scopeMedicalTaxonomyNodeIds()),
+                $plan->scopeLessonIds() !== [],
+                fn ($query) => $query->whereIn('lesson_id', $plan->scopeLessonIds()),
             )
             ->where('attempts', '>', 0)
             ->orderBy('correct_rate')
             ->limit(3)
-            ->pluck('medical_taxonomy_node_id')
+            ->pluck('lesson_id')
             ->all();
 
         if ($weakTopics === []) {
@@ -158,7 +158,7 @@ final class ReplanStudyPlanAction
 
         foreach ($upcoming->take(count($weakTopics))->values() as $index => $task) {
             $task->forceFill([
-                'ref' => array_merge($task->ref ?? [], ['medical_taxonomy_node_ids' => [$weakTopics[$index]], 'topic_ids' => [$weakTopics[$index]]]),
+                'ref' => array_merge($task->ref ?? [], ['lesson_ids' => [$weakTopics[$index]], 'topic_ids' => [$weakTopics[$index]]]),
             ])->save();
         }
     }

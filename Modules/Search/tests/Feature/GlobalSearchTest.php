@@ -20,7 +20,7 @@ use Modules\Search\Database\Seeders\SearchDatabaseSeeder;
 use Modules\Search\Models\SearchDocument;
 use Spatie\Permission\Models\Role as RoleModel;
 use Tests\TestCase;
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
+use Modules\QuestionBank\Models\Lesson;
 use Tests\Support\CreatesMedicalTaxonomy;
 
 
@@ -39,17 +39,16 @@ final class GlobalSearchTest extends TestCase
         $this->user = User::factory()->create();
         $this->user->assignRole(Role::Student->value);
 
-        $this->makeMedicalNode([
+        $this->makeLesson([
             'name' => 'Hô hấp',
             'slug' => 'ho-hap-global-search-test',
-            'node_type' => 'system',
             'sort_order' => 1,
         ]);
     }
 
     public function test_global_search_returns_library_content_without_qbank_questions(): void
     {
-        $topic = MedicalTaxonomyNode::query()->firstOrFail();
+        $topic = Lesson::query()->firstOrFail();
 
         Question::query()->create([
             'stem' => 'Viêm phổi cộng đồng cần điều trị thế nào?',

@@ -32,7 +32,7 @@ use Modules\Exam\Models\Exam;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\CoreClinicalTopic;
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
+use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionFeedback;
 
@@ -57,7 +57,7 @@ final class ClassroomOversightController extends Controller
                 ->orderBy('title')
                 ->get(['id', 'title', 'description', 'duration_minutes']),
             'selectedQuestions' => Question::query()
-                ->with(['medicalTaxonomyNodes:id,name'])
+                ->with(['lessons:id,name'])
                 ->withCount(['feedback as open_feedback_count' => fn ($query) => $query->whereIn('status', [
                     QuestionFeedback::STATUS_PENDING,
                     QuestionFeedback::STATUS_REVIEWING,
@@ -75,15 +75,15 @@ final class ClassroomOversightController extends Controller
             ],
             'coreTopicOptions' => CoreClinicalTopic::query()
                 ->whereHas(
-                    'medicalTaxonomyNodes.questions',
+                    'lessons.questions',
                     fn ($query) => $query->where('status', QuestionStatus::Published->value),
                 )
                 ->orderBy('name')
                 ->get(['id', 'name']),
-            'medicalTopicOptions' => MedicalTaxonomyNode::query()
+            'medicalTopicOptions' => Lesson::query()
                 ->whereHas('questions', fn ($query) => $query->where('status', QuestionStatus::Published->value))
                 ->orderBy('name')
-                ->get(['id', 'name', 'node_type']),
+                ->get(['id', 'name']),
             'difficulties' => Difficulty::cases(),
         ]);
     }
@@ -100,7 +100,7 @@ final class ClassroomOversightController extends Controller
         $filters = app(\Modules\QuestionBank\Support\QuestionFilterBuilder::class);
 
         $questions = Question::query()
-            ->with(['medicalTaxonomyNodes:id,name'])
+            ->with(['lessons:id,name'])
             ->withCount(['feedback as open_feedback_count' => fn ($query) => $query->whereIn('status', [
                 QuestionFeedback::STATUS_PENDING,
                 QuestionFeedback::STATUS_REVIEWING,
@@ -108,8 +108,8 @@ final class ClassroomOversightController extends Controller
             ->where('status', QuestionStatus::Published->value)
             ->when($coreTopicId > 0, fn ($query) => $filters->whereMatchesCoreClinicalTopic($query, $coreTopicId))
             ->when($medicalTopicId > 0, fn ($query) => $query->whereHas(
-                'medicalTaxonomyNodes',
-                fn ($topics) => $topics->where('medical_taxonomy_nodes.id', $medicalTopicId),
+                'lessons',
+                fn ($topics) => $topics->where('lessons.id', $medicalTopicId),
             ))
             ->when(in_array($difficulty, Difficulty::values(), true), fn ($query) => $query->where('difficulty', $difficulty))
             ->when($source === 'feedback', fn ($query) => $query->whereHas(
@@ -123,7 +123,7 @@ final class ClassroomOversightController extends Controller
                 $query->where(function ($questions) use ($search): void {
                     $questions->where('stem', 'like', "%{$search}%")
                         ->orWhere('code', 'like', "%{$search}%")
-                        ->orWhereHas('medicalTaxonomyNodes', fn ($topics) => $topics->where('name', 'like', "%{$search}%"));
+                        ->orWhereHas('lessons', fn ($topics) => $topics->where('name', 'like', "%{$search}%"));
                 });
             })
             ->latest()
@@ -134,7 +134,7 @@ final class ClassroomOversightController extends Controller
                 'id' => (string) $question->getKey(),
                 'code' => $question->code,
                 'text' => trim(strip_tags(html_entity_decode($question->stem, ENT_QUOTES | ENT_HTML5, 'UTF-8'))),
-                'topic' => $question->medicalTaxonomyNodes->pluck('name')->join(', ') ?: 'Tổng hợp',
+                'topic' => $question->lessons->pluck('name')->join(', ') ?: 'Tổng hợp',
                 'core_topic' => $question->inferredCoreClinicalTopics()->pluck('name')->join(', '),
                 'difficulty' => $question->difficulty->label(),
                 'feedback_count' => (int) ($question->open_feedback_count ?? 0),

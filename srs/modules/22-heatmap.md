@@ -3,7 +3,7 @@
 **Nhóm:** Personal · **Ưu tiên:** Trung bình · **Phụ thuộc:** Analytics (19), Weak Topics (20) · **Trạng thái:** ✅
 
 ## 0. Tóm tắt module
-Bản đồ nhiệt trực quan: (a) hoạt động học theo ngày (kiểu GitHub contribution) và (b) mức thành thạo theo chủ đề × hệ cơ quan. Giúp nhìn nhanh thói quen & vùng yếu/mạnh.
+Bản đồ nhiệt trực quan: (a) hoạt động học theo ngày (kiểu GitHub contribution) và (b) mức thành thạo theo Bài học × Hệ cơ quan (mastery rollup theo `lesson_id`). Giúp nhìn nhanh thói quen & vùng yếu/mạnh.
 
 | Route | Màn hình |
 |-------|----------|
@@ -20,15 +20,15 @@ Bản đồ nhiệt trực quan: (a) hoạt động học theo ngày (kiểu Git
 |-----------|-----------|-------------|-----------|
 | **Mode toggle** | Activity ↔ Mastery | Luôn | — |
 | **Activity heatmap** | Lưới ngày × cường độ (streak) | Mode activity | Cuộn ngang |
-| **Mastery matrix** | Chủ đề × hệ, màu theo mastery | Mode mastery | Cuộn |
+| **Mastery matrix** | Bài học × Hệ cơ quan, màu theo mastery | Mode mastery | Cuộn |
 | **Legend** | Thang màu | Luôn | — |
 | **Cell tooltip** | Chi tiết ô (ngày/chủ đề) | Hover/tap | Popover |
 | **Range/year selector** | Chọn năm/khoảng | Activity | — |
 | **Empty/Loading/Error/Paywall** | Chưa đủ dữ liệu | Theo trạng thái | — |
 
 ## 3. Phân tích Component
-- `ActivityHeatmap` (props days[]{date,count}), `MasteryMatrix` (props cells[]{topic,system,mastery}), `HeatmapLegend`, `CellTooltip`.
-- Click cell mastery → `onPractice(topic)`.
+- `ActivityHeatmap` (props days[]{date,count}), `MasteryMatrix` (props cells[]{lesson,organSystem,mastery}), `HeatmapLegend`, `CellTooltip`.
+- Click cell mastery → `onPractice(lesson)`.
 
 ## 4. Luồng người dùng
 ```
@@ -37,7 +37,7 @@ Bản đồ nhiệt trực quan: (a) hoạt động học theo ngày (kiểu Git
 
 ## 5. Business Logic
 - **Activity:** đếm hoạt động/ngày từ `daily_stats` → mức màu (0–4).
-- **Mastery matrix:** từ `topic_mastery` map sang màu (0–5).
+- **Mastery matrix:** từ `topic_mastery` (rollup theo `lesson_id`) map sang màu (0–5); nhóm theo Hệ cơ quan.
 - **Streak** liên kết activity heatmap.
 - **Gating:** Free xem activity + mastery cơ bản; Premium chi tiết hơn/nhiều năm.
 

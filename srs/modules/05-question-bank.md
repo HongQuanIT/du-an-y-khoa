@@ -3,7 +3,7 @@
 **Nhóm:** Core · **Ưu tiên:** Rất cao · **Phụ thuộc:** Question Session (06), Search (25), Subscription (28) · **Trạng thái:** ✅
 
 ## 0. Tóm tắt module
-Trình duyệt & bộ lọc câu hỏi để tạo phiên luyện tập. Người dùng chọn tiêu chí (chủ đề, độ khó, trạng thái đã làm, tag) → tạo Session. Đây là điểm khởi đầu học tập chính.
+Trình duyệt & bộ lọc câu hỏi để tạo phiên luyện tập. Người dùng chọn tiêu chí (Hệ cơ quan → Môn học → Bài học, độ khó, trạng thái đã làm, tag) → tạo Session. Đây là điểm khởi đầu học tập chính.
 
 | Route | Màn hình |
 |-------|----------|
@@ -20,7 +20,7 @@ Trình duyệt & bộ lọc câu hỏi để tạo phiên luyện tập. Ngườ
 
 | Thành phần | Chức năng | Hiển thị/Ẩn | Điều kiện | Responsive |
 |-----------|-----------|-------------|-----------|-----------|
-| **Filter panel** | Chọn chủ đề (**tree phân cấp cha–con**), hệ cơ quan, độ khó, trạng thái (unseen/incorrect/correct/marked/omitted), tag, nguồn | Luôn | — | Desktop bên trái; mobile: bottom sheet |
+| **Filter panel** | Chọn **Hệ cơ quan → Môn học → Bài học** (phân cấp DAG), độ khó, trạng thái (unseen/incorrect/correct/marked/omitted), tag, nguồn | Luôn | — | Desktop bên trái; mobile: bottom sheet |
 | **Count preview** | Hiển thị số câu khớp filter realtime | Luôn | Cập nhật khi đổi filter | — |
 | **Mode selector** | Study vs Exam | Luôn | — | Toggle |
 | **Config số câu** | Số câu / thời gian (exam) | Luôn | Exam mode hiện time | — |
@@ -36,8 +36,8 @@ Trình duyệt & bộ lọc câu hỏi để tạo phiên luyện tập. Ngườ
 ## 3. Phân tích Component
 
 ### `FilterBuilder`
-- **Props:** `topics[]`, `tags[]`, `currentUserStatusCounts`.
-- **State:** `selectedTopics`, `difficulty`, `status`, `tags`, `count(loading)`.
+- **Props:** `organSystems[]`, `subjects[]`, `lessons[]`, `tags[]`, `currentUserStatusCounts`.
+- **State:** `selectedLessons`, `selectedSubjects`, `selectedOrganSystems`, `difficulty`, `status`, `tags`, `count(loading)`.
 - **Events:** `onChange` (debounce → gọi count), `onReset`, `onSaveFilter`.
 - **Validation:** ít nhất 1 tiêu chí; số câu ≤ giới hạn (Free thấp hơn).
 - **Permission:** trạng thái/nguồn nâng cao (weak) Premium.
@@ -62,7 +62,7 @@ Trình duyệt & bộ lọc câu hỏi để tạo phiên luyện tập. Ngườ
 /qbank → chọn filter → xem count realtime → chọn mode (Study/Exam) → cấu hình số câu/time
  → "Bắt đầu" → tạo QuestionSession → Question Session (06)
 Nhánh:
- - Từ Weak Topics: /qbank?status=incorrect&topic=X (pre-filled)
+ - Từ Weak Topics: /qbank?status=incorrect&lesson=X (pre-filled)
  - Từ Study Plan task: filter theo task
  - Browse: chọn thủ công câu → tạo session
 Ngoại lệ:
@@ -77,12 +77,12 @@ Ngoại lệ:
 - **Gating:** Free chỉ `is_free` + quota/ngày; Premium full. Server enforce.
 - **Random/ordering:** shuffle hoặc theo độ khó tăng dần (tùy chọn).
 - **Exclude:** câu chưa từng live hoặc đã `retired`/`private` (kể cả `exam_flag`). Include khi có `published_version` (snapshot live) — kể cả lúc working copy đang `draft`/`in_review`/`pending_publish`/`rejected` để tái bản; learner **không** đọc working copy chưa publish. Gating tier vẫn áp dụng.
-- **Topic filter:** hỗ trợ chọn topic cha → đếm/lọc cả câu thuộc topic con (cây phân cấp).
+- **Taxonomy filter:** chọn Hệ cơ quan hoặc Môn học → đếm/lọc gồm mọi Bài học con (suy qua `subject_organ_system` / `lesson_subject`). Câu hỏi gắn ≥1 Bài học (các bài ngang hàng).
 - **Saved filters:** lưu snapshot tiêu chí.
 - **Adaptive option (Premium):** hệ thống tự chọn câu theo weak topics + spaced repetition.
 
 ## 6. Database
-- Đọc: `questions`, `question_topics`, `topics`, `tags`, `question_status` (theo user).
+- Đọc: `questions`, `question_lesson`, `lessons`, `subjects`, `organ_systems`, `lesson_subject`, `subject_organ_system`, `tags`, `question_tags`, `question_status` (theo user).
 - Tạo: `question_sessions` (khi start), `saved_filters(id,user_id,name,filters JSON)`.
 - Search/filter phức tạp → Meilisearch (facet) + đếm.
 
@@ -91,7 +91,7 @@ Ngoại lệ:
 |--------|-----|---------------|----------|-------|
 | GET | `/api/v1/questions` | filter, sort, page | list (không đáp án) | Auth (gated) |
 | GET | `/api/v1/questions/count` | filter | `{count, byStatus}` | Auth |
-| GET | `/api/v1/questions/facets` | — | topics/tags + counts | Auth |
+| GET | `/api/v1/questions/facets` | — | organ_systems/subjects/lessons/tags + counts | Auth |
 | POST | `/api/v1/sessions` | `{mode, filters, count, time_limit?}` | session (chuyển sang module 06) | Auth (gated) |
 | GET/POST/DELETE | `/api/v1/saved-filters` | — | CRUD | Owner |
 
@@ -100,7 +100,7 @@ Lỗi: `SUBSCRIPTION_REQUIRED` khi vượt free; `422` filter sai.
 
 ## 8. State Management
 - **Client:** filter state (Alpine/Livewire), debounce count.
-- **Server:** danh mục topic/tag cache Redis; count có thể cache ngắn theo (user, filter hash).
+- **Server:** danh mục taxonomy (hệ cơ quan/môn học/bài học) + tag cache Redis; count có thể cache ngắn theo (user, filter hash).
 - **Pagination:** browse dùng cursor/infinite scroll.
 - **Optimistic:** mark câu.
 - **Realtime:** không.
@@ -135,4 +135,4 @@ Lỗi: `SUBSCRIPTION_REQUIRED` khi vượt free; `422` filter sai.
 - "Smart session" 1 chạm (AI chọn câu tối ưu hôm nay).
 - Ước lượng thời gian hoàn thành session.
 - Lưu & chia sẻ bộ lọc trong lớp học.
-- Preview độ khó/tỉ lệ đúng cộng đồng cho từng chủ đề.
+- Preview độ khó/tỉ lệ đúng cộng đồng cho từng Bài học.

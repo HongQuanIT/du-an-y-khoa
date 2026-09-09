@@ -8,14 +8,14 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
+use Modules\QuestionBank\Models\Lesson;
 
 /**
- * Rolled-up accuracy per medical taxonomy node, feeding weak topics and adaptive replanning.
+ * Rolled-up accuracy per lesson (bài học), feeding weak topics and adaptive replanning.
  *
  * @property int $id
  * @property int $user_id
- * @property int $medical_taxonomy_node_id
+ * @property int $lesson_id
  * @property int $attempts
  * @property int $correct
  * @property float $correct_rate
@@ -29,7 +29,7 @@ class TopicMastery extends Model
 
     protected $fillable = [
         'user_id',
-        'medical_taxonomy_node_id',
+        'lesson_id',
         'attempts',
         'correct',
         'correct_rate',
@@ -53,9 +53,9 @@ class TopicMastery extends Model
         return $this->belongsTo(User::class);
     }
 
-    /** @return BelongsTo<MedicalTaxonomyNode, $this> */
-    public function medicalTaxonomyNode(): BelongsTo
+    /** @return BelongsTo<Lesson, $this> */
+    public function lesson(): BelongsTo
     {
-        return $this->belongsTo(MedicalTaxonomyNode::class);
+        return $this->belongsTo(Lesson::class);
     }
 }

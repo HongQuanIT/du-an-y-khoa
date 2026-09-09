@@ -3,6 +3,11 @@
 | Thuật ngữ | Giải thích |
 |-----------|-----------|
 | **Qbank (Question Bank)** | Ngân hàng câu hỏi luyện tập |
+| **Hệ cơ quan (Organ system)** | Cấp phân loại nội dung trên cùng (`organ_systems`); nhóm nhiều Môn học |
+| **Môn học (Subject)** | Cấp phân loại giữa (`subjects`); nhóm nhiều Bài học; 1 môn có thể thuộc nhiều Hệ cơ quan |
+| **Bài học (Lesson)** | **Đơn vị kiến thức chuẩn** (`lessons`); câu hỏi gắn vào đây (≥1 bài, ngang hàng). "Chủ đề / Topic" cũ nay là Bài học |
+| **Phân loại 3 cấp (DAG)** | Hệ cơ quan → Môn học → Bài học; đa cha (1 bài thuộc nhiều môn, 1 môn thuộc nhiều hệ) |
+| **Tag (Triệu chứng/Khái niệm)** | Trục gắn thẻ **trực giao** với phân loại 3 cấp (symptom/sign/finding/concept/high_yield…); lọc chéo, không thay Bài học |
 | **Vignette** | Đoạn mô tả tình huống lâm sàng làm đề bài câu hỏi |
 | **Stem** | Phần thân đề bài (vignette + dữ kiện) |
 | **Lead-in** | Câu hỏi dẫn ("Chẩn đoán phù hợp nhất là?") |
@@ -13,9 +18,9 @@
 | **Attempt** | Một lần trả lời một câu trong session |
 | **Omitted / Skip** | Câu bỏ qua không trả lời |
 | **Flag / Mark** | Đánh dấu câu để xem lại |
-| **Mastery** | Mức độ thành thạo theo chủ đề (0–5) |
-| **Weak Topic** | Chủ đề yếu (correct rate/mastery thấp) |
-| **Heatmap** | Bản đồ nhiệt thể hiện mức độ theo chủ đề/thời gian |
+| **Mastery** | Mức độ thành thạo theo Bài học (0–5); rollup trên `lesson_id`, tổng hợp lên Môn học/Hệ cơ quan |
+| **Weak Topic** | Bài học yếu (correct rate/mastery thấp) |
+| **Heatmap** | Bản đồ nhiệt thể hiện mức độ theo Bài học/Môn học/Hệ cơ quan hoặc thời gian |
 | **Spaced Repetition (SRS)** | Thuật toán lặp lại ngắt quãng cho flashcard |
 | **Ease Factor / Interval** | Tham số SRS (độ dễ, khoảng cách ôn) |
 | **High-Yield** | Nội dung trọng tâm, hay ra thi |

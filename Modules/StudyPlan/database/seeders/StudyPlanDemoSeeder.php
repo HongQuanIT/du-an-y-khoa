@@ -8,8 +8,7 @@ use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Modules\Analytics\Actions\RecalculateTopicMasteryAction;
-use Modules\QuestionBank\Models\MedicalTaxonomy;
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
+use Modules\QuestionBank\Models\Lesson;
 use Modules\StudyPlan\Actions\GenerateFixedTasksAction;
 use Modules\StudyPlan\Actions\RecalculatePlanProgressAction;
 use Modules\StudyPlan\Enums\PlanStatus;
@@ -57,7 +56,7 @@ class StudyPlanDemoSeeder extends Seeder
             'exam_target_date' => Carbon::today()->addWeeks(self::FUTURE_WEEKS),
             'daily_goal_questions' => 20,
             'daily_goal_minutes' => 45,
-            'topic_scope' => $this->scopeTopicIds(),
+            'topic_scope' => ['lesson_ids' => $this->scopeLessonIds()],
             'study_days' => [1, 2, 3, 4, 5, 6, 7], // every day, so the demo always has work for today
             'strategy' => PlanStrategy::Fixed,
             'status' => PlanStatus::Active,
@@ -72,15 +71,14 @@ class StudyPlanDemoSeeder extends Seeder
     }
 
     /**
-     * Cardiology / respiratory / antibiotics — the areas the demo questions
-     * cover best.
+     * Cardiology lessons — the areas the demo questions cover best.
      *
      * @return array<int, int>
      */
-    private function scopeTopicIds(): array
+    private function scopeLessonIds(): array
     {
-        return MedicalTaxonomyNode::query()
-            ->whereIn('slug', ['tim-mach', 'ho-hap', 'khang-sinh'])
+        return Lesson::query()
+            ->whereIn('slug', ['benh-dong-mach-vanh', 'hoi-chung-vanh-cap', 'nhoi-mau-co-tim', 'stemi'])
             ->pluck('id')
             ->all();
     }

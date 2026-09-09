@@ -38,7 +38,7 @@ final class TeachQuestionReviewController extends Controller
                 'creator:id,name,email',
                 'instructor:id,name',
                 'publisher:id,name',
-                'medicalTaxonomyNodes:id,name',
+                'lessons:id,name',
                 'pendingReviewRequest.requester:id,name',
             ]);
 
@@ -99,7 +99,7 @@ final class TeachQuestionReviewController extends Controller
 
         $question->load([
             'options' => fn ($query) => $query->orderBy('order'),
-            'medicalTaxonomyNodes:id,name',
+            'lessons:id,name',
             'creator:id,name,email',
             'instructor:id,name',
             'publisher:id,name',

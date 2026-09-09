@@ -9,7 +9,6 @@ use Modules\Admin\Actions\CaptureQuestionVersionAction;
 use Modules\QuestionBank\Data\ListQuestionsData;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionStatus;
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Repositories\QuestionRepository;
 use Modules\QuestionBank\Support\ServePublishedQuestion;
@@ -23,10 +22,9 @@ final class ServePublishedQuestionTest extends TestCase
 
     public function test_overlay_and_repository_serve_published_snapshot_while_in_review(): void
     {
-        $topic = $this->makeMedicalNode([
+        $topic = $this->makeLesson([
             'name' => 'Overlay topic',
             'slug' => 'overlay-topic',
-            'node_type' => 'specialty',
             'sort_order' => 1,
         ]);
 
@@ -38,7 +36,7 @@ final class ServePublishedQuestionTest extends TestCase
             'version' => 1,
             'published_version' => 1,
         ]);
-        $question->medicalTaxonomyNodes()->sync([$topic->id]);
+        $question->lessons()->attach($topic->id);
         $question->options()->create([
             'label' => 'A',
             'content' => 'Đúng',
@@ -51,7 +49,7 @@ final class ServePublishedQuestionTest extends TestCase
             'is_correct' => false,
             'order' => 2,
         ]);
-        $question = $question->fresh(['options', 'medicalTaxonomyNodes']);
+        $question = $question->fresh(['options', 'lessons']);
         app(CaptureQuestionVersionAction::class)->handle($question, null, 'publish');
 
         $question->forceFill([

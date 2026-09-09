@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
+use Modules\QuestionBank\Models\Lesson;
 use Modules\StudyPlan\Database\Factories\StudyPlanTaskFactory;
 use Modules\StudyPlan\Enums\TaskStatus;
 use Modules\StudyPlan\Enums\TaskType;
@@ -16,7 +16,7 @@ use Modules\StudyPlan\Enums\TaskType;
 /**
  * One day's piece of work inside a plan.
  *
- * `ref` carries the module payload: `{medical_taxonomy_node_ids, session_id, mode}` for
+ * `ref` carries the module payload: `{lesson_ids, session_id, mode}` for
  * question/review tasks.
  *
  * @property int $id
@@ -98,17 +98,23 @@ class StudyPlanTask extends Model
     }
 
     /** @return array<int, int> */
-    public function medicalTaxonomyNodeIds(): array
+    public function lessonIds(): array
     {
-        $ids = $this->ref['medical_taxonomy_node_ids'] ?? $this->ref['topic_ids'] ?? [];
+        $ids = $this->ref['lesson_ids'] ?? $this->ref['topic_ids'] ?? [];
 
         return is_array($ids) ? array_values(array_map('intval', $ids)) : [];
     }
 
-    /** @deprecated Use medicalTaxonomyNodeIds() */
+    /** @deprecated Use lessonIds() */
+    public function medicalTaxonomyNodeIds(): array
+    {
+        return $this->lessonIds();
+    }
+
+    /** @deprecated Use lessonIds() */
     public function topicIds(): array
     {
-        return $this->medicalTaxonomyNodeIds();
+        return $this->lessonIds();
     }
 
     /** Minutes budgeted for the task, using the ~2.25 min/question heuristic. */
@@ -136,14 +142,14 @@ class StudyPlanTask extends Model
     }
 
     /**
-     * Topic names are read on nearly every task render, so the (small) table
+     * Lesson names are read on nearly every task render, so the (small) table
      * is loaded once per request instead of per task.
      *
      * @return array<int, string>
      */
     private static function topicNames(): array
     {
-        return once(fn () => MedicalTaxonomyNode::query()->pluck('name', 'id')->all());
+        return once(fn () => Lesson::query()->pluck('name', 'id')->all());
     }
 
     protected static function newFactory(): StudyPlanTaskFactory

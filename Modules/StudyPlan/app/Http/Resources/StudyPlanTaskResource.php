@@ -31,8 +31,8 @@ final class StudyPlanTaskResource extends JsonResource
                 'percent' => $this->percent(),
                 'status' => $this->status->value,
                 'estimated_minutes' => $this->estimatedMinutes(),
-                'medical_taxonomy_node_ids' => $this->medicalTaxonomyNodeIds(),
-                'topic_ids' => $this->topicIds(),
+                'lesson_ids' => $this->lessonIds(),
+                'topic_ids' => $this->lessonIds(),
                 'session_id' => $this->sessionId(),
             ],
         ];

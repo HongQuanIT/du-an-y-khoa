@@ -22,7 +22,7 @@ use Modules\QuestionBank\Enums\SessionStatus;
 use Modules\QuestionBank\Enums\UserQuestionStatus;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
 use Modules\QuestionBank\Models\Blueprint;
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
+use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionFeedback;
@@ -43,7 +43,7 @@ final class QuestionBankFlowTest extends TestCase
 
     private User $user;
 
-    private MedicalTaxonomyNode $topic;
+    private Lesson $topic;
 
     protected function setUp(): void
     {
@@ -52,10 +52,9 @@ final class QuestionBankFlowTest extends TestCase
         RoleModel::findOrCreate(Role::Student->value, 'web');
         $this->user = User::factory()->create();
         $this->user->assignRole(Role::Student->value);
-        $this->topic = $this->makeMedicalNode([
+        $this->topic = $this->makeLesson([
             'name' => 'Tim mạch',
             'slug' => 'tim-mach-qbank-test',
-            'node_type' => 'system',
             'sort_order' => 1,
         ]);
     }
@@ -65,6 +64,11 @@ final class QuestionBankFlowTest extends TestCase
         $this->createQuestion($this->topic, true, Difficulty::Easy, 'Câu miễn phí 1');
         $this->createQuestion($this->topic, true, Difficulty::Easy, 'Câu miễn phí 2');
         $this->createQuestion($this->topic, false, Difficulty::Easy, 'Câu premium');
+
+        // The builder renders the real content taxonomy (organ systems / subjects)
+        // server-side; lessons are fetched lazily. Provide a subject so the
+        // learner-facing picker has data to display.
+        $this->makeSubject(['name' => 'Tim mạch']);
 
         Blueprint::query()->create([
             'name' => 'Kỳ thi đánh giá năng lực hành nghề Bác sĩ Y khoa',
@@ -88,7 +92,7 @@ final class QuestionBankFlowTest extends TestCase
             ])
             ->assertSee('Kỳ thi')
             ->assertSee('Kỳ thi đánh giá năng lực hành nghề Bác sĩ Y khoa')
-            ->assertSee('danh mục y khoa')
+            ->assertSee('Bài học')
             ->assertDontSee('Chủ đề lâm sàng')
             ->assertDontSee('>Tags</span>', false)
             ->assertDontSee('>Ma trận đề thi</span>', false)
@@ -204,10 +208,9 @@ final class QuestionBankFlowTest extends TestCase
         $this->assignScopes($wrongExam, ['nbme'], ['sepsis'], ['dyspnea']);
         $this->assignScopes($wrongArticle, ['usmle-step-2-ck'], ['stroke'], ['dyspnea']);
         $this->assignScopes($wrongSymptom, ['usmle-step-2-ck'], ['sepsis'], ['fever']);
-        $outsideTopic = $this->makeMedicalNode([
+        $outsideTopic = $this->makeLesson([
             'name' => 'Hô hấp',
             'slug' => 'ho-hap-qbank-test',
-            'node_type' => 'system',
             'sort_order' => 2,
         ]);
         $outside = $this->createQuestion($outsideTopic, true, Difficulty::Easy, 'Outside A');
@@ -233,7 +236,7 @@ final class QuestionBankFlowTest extends TestCase
             [$targetA->getKey(), $targetB->getKey()],
             $session->question_ids,
         );
-        $this->assertSame([$this->topic->id], $session->filters['medical_taxonomy_node_ids']);
+        $this->assertSame([$this->topic->id], $session->filters['lesson_ids']);
         $this->assertSame('usmle-step-2-ck', $session->filters['exam_key']);
         $this->assertSame(['abcde-approach', 'sepsis'], $session->filters['articles']);
         $this->assertSame(['chest-pain', 'dyspnea'], $session->filters['symptoms']);
@@ -1125,15 +1128,15 @@ final class QuestionBankFlowTest extends TestCase
         $this->seed(DemoLearningSeeder::class);
 
         $this->assertSame(200, Question::count());
-        $question = Question::with(['options', 'medicalTaxonomyNodes'])
+        $question = Question::with(['options', 'lessons'])
             ->where('stem', 'like', 'A 24-year-old man comes to the emergency department%')
             ->firstOrFail();
         $options = $question->options->sortBy('order')->values();
 
         $this->assertSame(Difficulty::VeryHard, $question->difficulty);
         $this->assertTrue(
-            $question->medicalTaxonomyNodes->contains(fn ($node): bool => $node->slug === 'urology')
-            || $question->medicalTaxonomyNodes->isNotEmpty(),
+            $question->lessons->contains(fn ($lesson): bool => $lesson->slug === 'urology')
+            || $question->lessons->isNotEmpty(),
         );
         $this->assertSame(['A', 'B', 'C', 'D', 'E', 'F', 'G'], $options->pluck('label')->all());
         $this->assertSame('Goodpasture syndrome', $options->first()?->content);
@@ -1189,7 +1192,7 @@ final class QuestionBankFlowTest extends TestCase
             'mode' => SessionMode::Study->value,
             'source' => 'custom',
             'count' => $count,
-            'medical_taxonomy_node_ids' => [$this->topic->id],
+            'lesson_ids' => [$this->topic->id],
             'difficulty' => $difficulty->value,
             'question_status_mode' => 'latest',
             'saved_only' => false,
@@ -1197,7 +1200,7 @@ final class QuestionBankFlowTest extends TestCase
     }
 
     private function createQuestion(
-        MedicalTaxonomyNode $topic,
+        Lesson $topic,
         bool $isFree,
         Difficulty $difficulty,
         string $stem,
@@ -1227,7 +1230,7 @@ final class QuestionBankFlowTest extends TestCase
             'order' => 1,
         ]);
 
-        $question->medicalTaxonomyNodes()->sync([$topic->id]);
+        $question->lessons()->sync([$topic->id]);
 
         return $question;
     }

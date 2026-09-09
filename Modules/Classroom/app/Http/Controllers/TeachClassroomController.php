@@ -39,11 +39,10 @@ use Modules\Exam\Enums\ExamStatus;
 use Modules\Exam\Models\Exam;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\CoreClinicalTopic;
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
+use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionFeedback;
 use Modules\QuestionBank\Models\Tag;
-use Modules\QuestionBank\Support\MedicalTaxonomyNodeTypes;
 
 final class TeachClassroomController extends Controller
 {
@@ -245,8 +244,8 @@ final class TeachClassroomController extends Controller
             'q' => ['nullable', 'string', 'max:255'],
             'core_clinical_topic_ids' => ['nullable', 'array', 'max:10'],
             'core_clinical_topic_ids.*' => ['integer', 'exists:core_clinical_topics,id'],
-            'medical_taxonomy_node_ids' => ['nullable', 'array', 'max:10'],
-            'medical_taxonomy_node_ids.*' => ['integer', 'exists:medical_taxonomy_nodes,id'],
+            'lesson_ids' => ['nullable', 'array', 'max:10'],
+            'lesson_ids.*' => ['integer', 'exists:lessons,id'],
             'tag_ids' => ['nullable', 'array', 'max:10'],
             'tag_ids.*' => ['integer', 'exists:tags,id'],
             'feedback_categories' => ['nullable', 'array', 'max:8'],
@@ -259,7 +258,7 @@ final class TeachClassroomController extends Controller
             ->unique()
             ->values()
             ->all();
-        $topicIds = collect($validated['medical_taxonomy_node_ids'] ?? [])
+        $lessonIds = collect($validated['lesson_ids'] ?? [])
             ->map(fn ($id): int => (int) $id)
             ->filter()
             ->unique()
@@ -283,7 +282,7 @@ final class TeachClassroomController extends Controller
         $questions = Question::query()
             ->with([
                 'latestFeedback.user:id,name',
-                'medicalTaxonomyNodes:id,name,node_type',
+                'lessons:id,name',
                 'tags:id,name',
             ])
             ->withCount([
@@ -301,11 +300,11 @@ final class TeachClassroomController extends Controller
                     $questions
                         ->whereRaw("stem LIKE ? ESCAPE '!'", [$pattern])
                         ->orWhereHas(
-                            'medicalTaxonomyNodes',
-                            fn ($nodes) => $nodes->whereRaw("name LIKE ? ESCAPE '!'", [$pattern]),
+                            'lessons',
+                            fn ($lessons) => $lessons->whereRaw("name LIKE ? ESCAPE '!'", [$pattern]),
                         )
                         ->orWhereHas(
-                            'medicalTaxonomyNodes.coreClinicalTopics',
+                            'lessons.coreClinicalTopics',
                             fn ($topics) => $topics->whereRaw("name LIKE ? ESCAPE '!'", [$pattern]),
                         )
                         ->orWhereHas(
@@ -320,10 +319,10 @@ final class TeachClassroomController extends Controller
                     coreClinicalTopicIds: $coreTopicIds,
                 );
             })
-            ->when($topicIds !== [], function ($query) use ($topicIds): void {
+            ->when($lessonIds !== [], function ($query) use ($lessonIds): void {
                 $query->whereHas(
-                    'medicalTaxonomyNodes',
-                    fn ($nodes) => $nodes->whereIn('medical_taxonomy_nodes.id', $topicIds),
+                    'lessons',
+                    fn ($lessons) => $lessons->whereIn('lessons.id', $lessonIds),
                 );
             })
             ->when($tagIds !== [], function ($query) use ($tagIds): void {
@@ -352,16 +351,16 @@ final class TeachClassroomController extends Controller
 
         $coreTopicOptions = CoreClinicalTopic::query()
             ->with(['section:id,name'])
-            ->whereHas('medicalTaxonomyNodes.questions', $availableQuestionScope)
+            ->whereHas('lessons.questions', $availableQuestionScope)
             ->orderBy('name')
             ->limit(80)
             ->get(['id', 'blueprint_section_id', 'name']);
 
-        $topicOptions = MedicalTaxonomyNode::query()
+        $lessonOptions = Lesson::query()
             ->whereHas('questions', $availableQuestionScope)
             ->orderBy('name')
             ->limit(80)
-            ->get(['id', 'name', 'node_type']);
+            ->get(['id', 'name']);
 
         $tagOptions = Tag::query()
             ->whereHas('questions', $availableQuestionScope)
@@ -376,20 +375,9 @@ final class TeachClassroomController extends Controller
                     'name' => $topic->name,
                     'section_name' => $topic->section?->name,
                 ])->values(),
-                'medical_groups' => collect(MedicalTaxonomyNodeTypes::GROUPS)
-                    ->map(fn (array $group, string $key): array => [
-                        'key' => $key,
-                        'label' => $group['label'],
-                        'icon' => $group['icon'],
-                        'types' => $group['types'],
-                    ])
-                    ->values(),
-                'medical_nodes' => $topicOptions->map(fn (MedicalTaxonomyNode $node): array => [
-                    'id' => (int) $node->getKey(),
-                    'name' => $node->name,
-                    'node_type' => $node->node_type,
-                    'node_type_label' => MedicalTaxonomyNodeTypes::label($node->node_type),
-                    'group_key' => MedicalTaxonomyNodeTypes::groupKey($node->node_type),
+                'lessons' => $lessonOptions->map(fn (Lesson $lesson): array => [
+                    'id' => (int) $lesson->getKey(),
+                    'name' => $lesson->name,
                 ])->values(),
                 'tags' => $tagOptions->map(fn (Tag $tag): array => [
                     'id' => (int) $tag->getKey(),
@@ -413,15 +401,14 @@ final class TeachClassroomController extends Controller
                     'id' => (string) $question->getKey(),
                     'stem' => trim(strip_tags(html_entity_decode($question->stem, ENT_QUOTES | ENT_HTML5, 'UTF-8'))),
                     'difficulty' => $question->difficulty->label(),
-                    'topic' => $question->medicalTaxonomyNodes->pluck('name')->join(', ') ?: 'Tổng hợp',
+                    'topic' => $question->lessons->pluck('name')->join(', ') ?: 'Tổng hợp',
                     'core_topics' => $inferred->map(fn (CoreClinicalTopic $topic): array => [
                         'id' => (int) $topic->getKey(),
                         'name' => $topic->name,
                         'section_name' => $topic->section?->name,
                     ])->values(),
-                    'topics' => $question->medicalTaxonomyNodes->pluck('name')->values(),
-                    'medical_taxonomy_node_ids' => $question->medicalTaxonomyNodes->pluck('id')->map(fn ($id): int => (int) $id)->values(),
-                    'topic_ids' => $question->medicalTaxonomyNodes->pluck('id')->map(fn ($id): int => (int) $id)->values(),
+                    'topics' => $question->lessons->pluck('name')->values(),
+                    'lesson_ids' => $question->lessons->pluck('id')->map(fn ($id): int => (int) $id)->values(),
                     'tags' => $question->tags->map(fn (Tag $tag): array => [
                         'id' => (int) $tag->getKey(),
                         'name' => $tag->name,

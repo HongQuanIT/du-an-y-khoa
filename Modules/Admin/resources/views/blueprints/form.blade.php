@@ -1,7 +1,7 @@
 @php $isNew = ! $blueprint->exists; @endphp
 <x-layouts.admin :title="$isNew ? 'Tạo ma trận đề thi' : 'Sửa ma trận đề thi'">
     <x-admin.page-header :title="$isNew ? 'Tạo ma trận đề thi' : $blueprint->name"
-        :description="$isNew ? 'Tạo ma trận mới, sau đó thêm các phần, chủ đề lâm sàng và map sang danh mục y khoa.' : 'Chỉnh metadata, phần, chủ đề lâm sàng. Map CCT ↔ danh mục để câu hỏi (đã gắn danh mục) tự khớp ma trận — không gắn câu hỏi trực tiếp.'">
+        :description="$isNew ? 'Tạo ma trận mới, sau đó thêm các phần, chủ đề lâm sàng và map sang bài học.' : 'Chỉnh metadata, phần, chủ đề lâm sàng. Map CCT ↔ bài học để câu hỏi (đã gắn bài học) tự khớp ma trận — không gắn câu hỏi trực tiếp.'">
         <x-slot:actions>
             <a href="{{ route('admin.blueprints.index') }}" class="rounded-lg border border-outline-variant px-4 py-2 text-sm font-semibold text-on-surface-variant hover:bg-surface-container-low">← Danh sách</a>
         </x-slot:actions>
@@ -126,7 +126,7 @@
                                     class="inline-flex h-8 items-center gap-1 rounded-lg border border-error/20 px-2.5 text-xs font-semibold text-error transition hover:bg-error/5"
                                     @click="openConfirm({
                                         title: 'Xóa phần này?',
-                                        message: @js('Phần «'.$section->name.'» và '.$section->coreClinicalTopics->count().' chủ đề lâm sàng bên trong sẽ bị xóa vĩnh viễn. Liên kết danh mục và tag cũng bị gỡ.'),
+                                        message: @js('Phần «'.$section->name.'» và '.$section->coreClinicalTopics->count().' chủ đề lâm sàng bên trong sẽ bị xóa vĩnh viễn. Liên kết bài học và tag cũng bị gỡ.'),
                                         action: @js(route('admin.blueprint-sections.destroy', $section)),
                                         label: 'Xóa phần',
                                     })"
@@ -141,10 +141,9 @@
                     <ul class="mb-4 space-y-3 text-sm">
                         @forelse ($section->coreClinicalTopics as $topic)
                             @php
-                                $topicNodes = $topic->medicalTaxonomyNodes->map(fn ($n) => [
-                                    'id' => (int) $n->id,
-                                    'name' => $n->name,
-                                    'node_type' => $n->node_type,
+                                $topicLessons = $topic->lessons->map(fn ($l) => [
+                                    'id' => (int) $l->id,
+                                    'name' => $l->name,
                                 ])->values()->all();
                                 $topicTags = $topic->tags->map(fn ($t) => [
                                     'id' => (int) $t->id,
@@ -154,13 +153,12 @@
                             <li
                                 class="rounded-lg border border-outline-variant/60 p-3"
                                 x-data="blueprintTopicLinkMapper({
-                                    nodeLookupUrl: @js(route('admin.taxonomy.lookups.medical-nodes')),
+                                    lessonLookupUrl: @js(route('admin.taxonomy.lookups.lessons')),
                                     tagLookupUrl: @js(route('admin.taxonomy.lookups.tags')),
                                     syncUrl: @js(route('admin.core-clinical-topics.medical-nodes.sync', $topic)),
                                     csrfToken: @js(csrf_token()),
                                     canUpdate: @js((bool) $canUpdate),
-                                    nodeTypeLabels: @js(\Modules\QuestionBank\Support\MedicalTaxonomyNodeTypes::LABELS),
-                                    initialNodes: @js(collect($topicNodes)->keyBy('id')->all()),
+                                    initialLessons: @js(collect($topicLessons)->keyBy('id')->all()),
                                     initialTags: @js(collect($topicTags)->keyBy('id')->all()),
                                 })"
                             >
@@ -172,7 +170,7 @@
                                         <span
                                             class="rounded bg-secondary-container px-2 py-0.5 text-on-secondary-container"
                                             x-text="linkCountLabel()"
-                                        >{{ count($topicNodes) + count($topicTags) }} liên kết</span>
+                                        >{{ count($topicLessons) + count($topicTags) }} liên kết</span>
                                         @if ($canUpdate)
                                             <button type="button" @click="open = !open" class="font-semibold text-primary" x-text="open ? 'Đóng' : 'Liên kết'"></button>
                                         @endif
@@ -183,7 +181,7 @@
                                                 aria-label="Xóa chủ đề {{ $topic->name }}"
                                                 @click="$dispatch('blueprint-confirm', {
                                                     title: 'Xóa chủ đề lâm sàng?',
-                                                    message: @js('Chủ đề «'.$topic->name.'» sẽ bị xóa vĩnh viễn. Liên kết danh mục và tag của chủ đề này cũng bị gỡ.'),
+                                                    message: @js('Chủ đề «'.$topic->name.'» sẽ bị xóa vĩnh viễn. Liên kết bài học và tag của chủ đề này cũng bị gỡ.'),
                                                     action: @js(route('admin.core-clinical-topics.destroy', $topic)),
                                                     label: 'Xóa chủ đề',
                                                 })"
@@ -196,12 +194,12 @@
 
                                 {{-- Preview chips when collapsed --}}
                                 <div
-                                    x-show="!open && (selectedNodeIds.length > 0 || selectedTagIds.length > 0)"
+                                    x-show="!open && (selectedLessonIds.length > 0 || selectedTagIds.length > 0)"
                                     class="mt-2 flex flex-wrap gap-1.5"
                                 >
-                                    <template x-for="id in selectedNodeIds" :key="'preview-node-'+id">
+                                    <template x-for="id in selectedLessonIds" :key="'preview-lesson-'+id">
                                         <span class="inline-flex max-w-full items-center gap-1 rounded-md bg-surface-container px-2 py-0.5 text-xs text-on-surface">
-                                            <span class="truncate" x-text="selectedNodes[id]?.name || ('#'+id)"></span>
+                                            <span class="truncate" x-text="selectedLessons[id]?.name || ('#'+id)"></span>
                                         </span>
                                     </template>
                                     <template x-for="id in selectedTagIds" :key="'preview-tag-'+id">
@@ -213,24 +211,19 @@
                                 </div>
 
                                 <div x-show="open" x-cloak class="mt-3 space-y-3 border-t border-outline-variant/60 pt-3">
-                                    <p class="text-xs text-on-surface-variant">Map danh mục y khoa hoặc tag cho chủ đề này. Câu hỏi đã gắn các mục/tag đó sẽ tự khớp ma trận — không cần gắn lại từng câu.</p>
+                                    <p class="text-xs text-on-surface-variant">Map bài học hoặc tag cho chủ đề này. Câu hỏi đã gắn các bài học/tag đó sẽ tự khớp ma trận — không cần gắn lại từng câu.</p>
 
                                     {{-- Selected links --}}
-                                    <div x-show="selectedNodeIds.length > 0 || selectedTagIds.length > 0" class="flex flex-wrap gap-1.5">
-                                        <template x-for="id in selectedNodeIds" :key="'chip-node-'+id">
+                                    <div x-show="selectedLessonIds.length > 0 || selectedTagIds.length > 0" class="flex flex-wrap gap-1.5">
+                                        <template x-for="id in selectedLessonIds" :key="'chip-lesson-'+id">
                                             <span class="inline-flex max-w-full items-center gap-1 rounded-lg bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
-                                                <span class="truncate" x-text="selectedNodes[id]?.name || ('#'+id)"></span>
-                                                <span
-                                                    class="shrink-0 text-[10px] font-normal text-primary/70"
-                                                    x-show="selectedNodes[id]?.node_type"
-                                                    x-text="nodeTypeLabel(selectedNodes[id]?.node_type)"
-                                                ></span>
+                                                <span class="truncate" x-text="selectedLessons[id]?.name || ('#'+id)"></span>
                                                 @if ($canUpdate)
                                                     <button
                                                         type="button"
-                                                        @click="removeNode(id)"
+                                                        @click="removeLesson(id)"
                                                         class="inline-flex size-5 shrink-0 items-center justify-center rounded-md text-primary/70 transition hover:bg-primary/15 hover:text-primary"
-                                                        :aria-label="'Xóa ' + (selectedNodes[id]?.name || id)"
+                                                        :aria-label="'Xóa ' + (selectedLessons[id]?.name || id)"
                                                     >
                                                         <span class="material-symbols-outlined text-[14px]" aria-hidden="true">close</span>
                                                     </button>
@@ -260,10 +253,10 @@
                                         <div class="flex gap-1 rounded-lg bg-surface-container-low p-1">
                                             <button
                                                 type="button"
-                                                @click="linkMode = 'node'; clearSearch()"
+                                                @click="linkMode = 'lesson'; clearSearch()"
                                                 class="flex-1 rounded-md px-3 py-1.5 text-xs font-semibold transition"
-                                                :class="linkMode === 'node' ? 'bg-surface text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface'"
-                                            >Danh mục</button>
+                                                :class="linkMode === 'lesson' ? 'bg-surface text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface'"
+                                            >Bài học</button>
                                             <button
                                                 type="button"
                                                 @click="linkMode = 'tag'; clearSearch()"
@@ -283,7 +276,7 @@
                                                     @input.debounce.300ms="runSearch()"
                                                     @keydown.enter.prevent="addFirstResult()"
                                                     @keydown.escape.prevent="clearSearch()"
-                                                    :placeholder="linkMode === 'tag' ? 'Tìm tag…' : 'Tìm mục danh mục y khoa…'"
+                                                    :placeholder="linkMode === 'tag' ? 'Tìm tag…' : 'Tìm bài học…'"
                                                     autocomplete="off"
                                                     class="h-10 w-full rounded-lg border border-outline-variant bg-surface-container-low py-2 pl-10 pr-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                                                 >
@@ -308,7 +301,7 @@
                                                         <span class="min-w-0 flex-1 truncate font-medium" x-text="item.name"></span>
                                                         <span
                                                             class="shrink-0 text-[10px] uppercase text-on-surface-variant"
-                                                            x-text="linkMode === 'tag' ? 'Tag' : nodeTypeLabel(item.node_type)"
+                                                            x-text="linkMode === 'tag' ? 'Tag' : 'Bài học'"
                                                         ></span>
                                                     </button>
                                                 </template>
@@ -417,14 +410,14 @@
     @once
         <script>
             function blueprintTopicLinkMapper(config) {
-                const initialNodes = { ...(config.initialNodes || {}) };
-                const initialNodeIds = Object.keys(initialNodes).map((id) => Number(id)).sort((a, b) => a - b);
+                const initialLessons = { ...(config.initialLessons || {}) };
+                const initialLessonIds = Object.keys(initialLessons).map((id) => Number(id)).sort((a, b) => a - b);
                 const initialTags = { ...(config.initialTags || {}) };
                 const initialTagIds = Object.keys(initialTags).map((id) => Number(id)).sort((a, b) => a - b);
 
                 return {
                     open: false,
-                    linkMode: 'node',
+                    linkMode: 'lesson',
                     searchQuery: '',
                     searchResults: [],
                     searching: false,
@@ -432,20 +425,19 @@
                     statusMessage: '',
                     statusError: false,
                     canUpdate: Boolean(config.canUpdate),
-                    nodeLookupUrl: config.nodeLookupUrl,
+                    lessonLookupUrl: config.lessonLookupUrl,
                     tagLookupUrl: config.tagLookupUrl,
                     syncUrl: config.syncUrl,
                     csrfToken: config.csrfToken,
-                    nodeTypeLabels: config.nodeTypeLabels || {},
-                    selectedNodes: { ...initialNodes },
-                    selectedNodeIds: [...initialNodeIds],
-                    savedNodeIds: [...initialNodeIds],
+                    selectedLessons: { ...initialLessons },
+                    selectedLessonIds: [...initialLessonIds],
+                    savedLessonIds: [...initialLessonIds],
                     selectedTags: { ...initialTags },
                     selectedTagIds: [...initialTagIds],
                     savedTagIds: [...initialTagIds],
 
                     get isDirty() {
-                        return ! this.sameIdList(this.selectedNodeIds, this.savedNodeIds)
+                        return ! this.sameIdList(this.selectedLessonIds, this.savedLessonIds)
                             || ! this.sameIdList(this.selectedTagIds, this.savedTagIds);
                     },
 
@@ -460,17 +452,9 @@
                     },
 
                     linkCountLabel() {
-                        const total = this.selectedNodeIds.length + this.selectedTagIds.length;
+                        const total = this.selectedLessonIds.length + this.selectedTagIds.length;
 
                         return total + ' liên kết';
-                    },
-
-                    nodeTypeLabel(type) {
-                        if (! type) {
-                            return '';
-                        }
-
-                        return this.nodeTypeLabels[type] || type;
                     },
 
                     isResultSelected(id) {
@@ -478,7 +462,7 @@
 
                         return this.linkMode === 'tag'
                             ? this.selectedTagIds.includes(value)
-                            : this.selectedNodeIds.includes(value);
+                            : this.selectedLessonIds.includes(value);
                     },
 
                     clearSearch() {
@@ -495,7 +479,7 @@
                         }
 
                         this.searching = true;
-                        const url = this.linkMode === 'tag' ? this.tagLookupUrl : this.nodeLookupUrl;
+                        const url = this.linkMode === 'tag' ? this.tagLookupUrl : this.lessonLookupUrl;
                         try {
                             const response = await fetch(`${url}?q=${encodeURIComponent(q)}`, {
                                 headers: { Accept: 'application/json' },
@@ -521,30 +505,29 @@
                             return;
                         }
 
-                        this.addNode(item);
+                        this.addLesson(item);
                     },
 
-                    addNode(node) {
-                        const id = Number(node.id);
-                        if (this.selectedNodeIds.includes(id)) {
-                            this.removeNode(id);
+                    addLesson(lesson) {
+                        const id = Number(lesson.id);
+                        if (this.selectedLessonIds.includes(id)) {
+                            this.removeLesson(id);
                             return;
                         }
 
-                        this.selectedNodeIds.push(id);
-                        this.selectedNodes[id] = {
+                        this.selectedLessonIds.push(id);
+                        this.selectedLessons[id] = {
                             id,
-                            name: node.name,
-                            node_type: node.node_type || null,
+                            name: lesson.name,
                         };
                         this.statusMessage = '';
                         this.clearSearch();
                     },
 
-                    removeNode(id) {
-                        const nodeId = Number(id);
-                        this.selectedNodeIds = this.selectedNodeIds.filter((item) => item !== nodeId);
-                        delete this.selectedNodes[nodeId];
+                    removeLesson(id) {
+                        const lessonId = Number(id);
+                        this.selectedLessonIds = this.selectedLessonIds.filter((item) => item !== lessonId);
+                        delete this.selectedLessons[lessonId];
                         this.statusMessage = '';
                     },
 
@@ -584,8 +567,8 @@
                             const body = new FormData();
                             body.append('_token', this.csrfToken);
                             body.append('_method', 'PUT');
-                            this.selectedNodeIds.forEach((id) => {
-                                body.append('medical_taxonomy_node_ids[]', String(id));
+                            this.selectedLessonIds.forEach((id) => {
+                                body.append('lesson_ids[]', String(id));
                             });
                             this.selectedTagIds.forEach((id) => {
                                 body.append('tag_ids[]', String(id));
@@ -604,7 +587,7 @@
                                 throw new Error('save_failed');
                             }
 
-                            this.savedNodeIds = [...this.selectedNodeIds].map(Number).sort((a, b) => a - b);
+                            this.savedLessonIds = [...this.selectedLessonIds].map(Number).sort((a, b) => a - b);
                             this.savedTagIds = [...this.selectedTagIds].map(Number).sort((a, b) => a - b);
                             this.statusMessage = 'Đã lưu liên kết.';
                             this.statusError = false;

@@ -11,7 +11,9 @@ use Modules\QuestionBank\Enums\SessionSource;
  * Input bag for creating a custom / exam / weak-topics Q-Bank session.
  *
  * @property-read array<int, int> $coreClinicalTopicIds
- * @property-read array<int, int> $medicalTaxonomyNodeIds
+ * @property-read array<int, int> $organSystemIds
+ * @property-read array<int, int> $subjectIds
+ * @property-read array<int, int> $lessonIds
  * @property-read array<int, int> $tagIds
  * @property-read array<int, string> $difficulties
  * @property-read array<int, string> $questionStatuses
@@ -22,7 +24,9 @@ final class CreateSessionData
 {
     /**
      * @param  array<int, int>  $coreClinicalTopicIds
-     * @param  array<int, int>  $medicalTaxonomyNodeIds
+     * @param  array<int, int>  $organSystemIds
+     * @param  array<int, int>  $subjectIds
+     * @param  array<int, int>  $lessonIds
      * @param  array<int, int>  $tagIds
      * @param  array<int, string>  $difficulties
      * @param  array<int, string>  $questionStatuses
@@ -36,7 +40,9 @@ final class CreateSessionData
         public readonly ?int $blueprintId = null,
         public readonly ?int $blueprintSectionId = null,
         public readonly array $coreClinicalTopicIds = [],
-        public readonly array $medicalTaxonomyNodeIds = [],
+        public readonly array $organSystemIds = [],
+        public readonly array $subjectIds = [],
+        public readonly array $lessonIds = [],
         public readonly array $tagIds = [],
         public readonly array $difficulties = [],
         public readonly array $questionStatuses = [],
@@ -60,7 +66,9 @@ final class CreateSessionData
             'blueprint_id' => $this->blueprintId,
             'blueprint_section_id' => $this->blueprintSectionId,
             'core_clinical_topic_ids' => array_values($this->coreClinicalTopicIds),
-            'medical_taxonomy_node_ids' => array_values($this->medicalTaxonomyNodeIds),
+            'organ_system_ids' => array_values($this->organSystemIds),
+            'subject_ids' => array_values($this->subjectIds),
+            'lesson_ids' => array_values($this->lessonIds),
             'tag_ids' => array_values($this->tagIds),
             'difficulties' => array_values($this->difficulties),
             'difficulty' => count($this->difficulties) === 1 ? $this->difficulties[0] : null,
