@@ -9,6 +9,7 @@ use Modules\Admin\Database\Seeders\CmsPageSeeder;
 use Modules\Admin\Database\Seeders\MenuSeeder;
 use Modules\Admin\Database\Seeders\SettingsSeeder;
 use Modules\AiAssistant\Database\Seeders\AiTutorSettingsSeeder;
+use Modules\Auth\Database\Seeders\AuthDatabaseSeeder;
 use Modules\Billing\Database\Seeders\BillingDatabaseSeeder;
 use Modules\Partner\Database\Seeders\PartnerSettingsSeeder;
 use Modules\QuestionBank\Database\Seeders\MedicalKnowledgeTaxonomySeeder;
@@ -31,6 +32,7 @@ class ProductionSeeder extends Seeder
     {
         $this->call([
             RolePermissionSeeder::class,
+            AuthDatabaseSeeder::class,
 
             MedicalLicensingExamBlueprintSeeder::class,
             MedicalKnowledgeTaxonomySeeder::class,

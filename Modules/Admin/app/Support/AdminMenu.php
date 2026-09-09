@@ -53,6 +53,20 @@ final class AdminMenu
                 'match' => 'admin.users.*',
             ],
             [
+                'label' => 'Dữ liệu học viên',
+                'icon' => 'clinical_notes',
+                'route' => 'admin.learner-data.demographics',
+                'permission' => Permission::UserView->value,
+                'match' => [
+                    'admin.learner-data.*',
+                    'admin.countries.*',
+                    'admin.administrative-units.*',
+                    'admin.institutions.*',
+                    'admin.professions.*',
+                    'admin.education-stages.*',
+                ],
+            ],
+            [
                 'label' => 'Câu hỏi',
                 'icon' => 'quiz',
                 'route' => 'admin.questions.index',

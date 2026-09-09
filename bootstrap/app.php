@@ -6,6 +6,7 @@ use App\Http\Middleware\EnforceWebSessionPolicy;
 use App\Http\Middleware\EnsureInstructor;
 use App\Http\Middleware\EnsureInstructorTwoFactor;
 use App\Http\Middleware\EnsureLearner;
+use App\Http\Middleware\EnsureLearnerOnboarding;
 use App\Http\Middleware\EnsurePartner;
 use App\Http\Middleware\EnsurePartnerTwoFactor;
 use App\Http\Middleware\EnsureStaffTwoFactor;
@@ -66,6 +67,7 @@ return Application::configure(basePath: dirname(__DIR__))
             EnsureSystemIsAvailable::class,
             EnforceWebSessionPolicy::class,
             EnsureStudentTwoFactor::class,
+            EnsureLearnerOnboarding::class,
             CapturePartnerInvite::class,
         ]);
 

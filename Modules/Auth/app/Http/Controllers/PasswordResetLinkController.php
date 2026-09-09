@@ -21,6 +21,10 @@ final class PasswordResetLinkController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $request->merge([
+            'email' => mb_strtolower(trim((string) $request->input('email'))),
+        ]);
+
         $request->validate([
             'email' => ['required', 'email'],
         ], [], [
@@ -31,12 +35,16 @@ final class PasswordResetLinkController extends Controller
             $request->only('email'),
         );
 
-        if ($status !== Password::RESET_LINK_SENT) {
-            return back()
-                ->withInput($request->only('email'))
-                ->withErrors(['email' => __($status)]);
+        // Do not reveal whether an email address is registered.
+        if (in_array($status, [Password::RESET_LINK_SENT, Password::INVALID_USER], true)) {
+            return back()->with(
+                'status',
+                'Nếu email tồn tại trong hệ thống, chúng tôi đã gửi liên kết đặt lại mật khẩu.',
+            );
         }
 
-        return back()->with('status', __($status));
+        return back()
+            ->withInput($request->only('email'))
+            ->withErrors(['email' => __($status)]);
     }
 }

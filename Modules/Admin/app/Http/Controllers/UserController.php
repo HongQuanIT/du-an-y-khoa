@@ -20,6 +20,10 @@ use Modules\Admin\Actions\SendUserPasswordResetAction;
 use Modules\Admin\Actions\UpdateUserRoleAction;
 use Modules\Admin\Actions\UpdateUserStatusAction;
 use Modules\Admin\Actions\VerifyUserEmailAction;
+use Modules\Auth\Models\AdministrativeUnit;
+use Modules\Auth\Models\EducationStage;
+use Modules\Auth\Models\Institution;
+use Modules\Auth\Models\Profession;
 use Modules\Partner\Models\Partner;
 
 final class UserController extends Controller
@@ -28,7 +32,13 @@ final class UserController extends Controller
     {
         $this->authorizePermission(Permission::UserView);
 
-        $query = User::query()->with('roles')->latest('id');
+        $query = User::query()->with([
+            'roles',
+            'learnerProfile.institution',
+            'learnerProfile.administrativeUnit',
+            'learnerProfile.profession',
+            'learnerProfile.educationStage',
+        ])->latest('id');
 
         if ($search = trim((string) $request->query('q', ''))) {
             $query->where(function ($builder) use ($search): void {
@@ -53,6 +63,18 @@ final class UserController extends Controller
             $query->where('status', (string) $status);
         }
 
+        foreach (['institution_id', 'administrative_unit_id', 'profession_id', 'education_stage_id'] as $field) {
+            if ($request->filled($field)) {
+                $query->whereHas('learnerProfile', fn ($profile) => $profile->where($field, $request->integer($field)));
+            }
+        }
+
+        if ($request->filled('onboarding')) {
+            $request->string('onboarding')->toString() === 'completed'
+                ? $query->whereHas('learnerProfile', fn ($profile) => $profile->whereNotNull('onboarding_completed_at'))
+                : $query->whereHas('learnerProfile', fn ($profile) => $profile->whereNull('onboarding_completed_at'));
+        }
+
         $users = $query->paginate(20)->withQueryString();
 
         return view('admin::users.index', [
@@ -60,6 +82,10 @@ final class UserController extends Controller
             'roles' => Role::cases(),
             'portals' => PortalGroup::cases(),
             'statuses' => UserStatus::cases(),
+            'institutions' => Institution::query()->active()->orderBy('name')->get(['id', 'name']),
+            'administrativeUnits' => AdministrativeUnit::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            'professions' => Profession::query()->where('is_active', true)->orderBy('sort_order')->get(['id', 'name']),
+            'educationStages' => EducationStage::query()->where('is_active', true)->orderBy('sort_order')->get(['id', 'name']),
             'canCreate' => $this->actor()->can(Permission::UserManage->value)
                 && Role::assignableBy($this->actor()) !== [],
             'filters' => [
@@ -67,6 +93,11 @@ final class UserController extends Controller
                 'portal' => $request->query('portal'),
                 'role' => $request->query('role'),
                 'status' => $request->query('status'),
+                'institution_id' => $request->query('institution_id'),
+                'administrative_unit_id' => $request->query('administrative_unit_id'),
+                'profession_id' => $request->query('profession_id'),
+                'education_stage_id' => $request->query('education_stage_id'),
+                'onboarding' => $request->query('onboarding'),
             ],
         ]);
     }
@@ -124,7 +155,15 @@ final class UserController extends Controller
     {
         $this->authorizePermission(Permission::UserView);
 
-        $user->load('roles');
+        $user->load([
+            'roles',
+            'learnerProfile.country',
+            'learnerProfile.administrativeUnit',
+            'learnerProfile.institution',
+            'learnerProfile.profession',
+            'learnerProfile.educationStage',
+            'socialAccounts',
+        ]);
 
         $activities = UserActivitySession::query()
             ->where('user_id', $user->getKey())

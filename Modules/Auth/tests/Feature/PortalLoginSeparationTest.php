@@ -10,6 +10,7 @@ use App\Support\Enums\Role;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Modules\Auth\Enums\AuthenticationMethod;
 use Modules\Auth\Models\TwoFactorSecret;
 use Modules\Auth\Services\TotpService;
 use PragmaRX\Google2FA\Google2FA;
@@ -43,6 +44,8 @@ final class PortalLoginSeparationTest extends TestCase
         ])->assertRedirect(route('dashboard', absolute: false));
 
         $this->assertAuthenticatedAs($user);
+        $this->assertSame(AuthenticationMethod::Email, $user->fresh()->last_login_method);
+        $this->assertNotNull($user->fresh()->last_login_at);
     }
 
     public function test_staff_cannot_login_via_student_portal(): void

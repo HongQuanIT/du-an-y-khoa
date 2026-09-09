@@ -41,7 +41,7 @@
             <x-auth.submit>Đăng nhập</x-auth.submit>
         </form>
 
-        <x-auth.social-providers />
+        <x-auth.social-providers mode="login" :plan-price-id="$planPriceId ?? null" />
 
         <p class="mt-8 text-center text-body-sm font-body-sm text-on-surface-variant">
             Chưa có tài khoản?

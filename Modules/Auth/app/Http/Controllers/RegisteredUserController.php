@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Modules\Auth\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Support\Auth\HomePath;
 use App\Support\Auth\WebSessionManager;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -13,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 use Modules\Auth\Actions\RegisterUserAction;
 use Modules\Auth\Http\Requests\RegisterRequest;
+use Modules\Auth\Support\RegistrationAttribution;
 use Modules\Billing\Support\CheckoutIntent;
 use Modules\Partner\Support\PartnerInviteIntent;
 
@@ -25,6 +25,7 @@ final class RegisteredUserController extends Controller
     {
         abort_unless(setting('features.registration_enabled', true), 404);
 
+        RegistrationAttribution::capture($request);
         CheckoutIntent::capture($request);
         PartnerInviteIntent::capture($request);
 
@@ -38,6 +39,7 @@ final class RegisteredUserController extends Controller
     {
         abort_unless(setting('features.registration_enabled', true), 404);
 
+        RegistrationAttribution::capture($request);
         CheckoutIntent::capture($request);
         PartnerInviteIntent::capture($request);
 
@@ -50,6 +52,6 @@ final class RegisteredUserController extends Controller
         $request->session()->regenerate();
         WebSessionManager::bindToUser($user, $request);
 
-        return redirect()->intended(HomePath::for($user));
+        return redirect()->route('onboarding.profile');
     }
 }
