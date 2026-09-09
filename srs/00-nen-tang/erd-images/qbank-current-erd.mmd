@@ -14,34 +14,42 @@
 }}%%
 erDiagram
   %% ===== Content =====
-  users ||--o{ questions : "created_by / reviewer / …"
+  %% All user FKs on questions are nullable (SET NULL)
+  users o|--o{ questions : "created_by / updated_by / reviewer / instructor / publisher"
   questions ||--o{ question_options : has
   questions ||--o{ question_hints : has
   questions ||--o{ question_versions : has
+  users o|--o{ question_versions : created_by
   questions ||--o{ question_scopes : has
   questions ||--o{ question_review_requests : has
+  users ||--o{ question_review_requests : requested_by
+  users o|--o{ question_review_requests : reviewed_by
   questions ||--o{ question_feedback : has
   questions ||--o{ question_similarity_matches : "pair low/high"
-  questions ||--o| questions : cloned_from_id
+  questions o|--o{ questions : cloned_from_id
 
   %% ===== Taxonomy / Blueprint =====
+  %% Content classification = 3-level DAG: organ_systems -> subjects -> lessons
   blueprints ||--o{ blueprint_sections : has
   blueprint_sections ||--o{ core_clinical_topics : has
-  medical_taxonomies ||--o{ medical_taxonomy_nodes : has
-  medical_taxonomy_nodes ||--o{ medical_taxonomy_nodes : parent_id
 
-  questions ||--o{ question_medical_topics : tagged
-  medical_taxonomy_nodes ||--o{ question_medical_topics : tagged
+  organ_systems ||--o{ subject_organ_system : groups
+  subjects ||--o{ subject_organ_system : "belongs (multi-parent)"
+  subjects ||--o{ lesson_subject : groups
+  lessons ||--o{ lesson_subject : "belongs (multi-parent)"
+
+  questions ||--o{ question_lesson : tagged
+  lessons ||--o{ question_lesson : tagged
   questions ||--o{ question_tags : tagged
   tags ||--o{ question_tags : tagged
-  core_clinical_topics ||--o{ core_topic_medical_taxonomy_nodes : maps
-  medical_taxonomy_nodes ||--o{ core_topic_medical_taxonomy_nodes : maps
+  core_clinical_topics ||--o{ core_topic_lessons : maps
+  lessons ||--o{ core_topic_lessons : maps
   core_clinical_topics ||--o{ core_topic_tags : tagged
   tags ||--o{ core_topic_tags : tagged
 
   %% ===== Runtime =====
   users ||--o{ question_sessions : owns
-  exams ||--o{ question_sessions : "exam_id optional"
+  exams o|--o{ question_sessions : "exam_id optional SET NULL"
   question_sessions ||--o{ question_session_snapshots : has
   question_sessions ||--o{ question_attempts : has
   question_sessions ||--o{ question_feedback : has
@@ -49,15 +57,18 @@ erDiagram
   users ||--o{ question_status : tracks
   questions ||--o{ question_status : tracks
   users ||--o{ question_feedback : owns
-  question_options ||--o{ question_feedback : "optional option"
+  question_options o|--o{ question_feedback : "option_id optional SET NULL"
+  %% logical only — no DB FK (survive hard-delete):
+  %% questions }o..o{ question_session_snapshots : question_id
+  %% questions }o..o{ question_attempts : question_id
 
   %% ===== Exam =====
-  blueprints ||--o{ exams : "blueprint_id"
+  blueprints o|--o{ exams : "blueprint_id optional SET NULL"
   exams ||--o{ exam_topics : has
   core_clinical_topics ||--o{ exam_topics : allocates
   exams ||--o{ exam_question : contains
   questions ||--o{ exam_question : contains
-  core_clinical_topics ||--o{ exam_question : "optional CCT"
+  core_clinical_topics o|--o{ exam_question : "CCT optional SET NULL"
 
   users {
     bigint id PK
@@ -66,7 +77,12 @@ erDiagram
   questions {
     uuid id PK
     string code UK
-    uuid cloned_from_id FK
+    bigint created_by FK "nullable"
+    bigint updated_by FK "nullable"
+    bigint reviewer_id FK "nullable"
+    bigint instructor_id FK "nullable"
+    bigint publisher_id FK "nullable"
+    uuid cloned_from_id FK "nullable self"
     string difficulty
     string status
     bool is_free
@@ -81,8 +97,8 @@ erDiagram
 
   question_options {
     bigint id PK "identity for grading"
-    uuid question_id FK
-    string label "authoring-only letter"
+    uuid question_id FK "CASCADE"
+    string label "authoring-only"
     text content
     bool is_correct
     uint order "author order"
@@ -90,7 +106,7 @@ erDiagram
 
   question_hints {
     bigint id PK
-    uuid question_id FK
+    uuid question_id FK "CASCADE"
     text content
     uint sort_order
     string status
@@ -98,33 +114,35 @@ erDiagram
 
   question_versions {
     bigint id PK
-    uuid question_id FK
+    uuid question_id FK "CASCADE"
     uint version
     json snapshot
     string event
+    bigint created_by FK "nullable"
   }
 
   question_scopes {
     bigint id PK
-    uuid question_id FK
+    uuid question_id FK "CASCADE"
     string scope_type
     string scope_key
   }
 
   question_review_requests {
     bigint id PK
-    uuid question_id FK
+    uuid question_id FK "CASCADE"
     string action
     string status
-    bigint requested_by FK
+    bigint requested_by FK "CASCADE"
+    bigint reviewed_by FK "nullable"
   }
 
   question_feedback {
     bigint id PK
-    uuid question_id FK
-    uuid question_session_id FK
-    bigint user_id FK
-    bigint question_option_id FK
+    uuid question_id FK "CASCADE"
+    uuid question_session_id FK "CASCADE"
+    bigint user_id FK "CASCADE"
+    bigint question_option_id FK "nullable"
     string target
     string category
     string status
@@ -132,8 +150,8 @@ erDiagram
 
   question_similarity_matches {
     bigint id PK
-    uuid question_id_low FK
-    uuid question_id_high FK
+    uuid question_id_low FK "CASCADE"
+    uuid question_id_high FK "CASCADE"
     decimal score
     string severity
   }
@@ -147,31 +165,46 @@ erDiagram
 
   blueprint_sections {
     bigint id PK
-    bigint blueprint_id FK
+    bigint blueprint_id FK "CASCADE"
     string slug
     string status
   }
 
   core_clinical_topics {
     bigint id PK
-    bigint blueprint_section_id FK
+    bigint blueprint_section_id FK "CASCADE"
     string slug
     string status
   }
 
-  medical_taxonomies {
+  organ_systems {
     bigint id PK
-    string code UK
-    string status
+    string name
+    string slug UK
+    string code "nullable"
+    text description "nullable"
+    string status "active/inactive"
+    uint sort_order
   }
 
-  medical_taxonomy_nodes {
+  subjects {
     bigint id PK
-    bigint medical_taxonomy_id FK
-    bigint parent_id FK
-    string slug
-    string node_type
-    string status
+    string name
+    string slug UK
+    string code "nullable"
+    text description "nullable"
+    string status "active/inactive"
+    uint sort_order
+  }
+
+  lessons {
+    bigint id PK
+    string name
+    string slug UK
+    string code "nullable"
+    text description "nullable"
+    string status "active/inactive"
+    uint sort_order
   }
 
   tags {
@@ -181,32 +214,42 @@ erDiagram
     string status
   }
 
-  question_medical_topics {
-    uuid question_id FK
-    bigint medical_taxonomy_node_id FK
-    string relationship_type
-    bool is_primary
+  subject_organ_system {
+    bigint subject_id FK "CASCADE"
+    bigint organ_system_id FK "CASCADE"
+    uint sort_order
+  }
+
+  lesson_subject {
+    bigint lesson_id FK "CASCADE"
+    bigint subject_id FK "CASCADE"
+    uint sort_order
+  }
+
+  question_lesson {
+    uuid question_id FK "CASCADE"
+    bigint lesson_id FK "CASCADE"
   }
 
   question_tags {
-    uuid question_id FK
-    bigint tag_id FK
+    uuid question_id FK "CASCADE"
+    bigint tag_id FK "CASCADE"
   }
 
-  core_topic_medical_taxonomy_nodes {
-    bigint core_clinical_topic_id FK
-    bigint medical_taxonomy_node_id FK
+  core_topic_lessons {
+    bigint core_clinical_topic_id FK "CASCADE"
+    bigint lesson_id FK "CASCADE"
   }
 
   core_topic_tags {
-    bigint core_clinical_topic_id FK
-    bigint tag_id FK
+    bigint core_clinical_topic_id FK "CASCADE"
+    bigint tag_id FK "CASCADE"
   }
 
   question_sessions {
     uuid id PK
-    bigint user_id FK
-    bigint exam_id FK
+    bigint user_id FK "CASCADE"
+    bigint exam_id FK "nullable SET NULL"
     string mode
     string status
     string source
@@ -217,32 +260,32 @@ erDiagram
 
   question_session_snapshots {
     bigint id PK
-    uuid session_id FK
-    uuid question_id "no FK"
+    uuid session_id FK "CASCADE"
+    uuid question_id "NO FK"
     uint position
     json payload
   }
 
   question_attempts {
     bigint id PK
-    uuid session_id FK
-    bigint user_id FK
-    uuid question_id "no FK"
+    uuid session_id FK "CASCADE"
+    bigint user_id FK "CASCADE"
+    uuid question_id "NO FK"
     json selected_option_ids
     bool is_correct
   }
 
   question_status {
     bigint id PK
-    bigint user_id FK
-    uuid question_id FK
+    bigint user_id FK "CASCADE"
+    uuid question_id FK "CASCADE"
     string status
     uint attempts_count
   }
 
   exams {
     bigint id PK
-    bigint blueprint_id FK
+    bigint blueprint_id FK "nullable SET NULL"
     string title
     string status
     bool is_published
@@ -250,16 +293,16 @@ erDiagram
 
   exam_topics {
     bigint id PK
-    bigint exam_id FK
-    bigint core_clinical_topic_id FK
+    bigint exam_id FK "CASCADE"
+    bigint core_clinical_topic_id FK "CASCADE"
     int question_count
     json difficulty_counts
   }
 
   exam_question {
     bigint id PK
-    bigint exam_id FK
-    uuid question_id FK
-    bigint core_clinical_topic_id FK
+    bigint exam_id FK "CASCADE"
+    uuid question_id FK "CASCADE"
+    bigint core_clinical_topic_id FK "nullable"
     int order
   }

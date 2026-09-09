@@ -47,7 +47,7 @@ final class QuestionSessionInsights
             $question = $questions[(string) $questionId] ?? null;
             $attempt = $attempts[(string) $questionId] ?? null;
             $topicNames = $question instanceof Question
-                ? $question->medicalTaxonomyNodes->pluck('name')->map(fn ($name): string => (string) $name)->all()
+                ? $question->lessons->pluck('name')->map(fn ($name): string => (string) $name)->all()
                 : [];
             if ($topicNames === []) {
                 $topicNames = ['Tổng hợp'];
@@ -181,7 +181,7 @@ final class QuestionSessionInsights
                 'question_id' => (string) $questionId,
                 'index' => $position,
                 'result' => $result,
-                'topic' => $question->medicalTaxonomyNodes->pluck('name')->join(', ') ?: 'Tổng hợp',
+                'topic' => $question->lessons->pluck('name')->join(', ') ?: 'Tổng hợp',
                 'excerpt' => Str::limit(strip_tags((string) $question->stem), 140),
                 'stem' => (string) $question->stem,
                 'stem_html' => (string) ($annotation['stem_html'] ?? SafeHtml::forDisplay((string) $question->stem)),

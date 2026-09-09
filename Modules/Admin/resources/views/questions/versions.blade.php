@@ -52,8 +52,8 @@
                     : null;
                 $status = QuestionStatus::tryFrom((string) ($snapshot['status'] ?? ''));
                 $difficulty = Difficulty::tryFrom((string) ($snapshot['difficulty'] ?? ''));
-                $versionNodeNames = collect((array) ($snapshot['medical_taxonomy_node_ids'] ?? []))
-                    ->map(fn ($id) => $nodeNames->get((int) $id, "Node #{$id}"))
+                $versionLessonNames = collect((array) ($snapshot['lesson_ids'] ?? $snapshot['medical_taxonomy_node_ids'] ?? []))
+                    ->map(fn ($id) => $lessonNames->get((int) $id, "Bài học #{$id}"))
                     ->values();
                 $isCurrent = (int) $version->version === (int) $contentVersion;
             @endphp
@@ -111,8 +111,8 @@
                         @if ($stemImageUrl)
                             <span class="rounded-lg bg-surface-container px-2 py-1">Có hình ảnh</span>
                         @endif
-                        @foreach ($versionNodeNames as $nodeName)
-                            <span class="rounded-lg bg-primary/10 px-2 py-1 text-primary">{{ $nodeName }}</span>
+                        @foreach ($versionLessonNames as $lessonName)
+                            <span class="rounded-lg bg-primary/10 px-2 py-1 text-primary">{{ $lessonName }}</span>
                         @endforeach
                     </div>
                 </div>

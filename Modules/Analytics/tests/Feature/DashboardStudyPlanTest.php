@@ -13,7 +13,7 @@ use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Enums\SessionMode;
 use Modules\QuestionBank\Enums\SessionStatus;
 use Modules\QuestionBank\Enums\UserQuestionStatus;
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
+use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionSession;
@@ -33,28 +33,27 @@ final class DashboardStudyPlanTest extends TestCase
 
     private User $user;
 
-    private MedicalTaxonomyNode $topic;
+    private Lesson $topic;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->user = User::factory()->create();
-        $this->topic = $this->makeMedicalNode([
+        $this->topic = $this->makeLesson([
             'name' => 'Tim mạch',
             'slug' => 'tim-mach',
-            'node_type' => 'system',
             'sort_order' => 0,
         ]);
     }
 
     public function test_dashboard_shows_todays_plan_task(): void
     {
-        $plan = StudyPlan::factory()->for($this->user)->create(['topic_scope' => [$this->topic->id]]);
+        $plan = StudyPlan::factory()->for($this->user)->create(['topic_scope' => ['lesson_ids' => [$this->topic->id]]]);
         StudyPlanTask::factory()->for($plan, 'plan')->create([
             'date' => Carbon::today()->toDateString(),
             'target' => 15,
-            'ref' => ['topic_ids' => [$this->topic->id], 'session_id' => null, 'mode' => 'study'],
+            'ref' => ['lesson_ids' => [$this->topic->id], 'session_id' => null, 'mode' => 'study'],
         ]);
 
         $this->actingAs($this->user)
@@ -66,11 +65,11 @@ final class DashboardStudyPlanTest extends TestCase
 
     public function test_continue_learning_prefers_an_unfinished_session(): void
     {
-        $plan = StudyPlan::factory()->for($this->user)->create(['topic_scope' => [$this->topic->id]]);
+        $plan = StudyPlan::factory()->for($this->user)->create(['topic_scope' => ['lesson_ids' => [$this->topic->id]]]);
         $task = StudyPlanTask::factory()->for($plan, 'plan')->create([
             'date' => Carbon::today()->toDateString(),
             'target' => 10,
-            'ref' => ['topic_ids' => [$this->topic->id], 'session_id' => null, 'mode' => 'study'],
+            'ref' => ['lesson_ids' => [$this->topic->id], 'session_id' => null, 'mode' => 'study'],
         ]);
 
         $session = QuestionSession::create([
@@ -139,7 +138,7 @@ final class DashboardStudyPlanTest extends TestCase
                 'status' => QuestionStatus::Published,
                 'is_free' => true,
             ]);
-            $question->medicalTaxonomyNodes()->sync([$this->topic->id]);
+            $question->lessons()->sync([$this->topic->id]);
 
             QuestionAttempt::create([
                 'session_id' => $session->getKey(),

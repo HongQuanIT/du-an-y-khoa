@@ -1,6 +1,6 @@
 <x-layouts.admin title="Phân loại câu hỏi">
     <x-admin.page-header title="Phân loại câu hỏi"
-        description="Quản lý ba lớp phân loại: ma trận đề thi, danh mục y khoa và thẻ.">
+        description="Quản lý ba lớp phân loại: ma trận đề thi, danh mục kiến thức 3 cấp và thẻ.">
     </x-admin.page-header>
 
     @include('admin::taxonomy._sub-nav', ['active' => 'overview'])
@@ -9,7 +9,7 @@
 
     <div class="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <x-admin.kpi-card label="Ma trận đề thi" :value="number_format($stats['blueprints'])" hint="{{ number_format($stats['sections']) }} phần · {{ number_format($stats['core_topics']) }} chủ đề lâm sàng" icon="assignment" />
-        <x-admin.kpi-card label="Danh mục y khoa" :value="number_format($stats['medical_nodes'])" hint="Cây phân loại kiến thức y khoa" icon="account_tree" />
+        <x-admin.kpi-card label="Danh mục kiến thức" :value="number_format($stats['lessons'])" hint="{{ number_format($stats['organ_systems']) }} hệ cơ quan · {{ number_format($stats['subjects']) }} môn học · {{ number_format($stats['lessons']) }} bài học" icon="account_tree" />
         <x-admin.kpi-card label="Thẻ" :value="number_format($stats['tags'])" hint="Nhãn phân loại bổ sung" icon="sell" />
     </div>
 
@@ -30,18 +30,18 @@
             </div>
         </a>
 
-        <a href="{{ route('admin.medical-taxonomy.index') }}"
+        <a href="{{ route('admin.curriculum.index') }}"
             class="group rounded-xl border border-outline-variant bg-surface p-5 transition-colors hover:border-primary/40 hover:bg-primary/5">
             <div class="flex items-start gap-4">
                 <span class="flex size-12 items-center justify-center rounded-xl bg-secondary-container text-on-secondary-container">
                     <span class="material-symbols-outlined text-[28px]">account_tree</span>
                 </span>
                 <div class="min-w-0 flex-1">
-                    <h3 class="font-label-lg font-semibold text-on-surface group-hover:text-primary">Danh mục y khoa</h3>
+                    <h3 class="font-label-lg font-semibold text-on-surface group-hover:text-primary">Danh mục kiến thức</h3>
                     <p class="mt-1 text-sm text-on-surface-variant">
-                        Cây kiến thức y khoa: hệ cơ quan → chuyên khoa → bệnh; kèm triệu chứng, dấu hiệu, cận lâm sàng và khái niệm để gắn câu hỏi.
+                        Danh mục chương trình 3 cấp: Hệ cơ quan → Môn học → Bài học. Câu hỏi gắn vào bài học; triệu chứng &amp; khái niệm quản lý ở mục Thẻ.
                     </p>
-                    <p class="mt-3 text-xs font-semibold text-primary">Duyệt danh mục →</p>
+                    <p class="mt-3 text-xs font-semibold text-primary">Quản lý danh mục →</p>
                 </div>
             </div>
         </a>

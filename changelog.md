@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-09-09
+
+### Feat — Danh mục chương trình 3 cấp (DAG)
+- Thay cây `medical_taxonomy*` bằng `organ_systems` ↔ `subjects` ↔ `lessons` (M:N); câu hỏi chỉ gắn bài học (`question_lesson`).
+- Admin `/admin/curriculum`: CRUD + gắn nhiều hệ cho môn, nhiều môn cho bài; CCT map qua `core_topic_lessons`.
+- Form câu hỏi: chọn ≥1 bài học, bỏ phân biệt primary; môn/hệ suy ra từ bài học.
+- Đồng bộ QBank, Study Plan, Analytics, Search, Classroom, seeders, tests và SRS/ERD.
+
 ## 2026-09-06
 
 ### Fix — Chuẩn hóa đáp án đảo thứ tự (identity = option id)

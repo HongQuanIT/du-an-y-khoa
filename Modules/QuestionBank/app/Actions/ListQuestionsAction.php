@@ -44,7 +44,9 @@ final class ListQuestionsAction
                 blueprintId: $data->blueprintId,
                 blueprintSectionId: $data->blueprintSectionId,
                 coreClinicalTopicIds: $data->coreClinicalTopicIds,
-                medicalTaxonomyNodeIds: $data->medicalTaxonomyNodeIds,
+                organSystemIds: $data->organSystemIds,
+                subjectIds: $data->subjectIds,
+                lessonIds: $data->lessonIds,
                 tagIds: $data->tagIds,
                 freeOnly: true,
                 perPage: $data->perPage,
@@ -64,8 +66,8 @@ final class ListQuestionsAction
                         fn ($search) => $search->whereIn('core_clinical_topic_ids', $data->coreClinicalTopicIds),
                     )
                     ->when(
-                        $data->medicalTaxonomyNodeIds !== [],
-                        fn ($search) => $search->whereIn('medical_taxonomy_node_ids', $data->medicalTaxonomyNodeIds),
+                        $data->lessonIds !== [],
+                        fn ($search) => $search->whereIn('lesson_ids', $data->lessonIds),
                     )
                     ->when(
                         $data->tagIds !== [],
@@ -77,15 +79,17 @@ final class ListQuestionsAction
                     )
                     ->query(fn (EloquentBuilder $query) => $this->filters->apply(
                         ServePublishedQuestion::scopeAvailable($query->with([
-                            'medicalTaxonomyNodes:id',
+                            'lessons:id',
                             'tags:id',
                         ])),
                         blueprintId: $data->blueprintId,
                         blueprintSectionId: $data->blueprintSectionId,
                         coreClinicalTopicIds: $data->coreClinicalTopicIds,
-                        medicalTaxonomyNodeIds: $data->medicalTaxonomyNodeIds,
+                        organSystemIds: $data->organSystemIds,
+                        subjectIds: $data->subjectIds,
+                        lessonIds: $data->lessonIds,
                         tagIds: $data->tagIds,
-                                                difficulty: $data->difficulty,
+                        difficulty: $data->difficulty,
                     )->when(
                         $data->freeOnly !== null,
                         fn (EloquentBuilder $query) => $query->where('is_free', $data->freeOnly),

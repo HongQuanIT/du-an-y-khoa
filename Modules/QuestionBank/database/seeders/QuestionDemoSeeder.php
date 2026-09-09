@@ -20,19 +20,15 @@ final class QuestionDemoSeeder extends Seeder
 
     public function run(): void
     {
-        $coreTopicId = DB::table('core_clinical_topics')->where('slug', 'dau-nguc')->value('id');
-        $taxonomyId = DB::table('medical_taxonomies')
-            ->where('code', MedicalKnowledgeTaxonomySeeder::TAXONOMY_CODE)
-            ->value('id');
-
-        if ($coreTopicId === null || $taxonomyId === null) {
+        $hasLessons = DB::table('lessons')->whereIn('slug', MedicalKnowledgeTaxonomySeeder::DEMO_LESSON_SLUGS)->exists();
+        if (! $hasLessons) {
             return;
         }
 
         $question = $this->upsertQuestion();
         $this->syncOptions($question);
         $this->syncHints($question);
-        $this->syncRelations($question, (int) $taxonomyId);
+        $this->syncRelations($question);
     }
 
     private function upsertQuestion(): Question
@@ -123,44 +119,26 @@ final class QuestionDemoSeeder extends Seeder
         $question->hints()->whereNotIn('id', $keepIds)->delete();
     }
 
-    private function syncRelations(Question $question, int $taxonomyId): void
+    private function syncRelations(Question $question): void
     {
-        // CCT inferred via core_topic_medical_taxonomy_nodes / core_topic_tags — no direct Q↔CCT pivot.
-
-        $nodeLinks = [
-            'tim-mach' => ['relationship_type' => 'contextual', 'is_primary' => false],
-            'benh-dong-mach-vanh' => ['relationship_type' => 'related', 'is_primary' => false],
-            'hoi-chung-vanh-cap' => ['relationship_type' => 'related', 'is_primary' => false],
-            'stemi' => ['relationship_type' => 'primary', 'is_primary' => true],
-            'symptom-dau-nguc' => ['relationship_type' => 'related', 'is_primary' => false],
-            'symptom-kho-tho' => ['relationship_type' => 'related', 'is_primary' => false],
-            'symptom-va-mo-hoi' => ['relationship_type' => 'related', 'is_primary' => false],
-            'finding-st-chenh-len' => ['relationship_type' => 'related', 'is_primary' => false],
-            'finding-troponin-i-tang' => ['relationship_type' => 'related', 'is_primary' => false],
-            'concept-nhan-dien-stemi' => ['relationship_type' => 'tested', 'is_primary' => false],
-            'concept-dinh-khu-mi-ecg' => ['relationship_type' => 'tested', 'is_primary' => false],
-            'concept-troponin-mi' => ['relationship_type' => 'tested', 'is_primary' => false],
-            'concept-tai-tuoi-mau-stemi' => ['relationship_type' => 'tested', 'is_primary' => false],
-        ];
+        // CCT inferred via core_topic_lessons / core_topic_tags — no direct Q↔CCT pivot.
+        $lessonRows = DB::table('lessons')
+            ->whereIn('slug', MedicalKnowledgeTaxonomySeeder::DEMO_LESSON_SLUGS)
+            ->pluck('id', 'slug');
 
         $sync = [];
-        foreach ($nodeLinks as $slug => $pivot) {
-            $nodeId = DB::table('medical_taxonomy_nodes')
-                ->where('medical_taxonomy_id', $taxonomyId)
-                ->where('slug', $slug)
-                ->value('id');
-
-            if ($nodeId === null) {
+        foreach (MedicalKnowledgeTaxonomySeeder::DEMO_LESSON_SLUGS as $slug) {
+            $lessonId = $lessonRows[$slug] ?? null;
+            if ($lessonId === null) {
                 continue;
             }
-
-            $sync[(int) $nodeId] = $pivot;
+            $sync[] = (int) $lessonId;
         }
 
-        $question->medicalTaxonomyNodes()->sync($sync);
+        $question->lessons()->sync($sync);
 
         $tagIds = DB::table('tags')
-            ->whereIn('slug', ['ecg', 'cardiology', 'emergency', 'diagnosis', 'high-yield', 'adult'])
+            ->whereIn('slug', MedicalKnowledgeTaxonomySeeder::DEMO_TAG_SLUGS)
             ->pluck('id')
             ->map(fn ($id): int => (int) $id)
             ->all();

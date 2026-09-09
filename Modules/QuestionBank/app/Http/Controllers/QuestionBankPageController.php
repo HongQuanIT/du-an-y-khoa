@@ -13,7 +13,7 @@ use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\SessionMode;
 use Modules\QuestionBank\Enums\SessionStatus;
 use Modules\QuestionBank\Models\QuestionSession;
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
+use Modules\QuestionBank\Models\Lesson;
 use Modules\Search\Actions\SearchScopeAction;
 use Modules\Search\Data\ScopedSearchResult;
 use Modules\Search\Data\SearchQueryData;
@@ -90,11 +90,11 @@ final class QuestionBankPageController extends Controller
             $filters['difficulty'] = $difficulty->value;
         }
 
-        $nodeId = filter_var($filterInput['medical_taxonomy_node_id'] ?? $filterInput['topic_id'] ?? null, FILTER_VALIDATE_INT, [
+        $lessonId = filter_var($filterInput['lesson_id'] ?? $filterInput['topic_id'] ?? null, FILTER_VALIDATE_INT, [
             'options' => ['min_range' => 1],
         ]);
-        if ($nodeId !== false && MedicalTaxonomyNode::query()->whereKey($nodeId)->exists()) {
-            $filters['medical_taxonomy_node_id'] = (int) $nodeId;
+        if ($lessonId !== false && Lesson::query()->whereKey($lessonId)->exists()) {
+            $filters['lesson_id'] = (int) $lessonId;
         }
 
         if (array_key_exists('is_free', $filterInput)) {
@@ -118,7 +118,7 @@ final class QuestionBankPageController extends Controller
                     'path' => route('qbank.index'),
                     'pageName' => 'page',
                 ]),
-                facets: ['difficulty' => [], 'medical_taxonomy_node_id' => [], 'is_free' => []],
+                facets: ['difficulty' => [], 'lesson_id' => [], 'is_free' => []],
                 degraded: false,
                 engine: 'none',
             );
@@ -133,9 +133,9 @@ final class QuestionBankPageController extends Controller
         }
 
         $result->paginator->appends($request->query());
-        $nodeIds = collect($result->facets['medical_taxonomy_node_id'] ?? [])->pluck('value');
-        if (isset($filters['medical_taxonomy_node_id'])) {
-            $nodeIds->push($filters['medical_taxonomy_node_id']);
+        $lessonIds = collect($result->facets['lesson_id'] ?? [])->pluck('value');
+        if (isset($filters['lesson_id'])) {
+            $lessonIds->push($filters['lesson_id']);
         }
 
         return view('questionbank::index', [
@@ -144,8 +144,8 @@ final class QuestionBankPageController extends Controller
             'searchQuery' => $query,
             'searchFilters' => $filters,
             'searchError' => $searchError,
-            'searchTopics' => MedicalTaxonomyNode::query()
-                ->whereIn('id', $nodeIds->unique()->filter()->values())
+            'searchTopics' => Lesson::query()
+                ->whereIn('id', $lessonIds->unique()->filter()->values())
                 ->orderBy('name')
                 ->get()
                 ->keyBy('id'),

@@ -27,17 +27,16 @@ final class StudyPlanScheduleTest extends TestCase
 
     private User $user;
 
-    private \Modules\QuestionBank\Models\MedicalTaxonomyNode $topic;
+    private \Modules\QuestionBank\Models\Lesson $topic;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->user = User::factory()->create();
-        $this->topic = $this->makeMedicalNode([
+        $this->topic = $this->makeLesson([
             'name' => 'Tim mạch',
             'slug' => 'tim-mach',
-            'node_type' => 'system',
             'sort_order' => 0,
         ]);
         $questions = Question::factory()->count(5)->create([
@@ -45,7 +44,7 @@ final class StudyPlanScheduleTest extends TestCase
             'is_free' => true,
         ]);
         foreach ($questions as $question) {
-            $question->medicalTaxonomyNodes()->sync([$this->topic->id]);
+            $question->lessons()->sync([$this->topic->id]);
         }
     }
 
@@ -113,7 +112,7 @@ final class StudyPlanScheduleTest extends TestCase
                 'exam_key' => 'usmle',
                 'exam_target_date' => Carbon::today()->addDays(6)->toDateString(),
                 'daily_goal_questions' => 30,
-                'topic_ids' => [$this->topic->id],
+                'lesson_ids' => [$this->topic->id],
                 'study_days' => [1, 2, 3, 4, 5, 6, 7],
                 'strategy' => 'fixed',
             ])
@@ -157,7 +156,7 @@ final class StudyPlanScheduleTest extends TestCase
             'exam_key' => 'resident',
             'exam_target_date' => Carbon::today()->addDays(10)->toDateString(),
             'daily_goal_questions' => 10,
-            'topic_ids' => [$this->topic->id],
+            'lesson_ids' => [$this->topic->id],
             'study_days' => [1, 2, 3, 4, 5, 6, 7],
             'strategy' => 'fixed',
         ]);

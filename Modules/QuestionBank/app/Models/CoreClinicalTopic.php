@@ -39,14 +39,14 @@ class CoreClinicalTopic extends Model
         return $this->belongsTo(BlueprintSection::class, 'blueprint_section_id');
     }
 
-    /** @return BelongsToMany<MedicalTaxonomyNode, $this> */
-    public function medicalTaxonomyNodes(): BelongsToMany
+    /** @return BelongsToMany<Lesson, $this> */
+    public function lessons(): BelongsToMany
     {
         return $this->belongsToMany(
-            MedicalTaxonomyNode::class,
-            'core_topic_medical_taxonomy_nodes',
+            Lesson::class,
+            'core_topic_lessons',
             'core_clinical_topic_id',
-            'medical_taxonomy_node_id',
+            'lesson_id',
         )->withTimestamps();
     }
 

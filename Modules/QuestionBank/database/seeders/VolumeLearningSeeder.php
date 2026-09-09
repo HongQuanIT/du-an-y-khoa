@@ -15,8 +15,7 @@ use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionScopeType;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
-use Modules\QuestionBank\Models\MedicalTaxonomy;
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
+use Modules\QuestionBank\Models\Lesson;
 
 /**
  * Large-volume generator for performance / search / pagination testing.
@@ -46,8 +45,8 @@ class VolumeLearningSeeder extends Seeder
         Question::withoutSyncingToSearch(function () use ($questionCount, $studentCount, $attemptsPerStudent): void {
             $this->command?->info("Volume seeding: {$questionCount} câu hỏi, {$studentCount} học viên...");
 
-            $topicIds = $this->ensureTopics(30);
-            $questionIds = $this->generateQuestions($questionCount, $topicIds);
+            $lessonIds = $this->ensureLessons(30);
+            $questionIds = $this->generateQuestions($questionCount, $lessonIds);
             $this->generateQuestionScopes($questionIds);
             $studentIds = $this->generateStudents($studentCount);
             $this->generateActivity($studentIds, $questionIds, $attemptsPerStudent);
@@ -57,42 +56,30 @@ class VolumeLearningSeeder extends Seeder
     }
 
     /**
-     * Ensure at least $min topics exist; return all topic ids.
+     * Ensure at least $min lessons exist; return all lesson ids.
      *
      * @return list<int>
      */
-    private function ensureTopics(int $min): array
+    private function ensureLessons(int $min): array
     {
         $this->call(MedicalKnowledgeTaxonomySeeder::class);
 
-        $ids = MedicalTaxonomyNode::query()->pluck('id')->all();
+        $ids = Lesson::query()->pluck('id')->all();
         $missing = $min - count($ids);
 
         if ($missing > 0) {
-            $taxonomy = MedicalTaxonomy::query()->firstOrCreate(
-                ['code' => 'medlearn-medical-taxonomy'],
-                [
-                    'name' => 'MedLearn Medical Taxonomy',
-                    'description' => null,
-                    'status' => \Modules\QuestionBank\Enums\TaxonomyStatus::Active,
-                ],
-            );
-
             for ($i = 0; $i < $missing; $i++) {
-                MedicalTaxonomyNode::query()->create([
-                    'medical_taxonomy_id' => $taxonomy->id,
-                    'parent_id' => null,
-                    'name' => 'Volume topic '.$i,
-                    'slug' => 'volume-topic-'.$i.'-'.Str::random(4),
+                Lesson::query()->create([
+                    'name' => 'Volume lesson '.$i,
+                    'slug' => 'volume-lesson-'.$i.'-'.Str::random(4),
                     'code' => null,
-                    'node_type' => 'system',
                     'description' => null,
                     'sort_order' => $i,
                     'status' => \Modules\QuestionBank\Enums\TaxonomyStatus::Active,
                 ]);
             }
 
-            $ids = MedicalTaxonomyNode::query()->pluck('id')->all();
+            $ids = Lesson::query()->pluck('id')->all();
         }
 
         return $ids;
@@ -101,13 +88,13 @@ class VolumeLearningSeeder extends Seeder
     /**
      * Batch-generate questions + 4 options each via chunked raw inserts.
      *
-     * @param  list<int>  $topicIds
+     * @param  list<int>  $lessonIds
      * @return list<string> generated question uuids
      */
-    private function generateQuestions(int $count, array $topicIds): array
+    private function generateQuestions(int $count, array $lessonIds): array
     {
-        if ($topicIds === []) {
-            throw new \RuntimeException('VolumeLearningSeeder requires medical taxonomy nodes.');
+        if ($lessonIds === []) {
+            throw new \RuntimeException('VolumeLearningSeeder requires lessons.');
         }
 
         $now = now()->toDateTimeString();
@@ -115,13 +102,13 @@ class VolumeLearningSeeder extends Seeder
         $ids = [];
         $questionRows = [];
         $optionRows = [];
-        $questionTopicRows = [];
+        $questionLessonRows = [];
 
         for ($i = 0; $i < $count; $i++) {
             $id = (string) Str::uuid();
             $ids[] = $id;
 
-            $topicId = $topicIds[$i % count($topicIds)];
+            $lessonId = $lessonIds[$i % count($lessonIds)];
             $questionRows[] = [
                 'id' => $id,
                 'stem' => "[vol] Câu hỏi hiệu năng #{$i} — ".Str::random(24).'?',
@@ -133,9 +120,9 @@ class VolumeLearningSeeder extends Seeder
                 'created_at' => $now,
                 'updated_at' => $now,
             ];
-            $questionTopicRows[] = [
+            $questionLessonRows[] = [
                 'question_id' => $id,
-                'medical_taxonomy_node_id' => $topicId,
+                'lesson_id' => $lessonId,
                 'created_at' => $now,
                 'updated_at' => $now,
             ];
@@ -156,17 +143,17 @@ class VolumeLearningSeeder extends Seeder
 
             if (count($questionRows) >= self::CHUNK) {
                 DB::table('questions')->insert($questionRows);
-                DB::table('question_medical_topics')->insert($questionTopicRows);
+                DB::table('question_lesson')->insert($questionLessonRows);
                 DB::table('question_options')->insert($optionRows);
                 $questionRows = [];
                 $optionRows = [];
-                $questionTopicRows = [];
+                $questionLessonRows = [];
             }
         }
 
         if ($questionRows !== []) {
             DB::table('questions')->insert($questionRows);
-            DB::table('question_medical_topics')->insert($questionTopicRows);
+            DB::table('question_lesson')->insert($questionLessonRows);
             DB::table('question_options')->insert($optionRows);
         }
 

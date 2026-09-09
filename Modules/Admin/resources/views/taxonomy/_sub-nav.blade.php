@@ -3,7 +3,7 @@
     $tabs = [
         ['key' => 'overview', 'label' => 'Tổng quan', 'route' => 'admin.taxonomy.index', 'icon' => 'dashboard'],
         ['key' => 'blueprints', 'label' => 'Ma trận đề thi', 'route' => 'admin.blueprints.index', 'icon' => 'assignment'],
-        ['key' => 'medical', 'label' => 'Danh mục y khoa', 'route' => 'admin.medical-taxonomy.index', 'icon' => 'account_tree'],
+        ['key' => 'curriculum', 'label' => 'Danh mục kiến thức', 'route' => 'admin.curriculum.index', 'icon' => 'account_tree'],
         ['key' => 'tags', 'label' => 'Tags', 'route' => 'admin.tags.index', 'icon' => 'sell'],
     ];
 @endphp

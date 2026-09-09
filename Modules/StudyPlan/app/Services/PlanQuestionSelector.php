@@ -12,7 +12,6 @@ use Modules\QuestionBank\Enums\UserQuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionStatus as UserQuestionStatusModel;
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
 use Modules\StudyPlan\Enums\TaskType;
 use Modules\StudyPlan\Models\StudyPlanTask;
 
@@ -45,8 +44,8 @@ final class PlanQuestionSelector
             return $this->reviewQuestions($userId, $task, $limit);
         }
 
-        $topicIds = $this->expandNodes($task->medicalTaxonomyNodeIds());
-        $planTopicIds = $this->expandNodes($task->plan->scopeMedicalTaxonomyNodeIds());
+        $topicIds = $task->lessonIds();
+        $planTopicIds = $task->plan->effectiveLessonIds();
         $statuses = $filters['question_statuses'];
         $difficulties = $filters['difficulties'];
         $eligible = $statuses === []
@@ -116,7 +115,7 @@ final class PlanQuestionSelector
         $topUp = $this->topUp(
             $incorrect,
             $limit,
-            $this->expandNodes($task->plan->scopeMedicalTaxonomyNodeIds()),
+            $task->plan->effectiveLessonIds(),
             $savedForUserId === null ? $this->answeredQuestionIds($userId) : [],
             null,
             $difficulties,
@@ -185,8 +184,8 @@ final class PlanQuestionSelector
             ->when(
                 $topicIds !== [],
                 fn ($query) => $query->whereHas(
-                    'medicalTaxonomyNodes',
-                    fn (Builder $nodes) => $nodes->whereIn('medical_taxonomy_nodes.id', $topicIds),
+                    'lessons',
+                    fn (Builder $lessons) => $lessons->whereIn('lessons.id', $topicIds),
                 ),
             )
             ->when($exclude !== [], fn ($query) => $query->whereNotIn('id', $exclude))
@@ -199,26 +198,6 @@ final class PlanQuestionSelector
             ->inRandomOrder()
             ->limit($limit)
             ->pluck('id');
-    }
-
-    /**
-     * A specialty in the scope also covers the systems beneath it.
-     *
-     * @param  array<int, int>  $topicIds
-     * @return array<int, int>
-     */
-    private function expandNodes(array $topicIds): array
-    {
-        if ($topicIds === []) {
-            return [];
-        }
-
-        $children = MedicalTaxonomyNode::query()
-            ->whereIn('parent_id', $topicIds)
-            ->pluck('id')
-            ->all();
-
-        return array_values(array_unique(array_merge($topicIds, $children)));
     }
 
     /**

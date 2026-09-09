@@ -155,7 +155,7 @@ final class TransitionQuestionStatusAction
         }
 
         if ($isPublishing) {
-            $question->load(['options' => fn ($query) => $query->orderBy('order'), 'medicalTaxonomyNodes:id']);
+            $question->load(['options' => fn ($query) => $query->orderBy('order'), 'lessons:id']);
             $this->captureVersion->handle($question, $actor, 'publish');
         }
 
@@ -325,9 +325,9 @@ final class TransitionQuestionStatusAction
             ]);
         }
 
-        if (! $question->medicalTaxonomyNodes()->exists()) {
+        if (! $question->lessons()->exists()) {
             throw ValidationException::withMessages([
-                'status' => 'Cần chọn ít nhất một mục danh mục y khoa.',
+                'status' => 'Cần chọn ít nhất một bài học.',
             ]);
         }
 

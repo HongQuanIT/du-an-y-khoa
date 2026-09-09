@@ -15,7 +15,8 @@ use Modules\QuestionBank\Actions\CreateQuestionSessionAction;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
 use Modules\QuestionBank\Http\Requests\CreateQuestionSessionRequest;
 use Modules\QuestionBank\Models\Blueprint;
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
+use Modules\QuestionBank\Models\OrganSystem;
+use Modules\QuestionBank\Models\Subject;
 use Modules\QuestionBank\Services\SessionQuestionSelector;
 use Modules\QuestionBank\Support\QuestionFilterBuilder;
 use RuntimeException;
@@ -49,8 +50,8 @@ final class CustomSessionController extends Controller
             ->taxonomyScopesForBlueprints($exams->pluck('id')->all());
 
         return view('questionbank::custom-session', [
-            'specialties' => MedicalTaxonomyNode::query()->where('node_type', 'specialty')->orderBy('sort_order')->orderBy('name')->get(),
-            'systems' => MedicalTaxonomyNode::query()->where('node_type', 'system')->orderBy('sort_order')->orderBy('name')->get(),
+            'subjects' => Subject::query()->where('status', TaxonomyStatus::Active)->orderBy('sort_order')->orderBy('name')->get(),
+            'organSystems' => OrganSystem::query()->where('status', TaxonomyStatus::Active)->orderBy('sort_order')->orderBy('name')->get(),
             'exams' => $exams
                 ->map(fn (Blueprint $blueprint): array => [
                     'id' => (int) $blueprint->id,

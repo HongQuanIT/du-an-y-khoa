@@ -5,22 +5,15 @@ declare(strict_types=1);
 namespace Modules\QuestionBank\Support;
 
 /**
- * Phân loại mục trong danh mục y khoa (Medical Knowledge Taxonomy).
+ * Trục nhãn (tags) — song song với danh mục 3 cấp (bài học / môn học / hệ cơ quan).
  *
- * Kiến trúc tham chiếu AMBOSS:
- * - Cây chính: Hệ cơ quan → Chuyên khoa → Bệnh / Tình trạng
- * - Biểu hiện lâm sàng: Triệu chứng, Dấu hiệu (gắn chéo với câu hỏi)
- * - Cận lâm sàng: Phát hiện lâm sàng, Xét nghiệm, Hình ảnh
- * - Kiến thức & can thiệp: Khái niệm, Thủ thuật, Thuốc
+ * Hấp thụ các biểu hiện lâm sàng, cận lâm sàng và khái niệm/can thiệp mà trước
+ * đây được mô tả bằng node_type phi cấu trúc.
  */
-final class MedicalTaxonomyNodeTypes
+final class TagType
 {
     /** @var array<string, string> */
     public const LABELS = [
-        'system' => 'Hệ cơ quan',
-        'specialty' => 'Chuyên khoa',
-        'disease' => 'Bệnh',
-        'condition' => 'Tình trạng / Hội chứng',
         'symptom' => 'Triệu chứng',
         'sign' => 'Dấu hiệu',
         'clinical_finding' => 'Phát hiện lâm sàng',
@@ -29,21 +22,16 @@ final class MedicalTaxonomyNodeTypes
         'concept' => 'Khái niệm',
         'procedure' => 'Thủ thuật',
         'drug' => 'Thuốc',
+        'high_yield' => 'Trọng tâm (High-yield)',
         'other' => 'Khác',
     ];
 
     /**
-     * Nhóm quản lý trên UI — gom các loại liên quan.
+     * Nhóm quản lý trên UI — gom các loại nhãn liên quan.
      *
      * @var array<string, array{label: string, description: string, icon: string, types: list<string>}>
      */
     public const GROUPS = [
-        'structure' => [
-            'label' => 'Phân loại',
-            'description' => 'Cây phân cấp chính theo hệ cơ quan và chuyên khoa, đến bệnh / hội chứng.',
-            'icon' => 'account_tree',
-            'types' => ['system', 'specialty', 'disease', 'condition'],
-        ],
         'presentation' => [
             'label' => 'Biểu hiện lâm sàng',
             'description' => 'Những gì người bệnh kể hoặc bác sĩ quan sát được khi khám.',
@@ -60,11 +48,11 @@ final class MedicalTaxonomyNodeTypes
             'label' => 'Kiến thức & can thiệp',
             'description' => 'Khái niệm cần nắm, thủ thuật và thuốc liên quan.',
             'icon' => 'school',
-            'types' => ['concept', 'procedure', 'drug'],
+            'types' => ['concept', 'procedure', 'drug', 'high_yield'],
         ],
         'other' => [
             'label' => 'Khác',
-            'description' => 'Mục chưa phân loại.',
+            'description' => 'Nhãn chưa phân loại.',
             'icon' => 'more_horiz',
             'types' => ['other'],
         ],
@@ -102,39 +90,5 @@ final class MedicalTaxonomyNodeTypes
     public static function group(?string $type): array
     {
         return self::GROUPS[self::groupKey($type)];
-    }
-
-    /**
-     * @param  array<string, int>  $countsByType
-     * @return array<string, array{label: string, description: string, icon: string, count: int, types: array<string, int>}>
-     */
-    public static function groupedStats(array $countsByType): array
-    {
-        $result = [];
-
-        foreach (self::GROUPS as $key => $group) {
-            $types = [];
-            $count = 0;
-
-            foreach ($group['types'] as $type) {
-                $c = (int) ($countsByType[$type] ?? 0);
-                if ($c > 0) {
-                    $types[$type] = $c;
-                    $count += $c;
-                }
-            }
-
-            if ($count > 0) {
-                $result[$key] = [
-                    'label' => $group['label'],
-                    'description' => $group['description'],
-                    'icon' => $group['icon'],
-                    'count' => $count,
-                    'types' => $types,
-                ];
-            }
-        }
-
-        return $result;
     }
 }

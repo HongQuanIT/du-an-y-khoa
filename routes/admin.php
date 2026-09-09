@@ -12,6 +12,7 @@ use Modules\Admin\Http\Controllers\BillingPlanController;
 use Modules\Admin\Http\Controllers\BillingSubscriptionController;
 use Modules\Admin\Http\Controllers\BlueprintController;
 use Modules\Admin\Http\Controllers\ClassroomOversightController;
+use Modules\Admin\Http\Controllers\CurriculumTaxonomyController;
 use Modules\Admin\Http\Controllers\Cms\BannerController;
 use Modules\Admin\Http\Controllers\Cms\FaqController;
 use Modules\Admin\Http\Controllers\Cms\MenuController;
@@ -23,7 +24,6 @@ use Modules\Admin\Http\Controllers\ExamController;
 use Modules\Admin\Http\Controllers\InstitutionController;
 use Modules\Admin\Http\Controllers\LearnerCatalogController;
 use Modules\Admin\Http\Controllers\LearnerDemographicsController;
-use Modules\Admin\Http\Controllers\MedicalTaxonomyController;
 use Modules\Admin\Http\Controllers\QuestionController;
 use Modules\Admin\Http\Controllers\QuestionDuplicateController;
 use Modules\Admin\Http\Controllers\QuestionFeedbackController;
@@ -267,14 +267,17 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
             Route::get('/taxonomy', [TaxonomyController::class, 'index'])->name('taxonomy.index');
             Route::get('/blueprints', [BlueprintController::class, 'index'])->name('blueprints.index');
             Route::get('/blueprints/{blueprint}/edit', [BlueprintController::class, 'edit'])->name('blueprints.edit');
-            Route::get('/medical-taxonomy', [MedicalTaxonomyController::class, 'index'])->name('medical-taxonomy.index');
+            Route::get('/categories', [CurriculumTaxonomyController::class, 'index'])->name('curriculum.index');
+            Route::redirect('/curriculum', '/admin/categories', 301);
             Route::get('/tags', [TagController::class, 'index'])->name('tags.index');
             Route::get('/tags/{tag}/edit', [TagController::class, 'edit'])->name('tags.edit');
             Route::get('/taxonomy/lookups/blueprints', [TaxonomyLookupController::class, 'blueprints'])->name('taxonomy.lookups.blueprints');
             Route::get('/taxonomy/lookups/blueprints/{blueprint}/sections', [TaxonomyLookupController::class, 'blueprintSections'])->name('taxonomy.lookups.sections');
             Route::get('/taxonomy/lookups/sections/{section}/core-topics', [TaxonomyLookupController::class, 'coreClinicalTopics'])->name('taxonomy.lookups.core-topics');
             Route::get('/taxonomy/lookups/core-topics/search', [TaxonomyLookupController::class, 'searchCoreClinicalTopics'])->name('taxonomy.lookups.core-topics.search');
-            Route::get('/taxonomy/lookups/medical-nodes', [TaxonomyLookupController::class, 'medicalTaxonomyNodes'])->name('taxonomy.lookups.medical-nodes');
+            Route::get('/taxonomy/lookups/organ-systems', [TaxonomyLookupController::class, 'organSystems'])->name('taxonomy.lookups.organ-systems');
+            Route::get('/taxonomy/lookups/subjects', [TaxonomyLookupController::class, 'subjects'])->name('taxonomy.lookups.subjects');
+            Route::get('/taxonomy/lookups/lessons', [TaxonomyLookupController::class, 'lessons'])->name('taxonomy.lookups.lessons');
             Route::get('/taxonomy/lookups/tags', [TaxonomyLookupController::class, 'tags'])->name('taxonomy.lookups.tags');
         });
 
@@ -284,14 +287,22 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
             Route::post('/blueprints/{blueprint}/sections', [BlueprintController::class, 'storeSection'])->name('blueprints.sections.store');
             Route::post('/blueprint-sections/{section}/core-topics', [BlueprintController::class, 'storeCoreTopic'])->name('blueprint-sections.core-topics.store');
             Route::put('/core-clinical-topics/{topic}/medical-nodes', [BlueprintController::class, 'syncCoreTopicMedicalNodes'])->name('core-clinical-topics.medical-nodes.sync');
-            Route::post('/medical-taxonomy/nodes', [MedicalTaxonomyController::class, 'storeNode'])->name('medical-taxonomy.nodes.store');
+            Route::post('/categories/organ-systems', [CurriculumTaxonomyController::class, 'storeOrganSystem'])->name('curriculum.organ-systems.store');
+            Route::post('/categories/subjects', [CurriculumTaxonomyController::class, 'storeSubject'])->name('curriculum.subjects.store');
+            Route::post('/categories/lessons', [CurriculumTaxonomyController::class, 'storeLesson'])->name('curriculum.lessons.store');
             Route::get('/tags/create', [TagController::class, 'create'])->name('tags.create');
             Route::post('/tags', [TagController::class, 'store'])->name('tags.store');
         });
 
         Route::middleware('permission:'.Permission::TopicUpdate->value)->group(function (): void {
             Route::put('/blueprints/{blueprint}', [BlueprintController::class, 'update'])->name('blueprints.update');
-            Route::put('/medical-taxonomy/nodes/{node}', [MedicalTaxonomyController::class, 'updateNode'])->name('medical-taxonomy.nodes.update');
+            Route::put('/categories/organ-systems/{organSystem}', [CurriculumTaxonomyController::class, 'updateOrganSystem'])->name('curriculum.organ-systems.update');
+            Route::put('/categories/subjects/{subject}', [CurriculumTaxonomyController::class, 'updateSubject'])->name('curriculum.subjects.update');
+            Route::put('/categories/lessons/{lesson}', [CurriculumTaxonomyController::class, 'updateLesson'])->name('curriculum.lessons.update');
+            Route::post('/categories/subjects/{subject}/organ-systems', [CurriculumTaxonomyController::class, 'attachSubjectOrganSystem'])->name('curriculum.subjects.organ-systems.attach');
+            Route::delete('/categories/subjects/{subject}/organ-systems/{organSystem}', [CurriculumTaxonomyController::class, 'detachSubjectOrganSystem'])->name('curriculum.subjects.organ-systems.detach');
+            Route::post('/categories/lessons/{lesson}/subjects', [CurriculumTaxonomyController::class, 'attachLessonSubject'])->name('curriculum.lessons.subjects.attach');
+            Route::delete('/categories/lessons/{lesson}/subjects/{subject}', [CurriculumTaxonomyController::class, 'detachLessonSubject'])->name('curriculum.lessons.subjects.detach');
             Route::put('/tags/{tag}', [TagController::class, 'update'])->name('tags.update');
         });
 

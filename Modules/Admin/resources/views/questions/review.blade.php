@@ -7,8 +7,8 @@
     $proposedAttendingTip = $isUpdate ? ($payload['attending_tip'] ?? '') : $question->attending_tip;
     $proposedOptions = $isUpdate ? collect($payload['options'] ?? []) : $question->options;
     $proposedTopicIds = $isUpdate
-        ? collect($payload['medical_taxonomy_node_ids'] ?? [])
-        : $question->medicalTaxonomyNodes->pluck('id');
+        ? collect($payload['lesson_ids'] ?? $payload['medical_taxonomy_node_ids'] ?? [])
+        : $question->lessons->pluck('id');
 @endphp
 
 <x-layouts.admin title="Kiểm duyệt câu hỏi">
@@ -103,9 +103,9 @@
             <p class="whitespace-pre-wrap text-sm leading-6 text-on-surface">{{ strip_tags((string) $proposedStem) }}</p>
 
             <div class="mt-5 flex flex-wrap gap-2">
-                @foreach ($proposedTopicIds as $nodeId)
+                @foreach ($proposedTopicIds as $lessonId)
                     <span class="inline-flex whitespace-nowrap rounded-lg bg-surface-container-high px-2.5 py-1 text-xs font-semibold">
-                        {{ $nodeNames[(int) $nodeId] ?? $question->medicalTaxonomyNodes->firstWhere('id', (int) $nodeId)?->name ?? "Node #{$nodeId}" }}
+                        {{ $lessonNames[(int) $lessonId] ?? $question->lessons->firstWhere('id', (int) $lessonId)?->name ?? "Bài học #{$lessonId}" }}
                     </span>
                 @endforeach
             </div>

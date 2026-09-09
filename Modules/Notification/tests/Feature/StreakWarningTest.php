@@ -27,7 +27,7 @@ final class StreakWarningTest extends TestCase
     use CreatesMedicalTaxonomy;
     use RefreshDatabase;
 
-    private \Modules\QuestionBank\Models\MedicalTaxonomyNode $topic;
+    private \Modules\QuestionBank\Models\Lesson $topic;
 
     private Question $question;
 
@@ -41,10 +41,9 @@ final class StreakWarningTest extends TestCase
             'notification.streak.warn_after_hour' => 18,
         ]);
 
-        $this->topic = $this->makeMedicalNode([
+        $this->topic = $this->makeLesson([
             'name' => 'Streak Topic',
             'slug' => 'streak-topic-test',
-            'node_type' => 'system',
             'sort_order' => 1,
         ]);
 

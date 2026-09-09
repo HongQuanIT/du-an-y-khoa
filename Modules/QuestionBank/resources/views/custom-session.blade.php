@@ -1,7 +1,7 @@
 @php
     /**
-     * @var \Illuminate\Support\Collection<int, \Modules\QuestionBank\Models\MedicalTaxonomyNode> $specialties
-     * @var \Illuminate\Support\Collection<int, \Modules\QuestionBank\Models\MedicalTaxonomyNode> $systems
+     * @var \Illuminate\Support\Collection<int, \Modules\QuestionBank\Models\Subject> $subjects
+     * @var \Illuminate\Support\Collection<int, \Modules\QuestionBank\Models\OrganSystem> $organSystems
      * @var list<array{id: int, title: string, icon: string, hint: string}> $exams
      * @var array<int, array{id: string, name: string}> $articles
      * @var array<int, array{id: string, name: string}> $symptoms
@@ -15,13 +15,14 @@
     );
     $initialDifficulties = array_values(array_filter((array) $initialDifficultyInput));
     $initialStatuses = array_values((array) old('question_statuses', request('question_statuses', [])));
-    $initialTopics = array_map('intval', (array) old('medical_taxonomy_node_ids', request('medical_taxonomy_node_ids', [])));
     $initialStatusMode = old('question_status_mode', request('question_status_mode', 'latest'));
     $initialSavedOnly = (bool) old('saved_only', request()->boolean('saved_only'));
     $initialBlueprintId = old('blueprint_id', request('blueprint_id'));
     $initialArticles = array_values((array) old('articles', request('articles', [])));
     $initialSymptoms = array_values((array) old('symptoms', request('symptoms', [])));
-    $initialMedicalNodeIds = array_map('intval', (array) old('medical_taxonomy_node_ids', request('medical_taxonomy_node_ids', [])));
+    $initialOrganSystemIds = array_map('intval', (array) old('organ_system_ids', request('organ_system_ids', [])));
+    $initialSubjectIds = array_map('intval', (array) old('subject_ids', request('subject_ids', [])));
+    $initialLessonIds = array_map('intval', (array) old('lesson_ids', request('lesson_ids', [])));
     $sessionName = 'Phiên tùy chỉnh từ ' . now()->translatedFormat('j M, H:i');
 
     $statusOptions = [
@@ -34,9 +35,8 @@
     ];
     $difficultyOptions = \App\Support\ScopeFilters::difficulties();
 
-    $selectedTopicIds = array_map('strval', $initialTopics);
-    $systemIds = $systems->pluck('id')->map(fn ($id) => (string) $id)->values()->all();
-    $specialtyIds = $specialties->pluck('id')->map(fn ($id) => (string) $id)->values()->all();
+    $selectedOrganSystemIds = array_map('strval', $initialOrganSystemIds);
+    $selectedSubjectIds = array_map('strval', $initialSubjectIds);
     $examTitles = collect($exams)->mapWithKeys(fn (array $exam) => [(int) $exam['id'] => $exam['title']])->all();
     $initialBlueprintName = $initialBlueprintId && isset($examTitles[(int) $initialBlueprintId])
         ? $examTitles[(int) $initialBlueprintId]
@@ -56,9 +56,8 @@
             difficultyLabels: {{ Illuminate\Support\Js::from(collect($difficultyOptions)->pluck('name', 'id')->all())->toHtml() }},
             difficultyOptionCount: {{ count($difficultyOptions) }},
             statuses: {{ Illuminate\Support\Js::from($initialStatuses)->toHtml() }},
-            selectedTopics: {{ Illuminate\Support\Js::from($selectedTopicIds)->toHtml() }},
-            systemIds: {{ Illuminate\Support\Js::from($systemIds)->toHtml() }},
-            specialtyIds: {{ Illuminate\Support\Js::from($specialtyIds)->toHtml() }},
+            organSystemIds: {{ Illuminate\Support\Js::from($selectedOrganSystemIds)->toHtml() }},
+            subjectIds: {{ Illuminate\Support\Js::from($selectedSubjectIds)->toHtml() }},
             savedOnly: {{ Illuminate\Support\Js::from($initialSavedOnly)->toHtml() }},
             blueprintId: {{ Illuminate\Support\Js::from($initialBlueprintId ? (int) $initialBlueprintId : null)->toHtml() }},
             blueprintName: {{ Illuminate\Support\Js::from($initialBlueprintName)->toHtml() }},
@@ -68,12 +67,12 @@
             articleTitles: {{ Illuminate\Support\Js::from($articleTitles)->toHtml() }},
             symptoms: {{ Illuminate\Support\Js::from($initialSymptoms)->toHtml() }},
             symptomTitles: {{ Illuminate\Support\Js::from($symptomTitles)->toHtml() }},
-            medicalTaxonomyNodeIds: {{ Illuminate\Support\Js::from($initialMedicalNodeIds)->toHtml() }},
-            medicalNodeLabels: {},
+            lessonIds: {{ Illuminate\Support\Js::from($initialLessonIds)->toHtml() }},
+            lessonLabels: {},
             taxonomySearch: '',
-            medicalNodeResults: [],
+            lessonResults: [],
             taxonomyUrls: {
-                medicalNodes: {{ Illuminate\Support\Js::from(route('qbank.taxonomy.lookups.medical-nodes', absolute: false))->toHtml() }},
+                lessons: {{ Illuminate\Support\Js::from(route('qbank.taxonomy.lookups.lessons', absolute: false))->toHtml() }},
             },
             folderId: null,
             folderName: '',
@@ -133,35 +132,33 @@
                 this.activeFilter = filter;
                 this.filterSearch = '';
                 this.taxonomySearch = '';
-                if (filter === 'medicalNodes') this.fetchMedicalNodes();
+                if (filter === 'lessons') this.fetchLessons();
             },
-            async fetchMedicalNodes() {
+            async fetchLessons() {
                 const q = this.taxonomySearch.trim();
-                const params = new URLSearchParams({ include_descendants: '1' });
+                const params = new URLSearchParams();
                 if (q.length >= 2) params.set('q', q);
-                const url = `${this.taxonomyUrls.medicalNodes}?${params}`;
+                const query = params.toString();
+                const url = query ? `${this.taxonomyUrls.lessons}?${query}` : this.taxonomyUrls.lessons;
                 const res = await fetch(url, { headers: { Accept: 'application/json' } });
                 const json = await res.json();
                 const rows = json.data ?? [];
-                this.medicalNodeResults = rows.filter((item) => this.isNodeAllowedForExam(item.id));
+                this.lessonResults = rows.filter((item) => this.isLessonAllowedForExam(item.id));
             },
-            toggleMedicalNode(item) {
-                const idx = this.medicalTaxonomyNodeIds.indexOf(item.id);
+            toggleLesson(item) {
+                const idx = this.lessonIds.indexOf(item.id);
                 if (idx >= 0) {
-                    this.medicalTaxonomyNodeIds.splice(idx, 1);
-                    delete this.medicalNodeLabels[item.id];
+                    this.lessonIds.splice(idx, 1);
+                    delete this.lessonLabels[item.id];
                 } else {
-                    this.medicalTaxonomyNodeIds.push(item.id);
-                    this.medicalNodeLabels[item.id] = item.name;
+                    this.lessonIds.push(item.id);
+                    this.lessonLabels[item.id] = item.name;
                 }
                 this.$nextTick(() => this.refreshCount());
             },
-            medicalNodeLabel() {
-                if (!this.medicalTaxonomyNodeIds.length) return 'Tất cả';
-                return this.medicalTaxonomyNodeIds.length + ' đã chọn';
-            },
-            selectedCount(ids) {
-                return this.selectedTopics.filter((id) => ids.includes(String(id))).length;
+            lessonLabel() {
+                if (!this.lessonIds.length) return 'Tất cả';
+                return this.lessonIds.length + ' đã chọn';
             },
             questionLimit() {
                 return Math.max(0, Number(this.matching) || 0);
@@ -193,8 +190,12 @@
                 const remainingSeconds = seconds % 60;
                 return remainingSeconds ? `${minutes} phút ${remainingSeconds} giây` : `${minutes} phút`;
             },
-            clearTopics(ids) {
-                this.selectedTopics = this.selectedTopics.filter((id) => !ids.includes(String(id)));
+            clearOrganSystems() {
+                this.organSystemIds = [];
+                this.$nextTick(() => this.refreshCount());
+            },
+            clearSubjects() {
+                this.subjectIds = [];
                 this.$nextTick(() => this.refreshCount());
             },
             difficultyLabel() {
@@ -211,38 +212,42 @@
                 if (!this.blueprintId) return null;
                 return this.blueprintScopes[this.blueprintId] || this.blueprintScopes[String(this.blueprintId)] || null;
             },
-            isNodeAllowedForExam(nodeId) {
+            isLessonAllowedForExam(lessonId) {
                 const scope = this.currentBlueprintScope();
                 if (!scope) return true;
-                const id = Number(nodeId);
-                return (scope.nodeIds || []).some((item) => Number(item) === id);
+                const id = Number(lessonId);
+                return (scope.lessonIds || []).some((item) => Number(item) === id);
             },
-            isSystemAllowedForExam(nodeId) {
+            isSystemAllowedForExam(organSystemId) {
                 const scope = this.currentBlueprintScope();
                 if (!scope) return true;
-                const id = Number(nodeId);
-                return (scope.systemIds || []).some((item) => Number(item) === id);
+                const id = Number(organSystemId);
+                return (scope.organSystemIds || []).some((item) => Number(item) === id);
             },
-            isSpecialtyAllowedForExam(nodeId) {
+            isSubjectAllowedForExam(subjectId) {
                 const scope = this.currentBlueprintScope();
                 if (!scope) return true;
-                const id = Number(nodeId);
-                return (scope.specialtyIds || []).some((item) => Number(item) === id);
+                const id = Number(subjectId);
+                return (scope.subjectIds || []).some((item) => Number(item) === id);
             },
             pruneFiltersToBlueprint() {
                 const scope = this.currentBlueprintScope();
                 if (!this.blueprintId) return;
-                if (!scope || !(scope.nodeIds || []).length) {
-                    this.selectedTopics = [];
-                    this.medicalTaxonomyNodeIds = [];
-                    this.medicalNodeLabels = {};
+                if (!scope || !(scope.lessonIds || []).length) {
+                    this.organSystemIds = [];
+                    this.subjectIds = [];
+                    this.lessonIds = [];
+                    this.lessonLabels = {};
                     return;
                 }
-                const allowed = new Set((scope.nodeIds || []).map((id) => String(id)));
-                this.selectedTopics = this.selectedTopics.filter((id) => allowed.has(String(id)));
-                this.medicalTaxonomyNodeIds = this.medicalTaxonomyNodeIds.filter((id) => allowed.has(String(id)));
-                Object.keys(this.medicalNodeLabels).forEach((id) => {
-                    if (!allowed.has(String(id))) delete this.medicalNodeLabels[id];
+                const allowedLessons = new Set((scope.lessonIds || []).map((id) => String(id)));
+                const allowedSubjects = new Set((scope.subjectIds || []).map((id) => String(id)));
+                const allowedSystems = new Set((scope.organSystemIds || []).map((id) => String(id)));
+                this.organSystemIds = this.organSystemIds.filter((id) => allowedSystems.has(String(id)));
+                this.subjectIds = this.subjectIds.filter((id) => allowedSubjects.has(String(id)));
+                this.lessonIds = this.lessonIds.filter((id) => allowedLessons.has(String(id)));
+                Object.keys(this.lessonLabels).forEach((id) => {
+                    if (!allowedLessons.has(String(id))) delete this.lessonLabels[id];
                 });
             },
             selectExam(id, title) {
@@ -274,14 +279,15 @@
                 this.count = 1;
                 this.difficulties = [];
                 this.statuses = [];
-                this.selectedTopics = [];
+                this.organSystemIds = [];
+                this.subjectIds = [];
                 this.savedOnly = false;
                 this.blueprintId = null;
                 this.blueprintName = '';
                 this.articles = [];
                 this.symptoms = [];
-                this.medicalTaxonomyNodeIds = [];
-                this.medicalNodeLabels = {};
+                this.lessonIds = [];
+                this.lessonLabels = {};
                 this.activeFilter = null;
                 this.$nextTick(() => this.refreshCount());
             },
@@ -301,8 +307,8 @@
         <input type="hidden" name="question_status_mode" value="{{ $initialStatusMode }}">
         <input type="hidden" name="saved_only" :value="savedOnly ? '1' : '0'">
         <input type="hidden" name="folder_id" :value="folderId ?? ''">
-        <template x-for="id in medicalTaxonomyNodeIds" :key="'med-' + id">
-            <input type="hidden" name="medical_taxonomy_node_ids[]" :value="id">
+        <template x-for="id in lessonIds" :key="'lesson-' + id">
+            <input type="hidden" name="lesson_ids[]" :value="id">
         </template>
 
         <div class="mx-auto w-full max-w-[1440px] flex-1 overflow-y-auto p-4 pb-8 md:p-8">
@@ -409,7 +415,19 @@
                                         <span class="font-medium">Hệ cơ quan</span>
                                     </span>
                                     <span class="text-sm text-on-surface-variant"
-                                        x-text="selectedCount(systemIds) ? selectedCount(systemIds) + ' đã chọn' : 'Tất cả'"></span>
+                                        x-text="organSystemIds.length ? organSystemIds.length + ' đã chọn' : 'Tất cả'"></span>
+                                </button>
+
+                                <button type="button" @click="openFilter('subjects')"
+                                    :disabled="source === 'weak_topics' || savedOnly"
+                                    :class="(source === 'weak_topics' || savedOnly) && 'opacity-50 pointer-events-none'"
+                                    class="group flex w-full items-center justify-between border-b border-outline-variant px-6 py-4 text-left transition-colors hover:bg-surface-container-lowest">
+                                    <span class="flex items-center gap-4">
+                                        <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">add</span>
+                                        <span class="font-medium">Môn học</span>
+                                    </span>
+                                    <span class="text-sm text-on-surface-variant"
+                                        x-text="subjectIds.length ? subjectIds.length + ' đã chọn' : 'Tất cả'"></span>
                                 </button>
 
                                 <button type="button" @click="openFilter('symptoms')"
@@ -465,7 +483,7 @@
                              <div class="space-y-2.5 max-h-80 overflow-y-auto pr-1">
                                  <!-- Option: Tất cả câu hỏi đã lưu -->
                                  <button type="button"
-                                     @click="savedOnly = true; folderId = null; folderName = 'Tất cả câu đã lưu'; selectedTopics = []; articles = []; symptoms = []; blueprintId = null; blueprintName = ''; foldersModalOpen = false; refreshCount()"
+                                     @click="savedOnly = true; folderId = null; folderName = 'Tất cả câu đã lưu'; organSystemIds = []; subjectIds = []; lessonIds = []; lessonLabels = {}; articles = []; symptoms = []; blueprintId = null; blueprintName = ''; foldersModalOpen = false; refreshCount()"
                                      :class="savedOnly && !folderId ? 'border-primary bg-primary/5 text-primary font-bold' : 'border-outline-variant hover:bg-surface-container-low text-on-surface'"
                                      class="flex w-full items-center justify-between rounded-xl border p-4 text-left transition-all">
                                      <div class="flex items-center gap-3">
@@ -481,7 +499,7 @@
                                  <!-- User Collections -->
                                  <template x-for="f in folders" :key="f.id">
                                      <button type="button"
-                                         @click="savedOnly = true; folderId = f.id; folderName = f.name; selectedTopics = []; articles = []; symptoms = []; blueprintId = null; blueprintName = ''; foldersModalOpen = false; refreshCount()"
+                                         @click="savedOnly = true; folderId = f.id; folderName = f.name; organSystemIds = []; subjectIds = []; lessonIds = []; lessonLabels = {}; articles = []; symptoms = []; blueprintId = null; blueprintName = ''; foldersModalOpen = false; refreshCount()"
                                          :class="folderId == f.id ? 'border-primary bg-primary/5 text-primary font-bold' : 'border-outline-variant hover:bg-surface-container-low text-on-surface'"
                                          class="flex w-full items-center justify-between rounded-xl border p-4 text-left transition-all">
                                          <div class="flex items-center gap-3">
@@ -635,10 +653,10 @@
                             articles: 'Bài viết',
                             symptoms: 'Triệu chứng',
                             systems: 'Hệ cơ quan',
-                            specialties: 'Chuyên khoa',
+                            subjects: 'Môn học',
                             difficulty: 'Độ khó',
                             statuses: 'Trạng thái',
-                            medicalNodes: 'Danh mục y khoa',
+                            lessons: 'Bài học',
                         })[activeFilter] || 'Bộ lọc'"></h3>
                     <button type="button" @click="activeFilter = null"
                         class="rounded-full p-2 transition-colors hover:bg-surface-container" aria-label="Đóng">
@@ -714,7 +732,7 @@
                         </div>
                     </div>
 
-                    <div x-show="activeFilter === 'systems' || activeFilter === 'specialties'" class="space-y-4">
+                    <div x-show="activeFilter === 'systems'" class="space-y-4">
                         <div class="relative">
                             <span class="material-symbols-outlined absolute top-1/2 left-3 -translate-y-1/2 text-[20px] text-on-surface-variant">search</span>
                             <input type="search" x-model="filterSearch" placeholder="Tìm kiếm..."
@@ -722,21 +740,21 @@
                         </div>
 
                         <button type="button"
-                            @click="clearTopics(activeFilter === 'systems' ? systemIds : specialtyIds)"
+                            @click="clearOrganSystems()"
                             class="flex w-full items-start gap-3 rounded-lg bg-surface-container-low p-3 text-left">
                             <span class="material-symbols-outlined mt-0.5 text-primary">select_all</span>
                             <span>
                                 <span class="block text-sm font-bold">Tất cả</span>
-                                <span class="block text-xs leading-relaxed text-on-surface-variant">Không giới hạn theo nhóm chủ đề này.</span>
+                                <span class="block text-xs leading-relaxed text-on-surface-variant">Không giới hạn theo hệ cơ quan.</span>
                             </span>
                         </button>
 
-                        <div x-show="activeFilter === 'systems'" class="space-y-1">
-                            @forelse ($systems as $topic)
+                        <div class="space-y-1">
+                            @forelse ($organSystems as $topic)
                                 <label data-search="{{ Str::lower($topic->name) }}"
                                     x-show="isSystemAllowedForExam({{ (int) $topic->id }}) && $el.dataset.search.includes(filterSearch.toLocaleLowerCase())"
                                     class="flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-surface-container-low">
-                                    <input type="checkbox" name="medical_taxonomy_node_ids[]" value="{{ $topic->id }}" x-model="selectedTopics"
+                                    <input type="checkbox" name="organ_system_ids[]" value="{{ $topic->id }}" x-model="organSystemIds"
                                         :disabled="source === 'weak_topics'"
                                         class="size-5 rounded border-outline-variant text-primary focus:ring-primary">
                                     <span class="text-sm">{{ $topic->name }}</span>
@@ -744,28 +762,46 @@
                             @empty
                                 <p class="rounded-lg bg-surface-container-low p-3 text-sm text-on-surface-variant">Chưa có dữ liệu hệ cơ quan.</p>
                             @endforelse
-                            <p x-show="blueprintId && !(currentBlueprintScope()?.systemIds || []).length"
+                            <p x-show="blueprintId && !(currentBlueprintScope()?.organSystemIds || []).length"
                                 class="rounded-lg bg-surface-container-low p-3 text-sm text-on-surface-variant">
                                 Kỳ thi này chưa map hệ cơ quan nào. Liên kết danh mục trên ma trận đề thi.
                             </p>
                         </div>
+                    </div>
 
-                        <div x-show="activeFilter === 'specialties'" class="space-y-1">
-                            @forelse ($specialties as $topic)
+                    <div x-show="activeFilter === 'subjects'" class="space-y-4">
+                        <div class="relative">
+                            <span class="material-symbols-outlined absolute top-1/2 left-3 -translate-y-1/2 text-[20px] text-on-surface-variant">search</span>
+                            <input type="search" x-model="filterSearch" placeholder="Tìm kiếm..."
+                                class="w-full rounded-lg border-none bg-surface-container-low py-2.5 pr-4 pl-10 text-sm focus:ring-2 focus:ring-primary">
+                        </div>
+
+                        <button type="button"
+                            @click="clearSubjects()"
+                            class="flex w-full items-start gap-3 rounded-lg bg-surface-container-low p-3 text-left">
+                            <span class="material-symbols-outlined mt-0.5 text-primary">select_all</span>
+                            <span>
+                                <span class="block text-sm font-bold">Tất cả</span>
+                                <span class="block text-xs leading-relaxed text-on-surface-variant">Không giới hạn theo môn học.</span>
+                            </span>
+                        </button>
+
+                        <div class="space-y-1">
+                            @forelse ($subjects as $topic)
                                 <label data-search="{{ Str::lower($topic->name) }}"
-                                    x-show="isSpecialtyAllowedForExam({{ (int) $topic->id }}) && $el.dataset.search.includes(filterSearch.toLocaleLowerCase())"
+                                    x-show="isSubjectAllowedForExam({{ (int) $topic->id }}) && $el.dataset.search.includes(filterSearch.toLocaleLowerCase())"
                                     class="flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-surface-container-low">
-                                    <input type="checkbox" name="medical_taxonomy_node_ids[]" value="{{ $topic->id }}" x-model="selectedTopics"
+                                    <input type="checkbox" name="subject_ids[]" value="{{ $topic->id }}" x-model="subjectIds"
                                         :disabled="source === 'weak_topics'"
                                         class="size-5 rounded border-outline-variant text-primary focus:ring-primary">
                                     <span class="text-sm">{{ $topic->name }}</span>
                                 </label>
                             @empty
-                                <p class="rounded-lg bg-surface-container-low p-3 text-sm text-on-surface-variant">Chưa có dữ liệu chuyên khoa.</p>
+                                <p class="rounded-lg bg-surface-container-low p-3 text-sm text-on-surface-variant">Chưa có dữ liệu môn học.</p>
                             @endforelse
-                            <p x-show="blueprintId && !(currentBlueprintScope()?.specialtyIds || []).length"
+                            <p x-show="blueprintId && !(currentBlueprintScope()?.subjectIds || []).length"
                                 class="rounded-lg bg-surface-container-low p-3 text-sm text-on-surface-variant">
-                                Kỳ thi này chưa map chuyên khoa nào. Liên kết danh mục trên ma trận đề thi.
+                                Kỳ thi này chưa map môn học nào. Liên kết danh mục trên ma trận đề thi.
                             </p>
                         </div>
                     </div>
@@ -805,7 +841,7 @@
 
                 <div class="flex items-center justify-between border-t border-outline-variant bg-surface-container-lowest p-4">
                     <button type="button"
-                        @click="activeFilter === 'exams' ? clearExam() : activeFilter === 'articles' ? articles = [] : activeFilter === 'symptoms' ? symptoms = [] : activeFilter === 'systems' ? clearTopics(systemIds) : activeFilter === 'specialties' ? clearTopics(specialtyIds) : activeFilter === 'difficulty' ? difficulties = [] : activeFilter === 'medicalNodes' ? (medicalTaxonomyNodeIds = [], medicalNodeLabels = {}) : statuses = []; $nextTick(() => refreshCount())"
+                        @click="activeFilter === 'exams' ? clearExam() : activeFilter === 'articles' ? articles = [] : activeFilter === 'symptoms' ? symptoms = [] : activeFilter === 'systems' ? clearOrganSystems() : activeFilter === 'subjects' ? clearSubjects() : activeFilter === 'difficulty' ? difficulties = [] : activeFilter === 'lessons' ? (lessonIds = [], lessonLabels = {}) : statuses = []; $nextTick(() => refreshCount())"
                         class="text-sm font-bold text-primary hover:underline">Đặt lại</button>
                     <button type="button" @click="activeFilter = null"
                         class="rounded-lg bg-primary px-8 py-2 font-bold text-white transition-opacity hover:opacity-90">Xong</button>

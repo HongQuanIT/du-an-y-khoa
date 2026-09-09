@@ -20,7 +20,7 @@ use Modules\QuestionBank\Enums\QuestionReviewAction;
 use Modules\QuestionBank\Enums\QuestionReviewStatus;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Enums\SessionMode;
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
+use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionFeedback;
@@ -35,7 +35,7 @@ final class AdminQuestionManagementTest extends TestCase
     use CreatesMedicalTaxonomy;
     use RefreshDatabase;
 
-    private MedicalTaxonomyNode $topic;
+    private Lesson $topic;
 
     protected function setUp(): void
     {
@@ -46,7 +46,6 @@ final class AdminQuestionManagementTest extends TestCase
         $this->topic = $this->makeMedicalNode([
             'name' => 'Tim mạch',
             'slug' => 'tim-mach-admin-test',
-            'node_type' => 'specialty',
             'sort_order' => 1,
         ]);
     }
@@ -134,13 +133,12 @@ final class AdminQuestionManagementTest extends TestCase
         $secondaryTopic = $this->makeMedicalNode([
             'name' => 'Chẩn đoán hình ảnh',
             'slug' => 'chan-doan-hinh-anh-admin-test',
-            'node_type' => 'specialty',
             'sort_order' => 2,
         ]);
 
         $this->actingAsStaff($editor)
             ->post(route('admin.questions.store'), array_merge($this->payload(), [
-                'medical_taxonomy_node_ids' => [$this->topic->id, $secondaryTopic->id],
+                'lesson_ids' => [$this->topic->id, $secondaryTopic->id],
             ]))
             ->assertRedirect();
 
@@ -148,25 +146,25 @@ final class AdminQuestionManagementTest extends TestCase
 
         $this->assertEqualsCanonicalizing(
             [$this->topic->id, $secondaryTopic->id],
-            $question->medicalTaxonomyNodes()->pluck('medical_taxonomy_nodes.id')->all(),
+            $question->lessons()->pluck('lessons.id')->all(),
         );
 
         $this->actingAsStaff($editor)
-            ->get(route('admin.questions.index', ['medical_taxonomy_node_id' => $secondaryTopic->id]))
+            ->get(route('admin.questions.index', ['lesson_id' => $secondaryTopic->id]))
             ->assertOk()
             ->assertSee('Bệnh nhân 55 tuổi đau ngực', false)
             ->assertSee('Chẩn đoán hình ảnh');
 
         $this->actingAsStaff($editor)
             ->put(route('admin.questions.update', $question), array_merge($this->payload(), [
-                'medical_taxonomy_node_ids' => [$secondaryTopic->id],
+                'lesson_ids' => [$secondaryTopic->id],
             ]))
             ->assertRedirect();
 
         $question->refresh();
         $this->assertSame(
             [$secondaryTopic->id],
-            $question->medicalTaxonomyNodes()->pluck('medical_taxonomy_nodes.id')->all(),
+            $question->lessons()->pluck('lessons.id')->all(),
         );
     }
 
@@ -206,7 +204,7 @@ final class AdminQuestionManagementTest extends TestCase
         $editor = $this->staffUser(Role::ContentEditor);
 
         $payload = array_merge($this->payload(), [
-            'medical_taxonomy_node_ids' => [],
+            'lesson_ids' => [],
             'options' => [
                 ['content' => 'Option typed A', 'is_correct' => '0', 'explanation' => 'Explanation typed A'],
                 ['content' => 'Option typed B', 'is_correct' => '1', 'explanation' => 'Explanation typed B'],
@@ -218,7 +216,7 @@ final class AdminQuestionManagementTest extends TestCase
             ->from(route('admin.questions.create'))
             ->post(route('admin.questions.store'), $payload)
             ->assertRedirect(route('admin.questions.create'))
-            ->assertSessionHasErrors('medical_taxonomy_node_ids');
+            ->assertSessionHasErrors('lesson_ids');
 
         $this->actingAsStaff($editor)
             ->get(route('admin.questions.create'))
@@ -370,7 +368,7 @@ final class AdminQuestionManagementTest extends TestCase
             ->post(route('admin.questions.versions.restore', [$question, $oldVersion]))
             ->assertRedirect(route('admin.questions.edit', $question));
 
-        $restored = $question->fresh(['options', 'medicalTaxonomyNodes']);
+        $restored = $question->fresh(['options', 'lessons']);
         $this->assertSame(3, $restored->version);
         $this->assertSame(QuestionStatus::Draft, $restored->status);
         $this->assertSame(
@@ -999,14 +997,14 @@ final class AdminQuestionManagementTest extends TestCase
         $this->approveByInstructor($question);
         $this->publishByAdmin($question);
 
-        $published = $question->fresh(['options', 'medicalTaxonomyNodes']);
+        $published = $question->fresh(['options', 'lessons']);
         $this->assertSame(QuestionStatus::Published, $published->status);
         $this->assertSame('Bệnh nhân 55 tuổi đau ngực. Chẩn đoán nào phù hợp nhất?', strip_tags($published->stem));
         $this->assertSame(['đau ngực', 'Chẩn đoán nào phù hợp nhất?'], array_values(array_map('strip_tags', $published->key_info ?? [])));
         $this->assertSame('Đúng', strip_tags($published->explanation));
         $this->assertSame('Nhớ ECG sớm.', strip_tags($published->attending_tip));
         $this->assertSame(Difficulty::Medium, $published->difficulty);
-        $this->assertSame([$this->topic->id], $published->medicalTaxonomyNodes->pluck('id')->all());
+        $this->assertSame([$this->topic->id], $published->lessons->pluck('id')->all());
         $this->assertTrue($published->is_free);
 
         $this->actingAs($student)
@@ -1170,7 +1168,7 @@ final class AdminQuestionManagementTest extends TestCase
             'explanation' => 'Giải thích lâm sàng đầy đủ.',
             'attending_tip' => 'Nhớ ECG sớm.',
             'difficulty' => Difficulty::Medium->value,
-            'medical_taxonomy_node_ids' => [$this->topic->id],
+            'lesson_ids' => [$this->topic->id],
             'is_free' => '1',
             'options' => [
                 ['content' => 'ACS', 'is_correct' => '1', 'explanation' => 'Đúng'],
@@ -1189,7 +1187,7 @@ final class AdminQuestionManagementTest extends TestCase
             'difficulty' => Difficulty::Easy,
             'created_by' => $createdBy?->id,
         ]);
-        $question->medicalTaxonomyNodes()->sync([$this->topic->id]);
+        $question->lessons()->sync([$this->topic->id]);
 
         foreach (['A đúng', 'B', 'C', 'D'] as $i => $content) {
             $question->options()->create([
@@ -1200,7 +1198,7 @@ final class AdminQuestionManagementTest extends TestCase
             ]);
         }
 
-        return $question->fresh(['options', 'medicalTaxonomyNodes']);
+        return $question->fresh(['options', 'lessons']);
     }
 
     private function createQuestionAttempt(
@@ -1240,7 +1238,7 @@ final class AdminQuestionManagementTest extends TestCase
             'published_version' => 1,
             'created_by' => $createdBy?->id,
         ]);
-        $question->medicalTaxonomyNodes()->sync([$this->topic->id]);
+        $question->lessons()->sync([$this->topic->id]);
 
         foreach ([
             ['ACS', true],
@@ -1256,7 +1254,7 @@ final class AdminQuestionManagementTest extends TestCase
             ]);
         }
 
-        $question = $question->fresh(['options', 'medicalTaxonomyNodes']);
+        $question = $question->fresh(['options', 'lessons']);
         app(\Modules\Admin\Actions\CaptureQuestionVersionAction::class)->handle($question, $createdBy, 'publish');
 
         return $question;

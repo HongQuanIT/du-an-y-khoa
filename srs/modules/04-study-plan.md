@@ -21,7 +21,7 @@ Lộ trình học cá nhân hóa theo ngày thi mục tiêu: chia khối lượn
 
 | Thành phần | Chức năng | Hiển thị/Ẩn | Responsive |
 |-----------|-----------|-------------|-----------|
-| **Create wizard (stepper)** | Chọn kỳ thi → ngày thi → phạm vi chủ đề → cường độ/ngày → xem trước | Khi tạo | Ngang → dọc |
+| **Create wizard (stepper)** | Chọn kỳ thi → ngày thi → phạm vi (Hệ cơ quan/Môn học/Bài học) → cường độ/ngày → xem trước | Khi tạo | Ngang → dọc |
 | **Calendar view** | Lịch task theo ngày (Calendar) | Chi tiết plan | Tháng → agenda list mobile |
 | **Today panel** | Task hôm nay + progress | Luôn | Full-width |
 | **Progress bar tổng** | % hoàn thành đến ngày thi | Luôn | — |
@@ -34,10 +34,10 @@ Lộ trình học cá nhân hóa theo ngày thi mục tiêu: chia khối lượn
 ## 3. Phân tích Component
 
 ### `StudyPlanWizard`
-- **Props:** `exams[]`, `topics[]`, `defaults`.
+- **Props:** `organSystems[]`, `subjects[]`, `lessons[]`, `defaults`.
 - **State:** `step`, `formData(examTargetDate, dailyGoal, scope, strategy)`.
 - **Events:** `onNext/onBack/onGenerate`.
-- **Validation:** ngày thi ở tương lai; daily goal > 0; phạm vi ≥ 1 chủ đề.
+- **Validation:** ngày thi ở tương lai; daily goal > 0; phạm vi ≥ 1 Bài học (hoặc Môn học/Hệ cơ quan).
 - **Business:** tính tổng câu cần làm / số ngày → daily goal đề xuất.
 - **A11y:** stepper, focus quản lý.
 
@@ -68,17 +68,17 @@ Ngoại lệ:
 ```
 
 ## 5. Business Logic
-- **Sinh kế hoạch:** `total_needed / days_until_exam` → daily goal; phân bổ theo trọng số chủ đề (ưu tiên weak topics + high-yield).
-- **Adaptive re-plan:** hằng ngày (scheduler) tính lại: cộng dồn task lỡ, giảm/tăng theo tốc độ thực tế, ưu tiên chủ đề đang yếu.
+- **Sinh kế hoạch:** `total_needed / days_until_exam` → daily goal; phân bổ theo trọng số Bài học/Môn học (ưu tiên Bài học yếu + high-yield).
+- **Adaptive re-plan:** hằng ngày (scheduler) tính lại: cộng dồn task lỡ, giảm/tăng theo tốc độ thực tế, ưu tiên Bài học đang yếu.
 - **Strategy:** `fixed` (chia đều) vs `adaptive` (điều chỉnh liên tục).
 - **Task types:** questions / read (article) / flashcards (due) / review (câu sai).
-- **Hoàn thành task** khi đạt target (vd làm đủ N câu chủ đề X).
+- **Hoàn thành task** khi đạt target (vd làm đủ N câu Bài học X).
 - **Premium:** adaptive nâng cao + dự báo "đạt mục tiêu"; Free chỉ fixed cơ bản.
 - **Continue Learning** (Dashboard) đọc task hôm nay từ đây.
 
 ## 6. Database
 - `study_plans`, `study_plan_tasks` (xem `04-mo-hinh-du-lieu.md` mục 7).
-- Đọc `topic_mastery`, `flashcard_reviews` (due), `question_status`.
+- Đọc `topic_mastery` (rollup theo `lesson_id`), `flashcard_reviews` (due), `question_status`.
 
 ## 7. API
 | Method | URL | Payload | Response | Quyền |
@@ -108,7 +108,7 @@ Validation: ngày tương lai, scope hợp lệ, quyền owner.
 | Đổi ngày thi | Re-generate hoặc re-balance |
 | Bỏ lỡ nhiều ngày | Adaptive dồn + cảnh báo quá tải |
 | Subscription hết hạn | Adaptive → fixed; plan vẫn xem được |
-| Xóa chủ đề khỏi scope | Re-balance task còn lại |
+| Xóa Bài học khỏi scope | Re-balance task còn lại |
 | Concurrent complete task | Idempotent, `409` nếu xung đột |
 | Timeout generate | Sinh nền qua queue + thông báo khi xong |
 

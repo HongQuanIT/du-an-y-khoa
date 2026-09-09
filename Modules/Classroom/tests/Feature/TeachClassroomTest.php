@@ -198,8 +198,8 @@ final class TeachClassroomTest extends TestCase
             'status' => TaxonomyStatus::Active,
             'sort_order' => 1,
         ]);
-        $cardiology = $this->makeMedicalNode(['name' => 'Tim mạch']);
-        $respiratory = $this->makeMedicalNode(['name' => 'Hô hấp']);
+        $cardiology = $this->makeLesson(['name' => 'Tim mạch']);
+        $respiratory = $this->makeLesson(['name' => 'Hô hấp']);
         $tag = Tag::query()->create([
             'name' => 'ECG',
             'slug' => 'ecg',
@@ -211,10 +211,10 @@ final class TeachClassroomTest extends TestCase
         $respiratoryQuestion = Question::factory()->free()->withOptions()->create([
             'stem' => 'Câu hỏi lọc theo Hô hấp',
         ]);
-        $cardiologyQuestion->medicalTaxonomyNodes()->attach($cardiology->getKey());
-        $coreTopic->medicalTaxonomyNodes()->sync([$cardiology->getKey()]);
+        $cardiologyQuestion->lessons()->attach($cardiology->getKey());
+        $coreTopic->lessons()->sync([$cardiology->getKey()]);
         $cardiologyQuestion->tags()->attach($tag->getKey());
-        $respiratoryQuestion->medicalTaxonomyNodes()->attach($respiratory->getKey());
+        $respiratoryQuestion->lessons()->attach($respiratory->getKey());
         $questionSession = QuestionSession::factory()->for($student)->create([
             'question_ids' => [$respiratoryQuestion->getKey()],
         ]);
@@ -237,7 +237,7 @@ final class TeachClassroomTest extends TestCase
         $this->actingAs($instructor)
             ->getJson(route('teach.classes.questions.search', [
                 $classroom,
-                'medical_taxonomy_node_ids' => [$cardiology->getKey()],
+                'lesson_ids' => [$cardiology->getKey()],
             ]))
             ->assertOk()
             ->assertJsonPath('data.questions.0.id', $cardiologyQuestion->id)

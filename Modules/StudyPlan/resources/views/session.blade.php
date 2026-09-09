@@ -70,7 +70,7 @@
     $sessionIncomplete = count($answeredIds) < $total;
     $stemImageUrl = $question->stemImageUrl();
     $categoryBadge = \Modules\QuestionBank\Support\QuestionCategoryBadge::resolve(
-        $question->medicalTaxonomyNodes,
+        $question->lessons,
         $question->difficulty,
     );
 @endphp

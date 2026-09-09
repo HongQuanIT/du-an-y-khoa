@@ -30,7 +30,7 @@ final class ExamModuleTest extends TestCase
 
     private User $user;
 
-    private \Modules\QuestionBank\Models\MedicalTaxonomyNode $topic;
+    private \Modules\QuestionBank\Models\Lesson $topic;
 
     protected function setUp(): void
     {
@@ -41,10 +41,9 @@ final class ExamModuleTest extends TestCase
 
         $this->user = User::factory()->create();
         $this->user->assignRole(Role::Student->value);
-        $this->topic = $this->makeMedicalNode([
+        $this->topic = $this->makeLesson([
             'name' => 'Nội tổng quát',
             'slug' => 'noi-tong-quat-exam-test',
-            'node_type' => 'system',
             'sort_order' => 1,
         ]);
     }

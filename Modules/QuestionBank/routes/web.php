@@ -29,7 +29,7 @@ Route::middleware(['auth', 'learner'])->group(function (): void {
     Route::get('/qbank/create', [CustomSessionController::class, 'create'])->name('qbank.create');
     Route::post('/qbank/create', [CustomSessionController::class, 'store'])->name('qbank.store');
     Route::post('/qbank/create/count', [CustomSessionController::class, 'count'])->name('qbank.count');
-    Route::post('/qbank/weak-topics/{medicalTaxonomyNode}/session', WeakTopicSessionController::class)
+    Route::post('/qbank/weak-topics/{lesson}/session', WeakTopicSessionController::class)
         ->name('qbank.weak-topics.session');
 
     Route::prefix('qbank/taxonomy/lookups')->name('qbank.taxonomy.lookups.')->group(function (): void {
@@ -37,7 +37,9 @@ Route::middleware(['auth', 'learner'])->group(function (): void {
         Route::get('/blueprints/{blueprint}/sections', [TaxonomyLookupController::class, 'blueprintSections'])->name('sections');
         Route::get('/sections/{section}/core-topics', [TaxonomyLookupController::class, 'coreClinicalTopics'])->name('core-topics');
         Route::get('/core-topics/search', [TaxonomyLookupController::class, 'searchCoreClinicalTopics'])->name('core-topics.search');
-        Route::get('/medical-nodes', [TaxonomyLookupController::class, 'medicalTaxonomyNodes'])->name('medical-nodes');
+        Route::get('/organ-systems', [TaxonomyLookupController::class, 'organSystems'])->name('organ-systems');
+        Route::get('/subjects', [TaxonomyLookupController::class, 'subjects'])->name('subjects');
+        Route::get('/lessons', [TaxonomyLookupController::class, 'lessons'])->name('lessons');
         Route::get('/tags', [TaxonomyLookupController::class, 'tags'])->name('tags');
     });
 

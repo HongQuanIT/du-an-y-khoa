@@ -34,7 +34,7 @@ final class QuestionRepository extends EloquentRepository
     {
         $query = $this->query()
             ->with([
-                'medicalTaxonomyNodes:id,name',
+                'lessons:id,name',
                 'tags:id,name',
             ]);
         ServePublishedQuestion::scopeAvailable($query);
@@ -67,9 +67,11 @@ final class QuestionRepository extends EloquentRepository
             blueprintId: $data->blueprintId,
             blueprintSectionId: $data->blueprintSectionId,
             coreClinicalTopicIds: $data->coreClinicalTopicIds,
-            medicalTaxonomyNodeIds: $data->medicalTaxonomyNodeIds,
+            organSystemIds: $data->organSystemIds,
+            subjectIds: $data->subjectIds,
+            lessonIds: $data->lessonIds,
             tagIds: $data->tagIds,
-                        difficulty: $data->difficulty,
+            difficulty: $data->difficulty,
         );
 
         if ($data->freeOnly !== null) {

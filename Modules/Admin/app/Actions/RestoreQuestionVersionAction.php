@@ -11,7 +11,7 @@ use Modules\Admin\Enums\AuditAction;
 use Modules\Admin\Support\Auditor;
 use Modules\Admin\Support\AuditSnapshot;
 use Modules\QuestionBank\Enums\QuestionStatus;
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
+use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionVersion;
 
@@ -36,16 +36,18 @@ final class RestoreQuestionVersionAction
             }
 
             $snapshot = $version->snapshot;
-            $medicalNodeIds = MedicalTaxonomyNode::query()
-                ->whereIn('id', array_map('intval', (array) ($snapshot['medical_taxonomy_node_ids'] ?? [])))
+            // Accept both the new key and the legacy key for old snapshots.
+            $snapshotLessonIds = (array) ($snapshot['lesson_ids'] ?? $snapshot['medical_taxonomy_node_ids'] ?? []);
+            $lessonIds = Lesson::query()
+                ->whereIn('id', array_map('intval', $snapshotLessonIds))
                 ->pluck('id')
                 ->map(fn ($id): int => (int) $id)
                 ->values()
                 ->all();
 
-            if ($medicalNodeIds === []) {
+            if ($lessonIds === []) {
                 throw ValidationException::withMessages([
-                    'version' => 'Không thể khôi phục vì danh mục y khoa của phiên bản này không còn tồn tại.',
+                    'version' => 'Không thể khôi phục vì bài học của phiên bản này không còn tồn tại.',
                 ]);
             }
 
@@ -62,7 +64,7 @@ final class RestoreQuestionVersionAction
                 'version' => $beforeVersion + 1,
             ])->save();
 
-            $question->medicalTaxonomyNodes()->sync($medicalNodeIds);
+            $question->lessons()->sync($lessonIds);
             $question->options()->delete();
 
             foreach (array_values((array) ($snapshot['options'] ?? [])) as $index => $option) {
@@ -80,7 +82,7 @@ final class RestoreQuestionVersionAction
             }
 
             $question->load([
-                'medicalTaxonomyNodes:id',
+                'lessons:id',
                 'options' => fn ($query) => $query->orderBy('order'),
             ]);
             $this->captureVersion->handle(

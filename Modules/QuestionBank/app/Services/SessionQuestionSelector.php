@@ -46,7 +46,7 @@ final class SessionQuestionSelector
                 $userId,
                 $data->count,
                 $canUsePremium,
-                $data->medicalTaxonomyNodeIds,
+                $data->lessonIds,
             );
         }
 
@@ -59,7 +59,11 @@ final class SessionQuestionSelector
                 ->all();
         }
 
-        $nodeIds = $this->filters->expandMedicalTaxonomyNodes($data->medicalTaxonomyNodeIds);
+        $lessonIds = $this->filters->resolveContentLessonIds(
+            $data->organSystemIds,
+            $data->subjectIds,
+            $data->lessonIds,
+        );
         $eligible = $this->eligibleForData($userId, $data, $canUsePremium);
 
         $difficulties = $this->parseDifficulties($data->difficulties);
@@ -68,7 +72,7 @@ final class SessionQuestionSelector
         // preferable to silently pulling unrelated material from other topics.
         $picked = $this->pick(
             $data->count,
-            $nodeIds,
+            $lessonIds,
             [],
             $eligible,
             $difficulties,
@@ -87,14 +91,12 @@ final class SessionQuestionSelector
         $canUsePremium = $user->hasEntitlement(Entitlement::QbankFull->value);
 
         if ($data->source === SessionSource::WeakTopics) {
-            $nodeIds = $this->filters->expandMedicalTaxonomyNodes(
-                $data->medicalTaxonomyNodeIds !== []
-                    ? $data->medicalTaxonomyNodeIds
-                    : $this->weakNodeIds($userId),
-            );
+            $lessonIds = $data->lessonIds !== []
+                ? $data->lessonIds
+                : $this->weakLessonIds($userId);
 
             return $this->questionQuery(
-                $nodeIds,
+                $lessonIds,
                 [],
                 null,
                 [],
@@ -107,7 +109,7 @@ final class SessionQuestionSelector
         }
 
         return $this->questionQuery(
-            $this->filters->expandMedicalTaxonomyNodes($data->medicalTaxonomyNodeIds),
+            $this->filters->resolveContentLessonIds($data->organSystemIds, $data->subjectIds, $data->lessonIds),
             [],
             $this->eligibleForData($userId, $data, $canUsePremium),
             $this->parseDifficulties($data->difficulties),
@@ -144,21 +146,19 @@ final class SessionQuestionSelector
         int $userId,
         int $limit,
         bool $canUsePremium,
-        array $selectedNodeIds = [],
+        array $selectedLessonIds = [],
     ): array {
-        $expandedNodeIds = $this->filters->expandMedicalTaxonomyNodes(
-            $selectedNodeIds !== [] ? $selectedNodeIds : $this->weakNodeIds($userId),
-        );
+        $lessonIds = $selectedLessonIds !== [] ? $selectedLessonIds : $this->weakLessonIds($userId);
 
         $accessibleQuestions = ServePublishedQuestion::scopeAvailable(
             Question::query()->select('id'),
         )
             ->when(! $canUsePremium, fn ($query) => $query->where('is_free', true))
             ->when(
-                $expandedNodeIds !== [],
+                $lessonIds !== [],
                 fn ($query) => $query->whereHas(
-                    'medicalTaxonomyNodes',
-                    fn (Builder $nodes) => $nodes->whereIn('medical_taxonomy_nodes.id', $expandedNodeIds),
+                    'lessons',
+                    fn (Builder $lessons) => $lessons->whereIn('lessons.id', $lessonIds),
                 ),
             );
 
@@ -187,8 +187,8 @@ final class SessionQuestionSelector
         }
 
         // A dashboard topic drill is intentionally restricted to questions
-        // this learner answered incorrectly in the selected topic.
-        if ($selectedNodeIds !== []) {
+        // this learner answered incorrectly in the selected lesson.
+        if ($selectedLessonIds !== []) {
             return $incorrect->values()->all();
         }
 
@@ -208,7 +208,7 @@ final class SessionQuestionSelector
         return $this->topUp(
             $picked,
             $limit,
-            $expandedNodeIds,
+            $lessonIds,
             [],
             null,
             [],
@@ -222,17 +222,17 @@ final class SessionQuestionSelector
      *
      * @return array<int, int>
      */
-    private function weakNodeIds(int $userId): array
+    private function weakLessonIds(int $userId): array
     {
         return DB::table('question_attempts')
-            ->join('question_medical_topics', 'question_medical_topics.question_id', '=', 'question_attempts.question_id')
+            ->join('question_lesson', 'question_lesson.question_id', '=', 'question_attempts.question_id')
             ->where('question_attempts.user_id', $userId)
             ->whereNotNull('question_attempts.is_correct')
-            ->groupBy('question_medical_topics.medical_taxonomy_node_id')
+            ->groupBy('question_lesson.lesson_id')
             ->havingRaw('COUNT(*) >= 3')
             ->orderByRaw('AVG(CASE WHEN question_attempts.is_correct = 1 THEN 1.0 ELSE 0.0 END)')
             ->limit(5)
-            ->pluck('question_medical_topics.medical_taxonomy_node_id')
+            ->pluck('question_lesson.lesson_id')
             ->map(fn ($id) => (int) $id)
             ->all();
     }
@@ -332,8 +332,8 @@ final class SessionQuestionSelector
             ->when(
                 $topicIds !== [],
                 fn ($query) => $query->whereHas(
-                    'medicalTaxonomyNodes',
-                    fn (Builder $nodes) => $nodes->whereIn('medical_taxonomy_nodes.id', $topicIds),
+                    'lessons',
+                    fn (Builder $lessons) => $lessons->whereIn('lessons.id', $topicIds),
                 ),
             )
             ->when($exclude !== [], fn ($query) => $query->whereNotIn('id', $exclude))
@@ -349,9 +349,7 @@ final class SessionQuestionSelector
             blueprintId: $data->blueprintId,
             blueprintSectionId: $data->blueprintSectionId,
             coreClinicalTopicIds: $data->coreClinicalTopicIds,
-            medicalTaxonomyNodeIds: $data->medicalTaxonomyNodeIds !== []
-                ? $data->medicalTaxonomyNodeIds
-                : $topicIds,
+            lessonIds: $topicIds,
             tagIds: $data->tagIds,
         );
 

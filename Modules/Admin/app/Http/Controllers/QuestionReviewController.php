@@ -11,7 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Modules\Admin\Actions\ReviewQuestionChangeAction;
 use Modules\Admin\Support\QuestionAccess;
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
+use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\QuestionReviewRequest;
 
 final class QuestionReviewController extends Controller
@@ -22,14 +22,17 @@ final class QuestionReviewController extends Controller
 
         $reviewRequest->load([
             'question.options',
-            'question.medicalTaxonomyNodes:id,name',
+            'question.lessons:id,name',
             'requester:id,name,email',
         ]);
-        $nodeNames = MedicalTaxonomyNode::query()
-            ->whereIn('id', array_map('intval', (array) ($reviewRequest->payload['medical_taxonomy_node_ids'] ?? [])))
+        $lessonNames = Lesson::query()
+            // Accept both the new key and the legacy key for old payloads.
+            ->whereIn('id', array_map('intval', (array) ($reviewRequest->payload['lesson_ids']
+                ?? $reviewRequest->payload['medical_taxonomy_node_ids']
+                ?? [])))
             ->pluck('name', 'id');
 
-        return view('admin::questions.review', compact('reviewRequest', 'nodeNames'));
+        return view('admin::questions.review', compact('reviewRequest', 'lessonNames'));
     }
 
     public function approve(

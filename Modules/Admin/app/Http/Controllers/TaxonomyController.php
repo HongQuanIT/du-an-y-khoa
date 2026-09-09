@@ -10,8 +10,9 @@ use App\Support\Enums\Permission;
 use Illuminate\View\View;
 use Modules\QuestionBank\Models\Blueprint;
 use Modules\QuestionBank\Models\CoreClinicalTopic;
-use Modules\QuestionBank\Models\MedicalTaxonomy;
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
+use Modules\QuestionBank\Models\Lesson;
+use Modules\QuestionBank\Models\OrganSystem;
+use Modules\QuestionBank\Models\Subject;
 use Modules\QuestionBank\Models\Tag;
 
 final class TaxonomyController extends Controller
@@ -20,16 +21,14 @@ final class TaxonomyController extends Controller
     {
         $this->authorizePermission(Permission::TopicView);
 
-        $canonical = MedicalTaxonomy::canonical();
-
         return view('admin::taxonomy.index', [
             'stats' => [
                 'blueprints' => Blueprint::query()->count(),
                 'sections' => Blueprint::query()->withCount('sections')->get()->sum('sections_count'),
                 'core_topics' => CoreClinicalTopic::query()->count(),
-                'medical_nodes' => $canonical
-                    ? MedicalTaxonomyNode::query()->where('medical_taxonomy_id', $canonical->id)->count()
-                    : 0,
+                'organ_systems' => OrganSystem::query()->count(),
+                'subjects' => Subject::query()->count(),
+                'lessons' => Lesson::query()->count(),
                 'tags' => Tag::query()->count(),
             ],
             'canCreate' => $this->actor()->can(Permission::TopicCreate->value),

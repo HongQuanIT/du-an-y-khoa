@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="1550" viewBox="0 0 2400 1550">
+<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="1580" viewBox="0 0 2400 1580">
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/>
@@ -9,108 +9,113 @@
     </marker>
   </defs>
   <rect width="100%" height="100%" fill="#ffffff"/>
-  <text x="40" y="36" font-family="Inter, system-ui, sans-serif" font-size="22" font-weight="700" fill="#0f172a">Question Bank — ERD hiện tại</text>
-  <text x="40" y="58" font-family="Inter, system-ui, sans-serif" font-size="12" fill="#64748b">Sau drop question_blueprint_topics · Modules/QuestionBank + Exam · 2026-09-06 · nét đứt = optional / no FK / self-ref · đường xám nhạt = liên kết cross-domain</text>
-  <rect x="40" y="90" width="720" height="780" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="40" y="36" font-family="Inter, system-ui, sans-serif" font-size="22" font-weight="700" fill="#0f172a">Question Bank — ERD (quan hệ đã chỉnh)</text>
+  <text x="40" y="58" font-family="Inter, system-ui, sans-serif" font-size="12" fill="#64748b">Nét đặc = FK bắt buộc (CASCADE) · Nét đứt = FK optional / NO FK / self-ref · Modules/QuestionBank + Exam · 2026-09-07</text>
+  <rect x="40" y="90" width="720" height="800" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
   <text x="56" y="118" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="700" fill="#334155">1. Nội dung câu hỏi</text>
-  <rect x="800" y="90" width="760" height="780" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <rect x="800" y="90" width="760" height="800" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
   <text x="816" y="118" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="700" fill="#334155">2. Taxonomy &amp; Blueprint</text>
-  <rect x="1600" y="90" width="760" height="780" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <rect x="1600" y="90" width="760" height="800" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
   <text x="1616" y="118" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="700" fill="#334155">3. Session / Attempt</text>
-  <rect x="40" y="910" width="1520" height="580" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
-  <text x="56" y="938" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="700" fill="#334155">4. Exam (cross-module)</text>
-  <rect x="1600" y="910" width="760" height="580" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
-  <text x="1616" y="938" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="700" fill="#334155">5. Ghi chú</text>
-  <line x1="360.0" y1="208.4" x2="400.0" y2="203.1" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
-  <text x="380.0" y="201.8" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">1:N</text>
-  <line x1="360.0" y1="270.2" x2="400.0" y2="281.3" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
-  <text x="380.0" y="271.8" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">1:N</text>
-  <line x1="334.9" y1="317.0" x2="480.2" y2="420.0" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
-  <text x="407.5" y="364.5" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">1:N</text>
-  <line x1="210.0" y1="317.0" x2="210.0" y2="420.0" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
-  <text x="210.0" y="364.5" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">1:N</text>
-  <line x1="286.3" y1="317.0" x2="512.9" y2="580.0" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
-  <text x="399.6" y="444.5" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">1:N</text>
-  <line x1="210.0" y1="317.0" x2="210.0" y2="560.0" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
-  <text x="210.0" y="434.5" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">pair</text>
-  <line x1="210.0" y1="317.0" x2="210.0" y2="700.0" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
-  <text x="210.0" y="504.5" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">1:N</text>
+  <rect x="40" y="930" width="1520" height="580" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="56" y="958" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="700" fill="#334155">4. Exam (cross-module)</text>
+  <rect x="1600" y="930" width="760" height="580" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="1616" y="958" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="700" fill="#334155">5. Ghi chú quan hệ</text>
+  <line x1="360.0" y1="207.7" x2="400.0" y2="203.8" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
+  <text x="380.0" y="201.8" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">1:N CASCADE</text>
+  <line x1="360.0" y1="271.0" x2="418.3" y2="290.0" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
+  <text x="389.1" y="276.5" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">1:N CASCADE</text>
+  <line x1="315.6" y1="304.0" x2="477.9" y2="430.0" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
+  <text x="396.7" y="363.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">1:N CASCADE</text>
+  <line x1="210.0" y1="304.0" x2="210.0" y2="420.0" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
+  <text x="210.0" y="358.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">1:N CASCADE</text>
+  <line x1="275.2" y1="304.0" x2="510.6" y2="600.0" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
+  <text x="392.9" y="448.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">1:N CASCADE</text>
+  <line x1="210.0" y1="304.0" x2="210.0" y2="560.0" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
+  <text x="210.0" y="428.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">pair CASCADE</text>
+  <line x1="210.0" y1="304.0" x2="210.0" y2="710.0" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
+  <text x="210.0" y="503.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">1:N CASCADE</text>
   <path d="M 344 152 C 396 112, 396 196, 352 180" fill="none" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#arrow-dash)"/>
-  <text x="366" y="146" font-family="Inter, system-ui, sans-serif" font-size="10" fill="#64748b">cloned_from</text>
+  <text x="366" y="146" font-family="Inter, system-ui, sans-serif" font-size="10" fill="#64748b">cloned_from optional</text>
   <line x1="970.0" y1="213.0" x2="970.0" y2="260.0" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
-  <text x="970.0" y="232.5" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">1:N</text>
+  <text x="970.0" y="232.5" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">1:N CASCADE</text>
   <line x1="970.0" y1="346.0" x2="970.0" y2="400.0" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
-  <text x="970.0" y="369.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">1:N</text>
+  <text x="970.0" y="369.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">1:N CASCADE</text>
   <line x1="1330.0" y1="213.0" x2="1330.0" y2="260.0" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
-  <text x="1330.0" y="232.5" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">1:N</text>
+  <text x="1330.0" y="232.5" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">1:N CASCADE</text>
   <path d="M 1464 272 C 1516 232, 1516 316, 1472 300" fill="none" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#arrow-dash)"/>
-  <text x="1486" y="266" font-family="Inter, system-ui, sans-serif" font-size="10" fill="#64748b">parent</text>
+  <text x="1486" y="266" font-family="Inter, system-ui, sans-serif" font-size="10" fill="#64748b">parent optional</text>
   <line x1="970.0" y1="486.0" x2="970.0" y2="560.0" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
   <text x="970.0" y="519.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">M:N</text>
   <line x1="1267.9" y1="359.0" x2="1015.8" y2="560.0" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
   <text x="1141.8" y="455.5" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">M:N</text>
   <line x1="970.0" y1="486.0" x2="970.0" y2="680.0" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
   <text x="970.0" y="579.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">M:N</text>
-  <line x1="1279.5" y1="493.0" x2="1020.5" y2="680.0" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
-  <text x="1150.0" y="582.5" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">M:N</text>
+  <line x1="1277.4" y1="503.0" x2="1022.6" y2="680.0" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
+  <text x="1150.0" y="587.5" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">M:N</text>
   <line x1="1330.0" y1="359.0" x2="1330.0" y2="540.0" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
   <text x="1330.0" y="445.5" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">M:N</text>
-  <line x1="1330.0" y1="493.0" x2="1330.0" y2="700.0" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
-  <text x="1330.0" y="592.5" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">M:N</text>
-  <line x1="1770.0" y1="200.0" x2="1770.0" y2="260.0" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
-  <text x="1770.0" y="226.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">1:N</text>
-  <line x1="1770.0" y1="385.0" x2="1770.0" y2="460.0" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
-  <text x="1770.0" y="418.5" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">1:N</text>
-  <line x1="1920.0" y1="322.5" x2="1980.0" y2="322.5" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
-  <text x="1950.0" y="318.5" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">1:N</text>
-  <line x1="1840.8" y1="200.0" x2="1982.5" y2="260.0" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
-  <text x="1911.6" y="226.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">1:N</text>
+  <line x1="1330.0" y1="503.0" x2="1330.0" y2="710.0" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
+  <text x="1330.0" y="602.5" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">M:N</text>
+  <line x1="1770.0" y1="200.0" x2="1770.0" y2="250.0" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
+  <text x="1770.0" y="221.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">1:N CASCADE</text>
+  <line x1="1770.0" y1="362.0" x2="1770.0" y2="450.0" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
+  <text x="1770.0" y="402.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">1:N CASCADE</text>
+  <line x1="1920.0" y1="308.7" x2="1980.0" y2="309.8" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
+  <text x="1950.0" y="305.2" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">1:N CASCADE</text>
+  <line x1="1845.8" y1="200.0" x2="1980.0" y2="253.1" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
+  <text x="1912.9" y="222.6" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">1:N CASCADE</text>
   <line x1="1800.0" y1="200.0" x2="2080.4" y2="480.0" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
-  <text x="1940.2" y="336.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">1:N</text>
-  <line x1="360.0" y1="1008.7" x2="400.0" y2="1010.3" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
-  <text x="380.0" y="1005.5" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">1:N</text>
-  <line x1="360.0" y1="1005.6" x2="800.0" y2="1013.4" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
-  <text x="580.0" y="1005.5" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">1:N</text>
-  <path d="M 360.0 276.8 L 754.0 276.8 L 754.0 541.2 L 1180.0 541.2" fill="none" stroke="#cbd5e1" stroke-width="1.1" stroke-dasharray="3 3" marker-end="url(#arrow-dash)"/>
-  <text x="754.0" y="406.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="8" fill="#94a3b8">M:N preferred</text>
-  <path d="M 360.0 296.5 L 796.8 296.5 L 796.8 700.0 L 1249.5 700.0" fill="none" stroke="#cbd5e1" stroke-width="1.1" stroke-dasharray="3 3" marker-end="url(#arrow-dash)"/>
-  <text x="796.8" y="495.3" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="8" fill="#94a3b8">M:N</text>
-  <path d="M 360.0 252.0 L 1170.0 252.0 L 1170.0 506.0 L 1980.0 506.0" fill="none" stroke="#cbd5e1" stroke-width="1.1" stroke-dasharray="3 3" marker-end="url(#arrow-dash)"/>
-  <text x="1170.0" y="376.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="8" fill="#94a3b8">1:N FK</text>
-  <path d="M 293.2 317.0 L 603.3 317.0 L 603.3 960.0 L 897.4 960.0" fill="none" stroke="#cbd5e1" stroke-width="1.1" stroke-dasharray="3 3" marker-end="url(#arrow-dash)"/>
-  <text x="603.3" y="635.5" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="8" fill="#94a3b8">1:N FK</text>
-  <path d="M 360.0 255.5 L 1006.0 255.5 L 1006.0 482.5 L 1620.0 482.5" fill="none" stroke="#cbd5e1" stroke-width="1.1" stroke-dasharray="3 3" marker-end="url(#arrow-dash)"/>
-  <text x="1006.0" y="366.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="8" fill="#94a3b8">UUID only</text>
-  <path d="M 360.0 235.8 L 1154.0 235.8 L 1154.0 315.2 L 1980.0 315.2" fill="none" stroke="#cbd5e1" stroke-width="1.1" stroke-dasharray="3 3" marker-end="url(#arrow-dash)"/>
-  <text x="1154.0" y="272.5" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="8" fill="#94a3b8">UUID only</text>
-  <path d="M 936.4 213.0 L 585.0 213.0 L 585.0 960.0 L 249.5 960.0" fill="none" stroke="#cbd5e1" stroke-width="1.1" stroke-dasharray="3 3" marker-end="url(#arrow-dash)"/>
-  <text x="585.0" y="583.5" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="8" fill="#94a3b8">optional FK</text>
-  <path d="M 938.5 486.0 L 764.8 486.0 L 764.8 960.0 L 591.0 960.0" fill="none" stroke="#cbd5e1" stroke-width="1.1" stroke-dasharray="3 3" marker-end="url(#arrow-dash)"/>
-  <text x="764.8" y="720.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="8" fill="#94a3b8">1:N</text>
-  <path d="M 968.5 486.0 L 968.2 486.0 L 968.2 960.0 L 952.0 960.0" fill="none" stroke="#cbd5e1" stroke-width="1.1" stroke-dasharray="3 3" marker-end="url(#arrow-dash)"/>
-  <text x="968.2" y="720.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="8" fill="#94a3b8">optional</text>
-  <path d="M 308.6 960.0 L 983.6 960.0 L 983.6 385.0 L 1626.7 385.0" fill="none" stroke="#cbd5e1" stroke-width="1.1" stroke-dasharray="3 3" marker-end="url(#arrow-dash)"/>
-  <text x="983.6" y="669.5" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="8" fill="#94a3b8">optional exam_id</text>
-  <path d="M 1620.0 364.2 L 974.0 364.2 L 974.0 714.3 L 360.0 714.3" fill="none" stroke="#cbd5e1" stroke-width="1.1" stroke-dasharray="3 3" marker-end="url(#arrow-dash)"/>
-  <text x="974.0" y="536.2" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="8" fill="#94a3b8">1:N</text>
-  <path d="M 524.5 226.0 L 375.9 226.0 L 375.9 700.0 L 243.2 700.0" fill="none" stroke="#cbd5e1" stroke-width="1.1" stroke-dasharray="3 3" marker-end="url(#arrow-dash)"/>
-  <text x="375.9" y="460.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="8" fill="#94a3b8">optional</text>
+  <text x="1940.2" y="336.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">1:N CASCADE</text>
+  <line x1="360.0" y1="1028.7" x2="400.0" y2="1030.3" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
+  <text x="380.0" y="1025.5" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">1:N CASCADE</text>
+  <line x1="360.0" y1="1025.6" x2="800.0" y2="1033.4" stroke="#475569" stroke-width="1.3" marker-end="url(#arrow)"/>
+  <text x="580.0" y="1025.5" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" fill="#64748b">1:N CASCADE</text>
+  <path d="M 360.0 271.2 L 750.0 271.2 L 750.0 540.3 L 1180.0 540.3" fill="none" stroke="#64748b" stroke-width="1.15" stroke-dasharray="2 3" marker-end="url(#arrow)"/>
+  <text x="750.0" y="402.8" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="8" fill="#64748b">M:N CASCADE</text>
+  <path d="M 360.0 292.2 L 796.0 292.2 L 796.0 710.0 L 1252.1 710.0" fill="none" stroke="#64748b" stroke-width="1.15" stroke-dasharray="2 3" marker-end="url(#arrow)"/>
+  <text x="796.0" y="498.1" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="8" fill="#64748b">M:N CASCADE</text>
+  <path d="M 360.0 246.0 L 1170.0 246.0 L 1170.0 505.5 L 1980.0 505.5" fill="none" stroke="#64748b" stroke-width="1.15" stroke-dasharray="2 3" marker-end="url(#arrow)"/>
+  <text x="1170.0" y="372.8" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="8" fill="#64748b">1:N CASCADE</text>
+  <path d="M 284.5 304.0 L 601.8 304.0 L 601.8 980.0 L 899.1 980.0" fill="none" stroke="#64748b" stroke-width="1.15" stroke-dasharray="2 3" marker-end="url(#arrow)"/>
+  <text x="601.8" y="639.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="8" fill="#64748b">1:N CASCADE</text>
+  <path d="M 360.0 248.7 L 1010.0 248.7 L 1010.0 472.8 L 1620.0 472.8" fill="none" stroke="#94a3b8" stroke-width="1.15" stroke-dasharray="5 4" marker-end="url(#arrow-dash)"/>
+  <text x="1010.0" y="357.8" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="8" fill="#64748b">UUID only NO FK</text>
+  <path d="M 360.0 229.1 L 1150.0 229.1 L 1150.0 305.4 L 1980.0 305.4" fill="none" stroke="#94a3b8" stroke-width="1.15" stroke-dasharray="5 4" marker-end="url(#arrow-dash)"/>
+  <text x="1150.0" y="264.2" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="8" fill="#64748b">UUID only NO FK</text>
+  <path d="M 937.2 213.0 L 582.9 213.0 L 582.9 980.0 L 248.6 980.0" fill="none" stroke="#94a3b8" stroke-width="1.15" stroke-dasharray="5 4" marker-end="url(#arrow-dash)"/>
+  <text x="582.9" y="593.5" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="8" fill="#64748b">blueprint_id optional</text>
+  <path d="M 939.5 486.0 L 764.6 486.0 L 764.6 980.0 L 589.7 980.0" fill="none" stroke="#64748b" stroke-width="1.15" stroke-dasharray="2 3" marker-end="url(#arrow)"/>
+  <text x="764.6" y="730.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="8" fill="#64748b">1:N CASCADE</text>
+  <path d="M 968.5 486.0 L 970.2 486.0 L 970.2 980.0 L 951.9 980.0" fill="none" stroke="#94a3b8" stroke-width="1.15" stroke-dasharray="5 4" marker-end="url(#arrow-dash)"/>
+  <text x="970.2" y="730.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="8" fill="#64748b">CCT optional</text>
+  <path d="M 303.6 980.0 L 995.9 980.0 L 995.9 362.0 L 1648.2 362.0" fill="none" stroke="#94a3b8" stroke-width="1.15" stroke-dasharray="5 4" marker-end="url(#arrow-dash)"/>
+  <text x="995.9" y="668.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="8" fill="#64748b">exam_id optional</text>
+  <path d="M 1620.0 350.2 L 970.0 350.2 L 970.0 721.8 L 360.0 721.8" fill="none" stroke="#64748b" stroke-width="1.15" stroke-dasharray="2 3" marker-end="url(#arrow)"/>
+  <text x="970.0" y="533.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="8" fill="#64748b">1:N CASCADE</text>
+  <path d="M 520.8 239.0 L 371.9 239.0 L 371.9 710.0 L 243.0 710.0" fill="none" stroke="#94a3b8" stroke-width="1.15" stroke-dasharray="5 4" marker-end="url(#arrow-dash)"/>
+  <text x="371.9" y="471.5" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="8" fill="#64748b">option_id optional</text>
+  <path d="M 1691.5 200.0 L 1024.0 200.0 L 1024.0 710.0 L 356.6 710.0" fill="none" stroke="#64748b" stroke-width="1.15" stroke-dasharray="2 3" marker-end="url(#arrow)"/>
+  <text x="1024.0" y="452.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="8" fill="#64748b">1:N CASCADE</text>
+  <path d="M 1693.7 200.0 L 1194.8 200.0 L 1194.8 600.0 L 675.9 600.0" fill="none" stroke="#64748b" stroke-width="1.15" stroke-dasharray="2 3" marker-end="url(#arrow)"/>
+  <text x="1194.8" y="397.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="8" fill="#64748b">requested_by CASCADE</text>
+  <path d="M 1620.0 175.0 L 1010.0 175.0 L 1010.0 217.0 L 360.0 217.0" fill="none" stroke="#94a3b8" stroke-width="1.15" stroke-dasharray="5 4" marker-end="url(#arrow-dash)"/>
+  <text x="1010.0" y="193.0" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="8" fill="#64748b">user FKs optional</text>
   <g>
-    <rect x="60" y="140" width="300" height="177" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.4"/>
+    <rect x="60" y="140" width="300" height="164" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.4"/>
     <rect x="60" y="140" width="300" height="22" rx="6" fill="#0f172a"/>
     <rect x="60" y="156" width="300" height="6" fill="#0f172a"/>
     <text x="70" y="155" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">questions</text>
     <text x="70" y="179" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">uuid id PK</text>
     <text x="70" y="192" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">code UK</text>
-    <text x="70" y="205" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">stem / explanation</text>
-    <text x="70" y="218" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">difficulty, status</text>
-    <text x="70" y="231" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">is_free, exam_flag</text>
-    <text x="70" y="244" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">version, published_version</text>
-    <text x="70" y="257" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">key_info json</text>
-    <text x="70" y="270" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">stats_cache json</text>
+    <text x="70" y="205" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">user FKs nullable</text>
+    <text x="70" y="218" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">cloned_from_id nullable</text>
+    <text x="70" y="231" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">difficulty, status</text>
+    <text x="70" y="244" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">is_free, exam_flag</text>
+    <text x="70" y="257" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">version, published_version</text>
+    <text x="70" y="270" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">key_info / stats_cache</text>
     <text x="70" y="283" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">content_fingerprint</text>
-    <text x="70" y="296" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">cloned_from_id FK self</text>
-    <text x="70" y="309" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">softDeletes</text>
+    <text x="70" y="296" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">softDeletes</text>
   </g>
   <g>
     <rect x="60" y="420" width="300" height="99" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.4"/>
@@ -118,10 +123,10 @@
     <rect x="60" y="436" width="300" height="6" fill="#0f172a"/>
     <text x="70" y="435" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">question_scopes</text>
     <text x="70" y="459" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">bigint id PK</text>
-    <text x="70" y="472" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">question_id FK</text>
+    <text x="70" y="472" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">question_id FK CASCADE</text>
     <text x="70" y="485" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">scope_type, scope_key</text>
     <text x="70" y="498" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">UK(q, type, key)</text>
-    <text x="70" y="511" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">scope_key: no FK</text>
+    <text x="70" y="511" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">EAV — no FK on key</text>
   </g>
   <g>
     <rect x="60" y="560" width="300" height="99" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.4"/>
@@ -129,22 +134,22 @@
     <rect x="60" y="576" width="300" height="6" fill="#0f172a"/>
     <text x="70" y="575" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">question_similarity_matches</text>
     <text x="70" y="599" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">bigint id PK</text>
-    <text x="70" y="612" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">question_id_low FK</text>
-    <text x="70" y="625" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">question_id_high FK</text>
+    <text x="70" y="612" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">question_id_low FK CASCADE</text>
+    <text x="70" y="625" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">question_id_high FK CASCADE</text>
     <text x="70" y="638" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">score, severity</text>
     <text x="70" y="651" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">UK(low, high)</text>
   </g>
   <g>
-    <rect x="60" y="700" width="300" height="112" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.4"/>
-    <rect x="60" y="700" width="300" height="22" rx="6" fill="#0f172a"/>
-    <rect x="60" y="716" width="300" height="6" fill="#0f172a"/>
-    <text x="70" y="715" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">question_feedback</text>
-    <text x="70" y="739" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">bigint id PK</text>
-    <text x="70" y="752" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">user_id FK</text>
-    <text x="70" y="765" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">question_id FK</text>
-    <text x="70" y="778" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">question_session_id FK</text>
-    <text x="70" y="791" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">question_option_id FK?</text>
-    <text x="70" y="804" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">target, category, status</text>
+    <rect x="60" y="710" width="300" height="112" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.4"/>
+    <rect x="60" y="710" width="300" height="22" rx="6" fill="#0f172a"/>
+    <rect x="60" y="726" width="300" height="6" fill="#0f172a"/>
+    <text x="70" y="725" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">question_feedback</text>
+    <text x="70" y="749" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">bigint id PK</text>
+    <text x="70" y="762" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">user_id FK CASCADE</text>
+    <text x="70" y="775" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">question_id FK CASCADE</text>
+    <text x="70" y="788" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">session_id FK CASCADE</text>
+    <text x="70" y="801" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">option_id FK nullable</text>
+    <text x="70" y="814" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">target, category, status</text>
   </g>
   <g>
     <rect x="400" y="140" width="300" height="99" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.4"/>
@@ -152,41 +157,43 @@
     <rect x="400" y="156" width="300" height="6" fill="#0f172a"/>
     <text x="410" y="155" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">question_options</text>
     <text x="410" y="179" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">bigint id PK identity</text>
-    <text x="410" y="192" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">question_id FK cascade</text>
+    <text x="410" y="192" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">question_id FK CASCADE</text>
     <text x="410" y="205" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">label authoring-only</text>
     <text x="410" y="218" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">content, is_correct</text>
     <text x="410" y="231" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">order author</text>
   </g>
   <g>
-    <rect x="400" y="280" width="300" height="86" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.4"/>
-    <rect x="400" y="280" width="300" height="22" rx="6" fill="#0f172a"/>
-    <rect x="400" y="296" width="300" height="6" fill="#0f172a"/>
-    <text x="410" y="295" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">question_hints</text>
-    <text x="410" y="319" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">bigint id PK</text>
-    <text x="410" y="332" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">question_id FK</text>
-    <text x="410" y="345" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">content, sort_order</text>
-    <text x="410" y="358" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">status</text>
+    <rect x="400" y="290" width="300" height="86" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.4"/>
+    <rect x="400" y="290" width="300" height="22" rx="6" fill="#0f172a"/>
+    <rect x="400" y="306" width="300" height="6" fill="#0f172a"/>
+    <text x="410" y="305" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">question_hints</text>
+    <text x="410" y="329" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">bigint id PK</text>
+    <text x="410" y="342" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">question_id FK CASCADE</text>
+    <text x="410" y="355" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">content, sort_order</text>
+    <text x="410" y="368" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">status</text>
   </g>
   <g>
-    <rect x="400" y="420" width="300" height="99" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.4"/>
-    <rect x="400" y="420" width="300" height="22" rx="6" fill="#0f172a"/>
-    <rect x="400" y="436" width="300" height="6" fill="#0f172a"/>
-    <text x="410" y="435" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">question_versions</text>
-    <text x="410" y="459" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">bigint id PK</text>
-    <text x="410" y="472" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">question_id FK</text>
-    <text x="410" y="485" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">version UK(q,v)</text>
-    <text x="410" y="498" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">snapshot json</text>
-    <text x="410" y="511" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">event</text>
+    <rect x="400" y="430" width="300" height="112" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.4"/>
+    <rect x="400" y="430" width="300" height="22" rx="6" fill="#0f172a"/>
+    <rect x="400" y="446" width="300" height="6" fill="#0f172a"/>
+    <text x="410" y="445" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">question_versions</text>
+    <text x="410" y="469" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">bigint id PK</text>
+    <text x="410" y="482" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">question_id FK CASCADE</text>
+    <text x="410" y="495" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">version UK(q,v)</text>
+    <text x="410" y="508" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">snapshot json</text>
+    <text x="410" y="521" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">created_by nullable</text>
+    <text x="410" y="534" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">event</text>
   </g>
   <g>
-    <rect x="400" y="580" width="300" height="86" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.4"/>
-    <rect x="400" y="580" width="300" height="22" rx="6" fill="#0f172a"/>
-    <rect x="400" y="596" width="300" height="6" fill="#0f172a"/>
-    <text x="410" y="595" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">question_review_requests</text>
-    <text x="410" y="619" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">bigint id PK</text>
-    <text x="410" y="632" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">question_id FK</text>
-    <text x="410" y="645" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">action, status</text>
-    <text x="410" y="658" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">requested_by FK</text>
+    <rect x="400" y="600" width="300" height="99" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.4"/>
+    <rect x="400" y="600" width="300" height="22" rx="6" fill="#0f172a"/>
+    <rect x="400" y="616" width="300" height="6" fill="#0f172a"/>
+    <text x="410" y="615" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">question_review_requests</text>
+    <text x="410" y="639" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">bigint id PK</text>
+    <text x="410" y="652" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">question_id FK CASCADE</text>
+    <text x="410" y="665" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">requested_by FK CASCADE</text>
+    <text x="410" y="678" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">reviewed_by nullable</text>
+    <text x="410" y="691" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">action, status</text>
   </g>
   <g>
     <rect x="820" y="140" width="300" height="73" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.4"/>
@@ -203,7 +210,7 @@
     <rect x="820" y="276" width="300" height="6" fill="#0f172a"/>
     <text x="830" y="275" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">blueprint_sections</text>
     <text x="830" y="299" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">bigint id PK</text>
-    <text x="830" y="312" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">blueprint_id FK</text>
+    <text x="830" y="312" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">blueprint_id FK CASCADE</text>
     <text x="830" y="325" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">slug UK(bp,slug)</text>
     <text x="830" y="338" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">status</text>
   </g>
@@ -213,7 +220,7 @@
     <rect x="820" y="416" width="300" height="6" fill="#0f172a"/>
     <text x="830" y="415" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">core_clinical_topics</text>
     <text x="830" y="439" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">bigint id PK</text>
-    <text x="830" y="452" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">blueprint_section_id FK</text>
+    <text x="830" y="452" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">section_id FK CASCADE</text>
     <text x="830" y="465" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">slug UK(sec,slug)</text>
     <text x="830" y="478" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">status</text>
   </g>
@@ -222,8 +229,8 @@
     <rect x="820" y="560" width="300" height="22" rx="6" fill="#0f172a"/>
     <rect x="820" y="576" width="300" height="6" fill="#0f172a"/>
     <text x="830" y="575" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">core_topic_medical_taxonomy_nodes</text>
-    <text x="830" y="599" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">core_clinical_topic_id FK</text>
-    <text x="830" y="612" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">medical_taxonomy_node_id FK</text>
+    <text x="830" y="599" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">cct_id FK CASCADE</text>
+    <text x="830" y="612" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">node_id FK CASCADE</text>
     <text x="830" y="625" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">PK composite</text>
   </g>
   <g>
@@ -231,8 +238,8 @@
     <rect x="820" y="680" width="300" height="22" rx="6" fill="#0f172a"/>
     <rect x="820" y="696" width="300" height="6" fill="#0f172a"/>
     <text x="830" y="695" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">core_topic_tags</text>
-    <text x="830" y="719" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">core_clinical_topic_id FK</text>
-    <text x="830" y="732" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">tag_id FK</text>
+    <text x="830" y="719" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">cct_id FK CASCADE</text>
+    <text x="830" y="732" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">tag_id FK CASCADE</text>
     <text x="830" y="745" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">PK composite</text>
   </g>
   <g>
@@ -250,39 +257,38 @@
     <rect x="1180" y="276" width="300" height="6" fill="#0f172a"/>
     <text x="1190" y="275" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">medical_taxonomy_nodes</text>
     <text x="1190" y="299" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">bigint id PK</text>
-    <text x="1190" y="312" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">medical_taxonomy_id FK</text>
-    <text x="1190" y="325" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">parent_id self FK</text>
+    <text x="1190" y="312" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">taxonomy_id FK CASCADE</text>
+    <text x="1190" y="325" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">parent_id nullable self</text>
     <text x="1190" y="338" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">slug UK(tax,slug)</text>
     <text x="1190" y="351" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">node_type, status</text>
   </g>
   <g>
-    <rect x="1180" y="420" width="300" height="73" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.4"/>
-    <rect x="1180" y="420" width="300" height="22" rx="6" fill="#0f172a"/>
-    <rect x="1180" y="436" width="300" height="6" fill="#0f172a"/>
-    <text x="1190" y="435" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">tags</text>
-    <text x="1190" y="459" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">bigint id PK</text>
-    <text x="1190" y="472" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">slug UK</text>
-    <text x="1190" y="485" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">type, status</text>
+    <rect x="1180" y="430" width="300" height="73" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.4"/>
+    <rect x="1180" y="430" width="300" height="22" rx="6" fill="#0f172a"/>
+    <rect x="1180" y="446" width="300" height="6" fill="#0f172a"/>
+    <text x="1190" y="445" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">tags</text>
+    <text x="1190" y="469" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">bigint id PK</text>
+    <text x="1190" y="482" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">slug UK</text>
+    <text x="1190" y="495" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">type, status</text>
   </g>
   <g>
     <rect x="1180" y="540" width="300" height="99" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.4"/>
     <rect x="1180" y="540" width="300" height="22" rx="6" fill="#0f172a"/>
     <rect x="1180" y="556" width="300" height="6" fill="#0f172a"/>
     <text x="1190" y="555" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">question_medical_topics</text>
-    <text x="1190" y="579" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">question_id FK</text>
-    <text x="1190" y="592" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">medical_taxonomy_node_id FK</text>
+    <text x="1190" y="579" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">question_id FK CASCADE</text>
+    <text x="1190" y="592" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">node_id FK CASCADE</text>
     <text x="1190" y="605" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">relationship_type</text>
-    <text x="1190" y="618" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">is_primary</text>
-    <text x="1190" y="631" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">PK composite — preferred</text>
+    <text x="1190" y="618" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">PK composite</text>
   </g>
   <g>
-    <rect x="1180" y="700" width="300" height="73" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.4"/>
-    <rect x="1180" y="700" width="300" height="22" rx="6" fill="#0f172a"/>
-    <rect x="1180" y="716" width="300" height="6" fill="#0f172a"/>
-    <text x="1190" y="715" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">question_tags</text>
-    <text x="1190" y="739" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">question_id FK</text>
-    <text x="1190" y="752" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">tag_id FK</text>
-    <text x="1190" y="765" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">PK composite</text>
+    <rect x="1180" y="710" width="300" height="73" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.4"/>
+    <rect x="1180" y="710" width="300" height="22" rx="6" fill="#0f172a"/>
+    <rect x="1180" y="726" width="300" height="6" fill="#0f172a"/>
+    <text x="1190" y="725" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">question_tags</text>
+    <text x="1190" y="749" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">question_id FK CASCADE</text>
+    <text x="1190" y="762" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">tag_id FK CASCADE</text>
+    <text x="1190" y="775" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">PK composite</text>
   </g>
   <g>
     <rect x="1620" y="140" width="300" height="60" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.4"/>
@@ -290,44 +296,43 @@
     <rect x="1620" y="156" width="300" height="6" fill="#0f172a"/>
     <text x="1630" y="155" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">users</text>
     <text x="1630" y="179" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">bigint id PK</text>
-    <text x="1630" y="192" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">(auth — referenced by QBank)</text>
+    <text x="1630" y="192" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">(auth — referenced)</text>
   </g>
   <g>
-    <rect x="1620" y="260" width="300" height="125" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.4"/>
-    <rect x="1620" y="260" width="300" height="22" rx="6" fill="#0f172a"/>
-    <rect x="1620" y="276" width="300" height="6" fill="#0f172a"/>
-    <text x="1630" y="275" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">question_sessions</text>
-    <text x="1630" y="299" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">uuid id PK</text>
-    <text x="1630" y="312" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">user_id FK</text>
-    <text x="1630" y="325" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">exam_id FK nullable</text>
-    <text x="1630" y="338" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">mode, status, source</text>
-    <text x="1630" y="351" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">filters / question_ids json</text>
-    <text x="1630" y="364" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">counters, annotations</text>
-    <text x="1630" y="377" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">softDeletes</text>
+    <rect x="1620" y="250" width="300" height="112" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.4"/>
+    <rect x="1620" y="250" width="300" height="22" rx="6" fill="#0f172a"/>
+    <rect x="1620" y="266" width="300" height="6" fill="#0f172a"/>
+    <text x="1630" y="265" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">question_sessions</text>
+    <text x="1630" y="289" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">uuid id PK</text>
+    <text x="1630" y="302" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">user_id FK CASCADE</text>
+    <text x="1630" y="315" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">exam_id FK nullable</text>
+    <text x="1630" y="328" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">mode, status, source</text>
+    <text x="1630" y="341" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">filters / question_ids json</text>
+    <text x="1630" y="354" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">softDeletes</text>
   </g>
   <g>
-    <rect x="1620" y="460" width="300" height="99" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.4"/>
-    <rect x="1620" y="460" width="300" height="22" rx="6" fill="#0f172a"/>
-    <rect x="1620" y="476" width="300" height="6" fill="#0f172a"/>
-    <text x="1630" y="475" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">question_session_snapshots</text>
-    <text x="1630" y="499" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">bigint id PK</text>
-    <text x="1630" y="512" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">session_id FK</text>
-    <text x="1630" y="525" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">question_id NO FK</text>
-    <text x="1630" y="538" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">position, payload json</text>
-    <text x="1630" y="551" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">UK(session, q)</text>
+    <rect x="1620" y="450" width="300" height="99" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.4"/>
+    <rect x="1620" y="450" width="300" height="22" rx="6" fill="#0f172a"/>
+    <rect x="1620" y="466" width="300" height="6" fill="#0f172a"/>
+    <text x="1630" y="465" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">question_session_snapshots</text>
+    <text x="1630" y="489" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">bigint id PK</text>
+    <text x="1630" y="502" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">session_id FK CASCADE</text>
+    <text x="1630" y="515" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">question_id NO FK</text>
+    <text x="1630" y="528" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">position, payload json</text>
+    <text x="1630" y="541" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">UK(session, q)</text>
   </g>
   <g>
-    <rect x="1980" y="260" width="300" height="125" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.4"/>
-    <rect x="1980" y="260" width="300" height="22" rx="6" fill="#0f172a"/>
-    <rect x="1980" y="276" width="300" height="6" fill="#0f172a"/>
-    <text x="1990" y="275" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">question_attempts</text>
-    <text x="1990" y="299" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">bigint id PK</text>
-    <text x="1990" y="312" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">session_id FK</text>
-    <text x="1990" y="325" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">user_id FK</text>
-    <text x="1990" y="338" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">question_id NO FK</text>
-    <text x="1990" y="351" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">selected_option_ids json</text>
-    <text x="1990" y="364" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">is_correct</text>
-    <text x="1990" y="377" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">UK(session, q)</text>
+    <rect x="1980" y="250" width="300" height="125" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.4"/>
+    <rect x="1980" y="250" width="300" height="22" rx="6" fill="#0f172a"/>
+    <rect x="1980" y="266" width="300" height="6" fill="#0f172a"/>
+    <text x="1990" y="265" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">question_attempts</text>
+    <text x="1990" y="289" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">bigint id PK</text>
+    <text x="1990" y="302" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">session_id FK CASCADE</text>
+    <text x="1990" y="315" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">user_id FK CASCADE</text>
+    <text x="1990" y="328" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">question_id NO FK</text>
+    <text x="1990" y="341" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">selected_option_ids json</text>
+    <text x="1990" y="354" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">is_correct</text>
+    <text x="1990" y="367" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">UK(session, q)</text>
   </g>
   <g>
     <rect x="1980" y="480" width="300" height="99" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.4"/>
@@ -335,60 +340,61 @@
     <rect x="1980" y="496" width="300" height="6" fill="#0f172a"/>
     <text x="1990" y="495" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">question_status</text>
     <text x="1990" y="519" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">bigint id PK</text>
-    <text x="1990" y="532" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">user_id FK</text>
-    <text x="1990" y="545" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">question_id FK</text>
+    <text x="1990" y="532" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">user_id FK CASCADE</text>
+    <text x="1990" y="545" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">question_id FK CASCADE</text>
     <text x="1990" y="558" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">status, attempts_count</text>
     <text x="1990" y="571" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">UK(user, q)</text>
   </g>
   <g>
-    <rect x="60" y="960" width="300" height="86" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.4"/>
-    <rect x="60" y="960" width="300" height="22" rx="6" fill="#0f172a"/>
-    <rect x="60" y="976" width="300" height="6" fill="#0f172a"/>
-    <text x="70" y="975" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">exams</text>
-    <text x="70" y="999" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">bigint id PK</text>
-    <text x="70" y="1012" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">blueprint_id FK nullable</text>
-    <text x="70" y="1025" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">title, status</text>
-    <text x="70" y="1038" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">is_published</text>
+    <rect x="60" y="980" width="300" height="86" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.4"/>
+    <rect x="60" y="980" width="300" height="22" rx="6" fill="#0f172a"/>
+    <rect x="60" y="996" width="300" height="6" fill="#0f172a"/>
+    <text x="70" y="995" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">exams</text>
+    <text x="70" y="1019" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">bigint id PK</text>
+    <text x="70" y="1032" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">blueprint_id FK nullable</text>
+    <text x="70" y="1045" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">title, status</text>
+    <text x="70" y="1058" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">is_published</text>
   </g>
   <g>
-    <rect x="400" y="960" width="300" height="112" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.4"/>
-    <rect x="400" y="960" width="300" height="22" rx="6" fill="#0f172a"/>
-    <rect x="400" y="976" width="300" height="6" fill="#0f172a"/>
-    <text x="410" y="975" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">exam_topics</text>
-    <text x="410" y="999" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">bigint id PK</text>
-    <text x="410" y="1012" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">exam_id FK</text>
-    <text x="410" y="1025" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">core_clinical_topic_id FK</text>
-    <text x="410" y="1038" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">question_count</text>
-    <text x="410" y="1051" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">difficulty_counts json</text>
-    <text x="410" y="1064" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">UK(exam, cct)</text>
+    <rect x="400" y="980" width="300" height="112" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.4"/>
+    <rect x="400" y="980" width="300" height="22" rx="6" fill="#0f172a"/>
+    <rect x="400" y="996" width="300" height="6" fill="#0f172a"/>
+    <text x="410" y="995" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">exam_topics</text>
+    <text x="410" y="1019" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">bigint id PK</text>
+    <text x="410" y="1032" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">exam_id FK CASCADE</text>
+    <text x="410" y="1045" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">cct_id FK CASCADE</text>
+    <text x="410" y="1058" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">question_count</text>
+    <text x="410" y="1071" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">difficulty_counts json</text>
+    <text x="410" y="1084" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">UK(exam, cct)</text>
   </g>
   <g>
-    <rect x="800" y="960" width="300" height="112" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.4"/>
-    <rect x="800" y="960" width="300" height="22" rx="6" fill="#0f172a"/>
-    <rect x="800" y="976" width="300" height="6" fill="#0f172a"/>
-    <text x="810" y="975" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">exam_question</text>
-    <text x="810" y="999" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">bigint id PK</text>
-    <text x="810" y="1012" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">exam_id FK</text>
-    <text x="810" y="1025" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">question_id FK</text>
-    <text x="810" y="1038" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">core_clinical_topic_id FK nullable</text>
-    <text x="810" y="1051" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">order</text>
-    <text x="810" y="1064" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">missing UK(exam, question_id)</text>
+    <rect x="800" y="980" width="300" height="112" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.4"/>
+    <rect x="800" y="980" width="300" height="22" rx="6" fill="#0f172a"/>
+    <rect x="800" y="996" width="300" height="6" fill="#0f172a"/>
+    <text x="810" y="995" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">exam_question</text>
+    <text x="810" y="1019" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">bigint id PK</text>
+    <text x="810" y="1032" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">exam_id FK CASCADE</text>
+    <text x="810" y="1045" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">question_id FK CASCADE</text>
+    <text x="810" y="1058" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">cct_id FK nullable</text>
+    <text x="810" y="1071" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">order</text>
+    <text x="810" y="1084" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">no UK(exam, question)</text>
   </g>
   <g>
-    <rect x="1620" y="960" width="300" height="203" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.4"/>
-    <rect x="1620" y="960" width="300" height="22" rx="6" fill="#b45309"/>
-    <rect x="1620" y="976" width="300" height="6" fill="#b45309"/>
-    <text x="1630" y="975" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">Path gắn CCT / ghi chú</text>
-    <text x="1630" y="999" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">DROPPED: question_blueprint_topics</text>
-    <text x="1630" y="1025" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">Path gắn CCT (inferred):</text>
-    <text x="1630" y="1038" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">questions</text>
-    <text x="1630" y="1051" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">  -&gt; question_medical_topics</text>
-    <text x="1630" y="1064" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">  -&gt; medical_taxonomy_nodes</text>
-    <text x="1630" y="1077" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">  &lt;- core_topic_medical_taxonomy_nodes</text>
-    <text x="1630" y="1090" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">  &lt;- core_clinical_topics</text>
-    <text x="1630" y="1103" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">  (+ tags / core_topic_tags)</text>
-    <text x="1630" y="1129" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">Nét đứt = optional / no FK / self-ref</text>
-    <text x="1630" y="1142" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">Snapshots &amp; attempts giữ UUID</text>
-    <text x="1630" y="1155" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">khi hard-delete question</text>
+    <rect x="1620" y="980" width="300" height="190" rx="6" fill="#ffffff" stroke="#334155" stroke-width="1.4"/>
+    <rect x="1620" y="980" width="300" height="22" rx="6" fill="#b45309"/>
+    <rect x="1620" y="996" width="300" height="6" fill="#b45309"/>
+    <text x="1630" y="995" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="#ffffff">Cardinality / FK notes</text>
+    <text x="1630" y="1019" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">Cardinality đã chỉnh:</text>
+    <text x="1630" y="1032" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">- optional FK: o|--o{ (nét đứt)</text>
+    <text x="1630" y="1045" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">- required FK: ||--o{ (nét đặc)</text>
+    <text x="1630" y="1071" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">Optional: blueprint_id, exam_id,</text>
+    <text x="1630" y="1084" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">cloned_from, user roles on Q,</text>
+    <text x="1630" y="1097" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">reviewed_by, option_id, CCT on</text>
+    <text x="1630" y="1110" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">exam_question, node parent_id</text>
+    <text x="1630" y="1136" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">NO FK (UUID only):</text>
+    <text x="1630" y="1149" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">snapshots.question_id</text>
+    <text x="1630" y="1162" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">attempts.question_id</text>
+    <text x="1630" y="1188" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">Dropped: question_blueprint_topics</text>
+    <text x="1630" y="1201" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" fill="#334155">CCT inferred via maps + tags</text>
   </g>
 </svg>

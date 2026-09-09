@@ -62,7 +62,7 @@ final class StartPlanTaskAction
                 'filters' => [
                     'study_plan_id' => $task->study_plan_id,
                     'study_plan_task_id' => $task->getKey(),
-                    'medical_taxonomy_node_ids' => $task->medicalTaxonomyNodeIds(),
+                    'lesson_ids' => $task->lessonIds(),
                 ],
                 'question_ids' => $questionIds,
                 'total' => count($questionIds),

@@ -6,32 +6,24 @@ namespace Modules\QuestionBank\Support;
 
 use Illuminate\Support\Collection;
 use Modules\QuestionBank\Enums\Difficulty;
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
+use Modules\QuestionBank\Models\Lesson;
 
 /**
  * Compact category + difficulty chips for the session/exam chrome.
  *
- * Questions often attach many taxonomy nodes (system, specialty, disease,
- * symptoms, concepts…). Dumping them all into one pill breaks the layout.
- * The player only needs a high-level orientation label.
+ * A question can attach several bài học (lessons); the player only needs a
+ * high-level orientation label, so we surface the primary lesson (or the first
+ * available) rather than every lesson.
  */
 final class QuestionCategoryBadge
 {
-    /** Prefer the highest-level structural label available on the question. */
-    private const TYPE_PRIORITY = [
-        'system',
-        'specialty',
-        'disease',
-        'condition',
-    ];
-
     /**
-     * @param  Collection<int, MedicalTaxonomyNode>|iterable<MedicalTaxonomyNode>  $nodes
+     * @param  Collection<int, Lesson>|iterable<Lesson>  $lessons
      * @return array{category: string, difficulty: string, difficulty_tone: string}
      */
-    public static function resolve(iterable $nodes, Difficulty|string|null $difficulty): array
+    public static function resolve(iterable $lessons, Difficulty|string|null $difficulty): array
     {
-        $collection = $nodes instanceof Collection ? $nodes : collect($nodes);
+        $collection = $lessons instanceof Collection ? $lessons : collect($lessons);
         $difficultyEnum = $difficulty instanceof Difficulty
             ? $difficulty
             : (is_string($difficulty) && $difficulty !== '' ? Difficulty::tryFrom($difficulty) : null);
@@ -44,34 +36,17 @@ final class QuestionCategoryBadge
     }
 
     /**
-     * @param  Collection<int, MedicalTaxonomyNode>  $nodes
+     * @param  Collection<int, Lesson>  $lessons
      */
-    public static function categoryLabel(Collection $nodes): string
+    public static function categoryLabel(Collection $lessons): string
     {
-        if ($nodes->isEmpty()) {
+        if ($lessons->isEmpty()) {
             return 'Tổng hợp';
         }
 
-        foreach (self::TYPE_PRIORITY as $type) {
-            $match = $nodes->first(function (MedicalTaxonomyNode $node) use ($type): bool {
-                return (string) ($node->node_type ?? '') === $type;
-            });
+        $lesson = $lessons->first();
 
-            if ($match instanceof MedicalTaxonomyNode) {
-                return self::shorten((string) $match->name);
-            }
-        }
-
-        // Prefer the pivot-primary topic when structural types are missing.
-        $primary = $nodes->first(function (MedicalTaxonomyNode $node): bool {
-            return (bool) ($node->pivot?->is_primary ?? false);
-        });
-
-        if ($primary instanceof MedicalTaxonomyNode) {
-            return self::shorten((string) $primary->name);
-        }
-
-        return self::shorten((string) $nodes->first()?->name ?: 'Tổng hợp');
+        return self::shorten((string) ($lesson?->name ?? '')) ?: 'Tổng hợp';
     }
 
     public static function difficultyTone(?Difficulty $difficulty): string
@@ -91,7 +66,6 @@ final class QuestionCategoryBadge
             return 'Tổng hợp';
         }
 
-        // Drop redundant "Hệ " prefix on very long labels so the chip stays readable.
         if (mb_strlen($name) > 28 && str_starts_with($name, 'Hệ ')) {
             $name = mb_substr($name, 3);
         }

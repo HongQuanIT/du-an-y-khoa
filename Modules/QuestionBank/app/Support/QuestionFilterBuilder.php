@@ -8,22 +8,26 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Modules\QuestionBank\Models\CoreClinicalTopic;
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
 use Modules\QuestionBank\Models\Question;
 
 /**
  * Shared question list filters for API, admin, and session selection.
  *
- * Authoring axis: medical taxonomy (+ tags).
- * Blueprint / core clinical topics are projections via
- * core_topic_medical_taxonomy_nodes and/or core_topic_tags —
+ * Content axis: bài học (lessons) → môn học (subjects) → hệ cơ quan (organ_systems).
+ * Questions attach only to lessons; subject/organ-system filters resolve down to
+ * lessons via the lesson_subject / subject_organ_system pivots.
+ *
+ * Blueprint / core clinical topics are a separate exam matrix projected onto
+ * lessons via core_topic_lessons and/or tags via core_topic_tags — questions
  * never require a direct question↔CCT pivot.
  */
 final class QuestionFilterBuilder
 {
     /**
      * @param  list<int>  $coreClinicalTopicIds
-     * @param  list<int>  $medicalTaxonomyNodeIds
+     * @param  list<int>  $organSystemIds
+     * @param  list<int>  $subjectIds
+     * @param  list<int>  $lessonIds
      * @param  list<int>  $tagIds
      */
     public function apply(
@@ -31,7 +35,9 @@ final class QuestionFilterBuilder
         ?int $blueprintId = null,
         ?int $blueprintSectionId = null,
         array $coreClinicalTopicIds = [],
-        array $medicalTaxonomyNodeIds = [],
+        array $organSystemIds = [],
+        array $subjectIds = [],
+        array $lessonIds = [],
         array $tagIds = [],
         ?string $difficulty = null,
     ): Builder {
@@ -44,11 +50,16 @@ final class QuestionFilterBuilder
             );
         }
 
-        $expandedMedicalNodeIds = $this->expandMedicalTaxonomyNodes($medicalTaxonomyNodeIds);
-        if ($expandedMedicalNodeIds !== []) {
+        if ($this->hasContentFilter($organSystemIds, $subjectIds, $lessonIds)) {
+            $resolvedLessonIds = $this->resolveContentLessonIds($organSystemIds, $subjectIds, $lessonIds);
+
+            if ($resolvedLessonIds === []) {
+                return $query->whereRaw('0 = 1');
+            }
+
             $query->whereHas(
-                'medicalTaxonomyNodes',
-                fn (Builder $nodes) => $nodes->whereIn('medical_taxonomy_nodes.id', $expandedMedicalNodeIds),
+                'lessons',
+                fn (Builder $lessons) => $lessons->whereIn('lessons.id', $resolvedLessonIds),
             );
         }
 
@@ -67,7 +78,7 @@ final class QuestionFilterBuilder
     }
 
     /**
-     * Restrict questions that match a core clinical topic through medical-taxonomy or tag mapping.
+     * Restrict questions that match a core clinical topic through lesson or tag mapping.
      */
     public function whereMatchesCoreClinicalTopic(Builder $query, int $coreClinicalTopicId): Builder
     {
@@ -80,12 +91,96 @@ final class QuestionFilterBuilder
     }
 
     /**
-     * Medical node IDs mapped from blueprint / section / CCT filters (descendants expanded).
+     * Combined lesson id set from organ-system, subject and direct lesson filters.
+     *
+     * @param  list<int>  $organSystemIds
+     * @param  list<int>  $subjectIds
+     * @param  list<int>  $lessonIds
+     * @return list<int>
+     */
+    public function resolveContentLessonIds(
+        array $organSystemIds = [],
+        array $subjectIds = [],
+        array $lessonIds = [],
+    ): array {
+        return collect($this->normalizeIds($lessonIds))
+            ->merge($this->lessonIdsForSubjects($subjectIds))
+            ->merge($this->lessonIdsForOrganSystems($organSystemIds))
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  list<int>  $subjectIds
+     * @return list<int>
+     */
+    public function lessonIdsForSubjects(array $subjectIds): array
+    {
+        $subjectIds = $this->normalizeIds($subjectIds);
+        if ($subjectIds === []) {
+            return [];
+        }
+
+        return DB::table('lesson_subject')
+            ->whereIn('subject_id', $subjectIds)
+            ->pluck('lesson_id')
+            ->map(fn ($id): int => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  list<int>  $organSystemIds
+     * @return list<int>
+     */
+    public function lessonIdsForOrganSystems(array $organSystemIds): array
+    {
+        $organSystemIds = $this->normalizeIds($organSystemIds);
+        if ($organSystemIds === []) {
+            return [];
+        }
+
+        $subjectIds = DB::table('subject_organ_system')
+            ->whereIn('organ_system_id', $organSystemIds)
+            ->pluck('subject_id')
+            ->map(fn ($id): int => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        return $this->lessonIdsForSubjects($subjectIds);
+    }
+
+    /**
+     * @param  list<int>  $subjectIds
+     * @return list<int>
+     */
+    public function subjectIdsForOrganSystems(array $organSystemIds): array
+    {
+        $organSystemIds = $this->normalizeIds($organSystemIds);
+        if ($organSystemIds === []) {
+            return [];
+        }
+
+        return DB::table('subject_organ_system')
+            ->whereIn('organ_system_id', $organSystemIds)
+            ->pluck('subject_id')
+            ->map(fn ($id): int => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Lesson ids mapped from blueprint / section / CCT filters.
      *
      * @param  list<int>  $coreClinicalTopicIds
      * @return list<int>
      */
-    public function mappedMedicalNodeIdsForBlueprint(
+    public function mappedLessonIdsForBlueprint(
         ?int $blueprintId = null,
         ?int $blueprintSectionId = null,
         array $coreClinicalTopicIds = [],
@@ -95,15 +190,13 @@ final class QuestionFilterBuilder
             return [];
         }
 
-        $mapped = DB::table('core_topic_medical_taxonomy_nodes')
+        return DB::table('core_topic_lessons')
             ->whereIn('core_clinical_topic_id', $topicIds)
-            ->pluck('medical_taxonomy_node_id')
+            ->pluck('lesson_id')
             ->map(fn ($id): int => (int) $id)
             ->unique()
             ->values()
             ->all();
-
-        return $this->expandMedicalTaxonomyNodes($mapped);
     }
 
     /**
@@ -132,51 +225,9 @@ final class QuestionFilterBuilder
     }
 
     /**
-     * Full medical-taxonomy node set for a blueprint UI scope:
-     * mapped nodes + descendants (for question matching) + ancestors (so system/specialty parents appear).
+     * Per-blueprint content scope for learner/admin filter UIs.
      *
-     * @param  list<int>  $coreClinicalTopicIds
-     * @return list<int>
-     */
-    public function relatedMedicalNodeIdsForBlueprint(
-        ?int $blueprintId = null,
-        ?int $blueprintSectionId = null,
-        array $coreClinicalTopicIds = [],
-    ): array {
-        if (! $this->hasBlueprintFilter($blueprintId, $blueprintSectionId, $coreClinicalTopicIds)) {
-            return [];
-        }
-
-        $topicIds = $this->resolveCoreTopicIds($blueprintId, $blueprintSectionId, $coreClinicalTopicIds);
-        if ($topicIds === []) {
-            return [];
-        }
-
-        $mapped = DB::table('core_topic_medical_taxonomy_nodes')
-            ->whereIn('core_clinical_topic_id', $topicIds)
-            ->pluck('medical_taxonomy_node_id')
-            ->map(fn ($id): int => (int) $id)
-            ->unique()
-            ->values()
-            ->all();
-
-        if ($mapped === []) {
-            return [];
-        }
-
-        $descendants = $this->expandMedicalTaxonomyNodes($mapped);
-        $ancestors = $this->expandWithAncestors($mapped);
-
-        return collect($descendants)
-            ->merge($ancestors)
-            ->unique()
-            ->sort()
-            ->values()
-            ->all();
-    }
-
-    /**
-     * @return array<int, array{nodeIds: list<int>, systemIds: list<int>, specialtyIds: list<int>}>
+     * @return array<int, array{lessonIds: list<int>, subjectIds: list<int>, organSystemIds: list<int>}>
      */
     public function taxonomyScopesForBlueprints(iterable $blueprintIds): array
     {
@@ -184,36 +235,36 @@ final class QuestionFilterBuilder
 
         foreach ($blueprintIds as $blueprintId) {
             $id = (int) $blueprintId;
-            $nodeIds = $this->relatedMedicalNodeIdsForBlueprint(blueprintId: $id);
-            if ($nodeIds === []) {
-                $scopes[$id] = [
-                    'nodeIds' => [],
-                    'systemIds' => [],
-                    'specialtyIds' => [],
-                ];
+            $lessonIds = $this->mappedLessonIdsForBlueprint(blueprintId: $id);
+
+            if ($lessonIds === []) {
+                $scopes[$id] = ['lessonIds' => [], 'subjectIds' => [], 'organSystemIds' => []];
 
                 continue;
             }
 
-            $typed = MedicalTaxonomyNode::query()
-                ->whereIn('id', $nodeIds)
-                ->whereIn('node_type', ['system', 'specialty'])
-                ->get(['id', 'node_type']);
+            $subjectIds = DB::table('lesson_subject')
+                ->whereIn('lesson_id', $lessonIds)
+                ->pluck('subject_id')
+                ->map(fn ($sid): int => (int) $sid)
+                ->unique()
+                ->values()
+                ->all();
+
+            $organSystemIds = $subjectIds === []
+                ? []
+                : DB::table('subject_organ_system')
+                    ->whereIn('subject_id', $subjectIds)
+                    ->pluck('organ_system_id')
+                    ->map(fn ($oid): int => (int) $oid)
+                    ->unique()
+                    ->values()
+                    ->all();
 
             $scopes[$id] = [
-                'nodeIds' => $nodeIds,
-                'systemIds' => $typed
-                    ->where('node_type', 'system')
-                    ->pluck('id')
-                    ->map(fn ($nodeId): int => (int) $nodeId)
-                    ->values()
-                    ->all(),
-                'specialtyIds' => $typed
-                    ->where('node_type', 'specialty')
-                    ->pluck('id')
-                    ->map(fn ($nodeId): int => (int) $nodeId)
-                    ->values()
-                    ->all(),
+                'lessonIds' => $lessonIds,
+                'subjectIds' => $subjectIds,
+                'organSystemIds' => $organSystemIds,
             ];
         }
 
@@ -221,26 +272,24 @@ final class QuestionFilterBuilder
     }
 
     /**
-     * Infer CCT IDs for a question from its medical taxonomy nodes (+ ancestors).
+     * Infer CCT IDs for a question from its lessons.
      *
-     * @param  list<int>  $medicalTaxonomyNodeIds
+     * @param  list<int>  $lessonIds
      * @return list<int>
      */
-    public function inferredCoreClinicalTopicIds(array $medicalTaxonomyNodeIds): array
+    public function inferredCoreClinicalTopicIds(array $lessonIds): array
     {
-        $matchNodeIds = $this->expandWithAncestors($medicalTaxonomyNodeIds);
-        if ($matchNodeIds === []) {
+        $lessonIds = $this->normalizeIds($lessonIds);
+        if ($lessonIds === []) {
             return [];
         }
 
-        return CoreClinicalTopic::query()
-            ->whereHas(
-                'medicalTaxonomyNodes',
-                fn (Builder $nodes) => $nodes->whereIn('medical_taxonomy_nodes.id', $matchNodeIds),
-            )
-            ->orderBy('id')
-            ->pluck('id')
+        return DB::table('core_topic_lessons')
+            ->whereIn('lesson_id', $lessonIds)
+            ->orderBy('core_clinical_topic_id')
+            ->pluck('core_clinical_topic_id')
             ->map(fn ($id): int => (int) $id)
+            ->unique()
             ->values()
             ->all();
     }
@@ -251,30 +300,28 @@ final class QuestionFilterBuilder
      */
     public function inferredCoreClinicalTopicIdsFromTags(array $tagIds): array
     {
-        $tagIds = collect($tagIds)->map(fn ($id): int => (int) $id)->filter()->unique()->values()->all();
+        $tagIds = $this->normalizeIds($tagIds);
         if ($tagIds === []) {
             return [];
         }
 
-        return CoreClinicalTopic::query()
-            ->whereHas(
-                'tags',
-                fn (Builder $tags) => $tags->whereIn('tags.id', $tagIds),
-            )
-            ->orderBy('id')
-            ->pluck('id')
+        return DB::table('core_topic_tags')
+            ->whereIn('tag_id', $tagIds)
+            ->orderBy('core_clinical_topic_id')
+            ->pluck('core_clinical_topic_id')
             ->map(fn ($id): int => (int) $id)
+            ->unique()
             ->values()
             ->all();
     }
 
     /**
-     * @param  list<int>  $medicalTaxonomyNodeIds
+     * @param  list<int>  $lessonIds
      * @return Collection<int, CoreClinicalTopic>
      */
-    public function inferredCoreClinicalTopics(array $medicalTaxonomyNodeIds): Collection
+    public function inferredCoreClinicalTopics(array $lessonIds): Collection
     {
-        $ids = $this->inferredCoreClinicalTopicIds($medicalTaxonomyNodeIds);
+        $ids = $this->inferredCoreClinicalTopicIds($lessonIds);
         if ($ids === []) {
             return collect();
         }
@@ -291,9 +338,9 @@ final class QuestionFilterBuilder
      */
     public function inferredCoreClinicalTopicsForQuestion(Question $question): Collection
     {
-        $nodeIds = ($question->relationLoaded('medicalTaxonomyNodes')
-            ? $question->medicalTaxonomyNodes->pluck('id')
-            : $question->medicalTaxonomyNodes()->pluck('medical_taxonomy_nodes.id'))
+        $lessonIds = ($question->relationLoaded('lessons')
+            ? $question->lessons->pluck('id')
+            : $question->lessons()->pluck('lessons.id'))
             ->map(fn ($id): int => (int) $id)
             ->values()
             ->all();
@@ -305,7 +352,7 @@ final class QuestionFilterBuilder
             ->values()
             ->all();
 
-        $ids = collect($this->inferredCoreClinicalTopicIds($nodeIds))
+        $ids = collect($this->inferredCoreClinicalTopicIds($lessonIds))
             ->merge($this->inferredCoreClinicalTopicIdsFromTags($tagIds))
             ->unique()
             ->sort()
@@ -324,61 +371,13 @@ final class QuestionFilterBuilder
     }
 
     /**
-     * @param  list<int>  $nodeIds
-     * @return list<int>
+     * @param  list<int>  $organSystemIds
+     * @param  list<int>  $subjectIds
+     * @param  list<int>  $lessonIds
      */
-    public function expandMedicalTaxonomyNodes(array $nodeIds): array
+    private function hasContentFilter(array $organSystemIds, array $subjectIds, array $lessonIds): bool
     {
-        $nodeIds = collect($nodeIds)->map(fn ($id): int => (int) $id)->filter()->unique()->values()->all();
-        if ($nodeIds === []) {
-            return [];
-        }
-
-        $all = collect($nodeIds);
-        $frontier = collect($nodeIds);
-
-        while ($frontier->isNotEmpty()) {
-            $children = MedicalTaxonomyNode::query()
-                ->whereIn('parent_id', $frontier->all())
-                ->pluck('id')
-                ->map(fn ($id): int => (int) $id);
-
-            $frontier = $children->diff($all)->values();
-            $all = $all->merge($frontier)->unique()->values();
-        }
-
-        return $all->all();
-    }
-
-    /**
-     * Include each node and all ancestors (for CCT inference from leaf tags).
-     *
-     * @param  list<int>  $nodeIds
-     * @return list<int>
-     */
-    public function expandWithAncestors(array $nodeIds): array
-    {
-        $nodeIds = collect($nodeIds)->map(fn ($id): int => (int) $id)->filter()->unique()->values()->all();
-        if ($nodeIds === []) {
-            return [];
-        }
-
-        $all = collect($nodeIds);
-        $frontier = collect($nodeIds);
-
-        while ($frontier->isNotEmpty()) {
-            $parents = MedicalTaxonomyNode::query()
-                ->whereIn('id', $frontier->all())
-                ->whereNotNull('parent_id')
-                ->pluck('parent_id')
-                ->map(fn ($id): int => (int) $id)
-                ->filter();
-
-            $frontier = $parents->diff($all)->values();
-            $all = $all->merge($frontier)->unique()->values();
-        }
-
-        return $all->all();
+        return $organSystemIds !== [] || $subjectIds !== [] || $lessonIds !== [];
     }
 
     /**
@@ -436,7 +435,7 @@ final class QuestionFilterBuilder
         ?int $blueprintSectionId,
         array $coreClinicalTopicIds,
     ): Builder {
-        $expandedNodes = $this->mappedMedicalNodeIdsForBlueprint(
+        $mappedLessons = $this->mappedLessonIdsForBlueprint(
             $blueprintId,
             $blueprintSectionId,
             $coreClinicalTopicIds,
@@ -447,25 +446,39 @@ final class QuestionFilterBuilder
             $coreClinicalTopicIds,
         );
 
-        if ($expandedNodes === [] && $mappedTags === []) {
+        if ($mappedLessons === [] && $mappedTags === []) {
             return $query->whereRaw('0 = 1');
         }
 
-        return $query->where(function (Builder $builder) use ($expandedNodes, $mappedTags): void {
-            if ($expandedNodes !== []) {
+        return $query->where(function (Builder $builder) use ($mappedLessons, $mappedTags): void {
+            if ($mappedLessons !== []) {
                 $builder->whereHas(
-                    'medicalTaxonomyNodes',
-                    fn (Builder $nodes) => $nodes->whereIn('medical_taxonomy_nodes.id', $expandedNodes),
+                    'lessons',
+                    fn (Builder $lessons) => $lessons->whereIn('lessons.id', $mappedLessons),
                 );
             }
 
             if ($mappedTags !== []) {
-                $method = $expandedNodes !== [] ? 'orWhereHas' : 'whereHas';
+                $method = $mappedLessons !== [] ? 'orWhereHas' : 'whereHas';
                 $builder->{$method}(
                     'tags',
                     fn (Builder $tags) => $tags->whereIn('tags.id', $mappedTags),
                 );
             }
         });
+    }
+
+    /**
+     * @param  list<int>  $ids
+     * @return list<int>
+     */
+    private function normalizeIds(array $ids): array
+    {
+        return collect($ids)
+            ->map(fn ($id): int => (int) $id)
+            ->filter(fn (int $id): bool => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
     }
 }

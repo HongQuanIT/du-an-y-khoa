@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\QuestionBank\Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Modules\QuestionBank\Data\ListQuestionsData;
 use Modules\QuestionBank\Database\Seeders\MedicalKnowledgeTaxonomySeeder;
 use Modules\QuestionBank\Database\Seeders\MedicalLicensingExamBlueprintSeeder;
@@ -13,13 +14,13 @@ use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Models\Blueprint;
 use Modules\QuestionBank\Models\BlueprintSection;
 use Modules\QuestionBank\Models\CoreClinicalTopic;
-use Modules\QuestionBank\Models\MedicalTaxonomy;
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
+use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
+use Modules\QuestionBank\Models\Subject;
 use Modules\QuestionBank\Models\Tag;
 use Modules\QuestionBank\Repositories\QuestionRepository;
-use Tests\TestCase;
 use Tests\Support\CreatesMedicalTaxonomy;
+use Tests\TestCase;
 
 
 final class QuestionArchitectureDemoTest extends TestCase
@@ -53,22 +54,29 @@ final class QuestionArchitectureDemoTest extends TestCase
         $this->assertSame(1, Blueprint::query()->where('code', 'medical_practice_licensing_exam')->count());
         $this->assertSame(17, BlueprintSection::query()->count());
         $this->assertSame(128, CoreClinicalTopic::query()->count());
-        $this->assertSame(1, MedicalTaxonomy::query()->where('code', 'medlearn-medical-taxonomy')->count());
-        $this->assertSame(1, MedicalTaxonomy::query()->count());
+        $this->assertSame(
+            count(MedicalKnowledgeTaxonomySeeder::DEMO_LESSON_SLUGS),
+            Lesson::query()->whereIn('slug', MedicalKnowledgeTaxonomySeeder::DEMO_LESSON_SLUGS)->count(),
+        );
+        $this->assertSame(1, DB::table('organ_systems')->where('slug', 'he-tim-mach')->count());
+        $this->assertSame(1, DB::table('subjects')->where('slug', 'tim-mach')->count());
         $this->assertSame(1, Question::query()->where('code', 'CARDIO-STEMI-001')->count());
     }
 
-    public function test_medical_taxonomy_nested_stemi_tree(): void
+    public function test_demo_curriculum_links_stemi_lesson(): void
     {
-        $taxonomy = MedicalTaxonomy::query()->where('code', 'medlearn-medical-taxonomy')->firstOrFail();
-        $stemi = MedicalTaxonomyNode::query()
-            ->where('medical_taxonomy_id', $taxonomy->id)
-            ->where('slug', 'stemi')
-            ->firstOrFail();
+        $stemi = Lesson::query()->where('slug', 'stemi')->firstOrFail();
 
-        $this->assertSame('disease', $stemi->node_type);
-        $this->assertSame('Nhồi máu cơ tim', $stemi->parent?->name);
-        $this->assertSame('Hội chứng vành cấp', $stemi->parent?->parent?->name);
+        $subject = $stemi->subjects()->firstOrFail();
+        $this->assertSame('Tim mạch', $subject->name);
+
+        $organSystem = $subject->organSystems()->firstOrFail();
+        $this->assertSame('Hệ tim mạch', $organSystem->name);
+
+        $this->assertTrue(
+            Subject::query()->where('slug', 'tim-mach')->firstOrFail()
+                ->lessons()->where('lessons.slug', 'stemi')->exists(),
+        );
     }
 
     public function test_demo_question_options_and_correct_answer(): void
@@ -89,16 +97,16 @@ final class QuestionArchitectureDemoTest extends TestCase
     {
         $question = Question::query()
             ->where('code', 'CARDIO-STEMI-001')
-            ->with(['medicalTaxonomyNodes', 'tags', 'hints'])
+            ->with(['lessons', 'tags', 'hints'])
             ->firstOrFail();
 
         $inferred = $question->inferredCoreClinicalTopics();
         $this->assertTrue($inferred->contains(fn ($t) => $t->name === 'Đau ngực'));
         $this->assertTrue($inferred->contains(fn ($t) => $t->section?->name === 'Hệ tim mạch'));
-        $this->assertTrue($question->medicalTaxonomyNodes->contains(fn ($n) => $n->slug === 'stemi'));
-        $this->assertTrue($question->medicalTaxonomyNodes->contains(fn ($n) => $n->node_type === 'symptom' && $n->name === 'Đau ngực'));
-        $this->assertTrue($question->medicalTaxonomyNodes->contains(fn ($n) => $n->node_type === 'clinical_finding'));
-        $this->assertTrue($question->medicalTaxonomyNodes->contains(fn ($n) => $n->node_type === 'concept'));
+        $this->assertTrue($question->lessons->contains(fn ($l) => $l->slug === 'stemi'));
+        $this->assertTrue($question->tags->contains(fn (Tag $t) => $t->type === 'symptom' && $t->name === 'Đau ngực'));
+        $this->assertTrue($question->tags->contains(fn (Tag $t) => $t->type === 'clinical_finding'));
+        $this->assertTrue($question->tags->contains(fn (Tag $t) => $t->type === 'concept'));
         $this->assertGreaterThanOrEqual(6, $question->tags->count());
         $this->assertTrue($question->tags->contains(fn (Tag $t) => $t->slug === 'ecg'));
 
@@ -112,9 +120,9 @@ final class QuestionArchitectureDemoTest extends TestCase
         $repo = app(QuestionRepository::class);
         $section = BlueprintSection::query()->where('slug', 'he-tim-mach')->firstOrFail();
         $coreTopic = CoreClinicalTopic::query()->where('slug', 'dau-nguc')->firstOrFail();
-        $stemi = MedicalTaxonomyNode::query()->where('slug', 'stemi')->firstOrFail();
-        $concept = MedicalTaxonomyNode::query()->where('slug', 'concept-nhan-dien-stemi')->firstOrFail();
-        $symptom = MedicalTaxonomyNode::query()->where('slug', 'symptom-dau-nguc')->firstOrFail();
+        $stemiLesson = Lesson::query()->where('slug', 'stemi')->firstOrFail();
+        $conceptTag = Tag::query()->where('slug', 'kn-nhan-dien-stemi')->firstOrFail();
+        $symptomTag = Tag::query()->where('slug', 'trieu-chung-dau-nguc')->firstOrFail();
         $tag = Tag::query()->where('slug', 'ecg')->firstOrFail();
         $demoId = Question::query()->where('code', 'CARDIO-STEMI-001')->value('id');
 
@@ -122,14 +130,14 @@ final class QuestionArchitectureDemoTest extends TestCase
             blueprintSectionId: $section->id,
             coreClinicalTopicIds: [$coreTopic->id],
         ));
-        $byDisease = $repo->paginatePublished(new ListQuestionsData(
-            medicalTaxonomyNodeIds: [$stemi->id],
+        $byLesson = $repo->paginatePublished(new ListQuestionsData(
+            lessonIds: [$stemiLesson->id],
         ));
-        $byConcept = $repo->paginatePublished(new ListQuestionsData(
-            medicalTaxonomyNodeIds: [$concept->id],
+        $byConceptTag = $repo->paginatePublished(new ListQuestionsData(
+            tagIds: [$conceptTag->id],
         ));
-        $bySymptom = $repo->paginatePublished(new ListQuestionsData(
-            medicalTaxonomyNodeIds: [$symptom->id],
+        $bySymptomTag = $repo->paginatePublished(new ListQuestionsData(
+            tagIds: [$symptomTag->id],
         ));
         $byTag = $repo->paginatePublished(new ListQuestionsData(
             tagIds: [$tag->id],
@@ -137,22 +145,22 @@ final class QuestionArchitectureDemoTest extends TestCase
         $combined = $repo->paginatePublished(new ListQuestionsData(
             blueprintSectionId: $section->id,
             coreClinicalTopicIds: [$coreTopic->id],
-            medicalTaxonomyNodeIds: [$stemi->id],
+            lessonIds: [$stemiLesson->id],
             tagIds: [$tag->id],
             difficulty: Difficulty::Hard->value,
         ));
 
         $this->assertTrue($bySectionTopic->contains('id', $demoId));
-        $this->assertTrue($byDisease->contains('id', $demoId));
-        $this->assertTrue($byConcept->contains('id', $demoId));
-        $this->assertTrue($bySymptom->contains('id', $demoId));
+        $this->assertTrue($byLesson->contains('id', $demoId));
+        $this->assertTrue($byConceptTag->contains('id', $demoId));
+        $this->assertTrue($bySymptomTag->contains('id', $demoId));
         $this->assertTrue($byTag->contains('id', $demoId));
         $this->assertTrue($combined->contains('id', $demoId));
 
         $this->assertSame(
             1,
             Question::query()->where('code', 'CARDIO-STEMI-001')->firstOrFail()
-                ->medicalTaxonomyNodes()->where('medical_taxonomy_nodes.id', $stemi->id)->count(),
+                ->lessons()->where('lessons.id', $stemiLesson->id)->count(),
         );
     }
 
@@ -163,8 +171,8 @@ final class QuestionArchitectureDemoTest extends TestCase
         $question = Question::query()->where('code', 'CARDIO-STEMI-001')->firstOrFail();
 
         $this->assertSame(
-            $question->medicalTaxonomyNodes()->count(),
-            $question->medicalTaxonomyNodes()->distinct('medical_taxonomy_nodes.id')->count('medical_taxonomy_nodes.id'),
+            $question->lessons()->count(),
+            $question->lessons()->distinct('lessons.id')->count('lessons.id'),
         );
         $this->assertSame(
             $question->tags()->count(),

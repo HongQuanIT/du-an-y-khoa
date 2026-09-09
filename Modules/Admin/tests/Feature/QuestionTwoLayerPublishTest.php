@@ -15,7 +15,7 @@ use Modules\Auth\Models\TwoFactorSecret;
 use Modules\Auth\Services\TotpService;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionStatus;
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
+use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
 use Tests\Support\CreatesMedicalTaxonomy;
 use Tests\TestCase;
@@ -25,7 +25,7 @@ final class QuestionTwoLayerPublishTest extends TestCase
     use CreatesMedicalTaxonomy;
     use RefreshDatabase;
 
-    private MedicalTaxonomyNode $topic;
+    private Lesson $topic;
 
     protected function setUp(): void
     {
@@ -34,7 +34,6 @@ final class QuestionTwoLayerPublishTest extends TestCase
         $this->topic = $this->makeMedicalNode([
             'name' => 'Tim mạch workflow',
             'slug' => 'tim-mach-workflow',
-            'node_type' => 'specialty',
             'sort_order' => 1,
         ]);
     }
@@ -92,7 +91,7 @@ final class QuestionTwoLayerPublishTest extends TestCase
             ->put(route('admin.questions.update', $question), [
                 'stem' => 'Super Admin không được sửa nội dung',
                 'difficulty' => Difficulty::Medium->value,
-                'medical_taxonomy_node_ids' => [$this->topic->id],
+                'lesson_ids' => [$this->topic->id],
                 'is_free' => '0',
                 'options' => [
                     ['content' => 'A', 'is_correct' => '1'],
@@ -192,7 +191,7 @@ final class QuestionTwoLayerPublishTest extends TestCase
             'version' => 0,
         ], $overrides));
 
-        $question->medicalTaxonomyNodes()->sync([$this->topic->id]);
+        $question->lessons()->sync([$this->topic->id]);
         foreach (['A', 'B', 'C', 'D'] as $i => $label) {
             $question->options()->create([
                 'label' => $label,

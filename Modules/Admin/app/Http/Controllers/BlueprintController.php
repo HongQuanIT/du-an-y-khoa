@@ -64,7 +64,7 @@ final class BlueprintController extends Controller
     public function edit(Blueprint $blueprint): View
     {
         $this->authorizePermission(Permission::TopicView);
-        $blueprint->load(['sections.coreClinicalTopics.medicalTaxonomyNodes', 'sections.coreClinicalTopics.tags']);
+        $blueprint->load(['sections.coreClinicalTopics.lessons', 'sections.coreClinicalTopics.tags']);
 
         return view('admin::blueprints.form', $this->formData($blueprint));
     }
@@ -150,20 +150,20 @@ final class BlueprintController extends Controller
         $this->authorizePermission(Permission::TopicUpdate);
 
         $data = $request->validate([
-            'medical_taxonomy_node_ids' => ['nullable', 'array'],
-            'medical_taxonomy_node_ids.*' => ['integer', 'exists:medical_taxonomy_nodes,id'],
+            'lesson_ids' => ['nullable', 'array'],
+            'lesson_ids.*' => ['integer', 'exists:lessons,id'],
             'tag_ids' => ['nullable', 'array'],
             'tag_ids.*' => ['integer', 'exists:tags,id'],
         ]);
 
-        $topic->medicalTaxonomyNodes()->sync($data['medical_taxonomy_node_ids'] ?? []);
+        $topic->lessons()->sync($data['lesson_ids'] ?? []);
         $topic->tags()->sync($data['tag_ids'] ?? []);
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'Đã cập nhật liên kết danh mục và tag cho chủ đề lâm sàng.',
+                'message' => 'Đã cập nhật liên kết bài học và tag cho chủ đề lâm sàng.',
                 'data' => [
-                    'medical_taxonomy_node_ids' => collect($data['medical_taxonomy_node_ids'] ?? [])
+                    'lesson_ids' => collect($data['lesson_ids'] ?? [])
                         ->map(fn ($id): int => (int) $id)
                         ->values()
                         ->all(),
@@ -175,7 +175,7 @@ final class BlueprintController extends Controller
             ]);
         }
 
-        return back()->with('status', 'Đã cập nhật liên kết danh mục và tag cho chủ đề lâm sàng.');
+        return back()->with('status', 'Đã cập nhật liên kết bài học và tag cho chủ đề lâm sàng.');
     }
 
     /** @return array<string, mixed> */

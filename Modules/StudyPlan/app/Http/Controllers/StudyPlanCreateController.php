@@ -9,7 +9,8 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
+use Modules\QuestionBank\Models\OrganSystem;
+use Modules\QuestionBank\Models\Subject;
 use Modules\StudyPlan\Actions\CreateStudyPlanAction;
 use Modules\StudyPlan\Http\Requests\StudyPlanRequest;
 use Modules\StudyPlan\Support\TargetExams;
@@ -42,24 +43,22 @@ final class StudyPlanCreateController extends Controller
     }
 
     /**
-     * @return Collection<int, MedicalTaxonomyNode>
+     * @return Collection<int, Subject>
      */
     private function specialties()
     {
-        return MedicalTaxonomyNode::query()
-            ->where('node_type', 'specialty')
+        return Subject::query()
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
     }
 
     /**
-     * @return Collection<int, MedicalTaxonomyNode>
+     * @return Collection<int, OrganSystem>
      */
     private function systems()
     {
-        return MedicalTaxonomyNode::query()
-            ->where('node_type', 'system')
+        return OrganSystem::query()
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();

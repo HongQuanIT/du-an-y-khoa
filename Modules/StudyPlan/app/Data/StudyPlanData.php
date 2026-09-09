@@ -9,7 +9,9 @@ use App\Support\Data\DataTransferObject;
 /**
  * Validated wizard input for creating or editing a plan.
  *
- * @property-read array<int, int> $topicIds
+ * @property-read array<int, int> $topicIds  Lesson ids (bài học) selected directly
+ * @property-read array<int, int> $subjectIds  Môn học
+ * @property-read array<int, int> $organSystemIds  Hệ cơ quan
  * @property-read array<int, int> $studyDays
  * @property-read array<int, string> $examTags
  * @property-read array<int, string> $articles
@@ -34,6 +36,8 @@ final class StudyPlanData extends DataTransferObject
         public readonly string $examTargetDate,
         public readonly int $dailyGoalQuestions,
         public readonly array $topicIds = [],
+        public readonly array $subjectIds = [],
+        public readonly array $organSystemIds = [],
         public readonly array $studyDays = [1, 2, 3, 4, 5],
         public readonly string $strategy = 'fixed',
         public readonly array $examTags = [],
@@ -63,8 +67,10 @@ final class StudyPlanData extends DataTransferObject
     public function topicScopePayload(): array
     {
         return [
-            'medical_taxonomy_node_ids' => array_values($this->topicIds),
+            'lesson_ids' => array_values($this->topicIds),
             'topic_ids' => array_values($this->topicIds),
+            'subject_ids' => array_values($this->subjectIds),
+            'organ_system_ids' => array_values($this->organSystemIds),
             'exam_tags' => array_values($this->examTags),
             'articles' => array_values($this->articles),
             'symptoms' => array_values($this->symptoms),

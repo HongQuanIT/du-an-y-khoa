@@ -36,7 +36,7 @@ final class StudyPlanFlowTest extends TestCase
 
     private User $user;
 
-    private \Modules\QuestionBank\Models\MedicalTaxonomyNode $topic;
+    private \Modules\QuestionBank\Models\Lesson $topic;
 
     protected function setUp(): void
     {
@@ -47,10 +47,9 @@ final class StudyPlanFlowTest extends TestCase
         $this->user = User::factory()->create();
         $this->user->assignRole(Role::Student->value);
 
-        $this->topic = $this->makeMedicalNode([
+        $this->topic = $this->makeLesson([
             'name' => 'Tim mạch',
             'slug' => 'tim-mach',
-            'node_type' => 'system',
             'sort_order' => 0,
         ]);
 
@@ -67,7 +66,7 @@ final class StudyPlanFlowTest extends TestCase
 
         $this->assertSame($this->user->id, $plan->user_id);
         $this->assertSame(5, $plan->daily_goal_questions);
-        $this->assertSame([$this->topic->id], $plan->scopeTopicIds());
+        $this->assertSame([$this->topic->id], $plan->scopeLessonIds());
         $this->assertTrue($plan->tasks()->where('type', TaskType::Questions)->exists());
         $this->assertTrue($plan->tasks()->whereDate('date', Carbon::today())->exists());
     }
@@ -81,7 +80,7 @@ final class StudyPlanFlowTest extends TestCase
             ->assertOk()
             ->assertSee('Ma trận đề thi')
             ->assertSee('Chủ đề lâm sàng (128)')
-            ->assertSee('Chuyên khoa &amp; danh mục y khoa', false)
+            ->assertSee('Bài học')
             ->assertSee('Tags');
 
         preg_match('/<form[^>]+x-data="([^"]*)"/s', (string) $response->getContent(), $matches);
@@ -599,7 +598,7 @@ final class StudyPlanFlowTest extends TestCase
             'exam_key' => 'resident',
             'exam_target_date' => Carbon::today()->addDays(10)->toDateString(),
             'daily_goal_questions' => 5,
-            'topic_ids' => [$this->topic->id],
+            'lesson_ids' => [$this->topic->id],
             'study_days' => [1, 2, 3, 4, 5, 6, 7],
             'strategy' => 'fixed',
         ];
@@ -643,7 +642,7 @@ final class StudyPlanFlowTest extends TestCase
                 ]);
             }
 
-            $question->medicalTaxonomyNodes()->sync([$this->topic->id]);
+            $question->lessons()->sync([$this->topic->id]);
         }
     }
 }

@@ -13,7 +13,9 @@ final class ListQuestionsData extends DataTransferObject
 {
     /**
      * @param  list<int>  $coreClinicalTopicIds
-     * @param  list<int>  $medicalTaxonomyNodeIds
+     * @param  list<int>  $organSystemIds
+     * @param  list<int>  $subjectIds
+     * @param  list<int>  $lessonIds
      * @param  list<int>  $tagIds
      */
     public function __construct(
@@ -22,7 +24,9 @@ final class ListQuestionsData extends DataTransferObject
         public readonly ?int $blueprintId = null,
         public readonly ?int $blueprintSectionId = null,
         public readonly array $coreClinicalTopicIds = [],
-        public readonly array $medicalTaxonomyNodeIds = [],
+        public readonly array $organSystemIds = [],
+        public readonly array $subjectIds = [],
+        public readonly array $lessonIds = [],
         public readonly array $tagIds = [],
         public readonly ?bool $freeOnly = null,
         public readonly int $perPage = 20,

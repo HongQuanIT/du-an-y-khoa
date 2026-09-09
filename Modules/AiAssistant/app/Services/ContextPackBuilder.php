@@ -51,7 +51,7 @@ final class ContextPackBuilder
         // submitted — and never for the explicit no-spoiler preset.
         $allowSpoiler = $answered && ($preset === null || $preset->allowsSpoiler());
 
-        $topics = $question->medicalTaxonomyNodes->pluck('name')->filter()->values()->all();
+        $topics = $question->lessons->pluck('name')->filter()->values()->all();
         $code = (string) ($question->code ?? '');
         $label = 'Câu'.($code !== '' ? ' '.$code : '').($topics !== [] ? ' — '.$topics[0] : '');
 

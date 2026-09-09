@@ -11,7 +11,7 @@ use Modules\QuestionBank\Enums\SessionMode;
 use Modules\QuestionBank\Enums\SessionSource;
 use Modules\QuestionBank\Enums\SessionStatus;
 use Modules\QuestionBank\Enums\UserQuestionStatus;
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
+use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionSession;
@@ -54,7 +54,7 @@ final class WeakTopicSessionTest extends TestCase
             [$mostIncorrect->getKey(), $secondIncorrect->getKey()],
             $session->question_ids,
         );
-        $this->assertSame([$topic->getKey()], $session->filters['medical_taxonomy_node_ids']);
+        $this->assertSame([$topic->getKey()], $session->filters['lesson_ids']);
         $this->assertCount(2, $session->snapshots);
 
         UserQuestionStatusModel::query()
@@ -117,7 +117,7 @@ final class WeakTopicSessionTest extends TestCase
         $this->assertCount(1, $repeated->snapshots);
     }
 
-    private function questionFor(MedicalTaxonomyNode $topic): Question
+    private function questionFor(Lesson $topic): Question
     {
         $question = Question::factory()
             ->withOptions()
@@ -125,7 +125,7 @@ final class WeakTopicSessionTest extends TestCase
                 'status' => QuestionStatus::Published,
                 'is_free' => true,
             ]);
-        $question->medicalTaxonomyNodes()->attach($topic->getKey());
+        $question->lessons()->attach($topic->getKey());
 
         return $question;
     }
