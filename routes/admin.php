@@ -6,7 +6,6 @@ use App\Support\Enums\Permission;
 use App\Support\Enums\Role;
 use Illuminate\Support\Facades\Route;
 use Modules\Admin\Http\Controllers\AuditLogController;
-use Modules\Admin\Http\Controllers\DashboardController;
 use Modules\Admin\Http\Controllers\BillingGatewayController;
 use Modules\Admin\Http\Controllers\BillingPaymentController;
 use Modules\Admin\Http\Controllers\BillingPlanController;
@@ -18,15 +17,19 @@ use Modules\Admin\Http\Controllers\Cms\FaqController;
 use Modules\Admin\Http\Controllers\Cms\MenuController;
 use Modules\Admin\Http\Controllers\Cms\PageController;
 use Modules\Admin\Http\Controllers\ContactInquiryController;
+use Modules\Admin\Http\Controllers\DashboardController;
 use Modules\Admin\Http\Controllers\EditorImageUploadController;
 use Modules\Admin\Http\Controllers\ExamController;
+use Modules\Admin\Http\Controllers\InstitutionController;
+use Modules\Admin\Http\Controllers\LearnerCatalogController;
+use Modules\Admin\Http\Controllers\LearnerDemographicsController;
 use Modules\Admin\Http\Controllers\MedicalTaxonomyController;
 use Modules\Admin\Http\Controllers\QuestionController;
 use Modules\Admin\Http\Controllers\QuestionDuplicateController;
 use Modules\Admin\Http\Controllers\QuestionFeedbackController;
 use Modules\Admin\Http\Controllers\QuestionReviewController;
-use Modules\Admin\Http\Controllers\ReportController;
 use Modules\Admin\Http\Controllers\QuestionVersionController;
+use Modules\Admin\Http\Controllers\ReportController;
 use Modules\Admin\Http\Controllers\RoleController;
 use Modules\Admin\Http\Controllers\SettingController;
 use Modules\Admin\Http\Controllers\SupportConversationController;
@@ -86,12 +89,35 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
         Route::get('/', DashboardController::class)->name('dashboard');
 
         Route::middleware('permission:'.Permission::UserView->value)->group(function (): void {
+            Route::get('/learner-data/demographics', LearnerDemographicsController::class)->name('learner-data.demographics');
+            Route::get('/learner-data/institutions', [InstitutionController::class, 'index'])->name('institutions.index');
+            Route::get('/learner-data/countries', [LearnerCatalogController::class, 'index'])->defaults('catalog', 'countries')->name('countries.index');
+            Route::get('/learner-data/administrative-units', [LearnerCatalogController::class, 'index'])->defaults('catalog', 'administrative-units')->name('administrative-units.index');
+            Route::get('/learner-data/professions', [LearnerCatalogController::class, 'index'])->defaults('catalog', 'professions')->name('professions.index');
+            Route::get('/learner-data/education-stages', [LearnerCatalogController::class, 'index'])->defaults('catalog', 'education-stages')->name('education-stages.index');
             Route::get('/users', [UserController::class, 'index'])->name('users.index');
             Route::get('/users/{user}', [UserController::class, 'show'])->name('users.show')
                 ->whereNumber('user');
         });
 
         Route::middleware('permission:'.Permission::UserManage->value)->group(function (): void {
+            Route::get('/learner-data/institutions/create', [InstitutionController::class, 'create'])->name('institutions.create');
+            Route::post('/learner-data/institutions', [InstitutionController::class, 'store'])->name('institutions.store');
+            Route::get('/learner-data/institutions/{institution}/edit', [InstitutionController::class, 'edit'])->name('institutions.edit');
+            Route::put('/learner-data/institutions/{institution}', [InstitutionController::class, 'update'])->name('institutions.update');
+            Route::patch('/learner-data/institutions/{institution}/toggle', [InstitutionController::class, 'toggle'])->name('institutions.toggle');
+            Route::post('/learner-data/countries', [LearnerCatalogController::class, 'store'])->defaults('catalog', 'countries')->name('countries.store');
+            Route::put('/learner-data/countries/{item}', [LearnerCatalogController::class, 'update'])->defaults('catalog', 'countries')->whereNumber('item')->name('countries.update');
+            Route::patch('/learner-data/countries/{item}/toggle', [LearnerCatalogController::class, 'toggle'])->defaults('catalog', 'countries')->whereNumber('item')->name('countries.toggle');
+            Route::post('/learner-data/administrative-units', [LearnerCatalogController::class, 'store'])->defaults('catalog', 'administrative-units')->name('administrative-units.store');
+            Route::put('/learner-data/administrative-units/{item}', [LearnerCatalogController::class, 'update'])->defaults('catalog', 'administrative-units')->whereNumber('item')->name('administrative-units.update');
+            Route::patch('/learner-data/administrative-units/{item}/toggle', [LearnerCatalogController::class, 'toggle'])->defaults('catalog', 'administrative-units')->whereNumber('item')->name('administrative-units.toggle');
+            Route::post('/learner-data/professions', [LearnerCatalogController::class, 'store'])->defaults('catalog', 'professions')->name('professions.store');
+            Route::put('/learner-data/professions/{item}', [LearnerCatalogController::class, 'update'])->defaults('catalog', 'professions')->whereNumber('item')->name('professions.update');
+            Route::patch('/learner-data/professions/{item}/toggle', [LearnerCatalogController::class, 'toggle'])->defaults('catalog', 'professions')->whereNumber('item')->name('professions.toggle');
+            Route::post('/learner-data/education-stages', [LearnerCatalogController::class, 'store'])->defaults('catalog', 'education-stages')->name('education-stages.store');
+            Route::put('/learner-data/education-stages/{item}', [LearnerCatalogController::class, 'update'])->defaults('catalog', 'education-stages')->whereNumber('item')->name('education-stages.update');
+            Route::patch('/learner-data/education-stages/{item}/toggle', [LearnerCatalogController::class, 'toggle'])->defaults('catalog', 'education-stages')->whereNumber('item')->name('education-stages.toggle');
             Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
             Route::post('/users', [UserController::class, 'store'])->name('users.store');
             Route::patch('/users/{user}/role', [UserController::class, 'updateRole'])->name('users.role');

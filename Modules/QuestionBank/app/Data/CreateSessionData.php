@@ -12,8 +12,6 @@ use Modules\QuestionBank\Enums\SessionSource;
  *
  * @property-read array<int, int> $coreClinicalTopicIds
  * @property-read array<int, int> $medicalTaxonomyNodeIds
- * @property-read array<int, int> $systemIds
- * @property-read array<int, int> $disciplineIds
  * @property-read array<int, int> $tagIds
  * @property-read array<int, string> $difficulties
  * @property-read array<int, string> $questionStatuses
@@ -25,8 +23,6 @@ final class CreateSessionData
     /**
      * @param  array<int, int>  $coreClinicalTopicIds
      * @param  array<int, int>  $medicalTaxonomyNodeIds
-     * @param  array<int, int>  $systemIds
-     * @param  array<int, int>  $disciplineIds
      * @param  array<int, int>  $tagIds
      * @param  array<int, string>  $difficulties
      * @param  array<int, string>  $questionStatuses
@@ -41,8 +37,6 @@ final class CreateSessionData
         public readonly ?int $blueprintSectionId = null,
         public readonly array $coreClinicalTopicIds = [],
         public readonly array $medicalTaxonomyNodeIds = [],
-        public readonly array $systemIds = [],
-        public readonly array $disciplineIds = [],
         public readonly array $tagIds = [],
         public readonly array $difficulties = [],
         public readonly array $questionStatuses = [],
@@ -67,8 +61,6 @@ final class CreateSessionData
             'blueprint_section_id' => $this->blueprintSectionId,
             'core_clinical_topic_ids' => array_values($this->coreClinicalTopicIds),
             'medical_taxonomy_node_ids' => array_values($this->medicalTaxonomyNodeIds),
-            'system_ids' => array_values($this->systemIds),
-            'discipline_ids' => array_values($this->disciplineIds),
             'tag_ids' => array_values($this->tagIds),
             'difficulties' => array_values($this->difficulties),
             'difficulty' => count($this->difficulties) === 1 ? $this->difficulties[0] : null,

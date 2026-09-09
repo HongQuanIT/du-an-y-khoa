@@ -7,15 +7,15 @@ namespace Modules\StudyPlan\Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
-use Modules\QuestionBank\Enums\QuestionScopeType;
-use Modules\QuestionBank\Enums\QuestionStatus;
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
-use Modules\QuestionBank\Models\Question;
 use Modules\StudyPlan\Enums\TaskStatus;
+use Modules\StudyPlan\Enums\TaskType;
 use Modules\StudyPlan\Models\StudyPlan;
 use Modules\StudyPlan\Models\StudyPlanTask;
-use Tests\Support\CreatesMedicalTaxonomy;
+use Modules\QuestionBank\Enums\QuestionStatus;
+use Modules\QuestionBank\Models\Question;
 use Tests\TestCase;
+use Tests\Support\CreatesMedicalTaxonomy;
+
 
 /**
  * Phase 2: moving, skipping and editing a plan after it has been generated.
@@ -27,7 +27,7 @@ final class StudyPlanScheduleTest extends TestCase
 
     private User $user;
 
-    private MedicalTaxonomyNode $topic;
+    private \Modules\QuestionBank\Models\MedicalTaxonomyNode $topic;
 
     protected function setUp(): void
     {
@@ -46,10 +46,6 @@ final class StudyPlanScheduleTest extends TestCase
         ]);
         foreach ($questions as $question) {
             $question->medicalTaxonomyNodes()->sync([$this->topic->id]);
-            $question->scopes()->create([
-                'scope_type' => QuestionScopeType::Exam,
-                'scope_key' => 'resident',
-            ]);
         }
     }
 

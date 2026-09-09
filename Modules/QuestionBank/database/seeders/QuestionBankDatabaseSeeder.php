@@ -15,7 +15,6 @@ class QuestionBankDatabaseSeeder extends Seeder
             MedicalLicensingExamBlueprintSeeder::class,
             MedicalKnowledgeTaxonomySeeder::class,
             QuestionDemoSeeder::class,
-            SimpleTenQuestionSeeder::class,
             DemoLearningSeeder::class,
             VolumeLearningSeeder::class, // no-op unless SEED_VOLUME=true
         ]);

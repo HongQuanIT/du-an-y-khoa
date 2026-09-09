@@ -10,8 +10,6 @@ use App\Support\Data\DataTransferObject;
  * Validated wizard input for creating or editing a plan.
  *
  * @property-read array<int, int> $topicIds
- * @property-read array<int, int> $systemIds
- * @property-read array<int, int> $disciplineIds
  * @property-read array<int, int> $studyDays
  * @property-read array<int, string> $examTags
  * @property-read array<int, string> $articles
@@ -23,8 +21,6 @@ final class StudyPlanData extends DataTransferObject
 {
     /**
      * @param  array<int, int>  $topicIds
-     * @param  array<int, int>  $systemIds
-     * @param  array<int, int>  $disciplineIds
      * @param  array<int, int>  $studyDays  ISO weekdays (1 = Monday)
      * @param  array<int, string>  $examTags
      * @param  array<int, string>  $articles
@@ -37,10 +33,7 @@ final class StudyPlanData extends DataTransferObject
         public readonly string $examKey,
         public readonly string $examTargetDate,
         public readonly int $dailyGoalQuestions,
-        public readonly float $hoursPerDay = 1.0,
         public readonly array $topicIds = [],
-        public readonly array $systemIds = [],
-        public readonly array $disciplineIds = [],
         public readonly array $studyDays = [1, 2, 3, 4, 5],
         public readonly string $strategy = 'fixed',
         public readonly array $examTags = [],
@@ -54,13 +47,12 @@ final class StudyPlanData extends DataTransferObject
         public readonly ?int $blueprintSectionId = null,
         public readonly array $coreClinicalTopicIds = [],
         public readonly array $tagIds = [],
-        public readonly array $additionalTopicIds = [],
     ) {}
 
-    /** Daily time budget selected in the schedule step. */
+    /** Rough time budget shown in the wizard preview (~2.25 min per question). */
     public function dailyGoalMinutes(): int
     {
-        return max(30, (int) round($this->hoursPerDay * 60));
+        return max(5, (int) round($this->dailyGoalQuestions * 2.25));
     }
 
     /**
@@ -71,10 +63,8 @@ final class StudyPlanData extends DataTransferObject
     public function topicScopePayload(): array
     {
         return [
-            'medical_taxonomy_node_ids' => array_values($this->additionalTopicIds),
+            'medical_taxonomy_node_ids' => array_values($this->topicIds),
             'topic_ids' => array_values($this->topicIds),
-            'system_ids' => array_values($this->systemIds),
-            'discipline_ids' => array_values($this->disciplineIds),
             'exam_tags' => array_values($this->examTags),
             'articles' => array_values($this->articles),
             'symptoms' => array_values($this->symptoms),

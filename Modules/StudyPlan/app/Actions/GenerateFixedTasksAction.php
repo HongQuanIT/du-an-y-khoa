@@ -6,16 +6,21 @@ namespace Modules\StudyPlan\Actions;
 
 use App\Support\Concerns\AsAction;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Modules\StudyPlan\Enums\TaskStatus;
 use Modules\StudyPlan\Enums\TaskType;
 use Modules\StudyPlan\Models\StudyPlan;
-use Modules\StudyPlan\Models\StudyPlanDay;
 use Modules\StudyPlan\Services\StudyPlanQuestionPool;
 
 /**
- * Freeze the filtered question pool into evenly distributed study days.
+ * Use case: lay out the day-by-day task grid for a plan.
+ *
+ * Fixed strategy: eligible questions are reserved once, split by the daily
+ * maximum, and stop when the selected scope is exhausted. Every study week
+ * may end with a review task for previously missed questions.
+ *
+ * Regeneration (`$from`) only replaces pending future tasks — finished days and
+ * their sessions stay untouched.
  */
 final class GenerateFixedTasksAction
 {
@@ -23,106 +28,99 @@ final class GenerateFixedTasksAction
 
     public function __construct(private readonly StudyPlanQuestionPool $questionPool) {}
 
+    /** Weekly review target as a share of the daily question goal. */
+    private const REVIEW_RATIO = 0.5;
+
     public function handle(StudyPlan $plan, ?Carbon $from = null): int
     {
         $from = ($from ?? Carbon::today())->copy()->startOfDay();
-        $dates = $this->studyDates($plan, $from);
-        $candidates = $this->questionPool->candidates($plan);
-        $totalPool = $candidates->count();
-        $capacity = $dates->count() * max(1, (int) $plan->daily_goal_questions);
+        $until = $plan->exam_target_date->copy()->startOfDay();
 
-        $previousQuestionIds = $plan->days()
-            ->whereDate('date', '<', $from)
-            ->with('questions:id,study_plan_day_id,question_id')
-            ->get()
-            ->flatMap(fn (StudyPlanDay $day) => $day->questions->pluck('question_id'))
-            ->map(static fn ($id): string => (string) $id)
-            ->unique()
-            ->values()
-            ->all();
-        $available = $candidates
-            ->reject(fn (array $candidate): bool => in_array(
-                $candidate['question_id'],
-                $previousQuestionIds,
-                true,
-            ))
-            ->values();
-        $selected = $this->selectQuestions($available, min($capacity, $available->count()));
-        $selectedCount = min($totalPool, count($previousQuestionIds) + $selected->count());
-        $coverage = $totalPool === 0
-            ? 0.0
-            : round(min(100, ($capacity / $totalPool) * 100), 2);
+        if ($until->lessThan($from)) {
+            return 0;
+        }
 
-        return DB::transaction(function () use (
-            $plan,
-            $from,
-            $dates,
-            $selected,
-            $totalPool,
-            $selectedCount,
-            $coverage,
-        ): int {
+        return DB::transaction(function () use ($plan, $from, $until): int {
             $plan->tasks()
                 ->where('status', TaskStatus::Pending)
                 ->whereDate('date', '>=', $from)
                 ->delete();
-            $plan->days()->whereDate('date', '>=', $from)->delete();
 
-            $plan->forceFill([
-                'total_question_pool' => $totalPool,
-                'selected_question_count' => $selectedCount,
-                'coverage_percent' => $coverage,
-                'daily_goal_minutes' => (int) round($plan->hours_per_day * 60),
-            ])->save();
-
-            if ($dates->isEmpty()) {
+            $topics = $plan->scopeTopicIds();
+            $weekdays = $plan->studyWeekdays();
+            $allAvailableQuestions = array_values(array_unique($this->questionPool->questionIds($plan)));
+            if (empty($allAvailableQuestions)) {
                 return 0;
             }
 
-            $counts = $this->dailyCounts($selected->count(), $dates->count());
-            $cursor = 0;
-            $taskRows = [];
+            $alreadyScheduled = $plan->tasks()
+                ->where('status', '!=', TaskStatus::Pending->value)
+                ->get()
+                ->flatMap(fn ($task) => (array) ($task->ref['question_ids'] ?? []))
+                ->map(fn ($id): string => (string) $id)
+                ->all();
+
+            // First pass: questions that haven't been scheduled yet
+            $remainingPool = array_values(array_diff($allAvailableQuestions, $alreadyScheduled));
+            $dailyGoal = max(1, $plan->daily_goal_questions);
+            $rows = [];
             $now = Carbon::now();
 
-            foreach ($dates->values() as $index => $date) {
-                $questionCount = $counts[$index];
-                $questions = $selected->slice($cursor, $questionCount)->values();
-                $cursor += $questionCount;
+            for ($date = $from->copy(); $date->lessThanOrEqualTo($until); $date->addDay()) {
+                if (! in_array($date->dayOfWeekIso, $weekdays, true)) {
+                    continue;
+                }
 
-                $day = StudyPlanDay::create([
+                $questionsForDay = [];
+                while (count($questionsForDay) < $dailyGoal) {
+                    if (empty($remainingPool)) {
+                        // Refill from all available questions and shuffle for the next cycle
+                        $refill = $allAvailableQuestions;
+                        shuffle($refill);
+                        $remainingPool = array_values($refill);
+                    }
+
+                    $needed = $dailyGoal - count($questionsForDay);
+                    $chunk = array_splice($remainingPool, 0, $needed);
+                    if (empty($chunk)) {
+                        break;
+                    }
+                    $questionsForDay = array_merge($questionsForDay, $chunk);
+                }
+
+                if (empty($questionsForDay)) {
+                    break;
+                }
+
+                $rows[] = [
                     'study_plan_id' => $plan->getKey(),
                     'date' => $date->toDateString(),
-                    'question_count' => $questionCount,
+                    'type' => TaskType::Questions->value,
+                    'target' => count($questionsForDay),
+                    'done' => 0,
                     'status' => TaskStatus::Pending->value,
-                ]);
+                    'ref' => json_encode([
+                        'medical_taxonomy_node_ids' => $topics,
+                        'topic_ids' => $topics,
+                        'question_ids' => $questionsForDay,
+                        'session_id' => null,
+                        'mode' => 'study',
+                    ]),
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
 
-                if ($questions->isNotEmpty()) {
-                    DB::table('study_plan_questions')->insert(
-                        $questions->values()->map(
-                            fn (array $candidate, int $order): array => [
-                                'study_plan_day_id' => $day->getKey(),
-                                'question_id' => $candidate['question_id'],
-                                'order' => $order + 1,
-                                'source_status' => $candidate['source_status'],
-                                'high_yield_score' => $candidate['high_yield_score'],
-                                'created_at' => $now,
-                                'updated_at' => $now,
-                            ],
-                        )->all(),
-                    );
-
-                    $taskRows[] = [
+                if ($this->closesTheWeek($date, $weekdays)) {
+                    $rows[] = [
                         'study_plan_id' => $plan->getKey(),
                         'date' => $date->toDateString(),
-                        'type' => TaskType::Questions->value,
-                        'target' => $questionCount,
+                        'type' => TaskType::Review->value,
+                        'target' => max(5, (int) round($plan->daily_goal_questions * self::REVIEW_RATIO)),
                         'done' => 0,
                         'status' => TaskStatus::Pending->value,
                         'ref' => json_encode([
-                            'study_plan_day_id' => $day->getKey(),
-                            'medical_taxonomy_node_ids' => $plan->scopeTopicIds(),
-                            'topic_ids' => $plan->scopeTopicIds(),
-                            'question_ids' => $questions->pluck('question_id')->all(),
+                            'medical_taxonomy_node_ids' => $topics,
+                            'topic_ids' => $topics,
                             'session_id' => null,
                             'mode' => 'study',
                         ]),
@@ -132,96 +130,17 @@ final class GenerateFixedTasksAction
                 }
             }
 
-            if ($taskRows !== []) {
-                DB::table('study_plan_tasks')->insert($taskRows);
+            foreach (array_chunk($rows, 500) as $chunk) {
+                DB::table('study_plan_tasks')->insert($chunk);
             }
 
-            return count($taskRows);
+            return count($rows);
         });
     }
 
-    /** @return Collection<int, Carbon> */
-    private function studyDates(StudyPlan $plan, Carbon $from): Collection
+    /** @param  array<int, int>  $weekdays */
+    private function closesTheWeek(Carbon $date, array $weekdays): bool
     {
-        $until = $plan->exam_target_date->copy()->startOfDay();
-        if ($until->lessThan($from)) {
-            return collect();
-        }
-
-        $weekdays = $plan->studyWeekdays();
-        $dates = collect();
-
-        for ($date = $from->copy(); $date->lessThanOrEqualTo($until); $date->addDay()) {
-            if (in_array($date->dayOfWeekIso, $weekdays, true)) {
-                $dates->push($date->copy());
-            }
-        }
-
-        return $dates;
-    }
-
-    /**
-     * @param  Collection<int, array<string, mixed>>  $candidates
-     * @return Collection<int, array<string, mixed>>
-     */
-    private function selectQuestions(Collection $candidates, int $limit): Collection
-    {
-        if ($limit <= 0) {
-            return collect();
-        }
-
-        $rows = $candidates
-            ->map(fn (array $candidate): array => [
-                ...$candidate,
-                'random_tie' => random_int(1, PHP_INT_MAX),
-            ])
-            ->all();
-
-        if ($limit < count($rows)) {
-            usort($rows, static function (array $left, array $right): int {
-                return ($right['high_yield_score'] <=> $left['high_yield_score'])
-                    ?: ($right['status_priority'] <=> $left['status_priority'])
-                    ?: ($right['random_tie'] <=> $left['random_tie']);
-            });
-            $rows = array_slice($rows, 0, $limit);
-        }
-
-        shuffle($rows);
-
-        return collect($rows)->map(function (array $row): array {
-            unset($row['random_tie']);
-
-            return $row;
-        });
-    }
-
-    /** @return list<int> */
-    private function dailyCounts(int $questions, int $days): array
-    {
-        if ($days <= 0) {
-            return [];
-        }
-
-        $base = intdiv($questions, $days);
-        $remainder = $questions % $days;
-        $counts = array_fill(0, $days, $base);
-
-        // When there are fewer questions than study dates, start the learner
-        // immediately instead of creating empty days at the beginning.
-        if ($base === 0) {
-            for ($index = 0; $index < $remainder; $index++) {
-                $counts[$index] = 1;
-            }
-
-            return $counts;
-        }
-
-        for ($index = $days - $remainder; $index < $days; $index++) {
-            if ($index >= 0) {
-                $counts[$index]++;
-            }
-        }
-
-        return $counts;
+        return $date->dayOfWeekIso === max($weekdays);
     }
 }

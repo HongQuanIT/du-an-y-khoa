@@ -48,6 +48,30 @@
                     <dt class="font-label-sm text-on-surface-variant">Ngày tạo</dt>
                     <dd class="mt-1 font-medium text-on-surface">{{ $user->created_at?->timezone(config('app.timezone'))->format('d/m/Y H:i') }}</dd>
                 </div>
+                <div>
+                    <dt class="font-label-sm text-on-surface-variant">Phương thức đăng nhập gần nhất</dt>
+                    <dd class="mt-1 font-medium text-on-surface">{{ $user->last_login_method?->label() ?? 'Chưa ghi nhận' }}</dd>
+                </div>
+                <div>
+                    <dt class="font-label-sm text-on-surface-variant">Thời gian đăng nhập gần nhất</dt>
+                    <dd class="mt-1 font-medium text-on-surface">{{ $user->last_login_at?->timezone(config('app.timezone'))->format('d/m/Y H:i') ?? 'Chưa ghi nhận' }}</dd>
+                </div>
+                <div class="sm:col-span-2">
+                    <dt class="font-label-sm text-on-surface-variant">Tài khoản mạng xã hội đã liên kết</dt>
+                    <dd class="mt-2 flex flex-wrap gap-2">
+                        @forelse ($user->socialAccounts as $account)
+                            <span class="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-label-sm text-primary"
+                                title="Đăng nhập gần nhất: {{ $account->last_login_at?->timezone(config('app.timezone'))->format('d/m/Y H:i') ?? 'Chưa ghi nhận' }}">
+                                {{ \Modules\Auth\Enums\SocialProvider::tryFrom($account->provider)?->label() ?? ucfirst($account->provider) }}
+                                @if ($account->provider_email)
+                                    <span class="text-on-surface-variant">· {{ $account->provider_email }}</span>
+                                @endif
+                            </span>
+                        @empty
+                            <span class="font-medium text-on-surface">Chưa liên kết</span>
+                        @endforelse
+                    </dd>
+                </div>
             </dl>
         </section>
 
@@ -128,6 +152,27 @@
             @endif
         </aside>
     </div>
+
+    <section class="mt-6 rounded-xl border border-outline-variant bg-surface p-5 shadow-sm">
+        <div class="mb-4 flex items-center justify-between gap-3 border-b border-outline-variant pb-4">
+            <div><h2 class="font-headline-sm text-on-surface">Hồ sơ học viên</h2><p class="mt-0.5 text-body-sm text-on-surface-variant">Thông tin phân khúc được thu thập khi onboarding.</p></div>
+            @if ($user->learnerProfile?->onboarding_completed_at)<span class="rounded-full bg-primary/10 px-3 py-1 text-label-sm font-semibold text-primary">Đã hoàn thiện</span>@elseif($user->learnerProfile)<span class="rounded-full bg-warning/10 px-3 py-1 text-label-sm font-semibold text-warning">Chưa hoàn thiện</span>@else<span class="rounded-full bg-surface-container px-3 py-1 text-label-sm text-on-surface-variant">Tài khoản cũ</span>@endif
+        </div>
+        @if ($user->learnerProfile)
+            <dl class="grid gap-x-8 gap-y-4 text-body-sm sm:grid-cols-2 lg:grid-cols-3">
+                <div><dt class="text-label-sm text-on-surface-variant">Quốc gia</dt><dd class="mt-1 font-medium">{{ $user->learnerProfile->country?->name ?? '—' }}</dd></div>
+                <div><dt class="text-label-sm text-on-surface-variant">Tỉnh/Thành phố</dt><dd class="mt-1 font-medium">{{ $user->learnerProfile->administrativeUnit?->name ?? '—' }}</dd></div>
+                <div><dt class="text-label-sm text-on-surface-variant">Trường</dt><dd class="mt-1 font-medium">{{ $user->learnerProfile->institution?->name ?? '—' }}</dd></div>
+                <div><dt class="text-label-sm text-on-surface-variant">Chức danh</dt><dd class="mt-1 font-medium">{{ $user->learnerProfile->profession?->name ?? '—' }}</dd></div>
+                <div><dt class="text-label-sm text-on-surface-variant">Năm học</dt><dd class="mt-1 font-medium">{{ $user->learnerProfile->educationStage?->name ?? '—' }}</dd></div>
+                <div><dt class="text-label-sm text-on-surface-variant">Phương thức đăng ký</dt><dd class="mt-1 font-medium">{{ match ($user->learnerProfile->registration_method) { 'google' => 'Google', 'facebook' => 'Facebook', default => 'Email/Mật khẩu' } }}</dd></div>
+                <div><dt class="text-label-sm text-on-surface-variant">Nguồn marketing</dt><dd class="mt-1 font-medium">{{ $user->learnerProfile->utm_source ?: 'Trực tiếp/Không xác định' }}</dd></div>
+                <div><dt class="text-label-sm text-on-surface-variant">Nhận marketing</dt><dd class="mt-1 font-medium">{{ $user->learnerProfile->marketing_consent_at ? 'Có' : 'Không' }}</dd></div>
+            </dl>
+        @else
+            <p class="text-body-sm text-on-surface-variant">Tài khoản được tạo trước khi áp dụng onboarding nên chưa có dữ liệu phân khúc.</p>
+        @endif
+    </section>
 
     <section class="mt-6 rounded-xl border border-outline-variant bg-surface p-5">
         <div class="mb-1 flex flex-wrap items-end justify-between gap-2">

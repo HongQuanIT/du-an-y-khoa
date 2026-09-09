@@ -17,5 +17,8 @@ final class RegisterData extends DataTransferObject
         public readonly string $password,
         public readonly ?string $inviteCode = null,
         public readonly bool $inviteFromField = false,
+        /** @var array<string, string|null> */
+        public readonly array $attribution = [],
+        public readonly string $registrationMethod = 'email',
     ) {}
 }

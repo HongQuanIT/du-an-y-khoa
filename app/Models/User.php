@@ -23,7 +23,11 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\HasApiTokens;
+use Modules\Auth\Enums\AuthenticationMethod;
+use Modules\Auth\Models\LearnerProfile;
+use Modules\Auth\Models\SocialAccount;
 use Modules\Auth\Models\TwoFactorSecret;
+use Modules\Auth\Notifications\ResetPasswordNotification;
 use Modules\Billing\Actions\ResolveUserEntitlementsAction;
 use Modules\Billing\Models\InstitutionMember;
 use Modules\Billing\Models\Invoice;
@@ -58,6 +62,19 @@ class User extends Authenticatable implements CanResetPasswordContract
     /** @use HasFactory<UserFactory> */
     use CanResetPassword, HasApiTokens, HasFactory, HasRoles, Notifiable;
 
+    public function sendPasswordResetNotification(#[\SensitiveParameter] $token): void
+    {
+        $this->notify(new ResetPasswordNotification($token));
+    }
+
+    public function recordSuccessfulLogin(AuthenticationMethod $method): void
+    {
+        $this->forceFill([
+            'last_login_method' => $method,
+            'last_login_at' => now(),
+        ])->save();
+    }
+
     /**
      * Get the attributes that should be cast.
      *
@@ -71,6 +88,8 @@ class User extends Authenticatable implements CanResetPasswordContract
             'status' => UserStatus::class,
             'notification_prefs' => 'array',
             'graduation_year' => 'integer',
+            'last_login_method' => AuthenticationMethod::class,
+            'last_login_at' => 'datetime',
         ];
     }
 
@@ -113,6 +132,16 @@ class User extends Authenticatable implements CanResetPasswordContract
     public function twoFactorSecret(): HasOne
     {
         return $this->hasOne(TwoFactorSecret::class);
+    }
+
+    public function learnerProfile(): HasOne
+    {
+        return $this->hasOne(LearnerProfile::class);
+    }
+
+    public function socialAccounts(): HasMany
+    {
+        return $this->hasMany(SocialAccount::class);
     }
 
     public function hasTwoFactorEnabled(): bool

@@ -13,8 +13,12 @@ use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
+use Modules\Admin\Models\AuditLog;
+use Modules\Auth\Enums\AuthenticationMethod;
 use Modules\Auth\Models\TwoFactorSecret;
+use Modules\Auth\Notifications\ResetPasswordNotification;
 use Modules\Auth\Services\TotpService;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 final class AdminPhase1ManagementTest extends TestCase
@@ -33,6 +37,16 @@ final class AdminPhase1ManagementTest extends TestCase
         $admin = $this->staffUser(Role::SuperAdmin);
         $student = User::factory()->create(['email' => 'learner@example.com']);
         $student->assignRole(Role::Student->value);
+        $student->forceFill([
+            'last_login_method' => AuthenticationMethod::Google,
+            'last_login_at' => now(),
+        ])->save();
+        $student->socialAccounts()->create([
+            'provider' => 'google',
+            'provider_user_id' => 'admin-view-google-123',
+            'provider_email' => $student->email,
+            'last_login_at' => now(),
+        ]);
 
         $this->actingAsStaff($admin)
             ->get(route('admin.users.index'))
@@ -42,7 +56,10 @@ final class AdminPhase1ManagementTest extends TestCase
         $this->actingAsStaff($admin)
             ->get(route('admin.users.show', $student))
             ->assertOk()
-            ->assertSee($student->name);
+            ->assertSee($student->name)
+            ->assertSee('Phương thức đăng nhập gần nhất')
+            ->assertSee('Google')
+            ->assertSee('learner@example.com');
     }
 
     public function test_admin_can_change_student_role_and_status(): void
@@ -102,7 +119,7 @@ final class AdminPhase1ManagementTest extends TestCase
     {
         $super = $this->staffUser(Role::SuperAdmin);
         $role = \Spatie\Permission\Models\Role::findByName(Role::ContentEditor->value, 'web');
-        $permission = \Spatie\Permission\Models\Permission::findByName('cms.manage', 'web');
+        $permission = Permission::findByName('cms.manage', 'web');
 
         $this->actingAsStaff($super)
             ->put(route('admin.roles.permissions', $role), [
@@ -119,7 +136,7 @@ final class AdminPhase1ManagementTest extends TestCase
     public function test_super_admin_can_create_custom_role_with_existing_permissions(): void
     {
         $super = $this->staffUser(Role::SuperAdmin);
-        $permissions = \Spatie\Permission\Models\Permission::query()
+        $permissions = Permission::query()
             ->whereIn('name', ['question.update', 'cms.manage'])
             ->pluck('id')
             ->all();
@@ -179,7 +196,7 @@ final class AdminPhase1ManagementTest extends TestCase
     public function test_super_admin_cannot_create_role_with_permission_from_another_portal(): void
     {
         $super = $this->staffUser(Role::SuperAdmin);
-        $adminPermission = \Spatie\Permission\Models\Permission::findByName('cms.manage', 'web');
+        $adminPermission = Permission::findByName('cms.manage', 'web');
 
         $this->actingAsStaff($super)
             ->from(route('admin.roles.create'))
@@ -198,7 +215,7 @@ final class AdminPhase1ManagementTest extends TestCase
     {
         $admin = $this->staffUser(Role::Admin);
         $role = \Spatie\Permission\Models\Role::findByName(Role::ContentEditor->value, 'web');
-        $permission = \Spatie\Permission\Models\Permission::findByName('question.view', 'web');
+        $permission = Permission::findByName('question.view', 'web');
 
         $this->actingAsStaff($admin)
             ->put(route('admin.roles.permissions', $role), [
@@ -218,7 +235,7 @@ final class AdminPhase1ManagementTest extends TestCase
                 'status' => UserStatus::Banned->value,
             ]);
 
-        $log = \Modules\Admin\Models\AuditLog::query()->latest('id')->first();
+        $log = AuditLog::query()->latest('id')->first();
         $this->assertNotNull($log);
 
         $this->actingAsStaff($super)
@@ -244,7 +261,7 @@ final class AdminPhase1ManagementTest extends TestCase
             ->post(route('admin.users.reset-password', $student))
             ->assertRedirect();
 
-        Notification::assertSentTo($student, \Illuminate\Auth\Notifications\ResetPassword::class);
+        Notification::assertSentTo($student, ResetPasswordNotification::class);
     }
 
     private function staffUser(Role $role): User

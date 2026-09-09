@@ -49,6 +49,7 @@ class RegisterRequest extends FormRequest
             password: (string) $this->string('password'),
             inviteCode: $inviteCode,
             inviteFromField: $inviteFromField,
+            attribution: (array) $this->session()->get('registration_attribution', []),
         );
     }
 }

@@ -61,6 +61,16 @@
             <a href="{{ route('admin.users.index') }}"
                 class="inline-flex h-11 flex-1 items-center justify-center whitespace-nowrap rounded-lg border border-outline-variant px-3 font-label-md font-medium text-on-surface-variant transition hover:bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-primary/20">Xóa lọc</a>
         </div>
+        <details class="sm:col-span-2 xl:col-span-12" @if(collect($filters)->only(['institution_id', 'administrative_unit_id', 'profession_id', 'education_stage_id', 'onboarding'])->filter()->isNotEmpty()) open @endif>
+            <summary class="cursor-pointer font-label-sm font-semibold text-primary">Bộ lọc hồ sơ học viên</summary>
+            <div class="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                <select name="administrative_unit_id" aria-label="Tỉnh thành" class="h-10 rounded-lg border border-outline-variant bg-surface-container-low px-3 text-body-sm"><option value="">Mọi tỉnh/thành</option>@foreach($administrativeUnits as $unit)<option value="{{ $unit->id }}" @selected((string)($filters['administrative_unit_id'] ?? '') === (string)$unit->id)>{{ $unit->name }}</option>@endforeach</select>
+                <select name="institution_id" aria-label="Trường" class="h-10 rounded-lg border border-outline-variant bg-surface-container-low px-3 text-body-sm"><option value="">Mọi trường</option>@foreach($institutions as $institution)<option value="{{ $institution->id }}" @selected((string)($filters['institution_id'] ?? '') === (string)$institution->id)>{{ $institution->name }}</option>@endforeach</select>
+                <select name="profession_id" aria-label="Chức danh" class="h-10 rounded-lg border border-outline-variant bg-surface-container-low px-3 text-body-sm"><option value="">Mọi chức danh</option>@foreach($professions as $profession)<option value="{{ $profession->id }}" @selected((string)($filters['profession_id'] ?? '') === (string)$profession->id)>{{ $profession->name }}</option>@endforeach</select>
+                <select name="education_stage_id" aria-label="Năm học" class="h-10 rounded-lg border border-outline-variant bg-surface-container-low px-3 text-body-sm"><option value="">Mọi năm học</option>@foreach($educationStages as $stage)<option value="{{ $stage->id }}" @selected((string)($filters['education_stage_id'] ?? '') === (string)$stage->id)>{{ $stage->name }}</option>@endforeach</select>
+                <select name="onboarding" aria-label="Onboarding" class="h-10 rounded-lg border border-outline-variant bg-surface-container-low px-3 text-body-sm"><option value="">Mọi hồ sơ</option><option value="completed" @selected(($filters['onboarding'] ?? '') === 'completed')>Đã hoàn thiện</option><option value="incomplete" @selected(($filters['onboarding'] ?? '') === 'incomplete')>Chưa hoàn thiện</option></select>
+            </div>
+        </details>
     </form>
 
     <div class="overflow-x-auto rounded-xl border border-outline-variant bg-surface">
@@ -72,6 +82,7 @@
                     <th class="px-4 py-3">Cổng truy cập / Vai trò</th>
                     <th class="px-4 py-3">Trạng thái</th>
                     <th class="px-4 py-3">Email</th>
+                    <th class="px-4 py-3">Hồ sơ học viên</th>
                     <th class="px-4 py-3"></th>
                 </tr>
             </thead>
@@ -109,6 +120,16 @@
                                 <span class="ms-1 font-label-sm text-label-sm text-primary">✓</span>
                             @endif
                         </td>
+                        <td class="px-4 py-3 text-on-surface-variant">
+                            @if ($user->learnerProfile?->onboarding_completed_at)
+                                <div class="font-medium text-on-surface">{{ $user->learnerProfile->profession?->name ?? '—' }} · {{ $user->learnerProfile->educationStage?->name ?? '—' }}</div>
+                                <div class="max-w-xs truncate text-label-sm">{{ $user->learnerProfile->institution?->name ?? '—' }}</div>
+                            @elseif ($user->learnerProfile)
+                                <span class="text-label-sm text-warning">Chưa hoàn thiện</span>
+                            @else
+                                <span class="text-label-sm">Hồ sơ cũ</span>
+                            @endif
+                        </td>
                         <td class="px-4 py-3 text-end">
                             <a href="{{ route('admin.users.show', $user) }}"
                                 class="inline-flex h-9 items-center justify-center rounded-lg border border-outline-variant px-3 font-label-sm font-medium text-on-surface transition hover:border-primary hover:text-primary">
@@ -118,7 +139,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="px-4 py-10 text-center text-on-surface-variant">Không có người dùng khớp bộ lọc.</td>
+                        <td colspan="6" class="px-4 py-10 text-center text-on-surface-variant">Không có người dùng khớp bộ lọc.</td>
                     </tr>
                 @endforelse
             </tbody>

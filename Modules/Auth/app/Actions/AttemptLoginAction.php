@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
 use Modules\Auth\Data\LoginData;
+use Modules\Auth\Enums\AuthenticationMethod;
 use Modules\Auth\Enums\LoginPortal;
 
 /**
@@ -94,6 +95,8 @@ final class AttemptLoginAction
                 category: AuditCategory::Auth,
             ),
         );
+
+        $user->recordSuccessfulLogin(AuthenticationMethod::Email);
 
         return $user;
     }

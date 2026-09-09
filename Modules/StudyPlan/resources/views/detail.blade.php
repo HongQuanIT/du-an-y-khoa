@@ -133,30 +133,6 @@
                                                 </span>
                                             </div>
 
-                                            @if ($day['outcomes'])
-                                                <dl class="space-y-1.5 text-label-sm" data-testid="study-day-outcomes">
-                                                    <div class="flex items-center gap-2">
-                                                        <span class="h-3 w-6 rounded-full bg-emerald-500"></span>
-                                                        <dt class="sr-only">Tỷ lệ câu đúng</dt>
-                                                        <dd><span class="font-medium">{{ $day['outcomes']['correct'] }}%</span>
-                                                            câu đúng</dd>
-                                                    </div>
-                                                    <div class="flex items-center gap-2">
-                                                        <span class="h-3 w-6 rounded-full bg-amber-400"></span>
-                                                        <dt class="sr-only">Tỷ lệ câu đúng có dùng gợi ý kiến thức</dt>
-                                                        <dd><span
-                                                                class="font-medium">{{ $day['outcomes']['correct_with_hints'] }}%</span>
-                                                            câu đúng có dùng gợi ý kiến thức</dd>
-                                                    </div>
-                                                    <div class="flex items-center gap-2">
-                                                        <span class="h-3 w-6 rounded-full bg-red-400"></span>
-                                                        <dt class="sr-only">Tỷ lệ câu sai</dt>
-                                                        <dd><span class="font-medium">{{ $day['outcomes']['incorrect'] }}%</span>
-                                                            câu sai</dd>
-                                                    </div>
-                                                </dl>
-                                            @endif
-
                                             @foreach ($day['tasks'] as $task)
                                                 <div
                                                     class="flex flex-col gap-3 rounded-lg bg-surface-container-lowest p-3 sm:flex-row sm:items-center sm:justify-between">
@@ -236,17 +212,15 @@
                     <div class="overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest">
                         <div class="border-b border-outline-variant bg-surface-container-low p-5">
                             <h4 class="text-label-md font-bold tracking-wider text-on-surface-variant uppercase">
-                                Tiến độ kế hoạch học tập
+                                Tiến độ lộ trình học
                             </h4>
                         </div>
                         <div class="space-y-6 p-5">
                             @foreach ($topicProgress as $topic)
                                 <div>
-                                    <div class="mb-2 flex items-start justify-between gap-3">
+                                    <div class="mb-2 flex justify-between">
                                         <span class="text-label-md font-medium">{{ $topic['name'] }}</span>
-                                        <span class="shrink-0 text-label-sm text-on-surface-variant">
-                                            {{ $topic['completed'] }}/{{ $topic['total'] }} câu · {{ $topic['percent'] }}%
-                                        </span>
+                                        <span class="text-label-sm text-on-surface-variant">{{ $topic['percent'] }}%</span>
                                     </div>
                                     <div class="h-1.5 w-full overflow-hidden rounded-full bg-surface-container">
                                         <div class="h-full rounded-full bg-primary" style="width: {{ $topic['percent'] }}%">

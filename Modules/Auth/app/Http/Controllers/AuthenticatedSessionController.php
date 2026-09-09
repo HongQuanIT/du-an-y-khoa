@@ -22,7 +22,9 @@ use Illuminate\View\View;
 use Modules\Auth\Actions\AttemptLoginAction;
 use Modules\Auth\Enums\LoginPortal;
 use Modules\Auth\Http\Requests\LoginRequest;
+use Modules\Auth\Support\PendingSocialLink;
 use Modules\Billing\Support\CheckoutIntent;
+use Modules\Partner\Support\PartnerInviteIntent;
 
 /**
  * Session lifecycle for the `web` guard: student, instructor, partner, admin portals.
@@ -32,7 +34,7 @@ final class AuthenticatedSessionController extends Controller
     public function create(Request $request): View
     {
         CheckoutIntent::capture($request);
-        \Modules\Partner\Support\PartnerInviteIntent::capture($request);
+        PartnerInviteIntent::capture($request);
 
         return view('auth::login', [
             'planPriceId' => CheckoutIntent::peek($request),
@@ -42,9 +44,12 @@ final class AuthenticatedSessionController extends Controller
     public function store(LoginRequest $request, AttemptLoginAction $action): RedirectResponse
     {
         CheckoutIntent::capture($request);
-        \Modules\Partner\Support\PartnerInviteIntent::capture($request);
+        PartnerInviteIntent::capture($request);
 
         $user = $action->handle($request->toData(), LoginPortal::Student);
+        if (PendingSocialLink::linkAfterPasswordLogin($request, $user)) {
+            $request->session()->flash('status', 'Đã liên kết tài khoản mạng xã hội.');
+        }
 
         return $this->finishLogin($request, $user, LoginPortal::Student, HomePath::for($user));
     }

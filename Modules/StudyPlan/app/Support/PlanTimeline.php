@@ -6,10 +6,9 @@ namespace Modules\StudyPlan\Support;
 
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
-use Modules\QuestionBank\Models\QuestionAttempt;
+use Modules\QuestionBank\Models\MedicalTaxonomyNode;
 use Modules\StudyPlan\Enums\TaskStatus;
 use Modules\StudyPlan\Models\StudyPlan;
-use Modules\StudyPlan\Models\StudyPlanQuestion;
 use Modules\StudyPlan\Models\StudyPlanTask;
 
 /**
@@ -32,28 +31,15 @@ final class PlanTimeline
         }
 
         $start = $tasks->first()->date->copy()->startOfWeek();
-        $sessionIds = $tasks
-            ->map(fn (StudyPlanTask $task): ?string => $task->sessionId())
-            ->filter()
-            ->unique()
-            ->values();
-        $attemptsBySession = QuestionAttempt::query()
-            ->whereIn('session_id', $sessionIds)
-            ->whereNotNull('is_correct')
-            ->orderByDesc('answered_at')
-            ->orderByDesc('id')
-            ->get(['id', 'session_id', 'question_id', 'is_correct', 'used_hint', 'answered_at'])
-            ->unique(fn (QuestionAttempt $attempt): string => $attempt->session_id.':'.$attempt->question_id)
-            ->groupBy('session_id');
 
         return $tasks
             ->groupBy(fn (StudyPlanTask $task) => (int) floor($start->diffInDays($task->date) / 7))
             ->sortKeys()
             ->values()
-            ->map(function (Collection $weekTasks, int $index) use ($attemptsBySession): array {
+            ->map(function (Collection $weekTasks, int $index): array {
                 $days = $weekTasks
                     ->groupBy(fn (StudyPlanTask $task) => $task->date->toDateString())
-                    ->map(fn (Collection $dayTasks, string $date) => $this->day($date, $dayTasks, $attemptsBySession))
+                    ->map(fn (Collection $dayTasks, string $date) => $this->day($date, $dayTasks))
                     ->values()
                     ->all();
 
@@ -88,84 +74,44 @@ final class PlanTimeline
     }
 
     /**
-     * Completion per classified system represented by allocated plan questions.
+     * Completion per topic in the plan scope, for the sidebar bars.
      *
-     * @return array<int, array{name: string, completed: int, total: int, percent: int}>
+     * @return array<int, array{name: string, percent: int}>
      */
     public function topicProgress(StudyPlan $plan): array
     {
-        $allocations = StudyPlanQuestion::query()
-            ->whereHas('day', fn ($query) => $query->where('study_plan_id', $plan->getKey()))
-            ->with('question.medicalTaxonomyNodes')
-            ->get();
-        if ($allocations->isEmpty()) {
+        $topicIds = $plan->scopeTopicIds();
+
+        if ($topicIds === []) {
             return [];
         }
 
-        $sessionIds = $plan->tasks()
-            ->get()
-            ->map(fn (StudyPlanTask $task): ?string => $task->sessionId())
-            ->filter()
-            ->unique()
-            ->values();
-        $answeredQuestionIds = QuestionAttempt::query()
-            ->whereIn('session_id', $sessionIds)
-            ->whereNotNull('is_correct')
-            ->pluck('question_id')
-            ->map(static fn ($id): string => (string) $id)
-            ->unique()
-            ->flip();
-        $topics = [];
+        $names = MedicalTaxonomyNode::query()->whereIn('id', $topicIds)->pluck('name', 'id');
+        $tasks = $plan->tasks()->get();
+        $progress = [];
 
-        foreach ($allocations as $allocation) {
-            $question = $allocation->question;
-            if ($question === null) {
-                continue;
-            }
+        foreach ($topicIds as $topicId) {
+            $forTopic = $tasks->filter(
+                fn (StudyPlanTask $task) => in_array($topicId, $task->topicIds(), true)
+            );
 
-            $nodes = $question->medicalTaxonomyNodes;
-            $systemNodes = $nodes->where('node_type', 'system');
-            if ($systemNodes->isNotEmpty()) {
-                $nodes = $systemNodes;
-            }
+            $target = (int) $forTopic->sum('target');
+            $done = (int) $forTopic->sum('done');
 
-            foreach ($nodes->unique('id') as $node) {
-                $topics[$node->id] ??= [
-                    'name' => $node->name,
-                    'sort_order' => (int) $node->sort_order,
-                    'question_ids' => [],
-                    'completed_ids' => [],
-                ];
-                $questionId = (string) $question->getKey();
-                $topics[$node->id]['question_ids'][$questionId] = true;
-                if ($answeredQuestionIds->has($questionId)) {
-                    $topics[$node->id]['completed_ids'][$questionId] = true;
-                }
-            }
+            $progress[] = [
+                'name' => $names[$topicId] ?? 'Chủ đề',
+                'percent' => $target > 0 ? (int) min(100, round($done / $target * 100)) : 0,
+            ];
         }
 
-        return collect($topics)
-            ->sortBy(fn (array $topic): array => [$topic['sort_order'], $topic['name']])
-            ->map(function (array $topic): array {
-                $total = count($topic['question_ids']);
-                $completed = count($topic['completed_ids']);
-
-                return [
-                    'name' => $topic['name'],
-                    'completed' => $completed,
-                    'total' => $total,
-                    'percent' => $total > 0 ? (int) round($completed / $total * 100) : 0,
-                ];
-            })
-            ->values()
-            ->all();
+        return $progress;
     }
 
     /**
      * @param  Collection<int, StudyPlanTask>  $tasks
      * @return array<string, mixed>
      */
-    private function day(string $date, Collection $tasks, Collection $attemptsBySession): array
+    private function day(string $date, Collection $tasks): array
     {
         $day = Carbon::parse($date);
         $status = $this->dayStatus($tasks, $day);
@@ -189,43 +135,7 @@ final class PlanTimeline
             },
             'done' => (int) $tasks->sum('done'),
             'target' => (int) $tasks->sum('target'),
-            'outcomes' => $this->outcomes($tasks, $attemptsBySession),
             'tasks' => $tasks->values(),
-        ];
-    }
-
-    /**
-     * @param  Collection<int, StudyPlanTask>  $tasks
-     * @param  Collection<string, Collection<int, QuestionAttempt>>  $attemptsBySession
-     * @return array{correct: int, correct_with_hints: int, incorrect: int}|null
-     */
-    private function outcomes(Collection $tasks, Collection $attemptsBySession): ?array
-    {
-        $attempts = $tasks
-            ->map(fn (StudyPlanTask $task): ?string => $task->sessionId())
-            ->filter()
-            ->flatMap(fn (string $sessionId): Collection => $attemptsBySession->get($sessionId, collect()))
-            ->values();
-
-        $answered = $attempts->count();
-        if ($answered === 0) {
-            return null;
-        }
-
-        $correctWithHints = $attempts->filter(
-            fn (QuestionAttempt $attempt): bool => $attempt->is_correct && $attempt->used_hint,
-        )->count();
-        $correct = $attempts->filter(
-            fn (QuestionAttempt $attempt): bool => $attempt->is_correct && ! $attempt->used_hint,
-        )->count();
-        $incorrect = $attempts->filter(
-            fn (QuestionAttempt $attempt): bool => ! $attempt->is_correct,
-        )->count();
-
-        return [
-            'correct' => (int) round($correct / $answered * 100),
-            'correct_with_hints' => (int) round($correctWithHints / $answered * 100),
-            'incorrect' => (int) round($incorrect / $answered * 100),
         ];
     }
 

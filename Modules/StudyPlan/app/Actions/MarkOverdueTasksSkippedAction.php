@@ -26,11 +26,6 @@ final class MarkOverdueTasksSkippedAction
             ->whereDate('date', '<', Carbon::today()->toDateString())
             ->update(['status' => TaskStatus::Skipped->value]);
 
-        $plan->days()
-            ->where('status', TaskStatus::Pending->value)
-            ->whereDate('date', '<', Carbon::today()->toDateString())
-            ->update(['status' => TaskStatus::Skipped->value]);
-
         if ($updated > 0) {
             $this->recalculateProgress->handle($plan->refresh());
         }

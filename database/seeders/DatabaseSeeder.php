@@ -11,6 +11,7 @@ use Modules\Admin\Database\Seeders\FaqSeeder;
 use Modules\Admin\Database\Seeders\MenuSeeder;
 use Modules\Admin\Database\Seeders\SettingsSeeder;
 use Modules\AiAssistant\Database\Seeders\AiTutorSettingsSeeder;
+use Modules\Auth\Database\Seeders\AuthDatabaseSeeder;
 use Modules\Billing\Database\Seeders\BillingDatabaseSeeder;
 use Modules\Library\Database\Seeders\LibraryDatabaseSeeder;
 use Modules\Partner\Database\Seeders\PartnerDatabaseSeeder;
@@ -32,6 +33,8 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call(RolePermissionSeeder::class);
+
+        $this->call(AuthDatabaseSeeder::class);
 
         // Accounts you log in with during development.
         $this->call(UserSeeder::class);

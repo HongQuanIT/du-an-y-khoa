@@ -5,7 +5,6 @@
      * @var \Modules\QuestionBank\Models\QuestionSession $session
      * @var \Modules\QuestionBank\Models\Question $question
      * @var \Modules\QuestionBank\Models\QuestionAttempt|null $attempt
-     * @var int $sessionElapsedSeconds
      */
     $playerConfig = $playerConfig ?? [
         'page_title' => 'Phiên học kế hoạch',
@@ -565,8 +564,6 @@
                         saving: false,
                         startedAt: Date.now(),
                         elapsed: @js($isAnswered ? (int) ($attempt?->time_spent_seconds ?? 0) : 0),
-                        sessionElapsedBase: @js($sessionElapsedSeconds ?? 0),
-                        currentTimeIncluded: @js($isAnswered),
                         running: @js(! $isAnswered),
                         _timer: null,
                         questionExplanation: @js(\App\Support\Html\SafeHtml::forDisplay((string) ($question->explanation ?? ''))),
@@ -596,15 +593,6 @@
                             const total = Math.max(0, this.elapsed | 0);
                             const m = Math.floor(total / 60);
                             const s = total % 60;
-                            return m + ':' + String(s).padStart(2, '0');
-                        },
-                        formatSessionTime() {
-                            const current = this.currentTimeIncluded ? 0 : this.elapsed;
-                            const total = Math.max(0, (this.sessionElapsedBase + current) | 0);
-                            const h = Math.floor(total / 3600);
-                            const m = Math.floor((total % 3600) / 60);
-                            const s = total % 60;
-                            if (h > 0) return h + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
                             return m + ':' + String(s).padStart(2, '0');
                         },
                         choose(id) {
@@ -714,14 +702,7 @@
                                         : 'bg-surface-container-highest text-on-surface-variant'">
                                     <span class="material-symbols-outlined text-[18px]"
                                         :class="running && 'fill-1'">timer</span>
-                                    <span class="font-label-sm text-label-sm font-bold">Câu</span>
                                     <span class="font-label-sm text-label-sm font-bold" x-text="formatTime()"></span>
-                                </div>
-                                <div class="flex items-center gap-1.5 rounded-full bg-surface-container-highest px-3 py-1 tabular-nums text-on-surface-variant"
-                                    data-testid="session-elapsed-time" title="Tổng thời gian của phiên">
-                                    <span class="material-symbols-outlined text-[18px]">schedule</span>
-                                    <span class="font-label-sm text-label-sm font-bold">Phiên</span>
-                                    <span class="font-label-sm text-label-sm font-bold" x-text="formatSessionTime()"></span>
                                 </div>
                                 <span x-cloak x-show="revealed"
                                     class="rounded-full px-3 py-1 text-label-sm font-bold"

@@ -10,11 +10,8 @@ use App\Support\ScopeFilters;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
-use Modules\Personalization\Models\BookmarkFolder;
 use Modules\QuestionBank\Actions\CreateQuestionSessionAction;
-use Modules\QuestionBank\Enums\SessionMode;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
 use Modules\QuestionBank\Http\Requests\CreateQuestionSessionRequest;
 use Modules\QuestionBank\Models\Blueprint;
@@ -31,11 +28,11 @@ final class CustomSessionController extends Controller
         private readonly SessionQuestionSelector $selector,
     ) {}
 
-    public function create(Request $request): View
+    public function create(\Illuminate\Http\Request $request): View
     {
         $userId = $request->user() ? (int) $request->user()->getKey() : 0;
         $bookmarkFolders = $userId > 0
-            ? BookmarkFolder::query()
+            ? \Modules\Personalization\Models\BookmarkFolder::query()
                 ->where('user_id', $userId)
                 ->withCount('items')
                 ->orderByDesc('id')
@@ -83,7 +80,7 @@ final class CustomSessionController extends Controller
             throw ValidationException::withMessages(['filters' => $exception->getMessage()]);
         }
 
-        $route = $session->mode === SessionMode::Exam
+        $route = $session->mode === \Modules\QuestionBank\Enums\SessionMode::Exam
             ? 'exam.session'
             : 'qbank.session';
 
@@ -94,8 +91,8 @@ final class CustomSessionController extends Controller
 
     public function count(CreateQuestionSessionRequest $request): JsonResponse
     {
-        return ApiResponse::item(
-            $this->selector->breakdownForSession($request->user(), $request->toData()),
-        );
+        $count = $this->selector->countForSession($request->user(), $request->toData());
+
+        return ApiResponse::item(['count' => $count]);
     }
 }

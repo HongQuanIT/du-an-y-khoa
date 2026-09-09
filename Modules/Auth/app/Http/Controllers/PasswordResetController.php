@@ -31,6 +31,10 @@ final class PasswordResetController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $request->merge([
+            'email' => mb_strtolower(trim((string) $request->input('email'))),
+        ]);
+
         $request->validate([
             'token' => ['required', 'string'],
             'email' => ['required', 'email'],

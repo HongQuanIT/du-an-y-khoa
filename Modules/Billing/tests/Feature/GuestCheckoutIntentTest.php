@@ -7,6 +7,10 @@ namespace Modules\Billing\Tests\Feature;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Auth\Database\Seeders\AuthDatabaseSeeder;
+use Modules\Auth\Models\Country;
+use Modules\Auth\Models\Institution;
+use Modules\Auth\Models\Profession;
 use Modules\Billing\Database\Seeders\BillingDatabaseSeeder;
 use Modules\Billing\Models\PlanPrice;
 use Modules\Billing\Support\CheckoutIntent;
@@ -21,6 +25,7 @@ final class GuestCheckoutIntentTest extends TestCase
         parent::setUp();
 
         $this->seed(RolePermissionSeeder::class);
+        $this->seed(AuthDatabaseSeeder::class);
         $this->seed(BillingDatabaseSeeder::class);
     }
 
@@ -42,16 +47,28 @@ final class GuestCheckoutIntentTest extends TestCase
             ->assertOk()
             ->assertSee('xác nhận gói', false);
 
-        $this->post(route('register', ['plan_price_id' => $price->id]), [
+        $registrationResponse = $this->post(route('register', ['plan_price_id' => $price->id]), [
             'name' => 'Học viên Test',
             'email' => 'buyer@example.com',
             'password' => 'Password1',
             'password_confirmation' => 'Password1',
             'terms' => '1',
             'plan_price_id' => $price->id,
-        ])->assertRedirect(CheckoutIntent::upgradeUrl($price->id));
+        ])->assertRedirect(route('onboarding.profile'));
 
         $this->assertAuthenticated();
+        $this->carrySessionFrom($registrationResponse);
+
+        $country = Country::query()->where('code', 'VN')->firstOrFail();
+        $institution = Institution::query()->firstOrFail();
+        $profession = Profession::query()->where('code', 'doctor')->firstOrFail();
+
+        $this->post(route('onboarding.profile.store'), [
+            'country_id' => $country->id,
+            'administrative_unit_id' => $institution->administrative_unit_id,
+            'institution_id' => $institution->id,
+            'profession_id' => $profession->id,
+        ])->assertRedirect(CheckoutIntent::upgradeUrl($price->id));
     }
 
     public function test_login_with_plan_price_id_redirects_to_upgrade(): void

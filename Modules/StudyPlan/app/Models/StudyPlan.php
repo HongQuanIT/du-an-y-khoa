@@ -24,11 +24,6 @@ use Modules\StudyPlan\Enums\TaskStatus;
  * @property string $name
  * @property string|null $exam_key
  * @property Carbon $exam_target_date
- * @property float $hours_per_day
- * @property int $questions_per_hour
- * @property int $total_question_pool
- * @property int $selected_question_count
- * @property float $coverage_percent
  * @property int $daily_goal_questions
  * @property int $daily_goal_minutes
  * @property array<string, mixed>|array<int, int>|null $topic_scope
@@ -50,11 +45,6 @@ class StudyPlan extends Model
         'name',
         'exam_key',
         'exam_target_date',
-        'hours_per_day',
-        'questions_per_hour',
-        'total_question_pool',
-        'selected_question_count',
-        'coverage_percent',
         'daily_goal_questions',
         'daily_goal_minutes',
         'topic_scope',
@@ -67,11 +57,6 @@ class StudyPlan extends Model
 
     protected $casts = [
         'exam_target_date' => 'date',
-        'hours_per_day' => 'float',
-        'questions_per_hour' => 'integer',
-        'total_question_pool' => 'integer',
-        'selected_question_count' => 'integer',
-        'coverage_percent' => 'float',
         'daily_goal_questions' => 'integer',
         'daily_goal_minutes' => 'integer',
         'topic_scope' => 'array',
@@ -92,12 +77,6 @@ class StudyPlan extends Model
     public function tasks(): HasMany
     {
         return $this->hasMany(StudyPlanTask::class);
-    }
-
-    /** @return HasMany<StudyPlanDay, $this> */
-    public function days(): HasMany
-    {
-        return $this->hasMany(StudyPlanDay::class);
     }
 
     /**
@@ -185,14 +164,9 @@ class StudyPlan extends Model
         return array_map('intval', $scope);
     }
 
+    /** @deprecated Use scopeMedicalTaxonomyNodeIds() */
     public function scopeTopicIds(): array
     {
-        $scope = $this->topic_scope ?? [];
-
-        if (isset($scope['topic_ids']) && is_array($scope['topic_ids'])) {
-            return array_values(array_map('intval', $scope['topic_ids']));
-        }
-
         return $this->scopeMedicalTaxonomyNodeIds();
     }
 
@@ -217,8 +191,6 @@ class StudyPlan extends Model
         $defaults = [
             'medical_taxonomy_node_ids' => [],
             'topic_ids' => [],
-            'system_ids' => [],
-            'discipline_ids' => [],
             'exam_tags' => [],
             'articles' => [],
             'symptoms' => [],
@@ -236,7 +208,7 @@ class StudyPlan extends Model
         if (isset($scope['medical_taxonomy_node_ids']) || isset($scope['topic_ids']) || isset($scope['exam_tags'])) {
             $filters = array_merge($defaults, array_intersect_key($scope, $defaults), [
                 'medical_taxonomy_node_ids' => $this->scopeMedicalTaxonomyNodeIds(),
-                'topic_ids' => $this->scopeTopicIds(),
+                'topic_ids' => $this->scopeMedicalTaxonomyNodeIds(),
                 'saved_only' => (bool) ($scope['saved_only'] ?? false),
             ]);
 

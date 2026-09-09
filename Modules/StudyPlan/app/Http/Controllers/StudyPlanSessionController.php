@@ -88,7 +88,6 @@ final class StudyPlanSessionController extends Controller
             'index' => $index,
             'total' => count($questionIds),
             'answeredIds' => $attempts->keys()->all(),
-            'sessionElapsedSeconds' => (int) $attempts->sum('time_spent_seconds'),
             'questionIds' => $questionIds,
             'note' => (string) ($annotation['note'] ?? ''),
             'noteHtml' => (string) ($annotation['note_html'] ?? nl2br(e((string) ($annotation['note'] ?? '')))),

@@ -8,9 +8,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Event;
-use Modules\QuestionBank\Enums\QuestionScopeType;
 use Modules\QuestionBank\Enums\QuestionStatus;
-use Modules\QuestionBank\Models\MedicalTaxonomyNode;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionOption;
 use Modules\StudyPlan\Actions\CompletePlanTaskAction;
@@ -18,8 +16,9 @@ use Modules\StudyPlan\Enums\TaskType;
 use Modules\StudyPlan\Events\StudyPlanActivity;
 use Modules\StudyPlan\Models\StudyPlan;
 use Modules\StudyPlan\Models\StudyPlanTask;
-use Tests\Support\CreatesMedicalTaxonomy;
 use Tests\TestCase;
+use Tests\Support\CreatesMedicalTaxonomy;
+
 
 /**
  * Phase 5: REST endpoints reuse the same actions, and the funnel emits its
@@ -32,7 +31,7 @@ final class StudyPlanApiTest extends TestCase
 
     private User $user;
 
-    private MedicalTaxonomyNode $topic;
+    private \Modules\QuestionBank\Models\MedicalTaxonomyNode $topic;
 
     protected function setUp(): void
     {
@@ -49,13 +48,7 @@ final class StudyPlanApiTest extends TestCase
         Question::factory()->count(10)->create([
             'status' => QuestionStatus::Published,
             'is_free' => true,
-        ])->each(function (Question $question): void {
-            $question->medicalTaxonomyNodes()->sync([$this->topic->id]);
-            $question->scopes()->create([
-                'scope_type' => QuestionScopeType::Exam,
-                'scope_key' => 'resident',
-            ]);
-        });
+        ])->each(fn (Question $question) => $question->medicalTaxonomyNodes()->sync([$this->topic->id]));
     }
 
     public function test_a_plan_can_be_created_and_read_back(): void
@@ -76,13 +69,12 @@ final class StudyPlanApiTest extends TestCase
     public function test_today_endpoint_returns_the_generated_task(): void
     {
         $plan = $this->createPlan();
-        $todayTarget = $plan->tasks()->whereDate('date', Carbon::today())->value('target');
 
         $this->actingAs($this->user, 'sanctum')
             ->getJson(route('api.study-plan.tasks.index', $plan))
             ->assertOk()
             ->assertJsonPath('data.0.attributes.task_type', 'questions')
-            ->assertJsonPath('data.0.attributes.target', $todayTarget);
+            ->assertJsonPath('data.0.attributes.target', 10);
     }
 
     public function test_skipping_a_task_over_the_api(): void
@@ -200,7 +192,7 @@ final class StudyPlanApiTest extends TestCase
                 'stem' => "Câu hỏi #{$i}?",
                 'difficulty' => 'medium',
                 'status' => QuestionStatus::Published,
-                'is_free' => true,
+                                'is_free' => true,
             ]);
 
             QuestionOption::create([
@@ -219,10 +211,6 @@ final class StudyPlanApiTest extends TestCase
             ]);
 
             $question->medicalTaxonomyNodes()->sync([$this->topic->id]);
-            $question->scopes()->create([
-                'scope_type' => QuestionScopeType::Exam,
-                'scope_key' => 'resident',
-            ]);
         }
     }
 }

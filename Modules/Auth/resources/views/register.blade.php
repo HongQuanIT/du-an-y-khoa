@@ -93,7 +93,7 @@
             <x-auth.submit>Đăng ký</x-auth.submit>
         </form>
 
-        <x-auth.social-providers />
+        <x-auth.social-providers mode="register" :plan-price-id="$planPriceId ?? null" />
 
         <p class="mt-8 text-center text-body-sm font-body-sm text-on-surface-variant">
             Đã có tài khoản?

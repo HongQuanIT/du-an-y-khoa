@@ -15,6 +15,7 @@ use Modules\Personalization\Models\BookmarkFolderItem;
 use Modules\QuestionBank\Data\CreateSessionData;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionScopeType;
+use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Enums\SessionSource;
 use Modules\QuestionBank\Enums\UserQuestionStatus;
 use Modules\QuestionBank\Models\Question;
@@ -30,7 +31,6 @@ final class SessionQuestionSelector
 {
     public function __construct(
         private readonly QuestionFilterBuilder $filters,
-        private readonly AdaptiveQuestionSelector $adaptiveSelector,
     ) {}
 
     /**
@@ -80,74 +80,6 @@ final class SessionQuestionSelector
         return $picked->shuffle()->values()->all();
     }
 
-    /**
-     * Select a fresh adaptive batch while retaining every explicit scope
-     * filter. Study-plan sessions use this immediately before they start.
-     *
-     * @return list<string>
-     */
-    public function forAdaptiveSession(
-        User $user,
-        CreateSessionData $data,
-        bool $respectSchedule = true,
-    ): array {
-        $userId = (int) $user->getKey();
-        $canUsePremium = $user->hasEntitlement(Entitlement::QbankFull->value);
-        $query = $this->questionQuery(
-            $this->filters->expandMedicalTaxonomyNodes($data->medicalTaxonomyNodeIds),
-            [],
-            $this->eligibleForData($userId, $data, $canUsePremium),
-            $this->parseDifficulties($data->difficulties),
-            $canUsePremium,
-            $data,
-            $userId,
-        );
-
-        return collect($this->adaptiveSelector->select(
-            $userId,
-            $query,
-            $data->count,
-            $respectSchedule,
-        ))->shuffle()->values()->all();
-    }
-
-    /**
-     * Return the complete filtered pool without ordering or adaptive schedule
-     * exclusions. Study plans use this immutable pool before capacity is
-     * calculated and questions are allocated to dates.
-     *
-     * @return list<string>
-     */
-    public function questionPoolIds(User $user, CreateSessionData $data): array
-    {
-        $userId = (int) $user->getKey();
-        $canUsePremium = $user->hasEntitlement(Entitlement::QbankFull->value);
-
-        if ($data->examId !== null) {
-            return DB::table('exam_question')
-                ->where('exam_id', $data->examId)
-                ->orderBy('order')
-                ->pluck('question_id')
-                ->map(static fn ($id): string => (string) $id)
-                ->all();
-        }
-
-        return $this->questionQuery(
-            $this->filters->expandMedicalTaxonomyNodes($data->medicalTaxonomyNodeIds),
-            [],
-            $this->eligibleForData($userId, $data, $canUsePremium),
-            $this->parseDifficulties($data->difficulties),
-            $canUsePremium,
-            $data,
-            $userId,
-        )
-            ->pluck('id')
-            ->map(static fn ($id): string => (string) $id)
-            ->unique()
-            ->values()
-            ->all();
-    }
-
     /** Count the full accessible pool using the exact creation filters. */
     public function countForSession(User $user, CreateSessionData $data): int
     {
@@ -174,7 +106,7 @@ final class SessionQuestionSelector
             return DB::table('exam_question')->where('exam_id', $data->examId)->count();
         }
 
-        $query = $this->questionQuery(
+        return $this->questionQuery(
             $this->filters->expandMedicalTaxonomyNodes($data->medicalTaxonomyNodeIds),
             [],
             $this->eligibleForData($userId, $data, $canUsePremium),
@@ -182,95 +114,7 @@ final class SessionQuestionSelector
             $canUsePremium,
             $data,
             $userId,
-        );
-
-        // Use the same content-level de-duplication as session creation.
-        // Explicit status filters must ignore the review schedule, just as
-        // `pick()` does when it builds the actual session.
-        return $this->adaptiveSelector->eligibleCount(
-            $userId,
-            $query,
-            false,
-        );
-    }
-
-    /**
-     * Return live counters for the exact accessible question-bank scope.
-     *
-     * The total deliberately ignores the learner-status facet so the UI can
-     * show the complete scope and its mutually exclusive latest-result groups.
-     * `count` still honours every selected facet for backward compatibility.
-     *
-     * @return array{
-     *     count: int,
-     *     pool_count: int,
-     *     total_in_scope: int,
-     *     eligible_total: int,
-     *     unanswered: int,
-     *     incorrect: int,
-     *     correct_with_hints: int,
-     *     correct: int
-     * }
-     */
-    public function breakdownForSession(User $user, CreateSessionData $data): array
-    {
-        $userId = (int) $user->getKey();
-        $canUsePremium = $user->hasEntitlement(Entitlement::QbankFull->value);
-        $scopeData = $this->withoutQuestionStatuses($data);
-        $scopeQuery = $this->questionQuery(
-            $this->filters->expandMedicalTaxonomyNodes($scopeData->medicalTaxonomyNodeIds),
-            [],
-            null,
-            $this->parseDifficulties($scopeData->difficulties),
-            $canUsePremium,
-            $scopeData,
-            $userId,
-        );
-        $scopeIds = (clone $scopeQuery)
-            ->pluck('id')
-            ->map(static fn ($id): string => (string) $id);
-
-        $latestAttempts = QuestionAttempt::query()
-            ->where('user_id', $userId)
-            ->whereIn('question_id', $scopeIds->all())
-            ->orderByDesc('answered_at')
-            ->orderByDesc('id')
-            ->get(['question_id', 'is_correct', 'used_hint'])
-            ->unique('question_id')
-            ->keyBy(fn (QuestionAttempt $attempt): string => (string) $attempt->question_id);
-
-        $counts = [
-            'unanswered' => 0,
-            'incorrect' => 0,
-            'correct_with_hints' => 0,
-            'correct' => 0,
-        ];
-
-        foreach ($scopeIds as $questionId) {
-            /** @var QuestionAttempt|null $attempt */
-            $attempt = $latestAttempts->get($questionId);
-
-            if ($attempt === null) {
-                $counts['unanswered']++;
-            } elseif ($attempt->is_correct === false) {
-                $counts['incorrect']++;
-            } elseif ($attempt->used_hint) {
-                $counts['correct_with_hints']++;
-            } else {
-                $counts['correct']++;
-            }
-        }
-
-        $adaptiveCount = $this->adaptiveSelector->eligibleCount($userId, $scopeQuery);
-        $poolCount = count($this->questionPoolIds($user, $data));
-
-        return [
-            'count' => $this->countForSession($user, $data),
-            'pool_count' => $poolCount,
-            'total_in_scope' => $scopeIds->count(),
-            'eligible_total' => $adaptiveCount,
-            ...$counts,
-        ];
+        )->count();
     }
 
     /**
@@ -283,74 +127,14 @@ final class SessionQuestionSelector
     ): ?array {
         // savedOnly is applied as a DB subquery inside questionQuery();
         // we only resolve question_status IDs here.
-        if ($data->questionStatuses === []) {
-            return null;
-        }
-
-        $statuses = collect($data->questionStatuses)
-            ->map(static fn (string $status): string => strtolower($status))
-            ->unique()
-            ->values();
-        $eligible = collect($this->eligibleQuestionIds(
-            $userId,
-            $statuses->reject(static fn (string $status): bool => in_array($status, ['unanswered', 'unseen'], true))->all(),
-            $data->questionStatusMode,
-        ));
-
-        if ($statuses->contains(fn (string $status): bool => in_array($status, ['unanswered', 'unseen'], true))) {
-            $eligible = $eligible->concat($this->roundUnansweredQuestionIds(
+        return $data->questionStatuses === []
+            ? null
+            : $this->eligibleQuestionIds(
                 $userId,
-                $data,
+                $data->questionStatuses,
+                $data->questionStatusMode,
                 $canUsePremium,
-            ));
-        }
-
-        return $eligible->unique()->values()->all();
-    }
-
-    /**
-     * Treat "unanswered" as the current coverage round, not lifetime history.
-     * Once every question in the selected scope has been attempted, the least
-     * attempted questions automatically form the next round.
-     *
-     * @return list<string>
-     */
-    private function roundUnansweredQuestionIds(
-        int $userId,
-        CreateSessionData $data,
-        bool $canUsePremium,
-    ): array {
-        $scopeData = $this->withoutQuestionStatuses($data);
-        $questionIds = $this->questionQuery(
-            $this->filters->expandMedicalTaxonomyNodes($scopeData->medicalTaxonomyNodeIds),
-            [],
-            null,
-            $this->parseDifficulties($scopeData->difficulties),
-            $canUsePremium,
-            $scopeData,
-            $userId,
-        )
-            ->pluck('id')
-            ->map(static fn ($id): string => (string) $id)
-            ->unique()
-            ->values();
-
-        if ($questionIds->isEmpty()) {
-            return [];
-        }
-
-        $coverageCounts = UserQuestionStatusModel::query()
-            ->where('user_id', $userId)
-            ->whereIn('question_id', $questionIds->all())
-            ->pluck('coverage_count', 'question_id');
-        $minimum = $questionIds->min(
-            static fn (string $questionId): int => (int) ($coverageCounts[$questionId] ?? 0),
-        );
-
-        return $questionIds
-            ->filter(static fn (string $questionId): bool => (int) ($coverageCounts[$questionId] ?? 0) === $minimum)
-            ->values()
-            ->all();
+            );
     }
 
     /**
@@ -416,9 +200,9 @@ final class SessionQuestionSelector
                     ->select('question_id')
                     ->where('user_id', $userId),
             )
-            ->pluck('id')
-            ->shuffle()
-            ->take($limit - $incorrect->count());
+            ->inRandomOrder()
+            ->limit($limit - $incorrect->count())
+            ->pluck('id');
         $picked = $incorrect->concat($unseen)->unique()->values();
 
         return $this->topUp(
@@ -513,7 +297,7 @@ final class SessionQuestionSelector
             return collect();
         }
 
-        $query = $this->questionQuery(
+        return $this->questionQuery(
             $topicIds,
             $exclude,
             $eligible,
@@ -521,20 +305,10 @@ final class SessionQuestionSelector
             $canUsePremium,
             $data,
             $userId,
-        );
-
-        if ($data instanceof CreateSessionData && $userId !== null) {
-            return collect($this->adaptiveSelector->select(
-                $userId,
-                $query,
-                $limit,
-                // Custom QBank sessions may prioritize due questions, but
-                // must never hide published questions from the learner pool.
-                false,
-            ));
-        }
-
-        return $query->pluck('id')->shuffle()->take($limit)->values();
+        )
+            ->inRandomOrder()
+            ->limit($limit)
+            ->pluck('id');
     }
 
     /**
@@ -580,20 +354,6 @@ final class SessionQuestionSelector
                 : $topicIds,
             tagIds: $data->tagIds,
         );
-
-        // Systems and disciplines are independent facets: values inside each
-        // group are OR-ed, while the two groups combine with AND semantics.
-        foreach ([$data->systemIds, $data->disciplineIds] as $facetNodeIds) {
-            $expandedFacetIds = $this->filters->expandMedicalTaxonomyNodes($facetNodeIds);
-            if ($expandedFacetIds === []) {
-                continue;
-            }
-
-            $query->whereHas(
-                'medicalTaxonomyNodes',
-                fn (Builder $nodes) => $nodes->whereIn('medical_taxonomy_nodes.id', $expandedFacetIds),
-            );
-        }
 
         // Apply saved-only or specific folder filtering
         if ($data->folderId !== null && $userId !== null) {
@@ -651,6 +411,7 @@ final class SessionQuestionSelector
         int $userId,
         array $statuses,
         string $mode,
+        bool $canUsePremium,
     ): array {
         $statuses = collect($statuses)
             ->map(static fn (string $status): string => match (strtolower($status)) {
@@ -697,6 +458,17 @@ final class SessionQuestionSelector
             $eligible = $eligible->concat($this->statusQuestionIds($userId, $directStatuses));
         }
 
+        if (in_array('unanswered', $statuses, true)) {
+            $answered = $attempts->pluck('question_id')->unique()->all();
+            $unanswered = ServePublishedQuestion::scopeAvailable(Question::query())
+                ->when(! $canUsePremium, fn ($query) => $query->where('is_free', true))
+                ->when($answered !== [], fn ($query) => $query->whereNotIn('id', $answered))
+                ->pluck('id');
+            $eligible = $eligible
+                ->concat($unanswered)
+                ->concat($this->statusQuestionIds($userId, [UserQuestionStatus::Unseen]));
+        }
+
         return $eligible->unique()->values()->all();
     }
 
@@ -727,29 +499,5 @@ final class SessionQuestionSelector
             ->unique()
             ->values()
             ->all();
-    }
-
-    private function withoutQuestionStatuses(CreateSessionData $data): CreateSessionData
-    {
-        return new CreateSessionData(
-            mode: $data->mode,
-            source: $data->source,
-            count: $data->count,
-            blueprintId: $data->blueprintId,
-            blueprintSectionId: $data->blueprintSectionId,
-            coreClinicalTopicIds: $data->coreClinicalTopicIds,
-            medicalTaxonomyNodeIds: $data->medicalTaxonomyNodeIds,
-            systemIds: $data->systemIds,
-            disciplineIds: $data->disciplineIds,
-            tagIds: $data->tagIds,
-            difficulties: $data->difficulties,
-            questionStatusMode: 'latest',
-            savedOnly: $data->savedOnly,
-            folderId: $data->folderId,
-            examKey: $data->examKey,
-            examId: $data->examId,
-            articles: $data->articles,
-            symptoms: $data->symptoms,
-        );
     }
 }

@@ -15,8 +15,8 @@ use Modules\QuestionBank\Enums\UserQuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionSession;
+use Modules\QuestionBank\Models\QuestionStatus as UserQuestionStatusModel;
 use Modules\QuestionBank\Services\QuestionGrader;
-use Modules\QuestionBank\Services\QuestionLearningState;
 use RuntimeException;
 
 /**
@@ -33,7 +33,6 @@ final class AnswerQuestionAction
     public function __construct(
         private readonly CompleteQuestionSessionAction $completeSession,
         private readonly QuestionGrader $grader,
-        private readonly QuestionLearningState $learningState,
     ) {}
 
     /**
@@ -109,13 +108,12 @@ final class AnswerQuestionAction
             );
 
             if ($isStudy && $this->liveQuestionExists($question)) {
-                $this->learningState->record(
+                $this->syncQuestionStatus(
                     (int) $currentSession->user_id,
                     $question,
-                    $isCorrect ? UserQuestionStatus::Correct : UserQuestionStatus::Incorrect,
+                    (bool) $isCorrect,
                     $now,
                     true,
-                    $usedHint,
                 );
             }
 
@@ -187,6 +185,40 @@ final class AnswerQuestionAction
     private function normalizeOptionIds(array $selectedOptionIds): array
     {
         return array_values(array_unique($selectedOptionIds));
+    }
+
+    private function syncQuestionStatus(
+        int $userId,
+        Question $question,
+        bool $isCorrect,
+        Carbon $answeredAt,
+        bool $incrementAttempts,
+    ): void {
+        $status = UserQuestionStatusModel::firstOrNew([
+            'user_id' => $userId,
+            'question_id' => $question->getKey(),
+        ]);
+        $attemptsCount = (int) ($status->attempts_count ?? 0);
+
+        if ($incrementAttempts) {
+            $attemptsCount++;
+        } elseif (! $status->exists) {
+            // Repair a missing rollup without double-counting the updated
+            // attempt that already existed in this session.
+            $attemptsCount = 1;
+        }
+
+        $answerStatus = $isCorrect ? UserQuestionStatus::Correct : UserQuestionStatus::Incorrect;
+        $status->fill([
+            // `marked` is the temporary bookmark fallback and therefore has
+            // priority over the derived answer state until explicitly removed.
+            'status' => $status->exists && $status->status === UserQuestionStatus::Marked
+                ? UserQuestionStatus::Marked
+                : $answerStatus,
+            'attempts_count' => $attemptsCount,
+            'last_attempt_at' => $answeredAt,
+            'last_correct_at' => $isCorrect ? $answeredAt : $status->last_correct_at,
+        ])->save();
     }
 
     private function liveQuestionExists(Question $question): bool

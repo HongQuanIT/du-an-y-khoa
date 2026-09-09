@@ -2,15 +2,17 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\SupportChatController;
 use Illuminate\Support\Facades\Route;
 use Modules\Auth\Http\Controllers\AuthenticatedSessionController;
+use Modules\Auth\Http\Controllers\OnboardingController;
 use Modules\Auth\Http\Controllers\PasswordResetController;
 use Modules\Auth\Http\Controllers\PasswordResetLinkController;
 use Modules\Auth\Http\Controllers\ProfileController;
 use Modules\Auth\Http\Controllers\RegisteredUserController;
 use Modules\Auth\Http\Controllers\SettingsTwoFactorController;
+use Modules\Auth\Http\Controllers\SocialAuthController;
 use Modules\Auth\Http\Controllers\StudentTwoFactorController;
-use App\Http\Controllers\SupportChatController;
 
 /*
 | Auth — web routes (login/register/password screens).
@@ -25,6 +27,15 @@ Route::middleware('guest')->group(function (): void {
     Route::post('/register', [RegisteredUserController::class, 'store'])
         ->middleware('throttle:auth');
 
+    Route::post('/auth/social/{provider}', [SocialAuthController::class, 'redirect'])
+        ->whereIn('provider', ['google', 'facebook'])
+        ->middleware('throttle:auth')
+        ->name('social.redirect');
+    Route::get('/auth/social/{provider}/callback', [SocialAuthController::class, 'callback'])
+        ->whereIn('provider', ['google', 'facebook'])
+        ->middleware('throttle:auth')
+        ->name('social.callback');
+
     Route::get('/reset-password/{token}', [PasswordResetController::class, 'create'])
         ->name('password.reset');
     Route::post('/reset-password', [PasswordResetController::class, 'store'])
@@ -34,12 +45,21 @@ Route::middleware('guest')->group(function (): void {
 
 Route::get('/forgot-password', [PasswordResetLinkController::class, 'create'])->name('password.request');
 Route::post('/forgot-password', [PasswordResetLinkController::class, 'store'])
-    ->middleware('throttle:auth')
+    ->middleware('throttle:password-reset')
     ->name('password.email');
 
 Route::middleware('auth')->group(function (): void {
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
         ->name('logout');
+
+    Route::get('/onboarding/profile', [OnboardingController::class, 'show'])->name('onboarding.profile');
+    Route::get('/onboarding/institutions', [OnboardingController::class, 'institutions'])
+        ->name('onboarding.institutions');
+    Route::post('/onboarding/profile', [OnboardingController::class, 'store'])
+        ->name('onboarding.profile.store');
+    Route::post('/onboarding/institution-request', [OnboardingController::class, 'requestInstitution'])
+        ->middleware('throttle:5,1')
+        ->name('onboarding.institution-request');
 
     Route::get('/support', [SupportChatController::class, 'index'])->name('support.index');
     Route::post('/support', [SupportChatController::class, 'store'])->middleware('throttle:20,1')->name('support.store');
