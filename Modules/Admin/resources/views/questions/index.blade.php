@@ -159,7 +159,7 @@
                             <span class="material-symbols-outlined text-[22px]" aria-hidden="true">stars</span>
                         </div>
                         <div class="min-w-0">
-                            <p class="truncate text-label-sm font-medium text-on-surface-variant">Miễn phí</p>
+                            <p class="truncate text-label-sm font-medium text-on-surface-variant">Free</p>
                             <p class="text-headline-sm font-bold text-on-surface">{{ number_format($stats['free']) }}
                             </p>
                         </div>
@@ -237,7 +237,7 @@
                     <select id="question-access-filter" name="is_free"
                         class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-body-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
                         <option value="">Tất cả</option>
-                        <option value="1" @selected($filters['is_free'] === '1')>Miễn phí</option>
+                        <option value="1" @selected($filters['is_free'] === '1')>Free</option>
                         <option value="0" @selected($filters['is_free'] === '0')>Premium</option>
                     </select>
                 </div>
@@ -508,7 +508,7 @@
                                     @if($question->is_free)
                                         <span
                                             class="inline-flex items-center gap-1 rounded-full border border-outline-variant px-2.5 py-0.5 text-xs font-medium text-on-surface">
-                                            Miễn phí
+                                            Free
                                         </span>
                                     @else
                                         <span

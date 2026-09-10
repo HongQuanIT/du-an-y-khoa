@@ -1,5 +1,5 @@
-<x-layouts.admin title="Thư viện tệp nội dung">
-    <x-admin.page-header title="Thư viện tệp nội dung"
+<x-layouts.admin title="Media">
+    <x-admin.page-header title="Media"
         description="Ảnh hoặc đoạn phim lưu trên máy chủ hay qua đường dẫn CDN. Có thể dùng lại cho trang nội dung, bài viết và câu hỏi.">
         @if ($canManage)
             <x-slot:actions>

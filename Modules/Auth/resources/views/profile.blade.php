@@ -6,6 +6,7 @@
         'redeem' => ['Đổi mã', 'Kích hoạt mã từ trường, tổ chức hoặc khuyến mãi.'],
         'notes' => ['Ghi chú cá nhân', 'Ghi chú riêng — chỉ bạn mới thấy.'],
         'org-license' => ['Giấy phép tổ chức', 'Kích hoạt và quản lý giấy phép từ trường hoặc bệnh viện.'],
+        'contact' => ['Tên và liên hệ', 'Chỉnh sửa tên hiển thị và xem email đăng nhập.'],
         'security' => ['Bảo mật', 'Quản lý mật khẩu và bảo vệ tài khoản.'],
         'notifications' => ['Thông báo', 'Chọn loại thông báo bạn muốn nhận.'],
         default => ['Hồ sơ cá nhân', 'Quản lý thông tin nghề nghiệp và mục tiêu học tập để cá nhân hóa lộ trình ôn luyện.'],

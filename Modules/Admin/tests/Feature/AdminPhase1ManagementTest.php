@@ -35,8 +35,22 @@ final class AdminPhase1ManagementTest extends TestCase
     public function test_super_admin_can_list_and_view_users(): void
     {
         $admin = $this->staffUser(Role::SuperAdmin);
-        $student = User::factory()->create(['email' => 'learner@example.com']);
+        $student = User::factory()->create([
+            'email' => 'learner@example.com',
+            'avatar_path' => 'avatars/learner.webp',
+        ]);
         $student->assignRole(Role::Student->value);
+        $student->learnerProfile()->create([
+            'registration_method' => 'google',
+            'onboarding_completed_at' => now(),
+            'marketing_consent_at' => now(),
+            'utm_source' => 'google',
+            'utm_medium' => 'cpc',
+            'utm_campaign' => 'medical-students-2026',
+            'utm_content' => 'registration-banner',
+            'referrer_url' => 'https://example.com/referrer',
+            'landing_page' => 'https://example.com/register',
+        ]);
         $student->forceFill([
             'last_login_method' => AuthenticationMethod::Google,
             'last_login_at' => now(),
@@ -51,14 +65,33 @@ final class AdminPhase1ManagementTest extends TestCase
         $this->actingAsStaff($admin)
             ->get(route('admin.users.index'))
             ->assertOk()
+            ->assertSee('Đăng nhập gần nhất')
+            ->assertSee('Google')
+            ->assertSee('Ảnh đại diện của '.$student->name)
+            ->assertSee('/storage/avatars/learner.webp', false)
             ->assertSee('learner@example.com');
 
         $this->actingAsStaff($admin)
             ->get(route('admin.users.show', $student))
             ->assertOk()
+            ->assertSee('<meta name="robots" content="noindex, nofollow">', false)
+            ->assertSee('Chi tiết học viên')
+            ->assertSee('Điều hướng chi tiết học viên')
+            ->assertSee('Gửi email')
             ->assertSee($student->name)
             ->assertSee('Phương thức đăng nhập gần nhất')
+            ->assertSee('Phương thức đăng nhập')
+            ->assertSee('Họ và tên')
+            ->assertSee('Email đăng nhập')
+            ->assertSee('Ảnh đại diện của '.$student->name)
+            ->assertSee('Email/password')
+            ->assertSee('Đã thiết lập')
             ->assertSee('Google')
+            ->assertSee('Đã liên kết')
+            ->assertSee('Facebook')
+            ->assertSee('Chưa liên kết')
+            ->assertSee('Hoàn tất hồ sơ lúc')
+            ->assertDontSee('Thông tin nguồn đăng ký')
             ->assertSee('learner@example.com');
     }
 
