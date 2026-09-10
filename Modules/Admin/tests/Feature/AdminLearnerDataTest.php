@@ -42,6 +42,14 @@ final class AdminLearnerDataTest extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.institutions.index'))
             ->assertOk()
+            ->assertSee($existing->name)
+            ->assertSee('Thêm trường')
+            ->assertSee('formModalOpen');
+
+        $this->actingAs($admin)
+            ->get(route('admin.institutions.index', ['edit' => $existing->id]))
+            ->assertOk()
+            ->assertSee('Chỉnh sửa trường/cơ sở đào tạo')
             ->assertSee($existing->name);
 
         $this->actingAs($admin)
@@ -72,8 +80,18 @@ final class AdminLearnerDataTest extends TestCase
             'admin.professions.index' => 'Quản lý Chức danh',
             'admin.education-stages.index' => 'Quản lý Năm học',
         ] as $route => $heading) {
-            $this->actingAs($admin)->get(route($route))->assertOk()->assertSee($heading);
+            $this->actingAs($admin)->get(route($route))
+                ->assertOk()
+                ->assertSee($heading)
+                ->assertSee('formModalOpen');
         }
+
+        $professionForEdit = Profession::query()->firstOrFail();
+        $this->actingAs($admin)
+            ->get(route('admin.professions.index', ['edit' => $professionForEdit->id]))
+            ->assertOk()
+            ->assertSee('Chỉnh sửa chức danh')
+            ->assertSee($professionForEdit->name);
 
         $this->actingAs($admin)->post(route('admin.countries.store'), [
             'code' => 'us', 'name' => 'Hoa Kỳ', 'sort_order' => 20, 'is_active' => '1',

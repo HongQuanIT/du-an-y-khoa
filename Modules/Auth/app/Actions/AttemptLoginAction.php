@@ -51,6 +51,21 @@ final class AttemptLoginAction
             ]);
         }
 
+        $passwordlessSocialUser = User::query()
+            ->where('email', $data->email)
+            ->whereNull('password_set_at')
+            ->whereHas('socialAccounts')
+            ->first();
+
+        if ($passwordlessSocialUser !== null) {
+            RateLimiter::hit($key, self::DECAY_SECONDS);
+            $this->auditFailure($portal, AuditResult::Denied, 'social_password_not_set', $passwordlessSocialUser);
+
+            throw ValidationException::withMessages([
+                'email' => 'Tài khoản này đăng ký bằng mạng xã hội và chưa có mật khẩu. Vui lòng bấm Quên mật khẩu để thiết lập mật khẩu.',
+            ]);
+        }
+
         $credentials = ['email' => $data->email, 'password' => $data->password];
         $remember = $portal === LoginPortal::Student ? $data->remember : false;
 

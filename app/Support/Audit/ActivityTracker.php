@@ -142,7 +142,7 @@ final class ActivityTracker
             return;
         }
 
-        UserActivitySession::query()->create([
+        $payload = [
             'user_id' => $userId,
             'session_id' => $sessionId,
             'area' => $area,
@@ -156,7 +156,20 @@ final class ActivityTracker
             'device_name' => $deviceName,
             'operating_system' => $operatingSystem,
             'browser' => $browser,
-        ]);
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
+
+        // Heartbeat/pagehide requests may persist the same visit concurrently.
+        // Use the database unique key atomically instead of select-then-insert.
+        UserActivitySession::query()->upsert(
+            [$payload],
+            ['user_id', 'session_id', 'area'],
+            [
+                'portal', 'last_seen_at', 'duration_seconds', 'heartbeat_count',
+                'ip', 'device_type', 'device_name', 'operating_system', 'browser', 'updated_at',
+            ],
+        );
     }
 
     private function touchRedis(

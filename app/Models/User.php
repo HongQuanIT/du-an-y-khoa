@@ -41,6 +41,7 @@ use Spatie\Permission\Traits\HasRoles;
     'name',
     'email',
     'password',
+    'password_set_at',
     'locale',
     'theme',
     'status',
@@ -85,6 +86,7 @@ class User extends Authenticatable implements CanResetPasswordContract
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'password_set_at' => 'datetime',
             'status' => UserStatus::class,
             'notification_prefs' => 'array',
             'graduation_year' => 'integer',

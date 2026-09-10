@@ -17,7 +17,7 @@ final class EnsureLearnerOnboarding
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->routeIs('onboarding.*', 'logout', 'student.2fa.*')) {
+        if ($request->routeIs('onboarding.*', 'logout', 'student.2fa.*', 'password.*')) {
             return $next($request);
         }
 

@@ -77,6 +77,7 @@ final class SocialAuthenticationTest extends TestCase
         $this->assertAuthenticatedAs($user);
         $this->assertTrue($user->hasRole(Role::Student->value));
         $this->assertNotNull($user->email_verified_at);
+        $this->assertNull($user->password_set_at);
         $this->assertDatabaseHas('social_accounts', [
             'user_id' => $user->id,
             'provider' => 'google',
@@ -87,6 +88,30 @@ final class SocialAuthenticationTest extends TestCase
             'registration_method' => 'google',
             'utm_source' => 'facebook-ads',
         ]);
+    }
+
+    public function test_social_only_user_is_told_to_reset_password_before_email_login(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'social-passwordless@example.com',
+            'password_set_at' => null,
+        ]);
+        $user->assignRole(Role::Student->value);
+        SocialAccount::query()->create([
+            'user_id' => $user->id,
+            'provider' => 'google',
+            'provider_user_id' => 'google-passwordless-123',
+            'provider_email' => $user->email,
+        ]);
+
+        $this->post(route('login'), [
+            'email' => $user->email,
+            'password' => 'AnyPassword1!',
+        ])->assertSessionHasErrors([
+            'email' => 'Tài khoản này đăng ký bằng mạng xã hội và chưa có mật khẩu. Vui lòng bấm Quên mật khẩu để thiết lập mật khẩu.',
+        ]);
+
+        $this->assertGuest();
     }
 
     public function test_linked_facebook_account_can_login_without_creating_a_duplicate_user(): void
@@ -120,7 +145,7 @@ final class SocialAuthenticationTest extends TestCase
         ]);
     }
 
-    public function test_matching_email_requires_password_before_linking_social_identity(): void
+    public function test_matching_email_links_social_identity_without_creating_a_duplicate_user(): void
     {
         $user = User::factory()->create([
             'email' => 'existing@example.com',
@@ -136,19 +161,84 @@ final class SocialAuthenticationTest extends TestCase
         $this->withSession([
             'social_auth.mode' => 'register',
         ])->get(route('social.callback', ['provider' => 'google']))
-            ->assertRedirect(route('login'))
-            ->assertSessionHas('status');
-        $this->assertDatabaseMissing('social_accounts', ['provider_user_id' => 'google-existing-123']);
+            ->assertRedirect(route('onboarding.profile'));
 
-        $this->post(route('login'), [
-            'email' => $user->email,
-            'password' => 'Password1',
-        ])->assertRedirect();
+        $this->assertAuthenticatedAs($user);
+        $this->assertSame(1, User::query()->where('email', $user->email)->count());
         $this->assertDatabaseHas('social_accounts', [
             'user_id' => $user->id,
             'provider' => 'google',
             'provider_user_id' => 'google-existing-123',
         ]);
+    }
+
+    public function test_google_then_facebook_with_the_same_email_share_one_user(): void
+    {
+        Socialite::fake('google', SocialiteUser::fake([
+            'id' => 'google-shared-123',
+            'name' => 'Shared Account',
+            'email' => 'shared@example.com',
+        ]));
+
+        $this->withSession(['social_auth.mode' => 'register'])
+            ->get(route('social.callback', ['provider' => 'google']))
+            ->assertRedirect(route('onboarding.profile'));
+
+        $user = User::query()->where('email', 'shared@example.com')->firstOrFail();
+        $this->post(route('logout'));
+
+        Socialite::fake('facebook', SocialiteUser::fake([
+            'id' => 'facebook-shared-123',
+            'name' => 'Shared Account Facebook',
+            'email' => 'shared@example.com',
+        ]));
+
+        $this->withSession(['social_auth.mode' => 'login'])
+            ->get(route('social.callback', ['provider' => 'facebook']))
+            ->assertRedirect(route('onboarding.profile'));
+
+        $this->assertAuthenticatedAs($user);
+        $this->assertSame(1, User::query()->where('email', 'shared@example.com')->count());
+        $this->assertDatabaseHas('social_accounts', [
+            'user_id' => $user->id,
+            'provider' => 'google',
+            'provider_user_id' => 'google-shared-123',
+        ]);
+        $this->assertDatabaseHas('social_accounts', [
+            'user_id' => $user->id,
+            'provider' => 'facebook',
+            'provider_user_id' => 'facebook-shared-123',
+        ]);
+        $this->assertSame(AuthenticationMethod::Facebook, $user->fresh()->last_login_method);
+    }
+
+    public function test_another_identity_cannot_replace_an_existing_provider_link(): void
+    {
+        $user = User::factory()->create(['email' => 'claimed@example.com']);
+        $user->assignRole(Role::Student->value);
+        SocialAccount::query()->create([
+            'user_id' => $user->id,
+            'provider' => 'google',
+            'provider_user_id' => 'original-google-id',
+            'provider_email' => $user->email,
+        ]);
+        Socialite::fake('google', SocialiteUser::fake([
+            'id' => 'different-google-id',
+            'email' => $user->email,
+        ]));
+
+        $this->withSession(['social_auth.mode' => 'login'])
+            ->get(route('social.callback', ['provider' => 'google']))
+            ->assertRedirect(route('login'))
+            ->assertSessionHasErrors('social');
+
+        $this->assertGuest();
+        $this->assertDatabaseHas('social_accounts', [
+            'user_id' => $user->id,
+            'provider' => 'google',
+            'provider_user_id' => 'original-google-id',
+        ]);
+        $this->assertDatabaseMissing('social_accounts', ['provider_user_id' => 'different-google-id']);
     }
 
     public function test_login_mode_also_registers_an_unknown_social_user(): void

@@ -2,7 +2,11 @@
     <x-auth.shell tagline="Khôi phục quyền truy cập tài khoản">
         <h2 class="font-headline-md text-headline-md text-on-surface mb-2">Quên mật khẩu?</h2>
         <p class="mb-8 font-body-sm text-body-sm text-on-surface-variant">
-            Nhập email đăng ký — chúng tôi sẽ gửi liên kết đặt lại mật khẩu.
+            @auth
+                Liên kết đặt lại mật khẩu sẽ được gửi đến email của tài khoản đang đăng nhập.
+            @else
+                Nhập email đăng ký — chúng tôi sẽ gửi liên kết đặt lại mật khẩu.
+            @endauth
         </p>
 
         @if (session('status'))
@@ -17,7 +21,7 @@
             @csrf
 
             <x-auth.input name="email" label="Email" type="email" placeholder="bacsi@mebpro.vn" required
-                autocomplete="email" :value="$email ?? ''" />
+                autocomplete="email" :value="$email ?? ''" :readonly="auth()->check()" />
 
             <x-auth.submit>Gửi liên kết đặt lại</x-auth.submit>
         </form>

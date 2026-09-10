@@ -38,6 +38,7 @@ final class RegisterUserAction
                 'name' => $data->name,
                 'email' => $data->email,
                 'password' => $data->password,
+                'password_set_at' => $data->registrationMethod === 'email' ? now() : null,
                 'locale' => app()->getLocale(),
             ]);
 

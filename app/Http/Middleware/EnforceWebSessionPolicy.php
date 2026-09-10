@@ -49,6 +49,15 @@ final class EnforceWebSessionPolicy
             return $next($request);
         }
 
+        if ($user->isSuspendedOrBanned()) {
+            WebSessionManager::logout(
+                $request,
+                'Tài khoản đã bị khóa hoặc cấm. Liên hệ hỗ trợ nếu cần.',
+            );
+
+            return $this->redirectToLogin($request);
+        }
+
         if (app()->environment('testing') && ! $request->session()->has(WebSessionManager::BOUND_SESSION_ID)) {
             return $next($request);
         }
