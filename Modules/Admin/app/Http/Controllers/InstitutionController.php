@@ -37,12 +37,18 @@ final class InstitutionController extends Controller
             $query->where('is_active', $request->string('status')->toString() === 'active');
         }
 
+        $canManage = $request->user()->can(Permission::UserManage->value);
+        $editing = $canManage && $request->filled('edit')
+            ? Institution::query()->findOrFail($request->integer('edit'))
+            : null;
+
         return view('admin::learner-data.institutions.index', [
             'institutions' => $query->orderBy('name')->paginate(20)->withQueryString(),
             'countries' => Country::query()->where('is_active', true)->orderBy('sort_order')->get(),
             'units' => AdministrativeUnit::query()->where('is_active', true)->orderBy('name')->get(),
             'filters' => $request->only(['q', 'country_id', 'administrative_unit_id', 'status']),
-            'canManage' => $request->user()->can(Permission::UserManage->value),
+            'canManage' => $canManage,
+            'editing' => $editing,
         ]);
     }
 
@@ -66,9 +72,9 @@ final class InstitutionController extends Controller
     {
         abort_unless($request->user()->can(Permission::UserManage->value), 403);
         $data = $this->validated($request);
-        $institution = Institution::query()->create($data);
+        Institution::query()->create($data);
 
-        return redirect()->route('admin.institutions.edit', $institution)->with('status', 'Đã thêm trường học.');
+        return redirect()->route('admin.institutions.index')->with('status', 'Đã thêm trường học.');
     }
 
     public function update(Request $request, Institution $institution): RedirectResponse

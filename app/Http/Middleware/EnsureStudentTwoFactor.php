@@ -20,7 +20,7 @@ final class EnsureStudentTwoFactor
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->routeIs('student.2fa.challenge', 'student.2fa.challenge.verify', 'logout')) {
+        if ($request->routeIs('student.2fa.challenge', 'student.2fa.challenge.verify', 'logout', 'password.*')) {
             return $next($request);
         }
 

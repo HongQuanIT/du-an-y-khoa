@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Support\Auth\TwoFactorTrustedDevice;
 use App\Support\Auth\WebSessionManager;
 use App\Support\Enums\Role;
+use App\Support\Enums\UserStatus;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -76,6 +77,26 @@ final class WebSessionPolicyTest extends TestCase
             ->assertRedirect(route('login'));
 
         $this->assertGuest();
+    }
+
+    public function test_suspended_or_banned_user_is_logged_out_on_the_next_request(): void
+    {
+        foreach ([UserStatus::Suspended, UserStatus::Banned] as $status) {
+            $user = User::factory()->create(['status' => $status]);
+            $user->assignRole(Role::Student->value);
+
+            $this->actingAs($user)
+                ->withSession([
+                    WebSessionManager::BOUND_SESSION_ID => session()->getId(),
+                    WebSessionManager::LOGGED_IN_AT => now()->timestamp,
+                    WebSessionManager::LAST_ACTIVITY_AT => now()->timestamp,
+                ])
+                ->get(route('dashboard'))
+                ->assertRedirect(route('login'))
+                ->assertSessionHas('status', 'Tài khoản đã bị khóa hoặc cấm. Liên hệ hỗ trợ nếu cần.');
+
+            $this->assertGuest();
+        }
     }
 
     public function test_trusted_device_skips_2fa_within_trust_period(): void

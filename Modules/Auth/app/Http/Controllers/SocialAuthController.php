@@ -29,7 +29,6 @@ use Modules\Auth\Enums\AuthenticationMethod;
 use Modules\Auth\Enums\LoginPortal;
 use Modules\Auth\Enums\SocialProvider;
 use Modules\Auth\Models\SocialAccount;
-use Modules\Auth\Support\PendingSocialLink;
 use Modules\Auth\Support\RegistrationAttribution;
 use Modules\Billing\Support\CheckoutIntent;
 use Modules\Partner\Support\PartnerInviteIntent;
@@ -97,11 +96,32 @@ final class SocialAuthController extends Controller
 
         $existingUser = User::query()->where('email', $identity['email'])->first();
         if ($existingUser !== null) {
-            PendingSocialLink::store($request, $identity);
+            if ($existingUser->isSuspendedOrBanned()) {
+                return $this->errorRedirect('login', 'Tài khoản đã bị khóa hoặc cấm. Liên hệ hỗ trợ nếu cần.');
+            }
+            if (Staff::isStaff($existingUser) || Instructor::is($existingUser) || Partner::is($existingUser)) {
+                return $this->errorRedirect('login', 'Tài khoản này không đăng nhập tại cổng học viên.');
+            }
 
-            return redirect()->route('login')
-                ->withInput(['email' => $identity['email']])
-                ->with('status', 'Email này đã có tài khoản. Hãy nhập mật khẩu để xác nhận liên kết '.$socialProvider->label().'.');
+            $providerAccount = $existingUser->socialAccounts()
+                ->where('provider', $identity['provider'])
+                ->first();
+            if ($providerAccount !== null && $providerAccount->provider_user_id !== $identity['provider_user_id']) {
+                return $this->errorRedirect($mode, 'Tài khoản đã liên kết với một tài khoản '.$socialProvider->label().' khác.');
+            }
+
+            $existingUser->socialAccounts()->updateOrCreate(
+                ['provider' => $identity['provider']],
+                [
+                    'provider_user_id' => $identity['provider_user_id'],
+                    'provider_email' => $identity['email'],
+                    'provider_name' => $identity['name'],
+                    'avatar_url' => $identity['avatar_url'],
+                    'last_login_at' => now(),
+                ],
+            );
+
+            return $this->login($request, $existingUser, $socialProvider);
         }
 
         if (! setting('features.registration_enabled', true)) {

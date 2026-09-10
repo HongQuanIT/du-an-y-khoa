@@ -36,17 +36,17 @@ Route::middleware('guest')->group(function (): void {
         ->middleware('throttle:auth')
         ->name('social.callback');
 
-    Route::get('/reset-password/{token}', [PasswordResetController::class, 'create'])
-        ->name('password.reset');
-    Route::post('/reset-password', [PasswordResetController::class, 'store'])
-        ->middleware('throttle:auth')
-        ->name('password.update');
 });
 
 Route::get('/forgot-password', [PasswordResetLinkController::class, 'create'])->name('password.request');
 Route::post('/forgot-password', [PasswordResetLinkController::class, 'store'])
     ->middleware('throttle:password-reset')
     ->name('password.email');
+Route::get('/reset-password/{token}', [PasswordResetController::class, 'create'])
+    ->name('password.reset');
+Route::post('/reset-password', [PasswordResetController::class, 'store'])
+    ->middleware('throttle:auth')
+    ->name('password.update');
 
 Route::middleware('auth')->group(function (): void {
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])

@@ -21,18 +21,25 @@ use Illuminate\View\View;
  */
 final class PasswordResetController extends Controller
 {
-    public function create(Request $request, string $token): View
+    public function create(Request $request, string $token): View|RedirectResponse
     {
+        $email = mb_strtolower(trim((string) $request->query('email')));
+        if ($request->user() !== null && $email !== mb_strtolower($request->user()->email)) {
+            return redirect()->route('password.request')
+                ->withErrors(['email' => 'Bạn chỉ có thể đặt lại mật khẩu cho tài khoản đang đăng nhập.']);
+        }
+
         return view('auth::reset-password', [
             'token' => $token,
-            'email' => old('email', $request->query('email')),
+            'email' => old('email', $email),
         ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
+        $email = $request->user()?->email ?? $request->input('email');
         $request->merge([
-            'email' => mb_strtolower(trim((string) $request->input('email'))),
+            'email' => mb_strtolower(trim((string) $email)),
         ]);
 
         $request->validate([
@@ -44,12 +51,20 @@ final class PasswordResetController extends Controller
             'password' => 'mật khẩu mới',
         ]);
 
+        $user = User::query()->where('email', $request->string('email')->toString())->first();
+        if (! $user || $user->isSuspendedOrBanned()) {
+            return back()
+                ->withInput($request->only('email'))
+                ->withErrors(['email' => __('passwords.token')]);
+        }
+
         $status = Password::broker()->reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function (User $user, string $password): void {
                 // User casts `password` => hashed — do not Hash::make again.
                 $user->forceFill([
                     'password' => $password,
+                    'password_set_at' => now(),
                     'remember_token' => Str::random(60),
                 ])->save();
 

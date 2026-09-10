@@ -1,11 +1,18 @@
 <x-layouts.admin :title="$config['title']">
-    <x-admin.page-header :title="'Quản lý '.$config['title']" description="Danh mục chuẩn được dùng trong hồ sơ và autocomplete của học viên." />
+    <div x-data="{ formModalOpen: @js($editing !== null || $errors->any() || request()->boolean('create')) }">
+    <x-admin.page-header :title="'Quản lý '.$config['title']" description="Danh mục chuẩn được dùng trong hồ sơ và autocomplete của học viên.">
+        @if ($canManage)
+            <x-slot:actions>
+                <a href="{{ route($config['route'].'.index', ['create' => 1]) }}" class="rounded-lg bg-primary px-3 py-2 font-label-md text-on-primary hover:opacity-90">Thêm {{ $config['singular'] }}</a>
+            </x-slot:actions>
+        @endif
+    </x-admin.page-header>
 
     @include('admin::learner-data._tabs')
     <x-admin.flash />
     <x-auth.errors />
 
-    <div class="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+    <div>
         <section>
             <form method="get" class="mb-4 grid gap-3 rounded-xl border border-outline-variant bg-surface p-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div class="sm:col-span-2">
@@ -88,76 +95,28 @@
             <div class="mt-4">{{ $items->links() }}</div>
         </section>
 
-        @if ($canManage)
-            @php
-                $formRoute = $editing
-                    ? route($config['route'].'.update', ['item' => $editing->id])
-                    : route($config['route'].'.store');
-            @endphp
-            <aside class="rounded-xl border border-outline-variant bg-surface p-5 xl:sticky xl:top-6">
-                <div class="mb-4 flex items-center justify-between gap-3">
-                    <h2 class="font-title-md font-semibold text-on-surface">{{ $editing ? 'Chỉnh sửa' : 'Thêm mới' }}</h2>
-                    @if ($editing)<a href="{{ route($config['route'].'.index') }}" class="text-label-sm text-primary hover:underline">Hủy sửa</a>@endif
+    </div>
+
+    @if ($canManage)
+        <div x-cloak x-show="formModalOpen" x-transition.opacity @keydown.escape.window="@if($editing) window.location.href = '{{ route($config['route'].'.index') }}' @else formModalOpen = false @endif"
+            class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="catalog-form-title">
+            @if ($editing)
+                <a href="{{ route($config['route'].'.index') }}" class="absolute inset-0 bg-scrim/50" aria-label="Đóng"></a>
+            @else
+                <button type="button" class="absolute inset-0 bg-scrim/50" aria-label="Đóng" @click="formModalOpen = false"></button>
+            @endif
+            <section x-show="formModalOpen" x-transition class="relative z-10 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-outline-variant bg-surface p-5 shadow-xl md:p-6">
+                <div class="mb-5 flex items-center justify-between gap-3">
+                    <h2 id="catalog-form-title" class="font-title-lg font-semibold text-on-surface">{{ $editing ? 'Chỉnh sửa '.$config['singular'] : 'Thêm '.$config['singular'] }}</h2>
+                    @if ($editing)
+                        <a href="{{ route($config['route'].'.index') }}" class="flex size-9 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container" aria-label="Đóng"><span class="material-symbols-outlined">close</span></a>
+                    @else
+                        <button type="button" @click="formModalOpen = false" class="flex size-9 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container" aria-label="Đóng"><span class="material-symbols-outlined">close</span></button>
+                    @endif
                 </div>
-                <form method="post" action="{{ $formRoute }}" class="space-y-4">
-                    @csrf
-                    @if ($editing) @method('PUT') @endif
-
-                    @if ($catalog === 'administrative-units')
-                        <div>
-                            <label for="country_id" class="mb-1 block text-label-sm text-on-surface-variant">Quốc gia</label>
-                            <select id="country_id" name="country_id" required class="h-10 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3">
-                                <option value="">Chọn quốc gia</option>
-                                @foreach ($countries as $country)
-                                    <option value="{{ $country->id }}" @selected((string) old('country_id', $editing?->country_id) === (string) $country->id)>{{ $country->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                    @endif
-
-                    <div>
-                        <label for="name" class="mb-1 block text-label-sm text-on-surface-variant">Tên hiển thị</label>
-                        <input id="name" name="name" value="{{ old('name', $editing?->name) }}" required maxlength="120"
-                            class="h-10 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3">
-                    </div>
-                    <div>
-                        <label for="code" class="mb-1 block text-label-sm text-on-surface-variant">Mã</label>
-                        <input id="code" name="code" value="{{ old('code', $editing?->code) }}" required maxlength="50"
-                            @readonly($catalog === 'countries' && $editing?->code === 'VN')
-                            class="h-10 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-mono read-only:opacity-60">
-                    </div>
-
-                    @if ($catalog === 'administrative-units')
-                        <div>
-                            <label for="type" class="mb-1 block text-label-sm text-on-surface-variant">Loại địa phương</label>
-                            <select id="type" name="type" class="h-10 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3">
-                                <option value="province" @selected(old('type', $editing?->type) === 'province')>Tỉnh</option>
-                                <option value="city" @selected(old('type', $editing?->type) === 'city')>Thành phố trực thuộc trung ương</option>
-                            </select>
-                        </div>
-                    @elseif ($catalog === 'professions')
-                        <label class="flex items-start gap-2 text-body-sm"><input type="checkbox" name="requires_education_stage" value="1" @checked(old('requires_education_stage', $editing?->requires_education_stage)) class="mt-0.5 size-4 rounded text-primary"><span>Yêu cầu học viên chọn năm học</span></label>
-                        <label class="flex items-start gap-2 text-body-sm"><input type="checkbox" name="defaults_to_graduated" value="1" @checked(old('defaults_to_graduated', $editing?->defaults_to_graduated)) class="mt-0.5 size-4 rounded text-primary"><span>Mặc định là đã tốt nghiệp</span></label>
-                    @elseif ($catalog === 'education-stages')
-                        <label class="flex items-start gap-2 text-body-sm"><input type="checkbox" name="is_graduated" value="1" @checked(old('is_graduated', $editing?->is_graduated)) class="mt-0.5 size-4 rounded text-primary"><span>Đây là trạng thái đã tốt nghiệp</span></label>
-                    @endif
-
-                    <div>
-                        <label for="sort_order" class="mb-1 block text-label-sm text-on-surface-variant">Thứ tự hiển thị</label>
-                        <input id="sort_order" type="number" name="sort_order" min="0" max="65535" value="{{ old('sort_order', $editing?->sort_order ?? 0) }}"
-                            class="h-10 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3">
-                    </div>
-                    <label class="flex items-center gap-2 text-body-sm"><input type="checkbox" name="is_active" value="1" @checked(old('is_active', $editing ? $editing->is_active : true)) class="size-4 rounded text-primary">Hiển thị cho học viên</label>
-                    <button class="w-full rounded-lg bg-primary px-4 py-2.5 font-label-md font-semibold text-on-primary">{{ $editing ? 'Lưu thay đổi' : 'Thêm '.$config['singular'] }}</button>
-                </form>
-
-                @if ($editing)
-                    <form method="post" action="{{ route($config['route'].'.toggle', ['item' => $editing->id]) }}" class="mt-3 text-center">
-                        @csrf @method('PATCH')
-                        <button class="text-label-sm font-semibold text-on-surface-variant hover:text-primary hover:underline">{{ $editing->is_active ? 'Ngừng hiển thị' : 'Kích hoạt lại' }}</button>
-                    </form>
-                @endif
-            </aside>
-        @endif
+                @include('admin::learner-data.catalogs._form')
+            </section>
+        </div>
+    @endif
     </div>
 </x-layouts.admin>

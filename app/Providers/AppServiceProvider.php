@@ -69,13 +69,12 @@ class AppServiceProvider extends ServiceProvider
         });
 
         RateLimiter::for('password-reset', function (Request $request) {
-            if (app()->environment('testing')) {
-                return Limit::none();
-            }
-
-            $email = mb_strtolower(trim((string) $request->input('email')));
-
-            return Limit::perMinute(5)->by($email.'|'.$request->ip());
+            return Limit::perDay(3)
+                ->by((string) $request->ip())
+                ->response(fn (Request $request, array $headers) => back()
+                    ->withInput($request->only('email'))
+                    ->withErrors(['email' => 'Địa chỉ IP này đã yêu cầu đặt lại mật khẩu quá 3 lần trong ngày. Vui lòng thử lại vào ngày mai.'])
+                    ->withHeaders($headers));
         });
 
         RateLimiter::for('exports', fn (Request $request) => Limit::perMinute(5)

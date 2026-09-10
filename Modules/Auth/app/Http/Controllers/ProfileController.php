@@ -168,6 +168,7 @@ final class ProfileController extends Controller
 
         $request->user()->forceFill([
             'password' => $validated['password'],
+            'password_set_at' => now(),
         ])->save();
         Auditor::record(AuditAction::AuthPasswordChanged, $request->user(), $request->user());
 
