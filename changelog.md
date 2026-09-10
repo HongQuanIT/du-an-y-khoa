@@ -2,6 +2,9 @@
 
 ## 2026-09-10
 
+### Fix — Auth: tên index learner_profiles
+- Rút ngắn tên index composite `(education_stage_id, onboarding_completed_at)` để không vượt giới hạn 64 ký tự MySQL.
+
 ### Feat — QBank create: bỏ Bài viết / Triệu chứng; lọc theo kỳ thi
 - Gỡ bộ lọc Bài viết và Triệu chứng trên `/qbank/create`.
 - Hệ cơ quan / Môn học / Bài học: không chọn kỳ thi → toàn bộ ngân hàng câu hỏi; chọn kỳ thi → chỉ danh mục trong ma trận kỳ đó.

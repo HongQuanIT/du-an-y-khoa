@@ -101,7 +101,11 @@ return new class extends Migration
 
                 $table->index(['country_id', 'administrative_unit_id']);
                 $table->index(['institution_id', 'profession_id']);
-                $table->index(['education_stage_id', 'onboarding_completed_at']);
+                // MySQL identifier max 64 chars — auto name exceeds limit.
+                $table->index(
+                    ['education_stage_id', 'onboarding_completed_at'],
+                    'learner_profiles_edu_stage_onboarding_idx',
+                );
             });
         }
 
