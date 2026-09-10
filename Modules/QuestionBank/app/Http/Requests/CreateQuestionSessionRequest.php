@@ -25,6 +25,9 @@ final class CreateQuestionSessionRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        $source = (string) $this->input('source', SessionSource::Custom->value);
+        $isAdaptive = $source === SessionSource::WeakTopics->value;
+
         $difficulties = $this->input('difficulties');
         if ($difficulties === null && $this->filled('difficulty')) {
             $difficulties = [$this->input('difficulty')];
@@ -33,6 +36,27 @@ final class CreateQuestionSessionRequest extends FormRequest
         $folderId = $this->input('folder_id');
         $folderId = is_numeric($folderId) && (int) $folderId > 0 ? (int) $folderId : null;
 
+        // Adaptive sessions only take an exam blueprint; strip manual filters.
+        if ($isAdaptive) {
+            $this->merge([
+                'source' => SessionSource::WeakTopics->value,
+                'difficulties' => [],
+                'question_statuses' => [],
+                'question_status_mode' => 'latest',
+                'organ_system_ids' => [],
+                'subject_ids' => [],
+                'lesson_ids' => [],
+                'core_clinical_topic_ids' => [],
+                'tag_ids' => [],
+                'articles' => [],
+                'symptoms' => [],
+                'saved_only' => false,
+                'folder_id' => null,
+            ]);
+
+            return;
+        }
+
         $this->merge([
             'difficulties' => array_values(array_filter(
                 (array) $difficulties,
@@ -40,7 +64,7 @@ final class CreateQuestionSessionRequest extends FormRequest
             )),
             'saved_only' => $this->boolean('saved_only') || $folderId !== null,
             'folder_id' => $folderId,
-            'source' => $this->input('source', SessionSource::Custom->value),
+            'source' => SessionSource::Custom->value,
             'question_status_mode' => $this->input('question_status_mode', 'latest'),
         ]);
     }
@@ -48,11 +72,18 @@ final class CreateQuestionSessionRequest extends FormRequest
     /** @return array<string, mixed> */
     public function rules(): array
     {
+        $isAdaptive = $this->input('source') === SessionSource::WeakTopics->value;
+
         return [
             'mode' => ['required', Rule::enum(SessionMode::class)],
             'source' => ['required', Rule::enum(SessionSource::class), 'in:custom,weak_topics'],
             'count' => ['required', 'integer', 'min:1', 'max:10000'],
-            'blueprint_id' => ['nullable', 'integer', 'exists:blueprints,id'],
+            'blueprint_id' => [
+                Rule::requiredIf($isAdaptive),
+                'nullable',
+                'integer',
+                'exists:blueprints,id',
+            ],
             'blueprint_section_id' => ['nullable', 'integer', 'exists:blueprint_sections,id'],
             'core_clinical_topic_ids' => ['nullable', 'array'],
             'core_clinical_topic_ids.*' => ['integer', 'distinct', 'exists:core_clinical_topics,id'],
@@ -88,6 +119,7 @@ final class CreateQuestionSessionRequest extends FormRequest
     {
         return [
             'count.max' => 'Số câu làm không được vượt quá tổng câu phù hợp.',
+            'blueprint_id.required' => 'Phiên luyện thích ứng cần chọn đề thi (ma trận).',
         ];
     }
 

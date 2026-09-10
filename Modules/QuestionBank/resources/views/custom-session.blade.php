@@ -3,11 +3,12 @@
      * @var \Illuminate\Support\Collection<int, \Modules\QuestionBank\Models\Subject> $subjects
      * @var \Illuminate\Support\Collection<int, \Modules\QuestionBank\Models\OrganSystem> $organSystems
      * @var list<array{id: int, title: string, icon: string, hint: string}> $exams
-     * @var array<int, array{id: string, name: string}> $articles
-     * @var array<int, array{id: string, name: string}> $symptoms
      */
     $initialMode = old('mode', request('mode', 'study'));
     $initialSource = old('source', request('source', 'custom'));
+    if (! in_array($initialSource, ['custom', 'weak_topics'], true)) {
+        $initialSource = 'custom';
+    }
     $initialCount = max(1, (int) old('count', 1));
     $initialDifficultyInput = old(
         'difficulties',
@@ -18,12 +19,10 @@
     $initialStatusMode = old('question_status_mode', request('question_status_mode', 'latest'));
     $initialSavedOnly = (bool) old('saved_only', request()->boolean('saved_only'));
     $initialBlueprintId = old('blueprint_id', request('blueprint_id'));
-    $initialArticles = array_values((array) old('articles', request('articles', [])));
-    $initialSymptoms = array_values((array) old('symptoms', request('symptoms', [])));
     $initialOrganSystemIds = array_map('intval', (array) old('organ_system_ids', request('organ_system_ids', [])));
     $initialSubjectIds = array_map('intval', (array) old('subject_ids', request('subject_ids', [])));
     $initialLessonIds = array_map('intval', (array) old('lesson_ids', request('lesson_ids', [])));
-    $sessionName = 'Phiên tùy chỉnh từ ' . now()->translatedFormat('j M, H:i');
+    $sessionName = 'Phiên luyện từ ' . now()->translatedFormat('j M, H:i');
 
     $statusOptions = [
         ['value' => 'unanswered', 'label' => 'Chưa trả lời', 'icon' => 'radio_button_unchecked'],
@@ -41,8 +40,6 @@
     $initialBlueprintName = $initialBlueprintId && isset($examTitles[(int) $initialBlueprintId])
         ? $examTitles[(int) $initialBlueprintId]
         : '';
-    $articleTitles = collect($articles)->pluck('name', 'id')->all();
-    $symptomTitles = collect($symptoms)->pluck('name', 'id')->all();
 @endphp
 
 <x-layouts.app title="Tạo phiên luyện tập">
@@ -63,10 +60,6 @@
             blueprintName: {{ Illuminate\Support\Js::from($initialBlueprintName)->toHtml() }},
             examTitles: {{ Illuminate\Support\Js::from($examTitles)->toHtml() }},
             blueprintScopes: {{ Illuminate\Support\Js::from($blueprintScopes)->toHtml() }},
-            articles: {{ Illuminate\Support\Js::from($initialArticles)->toHtml() }},
-            articleTitles: {{ Illuminate\Support\Js::from($articleTitles)->toHtml() }},
-            symptoms: {{ Illuminate\Support\Js::from($initialSymptoms)->toHtml() }},
-            symptomTitles: {{ Illuminate\Support\Js::from($symptomTitles)->toHtml() }},
             lessonIds: {{ Illuminate\Support\Js::from($initialLessonIds)->toHtml() }},
             lessonLabels: {},
             taxonomySearch: '',
@@ -88,11 +81,57 @@
             countUrl: {{ Illuminate\Support\Js::from(route('qbank.count', absolute: false))->toHtml() }},
             csrf: {{ Illuminate\Support\Js::from(csrf_token())->toHtml() }},
             init() {
+                if (this.source === 'weak_topics') this.clearCustomFilters(false);
+                if (this.blueprintId) this.pruneFiltersToBlueprint();
                 this.$nextTick(() => this.refreshCount());
+            },
+            isAdaptive() {
+                return this.source === 'weak_topics';
+            },
+            taxonomyLocked() {
+                return this.savedOnly;
+            },
+            setSource(next) {
+                if (this.source === next) return;
+                this.source = next;
+                this.activeFilter = null;
+                if (next === 'weak_topics') {
+                    this.clearCustomFilters(false);
+                }
+                this.countTouched = false;
+                this.$nextTick(() => this.refreshCount());
+            },
+            clearCustomFilters(refresh = true) {
+                this.difficulties = [];
+                this.statuses = [];
+                this.organSystemIds = [];
+                this.subjectIds = [];
+                this.savedOnly = false;
+                this.folderId = null;
+                this.folderName = '';
+                this.lessonIds = [];
+                this.lessonLabels = {};
+                if (refresh) this.$nextTick(() => this.refreshCount());
+            },
+            clearTaxonomySelection() {
+                this.organSystemIds = [];
+                this.subjectIds = [];
+                this.lessonIds = [];
+                this.lessonLabels = {};
+            },
+            canStart() {
+                if (this.matching === null || this.matching === 0 || this.counting || this.submitting) return false;
+                if (this.count < 1 || this.count > this.questionLimit()) return false;
+                if (this.isAdaptive() && !this.blueprintId) return false;
+                return true;
             },
             async refreshCount() {
                 if (!this.$refs.builderForm) return;
-                // Wait for Alpine to flush DOM updates so hidden inputs reflect current state
+                if (this.isAdaptive() && !this.blueprintId) {
+                    this.matching = 0;
+                    this.counting = false;
+                    return;
+                }
                 await this.$nextTick();
                 const requestId = ++this.countRequest;
                 this.counting = true;
@@ -101,9 +140,14 @@
                     if (!body.has('count')) {
                         body.set('count', String(Math.max(1, Number(this.count) || 1)));
                     }
-                    // Explicitly override from Alpine state to avoid stale DOM values
+                    body.set('source', this.source);
                     body.set('saved_only', this.savedOnly ? '1' : '0');
                     body.set('folder_id', this.folderId ? String(this.folderId) : '');
+                    if (this.blueprintId) {
+                        body.set('blueprint_id', String(this.blueprintId));
+                    } else {
+                        body.delete('blueprint_id');
+                    }
                     const response = await fetch(this.countUrl, {
                         method: 'POST',
                         headers: {
@@ -129,6 +173,8 @@
                 }
             },
             openFilter(filter) {
+                if (this.isAdaptive() && filter !== 'exams') return;
+                if (['systems', 'subjects', 'lessons'].includes(filter) && this.taxonomyLocked()) return;
                 this.activeFilter = filter;
                 this.filterSearch = '';
                 this.taxonomySearch = '';
@@ -159,6 +205,14 @@
             lessonLabel() {
                 if (!this.lessonIds.length) return 'Tất cả';
                 return this.lessonIds.length + ' đã chọn';
+            },
+            organSystemLabel() {
+                if (!this.organSystemIds.length) return 'Tất cả';
+                return this.organSystemIds.length + ' đã chọn';
+            },
+            subjectLabel() {
+                if (!this.subjectIds.length) return 'Tất cả';
+                return this.subjectIds.length + ' đã chọn';
             },
             questionLimit() {
                 return Math.max(0, Number(this.matching) || 0);
@@ -212,32 +266,39 @@
                 if (!this.blueprintId) return null;
                 return this.blueprintScopes[this.blueprintId] || this.blueprintScopes[String(this.blueprintId)] || null;
             },
+            /**
+             * Taxonomy picker scope:
+             * - no exam → unrestricted (full QBank)
+             * - exam selected → that exam matrix only
+             */
+            activeTaxonomyScope() {
+                if (!this.blueprintId) return null;
+                return this.currentBlueprintScope() || { lessonIds: [], subjectIds: [], organSystemIds: [] };
+            },
             isLessonAllowedForExam(lessonId) {
-                const scope = this.currentBlueprintScope();
+                const scope = this.activeTaxonomyScope();
                 if (!scope) return true;
                 const id = Number(lessonId);
                 return (scope.lessonIds || []).some((item) => Number(item) === id);
             },
             isSystemAllowedForExam(organSystemId) {
-                const scope = this.currentBlueprintScope();
+                const scope = this.activeTaxonomyScope();
                 if (!scope) return true;
                 const id = Number(organSystemId);
                 return (scope.organSystemIds || []).some((item) => Number(item) === id);
             },
             isSubjectAllowedForExam(subjectId) {
-                const scope = this.currentBlueprintScope();
+                const scope = this.activeTaxonomyScope();
                 if (!scope) return true;
                 const id = Number(subjectId);
                 return (scope.subjectIds || []).some((item) => Number(item) === id);
             },
             pruneFiltersToBlueprint() {
-                const scope = this.currentBlueprintScope();
-                if (!this.blueprintId) return;
-                if (!scope || !(scope.lessonIds || []).length) {
-                    this.organSystemIds = [];
-                    this.subjectIds = [];
-                    this.lessonIds = [];
-                    this.lessonLabels = {};
+                const scope = this.activeTaxonomyScope();
+                // No exam → full bank; keep any current taxonomy picks.
+                if (!scope) return;
+                if (!(scope.lessonIds || []).length) {
+                    this.clearTaxonomySelection();
                     return;
                 }
                 const allowedLessons = new Set((scope.lessonIds || []).map((id) => String(id)));
@@ -253,23 +314,13 @@
             selectExam(id, title) {
                 this.blueprintId = id;
                 this.blueprintName = title;
-                this.pruneFiltersToBlueprint();
+                if (!this.isAdaptive()) this.pruneFiltersToBlueprint();
                 this.$nextTick(() => this.refreshCount());
             },
             clearExam() {
                 this.blueprintId = null;
                 this.blueprintName = '';
                 this.$nextTick(() => this.refreshCount());
-            },
-            articleLabel() {
-                if (!this.articles.length) return 'Tất cả';
-                if (this.articles.length === 1) return this.articleTitles[this.articles[0]] || '1 đã chọn';
-                return this.articles.length + ' đã chọn';
-            },
-            symptomLabel() {
-                if (!this.symptoms.length) return 'Tất cả';
-                if (this.symptoms.length === 1) return this.symptomTitles[this.symptoms[0]] || '1 đã chọn';
-                return this.symptoms.length + ' đã chọn';
             },
             resetBuilder() {
                 this.$refs.builderForm.reset();
@@ -282,10 +333,10 @@
                 this.organSystemIds = [];
                 this.subjectIds = [];
                 this.savedOnly = false;
+                this.folderId = null;
+                this.folderName = '';
                 this.blueprintId = null;
                 this.blueprintName = '';
-                this.articles = [];
-                this.symptoms = [];
                 this.lessonIds = [];
                 this.lessonLabels = {};
                 this.activeFilter = null;
@@ -294,21 +345,16 @@
         }"
         @change.debounce.350ms="if ($event.target.name && $event.target.name !== 'count') refreshCount()"
         @input.debounce.500ms="if ($event.target.name && $event.target.name !== 'count') refreshCount()"
-        @keydown.escape.window="activeFilter = null" @submit="submitting = true">
+        @keydown.escape.window="activeFilter = null"
+        @submit="if (!canStart()) { $event.preventDefault(); return; } submitting = true">
         @csrf
         <input type="hidden" name="source" :value="source">
         <input type="hidden" name="blueprint_id" :value="blueprintId ?? ''" :disabled="!blueprintId">
-        <template x-for="article in articles" :key="'article-' + article">
-            <input type="hidden" name="articles[]" :value="article">
-        </template>
-        <template x-for="symptom in symptoms" :key="'symptom-' + symptom">
-            <input type="hidden" name="symptoms[]" :value="symptom">
-        </template>
         <input type="hidden" name="question_status_mode" value="{{ $initialStatusMode }}">
-        <input type="hidden" name="saved_only" :value="savedOnly ? '1' : '0'">
-        <input type="hidden" name="folder_id" :value="folderId ?? ''">
+        <input type="hidden" name="saved_only" :value="savedOnly ? '1' : '0'" :disabled="isAdaptive()">
+        <input type="hidden" name="folder_id" :value="folderId ?? ''" :disabled="isAdaptive()">
         <template x-for="id in lessonIds" :key="'lesson-' + id">
-            <input type="hidden" name="lesson_ids[]" :value="id">
+            <input type="hidden" name="lesson_ids[]" :value="id" :disabled="isAdaptive()">
         </template>
 
         <div class="mx-auto w-full max-w-[1440px] flex-1 overflow-y-auto p-4 pb-8 md:p-8">
@@ -327,23 +373,58 @@
                 </button>
             </div>
 
-            <div class="mb-8 flex flex-wrap items-center gap-4">
-                <div class="flex items-center gap-2 font-bold text-primary">
-                    <span class="material-symbols-outlined fill-1">auto_awesome</span>
-                    <span>Tạo phiên luyện tập bằng chế độ AI</span>
+            <div class="mb-8">
+                <h1 class="font-headline-sm text-on-surface">Chọn loại phiên luyện</h1>
+                <p class="mt-1 max-w-2xl text-sm text-on-surface-variant">
+                    Tuỳ chỉnh bộ lọc thủ công, hoặc để hệ thống chọn câu theo ma trận đề thi và sức học của bạn.
+                </p>
+                <div class="mt-5 grid gap-4 sm:grid-cols-2" role="radiogroup" aria-label="Loại phiên luyện tập">
+                    <button type="button" @click="setSource('custom')"
+                        role="radio" :aria-checked="source === 'custom'"
+                        class="rounded-xl border p-5 text-left transition-all"
+                        :class="source === 'custom'
+                            ? 'border-2 border-primary bg-primary/5 shadow-sm'
+                            : 'border-outline-variant bg-white hover:border-primary/40'">
+                        <div class="flex items-start gap-4">
+                            <span class="flex size-11 shrink-0 items-center justify-center rounded-lg"
+                                :class="source === 'custom' ? 'bg-primary text-white' : 'bg-surface-container-low text-on-surface-variant'">
+                                <span class="material-symbols-outlined text-[24px]">tune</span>
+                            </span>
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-center justify-between gap-2">
+                                    <p class="font-bold text-on-surface">Phiên luyện tập tuỳ chỉnh</p>
+                                    <span class="material-symbols-outlined text-primary" x-show="source === 'custom'" x-cloak>check_circle</span>
+                                </div>
+                                <p class="mt-1 text-sm leading-relaxed text-on-surface-variant">
+                                    Tự chọn kỳ thi, chủ đề, độ khó và trạng thái câu hỏi như hiện tại.
+                                </p>
+                            </div>
+                        </div>
+                    </button>
+
+                    <button type="button" @click="setSource('weak_topics')"
+                        role="radio" :aria-checked="source === 'weak_topics'"
+                        class="rounded-xl border p-5 text-left transition-all"
+                        :class="source === 'weak_topics'
+                            ? 'border-2 border-primary bg-primary/5 shadow-sm'
+                            : 'border-outline-variant bg-white hover:border-primary/40'">
+                        <div class="flex items-start gap-4">
+                            <span class="flex size-11 shrink-0 items-center justify-center rounded-lg"
+                                :class="source === 'weak_topics' ? 'bg-primary text-white' : 'bg-surface-container-low text-on-surface-variant'">
+                                <span class="material-symbols-outlined text-[24px]">auto_awesome</span>
+                            </span>
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-center justify-between gap-2">
+                                    <p class="font-bold text-on-surface">Phiên luyện tập thích ứng</p>
+                                    <span class="material-symbols-outlined text-primary" x-show="source === 'weak_topics'" x-cloak>check_circle</span>
+                                </div>
+                                <p class="mt-1 text-sm leading-relaxed text-on-surface-variant">
+                                    Chỉ chọn đề thi — hệ thống lấy câu theo ma trận, ưu tiên điểm yếu và thói quen học.
+                                </p>
+                            </div>
+                        </div>
+                    </button>
                 </div>
-                <button type="button" disabled
-                    class="flex cursor-not-allowed items-center gap-2 rounded-full border border-outline-variant bg-white px-4 py-2 text-sm font-medium opacity-60"
-                    title="Tính năng đang được phát triển">
-                    <span class="material-symbols-outlined text-[18px] text-primary">upload_file</span>
-                    Tải tệp lên để tạo phiên luyện
-                </button>
-                <button type="button" disabled
-                    class="flex cursor-not-allowed items-center gap-2 rounded-full border border-outline-variant bg-white px-4 py-2 text-sm font-medium opacity-60"
-                    title="Tính năng đang được phát triển">
-                    <span class="material-symbols-outlined text-[18px] text-primary">chat_bubble_outline</span>
-                    Mô tả nội dung bạn muốn học
-                </button>
             </div>
 
             @if ($errors->any())
@@ -362,7 +443,112 @@
                 </div>
             @endif
 
-            <div class="grid grid-cols-12 gap-8">
+            {{-- Adaptive layout --}}
+            <div x-show="isAdaptive()" x-cloak class="grid grid-cols-12 gap-8">
+                <section class="col-span-12 lg:col-span-7">
+                    <div class="overflow-hidden rounded-xl border border-outline-variant bg-white shadow-sm">
+                        <div class="border-b border-outline-variant p-6">
+                            <h2 class="font-headline-sm text-on-surface">Chọn đề thi</h2>
+                            <p class="mt-1 text-sm text-on-surface-variant">
+                                Câu hỏi lấy theo ma trận đề thi đã chọn. Không cần cấu hình độ khó hay trạng thái.
+                            </p>
+                        </div>
+                        <div class="space-y-4 p-6">
+                            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                @forelse ($exams as $exam)
+                                    <button type="button"
+                                        @click="selectExam({{ (int) $exam['id'] }}, {{ Illuminate\Support\Js::from($exam['title'])->toHtml() }})"
+                                        class="relative cursor-pointer rounded-lg border p-4 text-left transition-colors"
+                                        :class="blueprintId === {{ (int) $exam['id'] }}
+                                            ? 'border-2 border-primary bg-[#f0fdfa]'
+                                            : 'border-outline-variant bg-surface hover:border-primary/50'">
+                                        <span class="absolute top-4 right-4 text-primary" x-show="blueprintId === {{ (int) $exam['id'] }}" x-cloak>
+                                            <span class="material-symbols-outlined fill-1">check_circle</span>
+                                        </span>
+                                        <span class="material-symbols-outlined mb-2 text-3xl"
+                                            :class="blueprintId === {{ (int) $exam['id'] }} ? 'text-primary' : 'text-on-surface-variant'">{{ $exam['icon'] }}</span>
+                                        <span class="mb-1 block pr-7 font-label-md text-label-md text-on-surface">{{ $exam['title'] }}</span>
+                                        <span class="block font-body-sm text-body-sm text-on-surface-variant">{{ $exam['hint'] }}</span>
+                                    </button>
+                                @empty
+                                    <p class="col-span-full rounded-lg bg-surface-container-low p-4 text-sm text-on-surface-variant">
+                                        Chưa có ma trận đề thi. Tạo tại Admin → Ma trận đề thi.
+                                    </p>
+                                @endforelse
+                            </div>
+                            <button type="button" x-show="blueprintId" x-cloak @click="clearExam()"
+                                class="text-sm font-bold text-primary hover:underline">
+                                Bỏ chọn đề thi
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <aside class="col-span-12 lg:col-span-5">
+                    <div class="overflow-hidden rounded-xl border border-outline-variant bg-white shadow-sm">
+                        <div class="border-b border-outline-variant p-6">
+                            <h2 class="font-headline-sm text-on-surface">Tiêu chí phiên luyện</h2>
+                        </div>
+                        <div class="space-y-6 p-6">
+                            <div class="rounded-xl border border-primary/20 bg-primary/5 p-4">
+                                <div class="flex gap-3">
+                                    <span class="material-symbols-outlined mt-0.5 text-primary fill-1">psychology</span>
+                                    <div>
+                                        <p class="text-sm font-bold text-primary">Cách hệ thống chọn câu</p>
+                                        <ul class="mt-2 space-y-1.5 text-xs leading-relaxed text-on-surface-variant">
+                                            <li>Phạm vi câu theo ma trận đề thi đã chọn</li>
+                                            <li>Ưu tiên chủ đề bạn thường trả lời sai</li>
+                                            <li>Bổ sung câu chưa làm để cân bằng thói quen học</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label for="session-name-adaptive" class="mb-3 block text-[11px] font-bold tracking-widest text-on-surface-variant uppercase">
+                                    Tên phiên luyện
+                                </label>
+                                <input id="session-name-adaptive" type="text" value="{{ $sessionName }}"
+                                    class="w-full rounded-lg border border-outline-variant bg-white px-4 py-3 text-sm focus:border-primary focus:ring-2 focus:ring-primary">
+                            </div>
+
+                            <div x-show="!blueprintId" class="rounded-lg border border-outline-variant bg-surface-container-low p-4 text-sm text-on-surface-variant">
+                                Chọn đề thi để xem số câu khả dụng và bắt đầu phiên.
+                            </div>
+
+                            <div x-show="blueprintId" x-cloak>
+                                <label for="question-count-adaptive" class="mb-3 block text-[11px] font-bold tracking-widest text-on-surface-variant uppercase">
+                                    Số lượng câu hỏi
+                                </label>
+                                <div class="flex items-center gap-3">
+                                    <input id="question-count-adaptive" type="number" name="count" min="1" step="1"
+                                        :max="Math.max(1, questionLimit())" x-model.number="count"
+                                        :disabled="!isAdaptive() || matching === 0 || !blueprintId"
+                                        @input="countTouched = true; clampQuestionCount()"
+                                        @change="countTouched = true; clampQuestionCount()"
+                                        @blur="clampQuestionCount()"
+                                        :required="isAdaptive()"
+                                        class="w-20 rounded-lg border border-outline-variant py-2.5 text-center text-lg font-bold focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60">
+                                    <span class="text-lg font-medium text-on-surface-variant">
+                                        / <span x-text="counting ? '…' : (matching ?? 0)"></span>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div x-show="mode === 'exam' && blueprintId" x-cloak
+                                class="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                                <p class="text-[11px] font-bold tracking-widest text-primary uppercase">Thời gian thi tự động</p>
+                                <p class="mt-1 text-sm font-medium text-on-surface">
+                                    1 phút 30 giây mỗi câu · Tổng <strong x-text="examDurationLabel()"></strong>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+
+            {{-- Custom layout --}}
+            <div x-show="!isAdaptive()" class="grid grid-cols-12 gap-8">
                 <section class="col-span-12 lg:col-span-7">
                     <div class="overflow-hidden rounded-xl border border-outline-variant bg-white shadow-sm">
                         <div class="border-b border-outline-variant p-6">
@@ -383,8 +569,8 @@
 
                             <div class="-mx-6 space-y-0 border-t border-outline-variant">
                                 <button type="button" @click="openFilter('exams')"
-                                    :disabled="source === 'weak_topics' || savedOnly"
-                                    :class="(source === 'weak_topics' || savedOnly) && 'opacity-50 pointer-events-none'"
+                                    :disabled="savedOnly"
+                                    :class="savedOnly && 'opacity-50 pointer-events-none'"
                                     class="group flex w-full items-center justify-between border-b border-outline-variant px-6 py-4 text-left transition-colors hover:bg-surface-container-lowest">
                                     <span class="flex items-center gap-4">
                                         <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">add</span>
@@ -394,59 +580,31 @@
                                         x-text="examLabel()"></span>
                                 </button>
 
-                                <button type="button" @click="openFilter('articles')"
-                                    :disabled="source === 'weak_topics' || savedOnly"
-                                    :class="(source === 'weak_topics' || savedOnly) && 'opacity-50 pointer-events-none'"
-                                    class="group flex w-full items-center justify-between border-b border-outline-variant px-6 py-4 text-left transition-colors hover:bg-surface-container-lowest">
-                                    <span class="flex items-center gap-4">
-                                        <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">add</span>
-                                        <span class="font-medium">Bài viết</span>
-                                    </span>
-                                    <span class="rounded bg-secondary-fixed px-3 py-1 text-[12px] font-medium text-on-secondary-fixed"
-                                        x-text="articleLabel()"></span>
-                                </button>
-
                                 <button type="button" @click="openFilter('systems')"
-                                    :disabled="source === 'weak_topics' || savedOnly"
-                                    :class="(source === 'weak_topics' || savedOnly) && 'opacity-50 pointer-events-none'"
+                                    :disabled="taxonomyLocked()"
+                                    :class="taxonomyLocked() && 'opacity-50 pointer-events-none'"
                                     class="group flex w-full items-center justify-between border-b border-outline-variant px-6 py-4 text-left transition-colors hover:bg-surface-container-lowest">
                                     <span class="flex items-center gap-4">
                                         <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">add</span>
                                         <span class="font-medium">Hệ cơ quan</span>
                                     </span>
-                                    <span class="text-sm text-on-surface-variant"
-                                        x-text="organSystemIds.length ? organSystemIds.length + ' đã chọn' : 'Tất cả'"></span>
+                                    <span class="text-sm text-on-surface-variant" x-text="organSystemLabel()"></span>
                                 </button>
 
                                 <button type="button" @click="openFilter('subjects')"
-                                    :disabled="source === 'weak_topics' || savedOnly"
-                                    :class="(source === 'weak_topics' || savedOnly) && 'opacity-50 pointer-events-none'"
+                                    :disabled="taxonomyLocked()"
+                                    :class="taxonomyLocked() && 'opacity-50 pointer-events-none'"
                                     class="group flex w-full items-center justify-between border-b border-outline-variant px-6 py-4 text-left transition-colors hover:bg-surface-container-lowest">
                                     <span class="flex items-center gap-4">
                                         <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">add</span>
                                         <span class="font-medium">Môn học</span>
                                     </span>
-                                    <span class="text-sm text-on-surface-variant"
-                                        x-text="subjectIds.length ? subjectIds.length + ' đã chọn' : 'Tất cả'"></span>
-                                </button>
-
-                                <button type="button" @click="openFilter('symptoms')"
-                                    :disabled="source === 'weak_topics' || savedOnly"
-                                    :class="(source === 'weak_topics' || savedOnly) && 'opacity-50 pointer-events-none'"
-                                    class="group flex w-full items-center justify-between border-b border-outline-variant px-6 py-4 text-left transition-colors hover:bg-surface-container-lowest">
-                                    <span class="flex items-center gap-4">
-                                        <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">add</span>
-                                        <span class="font-medium">Triệu chứng</span>
-                                    </span>
-                                    <span class="rounded bg-secondary-fixed px-3 py-1 text-[12px] font-medium text-on-secondary-fixed"
-                                        x-text="symptomLabel()"></span>
+                                    <span class="text-sm text-on-surface-variant" x-text="subjectLabel()"></span>
                                 </button>
 
                                 @include('questionbank::partials.taxonomy-session-filter-rows')
 
                                 <button type="button" @click="foldersModalOpen = true"
-                                    :disabled="source === 'weak_topics'"
-                                    :class="source === 'weak_topics' && 'opacity-50 pointer-events-none'"
                                     class="group flex w-full items-center justify-between border-b border-outline-variant px-6 py-4 text-left transition-colors hover:bg-surface-container-lowest">
                                     <span class="flex items-center gap-4">
                                         <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">add</span>
@@ -459,74 +617,71 @@
                                         <span class="material-symbols-outlined text-[18px] text-on-surface-variant">chevron_right</span>
                                     </span>
                                 </button>
-                             </div>
-                         </div>
-                     </div>
+                            </div>
+                        </div>
+                    </div>
 
-                     <!-- Bookmark Collections Modal -->
-                     <div x-show="foldersModalOpen" x-cloak
-                         class="fixed inset-0 z-50 flex items-center justify-center p-4"
-                         @keydown.escape.window="foldersModalOpen = false">
-                         <div class="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
-                             @click="foldersModalOpen = false"></div>
+                    <div x-show="foldersModalOpen" x-cloak
+                        class="fixed inset-0 z-50 flex items-center justify-center p-4"
+                        @keydown.escape.window="foldersModalOpen = false">
+                        <div class="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
+                            @click="foldersModalOpen = false"></div>
 
-                         <div class="relative w-full max-w-md rounded-2xl border border-outline-variant bg-white p-6 shadow-2xl transition-all"
-                             @click.stop>
-                             <div class="mb-4 flex items-center justify-between">
-                                 <h3 class="text-headline-sm font-bold text-on-surface">Chọn bộ sưu tập câu hỏi đã lưu</h3>
-                                 <button type="button" @click="foldersModalOpen = false"
-                                     class="flex size-8 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface">
-                                     <span class="material-symbols-outlined text-[20px]">close</span>
-                                 </button>
-                             </div>
+                        <div class="relative w-full max-w-md rounded-2xl border border-outline-variant bg-white p-6 shadow-2xl transition-all"
+                            @click.stop>
+                            <div class="mb-4 flex items-center justify-between">
+                                <h3 class="text-headline-sm font-bold text-on-surface">Chọn bộ sưu tập câu hỏi đã lưu</h3>
+                                <button type="button" @click="foldersModalOpen = false"
+                                    class="flex size-8 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface">
+                                    <span class="material-symbols-outlined text-[20px]">close</span>
+                                </button>
+                            </div>
 
-                             <div class="space-y-2.5 max-h-80 overflow-y-auto pr-1">
-                                 <!-- Option: Tất cả câu hỏi đã lưu -->
-                                 <button type="button"
-                                     @click="savedOnly = true; folderId = null; folderName = 'Tất cả câu đã lưu'; organSystemIds = []; subjectIds = []; lessonIds = []; lessonLabels = {}; articles = []; symptoms = []; blueprintId = null; blueprintName = ''; foldersModalOpen = false; refreshCount()"
-                                     :class="savedOnly && !folderId ? 'border-primary bg-primary/5 text-primary font-bold' : 'border-outline-variant hover:bg-surface-container-low text-on-surface'"
-                                     class="flex w-full items-center justify-between rounded-xl border p-4 text-left transition-all">
-                                     <div class="flex items-center gap-3">
-                                         <span class="material-symbols-outlined text-[22px]">grid_view</span>
-                                         <div>
-                                             <p class="text-sm font-bold">Tất cả câu đã lưu</p>
-                                             <p class="text-xs text-on-surface-variant">Bao gồm câu hỏi từ tất cả bộ sưu tập</p>
-                                         </div>
-                                     </div>
-                                     <span x-show="savedOnly && !folderId" class="material-symbols-outlined text-primary text-[20px]">check</span>
-                                 </button>
+                            <div class="max-h-80 space-y-2.5 overflow-y-auto pr-1">
+                                <button type="button"
+                                    @click="savedOnly = true; folderId = null; folderName = 'Tất cả câu đã lưu'; clearTaxonomySelection(); blueprintId = null; blueprintName = ''; foldersModalOpen = false; refreshCount()"
+                                    :class="savedOnly && !folderId ? 'border-primary bg-primary/5 text-primary font-bold' : 'border-outline-variant hover:bg-surface-container-low text-on-surface'"
+                                    class="flex w-full items-center justify-between rounded-xl border p-4 text-left transition-all">
+                                    <div class="flex items-center gap-3">
+                                        <span class="material-symbols-outlined text-[22px]">grid_view</span>
+                                        <div>
+                                            <p class="text-sm font-bold">Tất cả câu đã lưu</p>
+                                            <p class="text-xs text-on-surface-variant">Bao gồm câu hỏi từ tất cả bộ sưu tập</p>
+                                        </div>
+                                    </div>
+                                    <span x-show="savedOnly && !folderId" class="material-symbols-outlined text-[20px] text-primary">check</span>
+                                </button>
 
-                                 <!-- User Collections -->
-                                 <template x-for="f in folders" :key="f.id">
-                                     <button type="button"
-                                         @click="savedOnly = true; folderId = f.id; folderName = f.name; organSystemIds = []; subjectIds = []; lessonIds = []; lessonLabels = {}; articles = []; symptoms = []; blueprintId = null; blueprintName = ''; foldersModalOpen = false; refreshCount()"
-                                         :class="folderId == f.id ? 'border-primary bg-primary/5 text-primary font-bold' : 'border-outline-variant hover:bg-surface-container-low text-on-surface'"
-                                         class="flex w-full items-center justify-between rounded-xl border p-4 text-left transition-all">
-                                         <div class="flex items-center gap-3">
-                                             <span class="material-symbols-outlined text-[22px]">folder_managed</span>
-                                             <div>
-                                                 <p class="text-sm font-bold" x-text="f.name"></p>
-                                                 <p class="text-xs text-on-surface-variant" x-text="f.items_count + ' câu hỏi'"></p>
-                                             </div>
-                                         </div>
-                                         <span x-show="folderId == f.id" class="material-symbols-outlined text-primary text-[20px]">check</span>
-                                     </button>
-                                 </template>
-                             </div>
+                                <template x-for="f in folders" :key="f.id">
+                                    <button type="button"
+                                        @click="savedOnly = true; folderId = f.id; folderName = f.name; clearTaxonomySelection(); blueprintId = null; blueprintName = ''; foldersModalOpen = false; refreshCount()"
+                                        :class="folderId == f.id ? 'border-primary bg-primary/5 text-primary font-bold' : 'border-outline-variant hover:bg-surface-container-low text-on-surface'"
+                                        class="flex w-full items-center justify-between rounded-xl border p-4 text-left transition-all">
+                                        <div class="flex items-center gap-3">
+                                            <span class="material-symbols-outlined text-[22px]">folder_managed</span>
+                                            <div>
+                                                <p class="text-sm font-bold" x-text="f.name"></p>
+                                                <p class="text-xs text-on-surface-variant" x-text="f.items_count + ' câu hỏi'"></p>
+                                            </div>
+                                        </div>
+                                        <span x-show="folderId == f.id" class="material-symbols-outlined text-[20px] text-primary">check</span>
+                                    </button>
+                                </template>
+                            </div>
 
-                             <div class="mt-4 flex items-center justify-between border-t border-outline-variant/60 pt-4">
-                                 <button type="button"
-                                     @click="savedOnly = false; folderId = null; folderName = ''; foldersModalOpen = false; refreshCount()"
-                                     class="text-xs font-bold text-on-surface-variant hover:text-error">
-                                     Bỏ chọn lọc câu lưu
-                                 </button>
-                                 <button type="button" @click="foldersModalOpen = false"
-                                     class="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white hover:bg-primary/90">
-                                     Đóng
-                                 </button>
-                             </div>
-                         </div>
-                     </div>
+                            <div class="mt-4 flex items-center justify-between border-t border-outline-variant/60 pt-4">
+                                <button type="button"
+                                    @click="savedOnly = false; folderId = null; folderName = ''; foldersModalOpen = false; refreshCount()"
+                                    class="text-xs font-bold text-on-surface-variant hover:text-error">
+                                    Bỏ chọn lọc câu lưu
+                                </button>
+                                <button type="button" @click="foldersModalOpen = false"
+                                    class="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white hover:bg-primary/90">
+                                    Đóng
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </section>
 
                 <aside class="col-span-12 lg:col-span-5">
@@ -536,31 +691,11 @@
                         </div>
                         <div class="space-y-8 p-6">
                             <div>
-                                <label for="session-name" class="mb-3 block text-[11px] font-bold tracking-widest text-on-surface-variant uppercase">
+                                <label for="session-name-custom" class="mb-3 block text-[11px] font-bold tracking-widest text-on-surface-variant uppercase">
                                     Tên phiên luyện
                                 </label>
-                                <input id="session-name" type="text" value="{{ $sessionName }}"
+                                <input id="session-name-custom" type="text" value="{{ $sessionName }}"
                                     class="w-full rounded-lg border border-outline-variant bg-white px-4 py-3 text-sm focus:border-primary focus:ring-2 focus:ring-primary">
-                            </div>
-
-                            <div class="flex items-start justify-between rounded-xl border border-outline-variant bg-surface-container-low p-4">
-                                <div class="flex gap-3">
-                                    <span class="material-symbols-outlined mt-0.5 text-primary fill-1">auto_awesome</span>
-                                    <div>
-                                        <p class="text-sm font-bold text-primary">Phiên luyện thích ứng</p>
-                                        <p class="mt-1 text-xs leading-relaxed text-on-surface-variant">
-                                            Ưu tiên câu hỏi từ các chủ đề bạn thường trả lời sai.
-                                        </p>
-                                    </div>
-                                </div>
-                                <button type="button"
-                                    @click="source = source === 'weak_topics' ? 'custom' : 'weak_topics'; $nextTick(() => refreshCount())"
-                                    class="relative flex h-6 w-12 shrink-0 items-center rounded-full transition-colors"
-                                    :class="source === 'weak_topics' ? 'bg-primary' : 'bg-outline-variant'"
-                                    :aria-pressed="source === 'weak_topics'" aria-label="Bật phiên luyện thích ứng">
-                                    <span class="absolute size-4 rounded-full bg-white transition-all"
-                                        :class="source === 'weak_topics' ? 'left-7' : 'left-1'"></span>
-                                </button>
                             </div>
 
                             <div class="-mx-6 space-y-0 border-y border-outline-variant">
@@ -593,16 +728,17 @@
                             </div>
 
                             <div>
-                                <label for="question-count" class="mb-3 block text-[11px] font-bold tracking-widest text-on-surface-variant uppercase">
+                                <label for="question-count-custom" class="mb-3 block text-[11px] font-bold tracking-widest text-on-surface-variant uppercase">
                                     Số lượng câu hỏi
                                 </label>
                                 <div class="flex items-center gap-3">
-                                    <input id="question-count" type="number" name="count" min="1" step="1"
+                                    <input id="question-count-custom" type="number" name="count" min="1" step="1"
                                         :max="Math.max(1, questionLimit())" x-model.number="count"
-                                        :disabled="matching === 0"
+                                        :disabled="matching === 0 || isAdaptive()"
                                         @input="countTouched = true; clampQuestionCount()"
                                         @change="countTouched = true; clampQuestionCount()"
-                                        @blur="clampQuestionCount()" required
+                                        @blur="clampQuestionCount()"
+                                        :required="!isAdaptive()"
                                         class="w-20 rounded-lg border border-outline-variant py-2.5 text-center text-lg font-bold focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60">
                                     <span class="text-lg font-medium text-on-surface-variant">
                                         / <span x-text="counting ? '…' : (matching ?? 0)"></span>
@@ -632,9 +768,9 @@
                 </div>
             </div>
             <button type="submit"
-                :disabled="matching === null || matching === 0 || counting || submitting || count < 1 || count > questionLimit()"
+                :disabled="!canStart()"
                 class="rounded-lg px-6 py-2.5 font-bold text-white transition-all md:px-12"
-                :class="matching === null || matching === 0 || counting || submitting || count < 1 || count > questionLimit()
+                :class="!canStart()
                     ? 'cursor-not-allowed bg-primary/30 opacity-70'
                     : 'bg-primary shadow-md hover:bg-primary/90'">
                 <span x-text="submitting ? 'Đang tạo…' : 'Bắt đầu'"></span>
@@ -650,8 +786,6 @@
                     <h3 class="font-headline-sm text-on-surface"
                         x-text="({
                             exams: 'Chọn kỳ thi',
-                            articles: 'Bài viết',
-                            symptoms: 'Triệu chứng',
                             systems: 'Hệ cơ quan',
                             subjects: 'Môn học',
                             difficulty: 'Độ khó',
@@ -667,7 +801,8 @@
                 <div class="custom-scrollbar space-y-4 overflow-y-auto p-4">
                     <div x-show="activeFilter === 'exams'" class="space-y-4">
                         <p class="text-sm text-on-surface-variant">
-                            Chọn kỳ thi (ma trận đề thi). Các bộ lọc Hệ cơ quan / Chuyên khoa / danh mục sẽ chỉ hiện mục thuộc ma trận này.
+                            Không chọn kỳ thi → Hệ / Môn / Bài học lấy toàn bộ ngân hàng câu hỏi.
+                            Chọn kỳ thi → chỉ danh mục thuộc ma trận kỳ đó.
                         </p>
                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
                             @forelse ($exams as $exam)
@@ -692,46 +827,6 @@
                         </div>
                     </div>
 
-                    <div x-show="activeFilter === 'articles'" class="space-y-4">
-                        <div class="relative">
-                            <span class="material-symbols-outlined absolute top-1/2 left-3 -translate-y-1/2 text-[20px] text-on-surface-variant">search</span>
-                            <input type="search" x-model="filterSearch" placeholder="Tìm bài viết..."
-                                class="w-full rounded-lg border-none bg-surface-container-low py-2.5 pr-4 pl-10 text-sm focus:ring-2 focus:ring-primary">
-                        </div>
-                        <div class="space-y-1">
-                            @foreach ($articles as $article)
-                                <label data-search="{{ Str::lower($article['name']) }}"
-                                    x-show="$el.dataset.search.includes(filterSearch.toLocaleLowerCase())"
-                                    class="flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-surface-container-low">
-                                    <input type="checkbox" value="{{ $article['id'] }}" x-model="articles"
-                                        @change="$nextTick(() => refreshCount())"
-                                        class="size-5 rounded border-outline-variant text-primary focus:ring-primary">
-                                    <span class="text-sm">{{ $article['name'] }}</span>
-                                </label>
-                            @endforeach
-                        </div>
-                    </div>
-
-                    <div x-show="activeFilter === 'symptoms'" class="space-y-4">
-                        <div class="relative">
-                            <span class="material-symbols-outlined absolute top-1/2 left-3 -translate-y-1/2 text-[20px] text-on-surface-variant">search</span>
-                            <input type="search" x-model="filterSearch" placeholder="Tìm triệu chứng..."
-                                class="w-full rounded-lg border-none bg-surface-container-low py-2.5 pr-4 pl-10 text-sm focus:ring-2 focus:ring-primary">
-                        </div>
-                        <div class="space-y-1">
-                            @foreach ($symptoms as $symptom)
-                                <label data-search="{{ Str::lower($symptom['name']) }}"
-                                    x-show="$el.dataset.search.includes(filterSearch.toLocaleLowerCase())"
-                                    class="flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-surface-container-low">
-                                    <input type="checkbox" value="{{ $symptom['id'] }}" x-model="symptoms"
-                                        @change="$nextTick(() => refreshCount())"
-                                        class="size-5 rounded border-outline-variant text-primary focus:ring-primary">
-                                    <span class="text-sm">{{ $symptom['name'] }}</span>
-                                </label>
-                            @endforeach
-                        </div>
-                    </div>
-
                     <div x-show="activeFilter === 'systems'" class="space-y-4">
                         <div class="relative">
                             <span class="material-symbols-outlined absolute top-1/2 left-3 -translate-y-1/2 text-[20px] text-on-surface-variant">search</span>
@@ -743,10 +838,7 @@
                             @click="clearOrganSystems()"
                             class="flex w-full items-start gap-3 rounded-lg bg-surface-container-low p-3 text-left">
                             <span class="material-symbols-outlined mt-0.5 text-primary">select_all</span>
-                            <span>
-                                <span class="block text-sm font-bold">Tất cả</span>
-                                <span class="block text-xs leading-relaxed text-on-surface-variant">Không giới hạn theo hệ cơ quan.</span>
-                            </span>
+                            <span class="block text-sm font-bold">Tất cả</span>
                         </button>
 
                         <div class="space-y-1">
@@ -755,14 +847,13 @@
                                     x-show="isSystemAllowedForExam({{ (int) $topic->id }}) && $el.dataset.search.includes(filterSearch.toLocaleLowerCase())"
                                     class="flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-surface-container-low">
                                     <input type="checkbox" name="organ_system_ids[]" value="{{ $topic->id }}" x-model="organSystemIds"
-                                        :disabled="source === 'weak_topics'"
                                         class="size-5 rounded border-outline-variant text-primary focus:ring-primary">
                                     <span class="text-sm">{{ $topic->name }}</span>
                                 </label>
                             @empty
                                 <p class="rounded-lg bg-surface-container-low p-3 text-sm text-on-surface-variant">Chưa có dữ liệu hệ cơ quan.</p>
                             @endforelse
-                            <p x-show="blueprintId && !(currentBlueprintScope()?.organSystemIds || []).length"
+                            <p x-show="blueprintId && !(activeTaxonomyScope()?.organSystemIds || []).length"
                                 class="rounded-lg bg-surface-container-low p-3 text-sm text-on-surface-variant">
                                 Kỳ thi này chưa map hệ cơ quan nào. Liên kết danh mục trên ma trận đề thi.
                             </p>
@@ -780,10 +871,7 @@
                             @click="clearSubjects()"
                             class="flex w-full items-start gap-3 rounded-lg bg-surface-container-low p-3 text-left">
                             <span class="material-symbols-outlined mt-0.5 text-primary">select_all</span>
-                            <span>
-                                <span class="block text-sm font-bold">Tất cả</span>
-                                <span class="block text-xs leading-relaxed text-on-surface-variant">Không giới hạn theo môn học.</span>
-                            </span>
+                            <span class="block text-sm font-bold">Tất cả</span>
                         </button>
 
                         <div class="space-y-1">
@@ -792,14 +880,13 @@
                                     x-show="isSubjectAllowedForExam({{ (int) $topic->id }}) && $el.dataset.search.includes(filterSearch.toLocaleLowerCase())"
                                     class="flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-surface-container-low">
                                     <input type="checkbox" name="subject_ids[]" value="{{ $topic->id }}" x-model="subjectIds"
-                                        :disabled="source === 'weak_topics'"
                                         class="size-5 rounded border-outline-variant text-primary focus:ring-primary">
                                     <span class="text-sm">{{ $topic->name }}</span>
                                 </label>
                             @empty
                                 <p class="rounded-lg bg-surface-container-low p-3 text-sm text-on-surface-variant">Chưa có dữ liệu môn học.</p>
                             @endforelse
-                            <p x-show="blueprintId && !(currentBlueprintScope()?.subjectIds || []).length"
+                            <p x-show="blueprintId && !(activeTaxonomyScope()?.subjectIds || []).length"
                                 class="rounded-lg bg-surface-container-low p-3 text-sm text-on-surface-variant">
                                 Kỳ thi này chưa map môn học nào. Liên kết danh mục trên ma trận đề thi.
                             </p>
@@ -810,14 +897,12 @@
                         <label class="flex cursor-pointer items-center gap-3 rounded-lg p-3 hover:bg-surface-container-low">
                             <input type="checkbox" :checked="difficulties.length === 0"
                                 @change="if ($event.target.checked) difficulties = []; $nextTick(() => refreshCount())"
-                                :disabled="source === 'weak_topics'"
                                 class="size-5 rounded border-outline-variant text-primary focus:ring-primary">
                             <span class="text-sm font-medium">Tất cả độ khó</span>
                         </label>
                         @foreach ($difficultyOptions as $difficultyOption)
                             <label class="flex cursor-pointer items-center gap-3 rounded-lg p-3 hover:bg-surface-container-low">
                                 <input type="checkbox" name="difficulties[]" value="{{ $difficultyOption['id'] }}" x-model="difficulties"
-                                    :disabled="source === 'weak_topics'"
                                     class="size-5 rounded border-outline-variant text-primary focus:ring-primary">
                                 <span class="text-sm font-medium">{{ $difficultyOption['name'] }}</span>
                             </label>
@@ -828,7 +913,7 @@
                         @foreach ($statusOptions as $status)
                             <label class="flex cursor-pointer items-center gap-3 rounded-lg p-3 hover:bg-surface-container-low">
                                 <input type="checkbox" name="question_statuses[]" value="{{ $status['value'] }}"
-                                    x-model="statuses" :disabled="source === 'weak_topics'"
+                                    x-model="statuses"
                                     class="size-5 rounded border-outline-variant text-primary focus:ring-primary">
                                 <span class="material-symbols-outlined text-[19px] text-on-surface-variant">{{ $status['icon'] }}</span>
                                 <span class="text-sm font-medium">{{ $status['label'] }}</span>
@@ -841,7 +926,7 @@
 
                 <div class="flex items-center justify-between border-t border-outline-variant bg-surface-container-lowest p-4">
                     <button type="button"
-                        @click="activeFilter === 'exams' ? clearExam() : activeFilter === 'articles' ? articles = [] : activeFilter === 'symptoms' ? symptoms = [] : activeFilter === 'systems' ? clearOrganSystems() : activeFilter === 'subjects' ? clearSubjects() : activeFilter === 'difficulty' ? difficulties = [] : activeFilter === 'lessons' ? (lessonIds = [], lessonLabels = {}) : statuses = []; $nextTick(() => refreshCount())"
+                        @click="activeFilter === 'exams' ? clearExam() : activeFilter === 'systems' ? clearOrganSystems() : activeFilter === 'subjects' ? clearSubjects() : activeFilter === 'difficulty' ? difficulties = [] : activeFilter === 'lessons' ? (lessonIds = [], lessonLabels = {}) : statuses = []; $nextTick(() => refreshCount())"
                         class="text-sm font-bold text-primary hover:underline">Đặt lại</button>
                     <button type="button" @click="activeFilter = null"
                         class="rounded-lg bg-primary px-8 py-2 font-bold text-white transition-opacity hover:opacity-90">Xong</button>

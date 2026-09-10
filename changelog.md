@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-09-10
+
+### Feat — QBank create: bỏ Bài viết / Triệu chứng; lọc theo kỳ thi
+- Gỡ bộ lọc Bài viết và Triệu chứng trên `/qbank/create`.
+- Hệ cơ quan / Môn học / Bài học: không chọn kỳ thi → toàn bộ ngân hàng câu hỏi; chọn kỳ thi → chỉ danh mục trong ma trận kỳ đó.
+
+### Feat — QBank create: 2 loại phiên luyện (tuỳ chỉnh / thích ứng)
+- `/qbank/create`: chọn loại phiên bằng thẻ SaaS — **Tuỳ chỉnh** (bộ lọc đầy đủ như cũ) vs **Thích ứng** (chỉ chọn đề thi theo ma trận).
+- Phiên thích ứng: không cấu hình độ khó/trạng thái; hệ thống lấy câu theo ma trận + điểm yếu/thói quen học (`source=weak_topics`).
+- Validation bắt buộc `blueprint_id` khi thích ứng; strip filter thủ công phía server.
+
 ## 2026-09-09
 
 ### Feat — Danh mục chương trình 3 cấp (DAG)

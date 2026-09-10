@@ -9,7 +9,7 @@
     <button type="button" @click="lessonIds = []; lessonLabels = {}; $nextTick(() => refreshCount())"
         class="flex w-full items-start gap-3 rounded-lg bg-surface-container-low p-3 text-left">
         <span class="material-symbols-outlined mt-0.5 text-primary">select_all</span>
-        <span class="block text-sm font-bold">Tất cả bài học</span>
+        <span class="block text-sm font-bold">Tất cả</span>
     </button>
     <div class="max-h-72 space-y-1 overflow-y-auto">
         <template x-for="item in lessonResults" :key="item.id">
@@ -20,5 +20,10 @@
                 <span class="text-[10px] uppercase text-on-surface-variant" x-text="item.code || ''"></span>
             </label>
         </template>
+        <p x-show="!lessonResults.length"
+            class="rounded-lg bg-surface-container-low p-3 text-sm text-on-surface-variant"
+            x-text="blueprintId
+                ? 'Kỳ thi này chưa map bài học nào, hoặc không khớp từ khóa.'
+                : 'Chưa có bài học, hoặc không khớp từ khóa tìm kiếm.'"></p>
     </div>
 </div>
