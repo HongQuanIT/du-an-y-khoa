@@ -82,6 +82,7 @@
                     <th class="px-4 py-3">Cổng truy cập / Vai trò</th>
                     <th class="px-4 py-3">Trạng thái</th>
                     <th class="px-4 py-3">Email</th>
+                    <th class="px-4 py-3">Đăng nhập gần nhất</th>
                     <th class="px-4 py-3">Hồ sơ học viên</th>
                     <th class="px-4 py-3"></th>
                 </tr>
@@ -92,9 +93,14 @@
                     <tr class="border-b border-outline-variant/60 last:border-0">
                         <td class="px-4 py-3">
                             <div class="flex items-center gap-3">
-                                <span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 font-label-md font-semibold uppercase text-primary" aria-hidden="true">
-                                    {{ mb_substr(trim($user->name), 0, 1) }}
-                                </span>
+                                @if ($user->avatarUrl())
+                                    <img src="{{ $user->avatarUrl() }}" alt="Ảnh đại diện của {{ $user->name }}"
+                                        class="size-9 shrink-0 rounded-full border border-outline-variant object-cover">
+                                @else
+                                    <span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 font-label-md font-semibold uppercase text-primary" aria-hidden="true">
+                                        {{ mb_substr(trim($user->name), 0, 1) }}
+                                    </span>
+                                @endif
                                 <div class="min-w-0">
                                     <div class="truncate font-label-md font-medium text-on-surface">{{ $user->name }}</div>
                                     <div class="font-label-sm text-on-surface-variant">Mã #{{ $user->id }}</div>
@@ -121,6 +127,20 @@
                             @endif
                         </td>
                         <td class="px-4 py-3 text-on-surface-variant">
+                            @if ($user->last_login_method)
+                                <span class="inline-flex rounded-full bg-primary/10 px-2.5 py-1 font-label-sm font-medium text-primary">
+                                    {{ $user->last_login_method->label() }}
+                                </span>
+                                @if ($user->last_login_at)
+                                    <div class="mt-1 whitespace-nowrap text-label-sm">
+                                        {{ $user->last_login_at->format('d/m/Y H:i') }}
+                                    </div>
+                                @endif
+                            @else
+                                <span class="text-label-sm">Chưa có dữ liệu</span>
+                            @endif
+                        </td>
+                        <td class="px-4 py-3 text-on-surface-variant">
                             @if ($user->learnerProfile?->onboarding_completed_at)
                                 <div class="font-medium text-on-surface">{{ $user->learnerProfile->profession?->name ?? '—' }} · {{ $user->learnerProfile->educationStage?->name ?? '—' }}</div>
                                 <div class="max-w-xs truncate text-label-sm">{{ $user->learnerProfile->institution?->name ?? '—' }}</div>
@@ -139,7 +159,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="px-4 py-10 text-center text-on-surface-variant">Không có người dùng khớp bộ lọc.</td>
+                        <td colspan="7" class="px-4 py-10 text-center text-on-surface-variant">Không có người dùng khớp bộ lọc.</td>
                     </tr>
                 @endforelse
             </tbody>

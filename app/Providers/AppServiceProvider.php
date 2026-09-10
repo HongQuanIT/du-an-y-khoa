@@ -73,7 +73,7 @@ class AppServiceProvider extends ServiceProvider
                 ->by((string) $request->ip())
                 ->response(fn (Request $request, array $headers) => back()
                     ->withInput($request->only('email'))
-                    ->withErrors(['email' => 'Địa chỉ IP này đã yêu cầu đặt lại mật khẩu quá 3 lần trong ngày. Vui lòng thử lại vào ngày mai.'])
+                    ->withErrors(['email' => 'Bạn đã yêu cầu đặt lại mật khẩu quá 3 lần trong hôm nay. Vui lòng thử lại vào ngày mai hoặc liên hệ quản trị viên nếu cần hỗ trợ khẩn cấp.'])
                     ->withHeaders($headers));
         });
 

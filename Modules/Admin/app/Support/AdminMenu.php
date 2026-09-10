@@ -114,7 +114,7 @@ final class AdminMenu
                 'match' => 'admin.library.*',
             ],
             [
-                'label' => 'Quản lý nội dung',
+                'label' => 'CMS',
                 'icon' => 'article',
                 'route' => 'admin.cms.pages.index',
                 'permission' => Permission::CmsManage->value,
@@ -128,7 +128,7 @@ final class AdminMenu
                 'match' => 'admin.contacts.*',
             ],
             [
-                'label' => 'Tệp nội dung',
+                'label' => 'Media',
                 'icon' => 'perm_media',
                 'route' => 'admin.media.index',
                 'permission' => Permission::MediaView->value,

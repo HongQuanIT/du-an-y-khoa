@@ -19,6 +19,13 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
+use Modules\Auth\Http\Requests\CompleteOnboardingRequest;
+use Modules\Auth\Models\AdministrativeUnit;
+use Modules\Auth\Models\Country;
+use Modules\Auth\Models\EducationStage;
+use Modules\Auth\Models\Institution;
+use Modules\Auth\Models\LearnerProfile;
+use Modules\Auth\Models\Profession;
 use Modules\Billing\Actions\ActivateInstitutionLicenseAction;
 use Modules\Billing\Actions\RedeemCodeAction;
 use Modules\Billing\Actions\RenewInstitutionLicenseAction;
@@ -33,13 +40,22 @@ final class ProfileController extends Controller
 {
     /** @var list<string> */
     private const TABS = [
-        'career', 'security', 'notifications',
+        'career', 'contact', 'security', 'notifications',
         'membership', 'invoices', 'redeem', 'notes', 'org-license',
     ];
 
     public function show(Request $request): View
     {
-        $user = User::query()->findOrFail($request->user()->getKey());
+        $user = User::query()
+            ->with([
+                'socialAccounts',
+                'learnerProfile.country',
+                'learnerProfile.administrativeUnit',
+                'learnerProfile.institution',
+                'learnerProfile.profession',
+                'learnerProfile.educationStage',
+            ])
+            ->findOrFail($request->user()->getKey());
         $tab = $this->normalizeTab((string) $request->query('tab', 'career'), $user);
 
         $storedPrefs = array_key_exists('notification_prefs', $user->getAttributes())
@@ -69,6 +85,11 @@ final class ProfileController extends Controller
                 ->orderByDesc('issued_at')
                 ->get(),
             'orgMembers' => $orgMembers,
+            'countries' => Country::query()->where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(),
+            'administrativeUnits' => AdministrativeUnit::query()->where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(),
+            'institutions' => Institution::query()->active()->orderBy('sort_order')->orderBy('name')->get(),
+            'professions' => Profession::query()->where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(),
+            'educationStages' => EducationStage::query()->where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(),
         ]);
     }
 
@@ -120,7 +141,60 @@ final class ProfileController extends Controller
 
         return redirect()
             ->route('profile.show')
-            ->with('status', 'Đã cập nhật hồ sơ nghề nghiệp.');
+            ->with('status', $form === 'contact'
+                ? 'Đã cập nhật tên và liên hệ.'
+                : 'Đã cập nhật hồ sơ nghề nghiệp.');
+    }
+
+    public function updateLearnerProfile(CompleteOnboardingRequest $request): RedirectResponse
+    {
+        $user = $request->user();
+        abort_unless($user->hasRole(Role::Student->value), 403);
+
+        $validated = $request->validated();
+        $profession = Profession::query()->findOrFail($validated['profession_id']);
+        $educationStageId = $validated['education_stage_id'] ?? null;
+
+        if ($profession->defaults_to_graduated) {
+            $educationStageId = EducationStage::query()->where('code', 'graduated')->value('id');
+        }
+
+        $before = $user->learnerProfile?->only([
+            'country_id', 'administrative_unit_id', 'institution_id', 'profession_id', 'education_stage_id',
+        ]) ?? [];
+
+        $profile = LearnerProfile::query()->updateOrCreate(
+            ['user_id' => $user->getKey()],
+            [
+                'country_id' => $validated['country_id'],
+                'administrative_unit_id' => $validated['administrative_unit_id'],
+                'institution_id' => $validated['institution_id'],
+                'profession_id' => $profession->getKey(),
+                'education_stage_id' => $educationStageId,
+                'onboarding_completed_at' => $user->learnerProfile?->onboarding_completed_at ?? now(),
+            ],
+        );
+
+        $country = Country::query()->findOrFail($validated['country_id']);
+        $institution = Institution::query()->findOrFail($validated['institution_id']);
+        $user->forceFill([
+            'country' => $country->name,
+            'institution' => $institution->name,
+            'career_role' => $profession->name,
+        ])->save();
+
+        Auditor::record(
+            AuditAction::AccountProfileUpdated,
+            $user,
+            $user,
+            $before,
+            $profile->only(['country_id', 'administrative_unit_id', 'institution_id', 'profession_id', 'education_stage_id']),
+            metadata: ['changed_fields' => ['learner_profile']],
+        );
+
+        return redirect()
+            ->route('profile.show')
+            ->with('status', 'Đã cập nhật thông tin học viên.');
     }
 
     public function updateObjective(Request $request): RedirectResponse

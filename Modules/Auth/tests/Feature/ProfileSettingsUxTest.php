@@ -9,6 +9,12 @@ use App\Support\Enums\Role;
 use App\Support\TargetExams;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Auth\Database\Seeders\AuthDatabaseSeeder;
+use Modules\Auth\Enums\AuthenticationMethod;
+use Modules\Auth\Models\Country;
+use Modules\Auth\Models\EducationStage;
+use Modules\Auth\Models\Institution;
+use Modules\Auth\Models\Profession;
 use Tests\TestCase;
 
 final class ProfileSettingsUxTest extends TestCase
@@ -59,6 +65,55 @@ final class ProfileSettingsUxTest extends TestCase
             ->assertOk()
             ->assertSee('Tùy chọn thông báo')
             ->assertDontSee('Đổi mật khẩu');
+    }
+
+    public function test_student_can_open_and_update_name_from_contact_editor(): void
+    {
+        $student = User::factory()->create(['name' => 'Tên cũ']);
+        $student->assignRole(Role::Student->value);
+
+        $this->actingAs($student)
+            ->get(route('profile.show', ['tab' => 'contact']))
+            ->assertOk()
+            ->assertSee('Tên và liên hệ')
+            ->assertSee('Tên hiển thị')
+            ->assertSee('Tên cũ');
+
+        $this->actingAs($student)
+            ->put(route('settings.profile'), [
+                '_form' => 'contact',
+                'name' => 'Tên học viên mới',
+            ])
+            ->assertRedirect(route('profile.show'))
+            ->assertSessionHas('status', 'Đã cập nhật tên và liên hệ.');
+
+        $this->assertSame('Tên học viên mới', $student->fresh()->name);
+    }
+
+    public function test_security_tab_shows_last_login_and_linked_login_methods(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'learner@example.com',
+            'password_set_at' => now(),
+            'last_login_method' => AuthenticationMethod::Google,
+            'last_login_at' => now(),
+        ]);
+        $user->socialAccounts()->create([
+            'provider' => 'google',
+            'provider_user_id' => 'google-user-1',
+            'provider_email' => 'learner@example.com',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('profile.show', ['tab' => 'security']))
+            ->assertOk()
+            ->assertSee('Phương thức đăng nhập')
+            ->assertSee('Lần đăng nhập gần nhất')
+            ->assertSee('Google')
+            ->assertSee('learner@example.com')
+            ->assertSee('Đã liên kết')
+            ->assertSee('Chưa liên kết')
+            ->assertSee('Nếu không dùng Google hoặc Facebook, bạn đăng nhập bằng email và mật khẩu.');
     }
 
     public function test_legacy_settings_url_redirects_to_profile(): void
@@ -121,10 +176,61 @@ final class ProfileSettingsUxTest extends TestCase
             ->assertOk()
             ->assertSee('Học viên', false)
             ->assertSee('Quân Đặng', false)
+            ->assertSee('Thông tin học viên')
+            ->assertSee('Trường')
+            ->assertSee('Tỉnh/Thành phố')
+            ->assertSee('Quốc gia')
+            ->assertSee('Chức danh')
+            ->assertSee('Năm học')
+            ->assertSee('id="learner_country_search"', false)
+            ->assertSee('id="learner_unit_search"', false)
+            ->assertSee('id="learner_institution_search"', false)
+            ->assertSee('id="learner_profession_search"', false)
+            ->assertSee('id="learner_stage_search"', false)
             ->assertDontSee('>Quản trị viên<', false)
             ->assertSee('Tổng quan')
             ->assertSee('Ngân hàng câu hỏi')
             ->assertDontSee('Quản trị hệ thống');
+    }
+
+    public function test_student_can_update_learner_profile_from_personal_profile(): void
+    {
+        $this->seed(AuthDatabaseSeeder::class);
+
+        $student = User::factory()->create();
+        $student->assignRole(Role::Student->value);
+        $country = Country::query()->where('code', 'VN')->firstOrFail();
+        $institution = Institution::query()->where('short_name', 'HMU')->firstOrFail();
+        $profession = Profession::query()->where('code', 'medical_student')->firstOrFail();
+        $stage = EducationStage::query()->where('code', 'year_3')->firstOrFail();
+
+        $this->actingAs($student)
+            ->put(route('settings.learner-profile'), [
+                '_form' => 'learner',
+                'country_id' => $country->id,
+                'administrative_unit_id' => $institution->administrative_unit_id,
+                'institution_id' => $institution->id,
+                'profession_id' => $profession->id,
+                'education_stage_id' => $stage->id,
+            ])
+            ->assertRedirect(route('profile.show'))
+            ->assertSessionHas('status', 'Đã cập nhật thông tin học viên.');
+
+        $this->assertDatabaseHas('learner_profiles', [
+            'user_id' => $student->id,
+            'country_id' => $country->id,
+            'institution_id' => $institution->id,
+            'profession_id' => $profession->id,
+            'education_stage_id' => $stage->id,
+        ]);
+
+        $this->actingAs($student)
+            ->get(route('profile.show'))
+            ->assertOk()
+            ->assertSee($country->name)
+            ->assertSee($institution->name)
+            ->assertSee($profession->name)
+            ->assertSee($stage->name);
     }
 
     public function test_admin_profile_keeps_admin_shell(): void

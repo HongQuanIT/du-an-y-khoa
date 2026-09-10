@@ -74,6 +74,7 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
     Route::get('/settings', [ProfileController::class, 'redirectLegacySettings'])->name('settings.edit');
     Route::put('/settings/profile', [ProfileController::class, 'updateProfile'])->name('settings.profile');
+    Route::put('/settings/learner-profile', [ProfileController::class, 'updateLearnerProfile'])->name('settings.learner-profile');
     Route::put('/settings/avatar', [ProfileController::class, 'updateAvatar'])->name('settings.avatar');
     Route::delete('/settings/avatar', [ProfileController::class, 'destroyAvatar'])->name('settings.avatar.destroy');
     Route::put('/settings/objective', [ProfileController::class, 'updateObjective'])->name('settings.objective');

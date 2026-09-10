@@ -49,6 +49,86 @@
     </section>
 
 @elseif ($tab === 'security')
+    @php
+        $googleAccount = $user->socialAccounts->firstWhere('provider', 'google');
+        $facebookAccount = $user->socialAccounts->firstWhere('provider', 'facebook');
+        $lastLoginMethod = $user->last_login_method?->value ?? $user->last_login_method;
+        $lastLoginLabels = [
+            'email' => 'Email và mật khẩu',
+            'google' => 'Google',
+            'facebook' => 'Facebook',
+        ];
+        $lastLoginLabel = $lastLoginLabels[$lastLoginMethod] ?? 'Chưa xác định';
+    @endphp
+
+    <section class="{{ $cardClass }} mb-6">
+        <div class="{{ $cardHeaderClass }}">
+            <h2 class="font-title-md text-title-md text-on-surface">Phương thức đăng nhập</h2>
+            <p class="mt-0.5 font-body-sm text-body-sm text-on-surface-variant">
+                Kiểm tra cách bạn vừa đăng nhập và các phương thức đang được liên kết với tài khoản.
+            </p>
+        </div>
+
+        <div class="{{ $cardBodyClass }} space-y-5">
+            <div class="flex flex-col gap-2 rounded-xl border border-primary/20 bg-primary/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <p class="font-label-sm text-label-sm text-on-surface-variant">Lần đăng nhập gần nhất</p>
+                    <p class="mt-1 font-body-md text-body-md font-semibold text-on-surface">{{ $lastLoginLabel }}</p>
+                </div>
+                @if ($user->last_login_at)
+                    <p class="font-body-sm text-body-sm text-on-surface-variant">
+                        {{ $user->last_login_at->locale('vi')->isoFormat('HH:mm, DD/MM/YYYY') }}
+                    </p>
+                @endif
+            </div>
+
+            <div class="divide-y divide-outline-variant/60 rounded-xl border border-outline-variant">
+                @foreach ([
+                    [
+                        'name' => 'Email và mật khẩu',
+                        'description' => $user->email,
+                        'connected' => filled($user->password_set_at),
+                        'icon' => 'mail',
+                    ],
+                    [
+                        'name' => 'Google',
+                        'description' => $googleAccount?->provider_email ?? 'Chưa liên kết với Google',
+                        'connected' => $googleAccount !== null,
+                        'icon' => 'language',
+                    ],
+                    [
+                        'name' => 'Facebook',
+                        'description' => $facebookAccount?->provider_email ?? 'Chưa liên kết với Facebook',
+                        'connected' => $facebookAccount !== null,
+                        'icon' => 'public',
+                    ],
+                ] as $method)
+                    <div class="flex items-center gap-3 p-4">
+                        <span class="material-symbols-outlined text-[22px] text-on-surface-variant">{{ $method['icon'] }}</span>
+                        <div class="min-w-0 flex-1">
+                            <p class="font-body-md text-body-md font-medium text-on-surface">{{ $method['name'] }}</p>
+                            <p class="truncate font-body-sm text-body-sm text-on-surface-variant">{{ $method['description'] }}</p>
+                        </div>
+                        @if ($method['connected'])
+                            <span class="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 font-label-sm text-label-sm font-semibold text-primary">
+                                <span class="material-symbols-outlined text-[16px]">check_circle</span>
+                                Đã liên kết
+                            </span>
+                        @else
+                            <span class="inline-flex shrink-0 items-center rounded-full bg-surface-container-high px-2.5 py-1 font-label-sm text-label-sm text-on-surface-variant">
+                                Chưa liên kết
+                            </span>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+
+            <p class="font-body-sm text-body-sm text-on-surface-variant">
+                Nếu không dùng Google hoặc Facebook, bạn đăng nhập bằng email và mật khẩu. Tài khoản có thể hỗ trợ nhiều phương thức cùng lúc.
+            </p>
+        </div>
+    </section>
+
     <section class="{{ $cardClass }}">
         <div class="{{ $cardHeaderClass }}">
             <h2 class="font-title-md text-title-md text-on-surface">Đổi mật khẩu</h2>

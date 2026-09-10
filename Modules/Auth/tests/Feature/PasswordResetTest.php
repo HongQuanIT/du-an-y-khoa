@@ -199,7 +199,7 @@ final class PasswordResetTest extends TestCase
         $client->post(route('password.email'), ['email' => $users[3]->email])
             ->assertRedirect()
             ->assertSessionHasErrors([
-                'email' => 'Địa chỉ IP này đã yêu cầu đặt lại mật khẩu quá 3 lần trong ngày. Vui lòng thử lại vào ngày mai.',
+                'email' => 'Bạn đã yêu cầu đặt lại mật khẩu quá 3 lần trong hôm nay. Vui lòng thử lại vào ngày mai hoặc liên hệ quản trị viên nếu cần hỗ trợ khẩn cấp.',
             ]);
 
         Notification::assertCount(3);
