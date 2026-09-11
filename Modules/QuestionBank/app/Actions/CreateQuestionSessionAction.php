@@ -13,7 +13,9 @@ use Illuminate\Support\Facades\DB;
 use Modules\QuestionBank\Data\CreateSessionData;
 use Modules\QuestionBank\Enums\SessionMode;
 use Modules\QuestionBank\Enums\SessionStatus;
+use Modules\QuestionBank\Enums\UserQuestionStatus;
 use Modules\QuestionBank\Models\QuestionSession;
+use Modules\QuestionBank\Models\QuestionStatus as UserQuestionStatusModel;
 use Modules\QuestionBank\Services\QuestionSessionSnapshots;
 use Modules\QuestionBank\Services\SessionQuestionSelector;
 use RuntimeException;
@@ -53,6 +55,7 @@ final class CreateQuestionSessionAction
             examId: $data->examId,
             articles: $data->articles,
             symptoms: $data->symptoms,
+            adaptiveFocus: $data->adaptiveFocus,
         );
 
         $questionIds = $this->selector->forSession($user, $data);
@@ -82,6 +85,7 @@ final class CreateQuestionSessionAction
             examId: $data->examId,
             articles: $data->articles,
             symptoms: $data->symptoms,
+            adaptiveFocus: $data->adaptiveFocus,
         );
         $timeLimit = $data->mode === SessionMode::Exam ? $actualCount * 90 : null;
 
@@ -102,6 +106,7 @@ final class CreateQuestionSessionAction
                 'exam_id' => $data->examId,
             ]);
             $this->snapshots->capture($session);
+            $this->markQuestionsServed($session, $questionIds);
             Auditor::record(
                 $data->mode === SessionMode::Exam ? AuditAction::ExamStarted : AuditAction::LearningSessionCreated,
                 $user,
@@ -119,5 +124,35 @@ final class CreateQuestionSessionAction
 
             return $session;
         });
+    }
+
+    /**
+     * @param  array<int, string>  $questionIds
+     */
+    private function markQuestionsServed(QuestionSession $session, array $questionIds): void
+    {
+        $now = now();
+        $userId = (int) $session->user_id;
+        $sessionId = (string) $session->getKey();
+
+        foreach ($questionIds as $questionId) {
+            $status = UserQuestionStatusModel::firstOrNew([
+                'user_id' => $userId,
+                'question_id' => (string) $questionId,
+            ]);
+
+            if (! $status->exists) {
+                $status->status = UserQuestionStatus::Unseen;
+                $status->attempts_count = 0;
+                $status->correct_count = 0;
+                $status->wrong_count = 0;
+                $status->omitted_count = 0;
+            }
+
+            $status->fill([
+                'last_served_at' => $now,
+                'last_served_session_id' => $sessionId,
+            ])->save();
+        }
     }
 }

@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-09-11
+
+### Feat — Adaptive: áp dụng thuật toán chọn câu khi tạo phiên
+- `AdaptiveQuestionSelector`: coverage (unseen) + Weakness/Memory theo mode + cooldown + weighted random.
+- UI 3 hướng luyện: Điểm yếu / Cân bằng / Củng cố (`adaptive_focus`); log debug `[adaptive] …`.
+- Dashboard weak-topic drill (có `lesson_ids`) giữ heuristic incorrect-first.
+- Docs: `docs/adaptive-session-algorithm.md`, `docs/adaptive-session-explained.md`.
+
+### Feat — Adaptive: rollup `question_status` (last_seen / counters / served)
+- Migration thêm `correct_count`, `wrong_count`, `omitted_count`, `last_seen_at`, `last_served_at`, `last_served_session_id` trên `question_status`.
+- Backfill từ `question_attempts` + lịch sử session; write-path: tạo session → `last_served_*`, trả lời/omit → `last_seen_at` + counters.
+- SRS `04-mo-hinh-du-lieu.md` cập nhật ngữ nghĩa Memory/Cooldown.
+
 ## 2026-09-10
 
 ### Fix — Auth: tên index learner_profiles

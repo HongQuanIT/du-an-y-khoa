@@ -200,17 +200,36 @@ final class CompleteQuestionSessionAction
             'question_id' => $question->getKey(),
         ]);
         $attemptsCount = (int) ($status->attempts_count ?? 0);
+        $correctCount = (int) ($status->correct_count ?? 0);
+        $wrongCount = (int) ($status->wrong_count ?? 0);
+        $omittedCount = (int) ($status->omitted_count ?? 0);
 
         if ($incrementAttempts) {
             $attemptsCount++;
+            match ($nextStatus) {
+                UserQuestionStatus::Correct => $correctCount++,
+                UserQuestionStatus::Incorrect => $wrongCount++,
+                UserQuestionStatus::Omitted => $omittedCount++,
+                default => null,
+            };
         } elseif (! $status->exists) {
             $attemptsCount = 1;
+            match ($nextStatus) {
+                UserQuestionStatus::Correct => $correctCount = 1,
+                UserQuestionStatus::Incorrect => $wrongCount = 1,
+                UserQuestionStatus::Omitted => $omittedCount = 1,
+                default => null,
+            };
         }
 
         $status->fill([
             'status' => $nextStatus,
             'attempts_count' => $attemptsCount,
+            'correct_count' => $correctCount,
+            'wrong_count' => $wrongCount,
+            'omitted_count' => $omittedCount,
             'last_attempt_at' => $attemptedAt,
+            'last_seen_at' => $attemptedAt,
             'last_correct_at' => $nextStatus === UserQuestionStatus::Correct
                 ? $attemptedAt
                 : $status->last_correct_at,

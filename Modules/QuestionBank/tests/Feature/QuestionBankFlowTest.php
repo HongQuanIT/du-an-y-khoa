@@ -85,9 +85,8 @@ final class QuestionBankFlowTest extends TestCase
             ->assertSee('Tim mạch')
             ->assertSeeInOrder([
                 'Chọn loại phiên luyện',
-                'Phiên luyện tập tuỳ chỉnh',
+                'Phiên luyện tập theo bài',
                 'Phiên luyện tập thích ứng',
-                'Chọn đề thi',
                 'Thiết lập chủ đề',
                 'Chế độ học tập',
                 'Bắt đầu',
@@ -96,6 +95,9 @@ final class QuestionBankFlowTest extends TestCase
             ->assertSee('Kỳ thi')
             ->assertSee('Kỳ thi đánh giá năng lực hành nghề Bác sĩ Y khoa')
             ->assertSee('Bài học')
+            ->assertSee('Điểm yếu')
+            ->assertSee('Cân bằng')
+            ->assertSee('Củng cố')
             ->assertDontSee('Bài viết')
             ->assertDontSee('Triệu chứng')
             ->assertDontSee('Chủ đề lâm sàng')
@@ -113,7 +115,7 @@ final class QuestionBankFlowTest extends TestCase
             ->assertSee('Rất khó')
             ->assertSee('name="difficulties[]"', false)
             ->assertSee('1 phút 30 giây mỗi câu')
-            ->assertSee(':disabled="matching === 0 || isAdaptive()"', false)
+            ->assertSee(':disabled="matching === 0"', false)
             ->assertSee(':max="Math.max(1, questionLimit())"', false)
             ->assertSee('@input="countTouched = true; clampQuestionCount()"', false)
             ->assertDontSee('name="time_limit_minutes"', false)
@@ -130,7 +132,7 @@ final class QuestionBankFlowTest extends TestCase
             ->assertJsonPath('data.count', 2);
     }
 
-    public function test_adaptive_session_requires_exam_and_ignores_manual_filters(): void
+    public function test_adaptive_session_defaults_to_all_exams_and_ignores_difficulty_status_filters(): void
     {
         $this->createQuestion($this->topic, true, Difficulty::Easy, 'Câu adaptive 1');
         $this->createQuestion($this->topic, true, Difficulty::Hard, 'Câu adaptive 2');
@@ -139,11 +141,11 @@ final class QuestionBankFlowTest extends TestCase
             ->postJson(route('qbank.count'), [
                 'mode' => SessionMode::Study->value,
                 'source' => 'weak_topics',
+                'adaptive_focus' => 'balanced',
                 'count' => 10,
             ])
-            ->assertUnprocessable()
-            ->assertJsonPath('error.code', 'VALIDATION_ERROR')
-            ->assertJsonFragment(['field' => 'blueprint_id']);
+            ->assertOk()
+            ->assertJsonPath('data.count', 2);
 
         $blueprint = Blueprint::query()->create([
             'name' => 'Đề thích ứng',
@@ -171,6 +173,7 @@ final class QuestionBankFlowTest extends TestCase
             ->postJson(route('qbank.count'), [
                 'mode' => SessionMode::Study->value,
                 'source' => 'weak_topics',
+                'adaptive_focus' => 'weak_focus',
                 'count' => 10,
                 'blueprint_id' => $blueprint->id,
                 'difficulties' => [Difficulty::Hard->value],
@@ -183,6 +186,7 @@ final class QuestionBankFlowTest extends TestCase
             ->post(route('qbank.store'), [
                 'mode' => SessionMode::Study->value,
                 'source' => 'weak_topics',
+                'adaptive_focus' => 'retention',
                 'count' => 2,
                 'blueprint_id' => $blueprint->id,
                 'difficulties' => [Difficulty::Hard->value],
@@ -193,6 +197,7 @@ final class QuestionBankFlowTest extends TestCase
         $session = QuestionSession::query()->latest('id')->firstOrFail();
         $this->assertSame('weak_topics', $session->source->value);
         $this->assertSame($blueprint->id, $session->filters['blueprint_id']);
+        $this->assertSame('retention', $session->filters['adaptive_focus']);
         $this->assertSame([], $session->filters['difficulties']);
         $this->assertSame([], $session->filters['question_statuses']);
         $this->assertSame(2, $session->total);
@@ -802,7 +807,8 @@ final class QuestionBankFlowTest extends TestCase
         $this->assertSame(SessionStatus::Active, $session->refresh()->status);
         $this->assertSame(2, $session->answered_count);
         $this->assertSame(0, $session->correct_count);
-        $this->assertSame(0, QuestionStatus::where('user_id', $this->user->id)->count());
+        $this->assertSame(2, QuestionStatus::where('user_id', $this->user->id)->count());
+        $this->assertSame(2, QuestionStatus::where('status', UserQuestionStatus::Unseen)->count());
         $this->assertSame(2, QuestionAttempt::whereNull('is_correct')->count());
 
         $this->actingAs($this->user)

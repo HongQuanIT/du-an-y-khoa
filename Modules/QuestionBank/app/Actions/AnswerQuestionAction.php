@@ -209,6 +209,20 @@ final class AnswerQuestionAction
         }
 
         $answerStatus = $isCorrect ? UserQuestionStatus::Correct : UserQuestionStatus::Incorrect;
+        $correctCount = (int) ($status->correct_count ?? 0);
+        $wrongCount = (int) ($status->wrong_count ?? 0);
+
+        if ($incrementAttempts) {
+            if ($isCorrect) {
+                $correctCount++;
+            } else {
+                $wrongCount++;
+            }
+        } elseif (! $status->exists) {
+            $correctCount = $isCorrect ? 1 : 0;
+            $wrongCount = $isCorrect ? 0 : 1;
+        }
+
         $status->fill([
             // `marked` is the temporary bookmark fallback and therefore has
             // priority over the derived answer state until explicitly removed.
@@ -216,7 +230,10 @@ final class AnswerQuestionAction
                 ? UserQuestionStatus::Marked
                 : $answerStatus,
             'attempts_count' => $attemptsCount,
+            'correct_count' => $correctCount,
+            'wrong_count' => $wrongCount,
             'last_attempt_at' => $answeredAt,
+            'last_seen_at' => $answeredAt,
             'last_correct_at' => $isCorrect ? $answeredAt : $status->last_correct_at,
         ])->save();
     }

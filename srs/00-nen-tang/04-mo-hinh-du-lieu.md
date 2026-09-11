@@ -163,8 +163,13 @@ Index: `user_id, status`, `mode`, `exam_id`.
 
 Index: `(user_id, question_id)`, `session_id`, `answered_at`. Bảng lớn → cân nhắc partition theo tháng.
 
-### QuestionStatus (trạng thái câu theo user — cache trạng thái mới nhất)
-`id, user_id, question_id, status(unseen/incorrect/correct/omitted/marked), attempts_count, last_attempt_at, last_correct_at`. Unique `(user_id, question_id)`. Dùng cho filter "chưa làm / làm sai / làm đúng".
+### QuestionStatus (trạng thái câu theo user — cache trạng thái + rollup adaptive)
+`id, user_id, question_id, status(unseen/incorrect/correct/omitted/marked), attempts_count, correct_count, wrong_count, omitted_count, last_attempt_at, last_seen_at, last_served_at, last_served_session_id, last_correct_at`. Unique `(user_id, question_id)`.
+
+- Filter QBank: `status`, `last_attempt_at`.
+- Adaptive Memory: `last_seen_at` = lần gần nhất **làm đúng/sai hoặc bỏ qua**.
+- Adaptive Weakness: `correct_count` / `wrong_count` (omit không cộng).
+- Adaptive Cooldown: `last_served_at` / `last_served_session_id` khi câu được đưa vào session.
 
 ## 5. Nhóm Cá nhân hóa
 

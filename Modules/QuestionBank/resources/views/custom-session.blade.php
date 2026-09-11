@@ -9,6 +9,10 @@
     if (! in_array($initialSource, ['custom', 'weak_topics'], true)) {
         $initialSource = 'custom';
     }
+    $initialAdaptiveFocus = old('adaptive_focus', request('adaptive_focus', 'balanced'));
+    if (! in_array($initialAdaptiveFocus, ['weak_focus', 'balanced', 'retention'], true)) {
+        $initialAdaptiveFocus = 'balanced';
+    }
     $initialCount = max(1, (int) old('count', 1));
     $initialDifficultyInput = old(
         'difficulties',
@@ -48,6 +52,7 @@
         x-data="{
             mode: {{ Illuminate\Support\Js::from($initialMode)->toHtml() }},
             source: {{ Illuminate\Support\Js::from($initialSource)->toHtml() }},
+            adaptiveFocus: {{ Illuminate\Support\Js::from($initialAdaptiveFocus)->toHtml() }},
             count: {{ Illuminate\Support\Js::from($initialCount)->toHtml() }},
             difficulties: {{ Illuminate\Support\Js::from($initialDifficulties)->toHtml() }},
             difficultyLabels: {{ Illuminate\Support\Js::from(collect($difficultyOptions)->pluck('name', 'id')->all())->toHtml() }},
@@ -81,7 +86,15 @@
             countUrl: {{ Illuminate\Support\Js::from(route('qbank.count', absolute: false))->toHtml() }},
             csrf: {{ Illuminate\Support\Js::from(csrf_token())->toHtml() }},
             init() {
-                if (this.source === 'weak_topics') this.clearCustomFilters(false);
+                if (this.source === 'weak_topics') {
+                    this.difficulties = [];
+                    this.statuses = [];
+                    this.lessonIds = [];
+                    this.lessonLabels = {};
+                    this.savedOnly = false;
+                    this.folderId = null;
+                    this.folderName = '';
+                }
                 if (this.blueprintId) this.pruneFiltersToBlueprint();
                 this.$nextTick(() => this.refreshCount());
             },
@@ -91,12 +104,31 @@
             taxonomyLocked() {
                 return this.savedOnly;
             },
+            setAdaptiveFocus(next) {
+                if (!['weak_focus', 'balanced', 'retention'].includes(next)) return;
+                this.adaptiveFocus = next;
+            },
+            adaptiveFocusLabel() {
+                return ({
+                    weak_focus: 'Điểm yếu',
+                    balanced: 'Cân bằng',
+                    retention: 'Củng cố',
+                })[this.adaptiveFocus] || 'Cân bằng';
+            },
             setSource(next) {
                 if (this.source === next) return;
                 this.source = next;
                 this.activeFilter = null;
                 if (next === 'weak_topics') {
-                    this.clearCustomFilters(false);
+                    // Adaptive keeps exam / hệ / môn; drops lesson + manual difficulty/status + saved.
+                    this.difficulties = [];
+                    this.statuses = [];
+                    this.lessonIds = [];
+                    this.lessonLabels = {};
+                    this.savedOnly = false;
+                    this.folderId = null;
+                    this.folderName = '';
+                    if (!this.adaptiveFocus) this.adaptiveFocus = 'balanced';
                 }
                 this.countTouched = false;
                 this.$nextTick(() => this.refreshCount());
@@ -122,16 +154,10 @@
             canStart() {
                 if (this.matching === null || this.matching === 0 || this.counting || this.submitting) return false;
                 if (this.count < 1 || this.count > this.questionLimit()) return false;
-                if (this.isAdaptive() && !this.blueprintId) return false;
                 return true;
             },
             async refreshCount() {
                 if (!this.$refs.builderForm) return;
-                if (this.isAdaptive() && !this.blueprintId) {
-                    this.matching = 0;
-                    this.counting = false;
-                    return;
-                }
                 await this.$nextTick();
                 const requestId = ++this.countRequest;
                 this.counting = true;
@@ -173,7 +199,7 @@
                 }
             },
             openFilter(filter) {
-                if (this.isAdaptive() && filter !== 'exams') return;
+                if (this.isAdaptive() && ['difficulty', 'statuses', 'lessons'].includes(filter)) return;
                 if (['systems', 'subjects', 'lessons'].includes(filter) && this.taxonomyLocked()) return;
                 this.activeFilter = filter;
                 this.filterSearch = '';
@@ -314,7 +340,7 @@
             selectExam(id, title) {
                 this.blueprintId = id;
                 this.blueprintName = title;
-                if (!this.isAdaptive()) this.pruneFiltersToBlueprint();
+                this.pruneFiltersToBlueprint();
                 this.$nextTick(() => this.refreshCount());
             },
             clearExam() {
@@ -326,6 +352,7 @@
                 this.$refs.builderForm.reset();
                 this.mode = 'study';
                 this.source = 'custom';
+                this.adaptiveFocus = 'balanced';
                 this.countTouched = false;
                 this.count = 1;
                 this.difficulties = [];
@@ -349,6 +376,7 @@
         @submit="if (!canStart()) { $event.preventDefault(); return; } submitting = true">
         @csrf
         <input type="hidden" name="source" :value="source">
+        <input type="hidden" name="adaptive_focus" :value="adaptiveFocus" :disabled="!isAdaptive()">
         <input type="hidden" name="blueprint_id" :value="blueprintId ?? ''" :disabled="!blueprintId">
         <input type="hidden" name="question_status_mode" value="{{ $initialStatusMode }}">
         <input type="hidden" name="saved_only" :value="savedOnly ? '1' : '0'" :disabled="isAdaptive()">
@@ -392,11 +420,11 @@
                             </span>
                             <div class="min-w-0 flex-1">
                                 <div class="flex items-center justify-between gap-2">
-                                    <p class="font-bold text-on-surface">Phiên luyện tập tuỳ chỉnh</p>
+                                    <p class="font-bold text-on-surface">Phiên luyện tập theo bài</p>
                                     <span class="material-symbols-outlined text-primary" x-show="source === 'custom'" x-cloak>check_circle</span>
                                 </div>
                                 <p class="mt-1 text-sm leading-relaxed text-on-surface-variant">
-                                    Tự chọn kỳ thi, chủ đề, độ khó và trạng thái câu hỏi như hiện tại.
+                                    Tự chọn kỳ thi, chủ đề, bài học, độ khó và trạng thái câu hỏi.
                                 </p>
                             </div>
                         </div>
@@ -419,7 +447,7 @@
                                     <span class="material-symbols-outlined text-primary" x-show="source === 'weak_topics'" x-cloak>check_circle</span>
                                 </div>
                                 <p class="mt-1 text-sm leading-relaxed text-on-surface-variant">
-                                    Chỉ chọn đề thi — hệ thống lấy câu theo ma trận, ưu tiên điểm yếu và thói quen học.
+                                    Chọn hướng luyện (điểm yếu / cân bằng / củng cố); kỳ thi và hệ/môn tùy chọn để thu hẹp phạm vi.
                                 </p>
                             </div>
                         </div>
@@ -443,116 +471,15 @@
                 </div>
             @endif
 
-            {{-- Adaptive layout --}}
-            <div x-show="isAdaptive()" x-cloak class="grid grid-cols-12 gap-8">
-                <section class="col-span-12 lg:col-span-7">
-                    <div class="overflow-hidden rounded-xl border border-outline-variant bg-white shadow-sm">
-                        <div class="border-b border-outline-variant p-6">
-                            <h2 class="font-headline-sm text-on-surface">Chọn đề thi</h2>
-                            <p class="mt-1 text-sm text-on-surface-variant">
-                                Câu hỏi lấy theo ma trận đề thi đã chọn. Không cần cấu hình độ khó hay trạng thái.
-                            </p>
-                        </div>
-                        <div class="space-y-4 p-6">
-                            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                @forelse ($exams as $exam)
-                                    <button type="button"
-                                        @click="selectExam({{ (int) $exam['id'] }}, {{ Illuminate\Support\Js::from($exam['title'])->toHtml() }})"
-                                        class="relative cursor-pointer rounded-lg border p-4 text-left transition-colors"
-                                        :class="blueprintId === {{ (int) $exam['id'] }}
-                                            ? 'border-2 border-primary bg-[#f0fdfa]'
-                                            : 'border-outline-variant bg-surface hover:border-primary/50'">
-                                        <span class="absolute top-4 right-4 text-primary" x-show="blueprintId === {{ (int) $exam['id'] }}" x-cloak>
-                                            <span class="material-symbols-outlined fill-1">check_circle</span>
-                                        </span>
-                                        <span class="material-symbols-outlined mb-2 text-3xl"
-                                            :class="blueprintId === {{ (int) $exam['id'] }} ? 'text-primary' : 'text-on-surface-variant'">{{ $exam['icon'] }}</span>
-                                        <span class="mb-1 block pr-7 font-label-md text-label-md text-on-surface">{{ $exam['title'] }}</span>
-                                        <span class="block font-body-sm text-body-sm text-on-surface-variant">{{ $exam['hint'] }}</span>
-                                    </button>
-                                @empty
-                                    <p class="col-span-full rounded-lg bg-surface-container-low p-4 text-sm text-on-surface-variant">
-                                        Chưa có ma trận đề thi. Tạo tại Admin → Ma trận đề thi.
-                                    </p>
-                                @endforelse
-                            </div>
-                            <button type="button" x-show="blueprintId" x-cloak @click="clearExam()"
-                                class="text-sm font-bold text-primary hover:underline">
-                                Bỏ chọn đề thi
-                            </button>
-                        </div>
-                    </div>
-                </section>
-
-                <aside class="col-span-12 lg:col-span-5">
-                    <div class="overflow-hidden rounded-xl border border-outline-variant bg-white shadow-sm">
-                        <div class="border-b border-outline-variant p-6">
-                            <h2 class="font-headline-sm text-on-surface">Tiêu chí phiên luyện</h2>
-                        </div>
-                        <div class="space-y-6 p-6">
-                            <div class="rounded-xl border border-primary/20 bg-primary/5 p-4">
-                                <div class="flex gap-3">
-                                    <span class="material-symbols-outlined mt-0.5 text-primary fill-1">psychology</span>
-                                    <div>
-                                        <p class="text-sm font-bold text-primary">Cách hệ thống chọn câu</p>
-                                        <ul class="mt-2 space-y-1.5 text-xs leading-relaxed text-on-surface-variant">
-                                            <li>Phạm vi câu theo ma trận đề thi đã chọn</li>
-                                            <li>Ưu tiên chủ đề bạn thường trả lời sai</li>
-                                            <li>Bổ sung câu chưa làm để cân bằng thói quen học</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label for="session-name-adaptive" class="mb-3 block text-[11px] font-bold tracking-widest text-on-surface-variant uppercase">
-                                    Tên phiên luyện
-                                </label>
-                                <input id="session-name-adaptive" type="text" value="{{ $sessionName }}"
-                                    class="w-full rounded-lg border border-outline-variant bg-white px-4 py-3 text-sm focus:border-primary focus:ring-2 focus:ring-primary">
-                            </div>
-
-                            <div x-show="!blueprintId" class="rounded-lg border border-outline-variant bg-surface-container-low p-4 text-sm text-on-surface-variant">
-                                Chọn đề thi để xem số câu khả dụng và bắt đầu phiên.
-                            </div>
-
-                            <div x-show="blueprintId" x-cloak>
-                                <label for="question-count-adaptive" class="mb-3 block text-[11px] font-bold tracking-widest text-on-surface-variant uppercase">
-                                    Số lượng câu hỏi
-                                </label>
-                                <div class="flex items-center gap-3">
-                                    <input id="question-count-adaptive" type="number" name="count" min="1" step="1"
-                                        :max="Math.max(1, questionLimit())" x-model.number="count"
-                                        :disabled="!isAdaptive() || matching === 0 || !blueprintId"
-                                        @input="countTouched = true; clampQuestionCount()"
-                                        @change="countTouched = true; clampQuestionCount()"
-                                        @blur="clampQuestionCount()"
-                                        :required="isAdaptive()"
-                                        class="w-20 rounded-lg border border-outline-variant py-2.5 text-center text-lg font-bold focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60">
-                                    <span class="text-lg font-medium text-on-surface-variant">
-                                        / <span x-text="counting ? '…' : (matching ?? 0)"></span>
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div x-show="mode === 'exam' && blueprintId" x-cloak
-                                class="rounded-lg border border-primary/20 bg-primary/5 p-4">
-                                <p class="text-[11px] font-bold tracking-widest text-primary uppercase">Thời gian thi tự động</p>
-                                <p class="mt-1 text-sm font-medium text-on-surface">
-                                    1 phút 30 giây mỗi câu · Tổng <strong x-text="examDurationLabel()"></strong>
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </aside>
-            </div>
-
-            {{-- Custom layout --}}
-            <div x-show="!isAdaptive()" class="grid grid-cols-12 gap-8">
+            {{-- Shared builder layout (custom + adaptive) --}}
+            <div class="grid grid-cols-12 gap-8">
                 <section class="col-span-12 lg:col-span-7">
                     <div class="overflow-hidden rounded-xl border border-outline-variant bg-white shadow-sm">
                         <div class="border-b border-outline-variant p-6">
                             <h2 class="font-headline-sm text-on-surface">Thiết lập chủ đề</h2>
+                            <p class="mt-1 text-sm text-on-surface-variant" x-show="isAdaptive()" x-cloak>
+                                Mặc định toàn bộ ngân hàng. Chọn kỳ thi / hệ / môn để thu hẹp — không lọc theo bài học.
+                            </p>
                         </div>
                         <div class="space-y-6 p-6">
                             <div>
@@ -569,8 +496,8 @@
 
                             <div class="-mx-6 space-y-0 border-t border-outline-variant">
                                 <button type="button" @click="openFilter('exams')"
-                                    :disabled="savedOnly"
-                                    :class="savedOnly && 'opacity-50 pointer-events-none'"
+                                    :disabled="!isAdaptive() && savedOnly"
+                                    :class="(!isAdaptive() && savedOnly) && 'opacity-50 pointer-events-none'"
                                     class="group flex w-full items-center justify-between border-b border-outline-variant px-6 py-4 text-left transition-colors hover:bg-surface-container-lowest">
                                     <span class="flex items-center gap-4">
                                         <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">add</span>
@@ -602,9 +529,11 @@
                                     <span class="text-sm text-on-surface-variant" x-text="subjectLabel()"></span>
                                 </button>
 
-                                @include('questionbank::partials.taxonomy-session-filter-rows')
+                                <div x-show="!isAdaptive()">
+                                    @include('questionbank::partials.taxonomy-session-filter-rows')
+                                </div>
 
-                                <button type="button" @click="foldersModalOpen = true"
+                                <button type="button" x-show="!isAdaptive()" @click="foldersModalOpen = true"
                                     class="group flex w-full items-center justify-between border-b border-outline-variant px-6 py-4 text-left transition-colors hover:bg-surface-container-lowest">
                                     <span class="flex items-center gap-4">
                                         <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">add</span>
@@ -691,14 +620,15 @@
                         </div>
                         <div class="space-y-8 p-6">
                             <div>
-                                <label for="session-name-custom" class="mb-3 block text-[11px] font-bold tracking-widest text-on-surface-variant uppercase">
+                                <label for="session-name" class="mb-3 block text-[11px] font-bold tracking-widest text-on-surface-variant uppercase">
                                     Tên phiên luyện
                                 </label>
-                                <input id="session-name-custom" type="text" value="{{ $sessionName }}"
+                                <input id="session-name" type="text" value="{{ $sessionName }}"
                                     class="w-full rounded-lg border border-outline-variant bg-white px-4 py-3 text-sm focus:border-primary focus:ring-2 focus:ring-primary">
                             </div>
 
-                            <div class="-mx-6 space-y-0 border-y border-outline-variant">
+                            {{-- Custom: độ khó / trạng thái --}}
+                            <div x-show="!isAdaptive()" class="-mx-6 space-y-0 border-y border-outline-variant">
                                 <button type="button" @click="openFilter('difficulty')"
                                     class="group flex w-full items-center justify-between border-b border-outline-variant px-6 py-4 text-left hover:bg-surface-container-lowest">
                                     <span class="flex items-center gap-4">
@@ -719,6 +649,43 @@
                                 </button>
                             </div>
 
+                            {{-- Adaptive: 3 hướng luyện thay độ khó / trạng thái --}}
+                            <div x-show="isAdaptive()" x-cloak class="-mx-6 space-y-0 border-y border-outline-variant">
+                                <div class="border-b border-outline-variant px-6 py-4">
+                                    <p class="text-[11px] font-bold tracking-widest text-on-surface-variant uppercase">Hướng luyện</p>
+                                    <p class="mt-1 text-xs text-on-surface-variant">
+                                        Thay cho độ khó / trạng thái — hệ thống tự chọn câu theo hướng đã chọn.
+                                    </p>
+                                </div>
+                                <div class="space-y-0" role="radiogroup" aria-label="Hướng luyện thích ứng">
+                                    <template x-for="option in [
+                                        { id: 'weak_focus', title: 'Điểm yếu', subtitle: 'Ưu tiên câu hay sai', icon: 'target' },
+                                        { id: 'balanced', title: 'Cân bằng', subtitle: 'Yếu + lâu chưa ôn', icon: 'balance' },
+                                        { id: 'retention', title: 'Củng cố', subtitle: 'Ưu tiên kiến thức lâu chưa gặp', icon: 'history_edu' },
+                                    ]" :key="option.id">
+                                        <button type="button"
+                                            @click="setAdaptiveFocus(option.id)"
+                                            role="radio"
+                                            :aria-checked="adaptiveFocus === option.id"
+                                            class="group flex w-full items-center gap-4 border-b border-outline-variant px-6 py-4 text-left transition-colors last:border-b-0 hover:bg-surface-container-lowest"
+                                            :class="adaptiveFocus === option.id ? 'bg-primary/[0.04]' : ''">
+                                            <span class="flex size-10 shrink-0 items-center justify-center rounded-lg transition-colors"
+                                                :class="adaptiveFocus === option.id
+                                                    ? 'bg-primary text-white'
+                                                    : 'bg-surface-container-low text-on-surface-variant group-hover:text-primary'">
+                                                <span class="material-symbols-outlined text-[22px]" x-text="option.icon"></span>
+                                            </span>
+                                            <span class="min-w-0 flex-1">
+                                                <span class="block font-medium text-on-surface" x-text="option.title"></span>
+                                                <span class="mt-0.5 block text-xs text-on-surface-variant" x-text="option.subtitle"></span>
+                                            </span>
+                                            <span class="material-symbols-outlined text-[20px] text-primary"
+                                                x-show="adaptiveFocus === option.id" x-cloak>check_circle</span>
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
+
                             <div x-show="mode === 'exam'" x-cloak
                                 class="rounded-lg border border-primary/20 bg-primary/5 p-4">
                                 <p class="text-[11px] font-bold tracking-widest text-primary uppercase">Thời gian thi tự động</p>
@@ -728,22 +695,26 @@
                             </div>
 
                             <div>
-                                <label for="question-count-custom" class="mb-3 block text-[11px] font-bold tracking-widest text-on-surface-variant uppercase">
+                                <label for="question-count" class="mb-3 block text-[11px] font-bold tracking-widest text-on-surface-variant uppercase">
                                     Số lượng câu hỏi
                                 </label>
                                 <div class="flex items-center gap-3">
-                                    <input id="question-count-custom" type="number" name="count" min="1" step="1"
+                                    <input id="question-count" type="number" name="count" min="1" step="1"
                                         :max="Math.max(1, questionLimit())" x-model.number="count"
-                                        :disabled="matching === 0 || isAdaptive()"
+                                        :disabled="matching === 0"
                                         @input="countTouched = true; clampQuestionCount()"
                                         @change="countTouched = true; clampQuestionCount()"
                                         @blur="clampQuestionCount()"
-                                        :required="!isAdaptive()"
+                                        required
                                         class="w-20 rounded-lg border border-outline-variant py-2.5 text-center text-lg font-bold focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60">
                                     <span class="text-lg font-medium text-on-surface-variant">
                                         / <span x-text="counting ? '…' : (matching ?? 0)"></span>
                                     </span>
                                 </div>
+                                <p x-show="isAdaptive()" x-cloak class="mt-2 text-xs text-on-surface-variant">
+                                    Hệ thống lấy câu trong phạm vi đã chọn theo hướng
+                                    <span class="font-semibold text-on-surface" x-text="adaptiveFocusLabel().toLowerCase()"></span>.
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -800,8 +771,12 @@
 
                 <div class="custom-scrollbar space-y-4 overflow-y-auto p-4">
                     <div x-show="activeFilter === 'exams'" class="space-y-4">
-                        <p class="text-sm text-on-surface-variant">
+                        <p class="text-sm text-on-surface-variant" x-show="!isAdaptive()">
                             Không chọn kỳ thi → Hệ / Môn / Bài học lấy toàn bộ ngân hàng câu hỏi.
+                            Chọn kỳ thi → chỉ danh mục thuộc ma trận kỳ đó.
+                        </p>
+                        <p class="text-sm text-on-surface-variant" x-show="isAdaptive()" x-cloak>
+                            Không chọn kỳ thi → Hệ / Môn lấy toàn bộ ngân hàng.
                             Chọn kỳ thi → chỉ danh mục thuộc ma trận kỳ đó.
                         </p>
                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">

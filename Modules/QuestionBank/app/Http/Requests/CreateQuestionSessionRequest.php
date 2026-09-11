@@ -36,15 +36,19 @@ final class CreateQuestionSessionRequest extends FormRequest
         $folderId = $this->input('folder_id');
         $folderId = is_numeric($folderId) && (int) $folderId > 0 ? (int) $folderId : null;
 
-        // Adaptive sessions only take an exam blueprint; strip manual filters.
+        // Adaptive: keep exam + optional hệ/môn; drop lesson / difficulty / status / saved.
         if ($isAdaptive) {
+            $focus = (string) $this->input('adaptive_focus', 'balanced');
+            if (! in_array($focus, ['weak_focus', 'balanced', 'retention'], true)) {
+                $focus = 'balanced';
+            }
+
             $this->merge([
                 'source' => SessionSource::WeakTopics->value,
+                'adaptive_focus' => $focus,
                 'difficulties' => [],
                 'question_statuses' => [],
                 'question_status_mode' => 'latest',
-                'organ_system_ids' => [],
-                'subject_ids' => [],
                 'lesson_ids' => [],
                 'core_clinical_topic_ids' => [],
                 'tag_ids' => [],
@@ -77,9 +81,14 @@ final class CreateQuestionSessionRequest extends FormRequest
         return [
             'mode' => ['required', Rule::enum(SessionMode::class)],
             'source' => ['required', Rule::enum(SessionSource::class), 'in:custom,weak_topics'],
+            'adaptive_focus' => [
+                Rule::requiredIf($isAdaptive),
+                'nullable',
+                'string',
+                'in:weak_focus,balanced,retention',
+            ],
             'count' => ['required', 'integer', 'min:1', 'max:10000'],
             'blueprint_id' => [
-                Rule::requiredIf($isAdaptive),
                 'nullable',
                 'integer',
                 'exists:blueprints,id',
@@ -119,12 +128,13 @@ final class CreateQuestionSessionRequest extends FormRequest
     {
         return [
             'count.max' => 'Số câu làm không được vượt quá tổng câu phù hợp.',
-            'blueprint_id.required' => 'Phiên luyện thích ứng cần chọn đề thi (ma trận).',
         ];
     }
 
     public function toData(): CreateSessionData
     {
+        $isAdaptive = $this->input('source') === SessionSource::WeakTopics->value;
+
         return new CreateSessionData(
             mode: SessionMode::from((string) $this->input('mode')),
             source: SessionSource::from((string) $this->input('source', SessionSource::Custom->value)),
@@ -144,6 +154,9 @@ final class CreateQuestionSessionRequest extends FormRequest
             examKey: $this->filled('exam_key') ? (string) $this->input('exam_key') : null,
             articles: array_values(array_unique(array_map('strval', $this->input('articles', [])))),
             symptoms: array_values(array_unique(array_map('strval', $this->input('symptoms', [])))),
+            adaptiveFocus: $isAdaptive
+                ? (string) $this->input('adaptive_focus', 'balanced')
+                : null,
         );
     }
 }
