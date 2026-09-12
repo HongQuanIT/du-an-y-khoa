@@ -25,6 +25,9 @@ final class CreateQuestionSessionRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        $source = (string) $this->input('source', SessionSource::Custom->value);
+        $isAdaptive = $source === SessionSource::WeakTopics->value;
+
         $difficulties = $this->input('difficulties');
         if ($difficulties === null && $this->filled('difficulty')) {
             $difficulties = [$this->input('difficulty')];
@@ -33,6 +36,31 @@ final class CreateQuestionSessionRequest extends FormRequest
         $folderId = $this->input('folder_id');
         $folderId = is_numeric($folderId) && (int) $folderId > 0 ? (int) $folderId : null;
 
+        // Adaptive: keep exam + optional hệ/môn; drop lesson / difficulty / status / saved.
+        if ($isAdaptive) {
+            $focus = (string) $this->input('adaptive_focus', 'balanced');
+            if (! in_array($focus, ['weak_focus', 'balanced', 'retention'], true)) {
+                $focus = 'balanced';
+            }
+
+            $this->merge([
+                'source' => SessionSource::WeakTopics->value,
+                'adaptive_focus' => $focus,
+                'difficulties' => [],
+                'question_statuses' => [],
+                'question_status_mode' => 'latest',
+                'lesson_ids' => [],
+                'core_clinical_topic_ids' => [],
+                'tag_ids' => [],
+                'articles' => [],
+                'symptoms' => [],
+                'saved_only' => false,
+                'folder_id' => null,
+            ]);
+
+            return;
+        }
+
         $this->merge([
             'difficulties' => array_values(array_filter(
                 (array) $difficulties,
@@ -40,7 +68,7 @@ final class CreateQuestionSessionRequest extends FormRequest
             )),
             'saved_only' => $this->boolean('saved_only') || $folderId !== null,
             'folder_id' => $folderId,
-            'source' => $this->input('source', SessionSource::Custom->value),
+            'source' => SessionSource::Custom->value,
             'question_status_mode' => $this->input('question_status_mode', 'latest'),
         ]);
     }
@@ -48,11 +76,23 @@ final class CreateQuestionSessionRequest extends FormRequest
     /** @return array<string, mixed> */
     public function rules(): array
     {
+        $isAdaptive = $this->input('source') === SessionSource::WeakTopics->value;
+
         return [
             'mode' => ['required', Rule::enum(SessionMode::class)],
             'source' => ['required', Rule::enum(SessionSource::class), 'in:custom,weak_topics'],
+            'adaptive_focus' => [
+                Rule::requiredIf($isAdaptive),
+                'nullable',
+                'string',
+                'in:weak_focus,balanced,retention',
+            ],
             'count' => ['required', 'integer', 'min:1', 'max:10000'],
-            'blueprint_id' => ['nullable', 'integer', 'exists:blueprints,id'],
+            'blueprint_id' => [
+                'nullable',
+                'integer',
+                'exists:blueprints,id',
+            ],
             'blueprint_section_id' => ['nullable', 'integer', 'exists:blueprint_sections,id'],
             'core_clinical_topic_ids' => ['nullable', 'array'],
             'core_clinical_topic_ids.*' => ['integer', 'distinct', 'exists:core_clinical_topics,id'],
@@ -93,6 +133,8 @@ final class CreateQuestionSessionRequest extends FormRequest
 
     public function toData(): CreateSessionData
     {
+        $isAdaptive = $this->input('source') === SessionSource::WeakTopics->value;
+
         return new CreateSessionData(
             mode: SessionMode::from((string) $this->input('mode')),
             source: SessionSource::from((string) $this->input('source', SessionSource::Custom->value)),
@@ -112,6 +154,9 @@ final class CreateQuestionSessionRequest extends FormRequest
             examKey: $this->filled('exam_key') ? (string) $this->input('exam_key') : null,
             articles: array_values(array_unique(array_map('strval', $this->input('articles', [])))),
             symptoms: array_values(array_unique(array_map('strval', $this->input('symptoms', [])))),
+            adaptiveFocus: $isAdaptive
+                ? (string) $this->input('adaptive_focus', 'balanced')
+                : null,
         );
     }
 }

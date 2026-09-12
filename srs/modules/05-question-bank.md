@@ -20,14 +20,13 @@ Trình duyệt & bộ lọc câu hỏi để tạo phiên luyện tập. Ngườ
 
 | Thành phần | Chức năng | Hiển thị/Ẩn | Điều kiện | Responsive |
 |-----------|-----------|-------------|-----------|-----------|
-| **Filter panel** | Chọn **Hệ cơ quan → Môn học → Bài học** (phân cấp DAG), độ khó, trạng thái (unseen/incorrect/correct/marked/omitted), tag, nguồn | Luôn | — | Desktop bên trái; mobile: bottom sheet |
-| **Count preview** | Hiển thị số câu khớp filter realtime | Luôn | Cập nhật khi đổi filter | — |
+| **Session type selector** | Chọn **Tuỳ chỉnh** vs **Thích ứng** | Luôn | — | 2 thẻ ngang; mobile xếp dọc |
+| **Filter panel (tuỳ chỉnh)** | Chọn **Kỳ thi (ma trận) → Hệ/Môn/Bài học**, độ khó, trạng thái, câu đã lưu | Khi loại = tuỳ chỉnh | Không chọn kỳ thi → toàn bộ NHCH; chọn kỳ thi → chỉ danh mục trong ma trận kỳ đó | Desktop bên trái; mobile: bottom sheet |
+| **Exam picker (thích ứng)** | Chỉ chọn đề thi theo ma trận; hệ thống chọn câu theo sức học / điểm yếu | Khi loại = thích ứng | Ẩn độ khó, trạng thái, bộ lọc chủ đề thủ công | Desktop trái; mobile full width |
+| **Count preview** | Hiển thị số câu khớp filter realtime | Luôn | Adaptive: cần đã chọn đề | — |
 | **Mode selector** | Study vs Exam | Luôn | — | Toggle |
 | **Config số câu** | Số câu / thời gian (exam) | Luôn | Exam mode hiện time | — |
-| **Question source tabs** | All / Custom / Weak / Marked | Luôn | — | Scroll ngang |
-| **Question list (browse)** | Bảng/list câu kèm trạng thái, độ khó | `/qbank/browse` | Premium xem full | Table → card mobile |
-| **Bulk actions** | Chọn nhiều → tạo session / mark | Browse | — | — |
-| **Start button (floating)** | Tạo session | Luôn | Disabled nếu 0 câu | Sticky đáy mobile |
+| **Start button (floating)** | Tạo session | Luôn | Disabled nếu 0 câu (hoặc adaptive chưa chọn đề) | Sticky đáy mobile |
 | **Saved filters** | Lưu bộ lọc yêu thích | Luôn | — | — |
 | **Paywall overlay** | Câu Premium khóa | Free | Free tier | — |
 | **Empty state** | Filter không ra câu nào | Khi 0 kết quả | — | — |
@@ -79,7 +78,7 @@ Ngoại lệ:
 - **Exclude:** câu chưa từng live hoặc đã `retired`/`private` (kể cả `exam_flag`). Include khi có `published_version` (snapshot live) — kể cả lúc working copy đang `draft`/`in_review`/`pending_publish`/`rejected` để tái bản; learner **không** đọc working copy chưa publish. Gating tier vẫn áp dụng.
 - **Taxonomy filter:** chọn Hệ cơ quan hoặc Môn học → đếm/lọc gồm mọi Bài học con (suy qua `subject_organ_system` / `lesson_subject`). Câu hỏi gắn ≥1 Bài học (các bài ngang hàng).
 - **Saved filters:** lưu snapshot tiêu chí.
-- **Adaptive option (Premium):** hệ thống tự chọn câu theo weak topics + spaced repetition.
+- **Adaptive option:** phiên luyện thích ứng chỉ yêu cầu chọn đề thi (blueprint/ma trận); server bỏ độ khó/trạng thái; chọn câu theo ma trận + chủ đề yếu / câu sai / chưa làm.
 
 ## 6. Database
 - Đọc: `questions`, `question_lesson`, `lessons`, `subjects`, `organ_systems`, `lesson_subject`, `subject_organ_system`, `tags`, `question_tags`, `question_status` (theo user).

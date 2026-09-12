@@ -31,6 +31,7 @@ final class SessionQuestionSelector
 {
     public function __construct(
         private readonly QuestionFilterBuilder $filters,
+        private readonly AdaptiveQuestionSelector $adaptive,
     ) {}
 
     /**
@@ -42,12 +43,7 @@ final class SessionQuestionSelector
         $canUsePremium = $user->hasEntitlement(Entitlement::QbankFull->value);
 
         if ($data->source === SessionSource::WeakTopics) {
-            return $this->weakTopicQuestions(
-                $userId,
-                $data->count,
-                $canUsePremium,
-                $data->lessonIds,
-            );
+            return $this->weakTopicQuestions($userId, $data->count, $canUsePremium, $data);
         }
 
         if ($data->examId !== null) {
@@ -91,9 +87,12 @@ final class SessionQuestionSelector
         $canUsePremium = $user->hasEntitlement(Entitlement::QbankFull->value);
 
         if ($data->source === SessionSource::WeakTopics) {
-            $lessonIds = $data->lessonIds !== []
-                ? $data->lessonIds
-                : $this->weakLessonIds($userId);
+            // Adaptive count = full blueprint (± hệ/môn) pool — not weak-lesson subset.
+            if ($data->lessonIds === []) {
+                return $this->adaptive->countPool($userId, $canUsePremium, $data);
+            }
+
+            $lessonIds = $this->adaptiveLessonIds($userId, $data);
 
             return $this->questionQuery(
                 $lessonIds,
@@ -101,6 +100,8 @@ final class SessionQuestionSelector
                 null,
                 [],
                 $canUsePremium,
+                $data,
+                $userId,
             )->count();
         }
 
@@ -140,15 +141,39 @@ final class SessionQuestionSelector
     }
 
     /**
+     * Adaptive path:
+     * - Dashboard lesson drill (explicit lessonIds) → legacy incorrect-first.
+     * - QBank "Thích ứng" → AdaptiveQuestionSelector (score + weighted random).
+     *
      * @return array<int, string>
      */
     private function weakTopicQuestions(
         int $userId,
         int $limit,
         bool $canUsePremium,
-        array $selectedLessonIds = [],
+        CreateSessionData $data,
     ): array {
-        $lessonIds = $selectedLessonIds !== [] ? $selectedLessonIds : $this->weakLessonIds($userId);
+        // Dashboard "weak topic" drill: chỉ câu sai trong 1 bài học.
+        if ($data->lessonIds !== []) {
+            return $this->legacyIncorrectFirstQuestions($userId, $limit, $canUsePremium, $data);
+        }
+
+        return $this->adaptive->pick($userId, $limit, $canUsePremium, $data);
+    }
+
+    /**
+     * Legacy heuristic kept for /qbank/weak-topics/{lesson}/session.
+     *
+     * @return array<int, string>
+     */
+    private function legacyIncorrectFirstQuestions(
+        int $userId,
+        int $limit,
+        bool $canUsePremium,
+        CreateSessionData $data,
+    ): array {
+        $selectedLessonIds = $data->lessonIds;
+        $lessonIds = $this->adaptiveLessonIds($userId, $data);
 
         $accessibleQuestions = ServePublishedQuestion::scopeAvailable(
             Question::query()->select('id'),
@@ -161,6 +186,14 @@ final class SessionQuestionSelector
                     fn (Builder $lessons) => $lessons->whereIn('lessons.id', $lessonIds),
                 ),
             );
+
+        $this->filters->apply(
+            $accessibleQuestions,
+            blueprintId: $data->blueprintId,
+            blueprintSectionId: $data->blueprintSectionId,
+            coreClinicalTopicIds: $data->coreClinicalTopicIds,
+            tagIds: $data->tagIds,
+        );
 
         $incorrect = QuestionAttempt::query()
             ->select('question_id')
@@ -186,8 +219,6 @@ final class SessionQuestionSelector
             return $incorrect->values()->all();
         }
 
-        // A dashboard topic drill is intentionally restricted to questions
-        // this learner answered incorrectly in the selected lesson.
         if ($selectedLessonIds !== []) {
             return $incorrect->values()->all();
         }
@@ -213,25 +244,74 @@ final class SessionQuestionSelector
             null,
             [],
             $canUsePremium,
+            $data,
+            $userId,
         )->values()->all();
+    }
+
+    /**
+     * Lessons used for adaptive selection:
+     * optional hệ/môn scope within the exam matrix, else weak lessons / full matrix.
+     *
+     * @return array<int, int>
+     */
+    private function adaptiveLessonIds(int $userId, CreateSessionData $data): array
+    {
+        $matrixLessonIds = $data->blueprintId !== null
+            ? $this->filters->mappedLessonIdsForBlueprint(blueprintId: $data->blueprintId)
+            : [];
+
+        $scopedLessonIds = $this->filters->resolveContentLessonIds(
+            $data->organSystemIds,
+            $data->subjectIds,
+            $data->lessonIds,
+        );
+
+        if ($scopedLessonIds !== []) {
+            if ($matrixLessonIds === []) {
+                return $scopedLessonIds;
+            }
+
+            $allowed = array_flip($matrixLessonIds);
+
+            return array_values(array_filter(
+                $scopedLessonIds,
+                static fn (int $id): bool => isset($allowed[$id]),
+            ));
+        }
+
+        $weakLessonIds = $this->weakLessonIds($userId, $matrixLessonIds);
+
+        if ($weakLessonIds !== []) {
+            return $weakLessonIds;
+        }
+
+        return $matrixLessonIds;
     }
 
     /**
      * Calculate weak topics directly from Q-Bank attempts. This keeps the
      * QuestionBank module independent from Analytics rollup models.
      *
+     * @param  array<int, int>  $limitToLessonIds
      * @return array<int, int>
      */
-    private function weakLessonIds(int $userId): array
+    private function weakLessonIds(int $userId, array $limitToLessonIds = []): array
     {
-        return DB::table('question_attempts')
+        $query = DB::table('question_attempts')
             ->join('question_lesson', 'question_lesson.question_id', '=', 'question_attempts.question_id')
             ->where('question_attempts.user_id', $userId)
             ->whereNotNull('question_attempts.is_correct')
+            ->when(
+                $limitToLessonIds !== [],
+                fn ($builder) => $builder->whereIn('question_lesson.lesson_id', $limitToLessonIds),
+            )
             ->groupBy('question_lesson.lesson_id')
             ->havingRaw('COUNT(*) >= 3')
             ->orderByRaw('AVG(CASE WHEN question_attempts.is_correct = 1 THEN 1.0 ELSE 0.0 END)')
-            ->limit(5)
+            ->limit(5);
+
+        return $query
             ->pluck('question_lesson.lesson_id')
             ->map(fn ($id) => (int) $id)
             ->all();

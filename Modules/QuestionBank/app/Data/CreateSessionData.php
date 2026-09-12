@@ -53,6 +53,7 @@ final class CreateSessionData
         public readonly ?int $examId = null,
         public readonly array $articles = [],
         public readonly array $symptoms = [],
+        public readonly ?string $adaptiveFocus = null,
     ) {}
 
     /**
@@ -80,6 +81,7 @@ final class CreateSessionData
             'exam_id' => $this->examId,
             'articles' => array_values($this->articles),
             'symptoms' => array_values($this->symptoms),
+            'adaptive_focus' => $this->adaptiveFocus,
             'count' => $this->count,
         ];
     }

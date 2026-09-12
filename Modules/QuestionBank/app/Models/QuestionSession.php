@@ -102,7 +102,7 @@ class QuestionSession extends Model
 
         return match ($this->source) {
             SessionSource::Custom => 'Phiên tùy chỉnh',
-            SessionSource::WeakTopics => 'Ôn chủ đề yếu',
+            SessionSource::WeakTopics => 'Phiên luyện thích ứng',
             SessionSource::StudyPlan => 'Kế hoạch học tập',
             SessionSource::Exam => 'Đề thi mô phỏng',
             SessionSource::SelfAssessment => 'Tự đánh giá',

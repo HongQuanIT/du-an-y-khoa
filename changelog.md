@@ -1,5 +1,42 @@
 # Changelog
 
+## 2026-09-12
+
+### UX — Copy phiên luyện tuỳ chỉnh / thích ứng
+- Làm rõ mô tả thẻ chọn loại phiên và mục Hướng luyện trên `/qbank/create`.
+- Subtitle 3 hướng: Điểm yếu / Cân bằng / Củng cố dễ hiểu hơn cho học viên.
+
+## 2026-09-11
+
+### Seed — Sample QBank 50 câu + taxonomy chương trình
+- Mở rộng `MedicalKnowledgeTaxonomySeeder`: 8 hệ cơ quan, 8 môn học, ~30 bài học (giữ demo STEMI).
+- Thêm `SampleQuestionBankSeeder` (idempotent `QBANK-SAMPLE-001…050`) gắn bài học; gọi từ `QuestionBankDatabaseSeeder`.
+
+### Feat — Adaptive: áp dụng thuật toán chọn câu khi tạo phiên
+- `AdaptiveQuestionSelector`: coverage (unseen) + Weakness/Memory theo mode + cooldown + weighted random.
+- UI 3 hướng luyện: Điểm yếu / Cân bằng / Củng cố (`adaptive_focus`); log debug `[adaptive] …`.
+- Dashboard weak-topic drill (có `lesson_ids`) giữ heuristic incorrect-first.
+- Docs: `docs/adaptive-session-algorithm.md`, `docs/adaptive-session-explained.md`.
+
+### Feat — Adaptive: rollup `question_status` (last_seen / counters / served)
+- Migration thêm `correct_count`, `wrong_count`, `omitted_count`, `last_seen_at`, `last_served_at`, `last_served_session_id` trên `question_status`.
+- Backfill từ `question_attempts` + lịch sử session; write-path: tạo session → `last_served_*`, trả lời/omit → `last_seen_at` + counters.
+- SRS `04-mo-hinh-du-lieu.md` cập nhật ngữ nghĩa Memory/Cooldown.
+
+## 2026-09-10
+
+### Fix — Auth: tên index learner_profiles
+- Rút ngắn tên index composite `(education_stage_id, onboarding_completed_at)` để không vượt giới hạn 64 ký tự MySQL.
+
+### Feat — QBank create: bỏ Bài viết / Triệu chứng; lọc theo kỳ thi
+- Gỡ bộ lọc Bài viết và Triệu chứng trên `/qbank/create`.
+- Hệ cơ quan / Môn học / Bài học: không chọn kỳ thi → toàn bộ ngân hàng câu hỏi; chọn kỳ thi → chỉ danh mục trong ma trận kỳ đó.
+
+### Feat — QBank create: 2 loại phiên luyện (tuỳ chỉnh / thích ứng)
+- `/qbank/create`: chọn loại phiên bằng thẻ SaaS — **Tuỳ chỉnh** (bộ lọc đầy đủ như cũ) vs **Thích ứng** (chỉ chọn đề thi theo ma trận).
+- Phiên thích ứng: không cấu hình độ khó/trạng thái; hệ thống lấy câu theo ma trận + điểm yếu/thói quen học (`source=weak_topics`).
+- Validation bắt buộc `blueprint_id` khi thích ứng; strip filter thủ công phía server.
+
 ## 2026-09-09
 
 ### Feat — Danh mục chương trình 3 cấp (DAG)

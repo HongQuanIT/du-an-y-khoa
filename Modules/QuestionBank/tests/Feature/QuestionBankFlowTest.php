@@ -84,26 +84,33 @@ final class QuestionBankFlowTest extends TestCase
             ->assertOk()
             ->assertSee('Tim mạch')
             ->assertSeeInOrder([
-                'Tạo phiên luyện tập bằng chế độ AI',
+                'Chọn loại phiên luyện',
+                'Phiên luyện tập theo bài',
+                'Phiên luyện tập thích ứng',
                 'Thiết lập chủ đề',
-                'Tiêu chí phiên luyện',
                 'Chế độ học tập',
                 'Bắt đầu',
             ])
+            ->assertSee('Tiêu chí phiên luyện')
             ->assertSee('Kỳ thi')
             ->assertSee('Kỳ thi đánh giá năng lực hành nghề Bác sĩ Y khoa')
             ->assertSee('Bài học')
+            ->assertSee('Điểm yếu')
+            ->assertSee('Cân bằng')
+            ->assertSee('Củng cố')
+            ->assertDontSee('Bài viết')
+            ->assertDontSee('Triệu chứng')
             ->assertDontSee('Chủ đề lâm sàng')
             ->assertDontSee('>Tags</span>', false)
             ->assertDontSee('>Ma trận đề thi</span>', false)
             ->assertDontSee('Bác sĩ nội trú')
             ->assertDontSee('USMLE Step 2 CK')
-            ->assertSee('ABCDE approach')
-            ->assertSee('Acute coronary syndromes')
-            ->assertSee('Stroke')
-            ->assertSee('Đau ngực')
-            ->assertSee('Khó thở')
-            ->assertSee('Ngất')
+            ->assertDontSee('ABCDE approach')
+            ->assertDontSee('Acute coronary syndromes')
+            ->assertDontSee('Tất cả (trong ngân hàng câu hỏi)')
+            ->assertDontSee('Tất cả (trong kỳ thi đã chọn)')
+            ->assertSee('activeTaxonomyScope()')
+            ->assertSee('taxonomyLocked()')
             ->assertSee('Rất dễ')
             ->assertSee('Rất khó')
             ->assertSee('name="difficulties[]"', false)
@@ -123,6 +130,78 @@ final class QuestionBankFlowTest extends TestCase
             ->postJson(route('qbank.count'), $this->sessionPayload(count: 10))
             ->assertOk()
             ->assertJsonPath('data.count', 2);
+    }
+
+    public function test_adaptive_session_defaults_to_all_exams_and_ignores_difficulty_status_filters(): void
+    {
+        $this->createQuestion($this->topic, true, Difficulty::Easy, 'Câu adaptive 1');
+        $this->createQuestion($this->topic, true, Difficulty::Hard, 'Câu adaptive 2');
+
+        $this->actingAs($this->user)
+            ->postJson(route('qbank.count'), [
+                'mode' => SessionMode::Study->value,
+                'source' => 'weak_topics',
+                'adaptive_focus' => 'balanced',
+                'count' => 10,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.count', 2);
+
+        $blueprint = Blueprint::query()->create([
+            'name' => 'Đề thích ứng',
+            'slug' => 'de-thich-ung',
+            'status' => TaxonomyStatus::Active,
+            'sort_order' => 1,
+        ]);
+        $section = \Modules\QuestionBank\Models\BlueprintSection::query()->create([
+            'blueprint_id' => $blueprint->id,
+            'name' => 'Phần 1',
+            'slug' => 'phan-1-adaptive',
+            'status' => TaxonomyStatus::Active,
+            'sort_order' => 1,
+        ]);
+        $coreTopic = \Modules\QuestionBank\Models\CoreClinicalTopic::query()->create([
+            'blueprint_section_id' => $section->id,
+            'name' => 'CCT adaptive',
+            'slug' => 'cct-adaptive',
+            'status' => TaxonomyStatus::Active,
+            'sort_order' => 1,
+        ]);
+        $coreTopic->lessons()->sync([$this->topic->id]);
+
+        $this->actingAs($this->user)
+            ->postJson(route('qbank.count'), [
+                'mode' => SessionMode::Study->value,
+                'source' => 'weak_topics',
+                'adaptive_focus' => 'weak_focus',
+                'count' => 10,
+                'blueprint_id' => $blueprint->id,
+                'difficulties' => [Difficulty::Hard->value],
+                'question_statuses' => ['incorrect'],
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.count', 2);
+
+        $this->actingAs($this->user)
+            ->post(route('qbank.store'), [
+                'mode' => SessionMode::Study->value,
+                'source' => 'weak_topics',
+                'adaptive_focus' => 'retention',
+                'count' => 2,
+                'blueprint_id' => $blueprint->id,
+                'difficulties' => [Difficulty::Hard->value],
+                'question_statuses' => ['incorrect'],
+            ])
+            ->assertRedirect();
+
+        $session = QuestionSession::query()->latest('id')->firstOrFail();
+        $this->assertSame('weak_topics', $session->source->value);
+        $this->assertSame($blueprint->id, $session->filters['blueprint_id']);
+        $this->assertSame('retention', $session->filters['adaptive_focus']);
+        $this->assertSame([], $session->filters['difficulties']);
+        $this->assertSame([], $session->filters['question_statuses']);
+        $this->assertSame(2, $session->total);
+        $this->assertSame('Phiên luyện thích ứng', $session->displayName());
     }
 
     public function test_session_size_can_equal_the_full_matching_pool(): void
@@ -728,7 +807,8 @@ final class QuestionBankFlowTest extends TestCase
         $this->assertSame(SessionStatus::Active, $session->refresh()->status);
         $this->assertSame(2, $session->answered_count);
         $this->assertSame(0, $session->correct_count);
-        $this->assertSame(0, QuestionStatus::where('user_id', $this->user->id)->count());
+        $this->assertSame(2, QuestionStatus::where('user_id', $this->user->id)->count());
+        $this->assertSame(2, QuestionStatus::where('status', UserQuestionStatus::Unseen)->count());
         $this->assertSame(2, QuestionAttempt::whereNull('is_correct')->count());
 
         $this->actingAs($this->user)
