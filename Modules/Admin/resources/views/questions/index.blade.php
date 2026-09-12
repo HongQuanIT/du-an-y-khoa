@@ -337,7 +337,7 @@
                         <tr>
                             <th scope="col" class="w-[380px] min-w-[320px] px-5 py-3.5">Nội dung câu hỏi</th>
                             <th scope="col" class="w-[220px] min-w-[180px] px-4 py-3.5" x-show="cols.taxonomy" x-cloak>
-                                Danh mục y khoa</th>
+                                Bài học</th>
                             <th scope="col" class="w-[110px] min-w-[100px] px-4 py-3.5 text-center"
                                 x-show="cols.difficulty" x-cloak>Độ khó</th>
                             @if ($isReviewer)
@@ -615,7 +615,7 @@
     <script>
         function questionColumnPrefs({ storageKey, defaults, isReviewer }) {
             const toggleableColumns = [
-                { key: 'taxonomy', label: 'Danh mục y khoa' },
+                { key: 'taxonomy', label: 'Bài học' },
                 { key: 'difficulty', label: 'Độ khó' },
                 { key: 'creator', label: 'Người tạo' },
                 { key: 'status', label: 'Trạng thái' },
