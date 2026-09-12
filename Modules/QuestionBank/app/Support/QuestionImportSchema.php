@@ -14,6 +14,7 @@ final class QuestionImportSchema
     public const MAX_OPTIONS = 5;
 
     public const FORBIDDEN_FIELDS = [
+        'id',
         'status',
         'publisher_id',
         'published_at',
@@ -30,7 +31,7 @@ final class QuestionImportSchema
     {
         $fields = [
             'code' => [
-                'label' => 'Mã câu hỏi (tuỳ chọn)',
+                'label' => 'Mã câu hỏi (trống = tạo mới, có mã = cập nhật)',
                 'required' => false,
                 'aliases' => ['code', 'ma', 'mã', 'ma cau hoi', 'mã câu hỏi'],
             ],
@@ -280,8 +281,8 @@ final class QuestionImportSchema
             ['difficulty', 'Có', 'very_easy | easy | medium | hard | very_hard'],
             ['lesson_slugs', 'Có', 'Slug hoặc mã bài học đã có trên hệ thống, cách nhau ;'],
             ['explanation', 'Khuyến nghị', 'Bắt buộc trước khi gửi duyệt. Import vẫn tạo nháp nếu thiếu.'],
-            ['status / publisher_id / version', 'Cấm', 'Hệ thống bỏ qua. Import luôn tạo bản nháp (draft).'],
-            ['code', 'Không', 'Để trống để hệ thống cấp Q00001… Trùng mã = lỗi dòng.'],
+            ['status / publisher_id / version / id', 'Cấm', 'Hệ thống bỏ qua. Không dùng id — khóa là mã câu hỏi.'],
+            ['code', 'Không', 'Để trống = tạo mới (hệ thống cấp Q00001…). Điền mã đã có = cập nhật. Mã không tồn tại = lỗi, không import dòng đó.'],
         ];
     }
 }

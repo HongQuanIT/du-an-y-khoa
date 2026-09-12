@@ -2,6 +2,12 @@
 
 ## 2026-09-12
 
+### Feat — Import/export câu hỏi theo mã
+- Export không còn cột `id`; khóa upsert là `code` (trống = tạo mới, có mã = cập nhật).
+- Mã không tồn tại: chặn cả lô và báo rõ mã lỗi.
+- Wizard/danh sách hiện tên tệp; «Xem câu vừa import» không ép `status=draft` (câu đang duyệt vẫn thấy).
+- Import đè câu `in_review` rút về nháp để gửi duyệt lại.
+
 ### Feat — Lọc đa chọn danh sách người dùng
 - `/admin/users`: lọc kết hợp nhiều cổng / vai trò / trạng thái bằng multi-select.
 

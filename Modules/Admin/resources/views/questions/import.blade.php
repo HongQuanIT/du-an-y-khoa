@@ -21,7 +21,8 @@
                     Import câu hỏi hàng loạt
                 </h1>
                 <p class="mt-1 font-body-sm text-body-sm text-on-surface-variant">
-                    Tải Excel/CSV theo mẫu. Mọi câu được tạo ở trạng thái <strong>nháp</strong> — không xuất bản ngay.
+                    Tải Excel/CSV theo mẫu. Có <strong>mã</strong> đã tồn tại = cập nhật; để trống = tạo mới.
+                    Mọi câu ghi vào ở trạng thái <strong>nháp</strong> — không xuất bản ngay.
                 </p>
             </div>
             <div class="flex flex-wrap gap-2">
@@ -49,21 +50,39 @@
             @endforeach
         </ol>
 
+        @if ($batch && filled($batch->original_filename))
+            <p class="flex flex-wrap items-center gap-2 rounded-xl border border-outline-variant bg-surface-container-low px-4 py-3 font-body-sm text-on-surface">
+                <span class="material-symbols-outlined text-[20px] text-primary" aria-hidden="true">draft</span>
+                Tệp import:
+                <strong class="break-all font-semibold">{{ $batch->original_filename }}</strong>
+            </p>
+        @endif
+
         @if ($step === 'upload')
             <section class="rounded-xl border border-outline-variant bg-surface p-6">
                 <h2 class="font-label-lg font-semibold text-on-surface">Tải tệp</h2>
                 <p class="mt-1 font-body-sm text-on-surface-variant">
-                    Tối đa 500 dòng, 5MB. Cột <code>status</code> / người xuất bản nếu có sẽ bị bỏ qua.
+                    Tối đa 500 dòng, 5MB. Khóa là cột <code>code</code> — không dùng <code>id</code>.
+                    Cột <code>status</code> / người xuất bản nếu có sẽ bị bỏ qua.
                 </p>
                 <form method="post" action="{{ route('admin.questions.import.upload') }}" enctype="multipart/form-data"
                     class="mt-5 space-y-4">
                     @csrf
                     <label
+                        x-data="{ name: '' }"
                         class="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-outline-variant bg-surface-container-low px-6 py-12 text-center hover:border-primary/50">
                         <span class="material-symbols-outlined text-[36px] text-primary" aria-hidden="true">upload_file</span>
-                        <span class="mt-2 font-label-md font-semibold text-on-surface">Chọn hoặc kéo thả .xlsx / .csv</span>
+                        <span class="mt-2 font-label-md font-semibold text-on-surface" x-show="!name">
+                            Chọn hoặc kéo thả .xlsx / .csv
+                        </span>
+                        <span class="mt-2 font-label-md font-semibold text-on-surface" x-show="name" x-cloak>
+                            Đã chọn: <span class="break-all" x-text="name"></span>
+                        </span>
+                        <span class="mt-1 font-body-sm text-on-surface-variant" x-show="name" x-cloak>
+                            Bấm để chọn tệp khác
+                        </span>
                         <input id="import-file" class="sr-only" type="file" name="file" accept=".xlsx,.csv,text/csv"
-                            required>
+                            required @change="name = $event.target.files[0]?.name || ''">
                     </label>
                     @error('file')
                         <p class="font-body-sm text-error">{{ $message }}</p>
@@ -80,7 +99,7 @@
             <section class="rounded-xl border border-outline-variant bg-surface p-6">
                 <h2 class="font-label-lg font-semibold text-on-surface">Ánh xạ cột</h2>
                 <p class="mt-1 font-body-sm text-on-surface-variant">
-                    Tệp: <strong>{{ $batch->original_filename }}</strong>. Ghép cột tệp với trường hệ thống.
+                    Ghép cột trong tệp với trường hệ thống.
                 </p>
                 @error('column_map')
                     <p class="mt-3 font-body-sm text-error">{{ $message }}</p>
@@ -145,8 +164,15 @@
                         trên {{ number_format($preview['total']) }} dòng.
                     </p>
                     <p class="mt-1 font-body-sm text-on-surface-variant">
-                        Chỉ các dòng hợp lệ được tạo thành bản nháp. Không gửi duyệt và không xuất bản.
+                        Dòng không có mã: tạo mới. Dòng có mã đã tồn tại: cập nhật.
+                        Mã không có trên hệ thống: không import dòng đó.
                     </p>
+                    @if (($preview['invalid_codes'] ?? []) !== [])
+                        <p class="mt-3 rounded-lg border border-error/30 bg-error/5 px-3 py-2 font-body-sm text-error">
+                            Không tìm thấy mã:
+                            <strong>{{ implode(', ', $preview['invalid_codes']) }}</strong>
+                        </p>
+                    @endif
                     @if ($batch->error_report_path)
                         <a href="{{ route('admin.questions.import.errors', $batch) }}"
                             class="mt-3 inline-flex font-label-sm font-semibold text-primary hover:underline">
@@ -161,6 +187,7 @@
                             <thead>
                                 <tr class="border-b border-outline-variant bg-surface-container-low text-on-surface-variant">
                                     <th class="px-3 py-2">Dòng</th>
+                                    <th class="px-3 py-2">Mã</th>
                                     <th class="px-3 py-2">Đề bài</th>
                                     <th class="px-3 py-2">Kết quả</th>
                                 </tr>
@@ -169,12 +196,17 @@
                                 @foreach (array_slice($preview['rows'], 0, 80) as $row)
                                     <tr class="border-b border-outline-variant/60">
                                         <td class="px-3 py-2 tabular-nums">{{ $row['line'] }}</td>
+                                        <td class="px-3 py-2 font-mono text-xs text-on-surface">
+                                            {{ $row['values']['code'] !== '' ? $row['values']['code'] : '—' }}
+                                        </td>
                                         <td class="max-w-xl px-3 py-2 text-on-surface">
                                             {{ \Illuminate\Support\Str::limit($row['values']['stem'] ?? '', 140) }}
                                         </td>
                                         <td class="px-3 py-2">
                                             @if ($row['ok'])
-                                                <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">Hợp lệ</span>
+                                                <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
+                                                    {{ ($row['action'] ?? '') === 'update' ? 'Cập nhật' : 'Tạo mới' }}
+                                                </span>
                                             @else
                                                 <span class="text-error">{{ implode(' ', $row['errors']) }}</span>
                                             @endif
@@ -193,9 +225,9 @@
                     </a>
                     <form method="post" action="{{ route('admin.questions.import.commit', $batch) }}">
                         @csrf
-                        <button type="submit" @if ($preview['valid'] === 0) disabled @endif
+                        <button type="submit" @if ($preview['valid'] === 0 || ($preview['invalid_codes'] ?? []) !== []) disabled @endif
                             class="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 font-label-md font-semibold text-on-primary hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50">
-                            Import {{ number_format($preview['valid']) }} câu (tạo bản nháp)
+                            Import {{ number_format($preview['valid']) }} dòng hợp lệ
                         </button>
                     </form>
                 </div>
@@ -205,19 +237,23 @@
         @if ($step === 'done' && $batch)
             <section class="rounded-xl border border-outline-variant bg-surface p-6">
                 <h2 class="font-label-lg font-semibold text-on-surface">Đã ghi bản nháp</h2>
+                <p class="mt-2 font-body-sm text-on-surface">
+                    Tệp <strong class="break-all">{{ $batch->original_filename }}</strong> đã được import.
+                </p>
                 <p class="mt-2 font-body-sm text-on-surface-variant">
-                    Tạo {{ number_format((int) ($batch->stats['created'] ?? 0)) }} câu hỏi
+                    Tạo {{ number_format((int) ($batch->stats['created'] ?? 0)) }} câu
+                    · cập nhật {{ number_format((int) ($batch->stats['updated'] ?? 0)) }} câu
                     · bỏ qua {{ number_format((int) ($batch->stats['skipped'] ?? $batch->stats['invalid'] ?? 0)) }} dòng lỗi.
                     Học viên chưa thấy các câu này.
                 </p>
                 <div class="mt-4 flex flex-wrap gap-2">
-                    <a href="{{ route('admin.questions.index', ['import_batch_id' => $batch->getKey(), 'status' => 'draft']) }}"
+                    <a href="{{ route('admin.questions.index', ['import_batch_id' => $batch->getKey()]) }}"
                         class="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 font-label-md font-semibold text-on-primary hover:bg-primary/90">
                         Xem câu vừa import
                     </a>
                     <a href="{{ route('admin.questions.import') }}"
                         class="inline-flex items-center rounded-xl border border-outline-variant px-4 py-2.5 font-label-md font-semibold text-on-surface hover:bg-surface-container-low">
-                        Import lô khác
+                        Import tệp khác
                     </a>
                 </div>
             </section>

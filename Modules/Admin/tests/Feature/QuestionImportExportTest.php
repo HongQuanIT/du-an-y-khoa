@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Modules\Auth\Models\TwoFactorSecret;
 use Modules\Auth\Services\TotpService;
+use Modules\QuestionBank\Enums\QuestionImportBatchStatus;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
@@ -93,7 +94,20 @@ final class QuestionImportExportTest extends TestCase
 
         $this->actingAsStaff($editor)
             ->post(route('admin.questions.import.commit', $batch))
-            ->assertRedirect();
+            ->assertRedirect(route('admin.questions.import.show', $batch))
+            ->assertSessionHas('status', fn (string $status): bool => str_contains($status, $batch->original_filename));
+
+        $this->actingAsStaff($editor)
+            ->get(route('admin.questions.import.show', $batch))
+            ->assertOk()
+            ->assertSee($batch->original_filename, false)
+            ->assertSee('Đã ghi bản nháp', false);
+
+        $this->actingAsStaff($editor)
+            ->get(route('admin.questions.index', ['import_batch_id' => $batch->getKey()]))
+            ->assertOk()
+            ->assertSee($batch->original_filename, false)
+            ->assertSee('Bệnh nhân 55 tuổi đau ngực', false);
 
         $question = Question::query()->firstOrFail();
         $this->assertSame(QuestionStatus::Draft, $question->status);
@@ -133,6 +147,7 @@ final class QuestionImportExportTest extends TestCase
             ->get(route('admin.questions.import.show', $batch))
             ->assertOk()
             ->assertSee('hợp lệ')
+            ->assertSee($batch->original_filename, false)
             ->assertSee('Đáp án đúng phải là một chữ');
 
         $this->assertSame(1, (int) $batch->fresh()->stats['valid']);
@@ -145,6 +160,145 @@ final class QuestionImportExportTest extends TestCase
         $this->assertSame(1, Question::query()->count());
         $this->assertSame(QuestionStatus::Draft, Question::query()->firstOrFail()->status);
         $this->assertSame(1, (int) $batch->fresh()->stats['created']);
+    }
+
+    public function test_import_with_existing_code_updates_question(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.store'), [
+                'stem' => 'Đề bài gốc trước khi import.',
+                'difficulty' => 'medium',
+                'lesson_ids' => [$this->lesson->id],
+                'is_free' => '0',
+                'options' => [
+                    ['content' => 'Đúng', 'is_correct' => '1', 'explanation' => 'OK'],
+                    ['content' => 'Sai', 'is_correct' => '0'],
+                ],
+            ])
+            ->assertRedirect();
+
+        $question = Question::query()->firstOrFail();
+        $file = $this->csvUpload([
+            QuestionImportSchema::headers(),
+            $this->validRow('Đề bài đã cập nhật qua import.', $question->code),
+        ]);
+
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.import.upload'), ['file' => $file])
+            ->assertRedirect();
+
+        $batch = QuestionImportBatch::query()->firstOrFail();
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.import.map', $batch), [
+                'column_map' => QuestionImportSchema::autoMap(QuestionImportSchema::headers()),
+            ])
+            ->assertRedirect();
+
+        $this->actingAsStaff($editor)
+            ->get(route('admin.questions.import.show', $batch))
+            ->assertOk()
+            ->assertSee('Cập nhật', false)
+            ->assertSee($question->code, false);
+
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.import.commit', $batch))
+            ->assertRedirect();
+
+        $this->assertSame(1, Question::query()->count());
+        $updated = $question->fresh();
+        $this->assertSame($question->getKey(), $updated->getKey());
+        $this->assertSame($question->code, $updated->code);
+        $this->assertStringContainsString('Đề bài đã cập nhật qua import.', strip_tags((string) $updated->stem));
+        $this->assertSame(QuestionStatus::Draft, $updated->status);
+        $this->assertSame(0, (int) $batch->fresh()->stats['created']);
+        $this->assertSame(1, (int) $batch->fresh()->stats['updated']);
+    }
+
+    public function test_import_update_of_in_review_question_appears_on_batch_list(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.store'), [
+                'stem' => 'Câu đang chờ duyệt trước import.',
+                'difficulty' => 'medium',
+                'lesson_ids' => [$this->lesson->id],
+                'is_free' => '0',
+                'options' => [
+                    ['content' => 'Đúng', 'is_correct' => '1', 'explanation' => 'OK'],
+                    ['content' => 'Sai', 'is_correct' => '0'],
+                ],
+            ])
+            ->assertRedirect();
+
+        $question = Question::query()->firstOrFail();
+        $question->forceFill(['status' => QuestionStatus::InReview])->save();
+
+        $file = $this->csvUpload([
+            QuestionImportSchema::headers(),
+            $this->validRow('Câu đã import đè khi đang duyệt.', $question->code),
+        ]);
+
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.import.upload'), ['file' => $file])
+            ->assertRedirect();
+
+        $batch = QuestionImportBatch::query()->firstOrFail();
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.import.map', $batch), [
+                'column_map' => QuestionImportSchema::autoMap(QuestionImportSchema::headers()),
+            ])
+            ->assertRedirect();
+
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.import.commit', $batch))
+            ->assertRedirect();
+
+        $this->assertSame(QuestionStatus::Draft, $question->fresh()->status);
+
+        $this->actingAsStaff($editor)
+            ->get(route('admin.questions.index', ['import_batch_id' => $batch->getKey()]))
+            ->assertOk()
+            ->assertSee('Câu đã import đè khi đang duyệt.', false)
+            ->assertSee($question->code, false);
+    }
+
+    public function test_import_with_unknown_code_is_rejected_and_reports_code(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+        $file = $this->csvUpload([
+            QuestionImportSchema::headers(),
+            $this->validRow('Câu có mã không tồn tại.', 'Q99999'),
+            $this->validRow('Câu hợp lệ nhưng cùng lô có mã sai.'),
+        ]);
+
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.import.upload'), ['file' => $file])
+            ->assertRedirect();
+
+        $batch = QuestionImportBatch::query()->firstOrFail();
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.import.map', $batch), [
+                'column_map' => QuestionImportSchema::autoMap(QuestionImportSchema::headers()),
+            ])
+            ->assertRedirect();
+
+        $this->actingAsStaff($editor)
+            ->get(route('admin.questions.import.show', $batch))
+            ->assertOk()
+            ->assertSee('Không tìm thấy mã', false)
+            ->assertSee('Q99999', false);
+
+        $this->assertSame(['Q99999'], $batch->fresh()->stats['invalid_codes'] ?? []);
+
+        $this->actingAsStaff($editor)
+            ->from(route('admin.questions.import.show', $batch))
+            ->post(route('admin.questions.import.commit', $batch))
+            ->assertRedirect(route('admin.questions.import.show', $batch))
+            ->assertSessionHasErrors('batch');
+
+        $this->assertSame(0, Question::query()->count());
+        $this->assertNotSame(QuestionImportBatchStatus::Done, $batch->fresh()->status);
     }
 
     public function test_editor_can_export_filtered_questions_as_csv(): void
@@ -168,7 +322,17 @@ final class QuestionImportExportTest extends TestCase
 
         $response->assertOk();
         $this->assertStringContainsString('text/csv', (string) $response->headers->get('content-type'));
-        $this->assertStringContainsString('Câu để xuất khẩu CSV.', $response->streamedContent());
+
+        $content = $response->streamedContent();
+        $question = Question::query()->firstOrFail();
+        $this->assertStringContainsString('Câu để xuất khẩu CSV.', $content);
+        $this->assertStringContainsString($question->code, $content);
+        $this->assertStringNotContainsString($question->getKey(), $content);
+
+        $headerLine = strtok(ltrim($content, "\xEF\xBB\xBF"), "\n");
+        $this->assertIsString($headerLine);
+        $this->assertNotContains('id', str_getcsv($headerLine));
+        $this->assertContains('code', str_getcsv($headerLine));
         $this->assertDatabaseHas('audit_logs', ['action' => 'admin.question.export']);
     }
 
@@ -185,9 +349,12 @@ final class QuestionImportExportTest extends TestCase
     /**
      * @return list<string>
      */
-    private function validRow(string $stem = 'Bệnh nhân 55 tuổi đau ngực. Chẩn đoán nào phù hợp nhất?'): array
-    {
+    private function validRow(
+        string $stem = 'Bệnh nhân 55 tuổi đau ngực. Chẩn đoán nào phù hợp nhất?',
+        string $code = '',
+    ): array {
         $row = array_fill_keys(QuestionImportSchema::headers(), '');
+        $row['code'] = $code;
         $row['stem'] = $stem;
         $row['option_a'] = 'ACS';
         $row['option_b'] = 'GERD';

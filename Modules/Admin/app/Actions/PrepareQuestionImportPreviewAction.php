@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Modules\Admin\Actions;
 
 use App\Support\Concerns\AsAction;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Modules\QuestionBank\Enums\QuestionImportBatchStatus;
+use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionImportBatch;
@@ -32,7 +34,8 @@ final class PrepareQuestionImportPreviewAction
      *     total: int,
      *     valid: int,
      *     invalid: int,
-     *     rows: list<array{line: int, ok: bool, errors: list<string>, values: array<string, string>, payload?: array<string, mixed>}>
+     *     invalid_codes: list<string>,
+     *     rows: list<array{line: int, ok: bool, action: ?string, errors: list<string>, values: array<string, string>, payload?: array<string, mixed>}>
      * }
      */
     public function handle(QuestionImportBatch $batch, ?array $columnMap = null): array
@@ -48,21 +51,49 @@ final class PrepareQuestionImportPreviewAction
         $map = $columnMap ?? $batch->column_map ?? QuestionImportSchema::autoMap($parsed['headers']);
         $this->assertRequiredMapped($map);
 
-        $rows = [];
+        $extracted = [];
         foreach ($parsed['rows'] as $offset => $raw) {
-            $line = $offset + 2;
-            $values = QuestionImportSchema::extractRow($raw, $map);
-            $result = $this->validateValues($values, $line);
-            $rows[] = $result;
+            $extracted[] = [
+                'line' => $offset + 2,
+                'values' => QuestionImportSchema::extractRow($raw, $map),
+            ];
+        }
+
+        $codes = collect($extracted)
+            ->pluck('values.code')
+            ->filter(fn (mixed $code): bool => is_string($code) && $code !== '')
+            ->unique()
+            ->values()
+            ->all();
+
+        /** @var Collection<string, Question> $existingByCode */
+        $existingByCode = $codes === []
+            ? collect()
+            : Question::query()->whereIn('code', $codes)->get()->keyBy('code');
+
+        $seenCodes = [];
+        $rows = [];
+        foreach ($extracted as $item) {
+            $rows[] = $this->validateValues($item['values'], $item['line'], $existingByCode, $seenCodes);
         }
 
         $valid = collect($rows)->where('ok', true)->count();
         $invalid = count($rows) - $valid;
+        $invalidCodes = collect($rows)
+            ->filter(fn (array $row): bool => ! $row['ok'] && filled($row['values']['code'] ?? null))
+            ->filter(fn (array $row): bool => collect($row['errors'])->contains(
+                fn (string $error): bool => str_contains($error, 'Không tìm thấy mã câu hỏi'),
+            ))
+            ->pluck('values.code')
+            ->unique()
+            ->values()
+            ->all();
 
         $preview = [
             'total' => count($rows),
             'valid' => $valid,
             'invalid' => $invalid,
+            'invalid_codes' => $invalidCodes,
             'rows' => $rows,
         ];
 
@@ -75,7 +106,9 @@ final class PrepareQuestionImportPreviewAction
                     'total' => $preview['total'],
                     'valid' => $valid,
                     'invalid' => $invalid,
+                    'invalid_codes' => $invalidCodes,
                     'created' => (int) ($batch->stats['created'] ?? 0),
+                    'updated' => (int) ($batch->stats['updated'] ?? 0),
                 ],
             ])->save();
         }
@@ -109,11 +142,35 @@ final class PrepareQuestionImportPreviewAction
 
     /**
      * @param  array<string, string>  $values
-     * @return array{line: int, ok: bool, errors: list<string>, values: array<string, string>, payload?: array<string, mixed>}
+     * @param  Collection<string, Question>  $existingByCode
+     * @param  array<string, int>  $seenCodes
+     * @return array{line: int, ok: bool, action: ?string, errors: list<string>, values: array<string, string>, payload?: array<string, mixed>}
      */
-    private function validateValues(array $values, int $line): array
+    private function validateValues(array $values, int $line, Collection $existingByCode, array &$seenCodes): array
     {
         $errors = [];
+        $existing = null;
+        $action = 'create';
+
+        $code = $values['code'];
+        if ($code !== '') {
+            if (isset($seenCodes[$code])) {
+                $errors[] = 'Mã câu hỏi trùng trong tệp: '.$code.'.';
+            } else {
+                $seenCodes[$code] = $line;
+            }
+
+            $existing = $existingByCode->get($code);
+            if ($existing === null) {
+                $errors[] = 'Không tìm thấy mã câu hỏi: '.$code.'. Chỉ điền mã đã có trên hệ thống (để cập nhật) hoặc để trống (để tạo mới).';
+            } else {
+                $action = 'update';
+                $blocked = $this->blockedUpdateReason($existing);
+                if ($blocked !== null) {
+                    $errors[] = $blocked;
+                }
+            }
+        }
 
         if ($values['stem'] === '') {
             $errors[] = 'Thiếu đề bài.';
@@ -180,15 +237,11 @@ final class PrepareQuestionImportPreviewAction
             $errors[] = 'Không tìm thấy thẻ: '.$this->unresolved($tagTokens, $tagIds, 'tag').'.';
         }
 
-        $code = $values['code'];
-        if ($code !== '' && Question::query()->where('code', $code)->exists()) {
-            $errors[] = 'Mã câu hỏi đã tồn tại.';
-        }
-
         if ($errors !== []) {
             return [
                 'line' => $line,
                 'ok' => false,
+                'action' => $code !== '' && $existing === null ? null : $action,
                 'errors' => $errors,
                 'values' => $values,
             ];
@@ -197,10 +250,12 @@ final class PrepareQuestionImportPreviewAction
         return [
             'line' => $line,
             'ok' => true,
+            'action' => $action,
             'errors' => [],
             'values' => $values,
             'payload' => [
-                'code' => $code !== '' ? $code : null,
+                'existing_id' => $existing?->getKey(),
+                'code' => $existing === null ? ($code !== '' ? $code : null) : null,
                 'stem' => $values['stem'],
                 'stem_image_path' => null,
                 'key_info' => QuestionImportSchema::splitList(str_replace(["\r\n", "\n"], '|', $values['hints'])),
@@ -213,6 +268,18 @@ final class PrepareQuestionImportPreviewAction
                 'options' => $options,
             ],
         ];
+    }
+
+    private function blockedUpdateReason(Question $question): ?string
+    {
+        $code = (string) $question->code;
+
+        return match ($question->status) {
+            QuestionStatus::PendingPublish => 'Câu '.$code.' đang chờ xuất bản, không được import đè.',
+            QuestionStatus::Retired => 'Câu '.$code.' đã ngừng dùng, không được import đè.',
+            QuestionStatus::Rejected => 'Câu '.$code.' đã bị từ chối, không được import đè.',
+            default => null,
+        };
     }
 
     /**

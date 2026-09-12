@@ -11,11 +11,15 @@ use Illuminate\Validation\ValidationException;
 use Modules\Admin\Enums\AuditAction;
 use Modules\Admin\Support\Auditor;
 use Modules\QuestionBank\Enums\QuestionImportBatchStatus;
+use Modules\QuestionBank\Enums\QuestionReviewAction;
+use Modules\QuestionBank\Enums\QuestionReviewStatus;
 use Modules\QuestionBank\Enums\QuestionStatus;
+use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionImportBatch;
+use Modules\QuestionBank\Support\QuestionInstructorReviewCycle;
 
 /**
- * Create draft questions from a validated import batch. Never publishes.
+ * Create or update questions from a validated import batch. Never publishes.
  */
 final class CommitQuestionImportAction
 {
@@ -24,10 +28,11 @@ final class CommitQuestionImportAction
     public function __construct(
         private readonly PrepareQuestionImportPreviewAction $preview,
         private readonly SaveAdminQuestionAction $save,
+        private readonly QuestionInstructorReviewCycle $reviewCycle,
     ) {}
 
     /**
-     * @return array{created: int, skipped: int}
+     * @return array{created: int, updated: int, skipped: int}
      */
     public function handle(User $actor, QuestionImportBatch $batch): array
     {
@@ -38,6 +43,13 @@ final class CommitQuestionImportAction
         }
 
         $preview = $this->preview->handle($batch, $batch->column_map);
+        $invalidCodes = $preview['invalid_codes'] ?? [];
+        if ($invalidCodes !== []) {
+            throw ValidationException::withMessages([
+                'batch' => 'Không import được vì mã câu hỏi không tồn tại: '.implode(', ', $invalidCodes).'. Sửa mã hoặc để trống cột code rồi tải lại.',
+            ]);
+        }
+
         $valid = array_values(array_filter($preview['rows'], fn (array $row): bool => $row['ok']));
 
         if ($valid === []) {
@@ -47,29 +59,46 @@ final class CommitQuestionImportAction
         }
 
         $created = 0;
+        $updated = 0;
 
-        DB::transaction(function () use ($actor, $batch, $valid, $preview, &$created): void {
+        DB::transaction(function () use ($actor, $batch, $valid, $preview, &$created, &$updated): void {
             foreach ($valid as $row) {
                 $payload = $row['payload'] ?? null;
                 if (! is_array($payload)) {
                     continue;
                 }
 
-                $question = $this->save->handle($actor, null, $payload);
-                $question->forceFill([
-                    'import_batch_id' => $batch->getKey(),
-                    'status' => QuestionStatus::Draft,
-                    'version' => 0,
-                    'published_version' => null,
-                    'publisher_id' => null,
-                    'instructor_id' => null,
-                ])->save();
+                $existingId = $payload['existing_id'] ?? null;
+                unset($payload['existing_id']);
 
-                if ($question->status !== QuestionStatus::Draft) {
-                    $question->forceFill(['status' => QuestionStatus::Draft])->save();
+                $existing = is_string($existingId) && $existingId !== ''
+                    ? Question::query()->whereKey($existingId)->first()
+                    : null;
+
+                if (filled($existingId) && $existing === null) {
+                    continue;
                 }
 
-                $created++;
+                $question = $this->save->handle($actor, $existing, $payload);
+                $question->forceFill([
+                    'import_batch_id' => $batch->getKey(),
+                ]);
+
+                if ($existing === null) {
+                    $question->forceFill([
+                        'status' => QuestionStatus::Draft,
+                        'version' => 0,
+                        'published_version' => null,
+                        'publisher_id' => null,
+                        'instructor_id' => null,
+                    ]);
+                    $created++;
+                } else {
+                    $this->returnImportedUpdateToDraft($question);
+                    $updated++;
+                }
+
+                $question->save();
             }
 
             $batch->forceFill([
@@ -77,7 +106,9 @@ final class CommitQuestionImportAction
                 'committed_at' => now(),
                 'stats' => array_merge($batch->stats ?? [], [
                     'created' => $created,
+                    'updated' => $updated,
                     'skipped' => (int) ($preview['invalid'] ?? 0),
+                    'invalid_codes' => $preview['invalid_codes'] ?? [],
                 ]),
             ])->save();
         });
@@ -88,14 +119,31 @@ final class CommitQuestionImportAction
             $batch,
             metadata: [
                 'created' => $created,
+                'updated' => $updated,
                 'skipped' => $preview['invalid'],
+                'invalid_codes' => $preview['invalid_codes'] ?? [],
                 'filename' => $batch->original_filename,
             ],
         );
 
         return [
             'created' => $created,
+            'updated' => $updated,
             'skipped' => $preview['invalid'],
         ];
+    }
+
+    private function returnImportedUpdateToDraft(Question $question): void
+    {
+        if ($question->status !== QuestionStatus::InReview) {
+            return;
+        }
+
+        $question->reviewRequests()
+            ->where('status', QuestionReviewStatus::Pending->value)
+            ->where('action', QuestionReviewAction::Create->value)
+            ->delete();
+        $this->reviewCycle->clearSlots($question);
+        $question->forceFill(['status' => QuestionStatus::Draft]);
     }
 }

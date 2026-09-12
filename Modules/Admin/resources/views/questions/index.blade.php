@@ -117,6 +117,14 @@
 
         <x-admin.flash />
 
+        @if (($importBatch ?? null) && filled($importBatch->original_filename))
+            <p class="flex flex-wrap items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 font-body-sm text-on-surface">
+                <span class="material-symbols-outlined text-[20px] text-primary" aria-hidden="true">draft</span>
+                Đang xem câu hỏi từ tệp import:
+                <strong class="break-all">{{ $importBatch->original_filename }}</strong>
+            </p>
+        @endif
+
         {{-- Section 1: Thống kê tổng quan --}}
         <section aria-labelledby="heading-stats">
             <div class="mb-3 flex items-center justify-between gap-3">

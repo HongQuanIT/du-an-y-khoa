@@ -195,13 +195,25 @@ final class QuestionImportController extends Controller
 
         $result = $action->handle($this->actor(), $batch);
 
+        $parts = [];
+        if ($result['created'] > 0) {
+            $parts[] = 'tạo '.$result['created'].' câu mới';
+        }
+        if ($result['updated'] > 0) {
+            $parts[] = 'cập nhật '.$result['updated'].' câu';
+        }
+        $summary = $parts !== [] ? implode(', ', $parts) : 'không ghi câu nào';
+
+        $filename = $batch->original_filename ?: 'tệp đã tải';
+
         return redirect()
-            ->route('admin.questions.index', ['import_batch_id' => $batch->getKey(), 'status' => 'draft'])
+            ->route('admin.questions.import.show', $batch)
             ->with(
                 'status',
                 sprintf(
-                    'Đã import %d câu hỏi bản nháp. %s Các câu này chưa được xuất bản — hãy xem lại rồi gửi giảng viên duyệt.',
-                    $result['created'],
+                    'Đã import từ tệp %s: %s. %s Các câu này chưa được xuất bản — hãy xem lại rồi gửi giảng viên duyệt.',
+                    $filename,
+                    $summary,
                     $result['skipped'] > 0 ? $result['skipped'].' dòng lỗi đã bỏ qua.' : '',
                 ),
             );

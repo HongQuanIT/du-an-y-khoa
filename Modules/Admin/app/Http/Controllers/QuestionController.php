@@ -25,6 +25,7 @@ use Modules\QuestionBank\Enums\QuestionReviewAction;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionFeedback;
+use Modules\QuestionBank\Models\QuestionImportBatch;
 
 final class QuestionController extends Controller
 {
@@ -58,10 +59,16 @@ final class QuestionController extends Controller
         $questions = $query->paginate(20)->withQueryString();
         $this->ensureListStatsAreFresh($questions->getCollection());
 
+        $importBatchId = $request->query('import_batch_id');
+        $importBatch = filled($importBatchId)
+            ? QuestionImportBatch::query()->find((string) $importBatchId)
+            : null;
+
         return view('admin::questions.index', [
             'questions' => $questions,
             'statuses' => QuestionStatus::cases(),
             'difficulties' => Difficulty::cases(),
+            'importBatch' => $importBatch,
             'filters' => [
                 'q' => $search,
                 'status' => $statusFilters,
@@ -69,7 +76,7 @@ final class QuestionController extends Controller
                 'lesson_id' => $request->query('lesson_id'),
                 'is_free' => $accessFilters,
                 'created_by' => $creatorIds,
-                'import_batch_id' => $request->query('import_batch_id'),
+                'import_batch_id' => $importBatchId,
             ],
             'stats' => [
                 'total' => (clone $statsQuery)->count(),

@@ -19,7 +19,7 @@ final class BuildQuestionExportRowsAction
      */
     public function handle(Collection $questions): array
     {
-        $headers = array_merge(QuestionImportSchema::headers(), ['id', 'status']);
+        $headers = array_merge(QuestionImportSchema::headers(), ['status']);
         $rows = [];
 
         foreach ($questions as $question) {
@@ -54,7 +54,6 @@ final class BuildQuestionExportRowsAction
 
             $row['correct'] = $correct;
             $rows[] = array_merge(array_values($row), [
-                (string) $question->getKey(),
                 $question->status->value,
             ]);
         }
