@@ -2,6 +2,10 @@
 
 ## 2026-09-11
 
+### Seed — Sample QBank 50 câu + taxonomy chương trình
+- Mở rộng `MedicalKnowledgeTaxonomySeeder`: 8 hệ cơ quan, 8 môn học, ~30 bài học (giữ demo STEMI).
+- Thêm `SampleQuestionBankSeeder` (idempotent `QBANK-SAMPLE-001…050`) gắn bài học; gọi từ `QuestionBankDatabaseSeeder`.
+
 ### Feat — Adaptive: áp dụng thuật toán chọn câu khi tạo phiên
 - `AdaptiveQuestionSelector`: coverage (unseen) + Weakness/Memory theo mode + cooldown + weighted random.
 - UI 3 hướng luyện: Điểm yếu / Cân bằng / Củng cố (`adaptive_focus`); log debug `[adaptive] …`.

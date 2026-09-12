@@ -54,24 +54,159 @@ final class MedicalKnowledgeTaxonomySeeder extends Seeder
      */
     private function seedCurriculum(): array
     {
-        $organSystemId = $this->upsert('organ_systems', 'he-tim-mach', 'Hệ tim mạch', 1);
-        $subjectId = $this->upsert('subjects', 'tim-mach', 'Tim mạch', 1);
-        $this->link('subject_organ_system', 'subject_id', $subjectId, 'organ_system_id', $organSystemId);
-
-        $lessons = [
-            'benh-dong-mach-vanh' => 'Bệnh động mạch vành',
-            'hoi-chung-vanh-cap' => 'Hội chứng vành cấp',
-            'nhoi-mau-co-tim' => 'Nhồi máu cơ tim',
-            'stemi' => 'STEMI',
+        $tree = [
+            [
+                'slug' => 'he-tim-mach',
+                'name' => 'Hệ tim mạch',
+                'subjects' => [
+                    [
+                        'slug' => 'tim-mach',
+                        'name' => 'Tim mạch',
+                        'lessons' => [
+                            'benh-dong-mach-vanh' => 'Bệnh động mạch vành',
+                            'hoi-chung-vanh-cap' => 'Hội chứng vành cấp',
+                            'nhoi-mau-co-tim' => 'Nhồi máu cơ tim',
+                            'stemi' => 'STEMI',
+                            'suy-tim' => 'Suy tim',
+                            'roi-loan-nhip' => 'Rối loạn nhịp',
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'slug' => 'he-ho-hap',
+                'name' => 'Hệ hô hấp',
+                'subjects' => [
+                    [
+                        'slug' => 'ho-hap',
+                        'name' => 'Hô hấp',
+                        'lessons' => [
+                            'viem-phoi' => 'Viêm phổi',
+                            'hen-phe-quan' => 'Hen phế quản',
+                            'copd' => 'COPD',
+                            'thuyen-tac-phoi' => 'Thuyên tắc phổi',
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'slug' => 'he-tieu-hoa',
+                'name' => 'Hệ tiêu hóa',
+                'subjects' => [
+                    [
+                        'slug' => 'tieu-hoa',
+                        'name' => 'Tiêu hóa',
+                        'lessons' => [
+                            'loet-da-day' => 'Loét dạ dày – tá tràng',
+                            'viem-tuy-cap' => 'Viêm tụy cấp',
+                            'xo-gan' => 'Xơ gan',
+                            'viem-ruot-thua' => 'Viêm ruột thừa',
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'slug' => 'he-than-kinh',
+                'name' => 'Hệ thần kinh',
+                'subjects' => [
+                    [
+                        'slug' => 'than-kinh',
+                        'name' => 'Thần kinh',
+                        'lessons' => [
+                            'dot-quy' => 'Đột quỵ',
+                            'viem-mang-nao' => 'Viêm màng não',
+                            'dong-kinh' => 'Động kinh',
+                            'migraine' => 'Migraine',
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'slug' => 'he-noi-tiet',
+                'name' => 'Hệ nội tiết',
+                'subjects' => [
+                    [
+                        'slug' => 'noi-tiet',
+                        'name' => 'Nội tiết',
+                        'lessons' => [
+                            'dai-thao-duong' => 'Đái tháo đường',
+                            'cuong-giap' => 'Cường giáp',
+                            'suy-thuong-than' => 'Suy thượng thận',
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'slug' => 'he-tiet-nieu',
+                'name' => 'Hệ tiết niệu',
+                'subjects' => [
+                    [
+                        'slug' => 'than-tiet-nieu',
+                        'name' => 'Thận – tiết niệu',
+                        'lessons' => [
+                            'suy-than-cap' => 'Suy thận cấp',
+                            'viem-be-than' => 'Viêm bể thận',
+                            'soi-tiet-nieu' => 'Sỏi tiết niệu',
+                            'urology' => 'Tiết niệu',
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'slug' => 'he-mau',
+                'name' => 'Hệ máu',
+                'subjects' => [
+                    [
+                        'slug' => 'huyet-hoc',
+                        'name' => 'Huyết học',
+                        'lessons' => [
+                            'thieu-mau' => 'Thiếu máu',
+                            'roi-loan-dong-mau' => 'Rối loạn đông máu',
+                            'bach-cau-cap' => 'Bạch cầu cấp',
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'slug' => 'he-co-xuong-khop',
+                'name' => 'Hệ cơ xương khớp',
+                'subjects' => [
+                    [
+                        'slug' => 'co-xuong-khop',
+                        'name' => 'Cơ xương khớp',
+                        'lessons' => [
+                            'gout' => 'Gout',
+                            'viem-khop-dang-thap' => 'Viêm khớp dạng thấp',
+                            'loang-xuong' => 'Loãng xương',
+                        ],
+                    ],
+                ],
+            ],
         ];
 
         $ids = [];
-        $sort = 1;
-        foreach ($lessons as $slug => $name) {
-            $lessonId = $this->upsert('lessons', $slug, $name, $sort);
-            $this->link('lesson_subject', 'lesson_id', $lessonId, 'subject_id', $subjectId, $sort);
-            $ids[$slug] = $lessonId;
-            $sort++;
+        $organSort = 1;
+
+        foreach ($tree as $organ) {
+            $organSystemId = $this->upsert('organ_systems', $organ['slug'], $organ['name'], $organSort);
+            $subjectSort = 1;
+
+            foreach ($organ['subjects'] as $subject) {
+                $subjectId = $this->upsert('subjects', $subject['slug'], $subject['name'], $subjectSort);
+                $this->link('subject_organ_system', 'subject_id', $subjectId, 'organ_system_id', $organSystemId);
+
+                $lessonSort = 1;
+                foreach ($subject['lessons'] as $slug => $name) {
+                    $lessonId = $this->upsert('lessons', $slug, $name, $lessonSort);
+                    $this->link('lesson_subject', 'lesson_id', $lessonId, 'subject_id', $subjectId, $lessonSort);
+                    $ids[$slug] = $lessonId;
+                    $lessonSort++;
+                }
+
+                $subjectSort++;
+            }
+
+            $organSort++;
         }
 
         return $ids;
