@@ -16,8 +16,9 @@
         || filled($filters['status'])
         || filled($filters['difficulty'])
         || filled($filters['is_free'])
-        || filled($filters['has_reports'])
-        || filled($filters['lesson_id']);
+        || filled($filters['created_by'] ?? [])
+        || filled($filters['lesson_id'])
+        || filled($filters['import_batch_id'] ?? null);
 @endphp
 
 <x-layouts.admin :title="$isReviewer ? 'Ngân hàng câu hỏi — Quản trị nội dung' : 'Câu hỏi của tôi — Quản trị nội dung'">
@@ -38,6 +39,22 @@
             </div>
 
             <div class="flex flex-wrap items-center gap-2.5">
+                @if ($canCreate)
+                    <a href="{{ route('admin.questions.import') }}" id="btn-import-questions"
+                        class="inline-flex items-center gap-2 rounded-xl border border-outline-variant bg-surface px-4 py-2.5 font-label-md font-semibold text-on-surface shadow-sm transition-colors hover:bg-surface-container-low">
+                        <span class="material-symbols-outlined text-[20px]" aria-hidden="true">upload</span>
+                        Import
+                    </a>
+                @endif
+                <a href="{{ route('admin.questions.export', request()->query()) }}" id="btn-export-questions-xlsx"
+                    class="inline-flex items-center gap-2 rounded-xl border border-outline-variant bg-surface px-4 py-2.5 font-label-md font-semibold text-on-surface shadow-sm transition-colors hover:bg-surface-container-low">
+                    <span class="material-symbols-outlined text-[20px]" aria-hidden="true">download</span>
+                    Xuất Excel
+                </a>
+                <a href="{{ route('admin.questions.export', array_merge(request()->query(), ['format' => 'csv'])) }}" id="btn-export-questions-csv"
+                    class="inline-flex items-center gap-2 rounded-xl border border-outline-variant bg-surface px-4 py-2.5 font-label-md font-semibold text-on-surface shadow-sm transition-colors hover:bg-surface-container-low">
+                    Xuất CSV
+                </a>
                 @if ($canCreate)
                     <a href="{{ route('admin.questions.create') }}" id="btn-create-question"
                         class="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 font-label-md font-semibold text-on-primary shadow-sm transition-all hover:bg-primary/90 hover:shadow">
@@ -183,7 +200,10 @@
                 @endif
             </div>
             <form method="get" action="{{ route('admin.questions.index') }}" id="question-filter-form" role="search"
-                class="grid grid-cols-1 items-end gap-4 sm:grid-cols-12">
+                class="grid grid-cols-1 items-start gap-4 sm:grid-cols-12">
+                @if (filled($filters['import_batch_id'] ?? null))
+                    <input type="hidden" name="import_batch_id" value="{{ $filters['import_batch_id'] }}">
+                @endif
                 <div class="sm:col-span-3">
                     <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant"
                         for="question-search-input">
@@ -200,61 +220,52 @@
                 </div>
 
                 <div class="sm:col-span-2">
-                    <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant"
-                        for="question-status-filter">
-                        Trạng thái
-                    </label>
-                    <select id="question-status-filter" name="status"
-                        class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-body-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
-                        <option value="">Tất cả trạng thái</option>
-                        @foreach ($statuses as $status)
-                            <option value="{{ $status->value }}" @selected($filters['status'] === $status->value)>
-                                {{ $status->label() }}</option>
-                        @endforeach
-                    </select>
+                    <x-admin.multi-select-filter
+                        name="status"
+                        label="Vòng đời"
+                        placeholder="Tất cả vòng đời"
+                        :options="collect($statuses)->map(fn ($status) => ['id' => $status->value, 'label' => $status->label()])->all()"
+                        :selected="$filters['status'] ?? []"
+                    />
                 </div>
 
                 <div class="sm:col-span-2">
-                    <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant"
-                        for="question-difficulty-filter">
-                        Độ khó
-                    </label>
-                    <select id="question-difficulty-filter" name="difficulty"
-                        class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-body-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
-                        <option value="">Tất cả độ khó</option>
-                        @foreach ($difficulties as $difficulty)
-                            <option value="{{ $difficulty->value }}" @selected($filters['difficulty'] === $difficulty->value)>
-                                {{ $difficulty->label() }}</option>
-                        @endforeach
-                    </select>
+                    <x-admin.multi-select-filter
+                        name="difficulty"
+                        label="Độ khó"
+                        placeholder="Tất cả độ khó"
+                        :options="collect($difficulties)->map(fn ($difficulty) => ['id' => $difficulty->value, 'label' => $difficulty->label()])->all()"
+                        :selected="$filters['difficulty'] ?? []"
+                    />
                 </div>
 
                 <div class="sm:col-span-2">
-                    <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant"
-                        for="question-access-filter">
-                        Gói truy cập
-                    </label>
-                    <select id="question-access-filter" name="is_free"
-                        class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-body-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
-                        <option value="">Tất cả</option>
-                        <option value="1" @selected($filters['is_free'] === '1')>Free</option>
-                        <option value="0" @selected($filters['is_free'] === '0')>Premium</option>
-                    </select>
+                    <x-admin.multi-select-filter
+                        name="is_free"
+                        label="Gói truy cập"
+                        placeholder="Tất cả gói"
+                        :options="[
+                            ['id' => '1', 'label' => 'Free'],
+                            ['id' => '0', 'label' => 'Premium'],
+                        ]"
+                        :selected="$filters['is_free'] ?? []"
+                    />
                 </div>
 
-                <div class="sm:col-span-2">
-                    <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant"
-                        for="question-reports-filter">
-                        Phản hồi
-                    </label>
-                    <select id="question-reports-filter" name="has_reports"
-                        class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-body-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
-                        <option value="">Tất cả</option>
-                        <option value="1" @selected(($filters['has_reports'] ?? null) === '1')>Có phản hồi</option>
-                    </select>
-                </div>
+                @if ($isReviewer)
+                    <div class="sm:col-span-2">
+                        <x-admin.multi-select-filter
+                            name="created_by"
+                            label="Người tạo"
+                            placeholder="Tất cả người tạo"
+                            :options="$creatorOptions"
+                            :selected="$filters['created_by'] ?? []"
+                        />
+                    </div>
+                @endif
 
-                <div class="flex items-center gap-2 sm:col-span-1">
+                <div class="{{ $isReviewer ? 'sm:col-span-1' : 'sm:col-span-3' }}">
+                    <span class="mb-1.5 block font-label-sm font-semibold text-transparent" aria-hidden="true">Lọc</span>
                     <button type="submit" id="btn-apply-filters"
                         class="inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-4 font-label-md font-medium text-on-primary transition hover:opacity-90">
                         <span class="material-symbols-outlined text-[18px]" aria-hidden="true">filter_alt</span>
@@ -327,8 +338,9 @@
                             @endif
                             <th scope="col" class="w-[140px] min-w-[120px] px-4 py-3.5" x-show="cols.status" x-cloak>
                                 Trạng thái</th>
-                            <th scope="col" class="w-[140px] min-w-[120px] px-4 py-3.5" x-show="cols.review_status"
-                                x-cloak>Kiểm duyệt</th>
+                            <th scope="col" class="w-[180px] min-w-[160px] px-4 py-3.5" x-show="cols.review_status"
+                                x-cloak title="Editor đã gửi bản cập nhật chưa, và 2 giảng viên đã duyệt thế nào.">
+                                Bản gửi duyệt</th>
                             <th scope="col" class="w-[160px] min-w-[140px] px-4 py-3.5" x-show="cols.origin" x-cloak>
                                 Nguồn gốc</th>
                             <th scope="col" class="w-[110px] min-w-[100px] px-4 py-3.5 text-center" x-show="cols.access"
@@ -406,67 +418,44 @@
                                     </td>
                                 @endif
 
-                                {{-- Cột 1: Trạng thái (Đã xuất bản, Nháp, Riêng tư, Ngừng dùng) --}}
+                                {{-- Cột 1: Trạng thái xuất bản (live / private / ngừng dùng) --}}
                                 <td class="w-[140px] min-w-[120px] px-4 py-4 align-top whitespace-nowrap"
                                     x-show="cols.status" x-cloak>
                                     @php
-                                        $pubBadgeClass = match ($question->status) {
-                                            \Modules\QuestionBank\Enums\QuestionStatus::Published => 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300',
-                                            \Modules\QuestionBank\Enums\QuestionStatus::PendingPublish => 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300',
-                                            \Modules\QuestionBank\Enums\QuestionStatus::InReview => 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300',
-                                            \Modules\QuestionBank\Enums\QuestionStatus::Rejected => 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300',
-                                            \Modules\QuestionBank\Enums\QuestionStatus::Private => 'bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300',
-                                            \Modules\QuestionBank\Enums\QuestionStatus::Retired => 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300',
+                                        $pubLabel = $question->publicationStateLabel();
+                                        $pubBadgeClass = match ($pubLabel) {
+                                            'Đã xuất bản' => 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300',
+                                            'Riêng tư (exam)' => 'bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300',
+                                            'Ngừng dùng' => 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300',
                                             default => 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
                                         };
-
-                                        $pubLabel = $question->status->label();
-                                        if ($question->published_version && $question->status !== \Modules\QuestionBank\Enums\QuestionStatus::Published) {
-                                            $pubLabel .= ' · QBank v' . $question->published_version;
+                                        if ((int) $question->published_version > 0 && $pubLabel === 'Đã xuất bản') {
+                                            $pubLabel .= ' · v'.$question->published_version;
                                         }
                                     @endphp
                                     <span
-                                        class="inline-flex items-center rounded-full border border-outline-variant px-2.5 py-0.5 text-xs font-medium text-on-surface">
+                                        class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold {{ $pubBadgeClass }}">
                                         {{ $pubLabel }}
                                     </span>
                                 </td>
 
-                                {{-- Cột 2: Kiểm duyệt (lớp GV / xuất bản) --}}
-                                <td class="w-[140px] min-w-[120px] px-4 py-4 align-top whitespace-nowrap"
+                                {{-- Cột 2: Editor đã gửi bản cập nhật chưa + phiếu 2 GV --}}
+                                <td class="w-[180px] min-w-[160px] px-4 py-4 align-top"
                                     x-show="cols.review_status" x-cloak>
-                                    @php
-                                        $reviewBadge = match ($question->status) {
-                                            \Modules\QuestionBank\Enums\QuestionStatus::InReview => ['Chờ GV duyệt', 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'],
-                                            \Modules\QuestionBank\Enums\QuestionStatus::PendingPublish => ['GV đã duyệt · chờ XB', 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300'],
-                                            \Modules\QuestionBank\Enums\QuestionStatus::Rejected => ['Từ chối', 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'],
-                                            \Modules\QuestionBank\Enums\QuestionStatus::Published, \Modules\QuestionBank\Enums\QuestionStatus::Private => ['Đã xuất bản', 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'],
-                                            default => null,
-                                        };
-                                    @endphp
-
-                                    @if ($reviewBadge)
-                                        <div class="flex flex-col items-start gap-1">
-                                            <span
-                                                class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold {{ $reviewBadge[1] }}">
-                                                {{ $reviewBadge[0] }}
-                                            </span>
-                                            @if ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::PendingPublish && $isReviewer)
-                                                <a href="{{ route('admin.questions.edit', $question) }}"
-                                                    class="inline-flex items-center gap-0.5 text-xs font-semibold text-primary hover:underline">
-                                                    Duyệt xuất bản
-                                                </a>
-                                            @endif
-                                            @if ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::InReview && $question->instructor)
-                                                <span class="text-[11px] text-on-surface-variant">GV:
-                                                    {{ $question->instructor->name }}</span>
-                                            @elseif ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::PendingPublish && $question->instructor)
-                                                <span class="text-[11px] text-on-surface-variant">GV:
-                                                    {{ $question->instructor->name }}</span>
-                                            @endif
-                                        </div>
-                                    @else
-                                        <span class="text-xs text-on-surface-variant/60">—</span>
-                                    @endif
+                                    <div class="flex flex-col items-start gap-1">
+                                        <p class="text-[11px] font-medium leading-4 text-on-surface-variant">
+                                            {{ $question->editorialSubmissionLabel() }}
+                                        </p>
+                                        @if ($question->hasEditorialSubmission())
+                                            @include('questionbank::partials.instructor-review-flags', ['question' => $question])
+                                        @endif
+                                        @if ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::PendingPublish && $isReviewer)
+                                            <a href="{{ route('admin.questions.edit', $question) }}"
+                                                class="inline-flex items-center gap-0.5 text-xs font-semibold text-primary hover:underline">
+                                                Duyệt xuất bản
+                                            </a>
+                                        @endif
+                                    </div>
                                 </td>
 
                                 {{-- Cột Nguồn gốc --}}
@@ -622,7 +611,7 @@
                 { key: 'difficulty', label: 'Độ khó' },
                 { key: 'creator', label: 'Người tạo' },
                 { key: 'status', label: 'Trạng thái' },
-                { key: 'review_status', label: 'Kiểm duyệt' },
+                { key: 'review_status', label: 'Bản gửi duyệt' },
                 { key: 'origin', label: 'Nguồn gốc' },
                 { key: 'access', label: 'Truy cập' },
                 { key: 'attempts', label: 'Lượt làm' },

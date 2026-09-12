@@ -3,14 +3,15 @@
 **Nhóm:** Admin · **Ưu tiên:** Rất cao (chất lượng nội dung) · **Phụ thuộc:** Qbank (05), Media (37), RBAC (39), Audit (40), Search (25), Instructor portal (44) · **Trạng thái:** ✅
 
 ## 0. Tóm tắt module
-CRUD & **workflow duyệt 2 lớp** câu hỏi: Content Creator soạn/sửa → Giảng viên duyệt chuyên môn → Super Admin publish phiên bản. Versioning, import (Excel/CSV/PDF), xử lý report, thống kê chất lượng.
+CRUD & **workflow duyệt 2 lớp** câu hỏi: Content Creator soạn/sửa → **2 giảng viên** duyệt chuyên môn (1 reject = fail ngay) → Super Admin publish phiên bản (không cần kiến thức y khoa). Versioning, import (Excel/CSV/PDF), xử lý report, thống kê chất lượng.
 
 | Route | Màn hình | Portal |
 |-------|----------|--------|
 | `/admin/questions` | Danh sách + filter + trạng thái | Admin |
 | `/admin/questions/create` | Soạn câu hỏi | Admin |
 | `/admin/questions/{id}/edit` | Chỉnh sửa (working copy) | Admin |
-| `/admin/questions/import` | Import hàng loạt | Admin |
+| `/admin/questions/import` | Import hàng loạt (Excel/CSV → draft) | Admin |
+| `/admin/questions/export` | Export theo bộ lọc (Excel/CSV) | Admin |
 | `/admin/questions/reports` | Xử lý báo lỗi câu hỏi | Admin |
 | `/admin/questions/pending-publish` | Hàng đợi Super Admin publish | Admin |
 | `/teach/questions/reviews` | Hàng đợi giảng viên duyệt | Teach |
@@ -32,7 +33,7 @@ CRUD & **workflow duyệt 2 lớp** câu hỏi: Content Creator soạn/sửa →
 | **Version history** | Sort `version_number`; instructor + publisher; snapshot read-only | Editor | Drawer |
 | **Clone action** | Nhân bản → câu mới `draft` | Detail/List | Button |
 | **Import wizard** | Upload → map → validate → preview → commit | `/import` | Stepper |
-| **Instructor review queue** | Danh sách `in_review` + approve/reject + lý do | `/teach/questions/reviews` | Table |
+| **Instructor review queue** | Danh sách `in_review` chưa có phiếu của mình + approve/reject + lý do; ẩn phiếu GV kia trước khi mình quyết | `/teach/questions/reviews` | Table |
 | **Publish queue** | Danh sách `pending_publish` + publish/reject | `/admin/questions/pending-publish` | Table |
 | **Reports queue** | Báo lỗi + xử lý | `/reports` | Table |
 | **Duplicate check (per question)** | Nút trên editor → trang chi tiết kết quả ≥30% | Form → `/duplicates` | Detail page |
@@ -52,19 +53,22 @@ CRUD & **workflow duyệt 2 lớp** câu hỏi: Content Creator soạn/sửa →
 └───────────────────────────────┬─────────────────────────────────────────┘
                                 │
 ┌───────────────────────────────▼─────────────────────────────────────────┐
-│  Lớp 1 — Giảng viên (instructor) trên /teach                            │
+│  Lớp 1 — 2 giảng viên (instructor) trên /teach — độc lập                │
 │  Duyệt chuyên môn · KHÔNG tăng version · KHÔNG publish lên Qbank        │
-│  in_review  ──approve──►  pending_publish                               │
-│  in_review  ──reject───►  rejected (+ rejection_reason)                 │
+│  in_review  ──accept #1──► vẫn in_review (1 cờ xanh, 1 cờ trắng)        │
+│  in_review  ──accept #2──► pending_publish (2 cờ xanh)                  │
+│  in_review  ──reject (1 phiếu)──► rejected ngay (cờ đỏ)                 │
+│  Creator được sửa khi in_review; «gửi duyệt lại» reset 2 cờ + cycle +1  │
+│  Creator ≠ reviewer; 2 slot phải 2 người khác nhau                      │
 └───────────────────────────────┬─────────────────────────────────────────┘
                                 │
 ┌───────────────────────────────▼─────────────────────────────────────────┐
 │  Lớp 2 — Admin có `question.publish` trên /admin                        │
-│  Chỉ publish khi đã qua lớp 1 · KHÔNG duyệt thay GV · KHÔNG sửa nội dung │
+│  Chỉ publish khi đủ 2 GV accept · KHÔNG duyệt chuyên môn · KHÔNG sửa    │
 │  pending_publish  ──publish──►  published (+ question_versions)         │
-│  pending_publish  ──reject───►  rejected (+ lý do; về Creator sửa lại)  │
+│  pending_publish  ──trả về──►  rejected (lý do vận hành, không y khoa)  │
 │  → đồng bộ Meilisearch → học viên thấy bản published                    │
-│  Bắt buộc ≥2 người: instructor_id ≠ publisher_id                        │
+│  Bắt buộc ≥3 người: 2 GV khác nhau + publisher ∉ {GV1, GV2}             │
 └─────────────────────────────────────────────────────────────────────────┘
 
 Report từ user → queue → Creator sửa (working copy, không +version)
@@ -80,7 +84,9 @@ Import: commit tạo hàng loạt `draft`.
 | Field | Ý nghĩa | UI |
 |-------|---------|-----|
 | `created_by` | Content Creator tạo câu | Basic info |
-| `instructor_id` | Giảng viên duyệt/từ chối gần nhất (lớp 1) | Basic info |
+| `instructor_id` | Giảng viên lớp 1 quyết định gần nhất | Basic info |
+| `instructor_1_*` / `instructor_2_*` | 2 slot phiếu (id + decision) — cờ list | 2 cờ trắng/xanh/đỏ |
+| `instructor_review_cycle` | Vòng duyệt; +1 mỗi lần submit / gửi lại | — |
 | `publisher_id` | Super Admin publish gần nhất (lớp 2) | Basic info |
 | `rejection_reason` | Lý do từ chối (GV hoặc Super Admin) | Badge / alert |
 | `created_at` / `updated_at` | Thời gian tạo / sửa working copy | Basic info |
@@ -104,8 +110,8 @@ Import: commit tạo hàng loạt `draft`.
 | Status | Ý nghĩa | Ai chuyển tới | Hiển thị học viên (Qbank) |
 |--------|---------|---------------|---------------------------|
 | `draft` | Nháp / đang soạn; Creator sửa tự do | Tạo mới; rút lại từ `in_review`; sau reject khi bắt đầu sửa | Không\* |
-| `in_review` | Đã gửi, **chờ giảng viên** (lớp 1) | Creator `submit` | Không\* |
-| `pending_publish` | GV đã duyệt, **chờ Super Admin** (lớp 2) | Instructor `approve` | Không\* |
+| `in_review` | Đã gửi, **chờ đủ 2 GV chấp nhận** (lớp 1) | Creator `submit` / gửi lại | Không\* |
+| `pending_publish` | Đủ 2 GV accept, **chờ Super Admin** (lớp 2) | Instructor accept #2 | Không\* |
 | `published` | Super Admin đã publish phiên bản | Super Admin `publish` | Có (theo gating) |
 | `rejected` | Bị từ chối ở lớp 1 hoặc lớp 2; có `rejection_reason` | Instructor / Super Admin `reject` | Không\* |
 | `private` | Pool exam (`exam_flag=true`) | Super Admin (sau đủ pipeline hoặc quy tắc exam riêng) | Không (Qbank) |
@@ -116,17 +122,20 @@ Import: commit tạo hàng loạt `draft`.
 **Máy trạng thái (happy path + nhánh từ chối):**
 
 ```
-                  submit            approve(GV)           publish(SA)
-  draft ────────────────► in_review ────────────► pending_publish ──────► published
-    ▲                       │                         │
-    │         reject(GV)    │         reject(SA)      │
-    │◄──── rejected ◄───────┘◄────────────────────────┘
+                  submit          accept×2 (2 GV khác nhau)     publish(SA)
+  draft ────────────────► in_review ──────────────────► pending_publish ──► published
+    ▲                       │  │                            │
+    │         reject(1 GV)  │  │ gửi duyệt lại (reset 2 cờ) │ trả về (vận hành)
+    │◄──── rejected ◄───────┘  └──────── in_review ─────────┘
     │         ▲
     └─ Creator sửa (không +version) ─┘
 ```
 
-- Từ `in_review`: Creator được **withdraw** → `draft` (nếu chưa có quyết định GV).
-- Từ `pending_publish`: **không** cho Creator sửa trực tiếp — phải Super Admin reject về `rejected`/`draft`, hoặc (tuỳ chọn) SA trả về `in_review`.
+- List admin: cột **Trạng thái** = xuất bản (đã XB / riêng tư / ngừng dùng). Cột **Bản gửi duyệt** = editor đã gửi bản cập nhật chưa + 2 cờ GV (trắng chờ / xanh chấp nhận / đỏ từ chối).
+- Một phiếu reject = fail ngay (không chờ phiếu 2). Admin không phá thế cờ y khoa.
+- Từ `in_review`: Creator **được sửa** working copy; **gửi duyệt lại** (`in_review` → `in_review`) tăng `instructor_review_cycle` và reset 2 cờ. Withdraw → `draft` cũng xóa slot hiện tại.
+- `/teach` ẩn phiếu của GV kia trước khi mình quyết định (tránh neo theo).
+- Từ `pending_publish`: **không** cho Creator sửa trực tiếp — Admin trả về (`rejected`) vì lý do vận hành, không phán chuyên môn.
 - `retired` / `private`: chỉ Super Admin; không đi ngược về Creator trừ clone.
 
 **Quyền (deny by default):**
@@ -134,7 +143,7 @@ Import: commit tạo hàng loạt `draft`.
 | Actor | Role | Được làm |
 |-------|------|----------|
 | Content Creator | `content_editor` | CRUD working copy; `submit`; withdraw; clone; import draft; xử lý report (sửa) |
-| Giảng viên | `instructor` | `approve` / `reject` trên hàng đợi `/teach` (**không** publish, **không** +version); xem lại đã duyệt / đã từ chối |
+| Giảng viên | `instructor` | 1 phiếu `approve` / `reject` trên `/teach` (**không** publish, **không** +version); `pending_publish` chỉ khi đủ 2 accept khác người; 1 reject = fail ngay; xem lại đã duyệt / đã từ chối |
 | Admin | `admin` | Xem + **publish / private / retire / xoá** (`question.publish`, `question.delete`); **không** `question.create` / `question.update` / không duyệt thay GV |
 | Super Admin | `super_admin` | Oversight + cùng quyền trạng thái/xoá như Admin; **không** soạn/sửa nội dung (tránh xung đột biên tập); publish vẫn cần đã qua lớp GV + khác người duyệt |
 
@@ -194,16 +203,19 @@ Tránh N+1: eager load creator / instructor / publisher trên list; **không** j
   - `status` enum §5.3 (`draft` / `in_review` / `pending_publish` / `published` / `rejected` / `private` / `retired`)
   - `version` INT (denormalized = version đã publish gần nhất; 0 nếu chưa từng publish)
   - `published_version` INT null (trùng `version` khi đang live; dùng Qbank đọc snapshot)
-  - `instructor_id` FK null, `publisher_id` FK null
+  - `instructor_id` FK null (GV quyết định gần nhất), `publisher_id` FK null
+  - `instructor_review_cycle` UINT default 0; `instructor_1_id` / `instructor_1_decision`; `instructor_2_id` / `instructor_2_decision` (denormalize 2 cờ cho list)
   - `rejection_reason` TEXT null, `rejected_by_role` ENUM(`instructor`,`super_admin`) null
   - `exam_flag`, `cloned_from_id`, `cloned_from_version`, `created_by`, `updated_by`, timestamps
   - `content_fingerprint` CHAR(64) null + index; `similarity_checked_at` timestamp null
 - `question_similarity_matches`: `question_id_low`, `question_id_high` (UUID, low < high), `score`, `severity`, `signals` JSON, `detected_at`; unique cặp
 - `question_options`, `question_lesson` (`question_id` uuid, `lesson_id`), `question_tags`, `question_reports`
 - `question_versions`: `question_id`, `version_number`, `instructor_id` FK, `publisher_id` FK, `snapshot` JSON, `created_at`; unique `(question_id, version_number)`; **chỉ tạo khi Super Admin publish**
+- `question_instructor_reviews`: `question_id`, `review_cycle`, `instructor_id`, `decision` (approved/rejected), `note`, `content_fingerprint`, `reviewed_at`; unique `(question_id, review_cycle, instructor_id)`
 - `question_review_requests` (optional / giữ): theo dõi yêu cầu submit lớp 1; status pending/approved/rejected; **không** thay thế `questions.status`
 - `organ_systems`, `subjects`, `lessons` (mỗi bảng: `id, name, slug UK, code null, description null, status, sort_order`); pivot `subject_organ_system`, `lesson_subject`
-- `import_batches(id, file, status, stats)`
+- `question_import_batches(id, uploaded_by, original_filename, disk_path, format, status, source_headers, column_map, stats, error_report_path, committed_at)`
+- `questions.import_batch_id` FK null — gắn câu tạo từ lô import (luôn `draft`)
 - `stats_cache` JSON + `stats_updated_at` trên `questions`
 
 ## 7. API
@@ -214,13 +226,15 @@ Tránh N+1: eager load creator / instructor / publisher trên list; **không** j
 | PUT | `/api/v1/admin/questions/{id}` | fields | working copy (không +version) | `question.update` |
 | POST | `/api/v1/admin/questions/{id}/submit` | — | `in_review` | `question.submit` |
 | POST | `/api/v1/admin/questions/{id}/withdraw` | — | `draft` | `question.submit` |
-| POST | `/api/v1/teach/questions/{id}/approve` | `{note?}` | `pending_publish` | `question.review` |
+| POST | `/api/v1/teach/questions/{id}/approve` | `{note?}` | `in_review` (1/2) hoặc `pending_publish` (2/2) | `question.review` |
 | POST | `/api/v1/teach/questions/{id}/reject` | `{reason}` | `rejected` | `question.review` |
 | POST | `/api/v1/admin/questions/{id}/publish` | — | `published` (+ version) | `question.publish` (super_admin) |
 | POST | `/api/v1/admin/questions/{id}/reject-publish` | `{reason}` | `rejected` | `question.publish` |
 | POST | `/api/v1/admin/questions/{id}/clone` | `{from_version?}` | draft (câu mới) | `question.create` |
 | POST | `/api/v1/admin/questions/{id}/retire` | — | retired | `question.retire` |
-| POST | `/api/v1/admin/questions/import` | file/map | batch | `question.create` |
+| POST | `/admin/questions/import` | file → map → commit | batch draft | `question.create` |
+| GET | `/admin/questions/import/template` | `format=xlsx\|csv` | file | `question.create` |
+| GET | `/admin/questions/export` | filter + `format` | file | `question.view` |
 | GET/POST | `/api/v1/admin/questions/reports` | — | queue/resolve | `question.update` |
 | POST | `/admin/questions/{id}/check-duplicates` | — | refresh pairs + redirect detail | `question.view` |
 | GET | `/admin/questions/{id}/duplicates` | — | trang chi tiết kết quả ≥30% | `question.view` |
@@ -246,7 +260,7 @@ Validation nghiêm; `409` optimistic lock trên working copy; audit mọi mutate
 - Super Admin **không** bỏ qua lớp GV trên happy path; override khẩn cấp (nếu có) phải ghi audit + lý do.
 
 ## 11. Tracking (audit + product)
-`question_create`, `question_update`, `question_submit`, `question_withdraw`, `question_instructor_approve`, `question_instructor_reject`, `question_publish`, `question_reject_publish`, `question_retire`, `question_import`, `report_resolve`, `question_preview`.
+`question_create`, `question_update`, `question_submit`, `question_withdraw`, `question_instructor_approve`, `question_instructor_reject`, `question_publish`, `question_reject_publish`, `question_retire`, `question_import`, `question_export`, `report_resolve`, `question_preview`.
 
 ## 12. Responsive
 - Desktop tối ưu (editor phức tạp); `/teach` review queue dùng được trên tablet; mobile hạn chế (duyệt nhanh, xử lý report).
@@ -271,4 +285,4 @@ Validation nghiêm; `409` optimistic lock trên working copy; audit mọi mutate
 |-----|---------|
 | **2a MVP** | Status `pending_publish`; Creator submit; Instructor approve/reject trên `/teach`; Super Admin publish (+version); RBAC tách `question.review` / `question.publish`; metadata instructor/publisher |
 | **2b** | Report queue, preview học viên, version compare, rejection UI 2 nguồn, withdraw |
-| **2c** | Import batch, media picker (37), `SyncQuestionStatsJob`, gán GV theo Môn học |
+| **2c** | Import/export Excel+CSV (luôn `draft`, không publish); media picker (37); `SyncQuestionStatsJob`; gán GV theo Môn học |

@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import 'quill/dist/quill.snow.css';
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -607,6 +608,47 @@ mark[data-hl='#10b981'] {
 }
 .admin-rich-editor .ql-editor {
     min-height: 160px;
+}
+.admin-rich-editor .ql-editor strong,
+.admin-rich-editor .ql-editor b {
+    font-weight: 700;
+}
+.admin-rich-editor .ql-editor em,
+.admin-rich-editor .ql-editor i {
+    font-style: italic;
+}
+.admin-rich-editor .ql-editor u {
+    text-decoration: underline;
+}
+.admin-rich-editor .ql-editor a {
+    text-decoration: underline;
+    color: var(--color-primary, #0f766e);
+}
+.admin-rich-editor .ql-editor h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1.4;
+    margin: 0.5em 0;
+}
+.admin-rich-editor .ql-editor h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    line-height: 1.4;
+    margin: 0.4em 0;
+}
+.admin-rich-editor .ql-editor ol {
+    list-style: decimal;
+    padding-left: 1.5rem;
+}
+.admin-rich-editor .ql-editor ul {
+    list-style: disc;
+    padding-left: 1.5rem;
+}
+.admin-rich-editor .ql-editor li {
+    margin: 0.15em 0;
+}
+.admin-rich-editor .ql-toolbar.ql-snow button {
+    cursor: pointer;
 }
 .admin-rich-editor .ql-editor.ql-blank::before {
     font-style: italic;

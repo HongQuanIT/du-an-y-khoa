@@ -28,6 +28,8 @@ enum AuditAction: string
     case QuestionReviewRejected = 'admin.question.review_rejected';
     case QuestionInstructorApproved = 'teach.question.instructor_approved';
     case QuestionInstructorRejected = 'teach.question.instructor_rejected';
+    case QuestionImported = 'admin.question.import';
+    case QuestionExported = 'admin.question.export';
 
     public function group(): string
     {
@@ -53,6 +55,8 @@ enum AuditAction: string
             self::QuestionReviewRejected => 'Từ chối thay đổi câu hỏi',
             self::QuestionInstructorApproved => 'Giảng viên duyệt câu hỏi',
             self::QuestionInstructorRejected => 'Giảng viên từ chối câu hỏi',
+            self::QuestionImported => 'Import câu hỏi',
+            self::QuestionExported => 'Export câu hỏi',
         };
     }
 }

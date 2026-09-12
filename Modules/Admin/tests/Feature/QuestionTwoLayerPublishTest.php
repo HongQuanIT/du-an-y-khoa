@@ -125,14 +125,45 @@ final class QuestionTwoLayerPublishTest extends TestCase
         $this->assertSame(QuestionStatus::InReview, $question->fresh()->status);
     }
 
-    public function test_admin_can_publish_after_instructor_approval_as_second_person(): void
+    public function test_admin_cannot_publish_with_only_one_instructor_approval(): void
     {
         $instructor = User::factory()->create();
         $instructor->assignRole(Role::Instructor->value);
-
         $admin = $this->staffUser(Role::Admin);
         $question = $this->makeQuestion(QuestionStatus::PendingPublish, [
             'instructor_id' => $instructor->id,
+            'instructor_review_cycle' => 1,
+            'instructor_1_id' => $instructor->id,
+            'instructor_1_decision' => 'approved',
+            'version' => 0,
+        ]);
+
+        $this->actingAsStaff($admin)
+            ->from(route('admin.questions.edit', $question))
+            ->post(route('admin.questions.transition', $question), [
+                'status' => QuestionStatus::Published->value,
+            ])
+            ->assertRedirect(route('admin.questions.edit', $question))
+            ->assertSessionHasErrors('status');
+
+        $this->assertSame(QuestionStatus::PendingPublish, $question->fresh()->status);
+    }
+
+    public function test_admin_can_publish_after_instructor_approval_as_second_person(): void
+    {
+        $first = User::factory()->create();
+        $first->assignRole(Role::Instructor->value);
+        $second = User::factory()->create();
+        $second->assignRole(Role::Instructor->value);
+
+        $admin = $this->staffUser(Role::Admin);
+        $question = $this->makeQuestion(QuestionStatus::PendingPublish, [
+            'instructor_id' => $second->id,
+            'instructor_review_cycle' => 1,
+            'instructor_1_id' => $first->id,
+            'instructor_1_decision' => 'approved',
+            'instructor_2_id' => $second->id,
+            'instructor_2_decision' => 'approved',
             'version' => 0,
         ]);
 
@@ -160,9 +191,15 @@ final class QuestionTwoLayerPublishTest extends TestCase
     public function test_same_person_cannot_be_both_instructor_and_publisher(): void
     {
         $user = $this->staffUser(Role::SuperAdmin);
-        // SuperAdmin has publish via Gate::before; simulate same person as instructor.
+        $other = User::factory()->create();
+        $other->assignRole(Role::Instructor->value);
         $question = $this->makeQuestion(QuestionStatus::PendingPublish, [
             'instructor_id' => $user->id,
+            'instructor_review_cycle' => 1,
+            'instructor_1_id' => $other->id,
+            'instructor_1_decision' => 'approved',
+            'instructor_2_id' => $user->id,
+            'instructor_2_decision' => 'approved',
             'version' => 0,
         ]);
 

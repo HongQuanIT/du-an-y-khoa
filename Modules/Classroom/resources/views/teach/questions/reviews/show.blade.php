@@ -53,9 +53,16 @@
     @if ($canDecide)
     <div class="mb-6 rounded-2xl border border-outline-variant bg-surface p-5 shadow-sm">
         <p class="mb-3 text-sm text-on-surface-variant">
-            Duyệt = chuyển sang <strong class="text-on-surface">chờ Admin xuất bản</strong> (không tăng version).
-            Từ chối = trả về Content Creator kèm lý do.
+            Cần 2 giảng viên khác nhau chấp nhận. Phiếu của bạn là
+            <strong class="text-on-surface">{{ ($approvalCount ?? 0) + 1 }}/2</strong>
+            (không tăng version). Một phiếu từ chối là fail ngay — trả về Content Creator.
         </p>
+        <div class="mb-3">
+            @include('questionbank::partials.instructor-review-flags', [
+                'question' => $question,
+                'hideNames' => $hidePeerVotes ?? false,
+            ])
+        </div>
         <label for="review_note" class="mb-2 block text-sm font-semibold text-on-surface">Ghi chú / lý do từ chối</label>
         <textarea id="review_note" form="approve-review-form" name="review_note" rows="3"
             class="w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm"
@@ -72,7 +79,7 @@
             </form>
             <form id="approve-review-form" method="post" action="{{ route('teach.questions.reviews.approve', $question) }}">
                 @csrf
-                <button type="submit" onclick="return confirm('Duyệt câu hỏi này và chuyển chờ xuất bản?')"
+                <button type="submit" onclick="return confirm('Ghi nhận phiếu chấp nhận của bạn? Cần đủ 2 giảng viên mới chuyển chờ xuất bản.')"
                     class="inline-flex items-center gap-1 rounded-xl bg-primary px-4 py-2.5 font-semibold text-on-primary hover:bg-primary/90">
                     <span class="material-symbols-outlined text-[18px]">check</span>Duyệt chuyên môn
                 </button>

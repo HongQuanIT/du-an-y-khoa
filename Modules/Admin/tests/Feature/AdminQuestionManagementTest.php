@@ -713,6 +713,36 @@ final class AdminQuestionManagementTest extends TestCase
         ]);
     }
 
+    public function test_editor_can_open_own_question_edit_with_only_update_permission(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+        $role = \Spatie\Permission\Models\Role::findByName(Role::ContentEditor->value, 'web');
+        $role->revokePermissionTo(\App\Support\Enums\Permission::QuestionView->value);
+        $editor->unsetRelation('roles');
+        $editor->unsetRelation('permissions');
+        $editor->forgetCachedPermissions();
+
+        $this->assertFalse($editor->fresh()->can(\App\Support\Enums\Permission::QuestionView->value));
+        $this->assertTrue($editor->fresh()->can(\App\Support\Enums\Permission::QuestionUpdate->value));
+
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.store'), $this->payload())
+            ->assertRedirect();
+
+        $question = Question::query()->firstOrFail();
+        $this->assertSame($editor->id, $question->created_by);
+
+        $this->actingAsStaff($editor)
+            ->get(route('admin.questions.edit', $question))
+            ->assertOk()
+            ->assertSee('Chỉnh sửa câu hỏi', false)
+            ->assertSee('Bài học *', false);
+
+        $this->actingAsStaff($editor)
+            ->get(route('admin.questions.index'))
+            ->assertOk();
+    }
+
     public function test_content_creator_only_sees_and_opens_own_questions(): void
     {
         $creatorA = $this->staffUser(Role::ContentEditor);
@@ -735,7 +765,27 @@ final class AdminQuestionManagementTest extends TestCase
         $this->actingAsStaff($admin)
             ->get(route('admin.questions.index'))
             ->assertOk()
+            ->assertSee('Câu hỏi bí mật của creator B', false)
+            ->assertSee('created_by-filter-trigger', false)
+            ->assertSee($creatorA->name, false)
+            ->assertSee($creatorB->name, false);
+
+        $this->actingAsStaff($admin)
+            ->get(route('admin.questions.index', ['created_by' => [$creatorA->id]]))
+            ->assertOk()
+            ->assertSee($ownQuestion->code, false)
+            ->assertDontSee('Câu hỏi bí mật của creator B', false);
+
+        $this->actingAsStaff($admin)
+            ->get(route('admin.questions.index', ['created_by' => [$creatorA->id, $creatorB->id]]))
+            ->assertOk()
+            ->assertSee($ownQuestion->code, false)
             ->assertSee('Câu hỏi bí mật của creator B', false);
+
+        $this->actingAsStaff($creatorA)
+            ->get(route('admin.questions.index'))
+            ->assertOk()
+            ->assertDontSee('created_by-filter-trigger', false);
     }
 
     public function test_creator_edit_published_becomes_working_copy_and_needs_instructor_then_admin(): void
@@ -796,8 +846,8 @@ final class AdminQuestionManagementTest extends TestCase
         $this->actingAsStaff($editor)
             ->get(route('admin.questions.edit', $question))
             ->assertOk()
-            ->assertSee('Câu hỏi đang chờ giảng viên duyệt', false)
-            ->assertSee('Lưu lại', false);
+            ->assertSee('Cần 2 giảng viên chấp nhận', false)
+            ->assertSee('Lưu thay đổi', false);
 
         $this->actingAsStaff($editor)
             ->put(route('admin.questions.update', $question), array_merge($this->payload(), [
@@ -809,6 +859,39 @@ final class AdminQuestionManagementTest extends TestCase
         $this->assertSame('Thay đổi được phép lưu lại khi đang chờ duyệt.', strip_tags($question->fresh()->stem));
         $this->assertSame(QuestionStatus::InReview, $question->fresh()->status);
         $this->assertSame(0, $question->fresh()->version);
+    }
+
+    public function test_editor_resubmit_while_in_review_resets_instructor_flags(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+        $question = $this->makeDraftQuestion($editor);
+        $question->forceFill([
+            'status' => QuestionStatus::InReview,
+            'instructor_review_cycle' => 1,
+        ])->save();
+
+        $first = $this->instructorUser();
+        app(\Modules\QuestionBank\Actions\InstructorReviewQuestionAction::class)
+            ->approve($first, $question->fresh());
+
+        $this->assertSame('approved', $question->fresh()->instructor_1_decision);
+
+        $this->actingAsStaff($editor)
+            ->put(route('admin.questions.update', $question), array_merge($this->payload(), [
+                'stem' => 'Nội dung gửi duyệt lại sau khi sửa.',
+                'requested_status' => QuestionStatus::InReview->value,
+            ]))
+            ->assertSessionHasNoErrors()
+            ->assertRedirect();
+
+        $fresh = $question->fresh();
+        $this->assertSame(QuestionStatus::InReview, $fresh->status);
+        $this->assertNull($fresh->instructor_1_id);
+        $this->assertNull($fresh->instructor_1_decision);
+        $this->assertNull($fresh->instructor_2_id);
+        $this->assertNull($fresh->instructor_2_decision);
+        $this->assertSame(2, (int) $fresh->instructor_review_cycle);
+        $this->assertSame('Nội dung gửi duyệt lại sau khi sửa.', strip_tags((string) $fresh->stem));
     }
 
     public function test_editor_clone_queues_admin_review_before_publish(): void
@@ -858,11 +941,29 @@ final class AdminQuestionManagementTest extends TestCase
     {
         $admin = $this->staffUser(Role::Admin);
         $this->makeDraftQuestion();
+        $published = $this->makePublishedQuestion(stem: 'Câu đã xuất bản để lọc');
+
+        $this->actingAsStaff($admin)
+            ->get(route('admin.questions.index'))
+            ->assertOk()
+            ->assertSee('status-filter-trigger', false)
+            ->assertSee('difficulty-filter-trigger', false)
+            ->assertSee('is_free-filter-trigger', false);
 
         $this->actingAsStaff($admin)
             ->get(route('admin.questions.index', ['status' => 'draft']))
             ->assertOk()
-            ->assertSee('Nháp');
+            ->assertSee('Nháp')
+            ->assertDontSee('Câu đã xuất bản để lọc', false);
+
+        $this->actingAsStaff($admin)
+            ->get(route('admin.questions.index', [
+                'status' => ['draft', 'published'],
+            ]))
+            ->assertOk()
+            ->assertSee('Stem draft test', false)
+            ->assertSee('Câu đã xuất bản để lọc', false)
+            ->assertSee($published->code, false);
     }
 
     public function test_questions_index_shows_attempt_stats_from_rollup(): void
@@ -1136,6 +1237,27 @@ final class AdminQuestionManagementTest extends TestCase
             ->assertDontSee('Chẩn đoán nào phù hợp nhất?', false);
     }
 
+    public function test_editor_can_lookup_lessons_on_create_form_without_cct_empty_hint(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+
+        $this->actingAsStaff($editor)
+            ->get(route('admin.questions.create'))
+            ->assertOk()
+            ->assertSee('Bài học *', false)
+            ->assertSee('Tìm bài học', false)
+            ->assertDontSee('Chưa suy ra chủ đề lâm sàng nào', false)
+            ->assertDontSee('Map CCT ↔ bài học/tag', false);
+
+        $this->actingAsStaff($editor)
+            ->getJson(route('admin.taxonomy.lookups.lessons'))
+            ->assertOk()
+            ->assertJsonFragment([
+                'id' => $this->topic->id,
+                'name' => 'Tim mạch',
+            ]);
+    }
+
     public function test_editor_can_upload_question_image_and_save_it_with_question(): void
     {
         Storage::fake('public');
@@ -1274,10 +1396,12 @@ final class AdminQuestionManagementTest extends TestCase
 
     private function approveByInstructor(Question $question, ?User $instructor = null): Question
     {
-        $instructor ??= $this->instructorUser();
+        $first = $instructor ?? $this->instructorUser();
+        $second = $this->instructorUser();
+        $action = app(\Modules\QuestionBank\Actions\InstructorReviewQuestionAction::class);
+        $action->approve($first, $question->fresh());
 
-        return app(\Modules\QuestionBank\Actions\InstructorReviewQuestionAction::class)
-            ->approve($instructor, $question->fresh());
+        return $action->approve($second, $question->fresh());
     }
 
     private function publishByAdmin(Question $question, ?User $admin = null): Question

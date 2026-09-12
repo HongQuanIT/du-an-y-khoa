@@ -6,7 +6,7 @@
             <p class="text-xs font-semibold uppercase tracking-wide text-primary">Kiểm duyệt nội dung</p>
             <h2 class="mt-1 font-headline-sm text-headline-sm font-bold text-on-surface">Danh sách duyệt câu hỏi</h2>
             <p class="mt-2 text-sm leading-6 text-on-surface-variant">
-                Bạn duyệt chuyên môn (lớp 1). Admin có quyền xuất bản mới publish và tăng version — không duyệt thay bạn.
+                Cần 2 giảng viên chấp nhận. Một phiếu từ chối là fail ngay. Admin chỉ xuất bản, không duyệt chuyên môn.
             </p>
         </div>
     </header>
@@ -117,6 +117,10 @@
                                             'bg-red-100 text-red-800' => $question->status === \Modules\QuestionBank\Enums\QuestionStatus::Rejected,
                                         ])>{{ $question->status->label() }}</span>
                                         <span class="text-xs text-on-surface-variant">{{ $question->difficulty->label() }}</span>
+                                        @include('questionbank::partials.instructor-review-flags', [
+                                            'question' => $question,
+                                            'hideNames' => $hidePeerVotes ?? false,
+                                        ])
                                     </div>
                                     <p class="mt-2 line-clamp-2 text-sm leading-6 text-on-surface">
                                         {{ \Illuminate\Support\Str::limit(strip_tags((string) $question->stem), 180) }}

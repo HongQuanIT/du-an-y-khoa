@@ -27,6 +27,34 @@ final class QuestionAccess
         return $user->can(Permission::QuestionCreate->value);
     }
 
+    /**
+     * Open the admin question workspace (list, form, stats).
+     * `question.update` is enough to edit — do not require `question.view` or `topic.view`.
+     */
+    public static function canAccessWorkspace(User $user): bool
+    {
+        return $user->can(Permission::QuestionView->value)
+            || $user->can(Permission::QuestionUpdate->value)
+            || $user->can(Permission::QuestionCreate->value)
+            || $user->can(Permission::QuestionPublish->value);
+    }
+
+    public static function authorizeWorkspace(User $user): void
+    {
+        abort_unless(self::canAccessWorkspace($user), 403);
+    }
+
+    /** Spatie `permission:a|b` — any of these opens GET question admin routes. */
+    public static function workspacePermissionMiddleware(): string
+    {
+        return implode('|', [
+            Permission::QuestionView->value,
+            Permission::QuestionUpdate->value,
+            Permission::QuestionCreate->value,
+            Permission::QuestionPublish->value,
+        ]);
+    }
+
     public static function canSubmit(User $user): bool
     {
         return $user->can(Permission::QuestionSubmit->value);

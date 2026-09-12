@@ -98,17 +98,40 @@ final class TeachQuestionReviewTest extends TestCase
 
         $question->refresh();
 
-        $this->assertSame(QuestionStatus::PendingPublish, $question->status);
+        $this->assertSame(QuestionStatus::InReview, $question->status);
         $this->assertSame($versionBefore, (int) $question->version);
         $this->assertSame($instructor->id, (int) $question->instructor_id);
+        $this->assertSame('approved', $question->instructor_1_decision);
+        $this->assertNull($question->instructor_2_decision);
         $this->assertNull($question->rejection_reason);
+        $this->assertDatabaseHas('question_instructor_reviews', [
+            'question_id' => $question->id,
+            'instructor_id' => $instructor->id,
+            'decision' => 'approved',
+        ]);
         $this->assertDatabaseHas('question_review_requests', [
             'question_id' => $question->id,
-            'status' => QuestionReviewStatus::Approved->value,
-            'reviewed_by' => $instructor->id,
+            'status' => QuestionReviewStatus::Pending->value,
         ]);
         $this->assertDatabaseHas('audit_logs', [
             'action' => 'teach.question.instructor_approved',
+        ]);
+
+        $second = $this->instructor();
+        $this->actingAs($second)
+            ->post(route('teach.questions.reviews.approve', $question), [
+                'review_note' => 'Đồng ý.',
+            ])
+            ->assertRedirect(route('teach.questions.reviews.index', ['tab' => 'approved']));
+
+        $question->refresh();
+        $this->assertSame(QuestionStatus::PendingPublish, $question->status);
+        $this->assertSame($versionBefore, (int) $question->version);
+        $this->assertSame('approved', $question->instructor_2_decision);
+        $this->assertDatabaseHas('question_review_requests', [
+            'question_id' => $question->id,
+            'status' => QuestionReviewStatus::Approved->value,
+            'reviewed_by' => $second->id,
         ]);
     }
 
@@ -131,9 +154,16 @@ final class TeachQuestionReviewTest extends TestCase
         $this->assertSame('Thiếu giải thích đáp án nhiễu.', $question->rejection_reason);
         $this->assertSame(Role::Instructor->value, $question->rejected_by_role);
         $this->assertSame($instructor->id, (int) $question->instructor_id);
+        $this->assertSame('rejected', $question->instructor_1_decision);
+        $this->assertNull($question->instructor_2_id);
         $this->assertDatabaseHas('question_review_requests', [
             'question_id' => $question->id,
             'status' => QuestionReviewStatus::Rejected->value,
+        ]);
+        $this->assertDatabaseHas('question_instructor_reviews', [
+            'question_id' => $question->id,
+            'instructor_id' => $instructor->id,
+            'decision' => 'rejected',
         ]);
     }
 

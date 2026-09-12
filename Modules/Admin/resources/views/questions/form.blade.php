@@ -196,9 +196,17 @@
         </section>
     @endif
 
-    @if (! $isNew && ! $isReviewer && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::InReview)
+    @if (! $isNew && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::InReview)
         <div class="mb-5 rounded-2xl border border-amber-200 bg-amber-50/60 px-4 py-3 text-sm text-amber-900">
-            Câu hỏi đang chờ giảng viên duyệt. Bạn vẫn có thể chỉnh sửa nội dung và bấm <strong>Lưu lại</strong> bất kỳ lúc nào.
+            <div class="flex flex-wrap items-center gap-3">
+                @include('questionbank::partials.instructor-review-flags', ['question' => $question])
+                <p>
+                    Cần 2 giảng viên chấp nhận. Cờ trắng = chờ duyệt, xanh = chấp nhận, đỏ = từ chối (1 phiếu đỏ là fail ngay).
+                    @if (! $isReviewer)
+                        Bạn vẫn được sửa; chọn <strong>Lưu và gửi duyệt lại</strong> để reset 2 phiếu.
+                    @endif
+                </p>
+            </div>
         </div>
     @endif
 
@@ -298,6 +306,9 @@
                                                  modules: { toolbar: [['bold', 'italic'], ['link', 'image'], ['clean']] },
                                                  placeholder: 'Giải thích cho lựa chọn này (không bắt buộc)...'
                                              });
+                                             if (typeof window.pinQuillToolbarButtons === 'function') {
+                                                 window.pinQuillToolbarButtons(q);
+                                             }
                                              if (currentOpt.explanation) {
                                                  const paste = q.clipboard.convert({ html: currentOpt.explanation, text: '' });
                                                  q.setContents(paste, 'silent');
@@ -379,6 +390,9 @@
                                                          modules: { toolbar: [['bold', 'italic'], ['link', 'image'], ['clean']] },
                                                          placeholder: 'Nội dung hint ' + (index + 1) + '...'
                                                      });
+                                                     if (typeof window.pinQuillToolbarButtons === 'function') {
+                                                         window.pinQuillToolbarButtons(q);
+                                                     }
                                                      if (currentHint.content) {
                                                          const paste = q.clipboard.convert({ html: currentHint.content, text: '' });
                                                          q.setContents(paste, 'silent');
@@ -435,10 +449,10 @@
                     <div class="rounded-2xl border border-primary/30 bg-primary/5 p-4">
                         <h2 class="mb-2 font-label-md font-semibold text-on-surface">Xuất bản (lớp 2)</h2>
                         <p class="mb-3 text-xs leading-5 text-on-surface-variant">
-                            Giảng viên đã duyệt. Xuất bản sẽ tăng phiên bản và đưa nội dung mới vào ngân hàng câu hỏi.
-                            @if ($question->instructor)
-                                · GV duyệt: <span class="font-semibold text-on-surface">{{ $question->instructor->name }}</span>
-                            @endif
+                            Đủ 2 giảng viên chấp nhận. Xuất bản chỉ tăng phiên bản — không cần duyệt lại chuyên môn.
+                            <span class="mt-2 block">
+                                @include('questionbank::partials.instructor-review-flags', ['question' => $question])
+                            </span>
                             @if ($question->published_version)
                                 · QBank đang phục vụ phiên bản {{ $question->published_version }}
                             @endif
@@ -463,7 +477,7 @@
                                 onclick="const r = prompt('Lý do từ chối xuất bản:'); if (!r || !r.trim()) return false; document.getElementById('question-reject-publish-reason').value = r.trim();"
                                 class="flex w-full items-center justify-center gap-2 rounded-xl border border-rose-300 py-2.5 font-label-md font-semibold text-rose-700 hover:bg-rose-50">
                                 <span class="material-symbols-outlined text-[18px]">close</span>
-                                Từ chối xuất bản
+                                Trả về biên tập
                             </button>
                         </div>
                     </div>
@@ -515,7 +529,7 @@
                         <p class="mt-1 text-xs leading-5">
                             Admin/Super Admin không sửa nội dung câu hỏi.
                             @if ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::InReview)
-                                Đang chờ giảng viên duyệt (lớp 1) — không xuất bản trước bước này.
+                                Đang chờ đủ 2 giảng viên duyệt — không xuất bản trước bước này.
                             @elseif ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::Draft)
                                 Bản nháp do biên tập viên soạn. Chỉ Content Editor được chỉnh sửa và gửi duyệt.
                             @endif
@@ -628,6 +642,7 @@
                             }
 
                             if (! $isNew && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::InReview) {
+                                $availableStatuses[\Modules\QuestionBank\Enums\QuestionStatus::InReview->value] = 'Lưu và gửi duyệt lại';
                                 $availableStatuses[\Modules\QuestionBank\Enums\QuestionStatus::Draft->value] = 'Chuyển về nháp';
                             }
                             if (! $isNew && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::Draft) {
@@ -769,9 +784,9 @@
                                 <dt class="text-on-surface-variant">Người tạo</dt>
                                 <dd class="font-semibold text-on-surface">{{ $question->creator?->name ?? '—' }}</dd>
                             </div>
-                            <div class="flex justify-between">
-                                <dt class="text-on-surface-variant">GV duyệt</dt>
-                                <dd class="font-semibold text-on-surface">{{ $question->instructor?->name ?? '—' }}</dd>
+                            <div class="flex items-center justify-between gap-3">
+                                <dt class="text-on-surface-variant">Bản gửi duyệt</dt>
+                                <dd>@include('questionbank::partials.instructor-review-flags', ['question' => $question])</dd>
                             </div>
                             <div class="flex justify-between">
                                 <dt class="text-on-surface-variant">Người xuất bản</dt>

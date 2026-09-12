@@ -7,6 +7,7 @@ namespace Modules\Admin\Actions;
 use App\Models\User;
 use App\Support\Concerns\AsAction;
 use App\Support\Enums\Permission;
+use App\Support\Enums\Role;
 use App\Support\Html\SafeHtml;
 use Illuminate\Validation\ValidationException;
 use Modules\Admin\Enums\AuditAction;
@@ -18,6 +19,7 @@ use Modules\QuestionBank\Enums\QuestionReviewStatus;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionReviewRequest;
+use Modules\QuestionBank\Support\QuestionInstructorReviewCycle;
 
 /**
  * Transition publication workflow for a question.
@@ -28,6 +30,7 @@ final class TransitionQuestionStatusAction
 
     public function __construct(
         private readonly CaptureQuestionVersionAction $captureVersion,
+        private readonly QuestionInstructorReviewCycle $reviewCycle,
     ) {}
 
     public function handle(
@@ -39,6 +42,28 @@ final class TransitionQuestionStatusAction
         $from = $question->status;
 
         if ($from === $to) {
+            if ($to === QuestionStatus::InReview) {
+                $this->assertCanSubmit($actor);
+                $this->assertReadyForStatus($question, $to);
+                $before = AuditSnapshot::question($question);
+                $this->reviewCycle->startOrReset($question);
+                $this->queueCreationReview($actor, $question->refresh());
+                Auditor::record(
+                    AuditAction::QuestionStatusChanged,
+                    $actor,
+                    $question,
+                    $before,
+                    AuditSnapshot::question($question->refresh()),
+                    metadata: [
+                        'from_status' => $from->value,
+                        'to_status' => $to->value,
+                        'instructor_reviews_reset' => true,
+                    ],
+                );
+
+                return $question->refresh();
+            }
+
             return $question;
         }
 
@@ -87,6 +112,7 @@ final class TransitionQuestionStatusAction
                 'rejected_by_role' => null,
                 'updated_by' => $actor->getKey(),
             ])->save();
+            $this->reviewCycle->clearSlots($question);
 
             Auditor::record(
                 AuditAction::QuestionStatusChanged,
@@ -145,6 +171,7 @@ final class TransitionQuestionStatusAction
 
         if ($to === QuestionStatus::InReview && ! QuestionAccess::isReviewer($actor)) {
             $this->queueCreationReview($actor, $question);
+            $this->reviewCycle->startOrReset($question);
         }
 
         if ($to === QuestionStatus::Draft && $from === QuestionStatus::InReview) {
@@ -152,6 +179,7 @@ final class TransitionQuestionStatusAction
                 ->where('status', QuestionReviewStatus::Pending->value)
                 ->where('action', QuestionReviewAction::Create->value)
                 ->delete();
+            $this->reviewCycle->clearSlots($question);
         }
 
         if ($isPublishing) {
@@ -213,7 +241,7 @@ final class TransitionQuestionStatusAction
 
         // Lớp 1 — chỉ role giảng viên + question.review. Admin không duyệt thay.
         if ($to === QuestionStatus::PendingPublish) {
-            if (! $actor->hasRole(\App\Support\Enums\Role::Instructor->value)
+            if (! $actor->hasRole(Role::Instructor->value)
                 || ! $actor->can(Permission::QuestionReview->value)) {
                 abort(403, 'Chỉ giảng viên có quyền question.review được duyệt lớp 1.');
             }
@@ -253,31 +281,11 @@ final class TransitionQuestionStatusAction
                     ]);
                 }
 
-                if ($question->instructor_id === null) {
-                    throw ValidationException::withMessages([
-                        'status' => 'Thiếu giảng viên duyệt lớp 1 — không thể xuất bản.',
-                    ]);
-                }
-
-                if ((int) $question->instructor_id === (int) $actor->getKey()) {
-                    throw ValidationException::withMessages([
-                        'status' => 'Cần ít nhất 2 người duyệt: người xuất bản phải khác giảng viên đã duyệt.',
-                    ]);
-                }
+                $this->assertLayerOneComplete($question, $actor, 'xuất bản');
             }
 
             if ($to === QuestionStatus::Private && $from === QuestionStatus::PendingPublish) {
-                if ($question->instructor_id === null) {
-                    throw ValidationException::withMessages([
-                        'status' => 'Thiếu giảng viên duyệt lớp 1 — không thể đưa vào kho đề thi.',
-                    ]);
-                }
-
-                if ((int) $question->instructor_id === (int) $actor->getKey()) {
-                    throw ValidationException::withMessages([
-                        'status' => 'Cần ít nhất 2 người duyệt: người xuất bản phải khác giảng viên đã duyệt.',
-                    ]);
-                }
+                $this->assertLayerOneComplete($question, $actor, 'đưa vào kho đề thi');
             }
 
             if ($to === QuestionStatus::Rejected && $from !== QuestionStatus::PendingPublish) {
@@ -294,9 +302,7 @@ final class TransitionQuestionStatusAction
             ($from === QuestionStatus::Draft && $to === QuestionStatus::InReview)
             || ($from === QuestionStatus::InReview && $to === QuestionStatus::Draft)
         ) {
-            if (! $actor->can(Permission::QuestionSubmit->value)) {
-                abort(403, 'Cần quyền question.submit.');
-            }
+            $this->assertCanSubmit($actor);
 
             return;
         }
@@ -304,6 +310,29 @@ final class TransitionQuestionStatusAction
         // Rejected / retired → draft (creator resumes editing)
         if (! $actor->can(Permission::QuestionUpdate->value)) {
             abort(403, 'Cần quyền question.update.');
+        }
+    }
+
+    private function assertCanSubmit(User $actor): void
+    {
+        if (! $actor->can(Permission::QuestionSubmit->value)) {
+            abort(403, 'Cần quyền question.submit.');
+        }
+    }
+
+    private function assertLayerOneComplete(Question $question, User $actor, string $actionLabel): void
+    {
+        if (! $this->reviewCycle->hasRequiredApprovals($question)) {
+            throw ValidationException::withMessages([
+                'status' => 'Cần đủ 2 giảng viên chấp nhận trước khi '.$actionLabel.'.',
+            ]);
+        }
+
+        $blockedIds = $this->reviewCycle->approvedInstructorIds($question);
+        if (in_array((int) $actor->getKey(), $blockedIds, true)) {
+            throw ValidationException::withMessages([
+                'status' => 'Người xuất bản phải khác 2 giảng viên đã duyệt chuyên môn.',
+            ]);
         }
     }
 

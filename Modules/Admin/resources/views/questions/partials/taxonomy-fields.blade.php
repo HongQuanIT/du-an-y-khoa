@@ -60,7 +60,6 @@
     <p class="text-[11px] leading-4 text-on-surface-variant">
         Câu hỏi gắn một hoặc nhiều <strong>bài học</strong> (bắt buộc), không phân biệt chính/phụ.
         Môn học và hệ cơ quan được suy ra từ bài học đã chọn — không gắn trực tiếp.
-        Chủ đề lâm sàng trên ma trận đề thi suy ra qua liên kết CCT ↔ bài học/tag.
     </p>
 
     <div>
@@ -110,9 +109,10 @@
                     </span>
                 </label>
             </template>
-            <p x-show="lessonResults.length === 0" class="px-2 py-1 text-[11px] text-on-surface-variant">
+            <p x-show="lessonResults.length === 0 && !lessonLookupError" class="px-2 py-1 text-[11px] text-on-surface-variant">
                 Không có bài học phù hợp.
             </p>
+            <p x-show="lessonLookupError" class="px-2 py-1 text-[11px] text-error" x-text="lessonLookupError"></p>
         </div>
 
         <div class="mt-2 flex flex-wrap gap-1.5">
@@ -169,13 +169,6 @@
                     </span>
                 @endforeach
             </div>
-            <p class="mt-1.5 text-[11px] text-on-surface-variant">
-                Đổi mapping tại Ma trận đề thi → Liên kết. Ma trận mới chỉ cần map thêm, không gắn lại câu hỏi.
-            </p>
-        </div>
-    @else
-        <div class="rounded-lg border border-dashed border-outline-variant p-3 text-[11px] text-on-surface-variant">
-            Chưa suy ra chủ đề lâm sàng nào. Map CCT ↔ bài học/tag trên trang Ma trận đề thi sau khi gắn bài học hoặc tag cho câu hỏi.
         </div>
     @endif
 
@@ -217,6 +210,7 @@
             subjectId: null,
             lessonSearch: '',
             lessonResults: [],
+            lessonLookupError: '',
             tagSearch: '',
             tagResults: [],
             get inferredCurriculum() {
@@ -243,21 +237,35 @@
                 return parts.join(' · ');
             },
             async init() {
-                await this.loadOrganSystems();
-                await this.loadSubjects();
+                try {
+                    await this.loadOrganSystems();
+                    await this.loadSubjects();
+                } catch (_) {
+                    // Optional filters; lesson search below still runs.
+                }
                 await this.searchLessons();
             },
+            async fetchJson(url) {
+                const res = await fetch(url, {
+                    headers: { Accept: 'application/json' },
+                    credentials: 'same-origin',
+                });
+                if (! res.ok) {
+                    throw new Error(res.status === 403
+                        ? 'Không có quyền tải danh mục. Tải lại trang hoặc liên hệ admin.'
+                        : 'Không tải được danh mục.');
+                }
+                return res.json();
+            },
             async loadOrganSystems() {
-                const res = await fetch(this.urls.organSystems);
-                const json = await res.json();
+                const json = await this.fetchJson(this.urls.organSystems);
                 this.organSystems = json.data ?? [];
             },
             async loadSubjects() {
                 const params = new URLSearchParams();
                 if (this.organSystemId) params.set('organ_system_id', this.organSystemId);
                 const url = params.toString() ? `${this.urls.subjects}?${params}` : this.urls.subjects;
-                const res = await fetch(url);
-                const json = await res.json();
+                const json = await this.fetchJson(url);
                 this.subjects = json.data ?? [];
             },
             async onOrganSystemChange() {
@@ -275,9 +283,14 @@
                 if (this.subjectId) params.set('subject_id', this.subjectId);
                 if (this.organSystemId) params.set('organ_system_id', this.organSystemId);
                 const url = params.toString() ? `${this.urls.lessons}?${params}` : this.urls.lessons;
-                const res = await fetch(url);
-                const json = await res.json();
-                this.lessonResults = json.data ?? [];
+                try {
+                    const json = await this.fetchJson(url);
+                    this.lessonResults = json.data ?? [];
+                    this.lessonLookupError = '';
+                } catch (error) {
+                    this.lessonResults = [];
+                    this.lessonLookupError = error?.message || 'Không tải được bài học.';
+                }
             },
             toggleLesson(lesson) {
                 const idx = this.selectedLessonIds.indexOf(lesson.id);
@@ -295,9 +308,12 @@
             async searchTags() {
                 const q = this.tagSearch.trim();
                 if (q.length < 1) { this.tagResults = []; return; }
-                const res = await fetch(`${this.urls.tags}?q=${encodeURIComponent(q)}`);
-                const json = await res.json();
-                this.tagResults = json.data ?? [];
+                try {
+                    const json = await this.fetchJson(`${this.urls.tags}?q=${encodeURIComponent(q)}`);
+                    this.tagResults = json.data ?? [];
+                } catch (_) {
+                    this.tagResults = [];
+                }
             },
             toggleTag(tag) {
                 const idx = this.selectedTagIds.indexOf(tag.id);

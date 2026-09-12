@@ -6,7 +6,6 @@ namespace Modules\Admin\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Support\Enums\Permission;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -23,7 +22,7 @@ final class QuestionDuplicateController extends Controller
 {
     public function show(Request $request, Question $question, FindSimilarQuestionsAction $action): View
     {
-        $this->authorizePermission(Permission::QuestionView);
+        QuestionAccess::authorizeWorkspace($this->actor());
         QuestionAccess::authorizeView($this->actor(), $question);
 
         $question->load([
@@ -76,7 +75,7 @@ final class QuestionDuplicateController extends Controller
 
     public function check(Question $question, FindSimilarQuestionsAction $action): RedirectResponse
     {
-        $this->authorizePermission(Permission::QuestionView);
+        QuestionAccess::authorizeWorkspace($this->actor());
         QuestionAccess::authorizeView($this->actor(), $question);
 
         $question->load('options');
@@ -92,11 +91,6 @@ final class QuestionDuplicateController extends Controller
                     ? "Không tìm thấy câu ≥{$threshold}% trùng trong ngân hàng."
                     : "Tìm thấy {$count} câu ≥{$threshold}% trùng / gần trùng.",
             );
-    }
-
-    private function authorizePermission(Permission $permission): void
-    {
-        abort_unless($this->actor()->can($permission->value), 403);
     }
 
     private function actor(): User

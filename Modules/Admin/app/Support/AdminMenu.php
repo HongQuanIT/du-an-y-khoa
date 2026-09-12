@@ -19,7 +19,7 @@ use Modules\QuestionBank\Models\QuestionReviewRequest;
  *     icon: string,
  *     route: ?string,
  *     url?: ?string,
- *     permission: ?string,
+ *     permission: string|list<string>|null,
  *     match: null|string|list<string>,
  *     path?: string,
  *     external?: bool,
@@ -70,14 +70,23 @@ final class AdminMenu
                 'label' => 'Câu hỏi',
                 'icon' => 'quiz',
                 'route' => 'admin.questions.index',
-                'permission' => Permission::QuestionView->value,
+                'permission' => [
+                    Permission::QuestionView->value,
+                    Permission::QuestionUpdate->value,
+                    Permission::QuestionCreate->value,
+                    Permission::QuestionPublish->value,
+                ],
                 'match' => 'admin.questions.*',
             ],
             [
                 'label' => 'Phản hồi câu hỏi',
                 'icon' => 'rate_review',
                 'route' => 'admin.question-feedback.index',
-                'permission' => Permission::QuestionView->value,
+                'permission' => [
+                    Permission::QuestionView->value,
+                    Permission::QuestionUpdate->value,
+                    Permission::QuestionPublish->value,
+                ],
                 'match' => 'admin.question-feedback.*',
             ],
             [
@@ -230,7 +239,7 @@ final class AdminMenu
         $visible = [];
 
         foreach ($items as $item) {
-            if ($item['permission'] !== null && ! $user->can($item['permission'])) {
+            if ($item['permission'] !== null && ! self::allows($user, $item['permission'])) {
                 continue;
             }
 
@@ -259,5 +268,17 @@ final class AdminMenu
         }
 
         return $visible;
+    }
+
+    /** @param  string|list<string>  $permission */
+    private static function allows(User $user, string|array $permission): bool
+    {
+        foreach ((array) $permission as $ability) {
+            if ($user->can($ability)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

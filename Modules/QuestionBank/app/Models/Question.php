@@ -21,9 +21,11 @@ use Illuminate\Support\Facades\Storage;
 use Laravel\Scout\Searchable;
 use Modules\QuestionBank\Database\Factories\QuestionFactory;
 use Modules\QuestionBank\Enums\Difficulty;
+use Modules\QuestionBank\Enums\InstructorReviewDecision;
 use Modules\QuestionBank\Enums\QuestionReviewStatus;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Support\QuestionCodeAllocator;
+use Modules\QuestionBank\Support\QuestionFilterBuilder;
 use Modules\QuestionBank\Support\ServePublishedQuestion;
 
 /**
@@ -45,12 +47,18 @@ use Modules\QuestionBank\Support\ServePublishedQuestion;
  * @property int|null $updated_by
  * @property int|null $reviewer_id
  * @property int|null $instructor_id
+ * @property int $instructor_review_cycle
+ * @property int|null $instructor_1_id
+ * @property string|null $instructor_1_decision
+ * @property int|null $instructor_2_id
+ * @property string|null $instructor_2_decision
  * @property int|null $publisher_id
  * @property int|null $published_version
  * @property string|null $rejection_reason
  * @property string|null $rejected_by_role
  * @property string|null $cloned_from_id
  * @property int|null $cloned_from_version
+ * @property string|null $import_batch_id
  * @property array<string, mixed>|null $stats_cache
  * @property Carbon|null $stats_updated_at
  * @property string|null $content_fingerprint
@@ -69,6 +77,7 @@ class Question extends Model
 
     protected $attributes = [
         'version' => 0,
+        'instructor_review_cycle' => 0,
     ];
 
     /**
@@ -90,12 +99,18 @@ class Question extends Model
         'updated_by',
         'reviewer_id',
         'instructor_id',
+        'instructor_review_cycle',
+        'instructor_1_id',
+        'instructor_1_decision',
+        'instructor_2_id',
+        'instructor_2_decision',
         'publisher_id',
         'published_version',
         'rejection_reason',
         'rejected_by_role',
         'cloned_from_id',
         'cloned_from_version',
+        'import_batch_id',
         'stats_cache',
         'stats_updated_at',
         'content_fingerprint',
@@ -131,6 +146,7 @@ class Question extends Model
         'is_free' => 'boolean',
         'exam_flag' => 'boolean',
         'version' => 'integer',
+        'instructor_review_cycle' => 'integer',
         'published_version' => 'integer',
         'cloned_from_version' => 'integer',
         'stats_cache' => 'array',
@@ -221,11 +237,11 @@ class Question extends Model
     /**
      * Core clinical topics projected from medical taxonomy ↔ blueprint mapping.
      *
-     * @return \Illuminate\Support\Collection<int, CoreClinicalTopic>
+     * @return Collection<int, CoreClinicalTopic>
      */
-    public function inferredCoreClinicalTopics(): \Illuminate\Support\Collection
+    public function inferredCoreClinicalTopics(): Collection
     {
-        return app(\Modules\QuestionBank\Support\QuestionFilterBuilder::class)
+        return app(QuestionFilterBuilder::class)
             ->inferredCoreClinicalTopicsForQuestion($this);
     }
 
@@ -324,6 +340,12 @@ class Question extends Model
         return $this->hasMany(QuestionVersion::class)->latest('version');
     }
 
+    /** @return BelongsTo<QuestionImportBatch, $this> */
+    public function importBatch(): BelongsTo
+    {
+        return $this->belongsTo(QuestionImportBatch::class, 'import_batch_id');
+    }
+
     /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
@@ -346,6 +368,105 @@ class Question extends Model
     public function instructor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'instructor_id');
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function instructorSlot1(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'instructor_1_id');
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function instructorSlot2(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'instructor_2_id');
+    }
+
+    /** @return HasMany<QuestionInstructorReview, $this> */
+    public function instructorReviews(): HasMany
+    {
+        return $this->hasMany(QuestionInstructorReview::class);
+    }
+
+    /**
+     * Publication state for the admin list "Trạng thái" column.
+     * Working-copy pipeline (draft / in_review / …) belongs to editorialSubmissionLabel().
+     */
+    public function publicationStateLabel(): string
+    {
+        return match ($this->status) {
+            QuestionStatus::Retired => 'Ngừng dùng',
+            QuestionStatus::Private => 'Riêng tư (exam)',
+            QuestionStatus::Published => 'Đã xuất bản',
+            default => ((int) $this->published_version > 0)
+                ? 'Đã xuất bản'
+                : 'Chưa xuất bản',
+        };
+    }
+
+    public function hasEditorialSubmission(): bool
+    {
+        return in_array($this->status, [
+            QuestionStatus::InReview,
+            QuestionStatus::PendingPublish,
+            QuestionStatus::Rejected,
+        ], true);
+    }
+
+    /**
+     * Whether the editor has a submitted (or rejected) working copy, and where it sits.
+     * Draft / unpublished copies are "Không có bản gửi" no matter how many times they were saved.
+     */
+    public function editorialSubmissionLabel(): string
+    {
+        $isUpdate = (int) $this->published_version > 0;
+
+        return match ($this->status) {
+            QuestionStatus::InReview => $isUpdate ? 'Đang duyệt cập nhật' : 'Đang chờ duyệt',
+            QuestionStatus::PendingPublish => $isUpdate ? 'Cập nhật đủ phiếu' : 'Đủ phiếu · chờ xuất bản',
+            QuestionStatus::Rejected => 'Bản gửi bị từ chối',
+            default => 'Không có bản gửi',
+        };
+    }
+
+    /**
+     * Two medical-review flags for admin/teach lists.
+     *
+     * @return list<array{slot: int, decision: string|null, color: string, instructor_name: string|null, label: string}>
+     */
+    public function instructorReviewFlags(): array
+    {
+        return [
+            $this->instructorReviewFlag(1, $this->instructor_1_decision, $this->instructorSlot1?->name),
+            $this->instructorReviewFlag(2, $this->instructor_2_decision, $this->instructorSlot2?->name),
+        ];
+    }
+
+    /**
+     * @return array{slot: int, decision: string|null, color: string, instructor_name: string|null, label: string}
+     */
+    private function instructorReviewFlag(int $slot, ?string $decision, ?string $name): array
+    {
+        $color = match ($decision) {
+            InstructorReviewDecision::Approved->value => 'green',
+            InstructorReviewDecision::Rejected->value => 'red',
+            default => 'white',
+        };
+
+        $who = $name ?: 'Giảng viên '.$slot;
+        $label = match ($decision) {
+            InstructorReviewDecision::Approved->value => $who.' đã chấp nhận',
+            InstructorReviewDecision::Rejected->value => $who.' đã từ chối',
+            default => 'Giảng viên '.$slot.' chưa duyệt / chờ duyệt',
+        };
+
+        return [
+            'slot' => $slot,
+            'decision' => $decision,
+            'color' => $color,
+            'instructor_name' => $name,
+            'label' => $label,
+        ];
     }
 
     /** @return BelongsTo<User, $this> */
@@ -477,7 +598,7 @@ class Question extends Model
             ->values()
             ->all();
 
-        $coreClinicalTopicIds = app(\Modules\QuestionBank\Support\QuestionFilterBuilder::class)
+        $coreClinicalTopicIds = app(QuestionFilterBuilder::class)
             ->inferredCoreClinicalTopicIds($lessonIds);
 
         $tagIds = ($source->relationLoaded('tags') ? $source->tags : $source->tags()->get())

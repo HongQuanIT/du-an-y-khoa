@@ -2,6 +2,12 @@
 
 ## 2026-09-12
 
+### Feat — Soạn câu hỏi, duyệt 2 GV, import/export
+- Lớp 1 cần 2 giảng viên chấp nhận; gửi duyệt lại reset 2 phiếu; 1 reject = fail.
+- Import/export Excel/CSV bản nháp; lookup bài học/tag theo `question.create` / `question.update` (không cần `topic.view`).
+- Editor mở/sửa câu của mình bằng `question.update`; sửa toolbar Quill (không submit form) và CSS format.
+- Cột Bản gửi duyệt: nháp chưa gửi luôn hiện «Không có bản gửi»; bỏ gợi ý CCT trống trên form.
+
 ### Feat — Mã câu hỏi tuần tự Q#####
 - Sinh mã cố định `Q00001`, `Q00002`… khi tạo/nhân bản; không đổi sau khi gán.
 - Bộ đếm `question_code_sequences` + backfill câu chưa có mã; mã cũ (CARDIO/QBANK-SAMPLE) giữ nguyên.
