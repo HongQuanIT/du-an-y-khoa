@@ -424,7 +424,7 @@
                                     <span class="material-symbols-outlined text-primary" x-show="source === 'custom'" x-cloak>check_circle</span>
                                 </div>
                                 <p class="mt-1 text-sm leading-relaxed text-on-surface-variant">
-                                    Tự chọn kỳ thi, chủ đề, bài học, độ khó và trạng thái câu hỏi.
+                                    Luyện tập theo bài học với bộ lọc kỳ thi, chủ đề, bài học, độ khó và trạng thái câu hỏi.
                                 </p>
                             </div>
                         </div>
@@ -447,7 +447,7 @@
                                     <span class="material-symbols-outlined text-primary" x-show="source === 'weak_topics'" x-cloak>check_circle</span>
                                 </div>
                                 <p class="mt-1 text-sm leading-relaxed text-on-surface-variant">
-                                    Chọn hướng luyện (điểm yếu / cân bằng / củng cố); kỳ thi và hệ/môn tùy chọn để thu hẹp phạm vi.
+                                    Hệ thống tự chọn câu theo tiến độ của bạn. Chọn hướng luyện — điểm yếu, cân bằng hoặc củng cố.
                                 </p>
                             </div>
                         </div>
@@ -654,14 +654,14 @@
                                 <div class="border-b border-outline-variant px-6 py-4">
                                     <p class="text-[11px] font-bold tracking-widest text-on-surface-variant uppercase">Hướng luyện</p>
                                     <p class="mt-1 text-xs text-on-surface-variant">
-                                        Thay cho độ khó / trạng thái — hệ thống tự chọn câu theo hướng đã chọn.
+                                        Chọn mục tiêu phiên luyện. Hệ thống sẽ ưu tiên câu phù hợp với hướng bạn chọn.
                                     </p>
                                 </div>
                                 <div class="space-y-0" role="radiogroup" aria-label="Hướng luyện thích ứng">
                                     <template x-for="option in [
-                                        { id: 'weak_focus', title: 'Điểm yếu', subtitle: 'Ưu tiên câu hay sai', icon: 'target' },
-                                        { id: 'balanced', title: 'Cân bằng', subtitle: 'Yếu + lâu chưa ôn', icon: 'balance' },
-                                        { id: 'retention', title: 'Củng cố', subtitle: 'Ưu tiên kiến thức lâu chưa gặp', icon: 'history_edu' },
+                                        { id: 'weak_focus', title: 'Điểm yếu', subtitle: 'Tập trung câu bạn hay trả lời sai', icon: 'target' },
+                                        { id: 'balanced', title: 'Cân bằng', subtitle: 'Kết hợp điểm yếu và kiến thức lâu chưa ôn', icon: 'balance' },
+                                        { id: 'retention', title: 'Củng cố', subtitle: 'Ôn lại kiến thức đã học nhưng lâu chưa gặp', icon: 'history_edu' },
                                     ]" :key="option.id">
                                         <button type="button"
                                             @click="setAdaptiveFocus(option.id)"
