@@ -2,6 +2,9 @@
 
 ## 2026-09-12
 
+### Feat — Lọc đa chọn danh sách người dùng
+- `/admin/users`: lọc kết hợp nhiều cổng / vai trò / trạng thái bằng multi-select.
+
 ### Feat — Soạn câu hỏi, duyệt 2 GV, import/export
 - Lớp 1 cần 2 giảng viên chấp nhận; gửi duyệt lại reset 2 phiếu; 1 reject = fail.
 - Import/export Excel/CSV bản nháp; lookup bài học/tag theo `question.create` / `question.update` (không cần `topic.view`).

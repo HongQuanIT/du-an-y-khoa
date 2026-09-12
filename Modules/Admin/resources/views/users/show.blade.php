@@ -144,22 +144,20 @@
                     <dd class="mt-3 grid gap-2 md:grid-cols-3">
                         @foreach ($loginMethods as $method)
                             <div class="rounded-lg border border-outline-variant bg-surface-container-low p-3">
-                                <div class="flex items-start justify-between gap-3">
-                                    <div class="flex min-w-0 items-center gap-2">
-                                        <span class="material-symbols-outlined text-[20px] text-primary" aria-hidden="true">{{ $method['icon'] }}</span>
-                                        <span class="font-label-md font-semibold text-on-surface">{{ $method['label'] }}</span>
-                                    </div>
-                                    @if ($method['linked'])
-                                        <span class="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-label-sm font-semibold text-primary">
-                                            <span class="material-symbols-outlined text-[16px]" aria-hidden="true">check_circle</span>
-                                            {{ $method['linkedText'] }}
-                                        </span>
-                                    @else
-                                        <span class="inline-flex shrink-0 rounded-full bg-surface-container-high px-2 py-0.5 text-label-sm font-medium text-on-surface-variant">
-                                            {{ $method['unlinkedText'] }}
-                                        </span>
-                                    @endif
+                                <div class="flex items-center gap-2">
+                                    <span class="material-symbols-outlined shrink-0 text-[20px] text-primary" aria-hidden="true">{{ $method['icon'] }}</span>
+                                    <span class="min-w-0 font-label-md font-semibold text-on-surface">{{ $method['label'] }}</span>
                                 </div>
+                                @if ($method['linked'])
+                                    <span class="mt-2 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-label-sm font-semibold text-primary">
+                                        <span class="material-symbols-outlined text-[16px]" aria-hidden="true">check_circle</span>
+                                        {{ $method['linkedText'] }}
+                                    </span>
+                                @else
+                                    <span class="mt-2 inline-flex rounded-full bg-surface-container-high px-2 py-0.5 text-label-sm font-medium text-on-surface-variant">
+                                        {{ $method['unlinkedText'] }}
+                                    </span>
+                                @endif
                                 <p class="mt-2 truncate text-body-sm text-on-surface-variant" title="{{ $method['description'] }}">
                                     {{ $method['description'] }}
                                 </p>
