@@ -2,6 +2,11 @@
 
 ## 2026-09-12
 
+### Feat — So sánh bản duyệt với bản xuất bản
+- `/teach` duyệt cập nhật: diff stem/đáp án/giải thích so với snapshot published.
+- Câu mới chưa có bản live: một cột, nhãn «chưa xuất bản».
+- Form admin phân biệt giảng viên từ chối vs admin trả về; editor phải chuyển về nháp trước khi sửa.
+
 ### Feat — Import/export câu hỏi theo mã
 - Export không còn cột `id`; khóa upsert là `code` (trống = tạo mới, có mã = cập nhật).
 - Mã không tồn tại: chặn cả lô và báo rõ mã lỗi.

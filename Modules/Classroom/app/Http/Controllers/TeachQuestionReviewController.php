@@ -17,6 +17,7 @@ use Modules\QuestionBank\Enums\InstructorReviewDecision;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Support\QuestionInstructorReviewCycle;
+use Modules\QuestionBank\Support\QuestionReviewComparison;
 
 final class TeachQuestionReviewController extends Controller
 {
@@ -28,6 +29,7 @@ final class TeachQuestionReviewController extends Controller
 
     public function __construct(
         private readonly QuestionInstructorReviewCycle $reviewCycle,
+        private readonly QuestionReviewComparison $reviewComparison,
     ) {}
 
     public function index(Request $request): View
@@ -110,6 +112,7 @@ final class TeachQuestionReviewController extends Controller
             'canDecide' => $canDecide,
             'hidePeerVotes' => $canDecide,
             'approvalCount' => $this->reviewCycle->approvedCountFromSlots($question),
+            'comparison' => $this->reviewComparison->compare($question),
         ]);
     }
 

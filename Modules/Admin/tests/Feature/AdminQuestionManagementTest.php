@@ -101,10 +101,11 @@ final class AdminQuestionManagementTest extends TestCase
         $this->assertSame(QuestionStatus::InReview, Question::query()->firstOrFail()->status);
     }
 
-    public function test_editor_sees_rejected_review_note_and_can_resubmit_question(): void
+    public function test_editor_sees_instructor_rejection_and_must_return_to_draft(): void
     {
         $editor = $this->staffUser(Role::ContentEditor);
         $instructor = $this->instructorUser();
+        $instructor->forceFill(['name' => 'Ekko'])->save();
 
         $this->actingAsStaff($editor)
             ->post(route('admin.questions.store'), array_merge($this->payload(), [
@@ -120,12 +121,72 @@ final class AdminQuestionManagementTest extends TestCase
         $this->actingAsStaff($editor)
             ->get(route('admin.questions.edit', $question))
             ->assertOk()
-            ->assertSee('Câu này bị từ chối bởi admin')
-            ->assertSee('Bị từ chối')
+            ->assertSee('Giảng viên Ekko đã từ chối')
+            ->assertSee('Giảng viên từ chối')
             ->assertSee('Cần bổ sung giải thích cho các đáp án sai.')
-            ->assertSee($instructor->name)
-            ->assertDontSee('Phiên bản')
-            ->assertSee('Bạn có thể chỉnh sửa câu hỏi bên dưới và lưu để gửi lại duyệt.');
+            ->assertSee('Chuyển về nháp để chỉnh sửa')
+            ->assertDontSee('Câu này bị từ chối bởi admin')
+            ->assertSee('id="editor-return-draft-form"', false)
+            ->assertSee(route('admin.questions.transition', $question), false);
+
+        $this->actingAsStaff($editor)
+            ->from(route('admin.questions.edit', $question))
+            ->post(route('admin.questions.transition', $question), [
+                'status' => QuestionStatus::Draft->value,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(QuestionStatus::Draft, $question->fresh()->status);
+    }
+
+    public function test_admin_cannot_publish_or_reject_instructor_rejected_question(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+        $admin = $this->staffUser(Role::Admin);
+        $instructor = $this->instructorUser();
+        $instructor->forceFill(['name' => 'Ekko'])->save();
+
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.store'), array_merge($this->payload(), [
+                'requested_status' => QuestionStatus::InReview->value,
+            ]))
+            ->assertRedirect();
+
+        $question = Question::query()->firstOrFail();
+        app(\Modules\QuestionBank\Actions\InstructorReviewQuestionAction::class)
+            ->reject($instructor, $question->fresh(), 'Sai kiến thức y khoa.');
+
+        $this->actingAsStaff($admin)
+            ->get(route('admin.questions.edit', $question))
+            ->assertOk()
+            ->assertSee('Giảng viên Ekko đã từ chối')
+            ->assertSee('Sai kiến thức y khoa.')
+            ->assertSee('Đang chờ biên tập viên xử lý.')
+            ->assertDontSee('Câu này bị từ chối bởi admin')
+            ->assertDontSee('Duyệt &amp; xuất bản', false)
+            ->assertDontSee('Trả về biên tập');
+
+        $this->actingAsStaff($admin)
+            ->from(route('admin.questions.edit', $question))
+            ->post(route('admin.questions.transition', $question), [
+                'status' => QuestionStatus::Published->value,
+            ])
+            ->assertRedirect(route('admin.questions.edit', $question))
+            ->assertSessionHasErrors('status');
+
+        $this->actingAsStaff($admin)
+            ->from(route('admin.questions.edit', $question))
+            ->post(route('admin.questions.transition', $question), [
+                'status' => QuestionStatus::Rejected->value,
+                'rejection_reason' => 'Admin cố từ chối câu chưa tới lớp 2.',
+            ])
+            ->assertRedirect();
+
+        $fresh = $question->fresh();
+        $this->assertSame(QuestionStatus::Rejected, $fresh->status);
+        $this->assertSame(Role::Instructor->value, $fresh->rejected_by_role);
+        $this->assertSame('Sai kiến thức y khoa.', $fresh->rejection_reason);
     }
 
     public function test_editor_can_assign_multiple_topics_to_question(): void

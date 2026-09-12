@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Support\Enums\Role;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Admin\Actions\CaptureQuestionVersionAction;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionReviewAction;
 use Modules\QuestionBank\Enums\QuestionReviewStatus;
@@ -183,6 +184,40 @@ final class TeachQuestionReviewTest extends TestCase
         $this->assertSame(QuestionStatus::InReview, $question->fresh()->status);
     }
 
+    public function test_review_detail_compares_working_copy_with_published_snapshot(): void
+    {
+        $instructor = $this->instructor();
+        $question = $this->makePublishedThenInReviewQuestion();
+
+        $this->actingAs($instructor)
+            ->get(route('teach.questions.reviews.show', $question))
+            ->assertOk()
+            ->assertSee('So sánh với bản đang xuất bản', false)
+            ->assertSee('Bản đang xuất bản', false)
+            ->assertSee('Bản cần duyệt', false)
+            ->assertSee('Bệnh nhân sốt', false)
+            ->assertSee('>cao<', false)
+            ->assertSee('>nhẹ<', false)
+            ->assertSee('>3<', false)
+            ->assertSee('>5<', false)
+            ->assertSee('Xóa', false)
+            ->assertSee('Thêm', false)
+            ->assertDontSee('Câu mới — chưa có bản xuất bản', false);
+    }
+
+    public function test_new_question_review_shows_single_pane_without_published_compare(): void
+    {
+        $instructor = $this->instructor();
+        $question = $this->makeInReviewQuestion();
+
+        $this->actingAs($instructor)
+            ->get(route('teach.questions.reviews.show', $question))
+            ->assertOk()
+            ->assertSee('Câu mới — chưa có bản xuất bản', false)
+            ->assertSee(strip_tags((string) $question->stem), false)
+            ->assertDontSee('So sánh với bản đang xuất bản', false);
+    }
+
     public function test_student_cannot_access_review_queue(): void
     {
         $student = User::factory()->create();
@@ -242,6 +277,51 @@ final class TeachQuestionReviewTest extends TestCase
         QuestionReviewRequest::query()->create([
             'question_id' => $question->id,
             'action' => QuestionReviewAction::Create,
+            'status' => QuestionReviewStatus::Pending,
+            'requested_by' => $creator->id,
+        ]);
+
+        return $question->fresh(['options', 'lessons']);
+    }
+
+    private function makePublishedThenInReviewQuestion(): Question
+    {
+        $creator = User::factory()->create();
+        $creator->assignRole(Role::ContentEditor->value);
+
+        $question = Question::factory()->create([
+            'stem' => 'Bệnh nhân sốt cao 3 ngày. Chẩn đoán phù hợp?',
+            'explanation' => 'Giải thích bản xuất bản.',
+            'difficulty' => Difficulty::Medium,
+            'status' => QuestionStatus::Published,
+            'created_by' => $creator->id,
+            'version' => 1,
+            'published_version' => 1,
+        ]);
+        $question->lessons()->sync([$this->topic->id]);
+
+        foreach (['Virus', 'Vi khuẩn', 'Nấm', 'Ký sinh'] as $i => $content) {
+            $question->options()->create([
+                'label' => chr(65 + $i),
+                'content' => $content,
+                'is_correct' => $i === 0,
+                'explanation' => $i === 0 ? 'Đúng' : 'Sai',
+                'order' => $i + 1,
+            ]);
+        }
+
+        $question = $question->fresh(['options', 'lessons']);
+        app(CaptureQuestionVersionAction::class)->handle($question, $creator, 'publish');
+
+        $question->forceFill([
+            'stem' => 'Bệnh nhân sốt nhẹ 5 ngày. Chẩn đoán phù hợp?',
+            'explanation' => 'Giải thích bản gửi duyệt.',
+            'status' => QuestionStatus::InReview,
+        ])->save();
+
+        QuestionReviewRequest::query()->create([
+            'question_id' => $question->id,
+            'action' => QuestionReviewAction::Update,
             'status' => QuestionReviewStatus::Pending,
             'requested_by' => $creator->id,
         ]);

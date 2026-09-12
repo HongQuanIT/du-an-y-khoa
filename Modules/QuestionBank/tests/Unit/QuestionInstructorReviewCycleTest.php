@@ -51,6 +51,9 @@ final class QuestionInstructorReviewCycleTest extends TestCase
         $this->assertSame(QuestionStatus::Rejected, $rejected->status);
         $this->assertSame('rejected', $rejected->instructor_2_decision);
         $this->assertSame('Sai kiến thức.', $rejected->rejection_reason);
+        $this->assertTrue($rejected->isInstructorRejection());
+        $this->assertFalse($rejected->isPublisherRejection());
+        $this->assertSame('Giảng viên từ chối', $rejected->editorialSubmissionLabel());
     }
 
     public function test_creator_cannot_approve_own_question(): void

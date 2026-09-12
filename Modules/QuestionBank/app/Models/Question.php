@@ -6,6 +6,7 @@ namespace Modules\QuestionBank\Models;
 
 use App\Models\AuditLog;
 use App\Models\User;
+use App\Support\Enums\Role;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -424,9 +425,56 @@ class Question extends Model
         return match ($this->status) {
             QuestionStatus::InReview => $isUpdate ? 'Đang duyệt cập nhật' : 'Đang chờ duyệt',
             QuestionStatus::PendingPublish => $isUpdate ? 'Cập nhật đủ phiếu' : 'Đủ phiếu · chờ xuất bản',
-            QuestionStatus::Rejected => 'Bản gửi bị từ chối',
+            QuestionStatus::Rejected => $this->isInstructorRejection()
+                ? 'Giảng viên từ chối'
+                : ($this->isPublisherRejection() ? 'Admin trả về biên tập' : 'Bản gửi bị từ chối'),
             default => 'Không có bản gửi',
         };
+    }
+
+    /** Layer 1: một giảng viên từ chối chuyên môn — câu chưa tới admin. */
+    public function isInstructorRejection(): bool
+    {
+        if ($this->status !== QuestionStatus::Rejected) {
+            return false;
+        }
+
+        $role = Role::tryFrom((string) $this->rejected_by_role);
+        if ($role === Role::Instructor) {
+            return true;
+        }
+        if (in_array($role, [Role::Admin, Role::SuperAdmin], true)) {
+            return false;
+        }
+
+        return collect($this->instructorReviewFlags())
+            ->contains(fn (array $flag): bool => ($flag['decision'] ?? null) === InstructorReviewDecision::Rejected->value);
+    }
+
+    /** Layer 2: admin trả về vì lý do vận hành sau khi đủ 2 phiếu GV. */
+    public function isPublisherRejection(): bool
+    {
+        if ($this->status !== QuestionStatus::Rejected || $this->isInstructorRejection()) {
+            return false;
+        }
+
+        return in_array(Role::tryFrom((string) $this->rejected_by_role), [Role::Admin, Role::SuperAdmin], true);
+    }
+
+    public function rejectorDisplayName(): ?string
+    {
+        if ($this->isInstructorRejection()) {
+            foreach ($this->instructorReviewFlags() as $flag) {
+                if (($flag['decision'] ?? null) === InstructorReviewDecision::Rejected->value
+                    && filled($flag['instructor_name'])) {
+                    return $flag['instructor_name'];
+                }
+            }
+
+            return $this->instructor?->name;
+        }
+
+        return $this->publisher?->name ?? $this->reviewer?->name;
     }
 
     /**

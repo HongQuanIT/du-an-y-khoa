@@ -17,6 +17,9 @@
                     @if ($question->code)
                         · <span class="font-semibold text-on-surface">{{ $question->code }}</span>
                     @endif
+                    @if ($comparison)
+                        · So sánh với bản xuất bản v{{ $comparison['published_version'] }}
+                    @endif
                 </p>
             </div>
         </div>
@@ -98,8 +101,14 @@
     </div>
     @endif
 
+    @if ($comparison)
+        @include('questionbank::partials.question-review-comparison', ['comparison' => $comparison])
+    @else
     <section class="rounded-2xl border border-outline-variant bg-surface p-5">
-        <h3 class="mb-4 font-label-lg font-bold text-on-surface">Nội dung câu hỏi</h3>
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <h3 class="font-label-lg font-bold text-on-surface">Nội dung câu hỏi</h3>
+            <span class="rounded-full bg-sky-100 px-2.5 py-1 text-xs font-bold text-sky-800">Câu mới — chưa có bản xuất bản</span>
+        </div>
         <p class="whitespace-pre-wrap text-sm leading-6 text-on-surface">{{ strip_tags((string) $question->stem) }}</p>
 
         @if ($question->stemImageUrl())
@@ -107,12 +116,19 @@
                 class="mt-4 max-h-72 rounded-xl border border-outline-variant object-contain">
         @endif
 
-        <div class="mt-5 flex flex-wrap gap-2">
-            @foreach ($question->lessons as $lesson)
+        <h4 class="mt-5 text-sm font-bold text-on-surface">Bài học</h4>
+        <div class="mt-2 flex flex-wrap gap-2">
+            @forelse ($question->lessons as $lesson)
                 <span class="inline-flex rounded-lg bg-surface-container-high px-2.5 py-1 text-xs font-semibold">
                     {{ $lesson->name }}
                 </span>
-            @endforeach
+            @empty
+                <span class="text-sm text-on-surface-variant">Chưa nhập.</span>
+            @endforelse
+        </div>
+
+        <h4 class="mt-5 text-sm font-bold text-on-surface">Độ khó</h4>
+        <div class="mt-2">
             <span class="inline-flex rounded-lg bg-surface-container-high px-2.5 py-1 text-xs font-semibold">
                 {{ $question->difficulty->label() }}
             </span>
@@ -154,4 +170,5 @@
             {{ filled(strip_tags((string) $question->attending_tip)) ? strip_tags((string) $question->attending_tip) : 'Chưa nhập.' }}
         </p>
     </section>
+    @endif
 </x-layouts.teach>
