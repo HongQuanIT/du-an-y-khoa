@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-09-12
+
+### UX — Copy phiên luyện tuỳ chỉnh / thích ứng
+- Làm rõ mô tả thẻ chọn loại phiên và mục Hướng luyện trên `/qbank/create`.
+- Subtitle 3 hướng: Điểm yếu / Cân bằng / Củng cố dễ hiểu hơn cho học viên.
+
 ## 2026-09-11
 
 ### Seed — Sample QBank 50 câu + taxonomy chương trình
