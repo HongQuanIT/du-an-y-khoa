@@ -23,13 +23,14 @@ use Modules\QuestionBank\Database\Factories\QuestionFactory;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionReviewStatus;
 use Modules\QuestionBank\Enums\QuestionStatus;
+use Modules\QuestionBank\Support\QuestionCodeAllocator;
 use Modules\QuestionBank\Support\ServePublishedQuestion;
 
 /**
  * A single QBank question (reference implementation of the module pattern).
  *
  * @property string $id
- * @property string|null $code
+ * @property string $code
  * @property string $stem
  * @property string|null $stem_image_path
  * @property string|null $explanation
@@ -70,8 +71,12 @@ class Question extends Model
         'version' => 0,
     ];
 
+    /**
+     * Code is assigned on create and never mass-assigned afterward.
+     *
+     * @var list<string>
+     */
     protected $fillable = [
-        'code',
         'stem',
         'stem_image_path',
         'explanation',
@@ -96,6 +101,28 @@ class Question extends Model
         'content_fingerprint',
         'similarity_checked_at',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (Question $question): void {
+            if (blank($question->code)) {
+                $question->code = app(QuestionCodeAllocator::class)->allocate();
+
+                return;
+            }
+
+            if (preg_match('/^Q(\d+)$/', (string) $question->code, $matches) === 1) {
+                app(QuestionCodeAllocator::class)->ensureAtLeast(((int) $matches[1]) + 1);
+            }
+        });
+
+        static::updating(function (Question $question): void {
+            $original = $question->getOriginal('code');
+            if (filled($original) && $question->isDirty('code')) {
+                $question->code = $original;
+            }
+        });
+    }
 
     protected $casts = [
         'difficulty' => Difficulty::class,

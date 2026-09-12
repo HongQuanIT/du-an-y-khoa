@@ -2,6 +2,11 @@
 
 ## 2026-09-12
 
+### Feat — Mã câu hỏi tuần tự Q#####
+- Sinh mã cố định `Q00001`, `Q00002`… khi tạo/nhân bản; không đổi sau khi gán.
+- Bộ đếm `question_code_sequences` + backfill câu chưa có mã; mã cũ (CARDIO/QBANK-SAMPLE) giữ nguyên.
+- Admin `/admin/questions`: hiện mã cùng cột nội dung; form edit hiện mã read-only.
+
 ### UX — Copy phiên luyện tuỳ chỉnh / thích ứng
 - Làm rõ mô tả thẻ chọn loại phiên và mục Hướng luyện trên `/qbank/create`.
 - Subtitle 3 hướng: Điểm yếu / Cân bằng / Củng cố dễ hiểu hơn cho học viên.

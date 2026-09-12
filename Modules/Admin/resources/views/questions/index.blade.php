@@ -351,7 +351,8 @@
                                         aria-label="Chỉnh sửa câu hỏi {{ $question->code ?: $question->id }}">
                                         @if (filled($question->code))
                                             <p
-                                                class="mb-0.5 font-mono text-xs font-semibold text-on-surface-variant group-hover:underline">
+                                                class="mb-0.5 font-mono text-xs font-semibold text-on-surface-variant group-hover:underline"
+                                                title="Mã câu hỏi">
                                                 {{ $question->code }}
                                             </p>
                                         @endif

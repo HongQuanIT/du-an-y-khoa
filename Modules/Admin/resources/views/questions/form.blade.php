@@ -87,6 +87,12 @@
                 <h1 class="font-headline-md text-headline-md font-bold text-on-surface">
                     {{ $isNew ? 'Tạo câu hỏi mới' : ($canEditContent ? 'Chỉnh sửa câu hỏi' : 'Chi tiết câu hỏi') }}
                 </h1>
+                @if (! $isNew && filled($question->code))
+                    <p class="mt-1 font-mono text-sm font-semibold tracking-wide text-on-surface-variant"
+                        title="Mã câu hỏi (không thay đổi)">
+                        {{ $question->code }}
+                    </p>
+                @endif
                 @if (! $isNew)
                     <div class="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 font-body-sm text-on-surface-variant" aria-label="Thông tin câu hỏi">
                         <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold {{ $statusBadge['class'] }}">

@@ -64,6 +64,7 @@ final class AdminQuestionManagementTest extends TestCase
         $this->assertSame(QuestionStatus::Draft, $question->status);
         $this->assertSame($editor->id, $question->created_by);
         $this->assertSame(0, $question->version);
+        $this->assertSame('Q00001', $question->code);
         $this->assertDatabaseMissing('question_review_requests', [
             'question_id' => $question->id,
         ]);
@@ -703,6 +704,8 @@ final class AdminQuestionManagementTest extends TestCase
         $this->assertSame(QuestionStatus::Draft, $clone->status);
         $this->assertSame($question->version, $clone->cloned_from_version);
         $this->assertSame($editor->id, $clone->created_by);
+        $this->assertNotSame($question->code, $clone->code);
+        $this->assertMatchesRegularExpression('/^Q\d{5}$/', (string) $clone->code);
         $this->assertCount(4, $clone->options);
         $this->assertDatabaseHas('audit_logs', [
             'action' => 'admin.question.clone',
@@ -720,6 +723,7 @@ final class AdminQuestionManagementTest extends TestCase
         $this->actingAsStaff($creatorA)
             ->get(route('admin.questions.index'))
             ->assertOk()
+            ->assertSee($ownQuestion->code, false)
             ->assertSee(strip_tags($ownQuestion->stem), false)
             ->assertDontSee('Câu hỏi bí mật của creator B', false);
 
