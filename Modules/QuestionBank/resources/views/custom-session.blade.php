@@ -477,9 +477,6 @@
                     <div class="overflow-hidden rounded-xl border border-outline-variant bg-white shadow-sm">
                         <div class="border-b border-outline-variant p-6">
                             <h2 class="font-headline-sm text-on-surface">Thiết lập chủ đề</h2>
-                            <p class="mt-1 text-sm text-on-surface-variant" x-show="isAdaptive()" x-cloak>
-                                Mặc định toàn bộ ngân hàng. Chọn kỳ thi / hệ / môn để thu hẹp — không lọc theo bài học.
-                            </p>
                         </div>
                         <div class="space-y-6 p-6">
                             <div>
