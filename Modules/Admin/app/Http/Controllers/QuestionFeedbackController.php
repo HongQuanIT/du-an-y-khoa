@@ -18,7 +18,7 @@ final class QuestionFeedbackController extends Controller
 {
     public function index(Request $request): View
     {
-        $this->authorizePermission(Permission::QuestionView);
+        abort_unless(\Modules\Admin\Support\QuestionAccess::canAccessWorkspace($this->actor()), 403);
 
         $filters = [
             'q' => trim((string) $request->query('q', '')),

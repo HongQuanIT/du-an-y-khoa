@@ -17,13 +17,18 @@ use Modules\QuestionBank\Enums\QuestionReviewStatus;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionReviewRequest;
+use Modules\QuestionBank\Support\QuestionInstructorReviewCycle;
 
 /**
- * Layer-1 instructor review: in_review → pending_publish | rejected.
+ * Layer-1 instructor review: two distinct accepts, fail-fast on first reject.
  * Does not bump version or publish to Qbank.
  */
 final class InstructorReviewQuestionAction
 {
+    public function __construct(
+        private readonly QuestionInstructorReviewCycle $reviewCycle,
+    ) {}
+
     public function approve(User $instructor, Question $question, ?string $note = null): Question
     {
         $this->authorize($instructor);
@@ -39,22 +44,29 @@ final class InstructorReviewQuestionAction
 
             $before = AuditSnapshot::question($question);
             $versionBefore = (int) $question->version;
+            $note = $this->cleanNote($note);
 
-            $question->forceFill([
-                'status' => QuestionStatus::PendingPublish,
-                'instructor_id' => $instructor->getKey(),
-                'reviewer_id' => $instructor->getKey(),
-                'rejection_reason' => null,
-                'rejected_by_role' => null,
-                'updated_by' => $instructor->getKey(),
-            ])->save();
+            $approvedCount = $this->reviewCycle->recordApproval($question, $instructor, $note);
+            $question = $question->refresh();
 
-            $this->resolvePendingCreateRequest(
-                $question,
-                $instructor,
-                QuestionReviewStatus::Approved,
-                $note,
-            );
+            $reachedQuota = $approvedCount >= QuestionInstructorReviewCycle::REQUIRED_APPROVALS;
+            if ($reachedQuota) {
+                $question->forceFill([
+                    'status' => QuestionStatus::PendingPublish,
+                    'updated_by' => $instructor->getKey(),
+                ])->save();
+
+                $this->resolvePendingCreateRequest(
+                    $question,
+                    $instructor,
+                    QuestionReviewStatus::Approved,
+                    $note,
+                );
+            } else {
+                $question->forceFill([
+                    'updated_by' => $instructor->getKey(),
+                ])->save();
+            }
 
             $question = $question->refresh();
 
@@ -72,8 +84,9 @@ final class InstructorReviewQuestionAction
                 AuditSnapshot::question($question),
                 metadata: [
                     'from_status' => QuestionStatus::InReview->value,
-                    'to_status' => QuestionStatus::PendingPublish->value,
-                    'review_note' => $this->cleanNote($note),
+                    'to_status' => $question->status->value,
+                    'review_note' => $note,
+                    'approval_count' => $approvedCount,
                 ],
             );
 
@@ -104,10 +117,10 @@ final class InstructorReviewQuestionAction
             $before = AuditSnapshot::question($question);
             $versionBefore = (int) $question->version;
 
+            $this->reviewCycle->recordRejection($question, $instructor, mb_substr($reason, 0, 2000));
+
             $question->forceFill([
                 'status' => QuestionStatus::Rejected,
-                'instructor_id' => $instructor->getKey(),
-                'reviewer_id' => $instructor->getKey(),
                 'rejection_reason' => mb_substr($reason, 0, 2000),
                 'rejected_by_role' => Role::Instructor->value,
                 'updated_by' => $instructor->getKey(),

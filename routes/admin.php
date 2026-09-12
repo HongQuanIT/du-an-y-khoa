@@ -26,6 +26,8 @@ use Modules\Admin\Http\Controllers\LearnerCatalogController;
 use Modules\Admin\Http\Controllers\LearnerDemographicsController;
 use Modules\Admin\Http\Controllers\QuestionController;
 use Modules\Admin\Http\Controllers\QuestionDuplicateController;
+use Modules\Admin\Http\Controllers\QuestionExportController;
+use Modules\Admin\Http\Controllers\QuestionImportController;
 use Modules\Admin\Http\Controllers\QuestionFeedbackController;
 use Modules\Admin\Http\Controllers\QuestionReviewController;
 use Modules\Admin\Http\Controllers\QuestionVersionController;
@@ -46,6 +48,7 @@ use Modules\Media\Http\Controllers\MediaController;
 use Modules\Notification\Http\Controllers\AdminBroadcastController;
 use Modules\Notification\Http\Controllers\NotificationController;
 use Modules\Partner\Http\Controllers\Admin\PartnerAdminController;
+use Modules\Admin\Support\QuestionAccess;
 use Modules\QuestionBank\Http\Controllers\TaxonomyLookupController;
 
 /*
@@ -218,12 +221,20 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
 
         Route::middleware('permission:'.Permission::QuestionCreate->value)->group(function (): void {
             Route::get('/questions/create', [QuestionController::class, 'create'])->name('questions.create');
+            Route::get('/questions/import', [QuestionImportController::class, 'create'])->name('questions.import');
+            Route::get('/questions/import/template', [QuestionImportController::class, 'template'])->name('questions.import.template');
+            Route::post('/questions/import', [QuestionImportController::class, 'store'])->name('questions.import.upload');
+            Route::get('/questions/import/{batch}', [QuestionImportController::class, 'show'])->name('questions.import.show');
+            Route::get('/questions/import/{batch}/errors', [QuestionImportController::class, 'errors'])->name('questions.import.errors');
+            Route::post('/questions/import/{batch}/map', [QuestionImportController::class, 'map'])->name('questions.import.map');
+            Route::post('/questions/import/{batch}/commit', [QuestionImportController::class, 'commit'])->name('questions.import.commit');
             Route::post('/questions', [QuestionController::class, 'store'])->name('questions.store');
             Route::post('/questions/{question}/clone', [QuestionController::class, 'clone'])->name('questions.clone');
         });
 
-        Route::middleware('permission:'.Permission::QuestionView->value)->group(function (): void {
+        Route::middleware('permission:'.QuestionAccess::workspacePermissionMiddleware())->group(function (): void {
             Route::get('/questions', [QuestionController::class, 'index'])->name('questions.index');
+            Route::get('/questions/export', QuestionExportController::class)->name('questions.export');
             Route::get('/question-feedback', [QuestionFeedbackController::class, 'index'])->name('question-feedback.index');
             Route::get('/questions/{question}', [QuestionController::class, 'edit']);
             Route::get('/questions/{question}/edit', [QuestionController::class, 'edit'])->name('questions.edit');
@@ -263,14 +274,8 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
             ->middleware('permission:'.Permission::QuestionDelete->value)
             ->name('questions.destroy');
 
-        Route::middleware('permission:'.Permission::TopicView->value)->group(function (): void {
-            Route::get('/taxonomy', [TaxonomyController::class, 'index'])->name('taxonomy.index');
-            Route::get('/blueprints', [BlueprintController::class, 'index'])->name('blueprints.index');
-            Route::get('/blueprints/{blueprint}/edit', [BlueprintController::class, 'edit'])->name('blueprints.edit');
-            Route::get('/categories', [CurriculumTaxonomyController::class, 'index'])->name('curriculum.index');
-            Route::redirect('/curriculum', '/admin/categories', 301);
-            Route::get('/tags', [TagController::class, 'index'])->name('tags.index');
-            Route::get('/tags/{tag}/edit', [TagController::class, 'edit'])->name('tags.edit');
+        // JSON pickers: soạn câu hỏi (create/update) hoặc quản lý phân loại/ma trận (topic.view).
+        Route::middleware('permission:'.Permission::QuestionCreate->value.'|'.Permission::QuestionUpdate->value.'|'.Permission::TopicView->value)->group(function (): void {
             Route::get('/taxonomy/lookups/blueprints', [TaxonomyLookupController::class, 'blueprints'])->name('taxonomy.lookups.blueprints');
             Route::get('/taxonomy/lookups/blueprints/{blueprint}/sections', [TaxonomyLookupController::class, 'blueprintSections'])->name('taxonomy.lookups.sections');
             Route::get('/taxonomy/lookups/sections/{section}/core-topics', [TaxonomyLookupController::class, 'coreClinicalTopics'])->name('taxonomy.lookups.core-topics');
@@ -279,6 +284,16 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
             Route::get('/taxonomy/lookups/subjects', [TaxonomyLookupController::class, 'subjects'])->name('taxonomy.lookups.subjects');
             Route::get('/taxonomy/lookups/lessons', [TaxonomyLookupController::class, 'lessons'])->name('taxonomy.lookups.lessons');
             Route::get('/taxonomy/lookups/tags', [TaxonomyLookupController::class, 'tags'])->name('taxonomy.lookups.tags');
+        });
+
+        Route::middleware('permission:'.Permission::TopicView->value)->group(function (): void {
+            Route::get('/taxonomy', [TaxonomyController::class, 'index'])->name('taxonomy.index');
+            Route::get('/blueprints', [BlueprintController::class, 'index'])->name('blueprints.index');
+            Route::get('/blueprints/{blueprint}/edit', [BlueprintController::class, 'edit'])->name('blueprints.edit');
+            Route::get('/categories', [CurriculumTaxonomyController::class, 'index'])->name('curriculum.index');
+            Route::redirect('/curriculum', '/admin/categories', 301);
+            Route::get('/tags', [TagController::class, 'index'])->name('tags.index');
+            Route::get('/tags/{tag}/edit', [TagController::class, 'edit'])->name('tags.edit');
         });
 
         Route::middleware('permission:'.Permission::TopicCreate->value)->group(function (): void {

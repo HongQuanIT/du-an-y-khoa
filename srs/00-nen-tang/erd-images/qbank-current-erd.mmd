@@ -24,9 +24,13 @@ erDiagram
   questions ||--o{ question_review_requests : has
   users ||--o{ question_review_requests : requested_by
   users o|--o{ question_review_requests : reviewed_by
+  questions ||--o{ question_instructor_reviews : has
+  users ||--o{ question_instructor_reviews : instructor_id
   questions ||--o{ question_feedback : has
   questions ||--o{ question_similarity_matches : "pair low/high"
   questions o|--o{ questions : cloned_from_id
+  users ||--o{ question_import_batches : uploaded_by
+  question_import_batches ||--o{ questions : import_batch_id
 
   %% ===== Taxonomy / Blueprint =====
   %% Content classification = 3-level DAG: organ_systems -> subjects -> lessons
@@ -81,6 +85,11 @@ erDiagram
     bigint updated_by FK "nullable"
     bigint reviewer_id FK "nullable"
     bigint instructor_id FK "nullable"
+    uint instructor_review_cycle
+    bigint instructor_1_id FK "nullable"
+    string instructor_1_decision "nullable"
+    bigint instructor_2_id FK "nullable"
+    string instructor_2_decision "nullable"
     bigint publisher_id FK "nullable"
     uuid cloned_from_id FK "nullable self"
     string difficulty
@@ -89,6 +98,7 @@ erDiagram
     bool exam_flag
     uint version
     uint published_version
+    uuid import_batch_id FK "nullable"
     json key_info
     json stats_cache
     char64 content_fingerprint
@@ -135,6 +145,24 @@ erDiagram
     string status
     bigint requested_by FK "CASCADE"
     bigint reviewed_by FK "nullable"
+  }
+
+  question_instructor_reviews {
+    bigint id PK
+    uuid question_id FK "CASCADE"
+    uint review_cycle
+    bigint instructor_id FK "CASCADE"
+    string decision "approved/rejected"
+    char64 content_fingerprint "nullable"
+  }
+
+  question_import_batches {
+    uuid id PK
+    bigint uploaded_by FK
+    string format
+    string status
+    json column_map
+    json stats
   }
 
   question_feedback {

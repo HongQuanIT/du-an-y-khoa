@@ -17,6 +17,9 @@
                     @if ($question->code)
                         · <span class="font-semibold text-on-surface">{{ $question->code }}</span>
                     @endif
+                    @if ($comparison)
+                        · So sánh với bản xuất bản v{{ $comparison['published_version'] }}
+                    @endif
                 </p>
             </div>
         </div>
@@ -53,9 +56,16 @@
     @if ($canDecide)
     <div class="mb-6 rounded-2xl border border-outline-variant bg-surface p-5 shadow-sm">
         <p class="mb-3 text-sm text-on-surface-variant">
-            Duyệt = chuyển sang <strong class="text-on-surface">chờ Admin xuất bản</strong> (không tăng version).
-            Từ chối = trả về Content Creator kèm lý do.
+            Cần 2 giảng viên khác nhau chấp nhận. Phiếu của bạn là
+            <strong class="text-on-surface">{{ ($approvalCount ?? 0) + 1 }}/2</strong>
+            (không tăng version). Một phiếu từ chối là fail ngay — trả về Content Creator.
         </p>
+        <div class="mb-3">
+            @include('questionbank::partials.instructor-review-flags', [
+                'question' => $question,
+                'hideNames' => $hidePeerVotes ?? false,
+            ])
+        </div>
         <label for="review_note" class="mb-2 block text-sm font-semibold text-on-surface">Ghi chú / lý do từ chối</label>
         <textarea id="review_note" form="approve-review-form" name="review_note" rows="3"
             class="w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm"
@@ -72,7 +82,7 @@
             </form>
             <form id="approve-review-form" method="post" action="{{ route('teach.questions.reviews.approve', $question) }}">
                 @csrf
-                <button type="submit" onclick="return confirm('Duyệt câu hỏi này và chuyển chờ xuất bản?')"
+                <button type="submit" onclick="return confirm('Ghi nhận phiếu chấp nhận của bạn? Cần đủ 2 giảng viên mới chuyển chờ xuất bản.')"
                     class="inline-flex items-center gap-1 rounded-xl bg-primary px-4 py-2.5 font-semibold text-on-primary hover:bg-primary/90">
                     <span class="material-symbols-outlined text-[18px]">check</span>Duyệt chuyên môn
                 </button>
@@ -91,8 +101,14 @@
     </div>
     @endif
 
+    @if ($comparison)
+        @include('questionbank::partials.question-review-comparison', ['comparison' => $comparison])
+    @else
     <section class="rounded-2xl border border-outline-variant bg-surface p-5">
-        <h3 class="mb-4 font-label-lg font-bold text-on-surface">Nội dung câu hỏi</h3>
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <h3 class="font-label-lg font-bold text-on-surface">Nội dung câu hỏi</h3>
+            <span class="rounded-full bg-sky-100 px-2.5 py-1 text-xs font-bold text-sky-800">Câu mới — chưa có bản xuất bản</span>
+        </div>
         <p class="whitespace-pre-wrap text-sm leading-6 text-on-surface">{{ strip_tags((string) $question->stem) }}</p>
 
         @if ($question->stemImageUrl())
@@ -100,12 +116,19 @@
                 class="mt-4 max-h-72 rounded-xl border border-outline-variant object-contain">
         @endif
 
-        <div class="mt-5 flex flex-wrap gap-2">
-            @foreach ($question->lessons as $lesson)
+        <h4 class="mt-5 text-sm font-bold text-on-surface">Bài học</h4>
+        <div class="mt-2 flex flex-wrap gap-2">
+            @forelse ($question->lessons as $lesson)
                 <span class="inline-flex rounded-lg bg-surface-container-high px-2.5 py-1 text-xs font-semibold">
                     {{ $lesson->name }}
                 </span>
-            @endforeach
+            @empty
+                <span class="text-sm text-on-surface-variant">Chưa nhập.</span>
+            @endforelse
+        </div>
+
+        <h4 class="mt-5 text-sm font-bold text-on-surface">Độ khó</h4>
+        <div class="mt-2">
             <span class="inline-flex rounded-lg bg-surface-container-high px-2.5 py-1 text-xs font-semibold">
                 {{ $question->difficulty->label() }}
             </span>
@@ -147,4 +170,5 @@
             {{ filled(strip_tags((string) $question->attending_tip)) ? strip_tags((string) $question->attending_tip) : 'Chưa nhập.' }}
         </p>
     </section>
+    @endif
 </x-layouts.teach>

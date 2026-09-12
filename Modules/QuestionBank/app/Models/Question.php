@@ -6,6 +6,7 @@ namespace Modules\QuestionBank\Models;
 
 use App\Models\AuditLog;
 use App\Models\User;
+use App\Support\Enums\Role;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -21,15 +22,18 @@ use Illuminate\Support\Facades\Storage;
 use Laravel\Scout\Searchable;
 use Modules\QuestionBank\Database\Factories\QuestionFactory;
 use Modules\QuestionBank\Enums\Difficulty;
+use Modules\QuestionBank\Enums\InstructorReviewDecision;
 use Modules\QuestionBank\Enums\QuestionReviewStatus;
 use Modules\QuestionBank\Enums\QuestionStatus;
+use Modules\QuestionBank\Support\QuestionCodeAllocator;
+use Modules\QuestionBank\Support\QuestionFilterBuilder;
 use Modules\QuestionBank\Support\ServePublishedQuestion;
 
 /**
  * A single QBank question (reference implementation of the module pattern).
  *
  * @property string $id
- * @property string|null $code
+ * @property string $code
  * @property string $stem
  * @property string|null $stem_image_path
  * @property string|null $explanation
@@ -44,12 +48,18 @@ use Modules\QuestionBank\Support\ServePublishedQuestion;
  * @property int|null $updated_by
  * @property int|null $reviewer_id
  * @property int|null $instructor_id
+ * @property int $instructor_review_cycle
+ * @property int|null $instructor_1_id
+ * @property string|null $instructor_1_decision
+ * @property int|null $instructor_2_id
+ * @property string|null $instructor_2_decision
  * @property int|null $publisher_id
  * @property int|null $published_version
  * @property string|null $rejection_reason
  * @property string|null $rejected_by_role
  * @property string|null $cloned_from_id
  * @property int|null $cloned_from_version
+ * @property string|null $import_batch_id
  * @property array<string, mixed>|null $stats_cache
  * @property Carbon|null $stats_updated_at
  * @property string|null $content_fingerprint
@@ -68,10 +78,15 @@ class Question extends Model
 
     protected $attributes = [
         'version' => 0,
+        'instructor_review_cycle' => 0,
     ];
 
+    /**
+     * Code is assigned on create and never mass-assigned afterward.
+     *
+     * @var list<string>
+     */
     protected $fillable = [
-        'code',
         'stem',
         'stem_image_path',
         'explanation',
@@ -85,17 +100,45 @@ class Question extends Model
         'updated_by',
         'reviewer_id',
         'instructor_id',
+        'instructor_review_cycle',
+        'instructor_1_id',
+        'instructor_1_decision',
+        'instructor_2_id',
+        'instructor_2_decision',
         'publisher_id',
         'published_version',
         'rejection_reason',
         'rejected_by_role',
         'cloned_from_id',
         'cloned_from_version',
+        'import_batch_id',
         'stats_cache',
         'stats_updated_at',
         'content_fingerprint',
         'similarity_checked_at',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (Question $question): void {
+            if (blank($question->code)) {
+                $question->code = app(QuestionCodeAllocator::class)->allocate();
+
+                return;
+            }
+
+            if (preg_match('/^Q(\d+)$/', (string) $question->code, $matches) === 1) {
+                app(QuestionCodeAllocator::class)->ensureAtLeast(((int) $matches[1]) + 1);
+            }
+        });
+
+        static::updating(function (Question $question): void {
+            $original = $question->getOriginal('code');
+            if (filled($original) && $question->isDirty('code')) {
+                $question->code = $original;
+            }
+        });
+    }
 
     protected $casts = [
         'difficulty' => Difficulty::class,
@@ -104,6 +147,7 @@ class Question extends Model
         'is_free' => 'boolean',
         'exam_flag' => 'boolean',
         'version' => 'integer',
+        'instructor_review_cycle' => 'integer',
         'published_version' => 'integer',
         'cloned_from_version' => 'integer',
         'stats_cache' => 'array',
@@ -194,11 +238,11 @@ class Question extends Model
     /**
      * Core clinical topics projected from medical taxonomy ↔ blueprint mapping.
      *
-     * @return \Illuminate\Support\Collection<int, CoreClinicalTopic>
+     * @return Collection<int, CoreClinicalTopic>
      */
-    public function inferredCoreClinicalTopics(): \Illuminate\Support\Collection
+    public function inferredCoreClinicalTopics(): Collection
     {
-        return app(\Modules\QuestionBank\Support\QuestionFilterBuilder::class)
+        return app(QuestionFilterBuilder::class)
             ->inferredCoreClinicalTopicsForQuestion($this);
     }
 
@@ -297,6 +341,12 @@ class Question extends Model
         return $this->hasMany(QuestionVersion::class)->latest('version');
     }
 
+    /** @return BelongsTo<QuestionImportBatch, $this> */
+    public function importBatch(): BelongsTo
+    {
+        return $this->belongsTo(QuestionImportBatch::class, 'import_batch_id');
+    }
+
     /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
@@ -319,6 +369,152 @@ class Question extends Model
     public function instructor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'instructor_id');
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function instructorSlot1(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'instructor_1_id');
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function instructorSlot2(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'instructor_2_id');
+    }
+
+    /** @return HasMany<QuestionInstructorReview, $this> */
+    public function instructorReviews(): HasMany
+    {
+        return $this->hasMany(QuestionInstructorReview::class);
+    }
+
+    /**
+     * Publication state for the admin list "Trạng thái" column.
+     * Working-copy pipeline (draft / in_review / …) belongs to editorialSubmissionLabel().
+     */
+    public function publicationStateLabel(): string
+    {
+        return match ($this->status) {
+            QuestionStatus::Retired => 'Ngừng dùng',
+            QuestionStatus::Private => 'Riêng tư (exam)',
+            QuestionStatus::Published => 'Đã xuất bản',
+            default => ((int) $this->published_version > 0)
+                ? 'Đã xuất bản'
+                : 'Chưa xuất bản',
+        };
+    }
+
+    public function hasEditorialSubmission(): bool
+    {
+        return in_array($this->status, [
+            QuestionStatus::InReview,
+            QuestionStatus::PendingPublish,
+            QuestionStatus::Rejected,
+        ], true);
+    }
+
+    /**
+     * Whether the editor has a submitted (or rejected) working copy, and where it sits.
+     * Draft / unpublished copies are "Không có bản gửi" no matter how many times they were saved.
+     */
+    public function editorialSubmissionLabel(): string
+    {
+        $isUpdate = (int) $this->published_version > 0;
+
+        return match ($this->status) {
+            QuestionStatus::InReview => $isUpdate ? 'Đang duyệt cập nhật' : 'Đang chờ duyệt',
+            QuestionStatus::PendingPublish => $isUpdate ? 'Cập nhật đủ phiếu' : 'Đủ phiếu · chờ xuất bản',
+            QuestionStatus::Rejected => $this->isInstructorRejection()
+                ? 'Giảng viên từ chối'
+                : ($this->isPublisherRejection() ? 'Admin trả về biên tập' : 'Bản gửi bị từ chối'),
+            default => 'Không có bản gửi',
+        };
+    }
+
+    /** Layer 1: một giảng viên từ chối chuyên môn — câu chưa tới admin. */
+    public function isInstructorRejection(): bool
+    {
+        if ($this->status !== QuestionStatus::Rejected) {
+            return false;
+        }
+
+        $role = Role::tryFrom((string) $this->rejected_by_role);
+        if ($role === Role::Instructor) {
+            return true;
+        }
+        if (in_array($role, [Role::Admin, Role::SuperAdmin], true)) {
+            return false;
+        }
+
+        return collect($this->instructorReviewFlags())
+            ->contains(fn (array $flag): bool => ($flag['decision'] ?? null) === InstructorReviewDecision::Rejected->value);
+    }
+
+    /** Layer 2: admin trả về vì lý do vận hành sau khi đủ 2 phiếu GV. */
+    public function isPublisherRejection(): bool
+    {
+        if ($this->status !== QuestionStatus::Rejected || $this->isInstructorRejection()) {
+            return false;
+        }
+
+        return in_array(Role::tryFrom((string) $this->rejected_by_role), [Role::Admin, Role::SuperAdmin], true);
+    }
+
+    public function rejectorDisplayName(): ?string
+    {
+        if ($this->isInstructorRejection()) {
+            foreach ($this->instructorReviewFlags() as $flag) {
+                if (($flag['decision'] ?? null) === InstructorReviewDecision::Rejected->value
+                    && filled($flag['instructor_name'])) {
+                    return $flag['instructor_name'];
+                }
+            }
+
+            return $this->instructor?->name;
+        }
+
+        return $this->publisher?->name ?? $this->reviewer?->name;
+    }
+
+    /**
+     * Two medical-review flags for admin/teach lists.
+     *
+     * @return list<array{slot: int, decision: string|null, color: string, instructor_name: string|null, label: string}>
+     */
+    public function instructorReviewFlags(): array
+    {
+        return [
+            $this->instructorReviewFlag(1, $this->instructor_1_decision, $this->instructorSlot1?->name),
+            $this->instructorReviewFlag(2, $this->instructor_2_decision, $this->instructorSlot2?->name),
+        ];
+    }
+
+    /**
+     * @return array{slot: int, decision: string|null, color: string, instructor_name: string|null, label: string}
+     */
+    private function instructorReviewFlag(int $slot, ?string $decision, ?string $name): array
+    {
+        $color = match ($decision) {
+            InstructorReviewDecision::Approved->value => 'green',
+            InstructorReviewDecision::Rejected->value => 'red',
+            default => 'white',
+        };
+
+        $who = $name ?: 'Giảng viên '.$slot;
+        $label = match ($decision) {
+            InstructorReviewDecision::Approved->value => $who.' đã chấp nhận',
+            InstructorReviewDecision::Rejected->value => $who.' đã từ chối',
+            default => 'Giảng viên '.$slot.' chưa duyệt / chờ duyệt',
+        };
+
+        return [
+            'slot' => $slot,
+            'decision' => $decision,
+            'color' => $color,
+            'instructor_name' => $name,
+            'label' => $label,
+        ];
     }
 
     /** @return BelongsTo<User, $this> */
@@ -450,7 +646,7 @@ class Question extends Model
             ->values()
             ->all();
 
-        $coreClinicalTopicIds = app(\Modules\QuestionBank\Support\QuestionFilterBuilder::class)
+        $coreClinicalTopicIds = app(QuestionFilterBuilder::class)
             ->inferredCoreClinicalTopicIds($lessonIds);
 
         $tagIds = ($source->relationLoaded('tags') ? $source->tags : $source->tags()->get())

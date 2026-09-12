@@ -95,6 +95,40 @@ final class AdminPhase1ManagementTest extends TestCase
             ->assertSee('learner@example.com');
     }
 
+    public function test_admin_can_filter_users_by_multiple_status_and_role(): void
+    {
+        $admin = $this->staffUser(Role::Admin);
+        $activeStudent = User::factory()->create(['email' => 'active-student@example.com']);
+        $activeStudent->assignRole(Role::Student->value);
+        $suspendedStudent = User::factory()->create([
+            'email' => 'suspended-student@example.com',
+            'status' => UserStatus::Suspended,
+        ]);
+        $suspendedStudent->assignRole(Role::Student->value);
+        $editor = User::factory()->create(['email' => 'editor-user@example.com']);
+        $editor->assignRole(Role::ContentEditor->value);
+
+        $this->actingAsStaff($admin)
+            ->get(route('admin.users.index'))
+            ->assertOk()
+            ->assertSee('portal-filter-trigger', false)
+            ->assertSee('role-filter-trigger', false)
+            ->assertSee('status-filter-trigger', false)
+            ->assertSee('active-student@example.com')
+            ->assertSee('suspended-student@example.com')
+            ->assertSee('editor-user@example.com');
+
+        $this->actingAsStaff($admin)
+            ->get(route('admin.users.index', [
+                'status' => [UserStatus::Active->value, UserStatus::Suspended->value],
+                'role' => [Role::Student->value],
+            ]))
+            ->assertOk()
+            ->assertSee('active-student@example.com')
+            ->assertSee('suspended-student@example.com')
+            ->assertDontSee('editor-user@example.com');
+    }
+
     public function test_admin_can_change_student_role_and_status(): void
     {
         $admin = $this->staffUser(Role::Admin);

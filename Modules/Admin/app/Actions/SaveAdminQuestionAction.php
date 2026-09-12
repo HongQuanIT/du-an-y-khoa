@@ -20,6 +20,7 @@ use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionHint;
 use Modules\QuestionBank\Models\QuestionOption;
 use Modules\QuestionBank\Services\QuestionContentFingerprint;
+use Modules\QuestionBank\Support\QuestionInstructorReviewCycle;
 
 /**
  * Create or update a question + options (admin editor).
@@ -31,6 +32,7 @@ final class SaveAdminQuestionAction
     public function __construct(
         private readonly CaptureQuestionVersionAction $captureVersion,
         private readonly QuestionContentFingerprint $fingerprint,
+        private readonly QuestionInstructorReviewCycle $reviewCycle,
     ) {}
 
     /**
@@ -65,6 +67,9 @@ final class SaveAdminQuestionAction
                 $question->status = QuestionStatus::Draft;
                 $question->version = 0;
                 $question->created_by = $actor->getKey();
+                if (filled($data['code'] ?? null)) {
+                    $question->code = (string) $data['code'];
+                }
             } else {
                 if ($question->status === QuestionStatus::PendingPublish) {
                     throw ValidationException::withMessages([
@@ -116,6 +121,9 @@ final class SaveAdminQuestionAction
                 $question->rejected_by_role = null;
             }
             $question->save();
+            if ($demoteLiveToDraft) {
+                $this->reviewCycle->clearSlots($question);
+            }
             $this->syncTaxonomyRelations($question, $data);
             if ($hints !== null) {
                 $this->syncHints($question, $hints);

@@ -24,6 +24,7 @@ use Modules\Auth\Models\AdministrativeUnit;
 use Modules\Auth\Models\EducationStage;
 use Modules\Auth\Models\Institution;
 use Modules\Auth\Models\Profession;
+use Modules\Admin\Support\AdminQuestionListQuery;
 use Modules\Partner\Models\Partner;
 
 final class UserController extends Controller
@@ -47,20 +48,32 @@ final class UserController extends Controller
             });
         }
 
-        if ($portal = $request->query('portal')) {
-            $portalEnum = PortalGroup::tryFrom((string) $portal);
-            if ($portalEnum !== null) {
-                $query->role(array_map(
-                    static fn (Role $role): string => $role->value,
-                    Role::rolesIn($portalEnum),
-                ));
+        $portals = AdminQuestionListQuery::stringValues($request->query('portal'));
+        $roles = AdminQuestionListQuery::stringValues($request->query('role'));
+        $statuses = AdminQuestionListQuery::stringValues($request->query('status'));
+
+        if ($portals !== []) {
+            $portalRoles = [];
+            foreach ($portals as $portal) {
+                $portalEnum = PortalGroup::tryFrom($portal);
+                if ($portalEnum === null) {
+                    continue;
+                }
+                foreach (Role::rolesIn($portalEnum) as $portalRole) {
+                    $portalRoles[] = $portalRole->value;
+                }
             }
-        } elseif ($role = $request->query('role')) {
-            $query->role((string) $role);
+            if ($portalRoles !== []) {
+                $query->role(array_values(array_unique($portalRoles)));
+            }
         }
 
-        if ($status = $request->query('status')) {
-            $query->where('status', (string) $status);
+        if ($roles !== []) {
+            $query->role($roles);
+        }
+
+        if ($statuses !== []) {
+            $query->whereIn('status', $statuses);
         }
 
         foreach (['institution_id', 'administrative_unit_id', 'profession_id', 'education_stage_id'] as $field) {
@@ -90,9 +103,9 @@ final class UserController extends Controller
                 && Role::assignableBy($this->actor()) !== [],
             'filters' => [
                 'q' => $search,
-                'portal' => $request->query('portal'),
-                'role' => $request->query('role'),
-                'status' => $request->query('status'),
+                'portal' => $portals,
+                'role' => $roles,
+                'status' => $statuses,
                 'institution_id' => $request->query('institution_id'),
                 'administrative_unit_id' => $request->query('administrative_unit_id'),
                 'profession_id' => $request->query('profession_id'),

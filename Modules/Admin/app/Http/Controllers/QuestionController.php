@@ -17,6 +17,7 @@ use Modules\Admin\Actions\CloneQuestionAction;
 use Modules\Admin\Actions\RequestQuestionDeletionAction;
 use Modules\Admin\Actions\SaveAdminQuestionAction;
 use Modules\Admin\Actions\TransitionQuestionStatusAction;
+use Modules\Admin\Support\AdminQuestionListQuery;
 use Modules\Admin\Support\QuestionAccess;
 use Modules\QuestionBank\Actions\SyncQuestionStatsAction;
 use Modules\QuestionBank\Enums\Difficulty;
@@ -24,87 +25,58 @@ use Modules\QuestionBank\Enums\QuestionReviewAction;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionFeedback;
+use Modules\QuestionBank\Models\QuestionImportBatch;
 
 final class QuestionController extends Controller
 {
     public function index(Request $request): View
     {
-        $this->authorizePermission(Permission::QuestionView);
+        QuestionAccess::authorizeWorkspace($this->actor());
 
         $actor = $this->actor();
-        $query = QuestionAccess::scopeVisibleTo(
+        $listQuery = app(AdminQuestionListQuery::class);
+        $query = $listQuery->apply(
             Question::query()
-                ->with(['lessons', 'creator:id,name', 'instructor:id,name', 'publisher:id,name', 'pendingReviewRequest.requester:id,name', 'reviewRequests.reviewer:id,name', 'clonedFrom:id,code,stem'])
+                ->with(['lessons', 'creator:id,name', 'instructor:id,name', 'instructorSlot1:id,name', 'instructorSlot2:id,name', 'publisher:id,name', 'pendingReviewRequest.requester:id,name', 'reviewRequests.reviewer:id,name', 'clonedFrom:id,code,stem'])
                 ->withCount([
                     'feedback',
                     'feedback as pending_feedback_count' => fn ($q) => $q->where('status', QuestionFeedback::STATUS_PENDING),
                 ]),
+            $request,
             $actor,
         )->latest('updated_at');
 
-        if ($search = trim((string) $request->query('q', ''))) {
-            $query->where(function ($builder) use ($search): void {
-                $builder->where('stem', 'like', "%{$search}%")
-                    ->orWhere('code', 'like', "%{$search}%");
-            });
+        $search = trim((string) $request->query('q', ''));
+        $statusFilters = AdminQuestionListQuery::stringValues($request->query('status'));
+        if ($statusFilters === [] && $request->query('review') === 'pending') {
+            $statusFilters = [QuestionStatus::InReview->value];
         }
-
-        if ($status = $request->query('status')) {
-            $query->where('status', (string) $status);
-        }
-
-        if ($difficulty = $request->query('difficulty')) {
-            $query->where('difficulty', (string) $difficulty);
-        }
-
-        if ($coreTopicId = $request->query('core_clinical_topic_id')) {
-            app(\Modules\QuestionBank\Support\QuestionFilterBuilder::class)
-                ->whereMatchesCoreClinicalTopic($query, (int) $coreTopicId);
-        }
-
-        if ($lessonId = $request->query('lesson_id')) {
-            $query->whereHas('lessons', fn ($q) => $q->whereKey((int) $lessonId));
-        }
-
-        if ($tagId = $request->query('tag_id')) {
-            $query->whereHas('tags', fn ($q) => $q->whereKey((int) $tagId));
-        }
-
-        // Legacy bookmark: ?review=pending → status in_review
-        if ($request->query('review') === 'pending' && ! $request->filled('status')) {
-            $query->where('status', QuestionStatus::InReview->value);
-        }
-
-        if ($request->query('is_free') === '1') {
-            $query->where('is_free', true);
-        } elseif ($request->query('is_free') === '0') {
-            $query->where('is_free', false);
-        }
-
-        if ($request->query('has_reports') === '1') {
-            $query->where(function ($builder): void {
-                $builder->has('feedback')
-                    ->orWhere('stats_cache->total_reports', '>', 0);
-            });
-        }
-
+        $difficultyFilters = AdminQuestionListQuery::stringValues($request->query('difficulty'));
+        $accessFilters = AdminQuestionListQuery::stringValues($request->query('is_free'));
+        $creatorIds = AdminQuestionListQuery::integerIds($request->query('created_by'));
         $statsQuery = QuestionAccess::scopeVisibleTo(Question::query(), $actor);
 
         $questions = $query->paginate(20)->withQueryString();
         $this->ensureListStatsAreFresh($questions->getCollection());
 
+        $importBatchId = $request->query('import_batch_id');
+        $importBatch = filled($importBatchId)
+            ? QuestionImportBatch::query()->find((string) $importBatchId)
+            : null;
+
         return view('admin::questions.index', [
             'questions' => $questions,
             'statuses' => QuestionStatus::cases(),
             'difficulties' => Difficulty::cases(),
+            'importBatch' => $importBatch,
             'filters' => [
                 'q' => $search,
-                'status' => $request->query('status')
-                    ?: ($request->query('review') === 'pending' ? QuestionStatus::InReview->value : null),
-                'difficulty' => $request->query('difficulty'),
+                'status' => $statusFilters,
+                'difficulty' => $difficultyFilters,
                 'lesson_id' => $request->query('lesson_id'),
-                'is_free' => $request->query('is_free'),
-                'has_reports' => $request->query('has_reports'),
+                'is_free' => $accessFilters,
+                'created_by' => $creatorIds,
+                'import_batch_id' => $importBatchId,
             ],
             'stats' => [
                 'total' => (clone $statsQuery)->count(),
@@ -114,6 +86,7 @@ final class QuestionController extends Controller
             ],
             'canCreate' => $actor->can(Permission::QuestionCreate->value),
             'isReviewer' => QuestionAccess::isReviewer($actor),
+            'creatorOptions' => $this->creatorFilterOptions($actor),
         ]);
     }
 
@@ -157,7 +130,7 @@ final class QuestionController extends Controller
 
     public function edit(Question $question): View
     {
-        $this->authorizePermission(Permission::QuestionView);
+        QuestionAccess::authorizeWorkspace($this->actor());
         QuestionAccess::authorizeView($this->actor(), $question);
 
         $question->load([
@@ -167,6 +140,8 @@ final class QuestionController extends Controller
             'tags',
             'creator:id,name,email',
             'instructor:id,name',
+            'instructorSlot1:id,name',
+            'instructorSlot2:id,name',
             'publisher:id,name',
             'reviewer:id,name',
             'pendingReviewRequest.requester:id,name',
@@ -178,7 +153,7 @@ final class QuestionController extends Controller
 
     public function stats(Question $question): View
     {
-        $this->authorizePermission(Permission::QuestionView);
+        QuestionAccess::authorizeWorkspace($this->actor());
         QuestionAccess::authorizeView($this->actor(), $question);
 
         $question->load([
@@ -240,16 +215,23 @@ final class QuestionController extends Controller
                 'rejection_reason' => ['nullable', 'string', 'max:2000'],
             ]);
 
+            $wasInReview = $question->status === QuestionStatus::InReview;
+            $nextStatus = QuestionStatus::from($statusData['requested_status']);
+
             $transition->handle(
                 $this->actor(),
                 $question,
-                QuestionStatus::from($statusData['requested_status']),
+                $nextStatus,
                 $statusData['rejection_reason'] ?? null,
             );
 
-            return back()->with('status', QuestionStatus::from($statusData['requested_status']) === QuestionStatus::InReview
-                ? 'Đã lưu câu hỏi và gửi giảng viên duyệt.'
-                : 'Đã lưu câu hỏi và cập nhật trạng thái: '.QuestionStatus::from($statusData['requested_status'])->label());
+            $resubmitted = $wasInReview && $nextStatus === QuestionStatus::InReview;
+
+            return back()->with('status', $resubmitted
+                ? 'Đã lưu và gửi duyệt lại. Hai phiếu giảng viên được reset.'
+                : ($nextStatus === QuestionStatus::InReview
+                    ? 'Đã lưu câu hỏi và gửi giảng viên duyệt.'
+                    : 'Đã lưu câu hỏi và cập nhật trạng thái: '.$nextStatus->label()));
         }
 
         return back()->with('status', match (true) {
@@ -538,6 +520,27 @@ final class QuestionController extends Controller
                 $question->refresh();
             }
         });
+    }
+
+    /**
+     * @return list<array{id: string, label: string}>
+     */
+    private function creatorFilterOptions(User $actor): array
+    {
+        if (! QuestionAccess::isReviewer($actor)) {
+            return [];
+        }
+
+        return User::query()
+            ->select('users.id', 'users.name')
+            ->whereHas('createdQuestions')
+            ->orderBy('name')
+            ->get()
+            ->map(fn (User $user): array => [
+                'id' => (string) $user->getKey(),
+                'label' => (string) $user->name,
+            ])
+            ->all();
     }
 
     private function authorizePermission(Permission $permission): void

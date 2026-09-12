@@ -77,7 +77,10 @@ Chuẩn RBAC: `roles(id,name,slug)`, `permissions(id,name,slug)`, `permission_ro
 | media_ids | JSON | ảnh/video đính kèm |
 | version | INT | version đã publish gần nhất (0 nếu chưa từng); chi tiết ở `question_versions` |
 | published_version | INT null | version đang phục vụ Qbank (snapshot); null = chưa live |
-| instructor_id | FK null | giảng viên duyệt/từ chối lớp 1 gần nhất |
+| instructor_id | FK null | giảng viên lớp 1 quyết định gần nhất |
+| instructor_review_cycle | UINT default 0 | vòng duyệt; +1 mỗi submit / gửi duyệt lại |
+| instructor_1_id / instructor_1_decision | FK + VARCHAR null | slot phiếu 1 (approved/rejected) — cờ list |
+| instructor_2_id / instructor_2_decision | FK + VARCHAR null | slot phiếu 2 |
 | publisher_id | FK null | Super Admin publish gần nhất (lớp 2) |
 | rejection_reason | TEXT null | khi status = rejected |
 | rejected_by_role | VARCHAR null | `instructor` \| `super_admin` |
@@ -85,10 +88,14 @@ Chuẩn RBAC: `roles(id,name,slug)`, `permissions(id,name,slug)`, `permission_ro
 | stats_updated_at | TIMESTAMP null | lần rollup gần nhất |
 | cloned_from_id | FK null | câu nguồn khi clone |
 | cloned_from_version | INT null | version snapshot nguồn (optional) |
+| import_batch_id | UUID FK null | lô import tạo câu (`question_import_batches`); câu import luôn `draft` |
 | created_by, updated_by | | creator_id / editor gần nhất |
 | timestamps, soft delete | | |
 
 Index: `status`, `exam_flag`, `(status, exam_flag, created_at)`, `difficulty`, `is_free`. Full-text → Meilisearch (chỉ `published`).
+
+### QuestionInstructorReview
+`id, question_id FK, review_cycle UINT, instructor_id FK, decision (approved/rejected), note, content_fingerprint, reviewed_at, timestamps`. Unique `(question_id, review_cycle, instructor_id)`. Lớp 1 cần **2 accept khác người**; 1 reject = fail ngay. Xem Module 35 §5.3.
 
 ### QuestionVersion
 `id, question_id FK, version_number INT, instructor_id FK, publisher_id FK, snapshot JSON, created_at`. Unique `(question_id, version_number)`. **Chỉ tạo khi Super Admin publish** (`pending_publish` → `published`) — không tạo khi Creator sửa working copy hay khi giảng viên approve/reject. Xem Module 35 §5.2–5.3.
@@ -121,6 +128,9 @@ Quan hệ (đều many-to-many → DAG):
 
 ### QuestionReport (báo lỗi câu hỏi)
 `id, question_id, user_id, reason(enum), detail TEXT, status(open/reviewing/resolved/rejected), resolved_by, resolution TEXT, timestamps`.
+
+### QuestionImportBatch
+`id` UUID, `uploaded_by` FK users, `original_filename`, `disk_path`, `format` (xlsx/csv), `status` (uploaded/mapped/validated/done/failed), `source_headers` JSON, `column_map` JSON, `stats` JSON, `error_report_path` null, `committed_at` null, timestamps. Câu tạo từ batch gắn `questions.import_batch_id`. **Commit luôn `draft`** — không publish, không tăng version. Excel là format chính; CSV cùng schema.
 
 ## 4. Nhóm Học tập (Learning activity)
 

@@ -2,6 +2,31 @@
 
 ## 2026-09-12
 
+### Feat — So sánh bản duyệt với bản xuất bản
+- `/teach` duyệt cập nhật: diff stem/đáp án/giải thích so với snapshot published.
+- Câu mới chưa có bản live: một cột, nhãn «chưa xuất bản».
+- Form admin phân biệt giảng viên từ chối vs admin trả về; editor phải chuyển về nháp trước khi sửa.
+
+### Feat — Import/export câu hỏi theo mã
+- Export không còn cột `id`; khóa upsert là `code` (trống = tạo mới, có mã = cập nhật).
+- Mã không tồn tại: chặn cả lô và báo rõ mã lỗi.
+- Wizard/danh sách hiện tên tệp; «Xem câu vừa import» không ép `status=draft` (câu đang duyệt vẫn thấy).
+- Import đè câu `in_review` rút về nháp để gửi duyệt lại.
+
+### Feat — Lọc đa chọn danh sách người dùng
+- `/admin/users`: lọc kết hợp nhiều cổng / vai trò / trạng thái bằng multi-select.
+
+### Feat — Soạn câu hỏi, duyệt 2 GV, import/export
+- Lớp 1 cần 2 giảng viên chấp nhận; gửi duyệt lại reset 2 phiếu; 1 reject = fail.
+- Import/export Excel/CSV bản nháp; lookup bài học/tag theo `question.create` / `question.update` (không cần `topic.view`).
+- Editor mở/sửa câu của mình bằng `question.update`; sửa toolbar Quill (không submit form) và CSS format.
+- Cột Bản gửi duyệt: nháp chưa gửi luôn hiện «Không có bản gửi»; bỏ gợi ý CCT trống trên form.
+
+### Feat — Mã câu hỏi tuần tự Q#####
+- Sinh mã cố định `Q00001`, `Q00002`… khi tạo/nhân bản; không đổi sau khi gán.
+- Bộ đếm `question_code_sequences` + backfill câu chưa có mã; mã cũ (CARDIO/QBANK-SAMPLE) giữ nguyên.
+- Admin `/admin/questions`: hiện mã cùng cột nội dung; form edit hiện mã read-only.
+
 ### UX — Copy phiên luyện tuỳ chỉnh / thích ứng
 - Làm rõ mô tả thẻ chọn loại phiên và mục Hướng luyện trên `/qbank/create`.
 - Subtitle 3 hướng: Điểm yếu / Cân bằng / Củng cố dễ hiểu hơn cho học viên.

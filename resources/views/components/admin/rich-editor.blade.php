@@ -17,7 +17,7 @@
         {{ $label }}@if ($required) *@endif
     </label>
 
-    <div class="overflow-hidden rounded-xl border border-outline-variant bg-surface admin-rich-editor">
+    <div class="rounded-xl border border-outline-variant bg-surface admin-rich-editor">
         <div x-ref="surface" id="{{ $name }}-editor" data-placeholder="{{ $placeholder }}"
             class="min-h-[160px] bg-surface font-body-sm text-body-sm text-on-surface"></div>
     </div>

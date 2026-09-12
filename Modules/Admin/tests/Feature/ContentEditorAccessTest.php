@@ -35,13 +35,10 @@ final class ContentEditorAccessTest extends TestCase
             Permission::QuestionCreate,
             Permission::QuestionUpdate,
             Permission::QuestionSubmit,
+            Permission::QuestionDelete,
             Permission::CmsManage,
             Permission::MediaView,
-            Permission::TopicView,
-            Permission::ExamManage,
-            Permission::LibraryView,
-            Permission::LibraryEdit,
-            Permission::LibraryPublish,
+            Permission::MediaManage,
         ] as $permission) {
             $this->assertTrue(
                 $editor->can($permission->value),
@@ -50,6 +47,8 @@ final class ContentEditorAccessTest extends TestCase
         }
 
         $this->assertFalse($editor->can(Permission::UserView->value));
+        $this->assertFalse($editor->can(Permission::TopicView->value));
+        $this->assertFalse($editor->can(Permission::ExamManage->value));
         $this->assertFalse($editor->can(Permission::QuestionPublish->value));
         $this->assertFalse($editor->can(Permission::QuestionRetire->value));
         $this->assertFalse($editor->can(Permission::QuestionReview->value));
@@ -66,10 +65,10 @@ final class ContentEditorAccessTest extends TestCase
         $this->actingAsStaff($editor)->get(route('admin.dashboard'))->assertOk();
         $this->actingAsStaff($editor)->get(route('admin.questions.index'))->assertOk();
         $this->actingAsStaff($editor)->get(route('admin.questions.create'))->assertOk();
+        $this->actingAsStaff($editor)->get(route('admin.questions.import'))->assertOk();
         $this->actingAsStaff($editor)->get(route('admin.cms.pages.index'))->assertOk();
         $this->actingAsStaff($editor)->get(route('admin.media.index'))->assertOk();
-        $this->actingAsStaff($editor)->get(route('admin.taxonomy.index'))->assertOk();
-        $this->actingAsStaff($editor)->get(route('admin.exams.index'))->assertOk();
+        $this->actingAsStaff($editor)->getJson(route('admin.taxonomy.lookups.lessons'))->assertOk();
     }
 
     public function test_content_editor_is_forbidden_on_admin_only_modules(): void
@@ -78,6 +77,8 @@ final class ContentEditorAccessTest extends TestCase
 
         $this->actingAsStaff($editor)->get(route('admin.users.index'))->assertForbidden();
         $this->actingAsStaff($editor)->get(route('admin.settings.index'))->assertForbidden();
+        $this->actingAsStaff($editor)->get(route('admin.taxonomy.index'))->assertForbidden();
+        $this->actingAsStaff($editor)->get(route('admin.exams.index'))->assertForbidden();
     }
 
     public function test_reseeding_permissions_keeps_content_editor_access(): void

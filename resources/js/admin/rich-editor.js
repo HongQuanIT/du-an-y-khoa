@@ -166,6 +166,26 @@ patchQuillInternals();
 window.Quill = Quill;
 
 /**
+ * Quill toolbar <button> defaults to type=submit inside a <form>.
+ * Clicking Bold/Italic would submit the question form instead of applying a format.
+ *
+ * @param {import('quill').default} quill
+ */
+function pinQuillToolbarButtons(quill) {
+    const toolbar = quill?.getModule?.('toolbar');
+    const container = toolbar?.container;
+    if (! container) {
+        return;
+    }
+
+    container.querySelectorAll('button').forEach((button) => {
+        button.setAttribute('type', 'button');
+    });
+}
+
+window.pinQuillToolbarButtons = pinQuillToolbarButtons;
+
+/**
  * Register Alpine rich-text editors (Quill) used on admin question forms.
  *
  * @param {typeof import('alpinejs').default} Alpine
@@ -298,6 +318,7 @@ export function registerRichEditor(Alpine) {
                 placeholder: this.$refs.surface?.dataset?.placeholder || '',
                 modules: { toolbar },
             });
+            pinQuillToolbarButtons(this.quill);
 
             if (initialHtml && initialHtml.trim() !== '') {
                 const paste = this.quill.clipboard.convert({ html: initialHtml, text: '' });

@@ -19,7 +19,7 @@ final class QuestionVersionController extends Controller
 {
     public function index(Question $question): View
     {
-        abort_unless($this->actor()->can(Permission::QuestionView->value), 403);
+        QuestionAccess::authorizeWorkspace($this->actor());
         QuestionAccess::authorizeView($this->actor(), $question);
 
         $question->load('lessons:id,name');
