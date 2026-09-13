@@ -2,6 +2,17 @@
 
 ## 2026-09-13
 
+### Feat — Ma trận đề: mã unique, slug tự sinh, form 2 cột
+- Unique theo `code` (không còn nhập slug); slug tự sinh từ tên, giữ nguyên khi đã có.
+- Form metadata 2 cột (trái: tên/mã/trạng thái/thứ tự; phải: mô tả); danh sách đổi nhãn «Code» → «Mã».
+
+### Fix — Material Symbols nhận `text-*` của Tailwind
+- Đưa `.material-symbols-outlined` vào `@layer base` để utility size override 24px mặc định.
+
+### Chore — Nhãn Super Admin và cột bài học
+- SuperAdmin hiển thị «Supper Admin» trên enum và trang vai trò.
+- Nới cột Môn học / Hệ cơ quan; copy panel thêm/sửa bài học gọn hơn.
+
 ### Feat — Danh mục kiến thức: hệ/môn độc lập + catalog admin
 - Hệ cơ quan và môn học không còn cha–con; bài học gắn 0 hoặc nhiều mỗi trục (`lesson_organ_system`, `lesson_subject`).
 - Bỏ cột `code`; import/lookup bài học chỉ theo đường dẫn định danh (slug).

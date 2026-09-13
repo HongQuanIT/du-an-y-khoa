@@ -180,8 +180,8 @@
                             </button>
                         </th>
                         <th scope="col" class="w-[120px] px-4 py-3">Trạng thái</th>
-                        <th scope="col" class="w-[88px] px-4 py-3 text-right">Môn học</th>
-                        <th scope="col" class="w-[100px] px-4 py-3 text-right">Hệ cơ quan</th>
+                        <th scope="col" class="w-[120px] px-4 py-3 text-right">Môn học</th>
+                        <th scope="col" class="w-[120px] px-4 py-3 text-right">Hệ cơ quan</th>
                         <th scope="col" class="w-[88px] px-4 py-3 text-right">Câu hỏi</th>
                         <th scope="col" class="w-[160px] px-5 py-3 text-right">Thao tác</th>
                     </tr>
@@ -240,7 +240,7 @@
                 <div class="flex items-center justify-between border-b border-outline-variant px-5 py-4">
                     <div>
                         <h2 class="text-base font-semibold text-on-surface" x-text="panel === 'create' ? 'Thêm bài học' : 'Sửa bài học'"></h2>
-                        <p class="mt-0.5 text-xs text-on-surface-variant">Có thể chọn 0 hoặc nhiều môn học và hệ cơ quan.</p>
+                        <p class="mt-0.5 text-xs text-on-surface-variant">Gắn môn học và hệ cơ quan để phân loại bài học — không bắt buộc, cho phép chọn nhiều.</p>
                     </div>
                     <button type="button" @click="closePanel()" class="rounded-lg p-1.5 text-on-surface-variant hover:bg-surface-container-low">
                         <span class="material-symbols-outlined text-[20px]">close</span>
@@ -282,7 +282,7 @@
                                 class="w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"></textarea>
                         </div>
                         <div>
-                            <p class="mb-1.5 text-xs font-semibold text-on-surface-variant">Môn học <span class="font-normal">(tuỳ chọn, chọn nhiều)</span></p>
+                            <p class="mb-1.5 text-xs font-semibold text-on-surface-variant">Môn học <span class="font-normal">(tuỳ chọn)</span></p>
                             <template x-for="id in form.subject_ids" :key="'sub-hid-'+id">
                                 <input type="hidden" name="subject_ids[]" :value="id">
                             </template>
@@ -331,7 +331,7 @@
                             </div>
                         </div>
                         <div>
-                            <p class="mb-1.5 text-xs font-semibold text-on-surface-variant">Hệ cơ quan <span class="font-normal">(tuỳ chọn, chọn nhiều)</span></p>
+                            <p class="mb-1.5 text-xs font-semibold text-on-surface-variant">Hệ cơ quan <span class="font-normal">(tuỳ chọn)</span></p>
                             <template x-for="id in form.organ_system_ids" :key="'os-hid-'+id">
                                 <input type="hidden" name="organ_system_ids[]" :value="id">
                             </template>

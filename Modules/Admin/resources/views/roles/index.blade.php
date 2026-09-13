@@ -1,6 +1,6 @@
 <x-layouts.admin title="Vai trò">
     <x-admin.page-header title="Vai trò & quyền"
-        description="Vai trò được nhóm theo 4 cổng truy cập. Quản trị viên cấp cao cập nhật ma trận quyền.">
+        description="Vai trò được nhóm theo 4 cổng truy cập. Supper Admin cập nhật ma trận quyền.">
         <x-slot:actions>
             @if ($canCreate)
                 <a href="{{ route('admin.roles.create') }}"
