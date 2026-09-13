@@ -250,7 +250,7 @@ final class QuestionImportSchema
     /**
      * @return list<string>
      */
-    public static function sampleRow(): array
+    public static function sampleRow(?string $lessonSlug = null): array
     {
         $row = array_fill_keys(self::headers(), '');
         $row['stem'] = 'Bệnh nhân 55 tuổi đau ngực. Chẩn đoán nào phù hợp nhất?';
@@ -263,11 +263,29 @@ final class QuestionImportSchema
         $row['correct'] = 'A';
         $row['explanation'] = 'Đau ngực + yếu tố nguy cơ gợi ý ACS.';
         $row['difficulty'] = 'medium';
-        $row['lesson_slugs'] = 'tim-mach-admin-test';
+        $row['lesson_slugs'] = $lessonSlug ?: 'tim-mach-admin-test';
         $row['is_free'] = '0';
         $row['exam_flag'] = '0';
 
         return array_values($row);
+    }
+
+    /**
+     * @param  iterable<int, object{slug?: string, name?: string}>  $lessons
+     * @return list<list<string>>
+     */
+    public static function catalogLessonRows(iterable $lessons): array
+    {
+        $rows = [['slug', 'name']];
+        foreach ($lessons as $lesson) {
+            $slug = trim((string) ($lesson->slug ?? ''));
+            if ($slug === '') {
+                continue;
+            }
+            $rows[] = [$slug, trim((string) ($lesson->name ?? ''))];
+        }
+
+        return $rows;
     }
 
     /** @return list<list<string>> */
@@ -279,10 +297,88 @@ final class QuestionImportSchema
             ['option_a … option_e', '≥2 đáp án', 'Để trống cột nếu không dùng.'],
             ['correct', 'Có', 'Một chữ: A, B, C, D hoặc E. Single best answer.'],
             ['difficulty', 'Có', 'very_easy | easy | medium | hard | very_hard'],
-            ['lesson_slugs', 'Có', 'Đường dẫn định danh bài học đã có trên hệ thống, cách nhau ;'],
+            ['lesson_slugs', 'Có', 'Copy slug thật từ sheet Bai_hoc. Nhiều bài: cách nhau ;'],
             ['explanation', 'Khuyến nghị', 'Bắt buộc trước khi gửi duyệt. Import vẫn tạo nháp nếu thiếu.'],
             ['status / publisher_id / version / id', 'Cấm', 'Hệ thống bỏ qua. Không dùng id — khóa là mã câu hỏi.'],
             ['code', 'Không', 'Để trống = tạo mới (hệ thống cấp Q00001…). Điền mã đã có = cập nhật. Mã không tồn tại = lỗi, không import dòng đó.'],
+            ['Định dạng (stem, đáp án, giải thích)', '—', 'Excel hiện đậm/nghiêng/gạch chân/xuống dòng. CSV giữ thẻ HTML. Import đọc lại định dạng.'],
+            ['Ảnh trong đề', '—', 'Giữ thẻ <img src="…"> trong ô. Excel không nhúng file ảnh.'],
+        ];
+    }
+
+    /**
+     * Excel character-widths so opening the file shows content without every column looking the same.
+     *
+     * @return array<string, float>
+     */
+    public static function columnWidthMap(): array
+    {
+        $widths = [
+            'code' => 12.0,
+            'stem' => 58.0,
+            'explanation' => 44.0,
+            'correct' => 10.0,
+            'difficulty' => 14.0,
+            'lesson_slugs' => 30.0,
+            'tag_slugs' => 22.0,
+            'is_free' => 10.0,
+            'exam_flag' => 12.0,
+            'attending_tip' => 34.0,
+            'hints' => 30.0,
+            'status' => 16.0,
+            'errors' => 52.0,
+            'slug' => 36.0,
+            'name' => 42.0,
+            'truong' => 32.0,
+            'bat buoc' => 14.0,
+            'ghi chu' => 78.0,
+        ];
+
+        foreach (range(0, self::MAX_OPTIONS - 1) as $index) {
+            $letter = strtolower(chr(65 + $index));
+            $widths['option_'.$letter] = 38.0;
+            $widths['option_'.$letter.'_explanation'] = 36.0;
+        }
+
+        return $widths;
+    }
+
+    /**
+     * @param  list<string>  $headers
+     * @return list<float>
+     */
+    public static function columnWidthsFor(array $headers): array
+    {
+        $map = self::columnWidthMap();
+        $widths = [];
+
+        foreach ($headers as $header) {
+            $field = self::matchField((string) $header);
+            if ($field !== null && isset($map[$field])) {
+                $widths[] = $map[$field];
+
+                continue;
+            }
+
+            $normalized = self::normalize((string) $header);
+            $widths[] = $map[$normalized] ?? ($normalized === 'status' ? 16.0 : 18.0);
+        }
+
+        return $widths;
+    }
+
+    /**
+     * Dropdown lists for template / export (Excel data validation).
+     *
+     * @return array<string, string>
+     */
+    public static function excelListValidations(): array
+    {
+        return [
+            'correct' => 'A,B,C,D,E',
+            'difficulty' => 'very_easy,easy,medium,hard,very_hard',
+            'is_free' => '0,1',
+            'exam_flag' => '0,1',
         ];
     }
 }

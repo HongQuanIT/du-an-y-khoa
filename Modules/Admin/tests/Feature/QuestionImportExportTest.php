@@ -49,10 +49,25 @@ final class QuestionImportExportTest extends TestCase
     {
         $editor = $this->staffUser(Role::ContentEditor);
 
-        $this->actingAsStaff($editor)
+        $xlsx = $this->actingAsStaff($editor)
             ->get(route('admin.questions.import.template', ['format' => 'xlsx']))
             ->assertOk()
             ->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+        $path = sys_get_temp_dir().'/qbank-template-'.uniqid().'.xlsx';
+        file_put_contents($path, $xlsx->streamedContent());
+        $parsed = app(QuestionSpreadsheet::class)->read($path);
+        $zip = new \ZipArchive;
+        $this->assertTrue($zip->open($path) === true);
+        $workbook = (string) $zip->getFromName('xl/workbook.xml');
+        $this->assertNotFalse($zip->getFromName('xl/worksheets/sheet3.xml'));
+        $zip->close();
+        @unlink($path);
+
+        $lessonIndex = array_search('lesson_slugs', $parsed['headers'], true);
+        $this->assertNotFalse($lessonIndex);
+        $this->assertSame($this->lesson->slug, $parsed['rows'][0][$lessonIndex]);
+        $this->assertStringContainsString('Bai_hoc', $workbook);
 
         $this->actingAsStaff($editor)
             ->get(route('admin.questions.import.template', ['format' => 'csv']))
@@ -334,6 +349,158 @@ final class QuestionImportExportTest extends TestCase
         $this->assertNotContains('id', str_getcsv($headerLine));
         $this->assertContains('code', str_getcsv($headerLine));
         $this->assertDatabaseHas('audit_logs', ['action' => 'admin.question.export']);
+    }
+
+    public function test_export_keeps_rich_text_in_csv_and_xlsx(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.store'), [
+                'stem' => '<p>Câu <strong>in đậm</strong> để xuất.</p>',
+                'difficulty' => 'medium',
+                'lesson_ids' => [$this->lesson->id],
+                'is_free' => '0',
+                'options' => [
+                    ['content' => '<p>Đáp án <em>nghiêng</em></p>', 'is_correct' => '1', 'explanation' => '<p>Vì <u>đúng</u>.</p>'],
+                    ['content' => 'Sai', 'is_correct' => '0'],
+                ],
+            ])
+            ->assertRedirect();
+
+        $csv = $this->actingAsStaff($editor)
+            ->get(route('admin.questions.export', ['format' => 'csv', 'status' => 'draft']));
+        $csv->assertOk();
+        $csvBody = $csv->streamedContent();
+        $this->assertStringContainsString('<strong>in đậm</strong>', $csvBody);
+        $this->assertStringContainsString('<em>nghiêng</em>', $csvBody);
+
+        $xlsx = $this->actingAsStaff($editor)
+            ->get(route('admin.questions.export', ['status' => 'draft']));
+        $xlsx->assertOk();
+
+        $path = sys_get_temp_dir().'/qbank-export-'.uniqid().'.xlsx';
+        file_put_contents($path, $xlsx->streamedContent());
+        $parsed = app(QuestionSpreadsheet::class)->read($path);
+        @unlink($path);
+
+        $stemIndex = array_search('stem', $parsed['headers'], true);
+        $this->assertNotFalse($stemIndex);
+        $this->assertStringContainsString('<strong>in đậm</strong>', $parsed['rows'][0][$stemIndex]);
+    }
+
+    public function test_editor_can_export_selected_questions_only(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.store'), [
+                'stem' => 'Câu được chọn để xuất.',
+                'difficulty' => 'medium',
+                'lesson_ids' => [$this->lesson->id],
+                'is_free' => '0',
+                'options' => [
+                    ['content' => 'Đúng', 'is_correct' => '1', 'explanation' => 'OK'],
+                    ['content' => 'Sai', 'is_correct' => '0'],
+                ],
+            ])
+            ->assertRedirect();
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.store'), [
+                'stem' => 'Câu không được chọn.',
+                'difficulty' => 'medium',
+                'lesson_ids' => [$this->lesson->id],
+                'is_free' => '0',
+                'options' => [
+                    ['content' => 'Đúng', 'is_correct' => '1', 'explanation' => 'OK'],
+                    ['content' => 'Sai', 'is_correct' => '0'],
+                ],
+            ])
+            ->assertRedirect();
+
+        $selected = Question::query()->where('stem', 'like', '%được chọn để xuất%')->firstOrFail();
+
+        $response = $this->actingAsStaff($editor)
+            ->post(route('admin.questions.export'), [
+                'format' => 'csv',
+                'ids' => [$selected->getKey()],
+            ]);
+
+        $response->assertOk();
+        $content = $response->streamedContent();
+        $this->assertStringContainsString('Câu được chọn để xuất.', $content);
+        $this->assertStringNotContainsString('Câu không được chọn.', $content);
+    }
+
+    public function test_import_blocks_exact_duplicates_and_writes_red_error_xlsx(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.store'), [
+                'stem' => 'Bệnh nhân 55 tuổi đau ngực. Chẩn đoán nào phù hợp nhất?',
+                'difficulty' => 'medium',
+                'lesson_ids' => [$this->lesson->id],
+                'is_free' => '0',
+                'options' => [
+                    ['content' => 'ACS', 'is_correct' => '1', 'explanation' => 'Đúng'],
+                    ['content' => 'GERD', 'is_correct' => '0'],
+                    ['content' => 'Lo lắng', 'is_correct' => '0'],
+                    ['content' => 'Viêm phổi', 'is_correct' => '0'],
+                ],
+            ])
+            ->assertRedirect();
+
+        $file = $this->csvUpload([
+            QuestionImportSchema::headers(),
+            $this->validRow(),
+            $this->validRow('Câu khác để vẫn còn dòng hợp lệ.'),
+        ]);
+
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.import.upload'), ['file' => $file])
+            ->assertRedirect();
+
+        $batch = QuestionImportBatch::query()->firstOrFail();
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.import.map', $batch), [
+                'column_map' => QuestionImportSchema::autoMap(QuestionImportSchema::headers()),
+            ])
+            ->assertRedirect();
+
+        $this->actingAsStaff($editor)
+            ->get(route('admin.questions.import.show', $batch))
+            ->assertOk()
+            ->assertSee('Trùng khớp 100%', false)
+            ->assertSee('Tải file lỗi Excel', false);
+
+        $this->assertSame(1, (int) $batch->fresh()->stats['valid']);
+        $this->assertSame(1, (int) $batch->fresh()->stats['exact_duplicates']);
+        $this->assertTrue(str_ends_with((string) $batch->fresh()->error_report_path, '.xlsx'));
+
+        $errors = $this->actingAsStaff($editor)
+            ->get(route('admin.questions.import.errors', $batch))
+            ->assertOk();
+        $this->assertStringContainsString(
+            'spreadsheetml.sheet',
+            (string) $errors->headers->get('content-type'),
+        );
+
+        $path = sys_get_temp_dir().'/qbank-errors-'.uniqid().'.xlsx';
+        file_put_contents($path, $errors->streamedContent());
+        $zip = new \ZipArchive;
+        $this->assertTrue($zip->open($path) === true);
+        $styles = (string) $zip->getFromName('xl/styles.xml');
+        $zip->close();
+        @unlink($path);
+        $this->assertStringContainsString('FFFEE2E2', $styles);
+    }
+
+    public function test_questions_index_shows_selection_and_export_limit_copy(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+        $this->actingAsStaff($editor)
+            ->get(route('admin.questions.index'))
+            ->assertOk()
+            ->assertSee('select-all-questions', false)
+            ->assertSee('Chọn dòng rồi xuất', false);
     }
 
     public function test_student_cannot_export_admin_questions(): void

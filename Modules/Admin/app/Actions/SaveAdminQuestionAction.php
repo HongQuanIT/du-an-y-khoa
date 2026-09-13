@@ -281,7 +281,7 @@ final class SaveAdminQuestionAction
         foreach (array_values($options) as $index => $row) {
             $payload = [
                 'label' => $labels[$index] ?? (string) ($index + 1),
-                'content' => $row['content'],
+                'content' => SafeHtml::fromEditor($row['content']),
                 'is_correct' => (bool) $row['is_correct'],
                 'explanation' => SafeHtml::fromEditor($row['explanation'] ?? null) ?: null,
                 'order' => $index + 1,

@@ -48,4 +48,62 @@ final class QuestionSpreadsheetTest extends TestCase
         $this->assertSame(['stem', 'option_a', 'option_b', 'correct'], $parsed['headers']);
         $this->assertSame('Câu hỏi UTF-8', $parsed['rows'][0][0]);
     }
+
+    #[Test]
+    public function it_writes_column_widths_wrap_and_rich_text(): void
+    {
+        $spreadsheet = new QuestionSpreadsheet;
+        $headers = QuestionImportSchema::headers();
+        $row = QuestionImportSchema::sampleRow();
+        $row[1] = '<p>Bệnh nhân <strong>55 tuổi</strong> đau ngực.</p>';
+
+        $path = sys_get_temp_dir().'/qbank-import-'.uniqid().'.xlsx';
+        $spreadsheet->writeXlsx($path, $headers, [$row], QuestionImportSchema::guideRows());
+
+        $zip = new \ZipArchive;
+        $this->assertTrue($zip->open($path) === true);
+        $sheet = (string) $zip->getFromName('xl/worksheets/sheet1.xml');
+        $shared = (string) $zip->getFromName('xl/sharedStrings.xml');
+        $styles = (string) $zip->getFromName('xl/styles.xml');
+        $zip->close();
+
+        $this->assertStringContainsString('customWidth="1"', $sheet);
+        $this->assertStringContainsString('width="58"', $sheet);
+        $this->assertStringContainsString('width="12"', $sheet);
+        $this->assertStringContainsString('wrapText="1"', $styles);
+        $this->assertStringContainsString('state="frozen"', $sheet);
+        $this->assertStringContainsString('<autoFilter ', $sheet);
+        $this->assertStringContainsString('<b/>', $shared);
+        $this->assertStringContainsString('55 tuổi', $shared);
+
+        $parsed = $spreadsheet->read($path);
+        @unlink($path);
+
+        $this->assertStringContainsString('<strong>55 tuổi</strong>', $parsed['rows'][0][1]);
+        $this->assertStringContainsString('Bệnh nhân', $parsed['rows'][0][1]);
+    }
+
+    #[Test]
+    public function it_writes_error_rows_with_red_fill(): void
+    {
+        $spreadsheet = new QuestionSpreadsheet;
+        $path = sys_get_temp_dir().'/qbank-errors-'.uniqid().'.xlsx';
+        $spreadsheet->writeXlsx(
+            $path,
+            ['stem', 'errors'],
+            [['Thiếu đáp án', 'Cần ít nhất 2 đáp án.']],
+            options: ['highlight_errors' => true],
+        );
+
+        $zip = new \ZipArchive;
+        $this->assertTrue($zip->open($path) === true);
+        $sheet = (string) $zip->getFromName('xl/worksheets/sheet1.xml');
+        $styles = (string) $zip->getFromName('xl/styles.xml');
+        $zip->close();
+        @unlink($path);
+
+        $this->assertStringContainsString('s="3"', $sheet);
+        $this->assertStringContainsString('s="4"', $sheet);
+        $this->assertStringContainsString('FFFEE2E2', $styles);
+    }
 }

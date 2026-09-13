@@ -34,8 +34,37 @@ final class QuestionSimilarityScorer
      */
     public function score(Question $a, Question $b): array
     {
-        $fpA = $a->content_fingerprint ?: $this->fingerprint->fingerprint($a);
-        $fpB = $b->content_fingerprint ?: $this->fingerprint->fingerprint($b);
+        return $this->scoreFromParts(
+            (string) $a->stem,
+            ($a->relationLoaded('options') ? $a->options : $a->options()->get())->all(),
+            (string) $b->stem,
+            ($b->relationLoaded('options') ? $b->options : $b->options()->get())->all(),
+            $a->content_fingerprint ?: $this->fingerprint->fingerprint($a),
+            $b->content_fingerprint ?: $this->fingerprint->fingerprint($b),
+        );
+    }
+
+    /**
+     * @param  list<array{content?: string, is_correct?: bool}|object>  $optionsA
+     * @param  list<array{content?: string, is_correct?: bool}|object>  $optionsB
+     * @return ScoreResult
+     */
+    public function scoreFromParts(
+        string $stemA,
+        array $optionsA,
+        string $stemB,
+        array $optionsB,
+        ?string $fingerprintA = null,
+        ?string $fingerprintB = null,
+    ): array {
+        $fpA = $fingerprintA ?: $this->fingerprint->fingerprintFromParts(
+            $stemA,
+            $this->normalizeOptionList($optionsA),
+        );
+        $fpB = $fingerprintB ?: $this->fingerprint->fingerprintFromParts(
+            $stemB,
+            $this->normalizeOptionList($optionsB),
+        );
 
         if ($fpA !== '' && $fpA === $fpB) {
             return [
@@ -48,15 +77,11 @@ final class QuestionSimilarityScorer
         }
 
         $stemScore = $this->textSimilarity(
-            $this->fingerprint->normalize((string) $a->stem),
-            $this->fingerprint->normalize((string) $b->stem),
+            $this->fingerprint->normalize($stemA),
+            $this->fingerprint->normalize($stemB),
         );
 
-        $optionsScore = $this->optionsSimilarity(
-            $a->relationLoaded('options') ? $a->options : $a->options()->get(),
-            $b->relationLoaded('options') ? $b->options : $b->options()->get(),
-        );
-
+        $optionsScore = $this->optionsSimilarity(collect($optionsA), collect($optionsB));
         $percent = round(($stemScore * self::STEM_WEIGHT) + ($optionsScore * self::OPTIONS_WEIGHT), 2);
 
         return [
@@ -66,6 +91,27 @@ final class QuestionSimilarityScorer
             'options_score' => round($optionsScore, 2),
             'exact' => false,
         ];
+    }
+
+    /**
+     * @param  list<array{content?: string, is_correct?: bool}|object>  $options
+     * @return list<array{content: string, is_correct: bool}>
+     */
+    private function normalizeOptionList(array $options): array
+    {
+        return array_values(array_map(function (mixed $option): array {
+            if (is_array($option)) {
+                return [
+                    'content' => (string) ($option['content'] ?? ''),
+                    'is_correct' => (bool) ($option['is_correct'] ?? false),
+                ];
+            }
+
+            return [
+                'content' => (string) ($option->content ?? ''),
+                'is_correct' => (bool) ($option->is_correct ?? false),
+            ];
+        }, $options));
     }
 
     /**

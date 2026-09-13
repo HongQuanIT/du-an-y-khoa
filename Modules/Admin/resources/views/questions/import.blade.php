@@ -23,6 +23,7 @@
                 <p class="mt-1 font-body-sm text-body-sm text-on-surface-variant">
                     Tải Excel/CSV theo mẫu. Có <strong>mã</strong> đã tồn tại = cập nhật; để trống = tạo mới.
                     Mọi câu ghi vào ở trạng thái <strong>nháp</strong> — không xuất bản ngay.
+                    Excel giữ đậm/nghiêng/xuống dòng; CSV giữ thẻ HTML của trình soạn.
                 </p>
             </div>
             <div class="flex flex-wrap gap-2">
@@ -64,6 +65,7 @@
                 <p class="mt-1 font-body-sm text-on-surface-variant">
                     Tối đa 500 dòng, 5MB. Khóa là cột <code>code</code> — không dùng <code>id</code>.
                     Cột <code>status</code> / người xuất bản nếu có sẽ bị bỏ qua.
+                    Mẫu Excel dùng slug bài học thật (sheet <code>Bai_hoc</code>), canh cột, khóa tiêu đề và dropdown độ khó / đáp án đúng.
                 </p>
                 <form method="post" action="{{ route('admin.questions.import.upload') }}" enctype="multipart/form-data"
                     class="mt-5 space-y-4">
@@ -165,8 +167,15 @@
                     </p>
                     <p class="mt-1 font-body-sm text-on-surface-variant">
                         Dòng không có mã: tạo mới. Dòng có mã đã tồn tại: cập nhật.
-                        Mã không có trên hệ thống: không import dòng đó.
+                        Trùng 100% với câu đã có hoặc dòng khác trong tệp: loại. Gần trùng: cảnh báo, vẫn import.
                     </p>
+                    @if (($preview['exact_duplicates'] ?? 0) > 0 || ($preview['near_duplicates'] ?? 0) > 0)
+                        <p class="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 font-body-sm text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100">
+                            Chống trùng:
+                            {{ number_format((int) ($preview['exact_duplicates'] ?? 0)) }} dòng trùng khớp 100% (bỏ),
+                            {{ number_format((int) ($preview['near_duplicates'] ?? 0)) }} dòng gần trùng (cảnh báo).
+                        </p>
+                    @endif
                     @if (($preview['invalid_codes'] ?? []) !== [])
                         <p class="mt-3 rounded-lg border border-error/30 bg-error/5 px-3 py-2 font-body-sm text-error">
                             Không tìm thấy mã:
@@ -175,8 +184,9 @@
                     @endif
                     @if ($batch->error_report_path)
                         <a href="{{ route('admin.questions.import.errors', $batch) }}"
-                            class="mt-3 inline-flex font-label-sm font-semibold text-primary hover:underline">
-                            Tải danh sách dòng lỗi
+                            class="mt-3 inline-flex items-center gap-1 font-label-sm font-semibold text-primary hover:underline">
+                            <span class="material-symbols-outlined text-[18px]" aria-hidden="true">download</span>
+                            Tải file lỗi Excel (dòng đỏ)
                         </a>
                     @endif
                 </div>
@@ -204,9 +214,14 @@
                                         </td>
                                         <td class="px-3 py-2">
                                             @if ($row['ok'])
-                                                <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
-                                                    {{ ($row['action'] ?? '') === 'update' ? 'Cập nhật' : 'Tạo mới' }}
-                                                </span>
+                                                <div class="space-y-1">
+                                                    <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
+                                                        {{ ($row['action'] ?? '') === 'update' ? 'Cập nhật' : 'Tạo mới' }}
+                                                    </span>
+                                                    @foreach ($row['warnings'] ?? [] as $warning)
+                                                        <p class="text-xs text-amber-800">{{ $warning }}</p>
+                                                    @endforeach
+                                                </div>
                                             @else
                                                 <span class="text-error">{{ implode(' ', $row['errors']) }}</span>
                                             @endif
