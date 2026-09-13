@@ -170,10 +170,10 @@ Tránh N+1: eager load creator / instructor / publisher trên list; **không** j
 - **Clone:** tạo `question` **mới** (`draft`), copy nội dung từ câu gốc hoặc từ snapshot version (`cloned_from_id`, `cloned_from_version` optional).
 - Câu gốc và attempt/history giữ nguyên; câu clone có lifecycle riêng (phải đi lại 2 lớp duyệt).
 
-### 5.6 Phân loại nội dung 3 cấp (Hệ cơ quan → Môn học → Bài học)
-- Phân loại chuẩn hóa DAG 3 cấp: `organ_systems` → `subjects` → `lessons` (đa cha qua `subject_organ_system`, `lesson_subject`), thay cho cây `topics` cũ.
-- Admin UI editor: chọn **Bài học** qua picker phân cấp (Hệ cơ quan → Môn học → Bài học).
-- Câu gắn **≥1 Bài học** (`question_lesson`); các bài ngang hàng, không phân biệt primary. Filter Qbank/exam pool: chọn Hệ cơ quan/Môn học **cha** → bao gồm câu thuộc **Bài học con** (suy qua pivot).
+### 5.6 Phân loại nội dung (Hệ cơ quan ∥ Môn học → Bài học)
+- Phân loại: `organ_systems` và `subjects` **độc lập**; bài học gắn qua `lesson_organ_system`, `lesson_subject` (0 hoặc nhiều mỗi trục), thay cho cây `topics` cũ.
+- Admin UI editor: chọn **Bài học** (lọc tuỳ chọn theo hệ cơ quan và/hoặc môn học — không cascade cha–con).
+- Câu gắn **≥1 Bài học** (`question_lesson`); các bài ngang hàng, không phân biệt primary. Filter Qbank/exam pool: chọn Hệ cơ quan và/hoặc Môn học → gồm câu thuộc bài học gắn trực tiếp.
 
 ### 5.7 Kiểm tra trùng lặp (lexical — phase 1)
 - **Mục đích:** trên form edit một câu, mở **trang chi tiết** để quét ngân hàng xem câu nào trùng / gần trùng. **Không** chặn workflow cứng (chỉ cảnh báo).
@@ -213,7 +213,7 @@ Tránh N+1: eager load creator / instructor / publisher trên list; **không** j
 - `question_versions`: `question_id`, `version_number`, `instructor_id` FK, `publisher_id` FK, `snapshot` JSON, `created_at`; unique `(question_id, version_number)`; **chỉ tạo khi Super Admin publish**
 - `question_instructor_reviews`: `question_id`, `review_cycle`, `instructor_id`, `decision` (approved/rejected), `note`, `content_fingerprint`, `reviewed_at`; unique `(question_id, review_cycle, instructor_id)`
 - `question_review_requests` (optional / giữ): theo dõi yêu cầu submit lớp 1; status pending/approved/rejected; **không** thay thế `questions.status`
-- `organ_systems`, `subjects`, `lessons` (mỗi bảng: `id, name, slug UK, code null, description null, status, sort_order`); pivot `subject_organ_system`, `lesson_subject`
+- `organ_systems`, `subjects`, `lessons` (mỗi bảng: `id, name, slug UK, description null, status, sort_order`); pivot `lesson_organ_system`, `lesson_subject`
 - `question_import_batches(id, uploaded_by, original_filename, disk_path, format, status, source_headers, column_map, stats, error_report_path, committed_at)`
 - `questions.import_batch_id` FK null — gắn câu tạo từ lô import (luôn `draft`)
 - `stats_cache` JSON + `stats_updated_at` trên `questions`

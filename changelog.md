@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-09-13
+
+### Feat — Danh mục kiến thức: hệ/môn độc lập + catalog admin
+- Hệ cơ quan và môn học không còn cha–con; bài học gắn 0 hoặc nhiều mỗi trục (`lesson_organ_system`, `lesson_subject`).
+- Bỏ cột `code`; import/lookup bài học chỉ theo đường dẫn định danh (slug).
+- `/admin/categories`: bảng SaaS, phân trang 20, unique tên/slug, tìm bài theo tên/slug, lọc môn/hệ autocomplete đa chọn.
+- Lỗi trùng tên/slug chỉ hiện dưới ô nhập; xoá bị chặn khi còn câu hỏi/bài học phụ thuộc — copy rõ ràng hơn.
+
 ## 2026-09-12
 
 ### Feat — So sánh bản duyệt với bản xuất bản

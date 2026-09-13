@@ -276,17 +276,21 @@ class Question extends Model
     }
 
     /**
-     * Organ systems inferred via lessons → subjects → organ systems.
+     * Organ systems inferred from attached lessons (lesson_organ_system).
      *
      * @return Collection<int, OrganSystem>
      */
     public function inferredOrganSystems(): Collection
     {
-        return $this->inferredSubjects()
-            ->flatMap(function (Subject $subject): Collection {
-                return $subject->relationLoaded('organSystems')
-                    ? $subject->organSystems
-                    : $subject->organSystems()->get();
+        $lessons = $this->relationLoaded('lessons')
+            ? $this->lessons
+            : $this->lessons()->with('organSystems')->get();
+
+        return $lessons
+            ->flatMap(function (Lesson $lesson): Collection {
+                return $lesson->relationLoaded('organSystems')
+                    ? $lesson->organSystems
+                    : $lesson->organSystems()->get();
             })
             ->unique('id')
             ->sortBy('name')

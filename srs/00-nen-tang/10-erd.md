@@ -128,7 +128,7 @@ erDiagram
     QUESTION ||--o{ QUESTION_REPORT : "bị báo lỗi"
     QUESTION ||--o{ QUESTION_VERSION : "phiên bản"
     LESSON }o--o{ SUBJECT : "lesson_subject"
-    SUBJECT }o--o{ ORGAN_SYSTEM : "subject_organ_system"
+    LESSON }o--o{ ORGAN_SYSTEM : "lesson_organ_system"
 
     USER ||--o{ QUESTION_SESSION : "tạo"
     QUESTION_SESSION ||--o{ QUESTION_ATTEMPT : "gồm"
@@ -170,7 +170,6 @@ erDiagram
         bigint id PK
         string name
         string slug UK
-        string code "null"
         text description "null"
         string status "active/inactive"
         int sort_order
@@ -179,7 +178,6 @@ erDiagram
         bigint id PK
         string name
         string slug UK
-        string code "null"
         text description "null"
         string status "active/inactive"
         int sort_order
@@ -188,7 +186,6 @@ erDiagram
         bigint id PK
         string name
         string slug UK
-        string code "null"
         text description "null"
         string status "active/inactive"
         int sort_order

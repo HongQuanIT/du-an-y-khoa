@@ -314,11 +314,17 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
             Route::put('/categories/organ-systems/{organSystem}', [CurriculumTaxonomyController::class, 'updateOrganSystem'])->name('curriculum.organ-systems.update');
             Route::put('/categories/subjects/{subject}', [CurriculumTaxonomyController::class, 'updateSubject'])->name('curriculum.subjects.update');
             Route::put('/categories/lessons/{lesson}', [CurriculumTaxonomyController::class, 'updateLesson'])->name('curriculum.lessons.update');
-            Route::post('/categories/subjects/{subject}/organ-systems', [CurriculumTaxonomyController::class, 'attachSubjectOrganSystem'])->name('curriculum.subjects.organ-systems.attach');
-            Route::delete('/categories/subjects/{subject}/organ-systems/{organSystem}', [CurriculumTaxonomyController::class, 'detachSubjectOrganSystem'])->name('curriculum.subjects.organ-systems.detach');
             Route::post('/categories/lessons/{lesson}/subjects', [CurriculumTaxonomyController::class, 'attachLessonSubject'])->name('curriculum.lessons.subjects.attach');
             Route::delete('/categories/lessons/{lesson}/subjects/{subject}', [CurriculumTaxonomyController::class, 'detachLessonSubject'])->name('curriculum.lessons.subjects.detach');
+            Route::post('/categories/lessons/{lesson}/organ-systems', [CurriculumTaxonomyController::class, 'attachLessonOrganSystem'])->name('curriculum.lessons.organ-systems.attach');
+            Route::delete('/categories/lessons/{lesson}/organ-systems/{organSystem}', [CurriculumTaxonomyController::class, 'detachLessonOrganSystem'])->name('curriculum.lessons.organ-systems.detach');
             Route::put('/tags/{tag}', [TagController::class, 'update'])->name('tags.update');
+        });
+
+        Route::middleware('permission:'.Permission::TopicDelete->value)->group(function (): void {
+            Route::delete('/categories/organ-systems/{organSystem}', [CurriculumTaxonomyController::class, 'destroyOrganSystem'])->name('curriculum.organ-systems.destroy');
+            Route::delete('/categories/subjects/{subject}', [CurriculumTaxonomyController::class, 'destroySubject'])->name('curriculum.subjects.destroy');
+            Route::delete('/categories/lessons/{lesson}', [CurriculumTaxonomyController::class, 'destroyLesson'])->name('curriculum.lessons.destroy');
         });
 
         Route::delete('/blueprints/{blueprint}', [BlueprintController::class, 'destroy'])

@@ -9,8 +9,8 @@ use Illuminate\Support\Facades\DB;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
 
 /**
- * Idempotent 3-level content taxonomy demo:
- *   Hệ cơ quan (organ_systems) → Môn học (subjects) → Bài học (lessons)
+ * Idempotent content taxonomy demo:
+ *   Hệ cơ quan và môn học độc lập; bài học gắn cả hai trục.
  * plus the orthogonal tags axis (symptom / finding / concept…).
  */
 final class MedicalKnowledgeTaxonomySeeder extends Seeder
@@ -193,12 +193,12 @@ final class MedicalKnowledgeTaxonomySeeder extends Seeder
 
             foreach ($organ['subjects'] as $subject) {
                 $subjectId = $this->upsert('subjects', $subject['slug'], $subject['name'], $subjectSort);
-                $this->link('subject_organ_system', 'subject_id', $subjectId, 'organ_system_id', $organSystemId);
 
                 $lessonSort = 1;
                 foreach ($subject['lessons'] as $slug => $name) {
                     $lessonId = $this->upsert('lessons', $slug, $name, $lessonSort);
                     $this->link('lesson_subject', 'lesson_id', $lessonId, 'subject_id', $subjectId, $lessonSort);
+                    $this->link('lesson_organ_system', 'lesson_id', $lessonId, 'organ_system_id', $organSystemId, $lessonSort);
                     $ids[$slug] = $lessonId;
                     $lessonSort++;
                 }
@@ -219,7 +219,6 @@ final class MedicalKnowledgeTaxonomySeeder extends Seeder
         if ($existingId !== null) {
             DB::table($table)->where('id', $existingId)->update([
                 'name' => $name,
-                'code' => $slug,
                 'sort_order' => $sort,
                 'status' => TaxonomyStatus::Active->value,
                 'updated_at' => now(),
@@ -231,7 +230,6 @@ final class MedicalKnowledgeTaxonomySeeder extends Seeder
         return (int) DB::table($table)->insertGetId([
             'name' => $name,
             'slug' => $slug,
-            'code' => $slug,
             'description' => null,
             'sort_order' => $sort,
             'status' => TaxonomyStatus::Active->value,

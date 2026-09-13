@@ -17,7 +17,7 @@
                 <input type="checkbox" :checked="lessonIds.includes(item.id)"
                     @change="toggleLesson(item)" class="size-5 rounded border-outline-variant text-primary focus:ring-primary">
                 <span class="text-sm" x-text="item.name"></span>
-                <span class="text-[10px] uppercase text-on-surface-variant" x-text="item.code || ''"></span>
+                <span class="font-mono text-[10px] text-on-surface-variant" x-text="item.slug || ''"></span>
             </label>
         </template>
         <p x-show="!lessonResults.length"

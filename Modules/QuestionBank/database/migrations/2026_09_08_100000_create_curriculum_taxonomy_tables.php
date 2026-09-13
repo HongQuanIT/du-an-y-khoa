@@ -7,12 +7,12 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Standardized 3-level content taxonomy (DAG):
- *   Bài học (lessons) → Môn học (subjects) → Hệ cơ quan (organ_systems)
+ * Content taxonomy:
+ *   Bài học (lessons) gắn độc lập với Môn học (subjects) và Hệ cơ quan (organ_systems).
  *
  * - lesson is the standard knowledge unit; questions attach to lessons.
- * - lesson ↔ subject and subject ↔ organ_system are many-to-many, so a
- *   lesson can belong to multiple subjects and (transitively) multiple systems.
+ * - lesson ↔ subject and lesson ↔ organ_system are many-to-many.
+ * - Organ systems and subjects have no parent-child link.
  * - Symptom/concept tagging keeps living on the orthogonal `tags` axis.
  *
  * Replaces the freeform `medical_taxonomy_nodes` tree (dropped in the sibling
@@ -29,7 +29,6 @@ return new class extends Migration
                     $table->id();
                     $table->string('name');
                     $table->string('slug')->unique();
-                    $table->string('code')->nullable();
                     $table->text('description')->nullable();
                     $table->string('status', 20)->default('active');
                     $table->unsignedInteger('sort_order')->default(0);
@@ -40,15 +39,15 @@ return new class extends Migration
             }
         }
 
-        if (! Schema::hasTable('subject_organ_system')) {
-            Schema::create('subject_organ_system', function (Blueprint $table): void {
-                $table->foreignId('subject_id')->constrained('subjects')->cascadeOnDelete();
+        if (! Schema::hasTable('lesson_organ_system')) {
+            Schema::create('lesson_organ_system', function (Blueprint $table): void {
+                $table->foreignId('lesson_id')->constrained('lessons')->cascadeOnDelete();
                 $table->foreignId('organ_system_id')->constrained('organ_systems')->cascadeOnDelete();
                 $table->unsignedInteger('sort_order')->default(0);
                 $table->timestamps();
 
-                $table->primary(['subject_id', 'organ_system_id'], 'subject_organ_system_primary');
-                $table->index('organ_system_id', 'subject_organ_system_os_idx');
+                $table->primary(['lesson_id', 'organ_system_id'], 'lesson_organ_system_primary');
+                $table->index('organ_system_id', 'lesson_organ_system_os_idx');
             });
         }
 
@@ -96,7 +95,7 @@ return new class extends Migration
         Schema::dropIfExists('core_topic_lessons');
         Schema::dropIfExists('question_lesson');
         Schema::dropIfExists('lesson_subject');
-        Schema::dropIfExists('subject_organ_system');
+        Schema::dropIfExists('lesson_organ_system');
         Schema::dropIfExists('lessons');
         Schema::dropIfExists('subjects');
         Schema::dropIfExists('organ_systems');

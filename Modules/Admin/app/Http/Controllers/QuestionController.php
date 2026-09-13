@@ -136,7 +136,8 @@ final class QuestionController extends Controller
         $question->load([
             'options' => fn ($q) => $q->orderBy('order'),
             'hints' => fn ($q) => $q->orderBy('sort_order'),
-            'lessons.subjects.organSystems',
+            'lessons.subjects',
+            'lessons.organSystems',
             'tags',
             'creator:id,name,email',
             'instructor:id,name',

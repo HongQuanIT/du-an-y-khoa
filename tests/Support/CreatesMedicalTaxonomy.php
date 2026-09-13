@@ -11,8 +11,9 @@ use Modules\QuestionBank\Models\OrganSystem;
 use Modules\QuestionBank\Models\Subject;
 
 /**
- * Test helper for the three-level curriculum taxonomy:
- * Hệ cơ quan (OrganSystem) → Môn học (Subject) → Bài học (Lesson).
+ * Test helper for the curriculum taxonomy:
+ * Hệ cơ quan (OrganSystem) and Môn học (Subject) are independent;
+ * Bài học (Lesson) may attach zero or more of each.
  */
 trait CreatesMedicalTaxonomy
 {
@@ -21,13 +22,14 @@ trait CreatesMedicalTaxonomy
      */
     protected function makeOrganSystem(array $overrides = []): OrganSystem
     {
+        unset($overrides['code']);
+
         $name = (string) ($overrides['name'] ?? 'Hệ tim mạch');
         $slug = (string) ($overrides['slug'] ?? Str::slug($name).'-'.Str::random(4));
 
         return OrganSystem::query()->create(array_merge([
             'name' => $name,
             'slug' => $slug,
-            'code' => $overrides['code'] ?? null,
             'description' => null,
             'sort_order' => $overrides['sort_order'] ?? 0,
             'status' => TaxonomyStatus::Active,
@@ -39,39 +41,30 @@ trait CreatesMedicalTaxonomy
      */
     protected function makeSubject(array $overrides = []): Subject
     {
-        $organSystems = $overrides['organSystems'] ?? null;
-        unset($overrides['organSystems']);
+        unset($overrides['organSystems'], $overrides['code']);
 
         $name = (string) ($overrides['name'] ?? 'Nội tim mạch');
         $slug = (string) ($overrides['slug'] ?? Str::slug($name).'-'.Str::random(4));
 
-        $subject = Subject::query()->create(array_merge([
+        return Subject::query()->create(array_merge([
             'name' => $name,
             'slug' => $slug,
-            'code' => $overrides['code'] ?? null,
             'description' => null,
             'sort_order' => $overrides['sort_order'] ?? 0,
             'status' => TaxonomyStatus::Active,
         ], $overrides));
-
-        if ($organSystems !== null) {
-            $subject->organSystems()->sync(
-                collect($organSystems)->map(fn ($s) => $s instanceof OrganSystem ? $s->id : $s)->all()
-            );
-        }
-
-        return $subject;
     }
 
     /**
-     * Create a lesson (bài học). Optionally attach it to subjects.
+     * Create a lesson (bài học). Optionally attach subjects and organ systems.
      *
      * @param  array<string, mixed>  $overrides
      */
     protected function makeLesson(array $overrides = []): Lesson
     {
         $subjects = $overrides['subjects'] ?? null;
-        unset($overrides['subjects']);
+        $organSystems = $overrides['organSystems'] ?? null;
+        unset($overrides['subjects'], $overrides['organSystems'], $overrides['code']);
 
         $name = (string) ($overrides['name'] ?? 'Tăng huyết áp');
         $slug = (string) ($overrides['slug'] ?? Str::slug($name).'-'.Str::random(4));
@@ -79,7 +72,6 @@ trait CreatesMedicalTaxonomy
         $lesson = Lesson::query()->create(array_merge([
             'name' => $name,
             'slug' => $slug,
-            'code' => $overrides['code'] ?? null,
             'description' => null,
             'sort_order' => $overrides['sort_order'] ?? 0,
             'status' => TaxonomyStatus::Active,
@@ -88,6 +80,12 @@ trait CreatesMedicalTaxonomy
         if ($subjects !== null) {
             $lesson->subjects()->sync(
                 collect($subjects)->map(fn ($s) => $s instanceof Subject ? $s->id : $s)->all()
+            );
+        }
+
+        if ($organSystems !== null) {
+            $lesson->organSystems()->sync(
+                collect($organSystems)->map(fn ($s) => $s instanceof OrganSystem ? $s->id : $s)->all()
             );
         }
 

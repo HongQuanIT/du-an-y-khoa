@@ -33,7 +33,7 @@ final class BuildQuestionExportRowsAction
             $row['explanation'] = trim(strip_tags((string) $question->explanation));
             $row['difficulty'] = $question->difficulty->value;
             $row['lesson_slugs'] = $question->lessons
-                ->map(fn ($lesson): string => (string) ($lesson->slug ?: $lesson->code))
+                ->map(fn ($lesson): string => (string) $lesson->slug)
                 ->filter()
                 ->implode('; ');
             $row['tag_slugs'] = $question->tags->pluck('slug')->filter()->implode('; ');

@@ -9,12 +9,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
 
 /**
- * Hệ cơ quan — cấp cao nhất của danh mục phân loại (VD: Hệ tim mạch).
+ * Hệ cơ quan — trục phân loại độc lập với môn học (VD: Hệ tim mạch).
  *
  * @property int $id
  * @property string $name
  * @property string $slug
- * @property string|null $code
  * @property string|null $description
  * @property TaxonomyStatus $status
  * @property int $sort_order
@@ -24,7 +23,6 @@ class OrganSystem extends Model
     protected $fillable = [
         'name',
         'slug',
-        'code',
         'description',
         'status',
         'sort_order',
@@ -35,30 +33,14 @@ class OrganSystem extends Model
         'sort_order' => 'integer',
     ];
 
-    /** @return BelongsToMany<Subject, $this> */
-    public function subjects(): BelongsToMany
+    /** @return BelongsToMany<Lesson, $this> */
+    public function lessons(): BelongsToMany
     {
         return $this->belongsToMany(
-            Subject::class,
-            'subject_organ_system',
+            Lesson::class,
+            'lesson_organ_system',
             'organ_system_id',
-            'subject_id',
-        )->withPivot('sort_order')->withTimestamps()->orderBy('subjects.sort_order')->orderBy('subjects.name');
-    }
-
-    /**
-     * Lessons reachable through this organ system's subjects.
-     *
-     * @return \Illuminate\Database\Eloquent\Builder<Lesson>
-     */
-    public function lessonsQuery(): \Illuminate\Database\Eloquent\Builder
-    {
-        return Lesson::query()->whereHas(
-            'subjects',
-            fn ($subjects) => $subjects->whereHas(
-                'organSystems',
-                fn ($systems) => $systems->whereKey($this->getKey()),
-            ),
-        );
+            'lesson_id',
+        )->withPivot('sort_order')->withTimestamps()->orderBy('lessons.sort_order')->orderBy('lessons.name');
     }
 }

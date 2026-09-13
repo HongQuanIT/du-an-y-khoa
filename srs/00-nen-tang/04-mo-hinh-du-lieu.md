@@ -105,20 +105,20 @@ Index: `status`, `exam_flag`, `(status, exam_flag, created_at)`, `difficulty`, `
 
 Khi tạo session / live classroom: đáp án được đảo theo seed ổn định (`sessionKey|questionId`); chữ A/B/C **gán lại theo vị trí hiển thị**. Snapshot phiên lưu `options[].id` + display `label`. Chấm điểm luôn so khớp `option.id`, không dựa vào chữ cái.
 
-### Phân loại nội dung 3 cấp — **organ_systems → subjects → lessons** (DAG đa cha)
-Phân loại nội dung chuẩn hóa thành **DAG 3 cấp** (đa cha), thay cho cây `topics` cũ. Ba bảng có **cùng cấu trúc cột**:
-`id, name, slug UNIQUE, code null, description null, status(active/inactive), sort_order, timestamps`.
+### Phân loại nội dung — **organ_systems ∥ subjects → lessons** (hai trục độc lập)
+Phân loại nội dung chuẩn hóa thành **ba bảng cùng cấu trúc cột**, thay cho cây `topics` cũ:
+`id, name, slug UNIQUE, description null, status(active/inactive), sort_order, timestamps`.
 
-- **organ_systems** (Hệ cơ quan) — cấp trên cùng.
-- **subjects** (Môn học) — nhóm các bài học.
+- **organ_systems** (Hệ cơ quan) — trục độc lập.
+- **subjects** (Môn học) — trục độc lập; **không** có quan hệ cha–con với hệ cơ quan.
 - **lessons** (Bài học) — **đơn vị kiến thức chuẩn**; câu hỏi gắn ở đây.
 
-Quan hệ (đều many-to-many → DAG):
-- `lesson_subject` (`lesson_id`, `subject_id`, `sort_order`, timestamps) — 1 bài học thuộc **nhiều** môn học.
-- `subject_organ_system` (`subject_id`, `organ_system_id`, `sort_order`, timestamps) — 1 môn học thuộc **nhiều** hệ cơ quan.
-- ⇒ 1 bài học có thể thuộc **nhiều hệ cơ quan** (suy ra qua các môn học).
-- Filter Qbank/exam: chọn Hệ cơ quan → Môn học → Bài học; chọn cấp trên bao gồm mọi bài học con (qua pivot).
-- Ví dụ: Tiêu hóa (hệ) → Nội tiêu hóa (môn) → Viêm gan virus (bài).
+Quan hệ (đều many-to-many):
+- `lesson_subject` (`lesson_id`, `subject_id`, `sort_order`, timestamps) — 1 bài học thuộc **0 hoặc nhiều môn học**.
+- `lesson_organ_system` (`lesson_id`, `organ_system_id`, `sort_order`, timestamps) — 1 bài học thuộc **0 hoặc nhiều hệ cơ quan**.
+- Hệ cơ quan và môn học **không** liên kết trực tiếp.
+- Filter Qbank/exam: chọn Hệ cơ quan và/hoặc Môn học → gồm mọi bài học gắn trực tiếp (qua pivot tương ứng).
+- Ví dụ: bài «Viêm gan virus» gắn môn Nội khoa + Dược lý, và hệ Tiêu hóa.
 
 ### QuestionLesson (pivot — câu hỏi ↔ bài học)
 `question_id (uuid), lesson_id, timestamps`. Câu hỏi gắn **≥1 bài học** (các bài ngang hàng, không phân biệt primary). Thay cho `question_topics` cũ.
@@ -367,7 +367,8 @@ Ma trận thi tách khỏi phân loại nội dung: `blueprints` → `blueprint_
 
 ```
 User ─┬─< QuestionSession ─< QuestionAttempt >─ Question ─< QuestionOption
-      │                                   │           ├─< QuestionLesson >─ Lesson >─< Subject >─< OrganSystem
+      │                                   │           ├─< QuestionLesson >─ Lesson >─< Subject
+      │                                   │           │                              └─< OrganSystem
       ├─< QuestionStatus >─ Question       │           └─< question_tags >─ Tag
       ├─< Note (poly)                      └─ (flagged/report) QuestionReport
       ├─< Bookmark (poly) ─ BookmarkFolder

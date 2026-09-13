@@ -62,34 +62,30 @@ final class TaxonomyArchitectureTest extends TestCase
         $this->assertSame($section->id, $topic->section->id);
     }
 
-    public function test_curriculum_taxonomy_links_organ_system_subject_and_lesson(): void
+    public function test_curriculum_taxonomy_links_lesson_to_subject_and_organ_system(): void
     {
         $organSystem = $this->makeOrganSystem(['name' => 'Hệ tim mạch']);
-        $subject = $this->makeSubject([
-            'name' => 'Nội tim mạch',
-            'organSystems' => [$organSystem],
-        ]);
+        $subject = $this->makeSubject(['name' => 'Nội tim mạch']);
         $lesson = $this->makeLesson([
             'name' => 'Nhồi máu cơ tim',
             'subjects' => [$subject],
+            'organSystems' => [$organSystem],
         ]);
 
-        $this->assertTrue($subject->organSystems()->whereKey($organSystem->id)->exists());
         $this->assertTrue($lesson->subjects()->whereKey($subject->id)->exists());
-        $this->assertTrue($organSystem->subjects()->whereKey($subject->id)->exists());
+        $this->assertTrue($lesson->organSystems()->whereKey($organSystem->id)->exists());
+        $this->assertTrue($organSystem->lessons()->whereKey($lesson->id)->exists());
         $this->assertTrue($subject->lessons()->whereKey($lesson->id)->exists());
     }
 
     public function test_question_infers_subjects_and_organ_systems_from_lessons_only(): void
     {
         $organSystem = $this->makeOrganSystem(['name' => 'Hệ hô hấp']);
-        $subject = $this->makeSubject([
-            'name' => 'Hô hấp học',
-            'organSystems' => [$organSystem],
-        ]);
+        $subject = $this->makeSubject(['name' => 'Hô hấp học']);
         $lesson = $this->makeLesson([
             'name' => 'Viêm phổi',
             'subjects' => [$subject],
+            'organSystems' => [$organSystem],
         ]);
 
         $question = Question::factory()->create(['status' => QuestionStatus::Published]);
@@ -161,12 +157,12 @@ final class TaxonomyArchitectureTest extends TestCase
         $subject = $this->makeSubject([
             'name' => 'Tim mạch',
             'slug' => 'tim-mach-scope',
-            'organSystems' => [$organSystem],
         ]);
         $lesson = $this->makeLesson([
             'name' => 'STEMI scope',
             'slug' => 'stemi-scope',
             'subjects' => [$subject],
+            'organSystems' => [$organSystem],
         ]);
 
         $otherOrganSystem = $this->makeOrganSystem([
@@ -176,12 +172,12 @@ final class TaxonomyArchitectureTest extends TestCase
         $otherSubject = $this->makeSubject([
             'name' => 'Thận tiết niệu',
             'slug' => 'than-tiet-nieu-scope',
-            'organSystems' => [$otherOrganSystem],
         ]);
         $otherLesson = $this->makeLesson([
             'name' => 'Suy thận scope',
             'slug' => 'suy-than-scope',
             'subjects' => [$otherSubject],
+            'organSystems' => [$otherOrganSystem],
         ]);
 
         [$coreTopic] = $this->seedCoreTopicAndLessons();
