@@ -13,9 +13,10 @@ use Modules\QuestionBank\Models\Question;
 /**
  * Shared question list filters for API, admin, and session selection.
  *
- * Content axis: bài học (lessons) → môn học (subjects) → hệ cơ quan (organ_systems).
- * Questions attach only to lessons; subject/organ-system filters resolve down to
- * lessons via the lesson_subject / subject_organ_system pivots.
+ * Content axis: bài học (lessons) gắn độc lập với môn học (subjects)
+ * và hệ cơ quan (organ_systems). Questions attach only to lessons;
+ * subject/organ-system filters resolve down to lessons via
+ * lesson_subject / lesson_organ_system.
  *
  * Blueprint / core clinical topics are a separate exam matrix projected onto
  * lessons via core_topic_lessons and/or tags via core_topic_tags — questions
@@ -143,30 +144,30 @@ final class QuestionFilterBuilder
             return [];
         }
 
-        $subjectIds = DB::table('subject_organ_system')
+        return DB::table('lesson_organ_system')
             ->whereIn('organ_system_id', $organSystemIds)
-            ->pluck('subject_id')
+            ->pluck('lesson_id')
             ->map(fn ($id): int => (int) $id)
             ->unique()
             ->values()
             ->all();
-
-        return $this->lessonIdsForSubjects($subjectIds);
     }
 
     /**
-     * @param  list<int>  $subjectIds
+     * Subjects that share at least one lesson with the given organ systems.
+     *
+     * @param  list<int>  $organSystemIds
      * @return list<int>
      */
     public function subjectIdsForOrganSystems(array $organSystemIds): array
     {
-        $organSystemIds = $this->normalizeIds($organSystemIds);
-        if ($organSystemIds === []) {
+        $lessonIds = $this->lessonIdsForOrganSystems($organSystemIds);
+        if ($lessonIds === []) {
             return [];
         }
 
-        return DB::table('subject_organ_system')
-            ->whereIn('organ_system_id', $organSystemIds)
+        return DB::table('lesson_subject')
+            ->whereIn('lesson_id', $lessonIds)
             ->pluck('subject_id')
             ->map(fn ($id): int => (int) $id)
             ->unique()
@@ -251,15 +252,13 @@ final class QuestionFilterBuilder
                 ->values()
                 ->all();
 
-            $organSystemIds = $subjectIds === []
-                ? []
-                : DB::table('subject_organ_system')
-                    ->whereIn('subject_id', $subjectIds)
-                    ->pluck('organ_system_id')
-                    ->map(fn ($oid): int => (int) $oid)
-                    ->unique()
-                    ->values()
-                    ->all();
+            $organSystemIds = DB::table('lesson_organ_system')
+                ->whereIn('lesson_id', $lessonIds)
+                ->pluck('organ_system_id')
+                ->map(fn ($oid): int => (int) $oid)
+                ->unique()
+                ->values()
+                ->all();
 
             $scopes[$id] = [
                 'lessonIds' => $lessonIds,

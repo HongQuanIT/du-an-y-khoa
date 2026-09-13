@@ -9,14 +9,8 @@
         'subject_names' => $l->relationLoaded('subjects')
             ? $l->subjects->pluck('name')->unique()->values()->all()
             : [],
-        'organ_system_names' => $l->relationLoaded('subjects')
-            ? $l->subjects
-                ->flatMap(fn ($s) => $s->relationLoaded('organSystems')
-                    ? $s->organSystems->pluck('name')
-                    : collect())
-                ->unique()
-                ->values()
-                ->all()
+        'organ_system_names' => $l->relationLoaded('organSystems')
+            ? $l->organSystems->pluck('name')->unique()->values()->all()
             : [],
     ])->values()->all();
 
@@ -262,15 +256,10 @@
                 this.organSystems = json.data ?? [];
             },
             async loadSubjects() {
-                const params = new URLSearchParams();
-                if (this.organSystemId) params.set('organ_system_id', this.organSystemId);
-                const url = params.toString() ? `${this.urls.subjects}?${params}` : this.urls.subjects;
-                const json = await this.fetchJson(url);
+                const json = await this.fetchJson(this.urls.subjects);
                 this.subjects = json.data ?? [];
             },
             async onOrganSystemChange() {
-                this.subjectId = null;
-                await this.loadSubjects();
                 await this.searchLessons();
             },
             async onSubjectChange() {

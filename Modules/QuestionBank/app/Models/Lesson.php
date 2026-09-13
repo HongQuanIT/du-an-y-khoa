@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\QuestionBank\Models;
 
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
@@ -12,12 +11,11 @@ use Modules\QuestionBank\Enums\TaxonomyStatus;
 /**
  * Bài học — đơn vị kiến thức chuẩn; câu hỏi gắn vào bài học.
  *
- * Một bài học có thể thuộc nhiều môn học (và qua đó, nhiều hệ cơ quan).
+ * Một bài học có thể gắn 0 hoặc nhiều môn học và 0 hoặc nhiều hệ cơ quan (hai trục độc lập).
  *
  * @property int $id
  * @property string $name
  * @property string $slug
- * @property string|null $code
  * @property string|null $description
  * @property TaxonomyStatus $status
  * @property int $sort_order
@@ -27,7 +25,6 @@ class Lesson extends Model
     protected $fillable = [
         'name',
         'slug',
-        'code',
         'description',
         'status',
         'sort_order',
@@ -49,6 +46,17 @@ class Lesson extends Model
         )->withPivot('sort_order')->withTimestamps()->orderBy('subjects.sort_order')->orderBy('subjects.name');
     }
 
+    /** @return BelongsToMany<OrganSystem, $this> */
+    public function organSystems(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            OrganSystem::class,
+            'lesson_organ_system',
+            'lesson_id',
+            'organ_system_id',
+        )->withPivot('sort_order')->withTimestamps()->orderBy('organ_systems.sort_order')->orderBy('organ_systems.name');
+    }
+
     /** @return BelongsToMany<Question, $this> */
     public function questions(): BelongsToMany
     {
@@ -65,21 +73,5 @@ class Lesson extends Model
             'lesson_id',
             'core_clinical_topic_id',
         )->withTimestamps();
-    }
-
-    /**
-     * Organ systems reachable through this lesson's subjects.
-     *
-     * @return Builder<OrganSystem>
-     */
-    public function organSystemsQuery(): Builder
-    {
-        return OrganSystem::query()->whereHas(
-            'subjects',
-            fn ($subjects) => $subjects->whereHas(
-                'lessons',
-                fn ($lessons) => $lessons->whereKey($this->getKey()),
-            ),
-        );
     }
 }

@@ -33,14 +33,14 @@ erDiagram
   question_import_batches ||--o{ questions : import_batch_id
 
   %% ===== Taxonomy / Blueprint =====
-  %% Content classification = 3-level DAG: organ_systems -> subjects -> lessons
+  %% Content classification: organ_systems and subjects are independent; lessons attach to both
   blueprints ||--o{ blueprint_sections : has
   blueprint_sections ||--o{ core_clinical_topics : has
 
-  organ_systems ||--o{ subject_organ_system : groups
-  subjects ||--o{ subject_organ_system : "belongs (multi-parent)"
-  subjects ||--o{ lesson_subject : groups
-  lessons ||--o{ lesson_subject : "belongs (multi-parent)"
+  organ_systems ||--o{ lesson_organ_system : "tagged (multi)"
+  lessons ||--o{ lesson_organ_system : "belongs (optional)"
+  subjects ||--o{ lesson_subject : "tagged (multi)"
+  lessons ||--o{ lesson_subject : "belongs (optional)"
 
   questions ||--o{ question_lesson : tagged
   lessons ||--o{ question_lesson : tagged
@@ -209,7 +209,6 @@ erDiagram
     bigint id PK
     string name
     string slug UK
-    string code "nullable"
     text description "nullable"
     string status "active/inactive"
     uint sort_order
@@ -219,7 +218,6 @@ erDiagram
     bigint id PK
     string name
     string slug UK
-    string code "nullable"
     text description "nullable"
     string status "active/inactive"
     uint sort_order
@@ -229,7 +227,6 @@ erDiagram
     bigint id PK
     string name
     string slug UK
-    string code "nullable"
     text description "nullable"
     string status "active/inactive"
     uint sort_order
@@ -242,8 +239,8 @@ erDiagram
     string status
   }
 
-  subject_organ_system {
-    bigint subject_id FK "CASCADE"
+  lesson_organ_system {
+    bigint lesson_id FK "CASCADE"
     bigint organ_system_id FK "CASCADE"
     uint sort_order
   }

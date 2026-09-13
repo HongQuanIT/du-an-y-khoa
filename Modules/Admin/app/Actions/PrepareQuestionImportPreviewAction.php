@@ -226,7 +226,7 @@ final class PrepareQuestionImportPreviewAction
         $lessonTokens = QuestionImportSchema::splitList($values['lesson_slugs']);
         $lessonIds = $this->resolveLessons($lessonTokens);
         if ($lessonTokens === []) {
-            $errors[] = 'Cần ít nhất một bài học (slug hoặc mã).';
+            $errors[] = 'Cần ít nhất một bài học (đường dẫn định danh).';
         } elseif (count($lessonIds) !== count($lessonTokens)) {
             $errors[] = 'Không tìm thấy bài học: '.$this->unresolved($lessonTokens, $lessonIds).'.';
         }
@@ -294,7 +294,7 @@ final class PrepareQuestionImportPreviewAction
 
         return Lesson::query()
             ->where(function ($query) use ($tokens): void {
-                $query->whereIn('slug', $tokens)->orWhereIn('code', $tokens);
+                $query->whereIn('slug', $tokens);
             })
             ->pluck('id')
             ->map(fn ($id): int => (int) $id)

@@ -9,12 +9,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
 
 /**
- * Môn học — gom các bài học; có thể thuộc nhiều hệ cơ quan.
+ * Môn học — trục phân loại độc lập với hệ cơ quan; gom các bài học.
  *
  * @property int $id
  * @property string $name
  * @property string $slug
- * @property string|null $code
  * @property string|null $description
  * @property TaxonomyStatus $status
  * @property int $sort_order
@@ -24,7 +23,6 @@ class Subject extends Model
     protected $fillable = [
         'name',
         'slug',
-        'code',
         'description',
         'status',
         'sort_order',
@@ -34,17 +32,6 @@ class Subject extends Model
         'status' => TaxonomyStatus::class,
         'sort_order' => 'integer',
     ];
-
-    /** @return BelongsToMany<OrganSystem, $this> */
-    public function organSystems(): BelongsToMany
-    {
-        return $this->belongsToMany(
-            OrganSystem::class,
-            'subject_organ_system',
-            'subject_id',
-            'organ_system_id',
-        )->withPivot('sort_order')->withTimestamps()->orderBy('organ_systems.sort_order')->orderBy('organ_systems.name');
-    }
 
     /** @return BelongsToMany<Lesson, $this> */
     public function lessons(): BelongsToMany

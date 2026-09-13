@@ -72,7 +72,6 @@ class VolumeLearningSeeder extends Seeder
                 Lesson::query()->create([
                     'name' => 'Volume lesson '.$i,
                     'slug' => 'volume-lesson-'.$i.'-'.Str::random(4),
-                    'code' => null,
                     'description' => null,
                     'sort_order' => $i,
                     'status' => \Modules\QuestionBank\Enums\TaxonomyStatus::Active,

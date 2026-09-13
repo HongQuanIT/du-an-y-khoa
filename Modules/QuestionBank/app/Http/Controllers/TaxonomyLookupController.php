@@ -135,7 +135,7 @@ final class TaxonomyLookupController extends Controller
             ->orderBy('sort_order')
             ->orderBy('name')
             ->limit(200)
-            ->get(['id', 'name', 'slug', 'code']);
+            ->get(['id', 'name', 'slug']);
 
         return response()->json(['data' => $items]);
     }
@@ -149,17 +149,8 @@ final class TaxonomyLookupController extends Controller
                 $builder->where('name', 'like', $term);
             });
 
-        if ($request->filled('organ_system_id')) {
-            $organSystemId = (int) $request->query('organ_system_id');
-            $subjectIds = DB::table('subject_organ_system')
-                ->where('organ_system_id', $organSystemId)
-                ->pluck('subject_id')
-                ->all();
-            $query->whereIn('id', $subjectIds);
-        }
-
         $items = $query->orderBy('sort_order')->orderBy('name')->limit(300)
-            ->get(['id', 'name', 'slug', 'code']);
+            ->get(['id', 'name', 'slug']);
 
         return response()->json(['data' => $items]);
     }
@@ -184,12 +175,8 @@ final class TaxonomyLookupController extends Controller
 
         if ($request->filled('organ_system_id')) {
             $organSystemId = (int) $request->query('organ_system_id');
-            $subjectIds = DB::table('subject_organ_system')
+            $lessonIds = DB::table('lesson_organ_system')
                 ->where('organ_system_id', $organSystemId)
-                ->pluck('subject_id')
-                ->all();
-            $lessonIds = DB::table('lesson_subject')
-                ->whereIn('subject_id', $subjectIds)
                 ->pluck('lesson_id')
                 ->all();
             $query->whereIn('id', $lessonIds);
@@ -200,23 +187,18 @@ final class TaxonomyLookupController extends Controller
         $items = $query
             ->with([
                 'subjects:id,name',
-                'subjects.organSystems:id,name',
+                'organSystems:id,name',
             ])
             ->orderBy('sort_order')
             ->orderBy('name')
             ->limit($limit)
-            ->get(['id', 'name', 'slug', 'code'])
+            ->get(['id', 'name', 'slug'])
             ->map(fn (Lesson $lesson): array => [
                 'id' => $lesson->id,
                 'name' => $lesson->name,
                 'slug' => $lesson->slug,
-                'code' => $lesson->code,
                 'subject_names' => $lesson->subjects->pluck('name')->unique()->values()->all(),
-                'organ_system_names' => $lesson->subjects
-                    ->flatMap(fn (Subject $subject) => $subject->organSystems->pluck('name'))
-                    ->unique()
-                    ->values()
-                    ->all(),
+                'organ_system_names' => $lesson->organSystems->pluck('name')->unique()->values()->all(),
             ]);
 
         return response()->json(['data' => $items]);

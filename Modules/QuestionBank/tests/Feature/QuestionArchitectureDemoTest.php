@@ -70,7 +70,7 @@ final class QuestionArchitectureDemoTest extends TestCase
         $subject = $stemi->subjects()->firstOrFail();
         $this->assertSame('Tim mạch', $subject->name);
 
-        $organSystem = $subject->organSystems()->firstOrFail();
+        $organSystem = $stemi->organSystems()->firstOrFail();
         $this->assertSame('Hệ tim mạch', $organSystem->name);
 
         $this->assertTrue(

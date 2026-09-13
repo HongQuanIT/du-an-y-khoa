@@ -217,9 +217,9 @@ class StudyPlan extends Model
         $organSystemIds = $this->scopeOrganSystemIds();
 
         if ($organSystemIds !== []) {
-            $subjectIds = array_merge(
-                $subjectIds,
-                \Modules\QuestionBank\Models\Subject::query()
+            $lessonIds = array_merge(
+                $lessonIds,
+                \Modules\QuestionBank\Models\Lesson::query()
                     ->whereHas('organSystems', fn ($query) => $query->whereIn('organ_systems.id', $organSystemIds))
                     ->pluck('id')
                     ->all(),

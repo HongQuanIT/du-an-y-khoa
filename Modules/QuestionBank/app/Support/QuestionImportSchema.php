@@ -56,7 +56,7 @@ final class QuestionImportSchema
                 'aliases' => ['difficulty', 'do kho', 'độ khó'],
             ],
             'lesson_slugs' => [
-                'label' => 'Bài học (slug hoặc mã, cách nhau ;)',
+                'label' => 'Bài học (đường dẫn định danh, cách nhau ;)',
                 'required' => true,
                 'aliases' => [
                     'lesson_slugs', 'lesson_codes', 'lessons', 'bai hoc', 'bài học',
@@ -279,7 +279,7 @@ final class QuestionImportSchema
             ['option_a … option_e', '≥2 đáp án', 'Để trống cột nếu không dùng.'],
             ['correct', 'Có', 'Một chữ: A, B, C, D hoặc E. Single best answer.'],
             ['difficulty', 'Có', 'very_easy | easy | medium | hard | very_hard'],
-            ['lesson_slugs', 'Có', 'Slug hoặc mã bài học đã có trên hệ thống, cách nhau ;'],
+            ['lesson_slugs', 'Có', 'Đường dẫn định danh bài học đã có trên hệ thống, cách nhau ;'],
             ['explanation', 'Khuyến nghị', 'Bắt buộc trước khi gửi duyệt. Import vẫn tạo nháp nếu thiếu.'],
             ['status / publisher_id / version / id', 'Cấm', 'Hệ thống bỏ qua. Không dùng id — khóa là mã câu hỏi.'],
             ['code', 'Không', 'Để trống = tạo mới (hệ thống cấp Q00001…). Điền mã đã có = cập nhật. Mã không tồn tại = lỗi, không import dòng đó.'],

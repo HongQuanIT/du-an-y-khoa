@@ -27,7 +27,7 @@ erDiagram
     QUESTION ||--o{ QUESTION_REPORT : "bi bao loi"
     QUESTION ||--o{ QUESTION_VERSION : "phien ban"
     LESSON }o--o{ SUBJECT : "lesson_subject"
-    SUBJECT }o--o{ ORGAN_SYSTEM : "subject_organ_system"
+    LESSON }o--o{ ORGAN_SYSTEM : "lesson_organ_system"
     USER ||--o{ QUESTION_SESSION : "tao"
     QUESTION_SESSION ||--o{ QUESTION_ATTEMPT : "gom"
     QUESTION ||--o{ QUESTION_ATTEMPT : "duoc tra loi"

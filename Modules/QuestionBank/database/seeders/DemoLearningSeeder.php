@@ -344,7 +344,6 @@ TEXT;
                 ['slug' => 'urology'],
                 [
                     'name' => 'Tiết niệu',
-                    'code' => 'urology',
                     'description' => null,
                     'sort_order' => 99,
                     'status' => \Modules\QuestionBank\Enums\TaxonomyStatus::Active,
