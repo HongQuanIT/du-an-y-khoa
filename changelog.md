@@ -2,6 +2,10 @@
 
 ## 2026-09-13
 
+### Fix — Editor câu hỏi: copy/paste và format
+- Thay Quill bằng `contenteditable` gốc: copy/paste/IME theo trình duyệt; toolbar Bold/Italic/list/link/ảnh không nuốt selection.
+- Content Editor sửa được đề/giải thích/gợi ý; ô soạn luôn `contenteditable` (không khóa pointer-events).
+
 ### Feat — Ma trận đề: mã unique, slug tự sinh, form 2 cột
 - Unique theo `code` (không còn nhập slug); slug tự sinh từ tên, giữ nguyên khi đã có.
 - Form metadata 2 cột (trái: tên/mã/trạng thái/thứ tự; phải: mô tả); danh sách đổi nhãn «Code» → «Mã».

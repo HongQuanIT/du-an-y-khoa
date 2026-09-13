@@ -804,6 +804,27 @@ final class AdminQuestionManagementTest extends TestCase
             ->assertOk();
     }
 
+    public function test_content_editor_edit_form_keeps_stem_editor_interactive(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.store'), $this->payload())
+            ->assertRedirect();
+
+        $question = Question::query()->firstOrFail();
+
+        $this->actingAsStaff($editor)
+            ->get(route('admin.questions.edit', $question))
+            ->assertOk()
+            ->assertSee('contenteditable="true"', false)
+            ->assertSee('data-editor-surface', false)
+            ->assertSee('data-editor-toolbar', false)
+            ->assertSee('mountAdminEditor', false)
+            ->assertDontSee('new window.Quill', false)
+            ->assertSee('Chỉnh sửa câu hỏi', false);
+    }
+
     public function test_content_creator_only_sees_and_opens_own_questions(): void
     {
         $creatorA = $this->staffUser(Role::ContentEditor);
