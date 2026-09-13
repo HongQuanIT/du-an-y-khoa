@@ -13,72 +13,68 @@
 
     <x-admin.flash />
 
-    <form method="post" action="{{ $isNew ? route('admin.blueprints.store') : route('admin.blueprints.update', $blueprint) }}" class="max-w-4xl space-y-6">
+    <form method="post" action="{{ $isNew ? route('admin.blueprints.store') : route('admin.blueprints.update', $blueprint) }}" class="w-full">
         @csrf @unless($isNew) @method('PUT') @endunless
-        <section class="rounded-xl border border-outline-variant bg-surface p-5 shadow-sm" aria-labelledby="blueprint-information-heading">
-            <div class="mb-6 flex items-start gap-3 border-b border-outline-variant pb-4">
+        <section class="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm" aria-labelledby="blueprint-information-heading">
+            <div class="flex items-start gap-3 border-b border-outline-variant px-5 py-4">
                 <span class="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary" aria-hidden="true">
                     <span class="material-symbols-outlined text-[22px]">account_tree</span>
                 </span>
-                <div>
+                <div class="min-w-0">
                     <h2 id="blueprint-information-heading" class="font-headline-sm text-headline-sm text-on-surface">Thông tin ma trận</h2>
-                    <p class="mt-1 font-body-sm text-on-surface-variant">Thiết lập tên hiển thị, mã nhận diện và thứ tự của ma trận đề thi.</p>
+                    <p class="mt-0.5 font-body-sm text-on-surface-variant">Tên, mã, trạng thái và mô tả phạm vi của ma trận đề thi.</p>
                 </div>
             </div>
 
-            <div class="space-y-5">
-            <div>
-                <label class="mb-1.5 block font-label-sm font-medium text-on-surface-variant" for="blueprint-name">Tên ma trận <span class="text-error">*</span></label>
-                <input id="blueprint-name" name="name" value="{{ old('name', $blueprint->name) }}" required
-                    class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-body-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-70" @disabled(! $canUpdate)>
-                @error('name') <p class="mt-1.5 font-label-sm text-error">{{ $message }}</p> @enderror
-            </div>
-            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <div>
-                    <label class="mb-1.5 block font-label-sm font-medium text-on-surface-variant" for="blueprint-slug">Đường dẫn định danh</label>
-                    <input id="blueprint-slug" name="slug" value="{{ old('slug', $blueprint->slug) }}" placeholder="vi-du-ma-tran"
-                        class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-mono text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-70" @disabled(! $canUpdate)>
-                    @error('slug') <p class="mt-1.5 font-label-sm text-error">{{ $message }}</p> @enderror
+            <div class="grid grid-cols-1 divide-y divide-outline-variant lg:grid-cols-[minmax(20rem,24rem)_minmax(0,1fr)] lg:divide-x lg:divide-y-0">
+                <div class="space-y-5 p-5">
+                    <div>
+                        <label class="mb-1.5 block font-label-sm font-medium text-on-surface-variant" for="blueprint-name">Tên ma trận <span class="text-error">*</span></label>
+                        <input id="blueprint-name" name="name" value="{{ old('name', $blueprint->name) }}" required
+                            class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-body-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-70" @disabled(! $canUpdate)>
+                        @error('name') <p class="mt-1.5 font-label-sm text-error">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <label class="mb-1.5 block font-label-sm font-medium text-on-surface-variant" for="blueprint-code">Mã</label>
+                        <input id="blueprint-code" name="code" value="{{ old('code', $blueprint->code) }}" placeholder="medical_practice_licensing_exam"
+                            class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-mono text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-70" @disabled(! $canUpdate)>
+                        @error('code') <p class="mt-1.5 font-label-sm text-error">{{ $message }}</p> @enderror
+                    </div>
+                    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                        <div>
+                            <label class="mb-1.5 block font-label-sm font-medium text-on-surface-variant" for="blueprint-status">Trạng thái</label>
+                            <select id="blueprint-status" name="status" class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-body-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-70" @disabled(! $canUpdate)>
+                                @foreach ($statuses as $status)
+                                    <option value="{{ $status->value }}" @selected(old('status', $blueprint->status?->value) === $status->value)>{{ $status->value === 'active' ? 'Đang hoạt động' : 'Ngừng sử dụng' }}</option>
+                                @endforeach
+                            </select>
+                            @error('status') <p class="mt-1.5 font-label-sm text-error">{{ $message }}</p> @enderror
+                        </div>
+                        <div>
+                            <label class="mb-1.5 block font-label-sm font-medium text-on-surface-variant" for="blueprint-sort-order">Thứ tự</label>
+                            <input id="blueprint-sort-order" type="number" name="sort_order" min="0" value="{{ old('sort_order', $blueprint->sort_order ?? 0) }}"
+                                class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-body-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-70" @disabled(! $canUpdate)>
+                            @error('sort_order') <p class="mt-1.5 font-label-sm text-error">{{ $message }}</p> @enderror
+                        </div>
+                    </div>
                 </div>
-                <div>
-                    <label class="mb-1.5 block font-label-sm font-medium text-on-surface-variant" for="blueprint-code">Mã nội bộ</label>
-                    <input id="blueprint-code" name="code" value="{{ old('code', $blueprint->code) }}" placeholder="medical_practice_licensing_exam"
-                        class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-mono text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-70" @disabled(! $canUpdate)>
-                    @error('code') <p class="mt-1.5 font-label-sm text-error">{{ $message }}</p> @enderror
-                </div>
-            </div>
-            <div>
-                <label class="mb-1.5 block font-label-sm font-medium text-on-surface-variant" for="blueprint-description">Mô tả</label>
-                <textarea id="blueprint-description" name="description" rows="4" placeholder="Mô tả phạm vi nội dung, số phần và chủ đề của ma trận…"
-                    class="block w-full resize-y rounded-lg border border-outline-variant bg-surface-container-low px-3 py-2.5 font-body-sm text-on-surface outline-none transition placeholder:text-on-surface-variant focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-70" @disabled(! $canUpdate)>{{ old('description', $blueprint->description) }}</textarea>
-                @error('description') <p class="mt-1.5 font-label-sm text-error">{{ $message }}</p> @enderror
-            </div>
-            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <div>
-                    <label class="mb-1.5 block font-label-sm font-medium text-on-surface-variant" for="blueprint-status">Trạng thái</label>
-                    <select id="blueprint-status" name="status" class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-body-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-70" @disabled(! $canUpdate)>
-                        @foreach ($statuses as $status)
-                            <option value="{{ $status->value }}" @selected(old('status', $blueprint->status?->value) === $status->value)>{{ $status->value === 'active' ? 'Đang hoạt động' : 'Ngừng sử dụng' }}</option>
-                        @endforeach
-                    </select>
-                    @error('status') <p class="mt-1.5 font-label-sm text-error">{{ $message }}</p> @enderror
-                </div>
-                <div>
-                    <label class="mb-1.5 block font-label-sm font-medium text-on-surface-variant" for="blueprint-sort-order">Thứ tự hiển thị</label>
-                    <input id="blueprint-sort-order" type="number" name="sort_order" min="0" value="{{ old('sort_order', $blueprint->sort_order ?? 0) }}"
-                        class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-body-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-70" @disabled(! $canUpdate)>
-                    @error('sort_order') <p class="mt-1.5 font-label-sm text-error">{{ $message }}</p> @enderror
+
+                <div class="flex min-h-[20rem] flex-col p-5">
+                    <label class="mb-1.5 block font-label-sm font-medium text-on-surface-variant" for="blueprint-description">Mô tả</label>
+                    <textarea id="blueprint-description" name="description" rows="12" placeholder="Mô tả phạm vi, số phần và chủ đề của ma trận…"
+                        class="min-h-[16rem] flex-1 resize-y rounded-lg border border-outline-variant bg-surface-container-low px-3 py-2.5 font-body-sm leading-6 text-on-surface outline-none transition placeholder:text-on-surface-variant focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-70 lg:min-h-0" @disabled(! $canUpdate)>{{ old('description', $blueprint->description) }}</textarea>
+                    @error('description') <p class="mt-1.5 font-label-sm text-error">{{ $message }}</p> @enderror
                 </div>
             </div>
+
             @if ($canUpdate)
-                <div class="flex items-center justify-end border-t border-outline-variant pt-5">
-                    <button type="submit" class="inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-5 font-label-md font-medium text-on-primary transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary/30">
+                <div class="flex items-center justify-end border-t border-outline-variant bg-surface-container-low/40 px-5 py-3.5">
+                    <button type="submit" class="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 font-label-md font-medium text-on-primary transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary/30">
                         <span class="material-symbols-outlined text-[18px]" aria-hidden="true">save</span>
                         Lưu thay đổi
                     </button>
                 </div>
             @endif
-            </div>
         </section>
     </form>
 
