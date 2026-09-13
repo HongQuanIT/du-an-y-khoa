@@ -257,7 +257,7 @@
             {{-- ── LEFT: Main content ── --}}
             <div @class([
                 'space-y-5',
-                'pointer-events-none select-none opacity-70' => ! $canEditContent,
+                'pointer-events-none opacity-70' => ! $canEditContent,
             ])>
 
                 {{-- Đề bài --}}
@@ -315,53 +315,16 @@
                                 {{-- Mini rich-editor for option explanation (supports images) --}}
                                 <div class="admin-rich-editor mini mt-2 overflow-hidden rounded-lg border border-outline-variant bg-surface"
                                      x-init="
-                                         (function(currentOpt) {
-                                             const container = $el.querySelector('[data-mini-editor]');
-                                             const uploadUrl = '{{ route('admin.editor.images') }}';
-                                             const q = new window.Quill(container, {
-                                                 theme: 'snow',
-                                                 modules: { toolbar: [['bold', 'italic'], ['link', 'image'], ['clean']] },
-                                                 placeholder: 'Giải thích cho lựa chọn này (không bắt buộc)...'
-                                             });
-                                             if (typeof window.pinQuillToolbarButtons === 'function') {
-                                                 window.pinQuillToolbarButtons(q);
-                                             }
-                                             if (currentOpt.explanation) {
-                                                 const paste = q.clipboard.convert({ html: currentOpt.explanation, text: '' });
-                                                 q.setContents(paste, 'silent');
-                                             }
-                                             q.on('text-change', function() {
-                                                 const html = q.root.innerHTML.trim();
-                                                 currentOpt.explanation = (html === '<p><br></p>') ? '' : html;
-                                             });
-                                             // Vietnamese IME fix
-                                             const ed = q.root;
-                                             ed.addEventListener('compositionstart', function() { ed.classList.remove('ql-blank'); });
-                                             ed.addEventListener('compositionend', function() { ed.classList.toggle('ql-blank', q.getLength() <= 1); });
-                                             // Image upload handler
-                                             q.getModule('toolbar').addHandler('image', function() {
-                                                 const inp = document.createElement('input');
-                                                 inp.type = 'file';
-                                                 inp.accept = 'image/png,image/jpeg,image/gif,image/webp';
-                                                 inp.click();
-                                                 inp.onchange = async function() {
-                                                     const file = inp.files?.[0];
-                                                     if (!file) return;
-                                                     const body = new FormData();
-                                                     body.append('image', file);
-                                                     const csrf = document.querySelector('meta[name=csrf-token]')?.content || '';
-                                                     try {
-                                                         const res = await fetch(uploadUrl, { method: 'POST', headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' }, body: body, credentials: 'same-origin' });
-                                                         const data = await res.json();
-                                                         const range = q.getSelection(true) || { index: q.getLength(), length: 0 };
-                                                         q.insertEmbed(range.index, 'image', data.url, 'user');
-                                                         q.setSelection(range.index + 1, 0, 'silent');
-                                                     } catch(e) { alert('Không tải được ảnh. Vui lòng thử lại.'); }
-                                                 };
-                                             });
-                                         })(opt);
+                                         window.mountAdminEditor($el, {
+                                             html: opt.explanation,
+                                             placeholder: 'Giải thích cho lựa chọn này (không bắt buộc)...',
+                                             uploadUrl: @js(route('admin.editor.images')),
+                                             mini: true,
+                                             onChange(html) { opt.explanation = html; },
+                                         });
                                      ">
-                                    <div data-mini-editor class="min-h-[64px] font-body-sm text-on-surface"></div>
+                                    <div data-editor-toolbar class="admin-rich-toolbar"></div>
+                                    <div data-editor-surface class="admin-rich-surface min-h-[64px] font-body-sm text-on-surface"></div>
                                 </div>
                                 {{-- Hidden field carries the HTML value on submit --}}
                                 <input type="hidden" :name="'options['+index+'][explanation]'" x-model="opt.explanation">
@@ -396,54 +359,19 @@
                                         </div>
                                         <input type="hidden" :name="'hints['+index+'][id]'" :value="hint.id || ''">
 
-                                        {{-- Mini rich-editor for hint content (supports formatting & images, matching option explanation) --}}
+                                        {{-- Mini rich-editor for hint content (supports formatting & images) --}}
                                         <div class="admin-rich-editor mini overflow-hidden rounded-lg border border-outline-variant bg-surface"
                                              x-init="
-                                                 (function(currentHint) {
-                                                     const container = $el.querySelector('[data-mini-hint-editor]');
-                                                     const uploadUrl = '{{ route('admin.editor.images') }}';
-                                                     const q = new window.Quill(container, {
-                                                         theme: 'snow',
-                                                         modules: { toolbar: [['bold', 'italic'], ['link', 'image'], ['clean']] },
-                                                         placeholder: 'Nội dung hint ' + (index + 1) + '...'
-                                                     });
-                                                     if (typeof window.pinQuillToolbarButtons === 'function') {
-                                                         window.pinQuillToolbarButtons(q);
-                                                     }
-                                                     if (currentHint.content) {
-                                                         const paste = q.clipboard.convert({ html: currentHint.content, text: '' });
-                                                         q.setContents(paste, 'silent');
-                                                     }
-                                                     q.on('text-change', function() {
-                                                         const html = q.root.innerHTML.trim();
-                                                         currentHint.content = (html === '<p><br></p>') ? '' : html;
-                                                     });
-                                                     const ed = q.root;
-                                                     ed.addEventListener('compositionstart', function() { ed.classList.remove('ql-blank'); });
-                                                     ed.addEventListener('compositionend', function() { ed.classList.toggle('ql-blank', q.getLength() <= 1); });
-                                                     q.getModule('toolbar').addHandler('image', function() {
-                                                         const inp = document.createElement('input');
-                                                         inp.type = 'file';
-                                                         inp.accept = 'image/png,image/jpeg,image/gif,image/webp';
-                                                         inp.click();
-                                                         inp.onchange = async function() {
-                                                             const file = inp.files?.[0];
-                                                             if (!file) return;
-                                                             const body = new FormData();
-                                                             body.append('image', file);
-                                                             const csrf = document.querySelector('meta[name=csrf-token]')?.content || '';
-                                                             try {
-                                                                 const res = await fetch(uploadUrl, { method: 'POST', headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' }, body: body, credentials: 'same-origin' });
-                                                                 const data = await res.json();
-                                                                 const range = q.getSelection(true) || { index: q.getLength(), length: 0 };
-                                                                 q.insertEmbed(range.index, 'image', data.url, 'user');
-                                                                 q.setSelection(range.index + 1, 0, 'silent');
-                                                             } catch(e) { alert('Không tải được ảnh. Vui lòng thử lại.'); }
-                                                         };
-                                                     });
-                                                 })(hint);
+                                                 window.mountAdminEditor($el, {
+                                                     html: hint.content,
+                                                     placeholder: 'Nội dung hint ' + (index + 1) + '...',
+                                                     uploadUrl: @js(route('admin.editor.images')),
+                                                     mini: true,
+                                                     onChange(html) { hint.content = html; },
+                                                 });
                                              ">
-                                            <div data-mini-hint-editor class="min-h-[64px] font-body-sm text-on-surface"></div>
+                                            <div data-editor-toolbar class="admin-rich-toolbar"></div>
+                                            <div data-editor-surface class="admin-rich-surface min-h-[64px] font-body-sm text-on-surface"></div>
                                         </div>
                                         <input type="hidden" :name="'hints['+index+'][content]'" :value="hint.content">
                                     </div>
@@ -572,7 +500,7 @@
 
                 <div @class([
                     'space-y-4',
-                    'pointer-events-none select-none opacity-70' => ! $canEditContent,
+                    'pointer-events-none opacity-70' => ! $canEditContent,
                 ])>
                 <div class="rounded-2xl border border-outline-variant bg-surface p-4"
                     x-data="questionImageUploader(@js($stemImagePath), @js($stemImageUrl), @js(route('admin.editor.images')), @js(csrf_token()))">

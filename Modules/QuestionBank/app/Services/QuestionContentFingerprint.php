@@ -23,6 +23,34 @@ final class QuestionContentFingerprint
     }
 
     /**
+     * @param  list<array{content?: string, is_correct?: bool}>  $options
+     */
+    public function fingerprintFromParts(string $stem, array $options): string
+    {
+        return hash('sha256', $this->canonicalFromParts($stem, $options));
+    }
+
+    /**
+     * @param  list<array{content?: string, is_correct?: bool}>  $options
+     */
+    public function canonicalFromParts(string $stem, array $options): string
+    {
+        $optionLines = collect($options)
+            ->map(function (array $option): string {
+                return $this->normalize((string) ($option['content'] ?? '')).'|'
+                    .(($option['is_correct'] ?? false) ? '1' : '0');
+            })
+            ->sort()
+            ->values()
+            ->all();
+
+        return implode("\n", [
+            'stem:'.$this->normalize($stem),
+            'options:'.implode(';', $optionLines),
+        ]);
+    }
+
+    /**
      * @param  Collection<int, object{content?: string, is_correct?: bool}|array{content?: string, is_correct?: bool}>|null  $options
      */
     public function canonicalPayload(Question $question, ?Collection $options = null): string

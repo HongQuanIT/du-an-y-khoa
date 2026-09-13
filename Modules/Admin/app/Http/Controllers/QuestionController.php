@@ -26,6 +26,7 @@ use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionFeedback;
 use Modules\QuestionBank\Models\QuestionImportBatch;
+use Modules\QuestionBank\Support\QuestionExportLimits;
 
 final class QuestionController extends Controller
 {
@@ -87,6 +88,8 @@ final class QuestionController extends Controller
             'canCreate' => $actor->can(Permission::QuestionCreate->value),
             'isReviewer' => QuestionAccess::isReviewer($actor),
             'creatorOptions' => $this->creatorFilterOptions($actor),
+            'exportLimit' => QuestionExportLimits::MAX_ROWS,
+            'exportBanner' => QuestionExportLimits::banner($questions->total()),
         ]);
     }
 

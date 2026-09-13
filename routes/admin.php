@@ -234,7 +234,7 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
 
         Route::middleware('permission:'.QuestionAccess::workspacePermissionMiddleware())->group(function (): void {
             Route::get('/questions', [QuestionController::class, 'index'])->name('questions.index');
-            Route::get('/questions/export', QuestionExportController::class)->name('questions.export');
+            Route::match(['get', 'post'], '/questions/export', QuestionExportController::class)->name('questions.export');
             Route::get('/question-feedback', [QuestionFeedbackController::class, 'index'])->name('question-feedback.index');
             Route::get('/questions/{question}', [QuestionController::class, 'edit']);
             Route::get('/questions/{question}/edit', [QuestionController::class, 'edit'])->name('questions.edit');

@@ -2,6 +2,33 @@
 
 ## 2026-09-13
 
+### Feat — Import/export câu hỏi: chọn dòng, giới hạn, mẫu slug, lỗi Excel, chống trùng
+- Danh sách: checkbox + thanh chọn; xuất đúng câu đã chọn (tối đa 2000). Không chọn = xuất theo bộ lọc.
+- Cảnh báo «Xuất 2000/N, thu hẹp lọc» trên list và sheet hướng dẫn Excel khi bị cắt.
+- Mẫu import lấy slug bài học thật; Excel có sheet `Bai_hoc` để copy.
+- File lỗi là Excel, hàng tô đỏ; không còn CSV lỗi.
+- Import dedup (§5.8): trùng 100% (trong tệp hoặc ngân hàng) bị loại; gần trùng ≥75% cảnh báo, vẫn import.
+
+### Feat — Export câu hỏi: giữ định dạng + độ rộng cột
+- CSV giữ HTML gốc (đậm/nghiêng/list/ảnh). Excel chuyển sang rich text, đọc lại thành HTML khi import.
+- Cột Excel canh theo nội dung (mã hẹp, đề bài/giải thích/đáp án rộng), wrap, khóa tiêu đề, autofilter, dropdown A–E / độ khó.
+- Export kèm sheet hướng dẫn; gợi ý lấy từ `key_info` nếu chưa có `question_hints`.
+
+### Fix — Editor câu hỏi: copy/paste và format
+- Thay Quill bằng `contenteditable` gốc: copy/paste/IME theo trình duyệt; toolbar Bold/Italic/list/link/ảnh không nuốt selection.
+- Content Editor sửa được đề/giải thích/gợi ý; ô soạn luôn `contenteditable` (không khóa pointer-events).
+
+### Feat — Ma trận đề: mã unique, slug tự sinh, form 2 cột
+- Unique theo `code` (không còn nhập slug); slug tự sinh từ tên, giữ nguyên khi đã có.
+- Form metadata 2 cột (trái: tên/mã/trạng thái/thứ tự; phải: mô tả); danh sách đổi nhãn «Code» → «Mã».
+
+### Fix — Material Symbols nhận `text-*` của Tailwind
+- Đưa `.material-symbols-outlined` vào `@layer base` để utility size override 24px mặc định.
+
+### Chore — Nhãn Super Admin và cột bài học
+- SuperAdmin hiển thị «Supper Admin» trên enum và trang vai trò.
+- Nới cột Môn học / Hệ cơ quan; copy panel thêm/sửa bài học gọn hơn.
+
 ### Feat — Danh mục kiến thức: hệ/môn độc lập + catalog admin
 - Hệ cơ quan và môn học không còn cha–con; bài học gắn 0 hoặc nhiều mỗi trục (`lesson_organ_system`, `lesson_subject`).
 - Bỏ cột `code`; import/lookup bài học chỉ theo đường dẫn định danh (slug).

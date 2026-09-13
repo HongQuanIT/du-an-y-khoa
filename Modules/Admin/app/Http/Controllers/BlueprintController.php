@@ -194,33 +194,57 @@ final class BlueprintController extends Controller
     /** @return array<string, mixed> */
     private function validatedBlueprint(Request $request, ?Blueprint $blueprint = null): array
     {
-        $uniqueSlug = Rule::unique('blueprints', 'slug');
+        $uniqueCode = Rule::unique('blueprints', 'code');
         if ($blueprint !== null) {
-            $uniqueSlug = $uniqueSlug->ignore($blueprint->id);
+            $uniqueCode = $uniqueCode->ignore($blueprint->id);
         }
+
+        $code = trim((string) $request->input('code', ''));
+        $request->merge(['code' => $code !== '' ? $code : null]);
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'slug' => ['nullable', 'string', 'max:191', $uniqueSlug],
-            'code' => ['nullable', 'string', 'max:100'],
+            'code' => ['nullable', 'string', 'max:100', $uniqueCode],
             'description' => ['nullable', 'string'],
             'status' => ['required', Rule::in(TaxonomyStatus::values())],
             'sort_order' => ['required', 'integer', 'min:0'],
         ]);
 
-        $slug = trim((string) ($data['slug'] ?? ''));
-        if ($slug === '') {
-            $slug = Str::slug($data['name']);
-        }
-
         return [
             'name' => $data['name'],
-            'slug' => $slug,
+            'slug' => $this->resolveBlueprintSlug($data['name'], $blueprint),
             'code' => $data['code'] ?? null,
             'description' => $data['description'] ?? null,
             'status' => $data['status'],
             'sort_order' => (int) $data['sort_order'],
         ];
+    }
+
+    private function resolveBlueprintSlug(string $name, ?Blueprint $blueprint): string
+    {
+        $existing = trim((string) ($blueprint?->slug ?? ''));
+        if ($existing !== '') {
+            return $existing;
+        }
+
+        return $this->uniqueBlueprintSlug(Str::slug($name) !== '' ? Str::slug($name) : 'blueprint', $blueprint);
+    }
+
+    private function uniqueBlueprintSlug(string $slug, ?Blueprint $blueprint): string
+    {
+        $base = $slug !== '' ? $slug : 'blueprint';
+        $candidate = $base;
+        $suffix = 1;
+
+        while (Blueprint::query()
+            ->where('slug', $candidate)
+            ->when($blueprint?->id, fn ($query, $id) => $query->where('id', '!=', $id))
+            ->exists()) {
+            $candidate = $base.'-'.$suffix;
+            $suffix++;
+        }
+
+        return $candidate;
     }
 
     private function uniqueSectionSlug(Blueprint $blueprint, string $slug): string

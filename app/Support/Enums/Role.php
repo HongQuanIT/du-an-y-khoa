@@ -29,7 +29,7 @@ enum Role: string
             self::Partner => 'Cộng tác viên',
             self::ContentEditor => 'Biên tập viên nội dung',
             self::Admin => 'Quản trị viên',
-            self::SuperAdmin => 'Quản trị viên cấp cao',
+            self::SuperAdmin => 'Supper Admin',
         };
     }
 
