@@ -75,6 +75,7 @@ final class BroadcastSystemNotificationAction
                 Role::Admin->value,
                 Role::SuperAdmin->value,
                 Role::ContentEditor->value,
+                Role::Reviewer->value,
             ])->pluck('id'),
             default => $query->pluck('id'),
         };

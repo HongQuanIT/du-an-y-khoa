@@ -76,7 +76,11 @@ final class QuestionFeedbackController extends Controller
 
     public function updateStatus(Request $request, QuestionFeedback $feedback): RedirectResponse
     {
-        $this->authorizePermission(Permission::QuestionUpdate);
+        abort_unless(
+            $this->actor()->can(Permission::QuestionUpdate->value)
+            || $this->actor()->can(Permission::QuestionPublish->value),
+            403,
+        );
 
         $validated = $request->validate([
             'status' => ['required', 'string', Rule::in(array_keys(QuestionFeedback::statusLabels()))],
@@ -101,11 +105,6 @@ final class QuestionFeedbackController extends Controller
         );
 
         return back()->with('status', 'Đã cập nhật trạng thái feedback.');
-    }
-
-    private function authorizePermission(Permission $permission): void
-    {
-        abort_unless($this->actor()->can($permission->value), 403);
     }
 
     private function actor(): User

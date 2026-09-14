@@ -16,7 +16,7 @@
 | **Learner** | `/login` | `student` | staff, instructor, partner |
 | **Instructor (Teach)** | `/teach/login` | `instructor` | student, staff CMS, partner |
 | **Partner (CTV)** | `/partner/login` | `partner` | student, instructor, staff |
-| **Admin** | `/admin/login` | `content_editor`, `admin`, `super_admin` | student, instructor, partner |
+| **Admin** | `/admin/login` | `content_editor`, `reviewer`, `admin`, `super_admin` | student, instructor, partner |
 
 - Giảng viên **không** dùng layout học viên và **không** vào `/admin` (CMS/users/RBAC).
 - Admin/Super Admin **không** vận hành lớp hàng ngày trên `/teach`; chỉ **giám sát** (`classroom.oversee`) trên `/admin`.
@@ -33,6 +33,7 @@
 | **Instructor** | `instructor` | Portal `/teach`; host lớp chữa đề vận hành (feedback QBank / exam); **không** phụ thuộc Premium |
 | **Partner (CTV)** | `partner` | Portal `/partner`; mã mời + theo dõi referral + hoa hồng (Module 46) |
 | Content Editor | `content_editor` | CMS nội dung (`/admin`) |
+| Reviewer | `reviewer` | Gắn cờ QBank trên `/admin` (sau khi GV duyệt chuyên môn) |
 | Admin | `admin` | Quản trị + oversight lớp |
 | Super Admin | `super_admin` | Toàn quyền + oversight |
 | 🔵 Organization Admin *(hoãn)* | `org_admin` | Phase 2 — phạm vi tổ chức |
@@ -60,8 +61,9 @@ Chú thích: ✅ full · 🔓 giới hạn/preview · ➖ không có · 🔒 c�
 | 🔵 Xem tiến độ học viên org *(Phase 2)* | ➖ | ➖ | ➖ | ✅ | ➖ | ✅ | ✅ | ✅ |
 | CRUD nội dung câu hỏi (working copy) | ➖ | ➖ | ➖ | ➖ | ✅ | ➖ | ✅ | ✅ |
 | Gửi duyệt câu hỏi (submit lớp 1) | ➖ | ➖ | ➖ | ➖ | ✅ | ➖ | ✅ | ✅ |
-| Duyệt chuyên môn câu hỏi (approve/reject lớp 1) | ➖ | ➖ | ➖ | ✅ | ➖ | ➖ | 👁 | 👁 |
-| Publish câu hỏi lên Qbank (lớp 2, +version) | ➖ | ➖ | ➖ | ➖ | ➖ | ➖ | ➖ | ✅ |
+| Duyệt chuyên môn câu hỏi (approve/reject lớp 1, GV được gán) | ➖ | ➖ | ➖ | ✅ | ➖ | ➖ | 👁 | 👁 |
+| Gắn cờ reviewer (xanh/vàng/đỏ) — chỉ role `reviewer` | ➖ | ➖ | ➖ | ➖ | ➖ | ➖ | 👁 | 👁 |
+| Publish câu hỏi lên Qbank (lớp 2, +version) | ➖ | ➖ | ➖ | ➖ | ➖ | ➖ | ✅ | ✅ |
 | Duyệt/publish nội dung thư viện (khác Qbank) | ➖ | ➖ | ➖ | ➖ | 🔓 | ➖ | ✅ | ✅ |
 | 🔵 Quản lý thành viên tổ chức *(Phase 2)* | ➖ | ➖ | ➖ | ➖ | ➖ | ✅ | ✅ | ✅ |
 | 🔵 Quản lý license/ghế *(Phase 2)* | ➖ | ➖ | ➖ | ➖ | ➖ | ✅ | ✅ | ✅ |
@@ -76,7 +78,7 @@ Chú thích: ✅ full · 🔓 giới hạn/preview · ➖ không có · 🔒 c�
 Định dạng: `{resource}.{action}` — ví dụ:
 
 ```
-question.view, question.create, question.update, question.delete, question.submit, question.review, question.publish, question.retire
+question.view, question.create, question.update, question.delete, question.submit, question.review, question.flag, question.publish, question.retire
 session.start, session.submit, session.review
 library.view, library.edit, library.publish
 user.view, user.manage, user.impersonate
@@ -97,7 +99,7 @@ Catalog `/admin/permissions` và ma trận role nhóm theo **4 portal** (không 
 |--------|-------|------------------|
 | Học viên | `student` | `session.*`, `exam.take`, `classroom.join`, `live.join`, `question.view`, `library.view`, … |
 | Giảng viên | `instructor` | `classroom.create/manage/moderate`, `live.start`, `question.review` (hàng đợi `/teach/questions/reviews`), … |
-| Admin | `content_editor`, `admin`, `super_admin` | CMS, user/RBAC, oversight, billing, `admin.partners.*`, `notification.broadcast`, `support.manage`, … — **`question.publish` / `question.retire`: `admin` + `super_admin`**; **`question.submit` chỉ `content_editor`** |
+| Admin | `content_editor`, `reviewer`, `admin`, `super_admin` | CMS, user/RBAC, oversight, billing, `admin.partners.*`, … — **`question.publish` / `question.retire`: `admin` + `super_admin`**; **`question.submit` chỉ `content_editor`**; **`question.flag` chỉ `reviewer`** |
 | Cộng tác viên | `partner` | `partner.portal`, `partner.codes.manage`, `partner.referrals.view`, `partner.commissions.view` |
 
 - Mỗi permission có **một portal chính** (catalog). Ability dùng chung vẫn hiện badge “cũng dùng bởi …” theo ma trận role.

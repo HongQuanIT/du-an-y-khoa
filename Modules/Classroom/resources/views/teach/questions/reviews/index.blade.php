@@ -6,7 +6,7 @@
             <p class="text-xs font-semibold uppercase tracking-wide text-primary">Kiểm duyệt nội dung</p>
             <h2 class="mt-1 font-headline-sm text-headline-sm font-bold text-on-surface">Danh sách duyệt câu hỏi</h2>
             <p class="mt-2 text-sm leading-6 text-on-surface-variant">
-                Cần 2 giảng viên chấp nhận. Một phiếu từ chối là fail ngay. Admin chỉ xuất bản, không duyệt chuyên môn.
+                Chỉ câu được gán cho bạn. Duyệt chuyên môn hoặc từ chối (lý do bắt buộc).
             </p>
         </div>
     </header>

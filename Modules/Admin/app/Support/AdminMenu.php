@@ -79,11 +79,24 @@ final class AdminMenu
                 'match' => 'admin.questions.*',
             ],
             [
+                'label' => 'Review câu hỏi',
+                'icon' => 'flag',
+                'route' => 'admin.questions.flags.index',
+                'permission' => Permission::QuestionFlag->value,
+                'match' => 'admin.questions.flags.*',
+            ],
+            [
+                'label' => 'Chờ xuất bản',
+                'icon' => 'publish',
+                'route' => 'admin.questions.pending-publish',
+                'permission' => Permission::QuestionPublish->value,
+                'match' => 'admin.questions.pending-publish',
+            ],
+            [
                 'label' => 'Phản hồi câu hỏi',
                 'icon' => 'rate_review',
                 'route' => 'admin.question-feedback.index',
                 'permission' => [
-                    Permission::QuestionView->value,
                     Permission::QuestionUpdate->value,
                     Permission::QuestionPublish->value,
                 ],
@@ -258,8 +271,11 @@ final class AdminMenu
                 'external' => (bool) ($item['external'] ?? false),
                 'coming_soon' => ! $hrefReady && $item['route'] !== 'admin.dashboard',
                 'badge' => match (true) {
-                    $item['route'] === 'admin.questions.index' && QuestionAccess::isReviewer($user) => QuestionReviewRequest::query()
-                        ->where('status', QuestionReviewStatus::Pending->value)
+                    $item['route'] === 'admin.questions.flags.index' => \Modules\QuestionBank\Models\Question::query()
+                        ->where('status', \Modules\QuestionBank\Enums\QuestionStatus::InFlagReview->value)
+                        ->count(),
+                    $item['route'] === 'admin.questions.pending-publish' => \Modules\QuestionBank\Models\Question::query()
+                        ->where('status', \Modules\QuestionBank\Enums\QuestionStatus::PendingPublish->value)
                         ->count(),
                     $item['route'] === 'admin.contacts.index' => ContactInquiry::newCount(),
                     default => 0,

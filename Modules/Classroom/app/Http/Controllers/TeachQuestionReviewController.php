@@ -45,9 +45,8 @@ final class TeachQuestionReviewController extends Controller
         $query = Question::query()
             ->with([
                 'creator:id,name,email',
+                'assignedInstructor:id,name',
                 'instructor:id,name',
-                'instructorSlot1:id,name',
-                'instructorSlot2:id,name',
                 'publisher:id,name',
                 'lessons:id,name',
                 'pendingReviewRequest.requester:id,name',
@@ -82,7 +81,7 @@ final class TeachQuestionReviewController extends Controller
             'questions' => $questions,
             'stats' => $stats,
             'tab' => $tab,
-            'hidePeerVotes' => $tab === self::TAB_PENDING,
+            'hidePeerVotes' => false,
         ]);
     }
 
@@ -95,22 +94,21 @@ final class TeachQuestionReviewController extends Controller
             'options' => fn ($query) => $query->orderBy('order'),
             'lessons:id,name',
             'creator:id,name,email',
+            'assignedInstructor:id,name',
             'instructor:id,name',
-            'instructorSlot1:id,name',
-            'instructorSlot2:id,name',
             'publisher:id,name',
             'pendingReviewRequest.requester:id,name',
         ]);
 
         $actor = $this->actor();
         $canDecide = $question->status === QuestionStatus::InReview
-            && (int) $question->created_by !== (int) $actor->getKey()
+            && (int) $question->assigned_instructor_id === (int) $actor->getKey()
             && ! $this->reviewCycle->actorHasDecided($question, $actor);
 
         return view('classroom::teach.questions.reviews.show', [
             'question' => $question,
             'canDecide' => $canDecide,
-            'hidePeerVotes' => $canDecide,
+            'hidePeerVotes' => false,
             'approvalCount' => $this->reviewCycle->approvedCountFromSlots($question),
             'comparison' => $this->reviewComparison->compare($question),
         ]);
@@ -127,15 +125,11 @@ final class TeachQuestionReviewController extends Controller
             'review_note' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        $question = $action->approve($this->actor(), $question, $data['review_note'] ?? null);
-
-        $enough = $question->status === QuestionStatus::PendingPublish;
+        $action->approve($this->actor(), $question, $data['review_note'] ?? null);
 
         return redirect()
             ->route('teach.questions.reviews.index', ['tab' => self::TAB_APPROVED])
-            ->with('status', $enough
-                ? 'Đã đủ 2 giảng viên chấp nhận. Câu chuyển sang chờ Admin xuất bản.'
-                : 'Đã ghi nhận phiếu của bạn (1/2). Cần thêm 1 giảng viên khác.');
+            ->with('status', 'Đã duyệt chuyên môn.');
     }
 
     public function reject(
@@ -155,7 +149,7 @@ final class TeachQuestionReviewController extends Controller
 
         return redirect()
             ->route('teach.questions.reviews.index', ['tab' => self::TAB_REJECTED])
-            ->with('status', 'Đã từ chối câu hỏi. Một phiếu từ chối là đủ để trả về Content Creator.');
+            ->with('status', 'Đã từ chối câu hỏi. Câu trả về Content Creator.');
     }
 
     /**
@@ -168,22 +162,7 @@ final class TeachQuestionReviewController extends Controller
 
         return $query
             ->where('status', QuestionStatus::InReview->value)
-            ->where(function ($builder) use ($actorId): void {
-                $builder
-                    ->whereNull('created_by')
-                    ->orWhere('created_by', '!=', $actorId);
-            })
-            ->where(function ($builder) use ($actorId): void {
-                $builder
-                    ->where(function ($inner) use ($actorId): void {
-                        $inner->whereNull('instructor_1_id')
-                            ->orWhere('instructor_1_id', '!=', $actorId);
-                    })
-                    ->where(function ($inner) use ($actorId): void {
-                        $inner->whereNull('instructor_2_id')
-                            ->orWhere('instructor_2_id', '!=', $actorId);
-                    });
-            });
+            ->where('assigned_instructor_id', $actorId);
     }
 
     /**
@@ -197,19 +176,16 @@ final class TeachQuestionReviewController extends Controller
         return $query->where(function ($builder) use ($actorId): void {
             $builder
                 ->where(function ($inner) use ($actorId): void {
+                    $inner->where('assigned_instructor_id', $actorId)
+                        ->where('instructor_decision', InstructorReviewDecision::Approved->value);
+                })
+                ->orWhere(function ($inner) use ($actorId): void {
                     $inner->where('instructor_1_id', $actorId)
                         ->where('instructor_1_decision', InstructorReviewDecision::Approved->value);
                 })
                 ->orWhere(function ($inner) use ($actorId): void {
                     $inner->where('instructor_2_id', $actorId)
                         ->where('instructor_2_decision', InstructorReviewDecision::Approved->value);
-                })
-                ->orWhere(function ($inner) use ($actorId): void {
-                    $inner->where('instructor_id', $actorId)
-                        ->whereIn('status', [
-                            QuestionStatus::PendingPublish->value,
-                            QuestionStatus::Published->value,
-                        ]);
                 });
         });
     }
@@ -227,7 +203,8 @@ final class TeachQuestionReviewController extends Controller
             ->where('rejected_by_role', Role::Instructor->value)
             ->where(function ($builder) use ($actorId): void {
                 $builder
-                    ->where('instructor_id', $actorId)
+                    ->where('assigned_instructor_id', $actorId)
+                    ->orWhere('instructor_id', $actorId)
                     ->orWhere(function ($inner) use ($actorId): void {
                         $inner->where('instructor_1_id', $actorId)
                             ->where('instructor_1_decision', InstructorReviewDecision::Rejected->value);
@@ -241,21 +218,14 @@ final class TeachQuestionReviewController extends Controller
 
     private function canViewQuestion(Question $question): bool
     {
-        if ($question->status === QuestionStatus::InReview) {
+        $actor = $this->actor();
+        $actorId = (int) $actor->getKey();
+
+        if ((int) $question->assigned_instructor_id === $actorId) {
             return true;
         }
 
-        $actor = $this->actor();
-
-        return $this->reviewCycle->actorHasDecided($question, $actor)
-            || (
-                (int) $question->instructor_id === (int) $actor->getKey()
-                && in_array($question->status, [
-                    QuestionStatus::PendingPublish,
-                    QuestionStatus::Published,
-                    QuestionStatus::Rejected,
-                ], true)
-            );
+        return $this->reviewCycle->actorHasDecided($question, $actor);
     }
 
     private function authorizeReview(): void

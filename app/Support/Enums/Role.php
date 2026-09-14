@@ -18,6 +18,7 @@ enum Role: string
     case Instructor = 'instructor';
     case Partner = 'partner';
     case ContentEditor = 'content_editor';
+    case Reviewer = 'reviewer';
     case Admin = 'admin';
     case SuperAdmin = 'super_admin';
 
@@ -28,6 +29,7 @@ enum Role: string
             self::Instructor => 'Giảng viên',
             self::Partner => 'Cộng tác viên',
             self::ContentEditor => 'Biên tập viên nội dung',
+            self::Reviewer => 'Reviewer',
             self::Admin => 'Quản trị viên',
             self::SuperAdmin => 'Supper Admin',
         };
@@ -39,7 +41,7 @@ enum Role: string
             self::Student => PortalGroup::Learner,
             self::Instructor => PortalGroup::Instructor,
             self::Partner => PortalGroup::Partner,
-            self::ContentEditor, self::Admin, self::SuperAdmin => PortalGroup::Admin,
+            self::ContentEditor, self::Reviewer, self::Admin, self::SuperAdmin => PortalGroup::Admin,
         };
     }
 
@@ -49,7 +51,7 @@ enum Role: string
             self::Student => 1,
             self::Instructor => 2,
             self::Partner => 2,
-            self::ContentEditor => 3,
+            self::ContentEditor, self::Reviewer => 3,
             self::Admin => 4,
             self::SuperAdmin => 5,
         };
@@ -80,7 +82,7 @@ enum Role: string
         }
 
         if ($actor->hasRole(self::Admin->value)) {
-            return [self::Student, self::Instructor, self::Partner, self::ContentEditor];
+            return [self::Student, self::Instructor, self::Partner, self::ContentEditor, self::Reviewer];
         }
 
         return [];

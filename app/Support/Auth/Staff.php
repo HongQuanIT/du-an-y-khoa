@@ -22,6 +22,7 @@ final class Staff
             Role::Admin->value,
             Role::SuperAdmin->value,
             Role::ContentEditor->value,
+            Role::Reviewer->value,
         ];
     }
 

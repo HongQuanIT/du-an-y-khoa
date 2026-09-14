@@ -1,5 +1,38 @@
 # Changelog
 
+## 2026-09-14
+
+### Fix — Admin: nhãn bộ lọc danh sách câu hỏi
+- «Vòng đời» → «Trạng thái»; «Chờ giảng viên» / «Chờ reviewer».
+- Placeholder đa chọn thống nhất «Tất cả».
+
+### Feat — Admin/editor: so sánh working copy với bản đang xuất bản
+- `/admin/questions/{id}/compare` dùng cùng layout hai cột với màn duyệt giảng viên (diff đỏ/vàng/xanh).
+- Lối vào từ form edit khi đã có `published_version`; nhãn phải là «Bản đang chỉnh sửa» hoặc «Bản cần duyệt» tùy trạng thái.
+
+### Fix — Teach: màn duyệt GV giữ format HTML, bỏ giải thích chung
+- `/teach/questions/reviews/{id}`: nhãn «Câu hỏi»; stem / kiến thức render HTML (không strip). Ý chính mới chỉ tô xanh, không chữ «Thêm»; mục trống ẩn (không «Chưa nhập»).
+- Gỡ «Giải thích chung» khỏi so sánh — field form đã bỏ, giải thích nằm trên từng đáp án. Cột `questions.explanation` vẫn là bản sao đáp án đúng cho export/search.
+
+### Fix — Admin: hiện ghi chú reviewer và lý do GV từ chối trên form câu hỏi
+- Trang `/admin/questions/{id}/edit` có panel «Phản hồi duyệt»: ghi chú 2 reviewer (cờ xanh/vàng/đỏ) và lý do/ghi chú giảng viên.
+- Admin chờ xuất bản đọc được góp ý trước khi publish; biên tập viên thấy lý do từ chối của GV. Câu đã xuất bản / private ẩn panel này.
+
+### Fix — Reviewer: trang gắn cờ xem câu như học viên
+- `/admin/questions/flags/{id}` hiện stem, gợi ý (highlight + lần lượt), kiến thức, ảnh, giải thích từng đáp án — cùng layout phiên học.
+- Form gắn cờ tách cột phải; đáp án đúng mở sẵn để reviewer đối chiếu chất lượng.
+
+### Fix — Reviewer: hàng đợi «Review câu hỏi», ẩn thứ tự cờ, không mở `/admin/questions`
+- Menu/tiêu đề `/admin/questions/flags` đổi thành «Review câu hỏi»; cột «Câu hỏi», «Bài học», «Độ khó». Bỏ cột «Cờ» vì lộ thứ tự/số lượng cờ.
+- Không tiết lộ reviewer là người gắn cờ thứ mấy (ẩn cờ peer, flash generic).
+- `question.flag` không còn mở danh sách/chi tiết `/admin/questions` — cần `question.view` (hoặc create/update/publish). Role reviewer chỉ còn `question.flag`.
+
+### Feat — QBank: duyệt 3 lớp (gán GV → 2 reviewer gắn cờ → xuất bản)
+- Editor chọn đúng giảng viên theo môn học (`instructor_subject`); `/teach` chỉ hiện câu gán cho GV đó.
+- Role mới `reviewer` trên `/admin`: hàng đợi gắn cờ xanh/vàng/đỏ (ghi chú tùy chọn). Đủ 2 cờ → chờ xuất bản.
+- Admin/SA xuất bản khi GV đã duyệt + đủ 2 cờ; cờ đỏ chặn publish (chỉ trả về biên tập); cờ vàng cảnh báo.
+- Status mới `in_flag_review`; trang `/admin/questions/flags` và `/admin/questions/pending-publish`.
+
 ## 2026-09-13
 
 ### Feat — Import/export câu hỏi: chọn dòng, giới hạn, mẫu slug, lỗi Excel, chống trùng

@@ -42,6 +42,14 @@
     a.hover\:underline:hover {
         text-decoration-line: none;
     }
+
+    .question-diff-del {
+        @apply rounded-sm bg-rose-100 px-0.5 text-rose-900 line-through decoration-rose-400;
+    }
+
+    .question-diff-ins {
+        @apply rounded-sm bg-emerald-100 px-0.5 text-emerald-950 no-underline;
+    }
 }
 
 @theme {

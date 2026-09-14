@@ -26,6 +26,8 @@ use Modules\Auth\Models\Institution;
 use Modules\Auth\Models\Profession;
 use Modules\Admin\Support\AdminQuestionListQuery;
 use Modules\Partner\Models\Partner;
+use Modules\QuestionBank\Enums\TaxonomyStatus;
+use Modules\QuestionBank\Models\Subject;
 
 final class UserController extends Controller
 {
@@ -176,6 +178,7 @@ final class UserController extends Controller
             'learnerProfile.profession',
             'learnerProfile.educationStage',
             'socialAccounts',
+            'instructorSubjects',
         ]);
 
         $activities = UserActivitySession::query()
@@ -191,7 +194,35 @@ final class UserController extends Controller
             'activities' => $activities,
             'canManage' => $this->actor()->can(Permission::UserManage->value)
                 && $this->actor()->isNot($user),
+            'subjects' => Subject::query()
+                ->where('status', TaxonomyStatus::Active)
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(['id', 'name']),
+            'isInstructor' => $user->hasRole(Role::Instructor->value),
         ]);
+    }
+
+    public function updateInstructorSubjects(Request $request, User $user): RedirectResponse
+    {
+        $this->authorizePermission(Permission::UserManage);
+        abort_unless($user->hasRole(Role::Instructor->value), 404);
+
+        $data = $request->validate([
+            'subject_ids' => ['nullable', 'array'],
+            'subject_ids.*' => ['integer', 'exists:subjects,id'],
+        ]);
+
+        $user->instructorSubjects()->sync(
+            collect($data['subject_ids'] ?? [])
+                ->map(fn ($id): int => (int) $id)
+                ->filter(fn (int $id): bool => $id > 0)
+                ->unique()
+                ->values()
+                ->all(),
+        );
+
+        return back()->with('status', 'Đã cập nhật môn học chuyên môn của giảng viên.');
     }
 
     public function updateRole(Request $request, User $user, UpdateUserRoleAction $action): RedirectResponse

@@ -177,6 +177,21 @@ final class PortalLoginSeparationTest extends TestCase
             ->assertDontSee('Người dùng');
     }
 
+    public function test_reviewer_menu_shows_flag_queue_not_user_management(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole(Role::Reviewer->value);
+        $this->enrollTwoFactor($user);
+
+        $this->actingAs($user)
+            ->withSession([TwoFactorSession::KEY => now()->timestamp])
+            ->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee('Review câu hỏi')
+            ->assertDontSee('Người dùng')
+            ->assertDontSee('Phân loại');
+    }
+
     public function test_guest_visiting_teach_is_sent_to_teach_login(): void
     {
         $this->get('/teach')
