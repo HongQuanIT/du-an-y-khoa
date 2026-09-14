@@ -87,6 +87,10 @@ class RolePermissionSeeder extends Seeder
                 PermissionEnum::QuestionDelete->value,
             ],
 
+            RoleEnum::Reviewer => [
+                PermissionEnum::QuestionFlag->value,
+            ],
+
             RoleEnum::Instructor => [
                 PermissionEnum::QuestionView->value,
                 PermissionEnum::QuestionReview->value,
@@ -134,6 +138,8 @@ class RolePermissionSeeder extends Seeder
             PermissionEnum::QuestionSubmit->value,
             // Instructor layer-1 only.
             PermissionEnum::QuestionReview->value,
+            // Reviewer flag queue only.
+            PermissionEnum::QuestionFlag->value,
             // Learner session / feature surface.
             PermissionEnum::SessionStart->value,
             PermissionEnum::SessionSubmit->value,

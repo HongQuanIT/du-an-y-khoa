@@ -27,6 +27,7 @@ use Modules\Admin\Http\Controllers\LearnerDemographicsController;
 use Modules\Admin\Http\Controllers\QuestionController;
 use Modules\Admin\Http\Controllers\QuestionDuplicateController;
 use Modules\Admin\Http\Controllers\QuestionExportController;
+use Modules\Admin\Http\Controllers\QuestionFlagController;
 use Modules\Admin\Http\Controllers\QuestionImportController;
 use Modules\Admin\Http\Controllers\QuestionFeedbackController;
 use Modules\Admin\Http\Controllers\QuestionReviewController;
@@ -74,6 +75,7 @@ $staffRoles = implode('|', [
     Role::Admin->value,
     Role::SuperAdmin->value,
     Role::ContentEditor->value,
+    Role::Reviewer->value,
 ]);
 
 Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
@@ -127,6 +129,7 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
             Route::patch('/users/{user}/status', [UserController::class, 'updateStatus'])->name('users.status');
             Route::post('/users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('users.reset-password');
             Route::post('/users/{user}/verify-email', [UserController::class, 'verifyEmail'])->name('users.verify-email');
+            Route::patch('/users/{user}/subjects', [UserController::class, 'updateInstructorSubjects'])->name('users.subjects');
         });
 
         Route::middleware('permission:'.Permission::RoleManage->value)->group(function (): void {
@@ -232,8 +235,16 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
             Route::post('/questions/{question}/clone', [QuestionController::class, 'clone'])->name('questions.clone');
         });
 
+        Route::middleware('permission:'.Permission::QuestionFlag->value)->group(function (): void {
+            Route::get('/questions/flags', [QuestionFlagController::class, 'index'])->name('questions.flags.index');
+            Route::get('/questions/flags/{question}', [QuestionFlagController::class, 'show'])->name('questions.flags.show');
+            Route::post('/questions/flags/{question}', [QuestionFlagController::class, 'store'])->name('questions.flags.store');
+        });
+
         Route::middleware('permission:'.QuestionAccess::workspacePermissionMiddleware())->group(function (): void {
             Route::get('/questions', [QuestionController::class, 'index'])->name('questions.index');
+            Route::get('/questions/pending-publish', [QuestionController::class, 'pendingPublish'])->name('questions.pending-publish');
+            Route::get('/questions/eligible-instructors', [QuestionController::class, 'eligibleInstructors'])->name('questions.eligible-instructors');
             Route::match(['get', 'post'], '/questions/export', QuestionExportController::class)->name('questions.export');
             Route::get('/question-feedback', [QuestionFeedbackController::class, 'index'])->name('question-feedback.index');
             Route::get('/questions/{question}', [QuestionController::class, 'edit']);
@@ -243,19 +254,23 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
             Route::post('/questions/{question}/check-duplicates', [QuestionDuplicateController::class, 'check'])
                 ->name('questions.check-duplicates');
             Route::get('/questions/{question}/stats', [QuestionController::class, 'stats'])->name('questions.stats');
+            Route::get('/questions/{question}/compare', [QuestionController::class, 'compare'])
+                ->name('questions.compare');
             Route::get('/questions/{question}/versions', [QuestionVersionController::class, 'index'])
                 ->name('questions.versions.index');
         });
 
         Route::middleware('permission:'.Permission::QuestionUpdate->value)->group(function (): void {
             Route::put('/questions/{question}', [QuestionController::class, 'update'])->name('questions.update');
-            Route::patch('/question-feedback/{feedback}/status', [QuestionFeedbackController::class, 'updateStatus'])
-                ->name('question-feedback.update-status');
             Route::post(
                 '/questions/{question}/versions/{version}/restore',
                 [QuestionVersionController::class, 'restore'],
             )->scopeBindings()->name('questions.versions.restore');
         });
+
+        Route::patch('/question-feedback/{feedback}/status', [QuestionFeedbackController::class, 'updateStatus'])
+            ->middleware('permission:'.Permission::QuestionUpdate->value.'|'.Permission::QuestionPublish->value)
+            ->name('question-feedback.update-status');
 
         Route::post('/questions/{question}/transition', [QuestionController::class, 'transition'])
             ->middleware('permission:'.Permission::QuestionUpdate->value.'|'.Permission::QuestionPublish->value)

@@ -27,6 +27,7 @@ use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionFeedback;
 use Modules\QuestionBank\Models\QuestionImportBatch;
 use Modules\QuestionBank\Support\QuestionExportLimits;
+use Modules\QuestionBank\Support\QuestionReviewComparison;
 
 final class QuestionController extends Controller
 {
@@ -38,7 +39,7 @@ final class QuestionController extends Controller
         $listQuery = app(AdminQuestionListQuery::class);
         $query = $listQuery->apply(
             Question::query()
-                ->with(['lessons', 'creator:id,name', 'instructor:id,name', 'instructorSlot1:id,name', 'instructorSlot2:id,name', 'publisher:id,name', 'pendingReviewRequest.requester:id,name', 'reviewRequests.reviewer:id,name', 'clonedFrom:id,code,stem'])
+                ->with(['lessons', 'creator:id,name', 'instructor:id,name', 'assignedInstructor:id,name', 'instructorSlot1:id,name', 'instructorSlot2:id,name', 'reviewerSlot1:id,name', 'reviewerSlot2:id,name', 'publisher:id,name', 'pendingReviewRequest.requester:id,name', 'reviewRequests.reviewer:id,name', 'clonedFrom:id,code,stem'])
                 ->withCount([
                     'feedback',
                     'feedback as pending_feedback_count' => fn ($q) => $q->where('status', QuestionFeedback::STATUS_PENDING),
@@ -82,7 +83,10 @@ final class QuestionController extends Controller
             'stats' => [
                 'total' => (clone $statsQuery)->count(),
                 'published' => (clone $statsQuery)->where('status', QuestionStatus::Published->value)->count(),
-                'pending' => (clone $statsQuery)->where('status', QuestionStatus::InReview->value)->count(),
+                'pending' => (clone $statsQuery)->whereIn('status', [
+                    QuestionStatus::InReview->value,
+                    QuestionStatus::InFlagReview->value,
+                ])->count(),
                 'free' => (clone $statsQuery)->where('is_free', true)->count(),
             ],
             'canCreate' => $actor->can(Permission::QuestionCreate->value),
@@ -144,8 +148,11 @@ final class QuestionController extends Controller
             'tags',
             'creator:id,name,email',
             'instructor:id,name',
+            'assignedInstructor:id,name',
             'instructorSlot1:id,name',
             'instructorSlot2:id,name',
+            'reviewerSlot1:id,name',
+            'reviewerSlot2:id,name',
             'publisher:id,name',
             'reviewer:id,name',
             'pendingReviewRequest.requester:id,name',
@@ -153,6 +160,34 @@ final class QuestionController extends Controller
         ]);
 
         return view('admin::questions.form', $this->formData($question));
+    }
+
+    public function compare(Question $question, QuestionReviewComparison $reviewComparison): View
+    {
+        QuestionAccess::authorizeWorkspace($this->actor());
+        QuestionAccess::authorizeView($this->actor(), $question);
+
+        $question->load([
+            'options' => fn ($query) => $query->orderBy('order'),
+            'lessons:id,name',
+            'creator:id,name',
+            'assignedInstructor:id,name',
+            'publisher:id,name',
+        ]);
+
+        $inPipeline = in_array($question->status, [
+            QuestionStatus::InReview,
+            QuestionStatus::InFlagReview,
+            QuestionStatus::PendingPublish,
+        ], true);
+
+        return view('admin::questions.compare', [
+            'question' => $question,
+            'comparison' => $reviewComparison->compare($question),
+            'proposedTitle' => $inPipeline ? 'Bản cần duyệt' : 'Bản đang chỉnh sửa',
+            'proposedBadge' => $question->status->label(),
+            'canEditContent' => QuestionAccess::canEdit($this->actor()),
+        ]);
     }
 
     public function stats(Question $question): View
@@ -229,10 +264,11 @@ final class QuestionController extends Controller
                 $statusData['rejection_reason'] ?? null,
             );
 
-            $resubmitted = $wasInReview && $nextStatus === QuestionStatus::InReview;
+            $resubmitted = ($wasInReview || $question->status === QuestionStatus::InFlagReview)
+                && $nextStatus === QuestionStatus::InReview;
 
             return back()->with('status', $resubmitted
-                ? 'Đã lưu và gửi duyệt lại. Hai phiếu giảng viên được reset.'
+                ? 'Đã lưu và gửi duyệt lại. Quyết định giảng viên và 2 cờ reviewer được reset.'
                 : ($nextStatus === QuestionStatus::InReview
                     ? 'Đã lưu câu hỏi và gửi giảng viên duyệt.'
                     : 'Đã lưu câu hỏi và cập nhật trạng thái: '.$nextStatus->label()));
@@ -327,6 +363,8 @@ final class QuestionController extends Controller
                     ], true)
                 )
             ),
+            'canFlag' => $this->actor()->can(Permission::QuestionFlag->value),
+            'assignedInstructorId' => old('assigned_instructor_id', $question->assigned_instructor_id),
             'canPublish' => $this->actor()->can(Permission::QuestionPublish->value),
             'canSubmit' => $this->actor()->can(Permission::QuestionSubmit->value),
             'canRetire' => $this->actor()->can(Permission::QuestionRetire->value),
@@ -356,6 +394,9 @@ final class QuestionController extends Controller
                 : [],
             QuestionStatus::InReview => $canSubmit
                 ? [QuestionStatus::Draft]
+                : [],
+            QuestionStatus::InFlagReview => $canSubmit
+                ? [QuestionStatus::Draft, QuestionStatus::InReview]
                 : [],
             QuestionStatus::PendingPublish => $canPublish
                 ? [QuestionStatus::Published, QuestionStatus::Private, QuestionStatus::Rejected]
@@ -395,6 +436,7 @@ final class QuestionController extends Controller
             'key_info' => ['nullable', 'string'],
             'attending_tip' => ['nullable', 'string'],
             'difficulty' => ['required', Rule::in(Difficulty::values())],
+            'assigned_instructor_id' => ['nullable', 'integer', 'exists:users,id'],
             'lesson_ids' => ['required', 'array', 'min:1'],
             'lesson_ids.*' => ['required', 'integer', 'distinct', 'exists:lessons,id'],
             'tag_ids' => ['nullable', 'array'],
@@ -411,6 +453,7 @@ final class QuestionController extends Controller
             'options.*.explanation' => ['nullable', 'string'],
         ], [
             'stem.required' => 'Vui lòng nhập nội dung câu hỏi.',
+            'assigned_instructor_id.required' => 'Vui lòng chọn giảng viên đúng chuyên môn.',
             'lesson_ids.required' => 'Vui lòng chọn ít nhất một bài học.',
             'lesson_ids.min' => 'Vui lòng chọn ít nhất một bài học.',
             'options.required' => 'Vui lòng thêm đáp án.',
@@ -444,6 +487,9 @@ final class QuestionController extends Controller
             'key_info' => $this->parseKeyInfo($data['key_info'] ?? null),
             'attending_tip' => $data['attending_tip'] ?? null,
             'difficulty' => $data['difficulty'],
+            'assigned_instructor_id' => isset($data['assigned_instructor_id'])
+                ? (int) $data['assigned_instructor_id']
+                : null,
             'lesson_ids' => collect($data['lesson_ids'] ?? [])
                 ->map(fn ($id): int => (int) $id)->unique()->values()->all(),
             'tag_ids' => collect($data['tag_ids'] ?? [])
@@ -545,6 +591,61 @@ final class QuestionController extends Controller
                 'label' => (string) $user->name,
             ])
             ->all();
+    }
+
+    public function pendingPublish(Request $request): View
+    {
+        QuestionAccess::authorizeWorkspace($this->actor());
+        abort_unless(QuestionAccess::canPublish($this->actor()), 403);
+
+        $query = Question::query()
+            ->with([
+                'creator:id,name',
+                'assignedInstructor:id,name',
+                'reviewerSlot1:id,name',
+                'reviewerSlot2:id,name',
+                'lessons:id,name',
+            ])
+            ->where('status', QuestionStatus::PendingPublish->value)
+            ->latest('updated_at');
+
+        if ($request->filled('q')) {
+            $term = trim((string) $request->string('q'));
+            $query->where(function ($builder) use ($term): void {
+                $builder
+                    ->where('code', 'like', "%{$term}%")
+                    ->orWhere('stem', 'like', "%{$term}%");
+            });
+        }
+
+        return view('admin::questions.pending-publish', [
+            'questions' => $query->paginate(20)->withQueryString(),
+        ]);
+    }
+
+    public function eligibleInstructors(Request $request)
+    {
+        abort_unless(
+            $this->actor()->can(Permission::QuestionCreate->value)
+            || $this->actor()->can(Permission::QuestionUpdate->value),
+            403,
+        );
+
+        $data = $request->validate([
+            'lesson_ids' => ['nullable', 'array'],
+            'lesson_ids.*' => ['integer', 'exists:lessons,id'],
+        ]);
+
+        $instructors = app(\Modules\QuestionBank\Support\AssignedInstructorMatcher::class)
+            ->eligibleInstructors(array_map('intval', $data['lesson_ids'] ?? []));
+
+        return response()->json([
+            'instructors' => $instructors->map(fn (User $user): array => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+            ])->values()->all(),
+        ]);
     }
 
     private function authorizePermission(Permission $permission): void

@@ -20,7 +20,7 @@ use Modules\QuestionBank\Models\QuestionReviewRequest;
 use Modules\QuestionBank\Support\QuestionInstructorReviewCycle;
 
 /**
- * Layer-1 instructor review: two distinct accepts, fail-fast on first reject.
+ * Layer-1 assigned-instructor review: approve → in_flag_review, reject → rejected.
  * Does not bump version or publish to Qbank.
  */
 final class InstructorReviewQuestionAction
@@ -46,27 +46,20 @@ final class InstructorReviewQuestionAction
             $versionBefore = (int) $question->version;
             $note = $this->cleanNote($note);
 
-            $approvedCount = $this->reviewCycle->recordApproval($question, $instructor, $note);
+            $this->reviewCycle->recordApproval($question, $instructor, $note);
             $question = $question->refresh();
 
-            $reachedQuota = $approvedCount >= QuestionInstructorReviewCycle::REQUIRED_APPROVALS;
-            if ($reachedQuota) {
-                $question->forceFill([
-                    'status' => QuestionStatus::PendingPublish,
-                    'updated_by' => $instructor->getKey(),
-                ])->save();
+            $question->forceFill([
+                'status' => QuestionStatus::InFlagReview,
+                'updated_by' => $instructor->getKey(),
+            ])->save();
 
-                $this->resolvePendingCreateRequest(
-                    $question,
-                    $instructor,
-                    QuestionReviewStatus::Approved,
-                    $note,
-                );
-            } else {
-                $question->forceFill([
-                    'updated_by' => $instructor->getKey(),
-                ])->save();
-            }
+            $this->resolvePendingCreateRequest(
+                $question,
+                $instructor,
+                QuestionReviewStatus::Approved,
+                $note,
+            );
 
             $question = $question->refresh();
 
@@ -86,7 +79,7 @@ final class InstructorReviewQuestionAction
                     'from_status' => QuestionStatus::InReview->value,
                     'to_status' => $question->status->value,
                     'review_note' => $note,
-                    'approval_count' => $approvedCount,
+                    'approval_count' => 1,
                 ],
             );
 

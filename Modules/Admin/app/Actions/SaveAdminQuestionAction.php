@@ -48,6 +48,7 @@ final class SaveAdminQuestionAction
      *     hints?: list<array{id?: int|null, content: string, sort_order?: int}>,
      *     is_free: bool,
      *     exam_flag?: bool,
+     *     assigned_instructor_id?: int|null,
      *     options: list<array{id?: int|null, content: string, is_correct: bool, explanation?: ?string}>
      * }  $data
      */
@@ -71,7 +72,9 @@ final class SaveAdminQuestionAction
                     $question->code = (string) $data['code'];
                 }
             } else {
-                if ($question->status === QuestionStatus::PendingPublish) {
+                if (in_array($question->status, [
+                    QuestionStatus::PendingPublish,
+                ], true)) {
                     throw ValidationException::withMessages([
                         'status' => 'Câu đang chờ xuất bản. Không chỉnh sửa — Admin xuất bản hoặc từ chối trước.',
                     ]);
@@ -117,8 +120,14 @@ final class SaveAdminQuestionAction
             if ($demoteLiveToDraft) {
                 $question->status = QuestionStatus::Draft;
                 $question->instructor_id = null;
+                $question->instructor_decision = null;
+                $question->instructor_note = null;
+                $question->instructor_reviewed_at = null;
                 $question->rejection_reason = null;
                 $question->rejected_by_role = null;
+            }
+            if (array_key_exists('assigned_instructor_id', $data)) {
+                $question->assigned_instructor_id = $data['assigned_instructor_id'] ?: null;
             }
             $question->save();
             if ($demoteLiveToDraft) {

@@ -242,8 +242,8 @@
                 <div class="sm:col-span-2">
                     <x-admin.multi-select-filter
                         name="status"
-                        label="Vòng đời"
-                        placeholder="Tất cả vòng đời"
+                        label="Trạng thái"
+                        placeholder="Tất cả"
                         :options="collect($statuses)->map(fn ($status) => ['id' => $status->value, 'label' => $status->label()])->all()"
                         :selected="$filters['status'] ?? []"
                     />
@@ -253,7 +253,7 @@
                     <x-admin.multi-select-filter
                         name="difficulty"
                         label="Độ khó"
-                        placeholder="Tất cả độ khó"
+                        placeholder="Tất cả"
                         :options="collect($difficulties)->map(fn ($difficulty) => ['id' => $difficulty->value, 'label' => $difficulty->label()])->all()"
                         :selected="$filters['difficulty'] ?? []"
                     />
@@ -263,7 +263,7 @@
                     <x-admin.multi-select-filter
                         name="is_free"
                         label="Gói truy cập"
-                        placeholder="Tất cả gói"
+                        placeholder="Tất cả"
                         :options="[
                             ['id' => '1', 'label' => 'Free'],
                             ['id' => '0', 'label' => 'Premium'],
@@ -277,7 +277,7 @@
                         <x-admin.multi-select-filter
                             name="created_by"
                             label="Người tạo"
-                            placeholder="Tất cả người tạo"
+                            placeholder="Tất cả"
                             :options="$creatorOptions"
                             :selected="$filters['created_by'] ?? []"
                         />
@@ -306,7 +306,7 @@
                         hỏi</h2>
                     <span>Hiển thị <strong>{{ number_format($questions->count()) }}</strong> /
                         <strong>{{ number_format($questions->total()) }}</strong> câu hỏi</span>
-                    <span class="hidden font-body-sm font-normal text-on-surface-variant sm:inline">· Chọn dòng rồi xuất, hoặc xuất cả bộ lọc (tối đa {{ number_format($exportLimit) }})</span>
+                    
                     @if ($questions->hasPages())
                         <span>· Trang {{ $questions->currentPage() }} / {{ $questions->lastPage() }}</span>
                     @endif
@@ -369,7 +369,7 @@
                             <th scope="col" class="w-[140px] min-w-[120px] px-4 py-3.5" x-show="cols.status" x-cloak>
                                 Trạng thái</th>
                             <th scope="col" class="w-[180px] min-w-[160px] px-4 py-3.5" x-show="cols.review_status"
-                                x-cloak title="Editor đã gửi bản cập nhật chưa, và 2 giảng viên đã duyệt thế nào.">
+                                x-cloak title="Editor đã gửi bản cập nhật chưa, giảng viên đã duyệt, và 2 reviewer đã gắn cờ thế nào.">
                                 Bản gửi duyệt</th>
                             <th scope="col" class="w-[160px] min-w-[140px] px-4 py-3.5" x-show="cols.origin" x-cloak>
                                 Nguồn gốc</th>

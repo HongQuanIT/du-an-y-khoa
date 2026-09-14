@@ -23,6 +23,7 @@ class UserSeeder extends Seeder
     private const ACCOUNTS = [
         ['Super Admin', 'superadmin@medlearn.local', Role::SuperAdmin, 'SuperAdmin123!'],
         ['Content Editor', 'editor@medlearn.local', Role::ContentEditor],
+        ['Reviewer QBank', 'reviewer@medlearn.local', Role::Reviewer],
 
         ['Giảng viên Minh', 'instructor@medlearn.local', Role::Instructor],
         ['Cộng tác viên Demo', 'partner@medlearn.local', Role::Partner],

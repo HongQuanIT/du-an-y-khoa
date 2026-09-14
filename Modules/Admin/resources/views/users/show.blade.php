@@ -199,6 +199,30 @@
                     </button>
                 </form>
 
+                @if ($isInstructor ?? false)
+                    <form method="post" action="{{ route('admin.users.subjects', $user) }}" class="space-y-4 rounded-xl border border-outline-variant bg-surface p-5 shadow-sm">
+                        @csrf
+                        @method('PATCH')
+                        <div>
+                            <h3 class="font-label-lg font-semibold text-on-surface">Môn học chuyên môn</h3>
+                            <p class="mt-1 font-body-sm text-on-surface-variant">Editor chỉ gán câu hỏi thuộc các môn này cho giảng viên.</p>
+                        </div>
+                        <div class="max-h-56 space-y-2 overflow-y-auto rounded-lg border border-outline-variant p-3">
+                            @foreach ($subjects ?? [] as $subject)
+                                <label class="flex items-center gap-2 text-sm">
+                                    <input type="checkbox" name="subject_ids[]" value="{{ $subject->id }}"
+                                        @checked($user->instructorSubjects->contains('id', $subject->id))
+                                        class="size-4 rounded text-primary">
+                                    {{ $subject->name }}
+                                </label>
+                            @endforeach
+                        </div>
+                        <button type="submit" class="inline-flex h-11 w-full items-center justify-center rounded-lg bg-primary px-4 font-label-md font-medium text-on-primary">
+                            Lưu môn học
+                        </button>
+                    </form>
+                @endif
+
                 <form method="post" action="{{ route('admin.users.status', $user) }}" class="space-y-4 rounded-xl border border-outline-variant bg-surface p-5 shadow-sm">
                     @csrf
                     @method('PATCH')

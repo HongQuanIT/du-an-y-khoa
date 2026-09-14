@@ -58,18 +58,15 @@
     $isRejected = ! $isNew && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::Rejected;
     $isInstructorRejection = $isRejected && $question->isInstructorRejection();
     $isPublisherRejection = $isRejected && $question->isPublisherRejection();
-    $rejectorName = $isRejected ? $question->rejectorDisplayName() : null;
     $rejectionReason = $isRejected
-        ? ($question->rejection_reason ?: $latestRejectedReview?->review_note)
-        : null;
-    $rejectedAt = $isRejected
-        ? ($latestRejectedReview?->reviewed_at ?? $question->updated_at)
+        ? ($question->rejection_reason ?: $question->instructor_note ?: $latestRejectedReview?->review_note)
         : null;
     $statusBadge = ! $isNew ? match (true) {
         $isInstructorRejection => ['label' => 'Giảng viên từ chối', 'class' => 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'],
         $isPublisherRejection => ['label' => 'Admin trả về', 'class' => 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'],
         $question->status === \Modules\QuestionBank\Enums\QuestionStatus::Published => ['label' => 'Đã xuất bản', 'class' => 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'],
-        $question->status === \Modules\QuestionBank\Enums\QuestionStatus::InReview => ['label' => 'Chờ giảng viên duyệt', 'class' => 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'],
+        $question->status === \Modules\QuestionBank\Enums\QuestionStatus::InReview => ['label' => 'Chờ giảng viên', 'class' => 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'],
+        $question->status === \Modules\QuestionBank\Enums\QuestionStatus::InFlagReview => ['label' => 'Chờ reviewer', 'class' => 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300'],
         $question->status === \Modules\QuestionBank\Enums\QuestionStatus::PendingPublish => ['label' => 'Chờ xuất bản', 'class' => 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300'],
         $question->status === \Modules\QuestionBank\Enums\QuestionStatus::Rejected => ['label' => 'Từ chối', 'class' => 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'],
         $question->status === \Modules\QuestionBank\Enums\QuestionStatus::Private => ['label' => 'Riêng tư', 'class' => 'bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300'],
@@ -118,6 +115,15 @@
                         @else
                             <span title="Phiên bản chỉ được tạo khi Admin xuất bản cấp cuối">Chưa có phiên bản</span>
                         @endif
+                        @if ($question->published_version)
+                            <span>·</span>
+                            <a href="{{ route('admin.questions.compare', $question) }}"
+                                class="inline-flex items-center gap-0.5 font-semibold text-primary hover:underline"
+                                title="Đối chiếu bản đang lưu với bản học viên đang làm">
+                                So sánh với bản xuất bản
+                                <span class="material-symbols-outlined text-[15px]">difference</span>
+                            </a>
+                        @endif
                         @if ($canViewAudit)
                             <span>·</span>
                             <a href="{{ route('admin.audit.index', ['subject_type' => 'question', 'subject_id' => $question->id]) }}"
@@ -143,16 +149,25 @@
             </div>
         </div>
 
-        @if (! $isNew && $canDelete && ! $pendingReview)
+        @if (! $isNew && ($question->published_version || ($canDelete && ! $pendingReview)))
             <div class="flex shrink-0 flex-wrap items-center gap-2 lg:justify-end lg:pt-0.5">
-                <form method="post" action="{{ route('admin.questions.destroy', $question) }}" aria-label="Xóa câu hỏi">
-                    @csrf @method('DELETE')
-                    <button type="submit" onclick="return confirm('{{ $isReviewer ? 'Xóa câu hỏi này?' : 'Gửi yêu cầu xóa câu hỏi này để admin duyệt?' }}')"
-                        class="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-rose-300 px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50">
-                        <span class="material-symbols-outlined text-[16px]" aria-hidden="true">delete</span>
-                        {{ $isReviewer ? 'Xóa' : 'Yêu cầu xóa' }}
-                    </button>
-                </form>
+                @if ($question->published_version)
+                    <a href="{{ route('admin.questions.compare', $question) }}"
+                        class="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-outline-variant px-3 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low">
+                        <span class="material-symbols-outlined text-[16px]" aria-hidden="true">difference</span>
+                        So sánh với bản xuất bản
+                    </a>
+                @endif
+                @if ($canDelete && ! $pendingReview)
+                    <form method="post" action="{{ route('admin.questions.destroy', $question) }}" aria-label="Xóa câu hỏi">
+                        @csrf @method('DELETE')
+                        <button type="submit" onclick="return confirm('{{ $isReviewer ? 'Xóa câu hỏi này?' : 'Gửi yêu cầu xóa câu hỏi này để admin duyệt?' }}')"
+                            class="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-rose-300 px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50">
+                            <span class="material-symbols-outlined text-[16px]" aria-hidden="true">delete</span>
+                            {{ $isReviewer ? 'Xóa' : 'Yêu cầu xóa' }}
+                        </button>
+                    </form>
+                @endif
             </div>
         @endif
     </header>
@@ -179,48 +194,34 @@
         </div>
     @endif
 
-    @if ($isRejected)
-        <section aria-labelledby="rejection-status-title" class="mb-5 rounded-2xl border border-red-300 bg-red-50 px-4 py-4 text-red-900 dark:border-red-900 dark:bg-red-950/40 dark:text-red-100">
-            <div class="flex items-start gap-3">
-                <span class="material-symbols-outlined mt-0.5" aria-hidden="true">cancel</span>
-                <div class="min-w-0 flex-1">
-                    <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
-                        <h2 id="rejection-status-title" class="font-semibold">
-                            @if ($isInstructorRejection)
-                                Giảng viên{{ $rejectorName ? ' '.$rejectorName : '' }} đã từ chối
-                            @elseif ($isPublisherRejection)
-                                {{ $rejectorName ?: 'Admin' }} đã trả về
-                            @else
-                                Câu hỏi đã bị từ chối
-                            @endif
-                        </h2>
-                        <span class="rounded-full bg-red-200 px-2 py-0.5 text-xs font-bold text-red-800 dark:bg-red-900/70 dark:text-red-100">
-                            {{ $statusBadge['label'] }}
-                        </span>
-                    </div>
-                    <p class="mt-2 text-sm leading-6">
-                        <span class="font-semibold">Lý do:</span>
-                        {{ $rejectionReason ?: 'Không có ghi chú kèm theo.' }}
-                    </p>
-                    @if ($rejectedAt)
-                        <p class="mt-1 text-xs text-red-700 dark:text-red-200">{{ $rejectedAt->format('d/m/Y H:i') }}</p>
-                    @endif
-                    @if ($canEditContent)
-                        <p class="mt-3 text-sm">Chuyển về nháp để chỉnh sửa.</p>
-                    @endif
-                </div>
-            </div>
-        </section>
+    @if (! $isNew)
+        @include('admin::questions.partials.review-feedback', [
+            'question' => $question,
+            'canEditContent' => $canEditContent,
+        ])
     @endif
 
     @if (! $isNew && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::InReview)
         <div class="mb-5 rounded-2xl border border-amber-200 bg-amber-50/60 px-4 py-3 text-sm text-amber-900">
             <div class="flex flex-wrap items-center gap-3">
+                <p>
+                    Giảng viên được gán đang duyệt chuyên môn. Một phiếu từ chối là fail ngay, chưa sang reviewer.
+                    @if (! $isReviewer)
+                        Bạn vẫn được sửa; chọn <strong>Lưu và gửi duyệt lại</strong> để reset phiếu giảng viên.
+                    @endif
+                </p>
+            </div>
+        </div>
+    @endif
+
+    @if (! $isNew && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::InFlagReview)
+        <div class="mb-5 rounded-2xl border border-orange-200 bg-orange-50/60 px-4 py-3 text-sm text-orange-900">
+            <div class="flex flex-wrap items-center gap-3">
                 @include('questionbank::partials.instructor-review-flags', ['question' => $question])
                 <p>
-                    Cần 2 giảng viên chấp nhận. Cờ trắng = chờ duyệt, xanh = chấp nhận, đỏ = từ chối (1 phiếu đỏ là fail ngay).
+                    Giảng viên đã duyệt chuyên môn. Câu hỏi đang chờ reviewer gắn cờ.
                     @if (! $isReviewer)
-                        Bạn vẫn được sửa; chọn <strong>Lưu và gửi duyệt lại</strong> để reset 2 phiếu.
+                        Bạn vẫn được sửa; chọn <strong>Lưu và gửi duyệt lại</strong> để reset phiếu GV và 2 cờ.
                     @endif
                 </p>
             </div>
@@ -392,17 +393,25 @@
                 {{-- Workflow trước (luôn bấm được); nội dung khóa nằm dưới --}}
                 @if (! $isNew && $canPublish && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::PendingPublish)
                     <div class="rounded-2xl border border-primary/30 bg-primary/5 p-4">
-                        <h2 class="mb-2 font-label-md font-semibold text-on-surface">Xuất bản (lớp 2)</h2>
+                        <h2 class="mb-2 font-label-md font-semibold text-on-surface">Xuất bản</h2>
                         <p class="mb-3 text-xs leading-5 text-on-surface-variant">
-                            Đủ 2 giảng viên chấp nhận. Xuất bản chỉ tăng phiên bản — không cần duyệt lại chuyên môn.
+                            GV {{ $question->assignedInstructor?->name ?? $question->instructor?->name ?? '—' }} đã duyệt.
+                            Xuất bản chỉ tăng phiên bản — không sửa nội dung.
                             <span class="mt-2 block">
                                 @include('questionbank::partials.instructor-review-flags', ['question' => $question])
                             </span>
+                            @if ($question->hasRedReviewerFlag())
+                                <span class="mt-2 block font-semibold text-rose-700">Có cờ đỏ — không xuất bản được, chỉ trả về biên tập.</span>
+                            @endif
                             @if ($question->published_version)
-                                · QBank đang phục vụ phiên bản {{ $question->published_version }}
+                                <span class="mt-2 block">
+                                    QBank đang phục vụ phiên bản {{ $question->published_version }}.
+                                    <a href="{{ route('admin.questions.compare', $question) }}" class="font-semibold text-primary hover:underline">So sánh thay đổi</a>
+                                </span>
                             @endif
                         </p>
                         <div class="flex flex-col gap-2">
+                            @unless ($question->hasRedReviewerFlag())
                             <button type="submit"
                                 form="question-publish-form"
                                 onclick="return confirm('Xuất bản câu hỏi này lên ngân hàng? Phiên bản sẽ tăng.')"
@@ -417,6 +426,7 @@
                                 <span class="material-symbols-outlined text-[18px]">lock</span>
                                 Đưa vào kho đề thi (private)
                             </button>
+                            @endunless
                             <button type="submit"
                                 form="question-reject-publish-form"
                                 onclick="const r = prompt('Lý do từ chối xuất bản:'); if (!r || !r.trim()) return false; document.getElementById('question-reject-publish-reason').value = r.trim();"
@@ -474,7 +484,9 @@
                         <p class="mt-1 text-xs leading-5">
                             Admin/Super Admin không sửa nội dung câu hỏi.
                             @if ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::InReview)
-                                Đang chờ đủ 2 giảng viên duyệt — không xuất bản trước bước này.
+                                Đang chờ giảng viên duyệt chuyên môn — không xuất bản trước bước này.
+                            @elseif ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::InFlagReview)
+                                Đang chờ reviewer gắn cờ — không xuất bản trước bước này.
                             @elseif ($isRejected)
                                 Câu hỏi đã bị từ chối. Đang chờ biên tập viên xử lý.
                             @elseif ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::Draft)
@@ -482,6 +494,7 @@
                             @endif
                             @if ($question->published_version)
                                 Ngân hàng vẫn phục vụ phiên bản {{ $question->published_version }}.
+                                <a href="{{ route('admin.questions.compare', $question) }}" class="font-semibold text-primary hover:underline">So sánh thay đổi</a>
                             @endif
                         </p>
                     </div>
@@ -490,6 +503,7 @@
                         <p class="font-semibold">QBank đang phục vụ phiên bản {{ $question->published_version }}</p>
                         <p class="mt-1 text-xs leading-5">
                             Working copy: {{ $question->status->label() }}.
+                            <a href="{{ route('admin.questions.compare', $question) }}" class="font-semibold text-primary hover:underline">So sánh với bản xuất bản</a>
                         </p>
                     </div>
                 @endif
@@ -592,6 +606,10 @@
                                 $availableStatuses[\Modules\QuestionBank\Enums\QuestionStatus::InReview->value] = 'Lưu và gửi duyệt lại';
                                 $availableStatuses[\Modules\QuestionBank\Enums\QuestionStatus::Draft->value] = 'Chuyển về nháp';
                             }
+                            if (! $isNew && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::InFlagReview) {
+                                $availableStatuses[\Modules\QuestionBank\Enums\QuestionStatus::InReview->value] = 'Lưu và gửi duyệt lại';
+                                $availableStatuses[\Modules\QuestionBank\Enums\QuestionStatus::Draft->value] = 'Chuyển về nháp';
+                            }
                             if (! $isNew && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::Draft) {
                                 $availableStatuses[\Modules\QuestionBank\Enums\QuestionStatus::Draft->value] = 'Lưu nháp';
                                 $availableStatuses[\Modules\QuestionBank\Enums\QuestionStatus::InReview->value] = 'Gửi duyệt giảng viên';
@@ -690,6 +708,7 @@
                         <p class="font-semibold">QBank đang phục vụ phiên bản {{ $question->published_version }}</p>
                         <p class="mt-1 text-xs leading-5">
                             Working copy: {{ $question->status->label() }}. Nội dung mới chỉ lên ngân hàng sau khi GV duyệt và admin xuất bản.
+                            <a href="{{ route('admin.questions.compare', $question) }}" class="mt-1 block font-semibold text-primary hover:underline">So sánh với bản xuất bản</a>
                         </p>
                     </div>
                 @endif
@@ -699,6 +718,7 @@
                     <h2 class="mb-3 font-label-md font-semibold text-on-surface-variant">Phân loại</h2>
                     <div class="space-y-3">
                         @include('admin::questions.partials.taxonomy-fields')
+                        @include('admin::questions.partials.instructor-picker')
 
                         <div>
                             <label class="mb-1 block text-xs font-semibold text-on-surface-variant" for="difficulty">Độ khó *</label>
@@ -736,6 +756,10 @@
                                 <dt class="text-on-surface-variant">Người tạo</dt>
                                 <dd class="font-semibold text-on-surface">{{ $question->creator?->name ?? '—' }}</dd>
                             </div>
+                            <div class="flex justify-between">
+                                <dt class="text-on-surface-variant">Giảng viên được gán</dt>
+                                <dd class="font-semibold text-on-surface">{{ $question->assignedInstructor?->name ?? '—' }}</dd>
+                            </div>
                             <div class="flex items-center justify-between gap-3">
                                 <dt class="text-on-surface-variant">Bản gửi duyệt</dt>
                                 <dd>@include('questionbank::partials.instructor-review-flags', ['question' => $question])</dd>
@@ -772,6 +796,7 @@
 
     @if (! $isNew && $canEditContent && in_array($question->status, [
         \Modules\QuestionBank\Enums\QuestionStatus::InReview,
+        \Modules\QuestionBank\Enums\QuestionStatus::InFlagReview,
         \Modules\QuestionBank\Enums\QuestionStatus::Rejected,
     ], true))
         <form id="editor-return-draft-form" method="post" action="{{ route('admin.questions.transition', $question) }}" class="hidden">

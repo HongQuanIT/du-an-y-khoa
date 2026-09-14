@@ -16,6 +16,7 @@ use Illuminate\Contracts\Auth\CanResetPassword as CanResetPasswordContract;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
@@ -35,6 +36,7 @@ use Modules\Billing\Models\Subscription;
 use Modules\Notification\Models\UserNotification;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionReviewRequest;
+use Modules\QuestionBank\Models\Subject;
 use Spatie\Permission\Traits\HasRoles;
 
 #[Fillable([
@@ -213,6 +215,13 @@ class User extends Authenticatable implements CanResetPasswordContract
     public function createdQuestions(): HasMany
     {
         return $this->hasMany(Question::class, 'created_by');
+    }
+
+    /** @return BelongsToMany<Subject, $this> */
+    public function instructorSubjects(): BelongsToMany
+    {
+        return $this->belongsToMany(Subject::class, 'instructor_subject')
+            ->withTimestamps();
     }
 
     /** @return HasMany<QuestionReviewRequest, $this> */
