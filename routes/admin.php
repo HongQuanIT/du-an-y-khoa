@@ -328,6 +328,8 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
             Route::put('/categories/organ-systems/{organSystem}', [CurriculumTaxonomyController::class, 'updateOrganSystem'])->name('curriculum.organ-systems.update');
             Route::put('/categories/subjects/{subject}', [CurriculumTaxonomyController::class, 'updateSubject'])->name('curriculum.subjects.update');
             Route::put('/categories/lessons/{lesson}', [CurriculumTaxonomyController::class, 'updateLesson'])->name('curriculum.lessons.update');
+            Route::post('/categories/subjects/{subject}/lessons', [CurriculumTaxonomyController::class, 'attachSubjectLessons'])->name('curriculum.subjects.lessons.attach');
+            Route::delete('/categories/subjects/{subject}/lessons/{lesson}', [CurriculumTaxonomyController::class, 'detachSubjectLesson'])->name('curriculum.subjects.lessons.detach');
             Route::post('/categories/lessons/{lesson}/subjects', [CurriculumTaxonomyController::class, 'attachLessonSubject'])->name('curriculum.lessons.subjects.attach');
             Route::delete('/categories/lessons/{lesson}/subjects/{subject}', [CurriculumTaxonomyController::class, 'detachLessonSubject'])->name('curriculum.lessons.subjects.detach');
             Route::post('/categories/lessons/{lesson}/organ-systems', [CurriculumTaxonomyController::class, 'attachLessonOrganSystem'])->name('curriculum.lessons.organ-systems.attach');

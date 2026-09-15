@@ -16,6 +16,7 @@
     $reopenUpdateUrl = $editingId > 0
         ? route('admin.curriculum.lessons.update', $editingId)
         : '';
+    $openCreatePanel = $reopenPanel === null && request('panel') === 'create';
 @endphp
 
 <div class="space-y-4"
@@ -37,6 +38,7 @@
         canDelete: @js($canDelete),
         subjects: @js($subjectOptions),
         organSystems: @js($organSystemOptions),
+        openCreatePanel: @js($openCreatePanel),
         reopenPanel: @js($reopenPanel),
         fieldErrors: @js([
             'name' => $reopenPanel ? $errors->first('name') : '',

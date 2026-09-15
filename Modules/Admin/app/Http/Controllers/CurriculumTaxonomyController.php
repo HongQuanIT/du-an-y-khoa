@@ -66,6 +66,9 @@ final class CurriculumTaxonomyController extends Controller
             'lessonOrganSystemOptions' => $tab === 'lessons'
                 ? OrganSystem::query()->orderBy('name')->get(['id', 'name', 'slug'])
                 : collect(),
+            'subjectLessonOptions' => $tab === 'subjects'
+                ? Lesson::query()->orderBy('name')->get(['id', 'name', 'slug', 'status'])
+                : collect(),
             'filters' => $filters,
             'stats' => [
                 'organ_systems' => OrganSystem::query()->count(),
@@ -172,6 +175,49 @@ final class CurriculumTaxonomyController extends Controller
 
         return $this->redirectToTab('subjects')
             ->with('status', 'Đã xoá môn học «'.$name.'».');
+    }
+
+    public function attachSubjectLessons(Request $request, Subject $subject): JsonResponse|RedirectResponse
+    {
+        $this->authorizePermission(Permission::TopicUpdate);
+
+        $subject->lessons()->syncWithoutDetaching($this->validatedAttachIds(
+            $request,
+            'lesson_ids',
+            'lesson_id',
+            'lessons,id',
+        ));
+        $subject->unsetRelation('lessons');
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'lessons' => $this->presentSubjectLessons($subject),
+                'lessons_count' => $subject->lessons()->count(),
+                'message' => 'Đã gắn bài học vào môn học.',
+            ]);
+        }
+
+        return $this->redirectToTab('subjects', $subject->id)
+            ->with('status', 'Đã gắn bài học vào môn học.');
+    }
+
+    public function detachSubjectLesson(Request $request, Subject $subject, Lesson $lesson): JsonResponse|RedirectResponse
+    {
+        $this->authorizePermission(Permission::TopicUpdate);
+
+        $subject->lessons()->detach($lesson->id);
+        $subject->unsetRelation('lessons');
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'lessons' => $this->presentSubjectLessons($subject),
+                'lessons_count' => $subject->lessons()->count(),
+                'message' => 'Đã gỡ bài học khỏi môn học.',
+            ]);
+        }
+
+        return $this->redirectToTab('subjects', $subject->id)
+            ->with('status', 'Đã gỡ bài học khỏi môn học.');
     }
 
     // ------------------------------------------------------------------
@@ -480,7 +526,12 @@ final class CurriculumTaxonomyController extends Controller
     {
         return match ($tab) {
             'organ-systems' => $this->paginateCatalog(OrganSystem::query()->withCount('lessons'), $filters),
-            'subjects' => $this->paginateCatalog(Subject::query()->withCount('lessons'), $filters),
+            'subjects' => $this->paginateCatalog(
+                Subject::query()
+                    ->withCount('lessons')
+                    ->with(['lessons' => fn ($query) => $query->select('lessons.id', 'lessons.name', 'lessons.slug', 'lessons.status')]),
+                $filters,
+            ),
             default => $this->paginateLessons($filters),
         };
     }
@@ -521,7 +572,7 @@ final class CurriculumTaxonomyController extends Controller
             ? ['admin.curriculum.subjects.update', 'admin.curriculum.subjects.destroy']
             : ['admin.curriculum.organ-systems.update', 'admin.curriculum.organ-systems.destroy'];
 
-        return [
+        $payload = [
             'id' => $item->id,
             'name' => $item->name,
             'slug' => $item->slug,
@@ -531,6 +582,40 @@ final class CurriculumTaxonomyController extends Controller
             'update_url' => route($updateRoute, $item),
             'destroy_url' => route($destroyRoute, $item),
         ];
+
+        if ($tab === 'subjects' && $item instanceof Subject) {
+            $payload['lessons'] = $this->presentSubjectLessons($item);
+            $payload['attach_lessons_url'] = route('admin.curriculum.subjects.lessons.attach', $item);
+            $payload['create_lesson_url'] = route('admin.curriculum.index', [
+                'tab' => 'lessons',
+                'panel' => 'create',
+                'subject_ids' => [$item->id],
+            ]);
+        }
+
+        return $payload;
+    }
+
+    /**
+     * @return list<array{id: int, name: string, slug: string, status: string, detach_url: string}>
+     */
+    private function presentSubjectLessons(Subject $subject): array
+    {
+        $subject->loadMissing(['lessons' => fn ($query) => $query
+            ->select('lessons.id', 'lessons.name', 'lessons.slug', 'lessons.status')
+            ->orderBy('lessons.sort_order')
+            ->orderBy('lessons.name')]);
+
+        return $subject->lessons
+            ->map(fn (Lesson $lesson): array => [
+                'id' => (int) $lesson->id,
+                'name' => $lesson->name,
+                'slug' => $lesson->slug,
+                'status' => $lesson->status->value,
+                'detach_url' => route('admin.curriculum.subjects.lessons.detach', [$subject, $lesson]),
+            ])
+            ->values()
+            ->all();
     }
 
     /**

@@ -2,6 +2,11 @@
 
 ## 2026-09-15
 
+### Feat — Admin: gắn/gỡ bài học trong drawer môn học
+
+- `/admin/categories?tab=subjects`: drawer **Sửa môn học** liệt kê bài đang gắn; tìm để gắn bài có sẵn; **Gỡ** = detach (không xoá bài); **Tạo mới** mở tab Bài học với môn đã chọn sẵn.
+- API: `POST/DELETE /admin/categories/subjects/{subject}/lessons[/{lesson}]` (JSON cho drawer). Schema `lesson_subject` không đổi.
+
 ### Chore — Admin: bỏ trang hàng đợi chờ xuất bản
 - Gỡ `/admin/questions/pending-publish` và mục menu «Chờ xuất bản».
 - Admin/SA vẫn xuất bản từ form edit (status `pending_publish`); lọc danh sách `/admin/questions` theo trạng thái.
