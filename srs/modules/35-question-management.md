@@ -14,7 +14,6 @@ CRUD & **workflow duyệt 3 lớp** câu hỏi: Content Creator soạn/sửa và
 | `/admin/questions/import` | Import hàng loạt (Excel/CSV → draft) | Admin |
 | `/admin/questions/export` | Export theo bộ lọc (Excel/CSV) | Admin |
 | `/admin/questions/reports` | Xử lý báo lỗi câu hỏi | Admin |
-| `/admin/questions/pending-publish` | Hàng đợi Admin/SA publish | Admin |
 | `/admin/questions/flags` | Review câu hỏi (hàng đợi reviewer gắn cờ) | Admin |
 | `/teach/questions/reviews` | Hàng đợi giảng viên được gán | Teach |
 
@@ -38,13 +37,12 @@ CRUD & **workflow duyệt 3 lớp** câu hỏi: Content Creator soạn/sửa và
 | **Import wizard** | Upload → map → validate → preview → commit | `/import` | Stepper |
 | **Instructor review queue** | Danh sách `in_review` **gán cho mình** + approve/reject + lý do | `/teach/questions/reviews` | Table |
 | **Reviewer flag queue** | Danh sách `in_flag_review` chưa có phiếu của mình + cờ xanh/vàng/đỏ + ghi chú tùy chọn; ẩn cờ peer và **không tiết lộ mình là người gắn cờ thứ mấy** | `/admin/questions/flags` | Table |
-| **Publish queue** | Danh sách `pending_publish` + publish/reject | `/admin/questions/pending-publish` | Table |
 | **Reports queue** | Báo lỗi + xử lý | `/reports` | Table |
 | **Duplicate check (per question)** | Nút trên editor → trang chi tiết kết quả ≥30% | Form → `/duplicates` | Detail page |
 | **Empty/Loading/Error** | Chuẩn | Theo trạng thái | — |
 
 ## 3. Phân tích Component
-- `QuestionEditor`(validate: đúng ≥1 đáp án, đủ giải thích), `OptionEditor`, `LessonPicker`(chọn ≥1 bài học; lọc tuỳ chọn theo hệ/môn), `InstructorPicker`(lọc GV giao môn với bài học), `TagPicker`, `WorkflowStatusBar`, `VersionHistory`(read-only snapshots), `CloneQuestionAction`, `ImportWizard`(map/validate), `InstructorReviewQueue`, `ReviewerFlagQueue`, `PublishQueue`, `ReportQueue`, `QuestionPreview`, `DuplicateCheckPanel`(lexical fingerprint + % similarity trên form edit).
+- `QuestionEditor`(validate: đúng ≥1 đáp án, đủ giải thích), `OptionEditor`, `LessonPicker`(chọn ≥1 bài học; lọc tuỳ chọn theo hệ/môn), `InstructorPicker`(lọc GV giao môn với bài học), `TagPicker`, `WorkflowStatusBar`, `VersionHistory`(read-only snapshots), `CloneQuestionAction`, `ImportWizard`(map/validate), `InstructorReviewQueue`, `ReviewerFlagQueue`, `ReportQueue`, `QuestionPreview`, `DuplicateCheckPanel`(lexical fingerprint + % similarity trên form edit).
 
 ## 4. Luồng người dùng
 
@@ -76,6 +74,8 @@ CRUD & **workflow duyệt 3 lớp** câu hỏi: Content Creator soạn/sửa và
 ┌───────────────────────────────▼─────────────────────────────────────────┐
 │  Lớp 2 — Admin / Super Admin có `question.publish` trên /admin          │
 │  Chỉ khi GV đã approve + đủ 2 cờ · KHÔNG sửa nội dung                   │
+│  Xuất bản / trả về từ form `/admin/questions/{id}/edit` (lọc list theo  │
+│  status `pending_publish`) — không còn trang hàng đợi riêng.            │
 │  pending_publish  ──publish──►  published (+ question_versions)         │
 │     (chặn nếu ≥1 cờ đỏ; cờ vàng = cảnh báo, vẫn cho publish)            │
 │  pending_publish  ──trả về──►  rejected (lý do vận hành)                │

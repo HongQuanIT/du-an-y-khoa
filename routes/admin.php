@@ -243,7 +243,6 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
 
         Route::middleware('permission:'.QuestionAccess::workspacePermissionMiddleware())->group(function (): void {
             Route::get('/questions', [QuestionController::class, 'index'])->name('questions.index');
-            Route::get('/questions/pending-publish', [QuestionController::class, 'pendingPublish'])->name('questions.pending-publish');
             Route::get('/questions/eligible-instructors', [QuestionController::class, 'eligibleInstructors'])->name('questions.eligible-instructors');
             Route::match(['get', 'post'], '/questions/export', QuestionExportController::class)->name('questions.export');
             Route::get('/question-feedback', [QuestionFeedbackController::class, 'index'])->name('question-feedback.index');

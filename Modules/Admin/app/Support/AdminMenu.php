@@ -86,13 +86,6 @@ final class AdminMenu
                 'match' => 'admin.questions.flags.*',
             ],
             [
-                'label' => 'Chờ xuất bản',
-                'icon' => 'publish',
-                'route' => 'admin.questions.pending-publish',
-                'permission' => Permission::QuestionPublish->value,
-                'match' => 'admin.questions.pending-publish',
-            ],
-            [
                 'label' => 'Phản hồi câu hỏi',
                 'icon' => 'rate_review',
                 'route' => 'admin.question-feedback.index',
@@ -273,9 +266,6 @@ final class AdminMenu
                 'badge' => match (true) {
                     $item['route'] === 'admin.questions.flags.index' => \Modules\QuestionBank\Models\Question::query()
                         ->where('status', \Modules\QuestionBank\Enums\QuestionStatus::InFlagReview->value)
-                        ->count(),
-                    $item['route'] === 'admin.questions.pending-publish' => \Modules\QuestionBank\Models\Question::query()
-                        ->where('status', \Modules\QuestionBank\Enums\QuestionStatus::PendingPublish->value)
                         ->count(),
                     $item['route'] === 'admin.contacts.index' => ContactInquiry::newCount(),
                     default => 0,

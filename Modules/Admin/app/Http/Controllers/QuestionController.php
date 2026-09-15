@@ -593,36 +593,6 @@ final class QuestionController extends Controller
             ->all();
     }
 
-    public function pendingPublish(Request $request): View
-    {
-        QuestionAccess::authorizeWorkspace($this->actor());
-        abort_unless(QuestionAccess::canPublish($this->actor()), 403);
-
-        $query = Question::query()
-            ->with([
-                'creator:id,name',
-                'assignedInstructor:id,name',
-                'reviewerSlot1:id,name',
-                'reviewerSlot2:id,name',
-                'lessons:id,name',
-            ])
-            ->where('status', QuestionStatus::PendingPublish->value)
-            ->latest('updated_at');
-
-        if ($request->filled('q')) {
-            $term = trim((string) $request->string('q'));
-            $query->where(function ($builder) use ($term): void {
-                $builder
-                    ->where('code', 'like', "%{$term}%")
-                    ->orWhere('stem', 'like', "%{$term}%");
-            });
-        }
-
-        return view('admin::questions.pending-publish', [
-            'questions' => $query->paginate(20)->withQueryString(),
-        ]);
-    }
-
     public function eligibleInstructors(Request $request)
     {
         abort_unless(
