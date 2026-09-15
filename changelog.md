@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-09-15
+
+### Chore — Admin: bỏ trang hàng đợi chờ xuất bản
+- Gỡ `/admin/questions/pending-publish` và mục menu «Chờ xuất bản».
+- Admin/SA vẫn xuất bản từ form edit (status `pending_publish`); lọc danh sách `/admin/questions` theo trạng thái.
+
 ## 2026-09-14
 
 ### Fix — Admin: nhãn bộ lọc danh sách câu hỏi
@@ -31,7 +37,7 @@
 - Editor chọn đúng giảng viên theo môn học (`instructor_subject`); `/teach` chỉ hiện câu gán cho GV đó.
 - Role mới `reviewer` trên `/admin`: hàng đợi gắn cờ xanh/vàng/đỏ (ghi chú tùy chọn). Đủ 2 cờ → chờ xuất bản.
 - Admin/SA xuất bản khi GV đã duyệt + đủ 2 cờ; cờ đỏ chặn publish (chỉ trả về biên tập); cờ vàng cảnh báo.
-- Status mới `in_flag_review`; trang `/admin/questions/flags` và `/admin/questions/pending-publish`.
+- Status mới `in_flag_review`; trang `/admin/questions/flags`.
 
 ## 2026-09-13
 
