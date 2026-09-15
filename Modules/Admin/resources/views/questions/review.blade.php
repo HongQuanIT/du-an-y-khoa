@@ -14,10 +14,12 @@
 <x-layouts.admin title="Kiểm duyệt câu hỏi">
     <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div class="flex items-center gap-3">
-            <a href="{{ route('admin.questions.index', ['status' => 'in_review']) }}"
+            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.index'))
+<a href="{{ route('admin.questions.index', ['status' => 'in_review']) }}"
                 class="flex size-9 items-center justify-center rounded-xl border border-outline-variant text-on-surface-variant hover:bg-surface-container-low">
                 <span class="material-symbols-outlined text-[20px]">arrow_back</span>
             </a>
+@endif
             <div>
                 <h1 class="font-headline-sm font-bold text-on-surface">Kiểm duyệt {{ mb_strtolower($reviewRequest->action->label()) }}</h1>
                 <p class="mt-0.5 text-sm text-on-surface-variant">
@@ -40,7 +42,8 @@
                 class="w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm"
                 placeholder="Nhập lý do hoặc góp ý (không bắt buộc)..."></textarea>
             <div class="mt-3 flex flex-wrap justify-end gap-2">
-                <form id="reject-review-form" method="post" action="{{ route('admin.questions.reviews.reject', $reviewRequest) }}">
+                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.reviews.reject'))
+<form id="reject-review-form" method="post" action="{{ route('admin.questions.reviews.reject', $reviewRequest) }}">
                     @csrf
                     <input type="hidden" name="review_note" id="reject-review-note">
                     <button type="submit" onclick="document.getElementById('reject-review-note').value = document.getElementById('review_note').value; return confirm('Từ chối yêu cầu này?')"
@@ -48,13 +51,16 @@
                         <span class="material-symbols-outlined text-[18px]">close</span>Từ chối
                     </button>
                 </form>
-                <form id="approve-review-form" method="post" action="{{ route('admin.questions.reviews.approve', $reviewRequest) }}">
+@endif
+                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.reviews.approve'))
+<form id="approve-review-form" method="post" action="{{ route('admin.questions.reviews.approve', $reviewRequest) }}">
                     @csrf
                     <button type="submit" onclick="return confirm('Phê duyệt yêu cầu này?')"
                         class="inline-flex whitespace-nowrap items-center gap-1 rounded-xl bg-primary px-4 py-2.5 font-semibold text-on-primary hover:bg-primary/90">
                         <span class="material-symbols-outlined text-[18px]">check</span>Phê duyệt
                     </button>
                 </form>
+@endif
             </div>
         </div>
     @endif

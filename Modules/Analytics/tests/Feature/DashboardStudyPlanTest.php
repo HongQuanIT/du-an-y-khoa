@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\Analytics\Tests\Feature;
 
 use App\Models\User;
+use App\Support\Enums\Role;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Modules\Analytics\Actions\RecalculateTopicMasteryAction;
@@ -39,7 +41,10 @@ final class DashboardStudyPlanTest extends TestCase
     {
         parent::setUp();
 
+        $this->seed(RolePermissionSeeder::class);
+
         $this->user = User::factory()->create();
+        $this->user->assignRole(Role::Student->value);
         $this->topic = $this->makeLesson([
             'name' => 'Tim mạch',
             'slug' => 'tim-mach',

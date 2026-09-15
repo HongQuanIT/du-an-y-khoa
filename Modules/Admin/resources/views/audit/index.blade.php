@@ -4,7 +4,8 @@
 
     <x-admin.flash />
 
-    <form method="get" action="{{ route('admin.audit.index') }}" role="search" aria-label="Lọc nhật ký hoạt động"
+    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.audit.index'))
+<form method="get" action="{{ route('admin.audit.index') }}" role="search" aria-label="Lọc nhật ký hoạt động"
         class="mb-6 grid grid-cols-1 items-end gap-4 rounded-xl border border-outline-variant bg-surface p-4 sm:grid-cols-2 xl:grid-cols-12">
         <div class="relative min-w-0 xl:col-span-3"
             x-data='{
@@ -82,6 +83,7 @@
             </a>
         </div>
     </form>
+@endif
 
     <div class="overflow-x-auto rounded-xl border border-outline-variant bg-surface">
         <table class="min-w-full text-left font-body-sm text-body-sm">
@@ -102,7 +104,9 @@
                         <td class="px-4 py-3 whitespace-nowrap text-on-surface-variant">{{ $log->created_at?->format('d/m/Y H:i:s') }}</td>
                         <td class="px-4 py-3">
                             @if ($log->actor)
-                                <a href="{{ route('admin.users.show', $log->actor) }}" class="text-primary hover:underline">{{ $log->actor->name }}</a>
+                                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.users.show'))
+<a href="{{ route('admin.users.show', $log->actor) }}" class="text-primary hover:underline">{{ $log->actor->name }}</a>
+@endif
                                 <div class="font-label-sm text-label-sm text-on-surface-variant">#{{ $log->actor_id }}</div>
                                 <div class="whitespace-nowrap font-label-sm text-label-sm text-on-surface-variant">{{ \App\Support\Enums\Role::tryFromName($log->actor_role)?->label() ?? '—' }}</div>
                             @else
@@ -116,13 +120,17 @@
                         <td class="px-4 py-3 text-on-surface-variant">
                             @if ($log->auditable_type)
                                 @if ($log->auditable_type === $userMorphClass)
-                                    <a href="{{ route('admin.users.show', $log->auditable_id) }}" class="whitespace-nowrap text-primary hover:underline">
+                                    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.users.show'))
+<a href="{{ route('admin.users.show', $log->auditable_id) }}" class="whitespace-nowrap text-primary hover:underline">
                                         Người dùng #{{ $log->auditable_id }}
                                     </a>
+@endif
                                 @elseif ($log->auditable_type === $questionMorphClass)
-                                    <a href="{{ route('admin.questions.edit', $log->auditable_id) }}" class="whitespace-nowrap text-primary hover:underline">
+                                    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.edit'))
+<a href="{{ route('admin.questions.edit', $log->auditable_id) }}" class="whitespace-nowrap text-primary hover:underline">
                                         Câu hỏi #{{ $log->auditable_id }}
                                     </a>
+@endif
                                 @else
                                     <span class="whitespace-nowrap">{{ class_basename($log->auditable_type) }} #{{ $log->auditable_id }}</span>
                                 @endif
@@ -137,7 +145,9 @@
                             <div class="text-xs text-on-surface-variant">{{ $log->browser ?? 'Không rõ trình duyệt' }}</div>
                         </td>
                         <td class="px-4 py-3 text-end">
-                            <a href="{{ route('admin.audit.show', $log) }}" class="font-label-md text-primary hover:underline">Chi tiết</a>
+                            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.audit.show'))
+<a href="{{ route('admin.audit.show', $log) }}" class="font-label-md text-primary hover:underline">Chi tiết</a>
+@endif
                         </td>
                     </tr>
                 @empty

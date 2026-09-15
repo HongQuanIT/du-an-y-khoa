@@ -7,7 +7,8 @@
 
     <x-admin.flash />
 
-    <form method="get" action="{{ route('admin.billing.subscriptions.index') }}"
+    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.billing.subscriptions.index'))
+<form method="get" action="{{ route('admin.billing.subscriptions.index') }}"
         class="mb-6 grid grid-cols-1 gap-3 rounded-xl border border-outline-variant bg-surface p-4 sm:grid-cols-2 lg:grid-cols-6">
         <div class="lg:col-span-2">
             <label class="mb-1 block font-label-sm text-on-surface-variant" for="q">Tìm kiếm học viên</label>
@@ -63,6 +64,7 @@
                 class="rounded-lg px-4 py-2 font-label-md text-on-surface-variant hover:bg-surface-container-low">Xóa lọc</a>
         </div>
     </form>
+@endif
 
     <div class="overflow-x-auto rounded-xl border border-outline-variant bg-surface">
         <table class="min-w-full text-left font-body-sm">
@@ -82,8 +84,10 @@
                     <tr>
                         <td class="px-4 py-3">
                             @if ($canViewUsers && $subscription->user)
-                                <a href="{{ route('admin.users.show', $subscription->user) }}"
+                                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.users.show'))
+<a href="{{ route('admin.users.show', $subscription->user) }}"
                                     class="font-label-md text-primary hover:underline">{{ $subscription->user->name }}</a>
+@endif
                                 <p class="font-body-sm text-on-surface-variant">{{ $subscription->user->email }}</p>
                             @else
                                 <p class="font-label-md text-on-surface">{{ $subscription->user?->name ?? '—' }}</p>

@@ -2,76 +2,13 @@
 
 ## 2026-09-15
 
-### Feat — Admin: gắn/gỡ bài học trong drawer môn học
+### Feat — RBAC: phân quyền chi tiết theo portal và chức năng
 
-- `/admin/categories?tab=subjects`: drawer **Sửa môn học** liệt kê bài đang gắn; tìm để gắn bài có sẵn; **Gỡ** = detach (không xoá bài); **Tạo mới** mở tab Bài học với môn đã chọn sẵn.
-- API: `POST/DELETE /admin/categories/subjects/{subject}/lessons[/{lesson}]` (JSON cho drawer). Schema `lesson_subject` không đổi.
-
-### Chore — Admin: bỏ trang hàng đợi chờ xuất bản
-- Gỡ `/admin/questions/pending-publish` và mục menu «Chờ xuất bản».
-- Admin/SA vẫn xuất bản từ form edit (status `pending_publish`); lọc danh sách `/admin/questions` theo trạng thái.
-
-## 2026-09-14
-
-### Fix — Admin: nhãn bộ lọc danh sách câu hỏi
-- «Vòng đời» → «Trạng thái»; «Chờ giảng viên» / «Chờ reviewer».
-- Placeholder đa chọn thống nhất «Tất cả».
-
-### Feat — Admin/editor: so sánh working copy với bản đang xuất bản
-- `/admin/questions/{id}/compare` dùng cùng layout hai cột với màn duyệt giảng viên (diff đỏ/vàng/xanh).
-- Lối vào từ form edit khi đã có `published_version`; nhãn phải là «Bản đang chỉnh sửa» hoặc «Bản cần duyệt» tùy trạng thái.
-
-### Fix — Teach: màn duyệt GV giữ format HTML, bỏ giải thích chung
-- `/teach/questions/reviews/{id}`: nhãn «Câu hỏi»; stem / kiến thức render HTML (không strip). Ý chính mới chỉ tô xanh, không chữ «Thêm»; mục trống ẩn (không «Chưa nhập»).
-- Gỡ «Giải thích chung» khỏi so sánh — field form đã bỏ, giải thích nằm trên từng đáp án. Cột `questions.explanation` vẫn là bản sao đáp án đúng cho export/search.
-
-### Fix — Admin: hiện ghi chú reviewer và lý do GV từ chối trên form câu hỏi
-- Trang `/admin/questions/{id}/edit` có panel «Phản hồi duyệt»: ghi chú 2 reviewer (cờ xanh/vàng/đỏ) và lý do/ghi chú giảng viên.
-- Admin chờ xuất bản đọc được góp ý trước khi publish; biên tập viên thấy lý do từ chối của GV. Câu đã xuất bản / private ẩn panel này.
-
-### Fix — Reviewer: trang gắn cờ xem câu như học viên
-- `/admin/questions/flags/{id}` hiện stem, gợi ý (highlight + lần lượt), kiến thức, ảnh, giải thích từng đáp án — cùng layout phiên học.
-- Form gắn cờ tách cột phải; đáp án đúng mở sẵn để reviewer đối chiếu chất lượng.
-
-### Fix — Reviewer: hàng đợi «Review câu hỏi», ẩn thứ tự cờ, không mở `/admin/questions`
-- Menu/tiêu đề `/admin/questions/flags` đổi thành «Review câu hỏi»; cột «Câu hỏi», «Bài học», «Độ khó». Bỏ cột «Cờ» vì lộ thứ tự/số lượng cờ.
-- Không tiết lộ reviewer là người gắn cờ thứ mấy (ẩn cờ peer, flash generic).
-- `question.flag` không còn mở danh sách/chi tiết `/admin/questions` — cần `question.view` (hoặc create/update/publish). Role reviewer chỉ còn `question.flag`.
-
-### Feat — QBank: duyệt 3 lớp (gán GV → 2 reviewer gắn cờ → xuất bản)
-- Editor chọn đúng giảng viên theo môn học (`instructor_subject`); `/teach` chỉ hiện câu gán cho GV đó.
-- Role mới `reviewer` trên `/admin`: hàng đợi gắn cờ xanh/vàng/đỏ (ghi chú tùy chọn). Đủ 2 cờ → chờ xuất bản.
-- Admin/SA xuất bản khi GV đã duyệt + đủ 2 cờ; cờ đỏ chặn publish (chỉ trả về biên tập); cờ vàng cảnh báo.
-- Status mới `in_flag_review`; trang `/admin/questions/flags`.
+- Chuẩn hóa registry, đồng bộ permission/role và kiểm tra cấu hình RBAC.
+- Áp dụng kiểm soát quyền trên admin, giảng viên, đối tác và luồng quản lý nội dung.
+- Bổ sung migration, seed, giao diện và test bao phủ các quyền mới.
 
 ## 2026-09-13
-
-### Feat — Import/export câu hỏi: chọn dòng, giới hạn, mẫu slug, lỗi Excel, chống trùng
-- Danh sách: checkbox + thanh chọn; xuất đúng câu đã chọn (tối đa 2000). Không chọn = xuất theo bộ lọc.
-- Cảnh báo «Xuất 2000/N, thu hẹp lọc» trên list và sheet hướng dẫn Excel khi bị cắt.
-- Mẫu import lấy slug bài học thật; Excel có sheet `Bai_hoc` để copy.
-- File lỗi là Excel, hàng tô đỏ; không còn CSV lỗi.
-- Import dedup (§5.8): trùng 100% (trong tệp hoặc ngân hàng) bị loại; gần trùng ≥75% cảnh báo, vẫn import.
-
-### Feat — Export câu hỏi: giữ định dạng + độ rộng cột
-- CSV giữ HTML gốc (đậm/nghiêng/list/ảnh). Excel chuyển sang rich text, đọc lại thành HTML khi import.
-- Cột Excel canh theo nội dung (mã hẹp, đề bài/giải thích/đáp án rộng), wrap, khóa tiêu đề, autofilter, dropdown A–E / độ khó.
-- Export kèm sheet hướng dẫn; gợi ý lấy từ `key_info` nếu chưa có `question_hints`.
-
-### Fix — Editor câu hỏi: copy/paste và format
-- Thay Quill bằng `contenteditable` gốc: copy/paste/IME theo trình duyệt; toolbar Bold/Italic/list/link/ảnh không nuốt selection.
-- Content Editor sửa được đề/giải thích/gợi ý; ô soạn luôn `contenteditable` (không khóa pointer-events).
-
-### Feat — Ma trận đề: mã unique, slug tự sinh, form 2 cột
-- Unique theo `code` (không còn nhập slug); slug tự sinh từ tên, giữ nguyên khi đã có.
-- Form metadata 2 cột (trái: tên/mã/trạng thái/thứ tự; phải: mô tả); danh sách đổi nhãn «Code» → «Mã».
-
-### Fix — Material Symbols nhận `text-*` của Tailwind
-- Đưa `.material-symbols-outlined` vào `@layer base` để utility size override 24px mặc định.
-
-### Chore — Nhãn Super Admin và cột bài học
-- SuperAdmin hiển thị «Supper Admin» trên enum và trang vai trò.
-- Nới cột Môn học / Hệ cơ quan; copy panel thêm/sửa bài học gọn hơn.
 
 ### Feat — Danh mục kiến thức: hệ/môn độc lập + catalog admin
 - Hệ cơ quan và môn học không còn cha–con; bài học gắn 0 hoặc nhiều mỗi trục (`lesson_organ_system`, `lesson_subject`).

@@ -114,11 +114,13 @@
                     <span class="material-symbols-outlined text-[18px]">draft</span>
                     Lưu nháp
                 </button>
-                <button type="submit" name="status" value="published"
+                @can('exam.publish')
+<button type="submit" name="status" value="published"
                     class="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 font-label-md text-on-primary hover:opacity-90">
                     <span class="material-symbols-outlined text-[18px]">publish</span>
                     {{ $isNew ? 'Tạo và xuất bản' : 'Lưu và xuất bản' }}
                 </button>
+@endcan
             </div>
         </div>
 

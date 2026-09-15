@@ -21,7 +21,7 @@ final class ContactInquiryController extends Controller
 {
     public function index(Request $request): View
     {
-        $this->authorizePermission(Permission::ContactView);
+        $this->authorizePermission('contact.view_any');
 
         $filters = [
             'q' => trim((string) $request->query('q', '')),
@@ -78,7 +78,7 @@ final class ContactInquiryController extends Controller
 
     public function show(ContactInquiry $contact): View
     {
-        $this->authorizePermission(Permission::ContactView);
+        $this->authorizePermission('contact.view_any');
 
         $contact->load(['user:id,name,email', 'assignedAdmin:id,name,email', 'resolver:id,name']);
         $contact->markRead();
@@ -92,13 +92,16 @@ final class ContactInquiryController extends Controller
             'inquiry' => $contact,
             'statuses' => ContactInquiryStatus::cases(),
             'staff' => $staff,
-            'canManage' => $this->actor()->can(Permission::ContactManage->value),
+            'canManage' => $this->actor()->canAny([
+                'contact.update',
+
+            ]),
         ]);
     }
 
     public function update(Request $request, ContactInquiry $contact, UpdateContactInquiryAction $update): RedirectResponse
     {
-        $this->authorizePermission(Permission::ContactManage);
+        $this->authorizePermission('contact.update');
 
         $validated = $request->validate([
             'status' => ['required', 'string', Rule::enum(ContactInquiryStatus::class)],
@@ -107,6 +110,10 @@ final class ContactInquiryController extends Controller
         ], [
             'status.required' => 'Vui lòng chọn trạng thái.',
         ]);
+
+        if ((int) ($validated['assigned_admin_id'] ?? 0) !== (int) $contact->assigned_admin_id) {
+            $this->authorizePermission('contact.update');
+        }
 
         if (! empty($validated['assigned_admin_id'])) {
             $assignee = User::query()->findOrFail((int) $validated['assigned_admin_id']);
@@ -131,7 +138,7 @@ final class ContactInquiryController extends Controller
 
     public function claim(Request $request, ContactInquiry $contact, UpdateContactInquiryAction $update): RedirectResponse
     {
-        $this->authorizePermission(Permission::ContactManage);
+        $this->authorizePermission('contact.update');
 
         $status = $contact->status === ContactInquiryStatus::New
             ? ContactInquiryStatus::InProgress
@@ -153,9 +160,16 @@ final class ContactInquiryController extends Controller
             ->with('status', 'Bạn đã nhận xử lý liên hệ này.');
     }
 
-    private function authorizePermission(Permission $permission): void
+    private function authorizePermission(string|Permission ...$permissions): void
     {
-        abort_unless($this->actor()->can($permission->value), 403);
+        $names = array_map(
+            static fn (string|Permission $permission): string => $permission instanceof Permission
+                ? $permission->value
+                : $permission,
+            $permissions,
+        );
+
+        abort_unless($this->actor()->canAny($names), 403);
     }
 
     private function actor(): User

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Modules\Classroom\Models;
 
 use App\Models\User;
-use App\Support\Enums\Permission;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -13,9 +12,9 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Modules\Classroom\Enums\ClassroomPurpose;
 use Modules\Classroom\Enums\ClassroomApprovalStatus;
 use Modules\Classroom\Enums\ClassroomLifecycleStatus;
+use Modules\Classroom\Enums\ClassroomPurpose;
 use Modules\Classroom\Enums\ClassroomStatus;
 use Modules\Classroom\Enums\ClassroomVisibility;
 use Modules\Classroom\Enums\LiveSessionStatus;
@@ -204,7 +203,7 @@ class Classroom extends Model
     public function canWatchLive(User $user): bool
     {
         return $this->isActiveMember($user)
-            || $user->can(Permission::ClassroomOversee->value);
+            || $user->canAny(['classroom_oversight.view_any']);
     }
 
     public function roleFor(User $user): ?MemberRole

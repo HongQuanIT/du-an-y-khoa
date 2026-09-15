@@ -8,7 +8,8 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Support\Audit\Auditor;
 use App\Support\Audit\Enums\AuditAction;
-use App\Support\Enums\Role;
+use App\Support\Auth\PortalAccess;
+use App\Support\Enums\PortalGroup;
 use App\Support\TargetExams;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
@@ -149,7 +150,7 @@ final class ProfileController extends Controller
     public function updateLearnerProfile(CompleteOnboardingRequest $request): RedirectResponse
     {
         $user = $request->user();
-        abort_unless($user->hasRole(Role::Student->value), 403);
+        abort_unless(PortalAccess::allows($user, PortalGroup::Learner), 403);
 
         $validated = $request->validated();
         $profession = Profession::query()->findOrFail($validated['profession_id']);
@@ -464,7 +465,7 @@ final class ProfileController extends Controller
             return 'career';
         }
 
-        if ($this->isAdminAccount($user) && ! in_array($tab, ['career', 'security'], true)) {
+        if ($this->isAdminAccount($user) && ! in_array($tab, ['career', 'contact', 'security'], true)) {
             return 'career';
         }
 
@@ -516,6 +517,6 @@ final class ProfileController extends Controller
 
     private function isAdminAccount(?User $user): bool
     {
-        return $user !== null && $user->hasAnyRole([Role::Admin->value, Role::SuperAdmin->value]);
+        return PortalAccess::allows($user, PortalGroup::Admin);
     }
 }

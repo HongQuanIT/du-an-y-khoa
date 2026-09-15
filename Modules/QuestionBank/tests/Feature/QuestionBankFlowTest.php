@@ -8,6 +8,7 @@ use App\Models\AuditLog;
 use App\Models\User;
 use App\Support\Audit\Enums\AuditAction;
 use App\Support\Enums\Role;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Modules\Personalization\Models\BookmarkFolder;
@@ -19,9 +20,11 @@ use Modules\QuestionBank\Enums\QuestionScopeType;
 use Modules\QuestionBank\Enums\QuestionStatus as PublicationStatus;
 use Modules\QuestionBank\Enums\SessionMode;
 use Modules\QuestionBank\Enums\SessionStatus;
-use Modules\QuestionBank\Enums\UserQuestionStatus;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
+use Modules\QuestionBank\Enums\UserQuestionStatus;
 use Modules\QuestionBank\Models\Blueprint;
+use Modules\QuestionBank\Models\BlueprintSection;
+use Modules\QuestionBank\Models\CoreClinicalTopic;
 use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
@@ -32,7 +35,7 @@ use Modules\QuestionBank\Models\QuestionSession;
 use Modules\QuestionBank\Models\QuestionSessionSnapshot;
 use Modules\QuestionBank\Models\QuestionStatus;
 use Modules\QuestionBank\Services\QuestionKeyInfoRenderer;
-use Spatie\Permission\Models\Role as RoleModel;
+use Modules\QuestionBank\Services\QuestionSessionSnapshots;
 use Tests\Support\CreatesMedicalTaxonomy;
 use Tests\TestCase;
 
@@ -49,7 +52,7 @@ final class QuestionBankFlowTest extends TestCase
     {
         parent::setUp();
 
-        RoleModel::findOrCreate(Role::Student->value, 'web');
+        $this->seed(RolePermissionSeeder::class);
         $this->user = User::factory()->create();
         $this->user->assignRole(Role::Student->value);
         $this->topic = $this->makeLesson([
@@ -153,14 +156,14 @@ final class QuestionBankFlowTest extends TestCase
             'status' => TaxonomyStatus::Active,
             'sort_order' => 1,
         ]);
-        $section = \Modules\QuestionBank\Models\BlueprintSection::query()->create([
+        $section = BlueprintSection::query()->create([
             'blueprint_id' => $blueprint->id,
             'name' => 'Phần 1',
             'slug' => 'phan-1-adaptive',
             'status' => TaxonomyStatus::Active,
             'sort_order' => 1,
         ]);
-        $coreTopic = \Modules\QuestionBank\Models\CoreClinicalTopic::query()->create([
+        $coreTopic = CoreClinicalTopic::query()->create([
             'blueprint_section_id' => $section->id,
             'name' => 'CCT adaptive',
             'slug' => 'cct-adaptive',
@@ -676,7 +679,7 @@ final class QuestionBankFlowTest extends TestCase
             'correct_count' => 1,
         ]);
 
-        app(\Modules\QuestionBank\Services\QuestionSessionSnapshots::class)->capture($session);
+        app(QuestionSessionSnapshots::class)->capture($session);
 
         $this->actingAs($this->user)
             ->get(route('qbank.review', $session))
@@ -932,6 +935,21 @@ final class QuestionBankFlowTest extends TestCase
         $this->actingAs($intruder)
             ->get(route('qbank.session', $session))
             ->assertForbidden();
+    }
+
+    public function test_pausing_a_completed_session_redirects_to_summary_instead_of_throwing_409(): void
+    {
+        $session = QuestionSession::factory()->create([
+            'user_id' => $this->user->id,
+            'status' => SessionStatus::Completed,
+        ]);
+
+        $this->actingAs($this->user)
+            ->post(route('qbank.session.pause', $session), ['current_index' => 0])
+            ->assertRedirect(route('qbank.summary', $session))
+            ->assertSessionHas('status', 'Phiên đã hoàn thành nên không thể tạm dừng.');
+
+        $this->assertSame(SessionStatus::Completed, $session->refresh()->status);
     }
 
     public function test_pausing_an_exam_freezes_the_timer_until_each_resume(): void

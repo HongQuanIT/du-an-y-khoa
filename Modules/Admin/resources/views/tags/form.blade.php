@@ -2,7 +2,9 @@
 <x-layouts.admin :title="$isNew ? 'Tạo tag' : 'Sửa tag'">
     <x-admin.page-header :title="$isNew ? 'Tạo tag' : $tag->name">
         <x-slot:actions>
-            <a href="{{ route('admin.tags.index') }}" class="rounded-lg border border-outline-variant px-4 py-2 text-sm font-semibold text-on-surface-variant hover:bg-surface-container-low">← Danh sách</a>
+            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.tags.index'))
+<a href="{{ route('admin.tags.index') }}" class="rounded-lg border border-outline-variant px-4 py-2 text-sm font-semibold text-on-surface-variant hover:bg-surface-container-low">← Danh sách</a>
+@endif
         </x-slot:actions>
     </x-admin.page-header>
 
@@ -44,10 +46,12 @@
     </form>
 
     @if ($canDelete && ! $isNew)
-        <form method="post" action="{{ route('admin.tags.destroy', $tag) }}" class="mt-4"
+        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.tags.destroy'))
+<form method="post" action="{{ route('admin.tags.destroy', $tag) }}" class="mt-4"
             onsubmit="return confirm('Xóa hoặc vô hiệu hóa tag này?')">
             @csrf @method('DELETE')
             <button type="submit" class="rounded-lg border border-error/30 px-4 py-2 text-sm font-semibold text-error hover:bg-error/5">Xóa tag</button>
         </form>
+@endif
     @endif
 </x-layouts.admin>

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Modules\StudyPlan\Policies;
 
 use App\Models\User;
-use App\Support\Enums\Role;
 use Modules\StudyPlan\Models\StudyPlan;
 
 /**
@@ -16,20 +15,18 @@ final class StudyPlanPolicy
 {
     public function view(User $user, StudyPlan $plan): bool
     {
-        return $this->owns($user, $plan);
+        return ($user->can('study_plan.view') || $user->can('study_plan.view_any'))
+            && $this->owns($user, $plan);
     }
 
     public function update(User $user, StudyPlan $plan): bool
     {
-        return $this->owns($user, $plan);
+        return $user->can('study_plan.update') && $this->owns($user, $plan);
     }
 
     public function delete(User $user, StudyPlan $plan): bool
     {
-        return $user->hasAnyRole([
-            Role::Admin->value,
-            Role::SuperAdmin->value,
-        ]);
+        return $user->can('study_plan.delete') && $this->owns($user, $plan);
     }
 
     private function owns(User $user, StudyPlan $plan): bool

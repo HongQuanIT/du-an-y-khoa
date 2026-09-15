@@ -6,11 +6,10 @@ namespace Modules\Admin\Actions;
 
 use App\Models\User;
 use App\Support\Concerns\AsAction;
-use App\Support\Enums\Permission;
 use Modules\Admin\Support\Auditor;
-use Modules\Classroom\Enums\ClassroomStatus;
 use Modules\Classroom\Enums\ClassroomApprovalStatus;
 use Modules\Classroom\Enums\ClassroomLifecycleStatus;
+use Modules\Classroom\Enums\ClassroomStatus;
 use Modules\Classroom\Models\Classroom;
 use Modules\Notification\Actions\CreateUserNotificationAction;
 
@@ -21,7 +20,7 @@ final class ApproveClassroomAction
 
     public function handle(User $actor, Classroom $classroom): Classroom
     {
-        abort_unless($actor->can(Permission::ClassroomOversee->value), 403);
+        abort_unless($actor->can('classroom_oversight.approve'), 403);
 
         if ($classroom->approval_status === ClassroomApprovalStatus::Approved
             && $classroom->lifecycle_status === ClassroomLifecycleStatus::Active) {

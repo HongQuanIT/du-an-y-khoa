@@ -90,10 +90,12 @@
                                             · {{ MoneyFormatter::vnd((int) $price->price_cents) }}
                                         </span>
                                     </span>
-                                    <a href="{{ route('admin.billing.plan-prices.edit', $price) }}"
+                                    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.billing.plan-prices.edit'))
+<a href="{{ route('admin.billing.plan-prices.edit', $price) }}"
                                         class="shrink-0 font-label-sm font-semibold text-primary hover:underline">
                                         Sửa giá
                                     </a>
+@endif
                                 </li>
                             @endforeach
                             @if ($plan->prices->count() > 4)
@@ -109,21 +111,27 @@
                     @endif
 
                     <div class="flex flex-wrap gap-2">
-                        <a href="{{ route('admin.billing.plans.edit', $plan) }}"
+                        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.billing.plans.edit'))
+<a href="{{ route('admin.billing.plans.edit', $plan) }}"
                             class="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 font-label-md font-semibold text-on-primary hover:opacity-90">
                             <span class="material-symbols-outlined text-[18px]">tune</span>
                             Cấu hình gói
                         </a>
-                        <a href="{{ route('admin.billing.plans.prices.create', $plan) }}"
+@endif
+                        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.billing.plans.prices.create'))
+<a href="{{ route('admin.billing.plans.prices.create', $plan) }}"
                             class="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant px-4 py-2.5 font-label-md text-on-surface hover:bg-surface-container-low">
                             <span class="material-symbols-outlined text-[18px]">add</span>
                             Thêm mức giá
                         </a>
+@endif
                         @if (! $plan->isFree())
-                            <a href="{{ route('admin.billing.subscriptions.index', ['plan' => $plan->id, 'status' => 'active']) }}"
+                            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.billing.subscriptions.index'))
+<a href="{{ route('admin.billing.subscriptions.index', ['plan' => $plan->id, 'status' => 'active']) }}"
                                 class="inline-flex items-center gap-1.5 rounded-lg px-3 py-2.5 font-label-md text-primary hover:underline">
                                 Xem học viên →
                             </a>
+@endif
                         @endif
                     </div>
                 </article>
@@ -141,11 +149,13 @@
                         Sửa giá, thời hạn, badge — hoặc thêm mức giá mới.
                     </p>
                 </div>
-                <a href="{{ route('admin.billing.plans.prices.create', $premiumPlan) }}"
+                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.billing.plans.prices.create'))
+<a href="{{ route('admin.billing.plans.prices.create', $premiumPlan) }}"
                     class="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 font-label-md font-semibold text-on-primary hover:opacity-90">
                     <span class="material-symbols-outlined text-[18px]">add</span>
                     Thêm SKU
                 </a>
+@endif
             </div>
 
             <div class="overflow-x-auto">
@@ -186,10 +196,12 @@
                                     {{ MoneyFormatter::vnd((int) $price->price_cents) }}
                                 </td>
                                 <td class="px-5 py-3 text-right">
-                                    <a href="{{ route('admin.billing.subscriptions.index', ['plan' => $premiumPlan->id, 'sku' => $price->id, 'status' => 'active']) }}"
+                                    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.billing.subscriptions.index'))
+<a href="{{ route('admin.billing.subscriptions.index', ['plan' => $premiumPlan->id, 'sku' => $price->id, 'status' => 'active']) }}"
                                         class="font-label-md font-semibold text-primary hover:underline">
                                         {{ number_format($row['active_users']) }}
                                     </a>
+@endif
                                 </td>
                                 <td class="px-5 py-3">
                                     @if ($price->is_public)
@@ -199,18 +211,22 @@
                                     @endif
                                 </td>
                                 <td class="px-5 py-3 text-right">
-                                    <a href="{{ route('admin.billing.plan-prices.edit', $price) }}"
+                                    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.billing.plan-prices.edit'))
+<a href="{{ route('admin.billing.plan-prices.edit', $price) }}"
                                         class="inline-flex items-center gap-1 rounded-lg border border-outline-variant px-3 py-1.5 font-label-sm font-semibold text-on-surface hover:bg-surface-container-low">
                                         <span class="material-symbols-outlined text-[16px]">edit</span>
                                         Sửa
                                     </a>
+@endif
                                 </td>
                             </tr>
                         @empty
                             <tr>
                                 <td colspan="6" class="px-5 py-8 text-center text-on-surface-variant">
                                     Chưa có SKU Premium.
-                                    <a href="{{ route('admin.billing.plans.prices.create', $premiumPlan) }}" class="text-primary hover:underline">Thêm mức giá</a>
+                                    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.billing.plans.prices.create'))
+<a href="{{ route('admin.billing.plans.prices.create', $premiumPlan) }}" class="text-primary hover:underline">Thêm mức giá</a>
+@endif
                                 </td>
                             </tr>
                         @endforelse
@@ -224,10 +240,12 @@
                                 <td class="px-5 py-3 text-on-surface-variant">—</td>
                                 <td class="px-5 py-3 text-right text-on-surface-variant">—</td>
                                 <td class="px-5 py-3 text-right">
-                                    <a href="{{ route('admin.billing.subscriptions.index', ['plan' => $premiumPlan->id, 'sku' => 'unassigned', 'status' => 'active']) }}"
+                                    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.billing.subscriptions.index'))
+<a href="{{ route('admin.billing.subscriptions.index', ['plan' => $premiumPlan->id, 'sku' => 'unassigned', 'status' => 'active']) }}"
                                         class="font-label-md font-semibold text-primary hover:underline">
                                         {{ number_format($unassignedSku['active_users']) }}
                                     </a>
+@endif
                                 </td>
                                 <td class="px-5 py-3 text-on-surface-variant">—</td>
                                 <td class="px-5 py-3"></td>

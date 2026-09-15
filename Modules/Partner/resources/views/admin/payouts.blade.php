@@ -8,7 +8,8 @@
 
     <x-admin.flash />
 
-    <form method="post" action="{{ route('admin.partners.payouts.store') }}"
+    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.partners.payouts.store'))
+<form method="post" action="{{ route('admin.partners.payouts.store') }}"
         class="mb-8 grid max-w-3xl grid-cols-1 gap-3 rounded-xl border border-outline-variant bg-surface p-4 sm:grid-cols-2">
         @csrf
         <div class="sm:col-span-2">
@@ -38,6 +39,7 @@
             <button type="submit" class="rounded-lg bg-primary px-4 py-2 font-label-md text-on-primary">Tạo kỳ & duyệt</button>
         </div>
     </form>
+@endif
 
     <div class="overflow-x-auto rounded-xl border border-outline-variant bg-surface">
         <table class="min-w-full text-left font-body-sm">
@@ -59,10 +61,12 @@
                         <td class="px-4 py-3">{{ $payout->status->label() }}</td>
                         <td class="px-4 py-3">
                             @if ($payout->status->value !== 'paid' && $payout->status->value !== 'cancelled')
-                                <form method="post" action="{{ route('admin.partners.payouts.mark-paid', $payout) }}">
+                                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.partners.payouts.mark-paid'))
+<form method="post" action="{{ route('admin.partners.payouts.mark-paid', $payout) }}">
                                     @csrf
                                     <button type="submit" class="text-primary hover:underline">Đánh dấu đã chi</button>
                                 </form>
+@endif
                             @endif
                         </td>
                     </tr>

@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace Modules\Notification\Actions;
 
 use App\Models\User;
+use App\Support\Auth\PortalAccess;
 use App\Support\Concerns\AsAction;
-use App\Support\Enums\Role;
+use App\Support\Enums\PortalGroup;
 use Illuminate\Support\Carbon;
 use Modules\Notification\Models\StreakWarningLog;
 use Modules\Notification\Support\StudyStreakCalculator;
@@ -31,7 +32,7 @@ final class SendStreakWarningsAction
 
         $sent = 0;
 
-        $userIds = User::role(Role::Student->value)->pluck('id');
+        $userIds = User::role(PortalAccess::roleNames(PortalGroup::Learner))->pluck('id');
 
         foreach ($userIds->chunk(200) as $chunk) {
             $users = User::query()->whereIn('id', $chunk)->get();

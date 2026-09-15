@@ -19,7 +19,7 @@ final class TaxonomyController extends Controller
 {
     public function index(): View
     {
-        $this->authorizePermission(Permission::TopicView);
+        $this->authorizePermission('taxonomy.view');
 
         return view('admin::taxonomy.index', [
             'stats' => [
@@ -31,13 +31,18 @@ final class TaxonomyController extends Controller
                 'lessons' => Lesson::query()->count(),
                 'tags' => Tag::query()->count(),
             ],
-            'canCreate' => $this->actor()->can(Permission::TopicCreate->value),
+            'canCreate' => $this->actor()->canAny(['taxonomy.create']),
         ]);
     }
 
-    private function authorizePermission(Permission $permission): void
+    private function authorizePermission(string|Permission ...$permissions): void
     {
-        abort_unless($this->actor()->can($permission->value), 403);
+        $names = array_map(
+            static fn (string|Permission $permission): string => $permission instanceof Permission ? $permission->value : $permission,
+            $permissions,
+        );
+
+        abort_unless($this->actor()->canAny($names), 403);
     }
 
     private function actor(): User

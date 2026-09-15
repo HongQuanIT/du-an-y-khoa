@@ -6,10 +6,12 @@
     <x-admin.page-header :title="'Sửa gói: '.$plan->name"
         description="Tier {{ $plan->slug }} — quyền lợi và tính năng hiển thị trên bảng giá.">
         <x-slot:actions>
-            <a href="{{ route('admin.billing.plans.index') }}"
+            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.billing.plans.index'))
+<a href="{{ route('admin.billing.plans.index') }}"
                 class="rounded-lg border border-outline-variant px-4 py-2 font-label-md text-on-surface-variant hover:bg-surface-container-low">
                 Quay lại
             </a>
+@endif
         </x-slot:actions>
     </x-admin.page-header>
 
@@ -18,7 +20,8 @@
     <x-admin.flash />
 
     <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <form method="post" action="{{ route('admin.billing.plans.update', $plan) }}"
+        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.billing.plans.update'))
+<form method="post" action="{{ route('admin.billing.plans.update', $plan) }}"
             class="xl:col-span-2 space-y-6 rounded-xl border border-outline-variant bg-surface p-6">
             @csrf
             @method('PUT')
@@ -73,6 +76,7 @@
                 </button>
             </div>
         </form>
+@endif
 
         <aside class="space-y-4">
             <div class="rounded-xl border border-outline-variant bg-surface p-5">
@@ -92,17 +96,21 @@
                         <div class="flex items-center justify-between">
                             <dt class="text-on-surface-variant">Lịch sử kích hoạt</dt>
                             <dd>
-                                <a href="{{ route('admin.billing.subscriptions.index', ['plan' => $plan->id, 'status' => 'all']) }}"
+                                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.billing.subscriptions.index'))
+<a href="{{ route('admin.billing.subscriptions.index', ['plan' => $plan->id, 'status' => 'all']) }}"
                                     class="text-on-surface hover:text-primary hover:underline">
                                     {{ number_format($planStats['history']) }}
                                 </a>
+@endif
                             </dd>
                         </div>
                         <dd class="pt-1">
-                            <a href="{{ route('admin.billing.subscriptions.index', ['plan' => $plan->id, 'status' => 'active']) }}"
+                            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.billing.subscriptions.index'))
+<a href="{{ route('admin.billing.subscriptions.index', ['plan' => $plan->id, 'status' => 'active']) }}"
                                 class="font-label-sm text-primary hover:underline">
                                 Xem học viên Premium active →
                             </a>
+@endif
                         </dd>
                     @endif
                 </dl>
@@ -111,10 +119,12 @@
             <div class="rounded-xl border border-outline-variant bg-surface p-5">
                 <div class="mb-4 flex items-center justify-between">
                     <h2 class="font-title-md text-on-surface">Mức giá (SKU)</h2>
-                    <a href="{{ route('admin.billing.plans.prices.create', $plan) }}"
+                    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.billing.plans.prices.create'))
+<a href="{{ route('admin.billing.plans.prices.create', $plan) }}"
                         class="rounded-lg bg-primary px-3 py-1.5 font-label-sm text-on-primary hover:opacity-90">
                         Thêm
                     </a>
+@endif
                 </div>
                 <ul class="space-y-3">
                     @forelse ($plan->prices as $price)
@@ -133,20 +143,24 @@
                                         @endif
                                     </p>
                                     <p class="mt-2 font-body-sm text-on-surface-variant">
-                                        <a href="{{ route('admin.billing.subscriptions.index', ['plan' => $plan->id, 'sku' => $price->id, 'status' => 'active']) }}"
+                                        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.billing.subscriptions.index'))
+<a href="{{ route('admin.billing.subscriptions.index', ['plan' => $plan->id, 'sku' => $price->id, 'status' => 'active']) }}"
                                             class="font-label-sm text-primary hover:underline">
                                             {{ number_format($skuStat['active_users']) }} học viên
                                         </a>
+@endif
                                         · {{ number_format($skuStat['total']) }} lịch sử
                                     </p>
                                     @if ($skuStat['by_source'] !== [])
                                         <ul class="mt-1 space-y-0.5 font-body-sm text-on-surface-variant">
                                             @foreach ($skuStat['by_source'] as $source => $count)
                                                 <li>
-                                                    <a href="{{ route('admin.billing.subscriptions.index', ['plan' => $plan->id, 'sku' => $price->id, 'source' => $source, 'status' => 'active']) }}"
+                                                    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.billing.subscriptions.index'))
+<a href="{{ route('admin.billing.subscriptions.index', ['plan' => $plan->id, 'sku' => $price->id, 'source' => $source, 'status' => 'active']) }}"
                                                         class="hover:text-primary hover:underline">
                                                         {{ $sourceLabels[$source] ?? $source }}: {{ number_format($count) }}
                                                     </a>
+@endif
                                                 </li>
                                             @endforeach
                                         </ul>
@@ -158,8 +172,10 @@
                                     @else
                                         <span class="rounded-full bg-surface-container-high px-2 py-0.5 text-[10px] text-on-surface-variant">Ẩn</span>
                                     @endif
-                                    <a href="{{ route('admin.billing.plan-prices.edit', $price) }}"
+                                    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.billing.plan-prices.edit'))
+<a href="{{ route('admin.billing.plan-prices.edit', $price) }}"
                                         class="font-label-sm text-primary hover:underline">Sửa</a>
+@endif
                                 </div>
                             </div>
                         </li>
@@ -175,20 +191,24 @@
                             Premium qua đổi mã hoặc giấy phép tổ chức, chưa map SKU cụ thể.
                         </p>
                         <p class="mt-2 font-body-sm">
-                            <a href="{{ route('admin.billing.subscriptions.index', ['plan' => $plan->id, 'sku' => 'unassigned', 'status' => 'active']) }}"
+                            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.billing.subscriptions.index'))
+<a href="{{ route('admin.billing.subscriptions.index', ['plan' => $plan->id, 'sku' => 'unassigned', 'status' => 'active']) }}"
                                 class="font-label-sm text-primary hover:underline">
                                 {{ number_format($unassignedSku['active_users']) }} học viên
                             </a>
+@endif
                             · {{ number_format($unassignedSku['total']) }} lịch sử
                         </p>
                         @if ($unassignedSku['by_source'] !== [])
                             <ul class="mt-1 space-y-0.5 font-body-sm text-on-surface-variant">
                                 @foreach ($unassignedSku['by_source'] as $source => $count)
                                     <li>
-                                        <a href="{{ route('admin.billing.subscriptions.index', ['plan' => $plan->id, 'sku' => 'unassigned', 'source' => $source, 'status' => 'active']) }}"
+                                        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.billing.subscriptions.index'))
+<a href="{{ route('admin.billing.subscriptions.index', ['plan' => $plan->id, 'sku' => 'unassigned', 'source' => $source, 'status' => 'active']) }}"
                                             class="hover:text-primary hover:underline">
                                             {{ $sourceLabels[$source] ?? $source }}: {{ number_format($count) }}
                                         </a>
+@endif
                                     </li>
                                 @endforeach
                             </ul>

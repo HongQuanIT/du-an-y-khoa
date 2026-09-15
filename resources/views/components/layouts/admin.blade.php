@@ -217,10 +217,12 @@
                             <p class="font-body-md text-body-md text-on-surface-variant">{{ $staffRoleLabel }}</p>
                         </div>
 
-                        <a href="{{ route('profile.show') }}" @click="accountMenu = false"
-                            class="block w-full rounded-lg bg-primary px-4 py-2.5 text-center font-label-md text-label-md font-bold text-on-primary transition-opacity hover:opacity-90">
-                            Quản lý tài khoản
-                        </a>
+                        @can('profile.view')
+                            <a href="{{ route('profile.show') }}" @click="accountMenu = false"
+                                class="block w-full rounded-lg bg-primary px-4 py-2.5 text-center font-label-md text-label-md font-bold text-on-primary transition-opacity hover:opacity-90">
+                                Quản lý tài khoản
+                            </a>
+                        @endcan
                     </div>
 
                     <div class="p-4">

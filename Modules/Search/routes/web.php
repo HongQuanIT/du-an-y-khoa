@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Route;
 use Modules\Search\Http\Controllers\GlobalSearchController;
 use Modules\Search\Http\Controllers\GlobalSearchSuggestController;
 
-Route::middleware(['auth', 'learner'])->group(function (): void {
+Route::middleware(['auth', 'learner', 'permission:search.use'])->group(function (): void {
     Route::get('/search', GlobalSearchController::class)->name('search.index');
     Route::get('/search/suggest', GlobalSearchSuggestController::class)->name('search.suggest');
 });

@@ -6,7 +6,6 @@ namespace Modules\Admin\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Support\Enums\Permission as PermissionEnum;
 use App\Support\Enums\PortalGroup;
 use App\Support\Enums\Role as RoleEnum;
 use Illuminate\Http\RedirectResponse;
@@ -23,7 +22,7 @@ final class RoleController extends Controller
 {
     public function index(): View
     {
-        $this->authorizePermission(PermissionEnum::RoleManage);
+        $this->authorizeAnyPermission(['role.view_any']);
 
         $roles = Role::query()
             ->where('guard_name', 'web')
@@ -32,16 +31,18 @@ final class RoleController extends Controller
             ->orderBy('name')
             ->get();
 
+        $canManageRoles = $this->actor()->hasAnyRole([RoleEnum::SuperAdmin->value, RoleEnum::Admin->value]);
+
         return view('admin::roles.index', [
             'roleGroups' => PermissionCatalog::rolesGroupedByPortal($roles),
-            'canCreate' => $this->actor()->hasRole(RoleEnum::SuperAdmin->value),
+            'canCreate' => $canManageRoles,
         ]);
     }
 
     public function create(): View
     {
-        $this->authorizePermission(PermissionEnum::RoleManage);
-        abort_unless($this->actor()->hasRole(RoleEnum::SuperAdmin->value), 403);
+        $this->authorizeAnyPermission(['role.create']);
+        abort_unless($this->actor()->hasAnyRole([RoleEnum::SuperAdmin->value, RoleEnum::Admin->value]), 403);
 
         $roles = Role::query()
             ->where('guard_name', 'web')
@@ -79,8 +80,8 @@ final class RoleController extends Controller
 
     public function store(Request $request, CreateRoleAction $action): RedirectResponse
     {
-        $this->authorizePermission(PermissionEnum::RoleManage);
-        abort_unless($this->actor()->hasRole(RoleEnum::SuperAdmin->value), 403);
+        $this->authorizeAnyPermission(['role.create']);
+        abort_unless($this->actor()->hasAnyRole([RoleEnum::SuperAdmin->value, RoleEnum::Admin->value]), 403);
 
         // Accept human-friendly or pasted names and normalize them to the
         // stable slug format used by Spatie roles.
@@ -141,7 +142,7 @@ final class RoleController extends Controller
 
     public function show(Role $role): View
     {
-        $this->authorizePermission(PermissionEnum::RoleManage);
+        $this->authorizeAnyPermission(['role.view']);
 
         $role->load('permissions');
 
@@ -156,14 +157,16 @@ final class RoleController extends Controller
             'assignedIds' => $role->permissions->pluck('id')->all(),
             'systemRole' => $systemRole !== null,
             'focusPortal' => $focusPortal,
-            'canEdit' => auth()->user()?->hasRole(RoleEnum::SuperAdmin->value)
-                && $role->name !== RoleEnum::SuperAdmin->value,
+            'canEdit' => (
+                auth()->user()?->hasRole(RoleEnum::SuperAdmin->value)
+                || (auth()->user()?->hasRole(RoleEnum::Admin->value) && ! in_array($role->name, [RoleEnum::SuperAdmin->value, RoleEnum::Admin->value], true))
+            ) && $role->name !== RoleEnum::SuperAdmin->value,
         ]);
     }
 
     public function syncPermissions(Request $request, Role $role, SyncRolePermissionsAction $action): RedirectResponse
     {
-        $this->authorizePermission(PermissionEnum::RoleManage);
+        $this->authorizeAnyPermission(['role_permission.assign']);
 
         $data = $request->validate([
             'permissions' => ['nullable', 'array'],
@@ -177,7 +180,7 @@ final class RoleController extends Controller
 
     public function permissionsCatalog(): View
     {
-        $this->authorizePermission(PermissionEnum::RoleManage);
+        $this->authorizeAnyPermission(['permission.view_any']);
 
         $roleModels = Role::query()
             ->where('guard_name', 'web')
@@ -221,9 +224,10 @@ final class RoleController extends Controller
         ]);
     }
 
-    private function authorizePermission(PermissionEnum $permission): void
+    /** @param list<string> $permissions */
+    private function authorizeAnyPermission(array $permissions): void
     {
-        abort_unless($this->actor()->can($permission->value), 403);
+        abort_unless($this->actor()->canAny($permissions), 403);
     }
 
     private function actor(): User

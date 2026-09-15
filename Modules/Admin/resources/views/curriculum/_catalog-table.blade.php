@@ -2,7 +2,6 @@
     Shared SaaS catalog table for organ systems / subjects.
     Expected: $catalogKey, $catalogLabel, $catalogSingular, $items, $storeRoute,
     $updateRoute, $destroyRoute, $namePlaceholder, $emptyHint
-    Optional (subjects): $manageLessons, $lessonOptions, $canCreateLesson
 --}}
 @php
     $editingId = (int) old('_editing_id', 0);
@@ -12,9 +11,6 @@
     $reopenUpdateUrl = $editingId > 0
         ? route($updateRoute, $editingId)
         : '';
-    $manageLessons = (bool) ($manageLessons ?? false);
-    $lessonOptions = $lessonOptions ?? [];
-    $canCreateLesson = (bool) ($canCreateLesson ?? false);
 @endphp
 
 <div class="space-y-4"
@@ -31,9 +27,6 @@
         canCreate: @js($canCreate),
         canUpdate: @js($canUpdate),
         canDelete: @js($canDelete),
-        manageLessons: @js($manageLessons),
-        lessons: @js($lessonOptions),
-        canCreateLesson: @js($canCreateLesson),
         reopenPanel: @js($reopenPanel),
         fieldErrors: @js([
             'name' => $reopenPanel ? $errors->first('name') : '',
@@ -46,7 +39,6 @@
             'slug' => old('slug', ''),
             'description' => old('description', ''),
             'status' => old('status', 'active'),
-            'lessons' => [],
         ]),
      })">
     <div class="flex flex-col gap-3 rounded-xl border border-outline-variant bg-surface p-4 lg:flex-row lg:items-center">
@@ -144,16 +136,12 @@
     <template x-teleport="body">
         <div x-show="panel !== null" x-cloak class="fixed inset-0 z-50 flex justify-end">
             <div class="absolute inset-0 bg-on-surface/40" @click="closePanel()"></div>
-            <aside class="relative flex h-full w-full flex-col bg-surface shadow-2xl"
-                :class="manageLessons ? 'max-w-lg' : 'max-w-md'"
+            <aside class="relative flex h-full w-full max-w-md flex-col bg-surface shadow-2xl"
                 @keydown.escape.window="closePanel()">
                 <div class="flex items-center justify-between border-b border-outline-variant px-5 py-4">
                     <div>
                         <h2 class="text-base font-semibold text-on-surface" x-text="panel === 'create' ? 'Thêm {{ $catalogSingular }}' : 'Sửa {{ $catalogSingular }}'"></h2>
-                        <p class="mt-0.5 text-xs text-on-surface-variant"
-                            x-text="manageLessons
-                                ? (panel === 'edit' ? 'Gắn hoặc gỡ bài học bên dưới.' : 'Sau khi tạo, mở Sửa để gắn bài học.')
-                                : 'Liên kết với bài học được quản lý ở tab Bài học.'"></p>
+                        <p class="mt-0.5 text-xs text-on-surface-variant">Liên kết với bài học được quản lý ở tab Bài học.</p>
                     </div>
                     <button type="button" @click="closePanel()" class="rounded-lg p-1.5 text-on-surface-variant hover:bg-surface-container-low">
                         <span class="material-symbols-outlined text-[20px]">close</span>
@@ -193,81 +181,6 @@
                             <label class="mb-1.5 block text-xs font-semibold text-on-surface-variant">Mô tả</label>
                             <textarea name="description" x-model="form.description" rows="3" maxlength="2000" placeholder="Tùy chọn"
                                 class="w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"></textarea>
-                        </div>
-
-                        <div x-show="manageLessons && panel === 'edit' && form.id" class="space-y-3 border-t border-outline-variant pt-4">
-                            <div class="flex items-start justify-between gap-3">
-                                <div>
-                                    <h3 class="text-sm font-semibold text-on-surface">Bài học</h3>
-                                    <p class="mt-0.5 text-xs text-on-surface-variant">
-                                        <span x-text="(form.lessons || []).length"></span> bài đang gắn · Gỡ chỉ bỏ liên kết với môn này
-                                    </p>
-                                </div>
-                                <a x-show="canCreateLesson && form.create_lesson_url"
-                                    :href="form.create_lesson_url"
-                                    class="inline-flex h-9 shrink-0 items-center gap-1 rounded-lg border border-outline-variant px-2.5 text-xs font-semibold text-on-surface hover:bg-surface-container-low">
-                                    <span class="material-symbols-outlined text-[16px]">add</span>
-                                    Tạo mới
-                                </a>
-                            </div>
-
-                            <div x-show="canUpdate" class="relative" @click.outside="subjectLessonOpen = false">
-                                <div class="relative">
-                                    <span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant">search</span>
-                                    <input type="search" x-model="subjectLessonQuery"
-                                        @focus="subjectLessonOpen = true"
-                                        @click="subjectLessonOpen = true"
-                                        @keydown.escape.prevent="subjectLessonOpen = false"
-                                        @keydown.enter.prevent="attachFirstSubjectLessonSuggestion()"
-                                        autocomplete="off" placeholder="Thêm bài học có sẵn…"
-                                        role="combobox" :aria-expanded="subjectLessonOpen"
-                                        class="h-10 w-full rounded-lg border border-outline-variant bg-surface-container-lowest py-2 pl-10 pr-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
-                                </div>
-                                <div x-show="subjectLessonOpen" x-cloak
-                                    class="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-outline-variant bg-surface p-1 shadow-xl"
-                                    role="listbox">
-                                    <template x-for="lesson in subjectLessonSuggestions" :key="'sub-les-sug-'+lesson.id">
-                                        <button type="button" role="option"
-                                            @mousedown.prevent="attachSubjectLesson(lesson)"
-                                            class="flex w-full flex-col rounded-md px-3 py-2 text-left hover:bg-surface-container-low"
-                                            :disabled="subjectLessonBusy">
-                                            <span class="text-sm font-medium text-on-surface" x-text="lesson.name"></span>
-                                            <span class="font-mono text-[11px] text-on-surface-variant" x-text="lesson.slug"></span>
-                                        </button>
-                                    </template>
-                                    <p x-show="subjectLessonSuggestions.length === 0 && lessons.length > 0"
-                                        class="px-3 py-2 text-xs text-on-surface-variant">Không còn bài học phù hợp để gắn.</p>
-                                    <p x-show="lessons.length === 0" class="px-3 py-2 text-xs text-on-surface-variant">Chưa có bài học nào trong hệ thống.</p>
-                                </div>
-                                <p x-show="subjectLessonError" x-text="subjectLessonError" class="mt-1.5 text-xs text-error"></p>
-                            </div>
-
-                            <ul class="divide-y divide-outline-variant/60 overflow-hidden rounded-lg border border-outline-variant">
-                                <template x-for="lesson in (form.lessons || [])" :key="'sub-les-'+lesson.id">
-                                    <li class="flex items-center gap-2 px-3 py-2.5">
-                                        <div class="min-w-0 flex-1">
-                                            <p class="truncate text-sm font-medium text-on-surface" x-text="lesson.name" :title="lesson.name"></p>
-                                            <div class="mt-0.5 flex flex-wrap items-center gap-2">
-                                                <span class="font-mono text-[11px] text-on-surface-variant" x-text="lesson.slug"></span>
-                                                <span class="inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                                                    :class="lesson.status === 'active'
-                                                        ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300'
-                                                        : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'"
-                                                    x-text="lesson.status === 'active' ? 'Đang dùng' : 'Ngừng dùng'"></span>
-                                            </div>
-                                        </div>
-                                        <button type="button" x-show="canUpdate"
-                                            @click="detachSubjectLesson(lesson)"
-                                            :disabled="subjectLessonBusy"
-                                            class="inline-flex h-8 shrink-0 items-center rounded-lg px-2.5 text-xs font-medium text-error hover:bg-error/10 disabled:opacity-50">
-                                            Gỡ
-                                        </button>
-                                    </li>
-                                </template>
-                                <li x-show="!(form.lessons || []).length" class="px-3 py-8 text-center text-xs text-on-surface-variant">
-                                    Chưa gắn bài học nào. Tìm bài có sẵn ở trên hoặc tạo mới.
-                                </li>
-                            </ul>
                         </div>
                     </div>
                     <div class="flex items-center justify-end gap-2 border-t border-outline-variant px-5 py-4">

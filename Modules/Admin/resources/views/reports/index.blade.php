@@ -2,14 +2,15 @@
     <x-admin.page-header title="Trung tâm báo cáo"
         description="Danh mục báo cáo dựng sẵn. Lọc kỳ, biểu đồ, xuất CSV và lên lịch gửi email định kỳ.">
         <x-slot:actions>
-            @can(\App\Support\Enums\Permission::SystemManage->value)
-                <a href="{{ route('admin.settings.index', ['tab' => 'reports']) }}"
+            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.settings.index'))
+<a href="{{ route('admin.settings.index', ['tab' => 'reports']) }}"
                     class="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant px-3 py-2 font-label-md text-on-surface-variant transition hover:bg-surface-container-low">
                     <span class="material-symbols-outlined text-[18px]">settings</span>
                     Chu kỳ cron
                 </a>
-            @endcan
-            <form method="post" action="{{ route('admin.reports.cache.warm-all') }}"
+            @endif
+            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.reports.cache.warm-all'))
+<form method="post" action="{{ route('admin.reports.cache.warm-all') }}"
                 x-data="{ busy: @js(in_array($warmAllStatus['status'] ?? 'idle', ['queued', 'processing'], true)) }"
                 @submit="busy = true">
                 @csrf
@@ -19,6 +20,7 @@
                     <span x-text="busy ? 'Đang làm mới cache…' : 'Làm mới toàn bộ cache'"></span>
                 </button>
             </form>
+@endif
         </x-slot:actions>
     </x-admin.page-header>
 
@@ -44,12 +46,14 @@
                     <span class="material-symbols-outlined animate-spin text-[20px]">progress_activity</span>
                     <span class="font-label-md">Đang làm mới toàn bộ cache báo cáo trong hàng đợi…</span>
                 </div>
-                <form method="post" action="{{ route('admin.reports.cache.warm-all-reset') }}">
+                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.reports.cache.warm-all-reset'))
+<form method="post" action="{{ route('admin.reports.cache.warm-all-reset') }}">
                     @csrf
                     <button type="submit" class="font-label-sm text-on-surface-variant underline hover:text-on-surface">
                         Reset nếu Horizon không có job
                     </button>
                 </form>
+@endif
             </div>
         </div>
     @elseif (($warmAllStatus['status'] ?? '') === 'failed')
@@ -59,12 +63,14 @@
                     <span class="font-label-md">Làm mới cache thất bại / bị kẹt.</span>
                     {{ $warmAllStatus['error'] ?? '' }}
                 </p>
-                <form method="post" action="{{ route('admin.reports.cache.warm-all') }}">
+                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.reports.cache.warm-all'))
+<form method="post" action="{{ route('admin.reports.cache.warm-all') }}">
                     @csrf
                     <button type="submit" class="rounded-lg border border-outline-variant px-3 py-1.5 font-label-sm hover:bg-surface">
                         Chạy lại
                     </button>
                 </form>
+@endif
             </div>
         </div>
     @endif
@@ -107,9 +113,10 @@
                     @else
                         chưa warm — cron sẽ chạy khi đủ chu kỳ (mặc định 1 ngày)
                     @endif
-                    @can(\App\Support\Enums\Permission::SystemManage->value)
-                        · <a href="{{ route('admin.settings.index', ['tab' => 'reports']) }}" class="text-primary hover:underline">Đổi trong Cài đặt → Báo cáo</a>
-                    @endcan
+                    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.settings.index'))
+                        ·
+<a href="{{ route('admin.settings.index', ['tab' => 'reports']) }}" class="text-primary hover:underline">Đổi trong Cài đặt → Báo cáo</a>
+                    @endif
                 </p>
             </div>
 
@@ -136,10 +143,12 @@
                             @foreach ($schedules as $schedule)
                                 <tr class="border-b border-outline-variant/60 last:border-0">
                                     <td class="px-3 py-3">
-                                        <a href="{{ route('admin.reports.show', [$schedule->category_slug, $schedule->report_slug]) }}"
+                                        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.reports.show'))
+<a href="{{ route('admin.reports.show', [$schedule->category_slug, $schedule->report_slug]) }}"
                                             class="font-label-md text-primary hover:underline">
                                             {{ $schedule->reportTitle() }}
                                         </a>
+@endif
                                         <div class="font-label-sm text-on-surface-variant">{{ $schedule->categoryTitle() }} · {{ $schedule->range_key }}</div>
                                     </td>
                                     <td class="px-3 py-3 whitespace-nowrap text-on-surface-variant">{{ $schedule->frequencySummary() }}</td>
@@ -172,23 +181,29 @@
                                     </td>
                                     <td class="px-3 py-3">
                                         <div class="flex flex-wrap justify-end gap-2">
-                                            <form method="post" action="{{ route('admin.reports.schedules.toggle', $schedule) }}">
+                                            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.reports.schedules.toggle'))
+<form method="post" action="{{ route('admin.reports.schedules.toggle', $schedule) }}">
                                                 @csrf
                                                 <button type="submit" class="font-label-sm text-primary hover:underline">
                                                     {{ $schedule->is_active ? 'Tắt lịch' : 'Bật lịch' }}
                                                 </button>
                                             </form>
-                                            <form method="post" action="{{ route('admin.reports.schedules.toggle-email', $schedule) }}">
+@endif
+                                            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.reports.schedules.toggle-email'))
+<form method="post" action="{{ route('admin.reports.schedules.toggle-email', $schedule) }}">
                                                 @csrf
                                                 <button type="submit" class="font-label-sm text-primary hover:underline">
                                                     {{ $schedule->send_email ? 'Tắt email' : 'Bật email' }}
                                                 </button>
                                             </form>
-                                            <form method="post" action="{{ route('admin.reports.schedules.destroy', $schedule) }}"
+@endif
+                                            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.reports.schedules.destroy'))
+<form method="post" action="{{ route('admin.reports.schedules.destroy', $schedule) }}"
                                                 onsubmit="return confirm('Xóa lịch này?')">
                                                 @csrf
                                                 <button type="submit" class="font-label-sm text-error hover:underline">Xóa</button>
                                             </form>
+@endif
                                         </div>
                                     </td>
                                 </tr>

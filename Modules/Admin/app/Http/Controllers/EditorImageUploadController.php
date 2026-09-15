@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Modules\Admin\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Support\Enums\Permission;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -18,8 +17,9 @@ final class EditorImageUploadController extends Controller
 {
     public function __invoke(Request $request): JsonResponse
     {
-        abort_unless($request->user()?->can(Permission::QuestionUpdate->value)
-            || $request->user()?->can(Permission::QuestionCreate->value), 403);
+        abort_unless($request->user()?->canAny([
+            'media.upload',
+        ]), 403);
 
         $request->validate([
             'image' => ['required', 'image', 'max:5120', 'mimes:jpg,jpeg,png,gif,webp'],

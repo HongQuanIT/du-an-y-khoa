@@ -1,6 +1,8 @@
 <x-layouts.admin :title="$institution->exists ? 'Chỉnh sửa trường' : 'Thêm trường'">
     <x-admin.page-header :title="$institution->exists ? 'Chỉnh sửa trường' : 'Thêm trường/cơ sở đào tạo'" description="Học viên chỉ có thể chọn những trường đang hiển thị.">
-        <x-slot:actions><a href="{{ route('admin.institutions.index') }}" class="rounded-lg px-3 py-2 text-on-surface-variant hover:bg-surface-container-low">← Danh sách</a></x-slot:actions>
+        <x-slot:actions>@if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.institutions.index'))
+<a href="{{ route('admin.institutions.index') }}" class="rounded-lg px-3 py-2 text-on-surface-variant hover:bg-surface-container-low">← Danh sách</a>
+@endif</x-slot:actions>
     </x-admin.page-header>
     @include('admin::learner-data._tabs')
     <x-admin.flash />
@@ -27,7 +29,4 @@
         </div>
     </form>
 
-    @if ($institution->exists)
-        <form method="post" action="{{ route('admin.institutions.toggle', $institution) }}" class="mt-4 max-w-3xl text-right">@csrf @method('PATCH')<button class="text-label-sm font-semibold text-on-surface-variant hover:text-primary hover:underline">{{ $institution->is_active ? 'Ngừng hiển thị' : 'Kích hoạt lại' }}</button></form>
-    @endif
 </x-layouts.admin>

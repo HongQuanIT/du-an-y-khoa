@@ -9,11 +9,13 @@
 <x-layouts.admin title="Kiểm tra trùng lặp">
     <div class="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div class="flex min-w-0 items-start gap-3">
-            <a href="{{ route('admin.questions.edit', $question) }}"
+            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.edit'))
+<a href="{{ route('admin.questions.edit', $question) }}"
                class="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl border border-outline-variant text-on-surface-variant transition-colors hover:bg-surface-container-low"
                aria-label="Quay lại chỉnh sửa">
                 <span class="material-symbols-outlined text-[20px]">arrow_back</span>
             </a>
+@endif
             <div class="min-w-0">
                 <h1 class="font-headline-sm font-bold text-on-surface">Kiểm tra trùng lặp</h1>
                 <p class="mt-1 max-w-3xl font-body-sm text-on-surface-variant">
@@ -33,7 +35,8 @@
             </div>
         </div>
         <div class="flex flex-wrap items-center gap-2">
-            <form method="post" action="{{ route('admin.questions.check-duplicates', $question) }}">
+            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.check-duplicates'))
+<form method="post" action="{{ route('admin.questions.check-duplicates', $question) }}">
                 @csrf
                 <button type="submit"
                         class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary hover:bg-primary/90">
@@ -41,11 +44,14 @@
                     Quét lại
                 </button>
             </form>
-            <a href="{{ route('admin.questions.edit', $question) }}"
+@endif
+            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.edit'))
+<a href="{{ route('admin.questions.edit', $question) }}"
                class="inline-flex items-center gap-1.5 rounded-xl border border-outline-variant bg-surface px-3 py-2.5 text-sm font-semibold text-on-surface hover:bg-surface-container-low">
                 <span class="material-symbols-outlined text-[18px]">edit</span>
                 Chỉnh sửa
             </a>
+@endif
         </div>
     </div>
 
@@ -145,11 +151,13 @@
                                 <p>Đáp án: {{ isset($signals['options_score']) ? number_format((float) $signals['options_score'], 1).'%' : '—' }}</p>
                             </td>
                             <td class="px-4 py-3 text-right">
-                                <a href="{{ route('admin.questions.edit', $other) }}"
+                                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.edit'))
+<a href="{{ route('admin.questions.edit', $other) }}"
                                    class="inline-flex items-center gap-1 rounded-lg border border-outline-variant px-2.5 py-1.5 text-xs font-semibold text-primary hover:bg-surface-container-low">
                                     Xem
                                     <span class="material-symbols-outlined text-[14px]">open_in_new</span>
                                 </a>
+@endif
                             </td>
                         </tr>
                     @empty

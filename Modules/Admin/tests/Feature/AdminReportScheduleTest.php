@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Admin\Tests\Feature;
 
 use App\Models\User;
+use App\Services\SettingService;
 use App\Support\Auth\TwoFactorSession;
 use App\Support\Enums\Permission;
 use App\Support\Enums\Role;
@@ -13,7 +14,11 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Queue;
+use Modules\Admin\Actions\GetAdminReportDataAction;
 use Modules\Admin\Enums\ReportScheduleFrequency;
+use Modules\Admin\Jobs\RefreshAdminReportCacheJob;
+use Modules\Admin\Jobs\WarmAllAdminReportCachesJob;
 use Modules\Admin\Mail\ScheduledReportMail;
 use Modules\Admin\Models\ReportSchedule;
 use Modules\Admin\Support\AdminReportCache;
@@ -166,13 +171,13 @@ final class AdminReportScheduleTest extends TestCase
 
     public function test_auto_warm_respects_interval_setting(): void
     {
-        app(\App\Services\SettingService::class)->set('reports.cache_warm_interval_days', 7, 'integer');
+        app(SettingService::class)->set('reports.cache_warm_interval_days', 7, 'integer');
 
         AdminReportCache::markWarmed(1);
         $this->assertFalse(AdminReportCache::shouldAutoWarm());
 
         // Giả lập lần warm cách đây 8 ngày
-        \Illuminate\Support\Facades\Cache::put(AdminReportCache::metaKey(), [
+        Cache::put(AdminReportCache::metaKey(), [
             'warmed_at' => now()->subDays(8)->toIso8601String(),
             'count' => 1,
             'interval_days' => 7,
@@ -215,6 +220,7 @@ final class AdminReportScheduleTest extends TestCase
 
     public function test_admin_can_queue_report_refresh_and_poll_status(): void
     {
+        Queue::fake();
         $admin = $this->staffUser(Role::Admin);
 
         $this->actingAsStaff($admin)
@@ -228,8 +234,8 @@ final class AdminReportScheduleTest extends TestCase
         $this->assertSame('queued', AdminReportCache::refreshStatus('users', 'dau-mau', '30d')['status']);
 
         // Mô phỏng worker xử lý job
-        (new \Modules\Admin\Jobs\RefreshAdminReportCacheJob('users', 'dau-mau', '30d'))
-            ->handle(\Modules\Admin\Actions\GetAdminReportDataAction::make());
+        (new RefreshAdminReportCacheJob('users', 'dau-mau', '30d'))
+            ->handle(GetAdminReportDataAction::make());
 
         $this->assertSame('ready', AdminReportCache::refreshStatus('users', 'dau-mau', '30d')['status']);
         $this->assertNotNull(AdminReportCache::get('users', 'dau-mau', '30d'));
@@ -247,7 +253,7 @@ final class AdminReportScheduleTest extends TestCase
 
     public function test_refresh_job_is_dispatched_to_queue(): void
     {
-        \Illuminate\Support\Facades\Queue::fake();
+        Queue::fake();
 
         $admin = $this->staffUser(Role::Admin);
 
@@ -258,7 +264,7 @@ final class AdminReportScheduleTest extends TestCase
             ->assertOk()
             ->assertJsonPath('queued', true);
 
-        \Illuminate\Support\Facades\Queue::assertPushed(\Modules\Admin\Jobs\RefreshAdminReportCacheJob::class);
+        Queue::assertPushed(RefreshAdminReportCacheJob::class);
         $this->assertSame('queued', AdminReportCache::refreshStatus('users', 'signups', '7d')['status']);
     }
 
@@ -275,7 +281,7 @@ final class AdminReportScheduleTest extends TestCase
 
     public function test_admin_can_queue_warm_all_caches(): void
     {
-        \Illuminate\Support\Facades\Queue::fake();
+        Queue::fake();
 
         $admin = $this->staffUser(Role::Admin);
 
@@ -284,7 +290,7 @@ final class AdminReportScheduleTest extends TestCase
             ->post(route('admin.reports.cache.warm-all'))
             ->assertRedirect(route('admin.reports.index'));
 
-        \Illuminate\Support\Facades\Queue::assertPushed(\Modules\Admin\Jobs\WarmAllAdminReportCachesJob::class);
+        Queue::assertPushed(WarmAllAdminReportCachesJob::class);
     }
 
     /** @param array<string, mixed> $overrides */

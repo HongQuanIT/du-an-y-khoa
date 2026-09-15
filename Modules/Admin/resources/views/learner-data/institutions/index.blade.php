@@ -3,9 +3,10 @@
     <x-admin.page-header title="Trường và cơ sở đào tạo" description="Danh mục chuẩn dùng khi học viên hoàn thiện hồ sơ.">
         <x-slot:actions>
             <div class="flex gap-2">
-                <a href="{{ route('admin.learner-data.demographics') }}" class="rounded-lg border border-outline-variant px-3 py-2 font-label-md text-on-surface-variant hover:bg-surface-container-low">Xem tổng hợp</a>
-                @if ($canManage)
-                    <a href="{{ route('admin.institutions.index', ['create' => 1]) }}" class="rounded-lg bg-primary px-3 py-2 font-label-md text-on-primary hover:opacity-90">Thêm trường</a>
+                @if ($canCreate)
+                    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.institutions.create'))
+<a href="{{ route('admin.institutions.index', ['create' => 1]) }}" class="rounded-lg bg-primary px-3 py-2 font-label-md text-on-primary hover:opacity-90">Thêm trường</a>
+@endif
                 @endif
             </div>
         </x-slot:actions>
@@ -52,7 +53,9 @@
                         <td class="px-4 py-3 tabular-nums">{{ number_format($institution->learner_profiles_count) }}</td>
                         <td class="px-4 py-3"><span class="rounded-full bg-surface-container px-2.5 py-1 text-label-sm">{{ $institution->is_active ? 'Đang hiển thị' : 'Đã ẩn' }}</span></td>
                         <td class="px-4 py-3 text-right">
-                            @if ($canManage)<a href="{{ route('admin.institutions.index', ['edit' => $institution->id] + $filters) }}" class="font-label-sm font-semibold text-primary hover:underline">Chỉnh sửa</a>@endif
+                            @if ($canUpdate)@if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.institutions.edit'))
+<a href="{{ route('admin.institutions.index', ['edit' => $institution->id] + $filters) }}" class="font-label-sm font-semibold text-primary hover:underline">Chỉnh sửa</a>
+@endif@endif
                         </td>
                     </tr>
                 @empty
@@ -63,11 +66,13 @@
     </div>
     <div class="mt-4">{{ $institutions->links() }}</div>
 
-    @if ($canManage)
+    @if ($editing || $canCreate)
         <div x-cloak x-show="formModalOpen" x-transition.opacity @keydown.escape.window="@if($editing) window.location.href = '{{ route('admin.institutions.index') }}' @else formModalOpen = false @endif"
             class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="institution-form-title">
             @if ($editing)
-                <a href="{{ route('admin.institutions.index') }}" class="absolute inset-0 bg-scrim/50" aria-label="Đóng"></a>
+                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.institutions.index'))
+<a href="{{ route('admin.institutions.index') }}" class="absolute inset-0 bg-scrim/50" aria-label="Đóng"></a>
+@endif
             @else
                 <button type="button" class="absolute inset-0 bg-scrim/50" aria-label="Đóng" @click="formModalOpen = false"></button>
             @endif
@@ -77,7 +82,9 @@
                 <div class="mb-5 flex items-center justify-between gap-3">
                     <h2 id="institution-form-title" class="font-title-lg font-semibold text-on-surface">{{ $editing ? 'Chỉnh sửa trường/cơ sở đào tạo' : 'Thêm trường/cơ sở đào tạo' }}</h2>
                     @if ($editing)
-                        <a href="{{ route('admin.institutions.index') }}" class="flex size-9 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container" aria-label="Đóng"><span class="material-symbols-outlined">close</span></a>
+                        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.institutions.index'))
+<a href="{{ route('admin.institutions.index') }}" class="flex size-9 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container" aria-label="Đóng"><span class="material-symbols-outlined">close</span></a>
+@endif
                     @else
                         <button type="button" @click="formModalOpen = false" class="flex size-9 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container" aria-label="Đóng"><span class="material-symbols-outlined">close</span></button>
                     @endif

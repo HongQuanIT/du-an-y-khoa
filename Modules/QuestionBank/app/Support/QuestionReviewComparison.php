@@ -33,42 +33,53 @@ final class QuestionReviewComparison
      *     has_changes: bool,
      *     changed_labels: list<string>,
      *     stem: TextField,
+     *     explanation: TextField,
      *     attending_tip: TextField,
      *     difficulty: array{changed: bool, published: string, proposed: string},
      *     stem_image: array{changed: bool, published_url: string|null, proposed_url: string|null},
      *     lessons: array{changed: bool, published: list<Chip>, proposed: list<Chip>},
      *     key_info: array{changed: bool, published: list<array{html: string, change: string}>, proposed: list<array{html: string, change: string}>},
      *     options: list<OptionRow>
-     * }
+     * }|null
      */
-    public function compare(Question $question): array
+    public function compare(Question $question): ?array
     {
+        $publishedVersion = (int) ($question->published_version ?? 0);
+        if ($publishedVersion < 1) {
+            return null;
+        }
+
+        $version = QuestionVersion::query()
+            ->where('question_id', $question->getKey())
+            ->where('version', $publishedVersion)
+            ->first();
+
+        if ($version === null) {
+            return null;
+        }
+
         $question->loadMissing([
             'options' => fn ($query) => $query->orderBy('order'),
             'lessons:id,name',
         ]);
 
-        $publishedVersion = (int) ($question->published_version ?? 0);
-        $version = $publishedVersion >= 1
-            ? QuestionVersion::query()
-                ->where('question_id', $question->getKey())
-                ->where('version', $publishedVersion)
-                ->first()
-            : null;
-
-        $snapshot = is_array($version?->snapshot) ? $version->snapshot : [];
-        $canCompare = $version !== null;
+        $snapshot = $version->snapshot ?? [];
         $stem = $this->diff->highlight(
             (string) ($snapshot['stem'] ?? ''),
             (string) $question->stem,
+        );
+        $explanation = $this->diff->highlight(
+            (string) ($snapshot['explanation'] ?? ''),
+            (string) $question->explanation,
         );
         $attendingTip = $this->diff->highlight(
             (string) ($snapshot['attending_tip'] ?? ''),
             (string) $question->attending_tip,
         );
 
-        $publishedDifficulty = Difficulty::tryFrom((string) ($snapshot['difficulty'] ?? ''));
-        $difficultyChanged = ($publishedDifficulty?->value ?? '') !== $question->difficulty->value;
+        $publishedDifficulty = Difficulty::tryFrom((string) ($snapshot['difficulty'] ?? ''))
+            ?? $question->difficulty;
+        $difficultyChanged = $publishedDifficulty !== $question->difficulty;
 
         $publishedImage = is_string($snapshot['stem_image_path'] ?? null)
             ? $snapshot['stem_image_path']
@@ -88,7 +99,7 @@ final class QuestionReviewComparison
 
         $changedLabels = [];
         if ($stem['changed']) {
-            $changedLabels[] = 'Câu hỏi';
+            $changedLabels[] = 'Đề bài';
         }
         if ($imageChanged) {
             $changedLabels[] = 'Hình ảnh';
@@ -102,6 +113,9 @@ final class QuestionReviewComparison
         if (collect($options)->contains(fn (array $row): bool => $row['change'] !== 'same')) {
             $changedLabels[] = 'Đáp án';
         }
+        if ($explanation['changed']) {
+            $changedLabels[] = 'Giải thích chung';
+        }
         if ($keyInfo['changed']) {
             $changedLabels[] = 'Ý chính';
         }
@@ -109,20 +123,17 @@ final class QuestionReviewComparison
             $changedLabels[] = 'Kiến thức / Gợi ý';
         }
 
-        if (! $canCompare) {
-            $changedLabels = ['Câu mới'];
-        }
-
         return [
-            'can_compare' => $canCompare,
-            'published_version' => $canCompare ? $publishedVersion : null,
+            'can_compare' => true,
+            'published_version' => $publishedVersion,
             'has_changes' => $changedLabels !== [],
             'changed_labels' => $changedLabels,
             'stem' => $stem,
+            'explanation' => $explanation,
             'attending_tip' => $attendingTip,
             'difficulty' => [
                 'changed' => $difficultyChanged,
-                'published' => $publishedDifficulty?->label() ?? '—',
+                'published' => $publishedDifficulty->label(),
                 'proposed' => $question->difficulty->label(),
             ],
             'stem_image' => [

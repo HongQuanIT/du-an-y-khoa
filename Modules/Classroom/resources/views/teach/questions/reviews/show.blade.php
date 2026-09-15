@@ -1,6 +1,6 @@
 <x-layouts.teach
     title="Duyệt câu hỏi"
-    description="Thẩm định chuyên môn câu hỏi trước khi đưa vào ngân hàng.">
+    description="Xem nội dung và duyệt hoặc từ chối câu hỏi do Content Creator gửi.">
     <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div class="flex items-center gap-3">
             <a href="{{ route('teach.questions.reviews.index') }}"
@@ -17,10 +17,8 @@
                     @if ($question->code)
                         · <span class="font-semibold text-on-surface">{{ $question->code }}</span>
                     @endif
-                    @if ($comparison['published_version'] ?? null)
+                    @if ($comparison)
                         · So sánh với bản xuất bản v{{ $comparison['published_version'] }}
-                    @else
-                        · Câu mới — chưa có bản xuất bản
                     @endif
                 </p>
             </div>
@@ -58,8 +56,9 @@
     @if ($canDecide)
     <div class="mb-6 rounded-2xl border border-outline-variant bg-surface p-5 shadow-sm">
         <p class="mb-3 text-sm text-on-surface-variant">
-            Bạn được mời thẩm định chuyên môn câu hỏi này. Hãy rà soát đề, đáp án và giải thích về tính chính xác y khoa.
-            Duyệt khi nội dung đã đạt; từ chối kèm góp ý nếu cần biên tập lại.
+            Cần 2 giảng viên khác nhau chấp nhận. Phiếu của bạn là
+            <strong class="text-on-surface">{{ ($approvalCount ?? 0) + 1 }}/2</strong>
+            (không tăng version). Một phiếu từ chối là fail ngay — trả về Content Creator.
         </p>
         <div class="mb-3">
             @include('questionbank::partials.instructor-review-flags', [
@@ -72,6 +71,7 @@
             class="w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm"
             placeholder="Góp ý không bắt buộc khi duyệt; bắt buộc khi từ chối...">{{ old('review_note') }}</textarea>
         <div class="mt-3 flex flex-wrap justify-end gap-2">
+            @if ($canReject)
             <form id="reject-review-form" method="post" action="{{ route('teach.questions.reviews.reject', $question) }}">
                 @csrf
                 <input type="hidden" name="review_note" id="reject-review-note">
@@ -81,13 +81,16 @@
                     <span class="material-symbols-outlined text-[18px]">close</span>Từ chối
                 </button>
             </form>
+            @endif
+            @if ($canApprove)
             <form id="approve-review-form" method="post" action="{{ route('teach.questions.reviews.approve', $question) }}">
                 @csrf
-                <button type="submit" onclick="return confirm('Xác nhận duyệt chuyên môn câu hỏi này?')"
+                <button type="submit" onclick="return confirm('Ghi nhận phiếu chấp nhận của bạn? Cần đủ 2 giảng viên mới chuyển chờ xuất bản.')"
                     class="inline-flex items-center gap-1 rounded-xl bg-primary px-4 py-2.5 font-semibold text-on-primary hover:bg-primary/90">
                     <span class="material-symbols-outlined text-[18px]">check</span>Duyệt chuyên môn
                 </button>
             </form>
+            @endif
         </div>
     </div>
     @else
@@ -102,5 +105,74 @@
     </div>
     @endif
 
-    @include('questionbank::partials.question-review-comparison', ['comparison' => $comparison])
+    @if ($comparison)
+        @include('questionbank::partials.question-review-comparison', ['comparison' => $comparison])
+    @else
+    <section class="rounded-2xl border border-outline-variant bg-surface p-5">
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <h3 class="font-label-lg font-bold text-on-surface">Nội dung câu hỏi</h3>
+            <span class="rounded-full bg-sky-100 px-2.5 py-1 text-xs font-bold text-sky-800">Câu mới — chưa có bản xuất bản</span>
+        </div>
+        <p class="whitespace-pre-wrap text-sm leading-6 text-on-surface">{{ strip_tags((string) $question->stem) }}</p>
+
+        @if ($question->stemImageUrl())
+            <img src="{{ $question->stemImageUrl() }}" alt="Hình kèm câu hỏi"
+                class="mt-4 max-h-72 rounded-xl border border-outline-variant object-contain">
+        @endif
+
+        <h4 class="mt-5 text-sm font-bold text-on-surface">Bài học</h4>
+        <div class="mt-2 flex flex-wrap gap-2">
+            @forelse ($question->lessons as $lesson)
+                <span class="inline-flex rounded-lg bg-surface-container-high px-2.5 py-1 text-xs font-semibold">
+                    {{ $lesson->name }}
+                </span>
+            @empty
+                <span class="text-sm text-on-surface-variant">Chưa nhập.</span>
+            @endforelse
+        </div>
+
+        <h4 class="mt-5 text-sm font-bold text-on-surface">Độ khó</h4>
+        <div class="mt-2">
+            <span class="inline-flex rounded-lg bg-surface-container-high px-2.5 py-1 text-xs font-semibold">
+                {{ $question->difficulty->label() }}
+            </span>
+        </div>
+
+        <h4 class="mt-5 text-sm font-bold text-on-surface">Đáp án</h4>
+        <div class="mt-2 space-y-2">
+            @foreach ($question->options as $index => $option)
+                <div class="rounded-xl border px-3 py-2 text-sm {{ $option->is_correct ? 'border-emerald-300 bg-emerald-50 text-emerald-900' : 'border-outline-variant bg-surface-container-lowest' }}">
+                    <p>
+                        <span class="mr-2 font-bold">{{ chr(65 + $index) }}.</span>{{ strip_tags((string) $option->content) }}
+                        @if ($option->is_correct)
+                            <span class="ml-2 text-xs font-bold">Đáp án đúng</span>
+                        @endif
+                    </p>
+                    @if (filled(strip_tags((string) $option->explanation)))
+                        <p class="mt-1 border-t border-current/10 pt-1 text-xs leading-5 text-on-surface-variant">
+                            <span class="font-semibold">Giải thích:</span> {{ strip_tags((string) $option->explanation) }}
+                        </p>
+                    @endif
+                </div>
+            @endforeach
+        </div>
+
+        <h4 class="mt-5 text-sm font-bold text-on-surface">Giải thích chung</h4>
+        <p class="mt-1 whitespace-pre-wrap text-sm leading-6 text-on-surface-variant">
+            {{ filled(strip_tags((string) $question->explanation)) ? strip_tags((string) $question->explanation) : 'Chưa nhập.' }}
+        </p>
+
+        <h4 class="mt-5 text-sm font-bold text-on-surface">Ý chính cần ghi nhớ</h4>
+        @forelse ((array) ($question->key_info ?? []) as $item)
+            <p class="mt-1 text-sm text-on-surface-variant">• {{ strip_tags((string) $item) }}</p>
+        @empty
+            <p class="mt-1 text-sm text-on-surface-variant">Chưa nhập.</p>
+        @endforelse
+
+        <h4 class="mt-5 text-sm font-bold text-on-surface">Kiến thức / Gợi ý</h4>
+        <p class="mt-1 whitespace-pre-wrap text-sm leading-6 text-on-surface-variant">
+            {{ filled(strip_tags((string) $question->attending_tip)) ? strip_tags((string) $question->attending_tip) : 'Chưa nhập.' }}
+        </p>
+    </section>
+    @endif
 </x-layouts.teach>

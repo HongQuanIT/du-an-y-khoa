@@ -70,7 +70,7 @@ final class AdminAuditArchitectureTest extends TestCase
         $this->assertTrue($admin->performedAuditLogs()->whereKey($log->id)->exists());
     }
 
-    public function test_question_create_audit_contains_normalized_content_and_review_context(): void
+    public function test_question_create_audit_contains_normalized_content(): void
     {
         $editor = $this->staffUser(Role::ContentEditor);
         $topic = $this->makeMedicalNode([
@@ -111,8 +111,7 @@ final class AdminAuditArchitectureTest extends TestCase
         $this->assertTrue($log->after['exam_flag']);
         $this->assertCount(2, $log->after['options']);
         $this->assertTrue($log->after['options'][0]['is_correct']);
-        $this->assertSame('create', $log->metadata['review_action']);
-        $this->assertNotNull($log->metadata['review_request_id']);
+        $this->assertNull($log->metadata);
         $this->assertTrue($question->auditLogs()->whereKey($log->id)->exists());
     }
 

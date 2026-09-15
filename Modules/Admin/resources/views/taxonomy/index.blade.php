@@ -14,7 +14,8 @@
     </div>
 
     <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <a href="{{ route('admin.blueprints.index') }}"
+        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.blueprints.index'))
+<a href="{{ route('admin.blueprints.index') }}"
             class="group rounded-xl border border-outline-variant bg-surface p-5 transition-colors hover:border-primary/40 hover:bg-primary/5">
             <div class="flex items-start gap-4">
                 <span class="flex size-12 items-center justify-center rounded-xl bg-primary-container text-on-primary-container">
@@ -29,8 +30,10 @@
                 </div>
             </div>
         </a>
+@endif
 
-        <a href="{{ route('admin.curriculum.index') }}"
+        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.curriculum.index'))
+<a href="{{ route('admin.curriculum.index') }}"
             class="group rounded-xl border border-outline-variant bg-surface p-5 transition-colors hover:border-primary/40 hover:bg-primary/5">
             <div class="flex items-start gap-4">
                 <span class="flex size-12 items-center justify-center rounded-xl bg-secondary-container text-on-secondary-container">
@@ -45,8 +48,10 @@
                 </div>
             </div>
         </a>
+@endif
 
-        <a href="{{ route('admin.tags.index') }}"
+        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.tags.index'))
+<a href="{{ route('admin.tags.index') }}"
             class="group rounded-xl border border-outline-variant bg-surface p-5 transition-colors hover:border-primary/40 hover:bg-primary/5">
             <div class="flex items-start gap-4">
                 <span class="flex size-12 items-center justify-center rounded-xl bg-tertiary-container text-on-tertiary-container">
@@ -61,5 +66,6 @@
                 </div>
             </div>
         </a>
+@endif
     </div>
 </x-layouts.admin>

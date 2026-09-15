@@ -1,13 +1,17 @@
 <x-layouts.admin title="Vai trò">
     <x-admin.page-header title="Vai trò & quyền"
-        description="Vai trò được nhóm theo 4 cổng truy cập. Supper Admin cập nhật ma trận quyền.">
+        description="Vai trò được nhóm theo 4 cổng truy cập. Quản trị viên cấp cao cập nhật ma trận quyền.">
         <x-slot:actions>
             @if ($canCreate)
-                <a href="{{ route('admin.roles.create') }}"
+                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.roles.create'))
+<a href="{{ route('admin.roles.create') }}"
                     class="rounded-lg bg-primary px-3 py-2 font-label-md text-on-primary hover:opacity-90">Tạo vai trò</a>
+@endif
             @endif
-            <a href="{{ route('admin.permissions.index') }}"
+            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.permissions.index'))
+<a href="{{ route('admin.permissions.index') }}"
                 class="rounded-lg border border-outline-variant px-3 py-2 font-label-md text-label-md text-on-surface hover:bg-surface-container-low">Danh mục permission</a>
+@endif
         </x-slot:actions>
     </x-admin.page-header>
 
@@ -42,7 +46,9 @@
                                     <td class="px-4 py-3 text-on-surface-variant">{{ $role->users_count }}</td>
                                     <td class="px-4 py-3 text-on-surface-variant">{{ $role->permissions_count }}</td>
                                     <td class="px-4 py-3 text-end">
-                                        <a href="{{ route('admin.roles.show', $role) }}" class="font-label-md text-primary hover:underline">Chi tiết</a>
+                                        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.roles.show'))
+<a href="{{ route('admin.roles.show', $role) }}" class="font-label-md text-primary hover:underline">Chi tiết</a>
+@endif
                                     </td>
                                 </tr>
                             @empty

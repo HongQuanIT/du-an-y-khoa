@@ -5,16 +5,18 @@ declare(strict_types=1);
 namespace Modules\Admin\Actions;
 
 use App\Models\User;
+use App\Support\Auth\PortalAccess;
 use App\Support\Concerns\AsAction;
-use App\Support\Enums\Role;
+use App\Support\Enums\PortalGroup;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Modules\Admin\Support\AdminReportCache;
 use Modules\Analytics\Models\DailyLearningStat;
 use Modules\Analytics\Models\TopicMastery;
-use Modules\Admin\Support\AdminReportCache;
 use Modules\Billing\Models\Payment;
 use Modules\Billing\Models\Plan;
+use Modules\Billing\Models\PlanPrice;
 use Modules\Billing\Models\Subscription;
 use Modules\Billing\Support\AdminBillingMetrics;
 use Modules\Billing\Support\BillingSubscriptionStats;
@@ -60,7 +62,7 @@ final class GetAdminReportDataAction
     ];
 
     /**
-     * @return ReportPayload&array{cached_at?: \Illuminate\Support\Carbon}
+     * @return ReportPayload&array{cached_at?: Carbon}
      */
     public function handle(string $category, string $report, string $range = '30d', bool $forceFresh = false): array
     {
@@ -243,7 +245,7 @@ final class GetAdminReportDataAction
     /** @return array{kpis: list<ReportKpi>, charts: list<ReportChart>, columns: list<ReportColumn>, rows: list<ReportRow>} */
     private function usersRetention(Carbon $from, Carbon $to): array
     {
-        $users = User::role(Role::Student->value)
+        $users = User::role(PortalAccess::roleNames(PortalGroup::Learner))
             ->whereBetween('created_at', [$from, $to])
             ->get(['id', 'created_at']);
 
@@ -426,7 +428,7 @@ final class GetAdminReportDataAction
         $premiumPlan = Plan::query()->where('slug', 'premium')->with(['prices' => fn ($q) => $q->ordered()])->first();
         if ($premiumPlan !== null) {
             foreach (BillingSubscriptionStats::premiumSkuBreakdown($premiumPlan) as $row) {
-                /** @var \Modules\Billing\Models\PlanPrice $price */
+                /** @var PlanPrice $price */
                 $price = $row['price'];
                 $skuRows[] = [
                     'sku' => $price->label,
@@ -870,7 +872,7 @@ final class GetAdminReportDataAction
     /** @return array<string, int> */
     private function studentSignupsByDate(Carbon $from, Carbon $to): array
     {
-        return User::role(Role::Student->value)
+        return User::role(PortalAccess::roleNames(PortalGroup::Learner))
             ->whereBetween('created_at', [$from, $to])
             ->get(['created_at'])
             ->groupBy(fn (User $user): string => $user->created_at->toDateString())

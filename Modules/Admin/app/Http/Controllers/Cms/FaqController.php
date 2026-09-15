@@ -6,7 +6,6 @@ namespace Modules\Admin\Http\Controllers\Cms;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Support\Enums\Permission;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -21,7 +20,7 @@ final class FaqController extends Controller
 {
     public function index(Request $request): View
     {
-        $this->authorizePermission(Permission::CmsManage);
+        $this->authorizePermission('cms_faq.view');
 
         $query = Faq::query()->ordered();
 
@@ -64,7 +63,7 @@ final class FaqController extends Controller
 
     public function create(): View
     {
-        $this->authorizePermission(Permission::CmsManage);
+        $this->authorizePermission('cms_faq.create');
 
         return view('admin::cms.faq.form', [
             'faq' => new Faq([
@@ -77,7 +76,7 @@ final class FaqController extends Controller
 
     public function store(SaveFaqRequest $request, SaveFaqAction $save): RedirectResponse
     {
-        $this->authorizePermission(Permission::CmsManage);
+        $this->authorizePermission('cms_faq.create');
 
         $faq = $save->handle($this->actor(), $request);
 
@@ -90,7 +89,7 @@ final class FaqController extends Controller
 
     public function edit(Faq $faq): View
     {
-        $this->authorizePermission(Permission::CmsManage);
+        $this->authorizePermission('cms_faq.update');
 
         return view('admin::cms.faq.form', [
             'faq' => $faq,
@@ -100,7 +99,7 @@ final class FaqController extends Controller
 
     public function update(SaveFaqRequest $request, Faq $faq, SaveFaqAction $save): RedirectResponse
     {
-        $this->authorizePermission(Permission::CmsManage);
+        $this->authorizePermission('cms_faq.update');
 
         $save->handle($this->actor(), $request, $faq);
 
@@ -113,7 +112,7 @@ final class FaqController extends Controller
 
     public function destroy(Faq $faq, DeleteFaqAction $delete): RedirectResponse
     {
-        $this->authorizePermission(Permission::CmsManage);
+        $this->authorizePermission('cms_faq.delete');
 
         $delete->handle($this->actor(), $faq);
 
@@ -124,7 +123,7 @@ final class FaqController extends Controller
 
     public function moveUp(Faq $faq, ReorderFaqAction $reorder): RedirectResponse
     {
-        $this->authorizePermission(Permission::CmsManage);
+        $this->authorizePermission('cms_faq.reorder');
 
         $reorder->handle($faq, 'up');
 
@@ -133,16 +132,16 @@ final class FaqController extends Controller
 
     public function moveDown(Faq $faq, ReorderFaqAction $reorder): RedirectResponse
     {
-        $this->authorizePermission(Permission::CmsManage);
+        $this->authorizePermission('cms_faq.reorder');
 
         $reorder->handle($faq, 'down');
 
         return back()->with('status', 'Đã đổi thứ tự FAQ.');
     }
 
-    private function authorizePermission(Permission $permission): void
+    private function authorizePermission(string ...$permissions): void
     {
-        abort_unless($this->actor()->can($permission->value), 403);
+        abort_unless($this->actor()->canAny([...$permissions]), 403);
     }
 
     private function actor(): User

@@ -13,9 +13,11 @@
             @endforeach
         </ul>
 
-        <form action="{{ route('admin.2fa.recovery.finish') }}" method="post">
+        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.2fa.recovery.finish'))
+<form action="{{ route('admin.2fa.recovery.finish') }}" method="post">
             @csrf
             <x-auth.submit>Đã lưu — vào quản trị</x-auth.submit>
         </form>
+@endif
     </x-auth.shell>
 </x-layouts.auth>

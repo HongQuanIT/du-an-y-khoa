@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Support\Auth;
 
 use App\Models\User;
-use App\Support\Enums\Role;
+use App\Support\Enums\PortalGroup;
 use Illuminate\Contracts\Auth\Authenticatable;
 
 /**
@@ -18,16 +18,11 @@ final class Staff
      */
     public static function roleValues(): array
     {
-        return [
-            Role::Admin->value,
-            Role::SuperAdmin->value,
-            Role::ContentEditor->value,
-            Role::Reviewer->value,
-        ];
+        return PortalAccess::roleNames(PortalGroup::Admin);
     }
 
     public static function isStaff(?Authenticatable $user): bool
     {
-        return $user instanceof User && $user->hasAnyRole(self::roleValues());
+        return $user instanceof User && PortalAccess::allows($user, PortalGroup::Admin);
     }
 }

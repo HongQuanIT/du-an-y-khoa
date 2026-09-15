@@ -2,12 +2,14 @@
     <x-admin.page-header title="Danh mục permission"
         description="Nhóm theo 4 portal sản phẩm. Permission gắn qua ma trận role — không gán trực tiếp trên user.">
         <x-slot:actions>
-            <a href="{{ route('admin.roles.index') }}"
+            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.roles.index'))
+<a href="{{ route('admin.roles.index') }}"
                 class="rounded-lg px-3 py-2 font-label-md text-on-surface-variant hover:bg-surface-container-low">← Vai trò</a>
+@endif
         </x-slot:actions>
     </x-admin.page-header>
 
-    <div class="space-y-6" x-data="{ tab: '{{ \App\Support\Enums\PortalGroup::Learner->value }}' }">
+    <div class="space-y-6" x-data="{ tab: '{{ \App\Support\Enums\PortalGroup::Learner->value }}', query: '' }">
         <div class="flex flex-wrap gap-2 border-b border-outline-variant pb-3">
             @foreach ($permissionGroups as $group)
                 @php $portal = $group['portal']; @endphp
@@ -22,6 +24,12 @@
                 </button>
             @endforeach
         </div>
+
+        <label class="relative block max-w-xl">
+            <span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-on-surface-variant">search</span>
+            <input type="search" x-model.debounce.200ms="query" placeholder="Tìm theo tên quyền hoặc mã permission..."
+                class="h-11 w-full rounded-xl border border-outline-variant bg-surface pl-10 pr-3 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
+        </label>
 
         @foreach ($permissionGroups as $group)
             @php
@@ -38,39 +46,50 @@
                     @if (count($portalRoles) > 0)
                         <div class="mt-3 flex flex-wrap gap-2">
                             @foreach ($portalRoles as $roleMeta)
-                                <a href="{{ route('admin.roles.show', $roleMeta['id']) }}"
+                                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.roles.show'))
+<a href="{{ route('admin.roles.show', $roleMeta['id']) }}"
                                     class="rounded-lg border border-outline-variant px-2.5 py-1 font-label-sm text-label-sm text-primary hover:bg-surface-container-low">
                                     Sửa ma trận: {{ $roleMeta['label'] }}
                                 </a>
+@endif
                             @endforeach
                         </div>
                     @endif
                 </div>
 
-                <ul class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                    @forelse ($group['permissions'] as $permission)
-                        @php
-                            $holders = $roleLabelsByPermission[$permission->name] ?? [];
-                            $primaryLabels = collect($portalRoles)->pluck('label')->all();
-                            $alsoBy = array_values(array_filter(
-                                $holders,
-                                fn (string $label) => ! in_array($label, $primaryLabels, true),
-                            ));
-                        @endphp
-                        <li class="rounded-lg border border-outline-variant/60 bg-surface px-3 py-2.5">
-                            <div class="font-label-md text-label-md text-on-surface">{{ $permission->name }}</div>
-                            @if (count($alsoBy) > 0)
-                                <div class="mt-1 font-label-sm text-label-sm text-on-surface-variant">
-                                    Cũng dùng bởi: {{ implode(', ', $alsoBy) }}
-                                </div>
-                            @endif
-                        </li>
+                <div class="space-y-4">
+                    @forelse ($group['modules'] as $module)
+                        <details open class="overflow-hidden rounded-xl border border-outline-variant bg-surface">
+                            <summary class="flex cursor-pointer list-none items-center justify-between gap-3 bg-surface-container-low px-5 py-3.5">
+                                <span class="font-headline-sm text-on-surface">{{ $module['label'] }}</span>
+                                <span class="rounded-full bg-surface px-2.5 py-1 font-label-sm text-on-surface-variant">{{ $module['count'] }} quyền</span>
+                            </summary>
+                            <div class="space-y-5 p-5">
+                                @foreach ($module['resources'] as $resource)
+                                    <section class="rounded-xl border border-outline-variant/60 bg-surface-container-lowest p-4">
+                                        <h4 class="mb-3 flex items-center justify-between font-label-md font-semibold text-primary">
+                                            <span>{{ $resource['label'] }}</span>
+                                            <span class="text-xs font-normal text-on-surface-variant">{{ $resource['permissions']->count() }} quyền</span>
+                                        </h4>
+                                        <ul class="space-y-2">
+                                            @foreach ($resource['permissions'] as $permission)
+                                                <li x-show="query === '' || @js(mb_strtolower($permission->name.' '.\Modules\Admin\Support\PermissionCatalog::actionLabel($permission->name))).includes(query.toLowerCase())"
+                                                    class="rounded-lg border border-outline-variant/60 bg-surface px-3.5 py-2.5">
+                                                    <div class="flex flex-wrap items-baseline justify-between gap-2">
+                                                        <span class="font-label-md font-medium text-on-surface">{{ \Modules\Admin\Support\PermissionCatalog::actionLabel($permission->name) }}</span>
+                                                        <code class="text-xs text-on-surface-variant">{{ $permission->name }}</code>
+                                                    </div>
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                    </section>
+                                @endforeach
+                            </div>
+                        </details>
                     @empty
-                        <li class="font-body-sm text-body-sm text-on-surface-variant sm:col-span-2 lg:col-span-3">
-                            Chưa có permission trong nhóm này.
-                        </li>
+                        <p class="font-body-sm text-on-surface-variant">Chưa có permission trong nhóm này.</p>
                     @endforelse
-                </ul>
+                </div>
             </section>
         @endforeach
     </div>

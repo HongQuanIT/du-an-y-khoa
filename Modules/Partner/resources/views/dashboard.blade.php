@@ -34,9 +34,13 @@
     </div>
 
     <div class="mt-8 flex flex-wrap gap-3">
-        <a href="{{ route('partner.codes.index') }}"
-            class="rounded-lg bg-primary px-4 py-2.5 font-label-md text-label-md text-on-primary hover:opacity-90">Xem mã mời</a>
-        <a href="{{ route('partner.referrals.index') }}"
-            class="rounded-lg border border-outline-variant px-4 py-2.5 font-label-md text-label-md text-on-surface hover:bg-surface-container-low">Xem người được mời</a>
+        @if (auth()->user()->can('partner_code.view'))
+            <a href="{{ route('partner.codes.index') }}"
+                class="rounded-lg bg-primary px-4 py-2.5 font-label-md text-label-md text-on-primary hover:opacity-90">Xem mã mời</a>
+        @endif
+        @if (auth()->user()->can('partner_referral.view'))
+            <a href="{{ route('partner.referrals.index') }}"
+                class="rounded-lg border border-outline-variant px-4 py-2.5 font-label-md text-label-md text-on-surface hover:bg-surface-container-low">Xem người được mời</a>
+        @endif
     </div>
 </x-layouts.partner>

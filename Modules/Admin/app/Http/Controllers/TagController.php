@@ -19,7 +19,7 @@ final class TagController extends Controller
 {
     public function index(Request $request): View
     {
-        $this->authorizePermission(Permission::TopicView);
+        $this->authorizePermission('tag.view');
 
         $query = Tag::query()->withCount('questions');
 
@@ -33,22 +33,22 @@ final class TagController extends Controller
         return view('admin::tags.index', [
             'tags' => $query->orderBy('name')->paginate(30)->withQueryString(),
             'filters' => ['q' => $search],
-            'canCreate' => $this->actor()->can(Permission::TopicCreate->value),
-            'canUpdate' => $this->actor()->can(Permission::TopicUpdate->value),
-            'canDelete' => $this->actor()->can(Permission::TopicDelete->value),
+            'canCreate' => $this->actor()->canAny(['tag.create']),
+            'canUpdate' => $this->actor()->canAny(['tag.update']),
+            'canDelete' => $this->actor()->canAny(['tag.delete']),
         ]);
     }
 
     public function create(): View
     {
-        $this->authorizePermission(Permission::TopicCreate);
+        $this->authorizePermission('tag.create');
 
         return view('admin::tags.form', $this->formData(new Tag(['status' => TaxonomyStatus::Active])));
     }
 
     public function store(Request $request): RedirectResponse
     {
-        $this->authorizePermission(Permission::TopicCreate);
+        $this->authorizePermission('tag.create');
         $tag = Tag::query()->create($this->validated($request));
 
         return redirect()->route('admin.tags.edit', $tag)->with('status', 'Đã tạo tag.');
@@ -56,14 +56,14 @@ final class TagController extends Controller
 
     public function edit(Tag $tag): View
     {
-        $this->authorizePermission(Permission::TopicView);
+        $this->authorizePermission('tag.update');
 
         return view('admin::tags.form', $this->formData($tag));
     }
 
     public function update(Request $request, Tag $tag): RedirectResponse
     {
-        $this->authorizePermission(Permission::TopicUpdate);
+        $this->authorizePermission('tag.update');
         $tag->update($this->validated($request, $tag));
 
         return back()->with('status', 'Đã cập nhật tag.');
@@ -71,7 +71,7 @@ final class TagController extends Controller
 
     public function destroy(Tag $tag): RedirectResponse
     {
-        $this->authorizePermission(Permission::TopicDelete);
+        $this->authorizePermission('tag.delete');
 
         if ($tag->questions()->exists()) {
             $tag->update(['status' => TaxonomyStatus::Inactive]);
@@ -91,9 +91,9 @@ final class TagController extends Controller
             'tag' => $tag,
             'statuses' => TaxonomyStatus::cases(),
             'canUpdate' => $tag->exists
-                ? $this->actor()->can(Permission::TopicUpdate->value)
-                : $this->actor()->can(Permission::TopicCreate->value),
-            'canDelete' => $tag->exists && $this->actor()->can(Permission::TopicDelete->value),
+                ? $this->actor()->canAny(['tag.update'])
+                : $this->actor()->canAny(['tag.create']),
+            'canDelete' => $tag->exists && $this->actor()->canAny(['tag.delete']),
         ];
     }
 
@@ -129,9 +129,14 @@ final class TagController extends Controller
         ];
     }
 
-    private function authorizePermission(Permission $permission): void
+    private function authorizePermission(string|Permission ...$permissions): void
     {
-        abort_unless($this->actor()->can($permission->value), 403);
+        $names = array_map(
+            static fn (string|Permission $permission): string => $permission instanceof Permission ? $permission->value : $permission,
+            $permissions,
+        );
+
+        abort_unless($this->actor()->canAny($names), 403);
     }
 
     private function actor(): User

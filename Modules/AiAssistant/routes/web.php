@@ -14,7 +14,7 @@ use Modules\AiAssistant\Http\Controllers\AiTutorPageController;
 | replies are delivered over Reverb on the private `user.{id}` channel; when no
 | realtime driver is configured the reply is generated synchronously as a fallback.
 */
-Route::middleware(['auth'])->prefix('ai')->name('ai-tutor.')->group(function (): void {
+Route::middleware(['auth', 'learner'])->prefix('ai')->name('ai-tutor.')->group(function (): void {
     Route::get('/', AiTutorPageController::class)->name('page');
 
     Route::get('/quota', [AiTutorController::class, 'quota'])->name('quota');

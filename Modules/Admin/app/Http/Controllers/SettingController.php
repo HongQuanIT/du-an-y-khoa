@@ -6,7 +6,6 @@ namespace Modules\Admin\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Services\SettingService;
-use App\Support\Enums\Permission;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -15,7 +14,7 @@ final class SettingController extends Controller
 {
     public function index(SettingService $settings): View
     {
-        $this->authorizeSystemSettings();
+        $this->authorizeSystemSettings('system_setting.view');
 
         return view('admin::settings.index', [
             'groups' => $this->groups(),
@@ -25,7 +24,7 @@ final class SettingController extends Controller
 
     public function update(Request $request, SettingService $settings): RedirectResponse
     {
-        $this->authorizeSystemSettings();
+        $this->authorizeSystemSettings('system_setting.update');
 
         $validated = $request->validate($this->rules());
         $updates = [];
@@ -40,6 +39,11 @@ final class SettingController extends Controller
                     'integer' => (int) data_get($validated, $inputKey, $field['default'] ?? 0),
                     default => data_get($validated, $inputKey),
                 };
+
+                if ($groupKey === 'features' && $fieldKey === 'maintenance_mode'
+                    && (bool) $value !== (bool) $settings->get('features.maintenance_mode', false)) {
+                    $this->authorizeSystemSettings('system_setting.maintenance_toggle');
+                }
 
                 $updates["{$groupKey}.{$fieldKey}"] = [
                     'value' => $value,
@@ -353,8 +357,8 @@ final class SettingController extends Controller
         return $rules;
     }
 
-    private function authorizeSystemSettings(): void
+    private function authorizeSystemSettings(string $permission): void
     {
-        abort_unless(auth()->user()?->can(Permission::SystemManage->value), 403);
+        abort_unless(auth()->user()?->canAny([$permission]), 403);
     }
 }

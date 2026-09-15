@@ -55,12 +55,14 @@
                     @endif
                 </div>
                 <div class="flex shrink-0 flex-wrap gap-2">
-                    <a href="{{ route('teach.classes.edit', $classroom) }}"
-                        class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-outline-variant px-4 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low">
-                        <span class="material-symbols-outlined text-[18px]" aria-hidden="true">edit</span>
-                        Chỉnh sửa
-                    </a>
-                    @if ($canClose)
+                    @can('classroom_settings.update')
+                        <a href="{{ route('teach.classes.edit', $classroom) }}"
+                            class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-outline-variant px-4 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low">
+                            <span class="material-symbols-outlined text-[18px]" aria-hidden="true">edit</span>
+                            Chỉnh sửa
+                        </a>
+                    @endcan
+                    @if ($canClose && auth()->user()?->can('classroom.close'))
                         <form method="post" action="{{ route('teach.classes.close', $classroom) }}"
                             onsubmit="return confirm('Đóng lớp này? Trạng thái sẽ chuyển sang Đã đóng và học viên không thể tham gia hoặc vào buổi trực tiếp mới.')">
                             @csrf
@@ -71,7 +73,7 @@
                             </button>
                         </form>
                     @endif
-                    @if ($isClosed)
+                    @if ($isClosed && auth()->user()?->can('classroom.reopen'))
                         <form method="post" action="{{ route('teach.classes.reopen', $classroom) }}"
                             onsubmit="return confirm('Mở lại lớp này? Phê duyệt trước đó sẽ được giữ nguyên và học viên có thể truy cập lại lớp.')">
                             @csrf
@@ -82,16 +84,18 @@
                             </button>
                         </form>
                     @endif
-                    <form method="post" action="{{ route('teach.classes.destroy', $classroom) }}"
-                        onsubmit="return confirm('Xoá lớp này? Hành động này sẽ ẩn lớp khỏi portal giảng viên và học viên.')">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit"
-                            class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-error px-4 py-2 text-sm font-semibold text-error hover:bg-error/5">
-                            <span class="material-symbols-outlined text-[18px]" aria-hidden="true">delete</span>
-                            Xoá lớp
-                        </button>
-                    </form>
+                    @can('classroom.delete')
+                        <form method="post" action="{{ route('teach.classes.destroy', $classroom) }}"
+                            onsubmit="return confirm('Xoá lớp này? Hành động này sẽ ẩn lớp khỏi portal giảng viên và học viên.')">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit"
+                                class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-error px-4 py-2 text-sm font-semibold text-error hover:bg-error/5">
+                                <span class="material-symbols-outlined text-[18px]" aria-hidden="true">delete</span>
+                                Xoá lớp
+                            </button>
+                        </form>
+                    @endcan
                 </div>
             </div>
 

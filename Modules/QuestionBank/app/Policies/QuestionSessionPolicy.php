@@ -12,16 +12,19 @@ final class QuestionSessionPolicy
 {
     public function view(User $user, QuestionSession $session): bool
     {
-        return (int) $session->user_id === (int) $user->getKey();
+        return $user->can('session.start')
+            && (int) $session->user_id === (int) $user->getKey();
     }
 
     public function update(User $user, QuestionSession $session): bool
     {
-        return $this->view($user, $session);
+        return $user->can('session.submit')
+            && (int) $session->user_id === (int) $user->getKey();
     }
 
     public function delete(User $user, QuestionSession $session): bool
     {
-        return $this->view($user, $session);
+        return $user->can('session.delete')
+            && (int) $session->user_id === (int) $user->getKey();
     }
 }

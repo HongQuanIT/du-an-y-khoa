@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace Modules\Admin\Support;
 
 use App\Models\User;
+use App\Support\Auth\PortalAccess;
+use App\Support\Enums\PortalGroup;
 use App\Support\Enums\Role;
+use Spatie\Permission\Models\Role as RoleModel;
 
 /**
  * Guards sensitive admin mutations against self-harm and privilege escalation.
@@ -23,23 +26,32 @@ final class StaffGuard
             abort(403, 'Không thể thao tác trên chính tài khoản của bạn.');
         }
 
+        abort_unless(PortalAccess::allows($actor, PortalGroup::Admin), 403);
+
         $actorRole = self::primaryRole($actor);
         $targetRole = self::primaryRole($target);
 
-        if ($actorRole === null) {
-            abort(403);
-        }
-
         if ($actorRole === Role::SuperAdmin) {
             return;
+        }
+
+        $targetRoleModel = $target->roles()->with('permissions:id,name')->first();
+        if ($targetRoleModel !== null
+            && Role::tryFrom($targetRoleModel->name) === null
+            && AssignableRoles::containsCriticalPermission($targetRoleModel)) {
+            abort(403, 'Admin không thể quản lý tài khoản giữ vai trò có quyền đặc biệt.');
         }
 
         if ($targetRole === Role::SuperAdmin) {
             abort(403, 'Không thể quản lý Super Admin.');
         }
 
-        if ($actorRole === Role::Admin && $targetRole === Role::Admin) {
+        if ($targetRole === Role::Admin) {
             abort(403, 'Admin không thể quản lý Admin khác.');
+        }
+
+        if ($actorRole === null) {
+            return;
         }
 
         if ($actorRole->rank() <= ($targetRole?->rank() ?? 0)) {
@@ -47,11 +59,11 @@ final class StaffGuard
         }
     }
 
-    public static function assertCanAssignRole(User $actor, Role $role): void
+    public static function assertCanAssignRole(User $actor, RoleModel $role): void
     {
-        $allowed = Role::assignableBy($actor);
+        $allowed = AssignableRoles::for($actor)->modelKeys();
 
-        if (! in_array($role, $allowed, true)) {
+        if (! in_array($role->getKey(), $allowed, true)) {
             abort(403, 'Không được gán vai trò này.');
         }
     }

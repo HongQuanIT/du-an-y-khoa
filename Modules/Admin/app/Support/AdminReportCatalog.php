@@ -21,7 +21,7 @@ use App\Support\Enums\Permission;
  *     title: string,
  *     description: string,
  *     icon: string,
- *     permission: ?Permission,
+ *     permission: ?string,
  *     reports: list<ReportItem>,
  * }
  */
@@ -36,7 +36,7 @@ final class AdminReportCatalog
                 'title' => 'Người dùng & Tăng trưởng',
                 'description' => 'DAU, MAU, đăng ký mới, tỷ lệ giữ chân theo nhóm đăng ký (cohort).',
                 'icon' => 'group',
-                'permission' => Permission::UserView,
+                'permission' => 'user.view_any',
                 'reports' => [
                     ['slug' => 'dau-mau', 'title' => 'DAU / MAU', 'description' => 'Người dùng hoạt động theo ngày và tháng.'],
                     ['slug' => 'signups', 'title' => 'Đăng ký mới', 'description' => 'Số học viên mới theo thời gian.'],
@@ -48,7 +48,7 @@ final class AdminReportCatalog
                 'title' => 'Tương tác & Hoạt động',
                 'description' => 'Phiên học, câu đã làm, thời lượng học.',
                 'icon' => 'insights',
-                'permission' => Permission::UserView,
+                'permission' => 'user.view_any',
                 'reports' => [
                     ['slug' => 'sessions', 'title' => 'Phiên học', 'description' => 'Số phiên hoàn thành theo thời gian.'],
                     ['slug' => 'questions', 'title' => 'Câu đã làm', 'description' => 'Khối lượng luyện tập toàn hệ thống.'],
@@ -60,7 +60,7 @@ final class AdminReportCatalog
                 'title' => 'Doanh thu & Churn',
                 'description' => 'MRR, ARPU, churn, phễu chuyển đổi Free → Premium.',
                 'icon' => 'payments',
-                'permission' => Permission::BillingManage,
+                'permission' => 'billing_payment.view',
                 'reports' => [
                     ['slug' => 'mrr', 'title' => 'MRR & Doanh thu', 'description' => 'Doanh thu định kỳ và theo tháng.'],
                     ['slug' => 'churn', 'title' => 'Churn & Rời bỏ', 'description' => 'Tỷ lệ hủy và hết hạn không gia hạn.'],
@@ -72,7 +72,7 @@ final class AdminReportCatalog
                 'title' => 'Hiệu quả nội dung',
                 'description' => 'Tỷ lệ đúng, báo lỗi, chất lượng câu hỏi.',
                 'icon' => 'quiz',
-                'permission' => Permission::QuestionView,
+                'permission' => 'question.view_any',
                 'reports' => [
                     ['slug' => 'accuracy', 'title' => 'Tỷ lệ đúng theo chủ đề', 'description' => 'Hiệu quả nội dung ngân hàng câu hỏi.'],
                     ['slug' => 'flags', 'title' => 'Báo lỗi câu hỏi', 'description' => 'Phản hồi học viên và chất lượng biên tập.'],
@@ -84,7 +84,7 @@ final class AdminReportCatalog
                 'title' => 'Kết quả học tập',
                 'description' => 'Mức độ nắm chủ đề (mastery), điểm thi, chủ đề yếu.',
                 'icon' => 'school',
-                'permission' => Permission::UserView,
+                'permission' => 'user.view_any',
                 'reports' => [
                     ['slug' => 'mastery', 'title' => 'Mức độ nắm chủ đề (mastery)', 'description' => 'Mức độ nắm chủ đề trung bình.'],
                     ['slug' => 'exam-scores', 'title' => 'Điểm thi thử', 'description' => 'Phân phối điểm bài thi thử.'],
@@ -104,7 +104,7 @@ final class AdminReportCatalog
         return array_values(array_filter(
             self::categories(),
             fn (array $category): bool => $category['permission'] === null
-                || $user->can($category['permission']->value),
+                || $user->can($category['permission']),
         ));
     }
 

@@ -6,9 +6,10 @@ namespace Modules\Admin\Actions;
 
 use App\Models\SupportConversation;
 use App\Models\User;
+use App\Support\Auth\PortalAccess;
 use App\Support\Concerns\AsAction;
 use App\Support\Enums\Permission;
-use App\Support\Enums\Role;
+use App\Support\Enums\PortalGroup;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -148,15 +149,17 @@ final class GetAdminDashboardDataAction
             ->distinct('user_id')
             ->count('user_id');
 
-        $signupsCurrent = (int) User::role(Role::Student->value)
+        $learnerRoles = PortalAccess::roleNames(PortalGroup::Learner);
+
+        $signupsCurrent = (int) User::role($learnerRoles)
             ->where('created_at', '>=', now()->subDays(7))
             ->count();
 
-        $signupsPrevious = (int) User::role(Role::Student->value)
+        $signupsPrevious = (int) User::role($learnerRoles)
             ->whereBetween('created_at', [now()->subDays(14), now()->subDays(7)])
             ->count();
 
-        $signupsToday = (int) User::role(Role::Student->value)
+        $signupsToday = (int) User::role($learnerRoles)
             ->whereDate('created_at', $today)
             ->count();
 
@@ -248,7 +251,7 @@ final class GetAdminDashboardDataAction
             ->all();
 
         /** @var array<string, int> $signupsByDate */
-        $signupsByDate = User::role(Role::Student->value)
+        $signupsByDate = User::role(PortalAccess::roleNames(PortalGroup::Learner))
             ->where('created_at', '>=', $start->startOfDay())
             ->selectRaw('DATE(created_at) as signup_date, COUNT(*) as aggregate')
             ->groupBy('signup_date')
@@ -309,7 +312,7 @@ final class GetAdminDashboardDataAction
         /** @var array<string, mixed> $chartSeries */
         $chartSeries = $aggregates['chart_series'];
 
-        if ($viewer->can(Permission::UserView->value)) {
+        if ($viewer->can('user.view_any')) {
             /** @var list<array{label: string, dau: int, signups: int}> $userGrowth */
             $userGrowth = $chartSeries['user_growth'];
             $charts[] = [
@@ -335,7 +338,7 @@ final class GetAdminDashboardDataAction
 
         }
 
-        if ($viewer->can(Permission::BillingManage->value)) {
+        if ($viewer->can('billing_payment.view')) {
             /** @var list<array{label: string, value: int}> $revenue */
             $revenue = $chartSeries['revenue'];
             $charts[] = [
@@ -355,7 +358,7 @@ final class GetAdminDashboardDataAction
             ];
         }
 
-        if ($viewer->can(Permission::UserView->value)) {
+        if ($viewer->can('user.view_any')) {
             /** @var list<array{label: string, questions: int, sessions: int}> $engagement */
             $engagement = $chartSeries['engagement'];
             $charts[] = [
@@ -392,7 +395,7 @@ final class GetAdminDashboardDataAction
     {
         $kpis = [];
 
-        if ($viewer->can(Permission::UserView->value)) {
+        if ($viewer->can('user.view_any')) {
             $kpis[] = $this->kpi(
                 label: 'DAU',
                 value: number_format((int) $aggregates['dau_today']),
@@ -419,7 +422,7 @@ final class GetAdminDashboardDataAction
             );
         }
 
-        if ($viewer->can(Permission::BillingManage->value)) {
+        if ($viewer->can('billing_payment.view')) {
             /** @var array{total_students: int, premium_students: int, free_students: int, expiring_premium_students: int} $billing */
             $billing = $aggregates['billing'];
             /** @var array{mrr_cents: int, revenue_month_cents: int, revenue_month_delta: ?float} $billingMetrics */
@@ -494,7 +497,7 @@ final class GetAdminDashboardDataAction
             }
         }
 
-        if ($viewer->can(Permission::ContactView->value)) {
+        if ($viewer->can('contact.view_any')) {
             $contactsNew = (int) $aggregates['contacts_new'];
             $kpis[] = $this->kpi(
                 label: 'Liên hệ mới',
@@ -506,7 +509,7 @@ final class GetAdminDashboardDataAction
             );
         }
 
-        if ($viewer->can(Permission::SupportManage->value)) {
+        if ($viewer->can('support_conversation.view')) {
             $supportPending = SupportConversation::pendingAdminAttentionCountFor($viewer);
             if ($supportPending > 0) {
                 $kpis[] = $this->kpi(
@@ -520,7 +523,7 @@ final class GetAdminDashboardDataAction
             }
         }
 
-        if ($viewer->can(Permission::ClassroomOversee->value)) {
+        if ($viewer->can('classroom_oversight.view_any')) {
             $classroomsPending = (int) $aggregates['classrooms_pending'];
             if ($classroomsPending > 0) {
                 $kpis[] = $this->kpi(
@@ -534,7 +537,7 @@ final class GetAdminDashboardDataAction
             }
         }
 
-        if ($viewer->can(Permission::AdminPartnersPayouts->value)) {
+        if ($viewer->can('partner_payout.view')) {
             $payoutsPending = (int) $aggregates['partner_payouts_pending'];
             if ($payoutsPending > 0) {
                 $kpis[] = $this->kpi(
@@ -565,7 +568,7 @@ final class GetAdminDashboardDataAction
     {
         $alerts = [];
 
-        if ($viewer->can(Permission::UserView->value)) {
+        if ($viewer->can('user.view_any')) {
             $dau = (int) $aggregates['dau_today'];
             $signups = (int) $aggregates['signups_7d'];
             $alerts[] = $this->alert(
@@ -585,7 +588,7 @@ final class GetAdminDashboardDataAction
             );
         }
 
-        if ($viewer->can(Permission::BillingManage->value)) {
+        if ($viewer->can('billing_payment.view')) {
             $failed24h = (int) $aggregates['failed_payments_24h'];
             $succeeded24h = (int) $aggregates['succeeded_payments_24h'];
             $failedAvg = (int) $aggregates['failed_payments_daily_avg'];
@@ -645,7 +648,7 @@ final class GetAdminDashboardDataAction
             }
         }
 
-        if ($viewer->can(Permission::QuestionView->value)) {
+        if ($viewer->can('question.view_any')) {
             $published = (int) $aggregates['questions_published'];
             $inReview = (int) $aggregates['questions_in_review'];
             $feedbackPending = (int) $aggregates['feedback_pending'];
@@ -721,7 +724,7 @@ final class GetAdminDashboardDataAction
             }
         }
 
-        if ($viewer->can(Permission::ContactView->value)) {
+        if ($viewer->can('contact.view_any')) {
             $contactsNew = (int) $aggregates['contacts_new'];
             if ($contactsNew >= 10) {
                 $alerts[] = $this->alert(
@@ -753,7 +756,7 @@ final class GetAdminDashboardDataAction
             }
         }
 
-        if ($viewer->can(Permission::SupportManage->value)) {
+        if ($viewer->can('support_conversation.view')) {
             $supportPending = SupportConversation::pendingAdminAttentionCountFor($viewer);
             if ($supportPending > 0) {
                 $alerts[] = $this->alert(
@@ -842,7 +845,7 @@ final class GetAdminDashboardDataAction
             }
         }
 
-        if ($viewer->can(Permission::ClassroomOversee->value)) {
+        if ($viewer->can('classroom_oversight.view_any')) {
             $classroomsPending = (int) $aggregates['classrooms_pending'];
             if ($classroomsPending > 0) {
                 $alerts[] = $this->alert(
@@ -865,7 +868,7 @@ final class GetAdminDashboardDataAction
             }
         }
 
-        if ($viewer->can(Permission::AdminPartnersPayouts->value)) {
+        if ($viewer->can('partner_payout.view')) {
             $payoutsPending = (int) $aggregates['partner_payouts_pending'];
             if ($payoutsPending > 0) {
                 $alerts[] = $this->alert(
@@ -888,7 +891,7 @@ final class GetAdminDashboardDataAction
             }
         }
 
-        if ($viewer->can(Permission::ReportView->value) && ! $viewer->can(Permission::SystemManage->value)) {
+        if ($viewer->can('report.view') && ! $viewer->can('system_setting.update')) {
             $reportMeta = AdminReportCache::meta();
             $alerts[] = $this->alert(
                 id: 'report_cache_visibility',
@@ -929,12 +932,12 @@ final class GetAdminDashboardDataAction
     /** @return list<AuditFeedItem> */
     private function buildAuditFeed(User $viewer): array
     {
-        if (! $viewer->can(Permission::AuditView->value)) {
+        if (! $viewer->can('audit_log.view')) {
             return [];
         }
 
         $userMorphClass = (new User)->getMorphClass();
-        $questionMorphClass = (new \Modules\QuestionBank\Models\Question)->getMorphClass();
+        $questionMorphClass = (new Question)->getMorphClass();
 
         return AuditLog::query()
             ->visibleToAdmin()
@@ -971,7 +974,7 @@ final class GetAdminDashboardDataAction
             ];
         }
 
-        if ($viewer->can(Permission::UserManage->value) && Route::has('admin.users.create')) {
+        if ($viewer->can('user.create') && Route::has('admin.users.create')) {
             $actions[] = [
                 'label' => 'Mời quản trị viên',
                 'icon' => 'person_add',
@@ -979,7 +982,7 @@ final class GetAdminDashboardDataAction
             ];
         }
 
-        if ($viewer->can(Permission::BillingManage->value) && Route::has('admin.billing.plans.index')) {
+        if ($viewer->can('billing_payment.view') && Route::has('admin.billing.plans.index')) {
             $actions[] = [
                 'label' => 'Xem gói & bảng giá',
                 'icon' => 'sell',
@@ -987,7 +990,7 @@ final class GetAdminDashboardDataAction
             ];
         }
 
-        if ($viewer->can(Permission::AuditView->value) && Route::has('admin.audit.index')) {
+        if ($viewer->can('audit_log.view') && Route::has('admin.audit.index')) {
             $actions[] = [
                 'label' => 'Xem nhật ký audit',
                 'icon' => 'history',
@@ -995,7 +998,7 @@ final class GetAdminDashboardDataAction
             ];
         }
 
-        if ($viewer->can(Permission::ReportView->value) && Route::has('admin.reports.index')) {
+        if ($viewer->can('report.view') && Route::has('admin.reports.index')) {
             $actions[] = [
                 'label' => 'Trung tâm báo cáo',
                 'icon' => 'analytics',
@@ -1003,7 +1006,7 @@ final class GetAdminDashboardDataAction
             ];
         }
 
-        if ($viewer->can(Permission::QuestionView->value) && Route::has('admin.question-feedback.index')) {
+        if ($viewer->can('question.view_any') && Route::has('admin.question-feedback.index')) {
             $actions[] = [
                 'label' => 'Xử lý feedback',
                 'icon' => 'rate_review',

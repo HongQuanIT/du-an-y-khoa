@@ -17,11 +17,13 @@
     >
     <x-admin.page-header :title="$report['title']" :description="$report['description']">
         <x-slot:actions>
-            <a href="{{ route('admin.reports.show-category', $category['slug']) }}"
+            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.reports.show-category'))
+<a href="{{ route('admin.reports.show-category', $category['slug']) }}"
                 class="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant px-3 py-2 font-label-md text-label-md text-on-surface-variant transition hover:bg-surface-container-low">
                 <span class="material-symbols-outlined text-[18px]">arrow_back</span>
                 {{ $category['title'] }}
             </a>
+@endif
             <button type="button"
                 @click="queueRefresh()"
                 :disabled="inFlight"
@@ -30,11 +32,13 @@
                 <span x-text="inFlight ? 'Đang xử lý…' : 'Làm mới báo cáo'"></span>
             </button>
             @if (count($data['columns']) > 0)
-                <a href="{{ route('admin.reports.export', ['category' => $category['slug'], 'report' => $report['slug'], 'range' => $range]) }}"
+                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.reports.export'))
+<a href="{{ route('admin.reports.export', ['category' => $category['slug'], 'report' => $report['slug'], 'range' => $range]) }}"
                     class="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 font-label-md text-label-md text-on-primary transition hover:opacity-90">
                     <span class="material-symbols-outlined text-[18px]">download</span>
                     Xuất CSV
                 </a>
+@endif
             @endif
         </x-slot:actions>
     </x-admin.page-header>
@@ -63,7 +67,8 @@
         </div>
     </div>
 
-    <form method="get" action="{{ route('admin.reports.show', [$category['slug'], $report['slug']]) }}"
+    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.reports.show'))
+<form method="get" action="{{ route('admin.reports.show', [$category['slug'], $report['slug']]) }}"
         class="mb-6 flex flex-wrap items-end gap-3 rounded-xl border border-outline-variant bg-surface p-4">
         <div>
             <label for="range" class="mb-1.5 block font-label-sm text-label-sm text-on-surface-variant">Khoảng thời gian</label>
@@ -82,6 +87,7 @@
             @endif
         </p>
     </form>
+@endif
 
     @if ($data['empty_message'] && count($data['kpis']) === 0 && count($data['charts']) === 0)
         <div class="mb-6 rounded-xl border border-dashed border-outline-variant bg-surface px-6 py-12 text-center">
@@ -181,7 +187,8 @@
             </div>
         </div>
 
-        <form method="post" action="{{ route('admin.reports.schedules.store', [$category['slug'], $report['slug']]) }}"
+        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.reports.schedules.store'))
+<form method="post" action="{{ route('admin.reports.schedules.store', [$category['slug'], $report['slug']]) }}"
             class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             @csrf
             <div>
@@ -260,6 +267,7 @@
                 </button>
             </div>
         </form>
+@endif
 
         @if ($schedules->isNotEmpty())
             <div class="border-t border-outline-variant pt-4">
@@ -296,7 +304,8 @@
                                 </div>
                             </div>
                             <div class="mt-3 flex flex-wrap gap-2 border-t border-outline-variant/60 pt-3">
-                                <form method="post" action="{{ route('admin.reports.schedules.toggle', $schedule) }}">
+                                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.reports.schedules.toggle'))
+<form method="post" action="{{ route('admin.reports.schedules.toggle', $schedule) }}">
                                     @csrf
                                     <button type="submit"
                                         class="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant px-3 py-2 font-label-sm text-on-surface transition hover:bg-surface-container-low">
@@ -304,7 +313,9 @@
                                         {{ $schedule->is_active ? 'Tắt lịch' : 'Bật lịch' }}
                                     </button>
                                 </form>
-                                <form method="post" action="{{ route('admin.reports.schedules.toggle-email', $schedule) }}">
+@endif
+                                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.reports.schedules.toggle-email'))
+<form method="post" action="{{ route('admin.reports.schedules.toggle-email', $schedule) }}">
                                     @csrf
                                     <button type="submit"
                                         class="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant px-3 py-2 font-label-sm text-on-surface transition hover:bg-surface-container-low">
@@ -312,7 +323,9 @@
                                         {{ $schedule->send_email ? 'Tắt gửi email' : 'Bật gửi email' }}
                                     </button>
                                 </form>
-                                <form method="post" action="{{ route('admin.reports.schedules.destroy', $schedule) }}"
+@endif
+                                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.reports.schedules.destroy'))
+<form method="post" action="{{ route('admin.reports.schedules.destroy', $schedule) }}"
                                     onsubmit="return confirm('Xóa lịch này?')">
                                     @csrf
                                     <button type="submit"
@@ -321,6 +334,7 @@
                                         Xóa
                                     </button>
                                 </form>
+@endif
                             </div>
                         </li>
                     @endforeach

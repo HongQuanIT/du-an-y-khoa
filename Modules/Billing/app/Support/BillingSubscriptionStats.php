@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace Modules\Billing\Support;
 
 use App\Models\User;
-use App\Support\Enums\Role;
+use App\Support\Auth\PortalAccess;
+use App\Support\Enums\PortalGroup;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -202,7 +203,7 @@ final class BillingSubscriptionStats
 
     public static function totalStudents(): int
     {
-        return (int) User::role(Role::Student->value)->count();
+        return (int) User::role(PortalAccess::roleNames(PortalGroup::Learner))->count();
     }
 
     public static function countPremiumStudents(?int $premiumPlanId = null): int

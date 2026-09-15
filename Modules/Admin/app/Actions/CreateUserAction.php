@@ -6,7 +6,7 @@ namespace Modules\Admin\Actions;
 
 use App\Models\User;
 use App\Support\Concerns\AsAction;
-use App\Support\Enums\Role;
+use App\Support\Enums\PortalGroup;
 use App\Support\Enums\UserStatus;
 use Illuminate\Support\Facades\DB;
 use Modules\Admin\Enums\AuditAction;
@@ -24,13 +24,11 @@ final class CreateUserAction
     /**
      * @param  array{name: string, email: string, password: string}  $data
      */
-    public function handle(User $actor, array $data, Role $role): User
+    public function handle(User $actor, array $data, RoleModel $role): User
     {
         StaffGuard::assertCanAssignRole($actor, $role);
 
         return DB::transaction(function () use ($actor, $data, $role): User {
-            RoleModel::findOrCreate($role->value, 'web');
-
             $user = User::query()->forceCreate([
                 'name' => $data['name'],
                 'email' => $data['email'],
@@ -40,10 +38,10 @@ final class CreateUserAction
                 'status' => UserStatus::Active,
             ]);
 
-            $user->syncRoles([$role->value]);
+            $user->syncRoles([$role]);
             app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-            if ($role === Role::Partner) {
+            if ($role->portal === PortalGroup::Partner->value) {
                 app(EnsurePartnerProfileAction::class)->handle($user);
             }
 

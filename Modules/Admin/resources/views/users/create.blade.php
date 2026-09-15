@@ -2,8 +2,10 @@
     <x-admin.page-header title="Tạo người dùng"
         description="Chọn portal trước, rồi chọn role. Permission lấy từ ma trận role — không tick từng quyền.">
         <x-slot:actions>
-            <a href="{{ route('admin.users.index') }}"
+            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.users.index'))
+<a href="{{ route('admin.users.index') }}"
                 class="rounded-lg px-3 py-2 font-label-md text-on-surface-variant hover:bg-surface-container-low">← Danh sách</a>
+@endif
         </x-slot:actions>
     </x-admin.page-header>
 
@@ -14,7 +16,8 @@
             Bạn không có quyền gán vai trò cho người dùng mới.
         </p>
     @else
-        <form method="post" action="{{ route('admin.users.store') }}"
+        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.users.store'))
+<form method="post" action="{{ route('admin.users.store') }}"
             class="max-w-2xl space-y-6 rounded-xl border border-outline-variant bg-surface p-6">
             @csrf
 
@@ -57,5 +60,6 @@
 
             <button type="submit" class="rounded-lg bg-primary px-4 py-2.5 font-label-md text-on-primary">Tạo người dùng</button>
         </form>
+@endif
     @endif
 </x-layouts.admin>

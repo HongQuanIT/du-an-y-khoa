@@ -7,18 +7,22 @@
 
         <x-auth.errors />
 
-        <form class="space-y-5" action="{{ route('admin.2fa.challenge.verify') }}" method="post">
+        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.2fa.challenge.verify'))
+<form class="space-y-5" action="{{ route('admin.2fa.challenge.verify') }}" method="post">
             @csrf
             <x-auth.input name="code" label="Mã xác thực" type="text" autocomplete="one-time-code"
                 placeholder="000000 hoặc XXXX-XXXX" required autofocus />
             <x-auth.submit>Xác nhận</x-auth.submit>
         </form>
+@endif
 
-        <form class="mt-6" method="post" action="{{ route('admin.logout') }}">
+        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.logout'))
+<form class="mt-6" method="post" action="{{ route('admin.logout') }}">
             @csrf
             <button type="submit" class="text-label-md font-label-md text-on-surface-variant hover:text-primary hover:underline">
                 Đăng xuất
             </button>
         </form>
+@endif
     </x-auth.shell>
 </x-layouts.auth>

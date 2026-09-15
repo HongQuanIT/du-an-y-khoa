@@ -10,32 +10,41 @@
             'icon' => 'dashboard',
             'route' => 'partner.dashboard',
             'match' => 'partner.dashboard',
+            'permission' => 'partner_dashboard.view',
         ],
         [
             'label' => 'Mã mời',
             'icon' => 'link',
             'route' => 'partner.codes.index',
             'match' => 'partner.codes.*',
+            'permission' => 'partner_code.view',
         ],
         [
             'label' => 'Người được mời',
             'icon' => 'group',
             'route' => 'partner.referrals.index',
             'match' => 'partner.referrals.*',
+            'permission' => 'partner_referral.view',
         ],
         [
             'label' => 'Hoa hồng',
             'icon' => 'payments',
             'route' => 'partner.commissions.index',
             'match' => 'partner.commissions.*',
+            'permission' => 'partner_commission.view',
         ],
         [
             'label' => 'Chi trả',
             'icon' => 'account_balance_wallet',
             'route' => 'partner.payouts.index',
             'match' => 'partner.payouts.*',
+            'permission' => 'partner_payout.view',
         ],
     ];
+    $navItems = array_values(array_filter(
+        $navItems,
+        static fn (array $item): bool => auth()->user()?->canAny((array) $item['permission']) === true,
+    ));
 @endphp
 
 <!DOCTYPE html>
@@ -77,7 +86,7 @@
     <aside
         class="fixed top-0 left-0 z-50 hidden h-screen w-sidebar-width flex-col border-r border-outline-variant bg-surface p-4 md:flex">
         <div class="mb-6 px-2">
-            <a href="{{ route('partner.dashboard') }}" class="block">
+            <a href="{{ \App\Support\Auth\HomePath::partnerPath(auth()->user()) }}" class="block">
                 <span class="font-headline-sm text-headline-sm font-extrabold text-primary tracking-tight">{{ config('app.name') }}</span>
                 <span class="mt-0.5 block font-label-sm text-label-sm text-on-surface-variant">Cổng cộng tác viên</span>
             </a>

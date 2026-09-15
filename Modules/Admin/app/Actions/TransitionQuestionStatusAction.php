@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Modules\Admin\Actions;
 
 use App\Models\User;
+use App\Support\Auth\PortalAccess;
 use App\Support\Concerns\AsAction;
 use App\Support\Enums\Permission;
+use App\Support\Enums\PortalGroup;
 use App\Support\Enums\Role;
 use App\Support\Html\SafeHtml;
 use Illuminate\Validation\ValidationException;
@@ -19,9 +21,7 @@ use Modules\QuestionBank\Enums\QuestionReviewStatus;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionReviewRequest;
-use Modules\QuestionBank\Support\AssignedInstructorMatcher;
 use Modules\QuestionBank\Support\QuestionInstructorReviewCycle;
-use Modules\QuestionBank\Support\QuestionReviewerFlagCycle;
 
 /**
  * Transition publication workflow for a question.
@@ -33,8 +33,6 @@ final class TransitionQuestionStatusAction
     public function __construct(
         private readonly CaptureQuestionVersionAction $captureVersion,
         private readonly QuestionInstructorReviewCycle $reviewCycle,
-        private readonly AssignedInstructorMatcher $instructorMatcher,
-        private readonly QuestionReviewerFlagCycle $flagCycle,
     ) {}
 
     public function handle(
@@ -178,10 +176,7 @@ final class TransitionQuestionStatusAction
             $this->reviewCycle->startOrReset($question);
         }
 
-        if ($to === QuestionStatus::Draft && in_array($from, [
-            QuestionStatus::InReview,
-            QuestionStatus::InFlagReview,
-        ], true)) {
+        if ($to === QuestionStatus::Draft && $from === QuestionStatus::InReview) {
             $question->reviewRequests()
                 ->where('status', QuestionReviewStatus::Pending->value)
                 ->where('action', QuestionReviewAction::Create->value)
@@ -219,11 +214,7 @@ final class TransitionQuestionStatusAction
             QuestionStatus::Draft->value => [QuestionStatus::InReview],
             QuestionStatus::InReview->value => [
                 QuestionStatus::Draft,
-                QuestionStatus::InReview,
-            ],
-            QuestionStatus::InFlagReview->value => [
-                QuestionStatus::Draft,
-                QuestionStatus::InReview,
+                QuestionStatus::PendingPublish,
             ],
             QuestionStatus::PendingPublish->value => [
                 QuestionStatus::Published,
@@ -250,8 +241,14 @@ final class TransitionQuestionStatusAction
             ]);
         }
 
+        // Lớp 1 — chỉ role giảng viên + question.review. Admin không duyệt thay.
         if ($to === QuestionStatus::PendingPublish) {
-            abort(403, 'Chỉ reviewer gắn đủ 2 cờ mới chuyển câu sang chờ xuất bản.');
+            if (! PortalAccess::allows($actor, PortalGroup::Instructor)
+                || ! $actor->can(Permission::QuestionReview->value)) {
+                abort(403, 'Chỉ giảng viên có quyền question.review được duyệt lớp 1.');
+            }
+
+            return;
         }
 
         // Retire — tách khỏi publish.
@@ -302,11 +299,10 @@ final class TransitionQuestionStatusAction
             return;
         }
 
-        // Submit / withdraw / resubmit from flag queue
+        // Submit / withdraw: draft ↔ in_review
         if (
             ($from === QuestionStatus::Draft && $to === QuestionStatus::InReview)
             || ($from === QuestionStatus::InReview && $to === QuestionStatus::Draft)
-            || ($from === QuestionStatus::InFlagReview && in_array($to, [QuestionStatus::Draft, QuestionStatus::InReview], true))
         ) {
             $this->assertCanSubmit($actor);
 
@@ -330,20 +326,14 @@ final class TransitionQuestionStatusAction
     {
         if (! $this->reviewCycle->hasRequiredApprovals($question)) {
             throw ValidationException::withMessages([
-                'status' => 'Cần giảng viên duyệt và đủ 2 cờ reviewer trước khi '.$actionLabel.'.',
+                'status' => 'Cần đủ 2 giảng viên chấp nhận trước khi '.$actionLabel.'.',
             ]);
         }
 
-        if ($this->flagCycle->hasRequiredFlags($question) && $this->flagCycle->hasRedFlag($question)) {
-            throw ValidationException::withMessages([
-                'status' => 'Có cờ đỏ — không xuất bản được. Chỉ được trả về biên tập.',
-            ]);
-        }
-
-        $blockedIds = $this->reviewCycle->blockedPublisherIds($question);
+        $blockedIds = $this->reviewCycle->approvedInstructorIds($question);
         if (in_array((int) $actor->getKey(), $blockedIds, true)) {
             throw ValidationException::withMessages([
-                'status' => 'Người xuất bản phải khác giảng viên được gán và 2 reviewer đã gắn cờ.',
+                'status' => 'Người xuất bản phải khác 2 giảng viên đã duyệt chuyên môn.',
             ]);
         }
     }
@@ -352,16 +342,11 @@ final class TransitionQuestionStatusAction
     {
         if (! in_array($to, [
             QuestionStatus::InReview,
-            QuestionStatus::InFlagReview,
             QuestionStatus::PendingPublish,
             QuestionStatus::Published,
             QuestionStatus::Private,
         ], true)) {
             return;
-        }
-
-        if ($to === QuestionStatus::InReview) {
-            $this->assertAssignedInstructorReady($question);
         }
         $question->loadMissing('options');
 
@@ -386,23 +371,6 @@ final class TransitionQuestionStatusAction
         if ($to === QuestionStatus::Private && ! $question->exam_flag) {
             throw ValidationException::withMessages([
                 'status' => 'Câu exam pool cần bật exam_flag.',
-            ]);
-        }
-    }
-
-    private function assertAssignedInstructorReady(Question $question): void
-    {
-        $instructorId = (int) $question->assigned_instructor_id;
-        if ($instructorId <= 0) {
-            throw ValidationException::withMessages([
-                'assigned_instructor_id' => 'Vui lòng chọn giảng viên đúng chuyên môn trước khi gửi duyệt.',
-            ]);
-        }
-
-        $instructor = User::query()->find($instructorId);
-        if ($instructor === null || ! $this->instructorMatcher->instructorMatchesQuestion($instructor, $question)) {
-            throw ValidationException::withMessages([
-                'assigned_instructor_id' => 'Giảng viên đã chọn không còn khớp môn học của câu hỏi. Hãy chọn lại.',
             ]);
         }
     }

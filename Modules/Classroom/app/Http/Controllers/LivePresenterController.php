@@ -31,7 +31,7 @@ final class LivePresenterController extends Controller
         return view('classroom::live.presenter', [
             'classroom' => $classroom,
             'session' => $liveSession,
-            'canModerate' => $role->canModerate(),
+            'canModerate' => $role->canModerate() && $request->user()->can('live_question.update'),
             'bootstrapUrl' => route($teachPortal ? 'teach.classes.sessions.studio.api.bootstrap' : 'classroom.live.api.bootstrap', [$classroom, $liveSession]),
             'questionUrl' => route($teachPortal ? 'teach.classes.sessions.studio.api.question' : 'classroom.live.api.question', [$classroom, $liveSession]),
             'marksUrl' => route($teachPortal ? 'teach.classes.sessions.studio.api.marks' : 'classroom.live.api.marks', [$classroom, $liveSession]),

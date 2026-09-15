@@ -6,7 +6,6 @@ namespace Modules\Admin\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Support\Enums\Permission;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -17,7 +16,7 @@ final class BillingGatewayController extends Controller
 {
     public function index(GatewaySettings $gateways): View
     {
-        $this->authorizePermission(Permission::BillingManage);
+        $this->authorizePermission('billing_gateway.view');
 
         $catalog = $gateways->catalog();
         $cards = [];
@@ -47,7 +46,7 @@ final class BillingGatewayController extends Controller
 
     public function update(Request $request, GatewaySettings $gateways): RedirectResponse
     {
-        $this->authorizePermission(Permission::BillingManage);
+        $this->authorizePermission('billing_gateway.update');
 
         $rules = [
             'default_gateway' => ['required', 'string', Rule::in($gateways->implementedKeys())],
@@ -80,9 +79,9 @@ final class BillingGatewayController extends Controller
             ->with('status', 'Đã lưu cấu hình cổng thanh toán.');
     }
 
-    private function authorizePermission(Permission $permission): void
+    private function authorizePermission(string $permission): void
     {
-        abort_unless($this->actor()->can($permission->value), 403);
+        abort_unless($this->actor()->canAny([$permission]), 403);
     }
 
     private function actor(): User

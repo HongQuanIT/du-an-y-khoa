@@ -18,7 +18,10 @@ final class QuestionFeedbackController extends Controller
 {
     public function index(Request $request): View
     {
-        abort_unless(\Modules\Admin\Support\QuestionAccess::canAccessWorkspace($this->actor()), 403);
+        abort_unless(
+            $this->actor()->can('question_feedback.view_any'),
+            403,
+        );
 
         $filters = [
             'q' => trim((string) $request->query('q', '')),
@@ -76,11 +79,7 @@ final class QuestionFeedbackController extends Controller
 
     public function updateStatus(Request $request, QuestionFeedback $feedback): RedirectResponse
     {
-        abort_unless(
-            $this->actor()->can(Permission::QuestionUpdate->value)
-            || $this->actor()->can(Permission::QuestionPublish->value),
-            403,
-        );
+        abort_unless($this->actor()->canAny(['question_feedback.update']), 403);
 
         $validated = $request->validate([
             'status' => ['required', 'string', Rule::in(array_keys(QuestionFeedback::statusLabels()))],
@@ -105,6 +104,11 @@ final class QuestionFeedbackController extends Controller
         );
 
         return back()->with('status', 'Đã cập nhật trạng thái feedback.');
+    }
+
+    private function authorizePermission(Permission $permission): void
+    {
+        abort_unless($this->actor()->can($permission->value), 403);
     }
 
     private function actor(): User

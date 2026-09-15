@@ -6,7 +6,6 @@ namespace Modules\Admin\Actions;
 
 use App\Models\User;
 use App\Support\Concerns\AsAction;
-use App\Support\Enums\Permission;
 use Modules\Admin\Support\Auditor;
 use Modules\Classroom\Actions\EndLiveSessionAction;
 use Modules\Classroom\Enums\LiveSessionStatus;
@@ -24,8 +23,7 @@ final class ForceEndClassroomLiveAction
 
     public function handle(User $actor, Classroom $classroom): ?LiveSession
     {
-        abort_unless($actor->can(Permission::LiveForceEnd->value)
-            || $actor->can(Permission::ClassroomOversee->value), 403);
+        abort_unless($actor->can('classroom_oversight.view_any'), 403);
 
         /** @var LiveSession|null $session */
         $session = $classroom->sessions()

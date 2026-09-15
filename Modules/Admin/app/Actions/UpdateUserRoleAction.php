@@ -6,20 +6,21 @@ namespace Modules\Admin\Actions;
 
 use App\Models\User;
 use App\Support\Concerns\AsAction;
-use App\Support\Enums\Role;
+use App\Support\Enums\PortalGroup;
 use Illuminate\Support\Facades\DB;
 use Modules\Admin\Enums\AuditAction;
 use Modules\Admin\Support\Auditor;
 use Modules\Admin\Support\AuditSnapshot;
 use Modules\Admin\Support\StaffGuard;
 use Modules\Partner\Actions\EnsurePartnerProfileAction;
+use Spatie\Permission\Models\Role as RoleModel;
 use Spatie\Permission\PermissionRegistrar;
 
 final class UpdateUserRoleAction
 {
     use AsAction;
 
-    public function handle(User $actor, User $target, Role $role): User
+    public function handle(User $actor, User $target, RoleModel $role): User
     {
         StaffGuard::assertCanManage($actor, $target);
         StaffGuard::assertCanAssignRole($actor, $role);
@@ -27,10 +28,10 @@ final class UpdateUserRoleAction
         return DB::transaction(function () use ($actor, $target, $role): User {
             $before = AuditSnapshot::user($target);
 
-            $target->syncRoles([$role->value]);
+            $target->syncRoles([$role]);
             app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-            if ($role === Role::Partner) {
+            if ($role->portal === PortalGroup::Partner->value) {
                 app(EnsurePartnerProfileAction::class)->handle($target);
             }
 

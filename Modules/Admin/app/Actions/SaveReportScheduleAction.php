@@ -52,7 +52,7 @@ final class SaveReportScheduleAction
         }
 
         $permission = $match['category']['permission'];
-        if ($permission !== null && ! $actor->can($permission->value)) {
+        if ($permission !== null && ! $actor->can($permission)) {
             abort(403);
         }
 

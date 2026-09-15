@@ -58,15 +58,18 @@
     $isRejected = ! $isNew && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::Rejected;
     $isInstructorRejection = $isRejected && $question->isInstructorRejection();
     $isPublisherRejection = $isRejected && $question->isPublisherRejection();
+    $rejectorName = $isRejected ? $question->rejectorDisplayName() : null;
     $rejectionReason = $isRejected
-        ? ($question->rejection_reason ?: $question->instructor_note ?: $latestRejectedReview?->review_note)
+        ? ($question->rejection_reason ?: $latestRejectedReview?->review_note)
+        : null;
+    $rejectedAt = $isRejected
+        ? ($latestRejectedReview?->reviewed_at ?? $question->updated_at)
         : null;
     $statusBadge = ! $isNew ? match (true) {
         $isInstructorRejection => ['label' => 'Giảng viên từ chối', 'class' => 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'],
         $isPublisherRejection => ['label' => 'Admin trả về', 'class' => 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'],
         $question->status === \Modules\QuestionBank\Enums\QuestionStatus::Published => ['label' => 'Đã xuất bản', 'class' => 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'],
-        $question->status === \Modules\QuestionBank\Enums\QuestionStatus::InReview => ['label' => 'Chờ giảng viên', 'class' => 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'],
-        $question->status === \Modules\QuestionBank\Enums\QuestionStatus::InFlagReview => ['label' => 'Chờ reviewer', 'class' => 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300'],
+        $question->status === \Modules\QuestionBank\Enums\QuestionStatus::InReview => ['label' => 'Chờ giảng viên duyệt', 'class' => 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'],
         $question->status === \Modules\QuestionBank\Enums\QuestionStatus::PendingPublish => ['label' => 'Chờ xuất bản', 'class' => 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300'],
         $question->status === \Modules\QuestionBank\Enums\QuestionStatus::Rejected => ['label' => 'Từ chối', 'class' => 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'],
         $question->status === \Modules\QuestionBank\Enums\QuestionStatus::Private => ['label' => 'Riêng tư', 'class' => 'bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300'],
@@ -84,11 +87,13 @@
     {{-- ── HEADER ── --}}
     <header class="mb-6 flex flex-col gap-4 border-b border-outline-variant pb-5 lg:flex-row lg:items-start lg:justify-between">
         <div class="flex min-w-0 items-start gap-3">
-            <a href="{{ route('admin.questions.index') }}"
+            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.index'))
+<a href="{{ route('admin.questions.index') }}"
                aria-label="Quay lại danh sách câu hỏi"
                class="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container-low">
                 <span class="material-symbols-outlined text-[20px]" aria-hidden="true">arrow_back</span>
             </a>
+@endif
             <div class="min-w-0">
                 <h1 class="font-headline-md text-headline-md font-bold text-on-surface">
                     {{ $isNew ? 'Tạo câu hỏi mới' : ($canEditContent ? 'Chỉnh sửa câu hỏi' : 'Chi tiết câu hỏi') }}
@@ -106,40 +111,37 @@
                         </span>
                         <span>·</span>
                         @if ($question->version > 0)
-                            <a href="{{ route('admin.questions.versions.index', $question) }}"
+                            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.versions.index'))
+<a href="{{ route('admin.questions.versions.index', $question) }}"
                                 class="inline-flex items-center gap-0.5 font-semibold text-primary hover:underline"
                                 title="Xem lịch sử phiên bản">
                                 Phiên bản {{ $question->version }}
                                 <span class="material-symbols-outlined text-[15px]">history</span>
                             </a>
+@endif
                         @else
                             <span title="Phiên bản chỉ được tạo khi Admin xuất bản cấp cuối">Chưa có phiên bản</span>
                         @endif
-                        @if ($question->published_version)
-                            <span>·</span>
-                            <a href="{{ route('admin.questions.compare', $question) }}"
-                                class="inline-flex items-center gap-0.5 font-semibold text-primary hover:underline"
-                                title="Đối chiếu bản đang lưu với bản học viên đang làm">
-                                So sánh với bản xuất bản
-                                <span class="material-symbols-outlined text-[15px]">difference</span>
-                            </a>
-                        @endif
                         @if ($canViewAudit)
                             <span>·</span>
-                            <a href="{{ route('admin.audit.index', ['subject_type' => 'question', 'subject_id' => $question->id]) }}"
+                            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.audit.index'))
+<a href="{{ route('admin.audit.index', ['subject_type' => 'question', 'subject_id' => $question->id]) }}"
                                 class="inline-flex items-center gap-0.5 font-semibold text-primary hover:underline"
                                 title="Xem nhật ký audit">
                                 Nhật ký
                                 <span class="material-symbols-outlined text-[15px]">policy</span>
                             </a>
+@endif
                         @endif
                         <span>·</span>
-                        <a href="{{ route('admin.questions.stats', $question) }}"
+                        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.stats'))
+<a href="{{ route('admin.questions.stats', $question) }}"
                             class="inline-flex items-center gap-0.5 font-semibold text-primary hover:underline"
                             title="Thống kê chi tiết">
                             Thống kê
                             <span class="material-symbols-outlined text-[15px]">analytics</span>
                         </a>
+@endif
                         <span>·</span>
                         <span>Cập nhật {{ $question->updated_at?->diffForHumans() }}</span>
                     </div>
@@ -149,25 +151,18 @@
             </div>
         </div>
 
-        @if (! $isNew && ($question->published_version || ($canDelete && ! $pendingReview)))
+        @if (! $isNew && $canDelete && ! $pendingReview)
             <div class="flex shrink-0 flex-wrap items-center gap-2 lg:justify-end lg:pt-0.5">
-                @if ($question->published_version)
-                    <a href="{{ route('admin.questions.compare', $question) }}"
-                        class="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-outline-variant px-3 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low">
-                        <span class="material-symbols-outlined text-[16px]" aria-hidden="true">difference</span>
-                        So sánh với bản xuất bản
-                    </a>
-                @endif
-                @if ($canDelete && ! $pendingReview)
-                    <form method="post" action="{{ route('admin.questions.destroy', $question) }}" aria-label="Xóa câu hỏi">
-                        @csrf @method('DELETE')
-                        <button type="submit" onclick="return confirm('{{ $isReviewer ? 'Xóa câu hỏi này?' : 'Gửi yêu cầu xóa câu hỏi này để admin duyệt?' }}')"
-                            class="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-rose-300 px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50">
-                            <span class="material-symbols-outlined text-[16px]" aria-hidden="true">delete</span>
-                            {{ $isReviewer ? 'Xóa' : 'Yêu cầu xóa' }}
-                        </button>
-                    </form>
-                @endif
+                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.destroy'))
+<form method="post" action="{{ route('admin.questions.destroy', $question) }}" aria-label="Xóa câu hỏi">
+                    @csrf @method('DELETE')
+                    <button type="submit" onclick="return confirm('{{ $isReviewer ? 'Xóa câu hỏi này?' : 'Gửi yêu cầu xóa câu hỏi này để admin duyệt?' }}')"
+                        class="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-rose-300 px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50">
+                        <span class="material-symbols-outlined text-[16px]" aria-hidden="true">delete</span>
+                        {{ $isReviewer ? 'Xóa' : 'Yêu cầu xóa' }}
+                    </button>
+                </form>
+@endif
             </div>
         @endif
     </header>
@@ -186,42 +181,58 @@
                 </p>
             </div>
             @if ($isReviewer)
-                <a href="{{ route('admin.questions.reviews.show', $pendingReview) }}"
+                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.reviews.show'))
+<a href="{{ route('admin.questions.reviews.show', $pendingReview) }}"
                     class="inline-flex whitespace-nowrap items-center gap-1 rounded-xl bg-amber-800 px-3 py-2 text-sm font-bold text-white hover:bg-amber-900">
                     Xem và duyệt
                 </a>
+@endif
             @endif
         </div>
     @endif
 
-    @if (! $isNew)
-        @include('admin::questions.partials.review-feedback', [
-            'question' => $question,
-            'canEditContent' => $canEditContent,
-        ])
+    @if ($isRejected)
+        <section aria-labelledby="rejection-status-title" class="mb-5 rounded-2xl border border-red-300 bg-red-50 px-4 py-4 text-red-900 dark:border-red-900 dark:bg-red-950/40 dark:text-red-100">
+            <div class="flex items-start gap-3">
+                <span class="material-symbols-outlined mt-0.5" aria-hidden="true">cancel</span>
+                <div class="min-w-0 flex-1">
+                    <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <h2 id="rejection-status-title" class="font-semibold">
+                            @if ($isInstructorRejection)
+                                Giảng viên{{ $rejectorName ? ' '.$rejectorName : '' }} đã từ chối
+                            @elseif ($isPublisherRejection)
+                                {{ $rejectorName ?: 'Admin' }} đã trả về
+                            @else
+                                Câu hỏi đã bị từ chối
+                            @endif
+                        </h2>
+                        <span class="rounded-full bg-red-200 px-2 py-0.5 text-xs font-bold text-red-800 dark:bg-red-900/70 dark:text-red-100">
+                            {{ $statusBadge['label'] }}
+                        </span>
+                    </div>
+                    <p class="mt-2 text-sm leading-6">
+                        <span class="font-semibold">Lý do:</span>
+                        {{ $rejectionReason ?: 'Không có ghi chú kèm theo.' }}
+                    </p>
+                    @if ($rejectedAt)
+                        <p class="mt-1 text-xs text-red-700 dark:text-red-200">{{ $rejectedAt->format('d/m/Y H:i') }}</p>
+                    @endif
+                    @if ($canEditContent)
+                        <p class="mt-3 text-sm">Chuyển về nháp để chỉnh sửa.</p>
+                    @endif
+                </div>
+            </div>
+        </section>
     @endif
 
     @if (! $isNew && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::InReview)
         <div class="mb-5 rounded-2xl border border-amber-200 bg-amber-50/60 px-4 py-3 text-sm text-amber-900">
             <div class="flex flex-wrap items-center gap-3">
-                <p>
-                    Giảng viên được gán đang duyệt chuyên môn. Một phiếu từ chối là fail ngay, chưa sang reviewer.
-                    @if (! $isReviewer)
-                        Bạn vẫn được sửa; chọn <strong>Lưu và gửi duyệt lại</strong> để reset phiếu giảng viên.
-                    @endif
-                </p>
-            </div>
-        </div>
-    @endif
-
-    @if (! $isNew && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::InFlagReview)
-        <div class="mb-5 rounded-2xl border border-orange-200 bg-orange-50/60 px-4 py-3 text-sm text-orange-900">
-            <div class="flex flex-wrap items-center gap-3">
                 @include('questionbank::partials.instructor-review-flags', ['question' => $question])
                 <p>
-                    Giảng viên đã duyệt chuyên môn. Câu hỏi đang chờ reviewer gắn cờ.
+                    Cần 2 giảng viên chấp nhận. Cờ trắng = chờ duyệt, xanh = chấp nhận, đỏ = từ chối (1 phiếu đỏ là fail ngay).
                     @if (! $isReviewer)
-                        Bạn vẫn được sửa; chọn <strong>Lưu và gửi duyệt lại</strong> để reset phiếu GV và 2 cờ.
+                        Bạn vẫn được sửa; chọn <strong>Lưu và gửi duyệt lại</strong> để reset 2 phiếu.
                     @endif
                 </p>
             </div>
@@ -258,7 +269,7 @@
             {{-- ── LEFT: Main content ── --}}
             <div @class([
                 'space-y-5',
-                'pointer-events-none opacity-70' => ! $canEditContent,
+                'pointer-events-none select-none opacity-70' => ! $canEditContent,
             ])>
 
                 {{-- Đề bài --}}
@@ -316,16 +327,53 @@
                                 {{-- Mini rich-editor for option explanation (supports images) --}}
                                 <div class="admin-rich-editor mini mt-2 overflow-hidden rounded-lg border border-outline-variant bg-surface"
                                      x-init="
-                                         window.mountAdminEditor($el, {
-                                             html: opt.explanation,
-                                             placeholder: 'Giải thích cho lựa chọn này (không bắt buộc)...',
-                                             uploadUrl: @js(route('admin.editor.images')),
-                                             mini: true,
-                                             onChange(html) { opt.explanation = html; },
-                                         });
+                                         (function(currentOpt) {
+                                             const container = $el.querySelector('[data-mini-editor]');
+                                             const uploadUrl = '{{ route('admin.editor.images') }}';
+                                             const q = new window.Quill(container, {
+                                                 theme: 'snow',
+                                                 modules: { toolbar: [['bold', 'italic'], ['link', 'image'], ['clean']] },
+                                                 placeholder: 'Giải thích cho lựa chọn này (không bắt buộc)...'
+                                             });
+                                             if (typeof window.pinQuillToolbarButtons === 'function') {
+                                                 window.pinQuillToolbarButtons(q);
+                                             }
+                                             if (currentOpt.explanation) {
+                                                 const paste = q.clipboard.convert({ html: currentOpt.explanation, text: '' });
+                                                 q.setContents(paste, 'silent');
+                                             }
+                                             q.on('text-change', function() {
+                                                 const html = q.root.innerHTML.trim();
+                                                 currentOpt.explanation = (html === '<p><br></p>') ? '' : html;
+                                             });
+                                             // Vietnamese IME fix
+                                             const ed = q.root;
+                                             ed.addEventListener('compositionstart', function() { ed.classList.remove('ql-blank'); });
+                                             ed.addEventListener('compositionend', function() { ed.classList.toggle('ql-blank', q.getLength() <= 1); });
+                                             // Image upload handler
+                                             q.getModule('toolbar').addHandler('image', function() {
+                                                 const inp = document.createElement('input');
+                                                 inp.type = 'file';
+                                                 inp.accept = 'image/png,image/jpeg,image/gif,image/webp';
+                                                 inp.click();
+                                                 inp.onchange = async function() {
+                                                     const file = inp.files?.[0];
+                                                     if (!file) return;
+                                                     const body = new FormData();
+                                                     body.append('image', file);
+                                                     const csrf = document.querySelector('meta[name=csrf-token]')?.content || '';
+                                                     try {
+                                                         const res = await fetch(uploadUrl, { method: 'POST', headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' }, body: body, credentials: 'same-origin' });
+                                                         const data = await res.json();
+                                                         const range = q.getSelection(true) || { index: q.getLength(), length: 0 };
+                                                         q.insertEmbed(range.index, 'image', data.url, 'user');
+                                                         q.setSelection(range.index + 1, 0, 'silent');
+                                                     } catch(e) { alert('Không tải được ảnh. Vui lòng thử lại.'); }
+                                                 };
+                                             });
+                                         })(opt);
                                      ">
-                                    <div data-editor-toolbar class="admin-rich-toolbar"></div>
-                                    <div data-editor-surface class="admin-rich-surface min-h-[64px] font-body-sm text-on-surface"></div>
+                                    <div data-mini-editor class="min-h-[64px] font-body-sm text-on-surface"></div>
                                 </div>
                                 {{-- Hidden field carries the HTML value on submit --}}
                                 <input type="hidden" :name="'options['+index+'][explanation]'" x-model="opt.explanation">
@@ -360,19 +408,54 @@
                                         </div>
                                         <input type="hidden" :name="'hints['+index+'][id]'" :value="hint.id || ''">
 
-                                        {{-- Mini rich-editor for hint content (supports formatting & images) --}}
+                                        {{-- Mini rich-editor for hint content (supports formatting & images, matching option explanation) --}}
                                         <div class="admin-rich-editor mini overflow-hidden rounded-lg border border-outline-variant bg-surface"
                                              x-init="
-                                                 window.mountAdminEditor($el, {
-                                                     html: hint.content,
-                                                     placeholder: 'Nội dung hint ' + (index + 1) + '...',
-                                                     uploadUrl: @js(route('admin.editor.images')),
-                                                     mini: true,
-                                                     onChange(html) { hint.content = html; },
-                                                 });
+                                                 (function(currentHint) {
+                                                     const container = $el.querySelector('[data-mini-hint-editor]');
+                                                     const uploadUrl = '{{ route('admin.editor.images') }}';
+                                                     const q = new window.Quill(container, {
+                                                         theme: 'snow',
+                                                         modules: { toolbar: [['bold', 'italic'], ['link', 'image'], ['clean']] },
+                                                         placeholder: 'Nội dung hint ' + (index + 1) + '...'
+                                                     });
+                                                     if (typeof window.pinQuillToolbarButtons === 'function') {
+                                                         window.pinQuillToolbarButtons(q);
+                                                     }
+                                                     if (currentHint.content) {
+                                                         const paste = q.clipboard.convert({ html: currentHint.content, text: '' });
+                                                         q.setContents(paste, 'silent');
+                                                     }
+                                                     q.on('text-change', function() {
+                                                         const html = q.root.innerHTML.trim();
+                                                         currentHint.content = (html === '<p><br></p>') ? '' : html;
+                                                     });
+                                                     const ed = q.root;
+                                                     ed.addEventListener('compositionstart', function() { ed.classList.remove('ql-blank'); });
+                                                     ed.addEventListener('compositionend', function() { ed.classList.toggle('ql-blank', q.getLength() <= 1); });
+                                                     q.getModule('toolbar').addHandler('image', function() {
+                                                         const inp = document.createElement('input');
+                                                         inp.type = 'file';
+                                                         inp.accept = 'image/png,image/jpeg,image/gif,image/webp';
+                                                         inp.click();
+                                                         inp.onchange = async function() {
+                                                             const file = inp.files?.[0];
+                                                             if (!file) return;
+                                                             const body = new FormData();
+                                                             body.append('image', file);
+                                                             const csrf = document.querySelector('meta[name=csrf-token]')?.content || '';
+                                                             try {
+                                                                 const res = await fetch(uploadUrl, { method: 'POST', headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' }, body: body, credentials: 'same-origin' });
+                                                                 const data = await res.json();
+                                                                 const range = q.getSelection(true) || { index: q.getLength(), length: 0 };
+                                                                 q.insertEmbed(range.index, 'image', data.url, 'user');
+                                                                 q.setSelection(range.index + 1, 0, 'silent');
+                                                             } catch(e) { alert('Không tải được ảnh. Vui lòng thử lại.'); }
+                                                         };
+                                                     });
+                                                 })(hint);
                                              ">
-                                            <div data-editor-toolbar class="admin-rich-toolbar"></div>
-                                            <div data-editor-surface class="admin-rich-surface min-h-[64px] font-body-sm text-on-surface"></div>
+                                            <div data-mini-hint-editor class="min-h-[64px] font-body-sm text-on-surface"></div>
                                         </div>
                                         <input type="hidden" :name="'hints['+index+'][content]'" :value="hint.content">
                                     </div>
@@ -393,25 +476,17 @@
                 {{-- Workflow trước (luôn bấm được); nội dung khóa nằm dưới --}}
                 @if (! $isNew && $canPublish && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::PendingPublish)
                     <div class="rounded-2xl border border-primary/30 bg-primary/5 p-4">
-                        <h2 class="mb-2 font-label-md font-semibold text-on-surface">Xuất bản</h2>
+                        <h2 class="mb-2 font-label-md font-semibold text-on-surface">Xuất bản (lớp 2)</h2>
                         <p class="mb-3 text-xs leading-5 text-on-surface-variant">
-                            GV {{ $question->assignedInstructor?->name ?? $question->instructor?->name ?? '—' }} đã duyệt.
-                            Xuất bản chỉ tăng phiên bản — không sửa nội dung.
+                            Đủ 2 giảng viên chấp nhận. Xuất bản chỉ tăng phiên bản — không cần duyệt lại chuyên môn.
                             <span class="mt-2 block">
                                 @include('questionbank::partials.instructor-review-flags', ['question' => $question])
                             </span>
-                            @if ($question->hasRedReviewerFlag())
-                                <span class="mt-2 block font-semibold text-rose-700">Có cờ đỏ — không xuất bản được, chỉ trả về biên tập.</span>
-                            @endif
                             @if ($question->published_version)
-                                <span class="mt-2 block">
-                                    QBank đang phục vụ phiên bản {{ $question->published_version }}.
-                                    <a href="{{ route('admin.questions.compare', $question) }}" class="font-semibold text-primary hover:underline">So sánh thay đổi</a>
-                                </span>
+                                · QBank đang phục vụ phiên bản {{ $question->published_version }}
                             @endif
                         </p>
                         <div class="flex flex-col gap-2">
-                            @unless ($question->hasRedReviewerFlag())
                             <button type="submit"
                                 form="question-publish-form"
                                 onclick="return confirm('Xuất bản câu hỏi này lên ngân hàng? Phiên bản sẽ tăng.')"
@@ -426,7 +501,6 @@
                                 <span class="material-symbols-outlined text-[18px]">lock</span>
                                 Đưa vào kho đề thi (private)
                             </button>
-                            @endunless
                             <button type="submit"
                                 form="question-reject-publish-form"
                                 onclick="const r = prompt('Lý do từ chối xuất bản:'); if (!r || !r.trim()) return false; document.getElementById('question-reject-publish-reason').value = r.trim();"
@@ -484,9 +558,7 @@
                         <p class="mt-1 text-xs leading-5">
                             Admin/Super Admin không sửa nội dung câu hỏi.
                             @if ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::InReview)
-                                Đang chờ giảng viên duyệt chuyên môn — không xuất bản trước bước này.
-                            @elseif ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::InFlagReview)
-                                Đang chờ reviewer gắn cờ — không xuất bản trước bước này.
+                                Đang chờ đủ 2 giảng viên duyệt — không xuất bản trước bước này.
                             @elseif ($isRejected)
                                 Câu hỏi đã bị từ chối. Đang chờ biên tập viên xử lý.
                             @elseif ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::Draft)
@@ -494,7 +566,6 @@
                             @endif
                             @if ($question->published_version)
                                 Ngân hàng vẫn phục vụ phiên bản {{ $question->published_version }}.
-                                <a href="{{ route('admin.questions.compare', $question) }}" class="font-semibold text-primary hover:underline">So sánh thay đổi</a>
                             @endif
                         </p>
                     </div>
@@ -503,7 +574,6 @@
                         <p class="font-semibold">QBank đang phục vụ phiên bản {{ $question->published_version }}</p>
                         <p class="mt-1 text-xs leading-5">
                             Working copy: {{ $question->status->label() }}.
-                            <a href="{{ route('admin.questions.compare', $question) }}" class="font-semibold text-primary hover:underline">So sánh với bản xuất bản</a>
                         </p>
                     </div>
                 @endif
@@ -514,7 +584,7 @@
 
                 <div @class([
                     'space-y-4',
-                    'pointer-events-none opacity-70' => ! $canEditContent,
+                    'pointer-events-none select-none opacity-70' => ! $canEditContent,
                 ])>
                 <div class="rounded-2xl border border-outline-variant bg-surface p-4"
                     x-data="questionImageUploader(@js($stemImagePath), @js($stemImageUrl), @js(route('admin.editor.images')), @js(csrf_token()))">
@@ -603,10 +673,6 @@
                             }
 
                             if (! $isNew && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::InReview) {
-                                $availableStatuses[\Modules\QuestionBank\Enums\QuestionStatus::InReview->value] = 'Lưu và gửi duyệt lại';
-                                $availableStatuses[\Modules\QuestionBank\Enums\QuestionStatus::Draft->value] = 'Chuyển về nháp';
-                            }
-                            if (! $isNew && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::InFlagReview) {
                                 $availableStatuses[\Modules\QuestionBank\Enums\QuestionStatus::InReview->value] = 'Lưu và gửi duyệt lại';
                                 $availableStatuses[\Modules\QuestionBank\Enums\QuestionStatus::Draft->value] = 'Chuyển về nháp';
                             }
@@ -708,7 +774,6 @@
                         <p class="font-semibold">QBank đang phục vụ phiên bản {{ $question->published_version }}</p>
                         <p class="mt-1 text-xs leading-5">
                             Working copy: {{ $question->status->label() }}. Nội dung mới chỉ lên ngân hàng sau khi GV duyệt và admin xuất bản.
-                            <a href="{{ route('admin.questions.compare', $question) }}" class="mt-1 block font-semibold text-primary hover:underline">So sánh với bản xuất bản</a>
                         </p>
                     </div>
                 @endif
@@ -718,7 +783,6 @@
                     <h2 class="mb-3 font-label-md font-semibold text-on-surface-variant">Phân loại</h2>
                     <div class="space-y-3">
                         @include('admin::questions.partials.taxonomy-fields')
-                        @include('admin::questions.partials.instructor-picker')
 
                         <div>
                             <label class="mb-1 block text-xs font-semibold text-on-surface-variant" for="difficulty">Độ khó *</label>
@@ -756,10 +820,6 @@
                                 <dt class="text-on-surface-variant">Người tạo</dt>
                                 <dd class="font-semibold text-on-surface">{{ $question->creator?->name ?? '—' }}</dd>
                             </div>
-                            <div class="flex justify-between">
-                                <dt class="text-on-surface-variant">Giảng viên được gán</dt>
-                                <dd class="font-semibold text-on-surface">{{ $question->assignedInstructor?->name ?? '—' }}</dd>
-                            </div>
                             <div class="flex items-center justify-between gap-3">
                                 <dt class="text-on-surface-variant">Bản gửi duyệt</dt>
                                 <dd>@include('questionbank::partials.instructor-review-flags', ['question' => $question])</dd>
@@ -796,13 +856,14 @@
 
     @if (! $isNew && $canEditContent && in_array($question->status, [
         \Modules\QuestionBank\Enums\QuestionStatus::InReview,
-        \Modules\QuestionBank\Enums\QuestionStatus::InFlagReview,
         \Modules\QuestionBank\Enums\QuestionStatus::Rejected,
     ], true))
-        <form id="editor-return-draft-form" method="post" action="{{ route('admin.questions.transition', $question) }}" class="hidden">
+        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.transition'))
+<form id="editor-return-draft-form" method="post" action="{{ route('admin.questions.transition', $question) }}" class="hidden">
             @csrf
             <input type="hidden" name="status" value="{{ \Modules\QuestionBank\Enums\QuestionStatus::Draft->value }}">
         </form>
+@endif
     @endif
 
     @if (! $isNew && $canPublish && in_array($question->status, [
@@ -810,23 +871,31 @@
         \Modules\QuestionBank\Enums\QuestionStatus::Published,
         \Modules\QuestionBank\Enums\QuestionStatus::Private,
     ], true))
-        <form id="question-publish-form" method="post" action="{{ route('admin.questions.transition', $question) }}" class="hidden">
+        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.transition'))
+<form id="question-publish-form" method="post" action="{{ route('admin.questions.transition', $question) }}" class="hidden">
             @csrf
             <input type="hidden" name="status" value="{{ \Modules\QuestionBank\Enums\QuestionStatus::Published->value }}">
         </form>
-        <form id="question-private-form" method="post" action="{{ route('admin.questions.transition', $question) }}" class="hidden">
+@endif
+        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.transition'))
+<form id="question-private-form" method="post" action="{{ route('admin.questions.transition', $question) }}" class="hidden">
             @csrf
             <input type="hidden" name="status" value="{{ \Modules\QuestionBank\Enums\QuestionStatus::Private->value }}">
         </form>
-        <form id="question-retire-form" method="post" action="{{ route('admin.questions.transition', $question) }}" class="hidden">
+@endif
+        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.transition'))
+<form id="question-retire-form" method="post" action="{{ route('admin.questions.transition', $question) }}" class="hidden">
             @csrf
             <input type="hidden" name="status" value="{{ \Modules\QuestionBank\Enums\QuestionStatus::Retired->value }}">
         </form>
-        <form id="question-reject-publish-form" method="post" action="{{ route('admin.questions.transition', $question) }}" class="hidden">
+@endif
+        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.transition'))
+<form id="question-reject-publish-form" method="post" action="{{ route('admin.questions.transition', $question) }}" class="hidden">
             @csrf
             <input type="hidden" name="status" value="{{ \Modules\QuestionBank\Enums\QuestionStatus::Rejected->value }}">
             <input type="hidden" name="rejection_reason" id="question-reject-publish-reason" value="">
         </form>
+@endif
     @endif
 
 </x-layouts.admin>

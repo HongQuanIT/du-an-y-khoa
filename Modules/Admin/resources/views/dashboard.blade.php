@@ -51,10 +51,10 @@
     <div class="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <x-admin.alerts-panel :alerts="$alerts" />
 
-        @if (count($audit_feed) > 0 || auth()->user()?->can(\App\Support\Enums\Permission::AuditView->value))
+        @if (count($audit_feed) > 0 || auth()->user()?->can('audit_log.view'))
             <x-admin.audit-feed
                 :items="$audit_feed"
-                :view-all-href="auth()->user()?->can(\App\Support\Enums\Permission::AuditView->value) ? route('admin.audit.index') : null" />
+                :view-all-href="auth()->user()?->can('audit_log.view') ? route('admin.audit.index') : null" />
         @endif
     </div>
 

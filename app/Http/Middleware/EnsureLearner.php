@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
-use App\Support\Auth\Instructor;
-use App\Support\Auth\Partner;
-use App\Support\Auth\Staff;
+use App\Support\Auth\HomePath;
+use App\Support\Auth\PortalAccess;
+use App\Support\Enums\PortalGroup;
 use App\Support\Http\Responses\ApiResponse;
 use Closure;
 use Illuminate\Http\Request;
@@ -21,42 +21,22 @@ final class EnsureLearner
     {
         $user = $request->user();
 
-        if (Staff::isStaff($user)) {
-            if ($request->expectsJson()) {
-                return ApiResponse::error(
-                    code: 'STAFF_PORTAL_REQUIRED',
-                    message: 'Tài khoản quản trị chỉ dùng khu vực /admin.',
-                    status: 403,
-                );
-            }
-
-            return redirect()->route('admin.dashboard');
+        if (PortalAccess::allows($user, PortalGroup::Learner)) {
+            return $next($request);
         }
 
-        if (Instructor::is($user)) {
-            if ($request->expectsJson()) {
-                return ApiResponse::error(
-                    code: 'TEACH_PORTAL_REQUIRED',
-                    message: 'Tài khoản giảng viên chỉ dùng khu vực /teach.',
-                    status: 403,
-                );
-            }
-
-            return redirect()->route('teach.dashboard');
+        if ($request->expectsJson()) {
+            return ApiResponse::error(
+                code: 'LEARNER_REQUIRED',
+                message: 'Chỉ tài khoản học viên được vào khu vực học tập.',
+                status: 403,
+            );
         }
 
-        if (Partner::is($user)) {
-            if ($request->expectsJson()) {
-                return ApiResponse::error(
-                    code: 'PARTNER_PORTAL_REQUIRED',
-                    message: 'Tài khoản cộng tác viên chỉ dùng khu vực /partner.',
-                    status: 403,
-                );
-            }
-
-            return redirect()->route('partner.dashboard');
+        if (PortalAccess::primaryPortal($user) === null) {
+            abort(403, 'Tài khoản chưa được gán vai trò truy cập.');
         }
 
-        return $next($request);
+        return redirect()->to(HomePath::for($user));
     }
 }

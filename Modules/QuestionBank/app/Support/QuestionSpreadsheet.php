@@ -90,22 +90,9 @@ final class QuestionSpreadsheet
      * @param  list<list<string>>  $rows
      * @param  list<list<string>>|null  $guideRows
      */
-    /**
-     * @param  list<string>  $headers
-     * @param  list<list<string>>  $rows
-     * @param  list<list<string>>|null  $guideRows
-     * @param  list<array{name: string, rows: list<list<string>>}>  $extraSheets
-     * @param  array{highlight_errors?: bool}  $options
-     */
-    public function writeXlsx(
-        string $path,
-        array $headers,
-        array $rows,
-        ?array $guideRows = null,
-        array $extraSheets = [],
-        array $options = [],
-    ): void {
-        if (file_put_contents($path, $this->xlsxBinary($headers, $rows, $guideRows, $extraSheets, $options)) === false) {
+    public function writeXlsx(string $path, array $headers, array $rows, ?array $guideRows = null): void
+    {
+        if (file_put_contents($path, $this->xlsxBinary($headers, $rows, $guideRows)) === false) {
             throw new RuntimeException('Không ghi được tệp Excel.');
         }
     }
@@ -114,31 +101,14 @@ final class QuestionSpreadsheet
      * @param  list<string>  $headers
      * @param  list<list<string>>  $rows
      * @param  list<list<string>>|null  $guideRows
-     * @param  list<array{name: string, rows: list<list<string>>}>  $extraSheets
-     * @param  array{highlight_errors?: bool}  $options
      */
-    public function xlsxBinary(
-        array $headers,
-        array $rows,
-        ?array $guideRows = null,
-        array $extraSheets = [],
-        array $options = [],
-    ): string {
+    public function xlsxBinary(array $headers, array $rows, ?array $guideRows = null): string
+    {
         $sheets = [
-            [
-                'name' => 'Cau_hoi',
-                'rows' => array_merge([$headers], $rows),
-                'highlight_errors' => (bool) ($options['highlight_errors'] ?? false),
-            ],
+            ['name' => 'Cau_hoi', 'rows' => array_merge([$headers], $rows)],
         ];
         if ($guideRows !== null) {
             $sheets[] = ['name' => 'Huong_dan', 'rows' => $guideRows];
-        }
-        foreach ($extraSheets as $sheet) {
-            $sheets[] = [
-                'name' => (string) ($sheet['name'] ?? 'Sheet'),
-                'rows' => $sheet['rows'] ?? [],
-            ];
         }
 
         $tmp = tempnam(sys_get_temp_dir(), 'qbank-xlsx-');
@@ -172,10 +142,7 @@ final class QuestionSpreadsheet
             $contentTypes .= '<Override PartName="/xl/worksheets/sheet'.$sheetId.'.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>';
             $workbookSheets .= '<sheet name="'.$this->xml($sheet['name']).'" sheetId="'.$sheetId.'" r:id="rIdSheet'.$sheetId.'"/>';
             $workbookRels .= '<Relationship Id="rIdSheet'.$sheetId.'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet'.$sheetId.'.xml"/>';
-            $sheetXml[$sheetId] = $this->worksheetXml($sheet['rows'], $shared, [
-                'name' => $sheet['name'],
-                'highlight_errors' => (bool) ($sheet['highlight_errors'] ?? false),
-            ]);
+            $sheetXml[$sheetId] = $this->worksheetXml($sheet['rows'], $shared);
         }
 
         $contentTypes .= '</Types>';
@@ -288,45 +255,10 @@ final class QuestionSpreadsheet
         $document->registerXPathNamespace('m', 'http://schemas.openxmlformats.org/spreadsheetml/2006/main');
         $strings = [];
         foreach ($document->si as $item) {
-            $strings[] = $this->sharedStringValue($item);
+            $strings[] = trim(html_entity_decode(strip_tags($item->asXML() ?: ''), ENT_QUOTES | ENT_XML1, 'UTF-8'));
         }
 
         return $strings;
-    }
-
-    private function sharedStringValue(\SimpleXMLElement $item): string
-    {
-        if (isset($item->r)) {
-            $runs = [];
-            foreach ($item->r as $run) {
-                $props = $run->rPr ?? null;
-                $runs[] = [
-                    'text' => html_entity_decode((string) ($run->t ?? ''), ENT_QUOTES | ENT_XML1, 'UTF-8'),
-                    'bold' => $this->runFlag($props, 'b'),
-                    'italic' => $this->runFlag($props, 'i'),
-                    'underline' => $props !== null && isset($props->u),
-                    'strike' => $props !== null && isset($props->strike),
-                    'vertAlign' => $props !== null && isset($props->vertAlign)
-                        ? (string) $props->vertAlign['val']
-                        : '',
-                ];
-            }
-
-            return SpreadsheetRichText::toHtml($runs);
-        }
-
-        return html_entity_decode((string) ($item->t ?? ''), ENT_QUOTES | ENT_XML1, 'UTF-8');
-    }
-
-    private function runFlag(?\SimpleXMLElement $props, string $name): bool
-    {
-        if ($props === null || ! isset($props->{$name})) {
-            return false;
-        }
-
-        $val = (string) $props->{$name}['val'];
-
-        return $val === '' || $val === '1' || $val === 'true';
     }
 
     private function firstSheetPath(ZipArchive $zip): string
@@ -421,168 +353,50 @@ final class QuestionSpreadsheet
 
     /**
      * @param  list<list<string>>  $rows
-     * @param  array<string, array{i: int, si: string}>  $shared
-     * @param  array{name?: string, highlight_errors?: bool}  $options
+     * @param  array<string, int>  $shared
      */
-    private function worksheetXml(array $rows, array &$shared, array $options = []): string
+    private function worksheetXml(array $rows, array &$shared): string
     {
-        $indexed = array_values($rows);
-        $headers = array_map(fn (mixed $cell): string => (string) $cell, $indexed[0] ?? []);
-        $lastRow = max(count($indexed), 1);
-        $lastCol = max(count($headers), 1);
-        $filterEnd = $this->cellRef($lastCol - 1, $lastRow);
-        $isGuide = ($options['name'] ?? '') === 'Huong_dan';
-        $highlightErrors = (bool) ($options['highlight_errors'] ?? false);
-
         $xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-            .'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
-            .'<sheetViews><sheetView workbookViewId="0">'
-            .'<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/>'
-            .'</sheetView></sheetViews>'
-            .'<sheetFormatPr defaultRowHeight="16" defaultColWidth="10"/>'
-            .$this->colsXml($headers);
+            .'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>';
 
-        $xml .= '<sheetData>';
-        foreach ($indexed as $r => $row) {
+        foreach (array_values($rows) as $r => $row) {
             $rowNumber = $r + 1;
-            $height = $r === 0 ? ' ht="22" customHeight="1"' : ' ht="36" customHeight="1"';
-            if ($isGuide) {
-                $height = $r === 0 ? ' ht="22" customHeight="1"' : ' ht="28" customHeight="1"';
-            }
-            $xml .= '<row r="'.$rowNumber.'"'.$height.'>';
+            $xml .= '<row r="'.$rowNumber.'">';
             foreach (array_values($row) as $c => $value) {
                 $ref = $this->cellRef($c, $rowNumber);
-                $style = $r === 0
-                    ? ($highlightErrors ? ' s="4"' : ' s="1"')
-                    : ($highlightErrors ? ' s="3"' : ' s="2"');
+                $style = $r === 0 ? ' s="1"' : '';
                 $index = $this->sharedIndex($shared, (string) $value);
                 $xml .= '<c r="'.$ref.'" t="s"'.$style.'><v>'.$index.'</v></c>';
             }
             $xml .= '</row>';
         }
-        $xml .= '</sheetData>';
 
-        if ($headers !== []) {
-            $xml .= '<autoFilter ref="A1:'.$filterEnd.'"/>';
-        }
-
-        if (! $isGuide) {
-            $xml .= $this->dataValidationsXml($headers, max($lastRow, 501));
-        }
-
-        return $xml.'</worksheet>';
+        return $xml.'</sheetData></worksheet>';
     }
 
     /**
-     * @param  list<string>  $headers
-     */
-    private function colsXml(array $headers): string
-    {
-        $widths = QuestionImportSchema::columnWidthsFor($headers);
-        if ($widths === []) {
-            return '';
-        }
-
-        $xml = '<cols>';
-        foreach ($widths as $index => $width) {
-            $col = $index + 1;
-            $xml .= '<col min="'.$col.'" max="'.$col.'" width="'.$this->xmlNumber($width).'" customWidth="1" bestFit="1"/>';
-        }
-
-        return $xml.'</cols>';
-    }
-
-    /**
-     * @param  list<string>  $headers
-     */
-    private function dataValidationsXml(array $headers, int $lastRow): string
-    {
-        $rules = [];
-        foreach ($headers as $index => $header) {
-            $field = QuestionImportSchema::matchField((string) $header);
-            $lists = QuestionImportSchema::excelListValidations();
-            if ($field === null || ! isset($lists[$field])) {
-                continue;
-            }
-            $col = $this->cellRef($index, 2);
-            $end = $this->cellRef($index, $lastRow);
-            $rules[] = '<dataValidation type="list" allowBlank="1" showDropDown="0" showErrorMessage="1" sqref="'
-                .$col.':'.$end.'"><formula1>"'.$this->xml($lists[$field]).'"</formula1></dataValidation>';
-        }
-
-        if ($rules === []) {
-            return '';
-        }
-
-        return '<dataValidations count="'.count($rules).'">'.implode('', $rules).'</dataValidations>';
-    }
-
-    /**
-     * @param  array<string, array{i: int, si: string}>  $shared
+     * @param  array<string, int>  $shared
      */
     private function sharedIndex(array &$shared, string $value): int
     {
         if (! array_key_exists($value, $shared)) {
-            $shared[$value] = [
-                'i' => count($shared),
-                'si' => $this->sharedItemXml($value),
-            ];
+            $shared[$value] = count($shared);
         }
 
-        return $shared[$value]['i'];
-    }
-
-    private function sharedItemXml(string $value): string
-    {
-        $runs = SpreadsheetRichText::fromHtml($value);
-        if (SpreadsheetRichText::hasInlineStyle($runs)) {
-            $xml = '<si>';
-            foreach ($runs as $run) {
-                $xml .= '<r>'.$this->runPropertiesXml($run)
-                    .'<t xml:space="preserve">'.$this->xml($run['text']).'</t></r>';
-            }
-
-            return $xml.'</si>';
-        }
-
-        return '<si><t xml:space="preserve">'.$this->xml(SpreadsheetRichText::plainText($runs)).'</t></si>';
+        return $shared[$value];
     }
 
     /**
-     * @param  array{text: string, bold: bool, italic: bool, underline: bool, strike: bool, vertAlign: string, literal?: bool}  $run
-     */
-    private function runPropertiesXml(array $run): string
-    {
-        $xml = '<rPr>';
-        if ($run['bold']) {
-            $xml .= '<b/>';
-        }
-        if ($run['italic']) {
-            $xml .= '<i/>';
-        }
-        if ($run['underline']) {
-            $xml .= '<u/>';
-        }
-        if ($run['strike']) {
-            $xml .= '<strike/>';
-        }
-        if ($run['vertAlign'] !== '') {
-            $xml .= '<vertAlign val="'.$this->xml($run['vertAlign']).'"/>';
-        }
-
-        return $xml.'<sz val="11"/><rFont val="Calibri"/></rPr>';
-    }
-
-    /**
-     * @param  array<string, array{i: int, si: string}>  $shared
+     * @param  array<string, int>  $shared
      */
     private function sharedStringsXml(array $shared): string
     {
         $count = count($shared);
         $xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
             .'<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="'.$count.'" uniqueCount="'.$count.'">';
-        foreach ($shared as $entry) {
-            $xml .= $entry['si'];
+        foreach (array_keys($shared) as $value) {
+            $xml .= '<si><t xml:space="preserve">'.$this->xml((string) $value).'</t></si>';
         }
 
         return $xml.'</sst>';
@@ -592,40 +406,12 @@ final class QuestionSpreadsheet
     {
         return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
             .'<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
-            .'<fonts count="3">'
-            .'<font><sz val="11"/><name val="Calibri"/></font>'
-            .'<font><b/><sz val="11"/><name val="Calibri"/><color rgb="FF1B2A4A"/></font>'
-            .'<font><sz val="11"/><name val="Calibri"/><color rgb="FF9B1C1C"/></font>'
-            .'</fonts>'
-            .'<fills count="5">'
-            .'<fill><patternFill patternType="none"/></fill>'
-            .'<fill><patternFill patternType="gray125"/></fill>'
-            .'<fill><patternFill patternType="solid"><fgColor rgb="FFE8EEF4"/></patternFill></fill>'
-            .'<fill><patternFill patternType="solid"><fgColor rgb="FFFEE2E2"/></patternFill></fill>'
-            .'<fill><patternFill patternType="solid"><fgColor rgb="FFFECACA"/></patternFill></fill>'
-            .'</fills>'
+            .'<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font>'
+            .'<font><b/><sz val="11"/><name val="Calibri"/></font></fonts>'
+            .'<fills count="1"><fill><patternFill patternType="none"/></fill></fills>'
             .'<borders count="1"><border/></borders>'
-            .'<cellXfs count="5">'
-            .'<xf fontId="0" fillId="0" borderId="0"/>'
-            .'<xf fontId="1" fillId="2" borderId="0" applyFont="1" applyFill="1" applyAlignment="1">'
-            .'<alignment wrapText="1" vertical="center" horizontal="center"/>'
-            .'</xf>'
-            .'<xf fontId="0" fillId="0" borderId="0" applyAlignment="1">'
-            .'<alignment wrapText="1" vertical="top"/>'
-            .'</xf>'
-            .'<xf fontId="2" fillId="3" borderId="0" applyFont="1" applyFill="1" applyAlignment="1">'
-            .'<alignment wrapText="1" vertical="top"/>'
-            .'</xf>'
-            .'<xf fontId="1" fillId="4" borderId="0" applyFont="1" applyFill="1" applyAlignment="1">'
-            .'<alignment wrapText="1" vertical="center" horizontal="center"/>'
-            .'</xf>'
-            .'</cellXfs>'
+            .'<cellXfs count="2"><xf fontId="0"/><xf fontId="1" applyFont="1"/></cellXfs>'
             .'</styleSheet>';
-    }
-
-    private function xmlNumber(float $value): string
-    {
-        return rtrim(rtrim(number_format($value, 2, '.', ''), '0'), '.') ?: '0';
     }
 
     private function cellRef(int $col, int $row): string

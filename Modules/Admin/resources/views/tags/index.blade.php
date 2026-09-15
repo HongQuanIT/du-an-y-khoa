@@ -2,10 +2,12 @@
     <x-admin.page-header title="Thẻ" description="Các thẻ phân loại gắn với câu hỏi (ECG, cấp cứu, trọng tâm…).">
         <x-slot:actions>
             @if ($canCreate)
-                <a href="{{ route('admin.tags.create') }}" class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 font-label-md font-semibold text-on-primary">
+                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.tags.create'))
+<a href="{{ route('admin.tags.create') }}" class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 font-label-md font-semibold text-on-primary">
                     <span class="material-symbols-outlined text-[18px]">add</span>
                     Tạo thẻ
                 </a>
+@endif
             @endif
         </x-slot:actions>
     </x-admin.page-header>
@@ -53,7 +55,9 @@
                             </span>
                         </td>
                         <td class="px-4 py-3 text-right">
-                            <a href="{{ route('admin.tags.edit', $tag) }}" class="inline-flex h-9 items-center rounded-lg border border-outline-variant px-3 font-label-sm font-medium text-on-surface hover:bg-surface-container-low">Sửa</a>
+                            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.tags.edit'))
+<a href="{{ route('admin.tags.edit', $tag) }}" class="inline-flex h-9 items-center rounded-lg border border-outline-variant px-3 font-label-sm font-medium text-on-surface hover:bg-surface-container-low">Sửa</a>
+@endif
                         </td>
                     </tr>
                 @empty
@@ -61,7 +65,9 @@
                         <td colspan="6" class="px-4 py-12 text-center text-on-surface-variant">
                             Chưa có thẻ.
                             @if ($canCreate)
-                                <a href="{{ route('admin.tags.create') }}" class="ml-1 font-semibold text-primary hover:underline">Tạo thẻ đầu tiên</a>
+                                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.tags.create'))
+<a href="{{ route('admin.tags.create') }}" class="ml-1 font-semibold text-primary hover:underline">Tạo thẻ đầu tiên</a>
+@endif
                             @endif
                         </td>
                     </tr>

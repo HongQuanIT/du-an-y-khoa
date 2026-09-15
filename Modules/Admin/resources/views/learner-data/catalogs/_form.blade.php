@@ -55,10 +55,3 @@
     <label class="flex items-center gap-2 text-body-sm"><input type="checkbox" name="is_active" value="1" @checked(old('is_active', $editing ? $editing->is_active : true)) class="size-4 rounded text-primary">Hiển thị cho học viên</label>
     <button class="w-full rounded-lg bg-primary px-4 py-2.5 font-label-md font-semibold text-on-primary">{{ $editing ? 'Lưu thay đổi' : 'Thêm '.$config['singular'] }}</button>
 </form>
-
-@if ($editing)
-    <form method="post" action="{{ route($config['route'].'.toggle', ['item' => $editing->id]) }}" class="mt-3 text-center">
-        @csrf @method('PATCH')
-        <button class="text-label-sm font-semibold text-on-surface-variant hover:text-primary hover:underline">{{ $editing->is_active ? 'Ngừng hiển thị' : 'Kích hoạt lại' }}</button>
-    </form>
-@endif

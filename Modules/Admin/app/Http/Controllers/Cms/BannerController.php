@@ -6,7 +6,6 @@ namespace Modules\Admin\Http\Controllers\Cms;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Support\Enums\Permission;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -23,7 +22,7 @@ final class BannerController extends Controller
 {
     public function index(Request $request): View
     {
-        $this->authorizePermission(Permission::CmsManage);
+        $this->authorizePermission('cms_banner.view');
 
         $query = Banner::query()->ordered();
 
@@ -66,7 +65,7 @@ final class BannerController extends Controller
 
     public function create(): View
     {
-        $this->authorizePermission(Permission::CmsManage);
+        $this->authorizePermission('cms_banner.create');
 
         return view('admin::cms.banners.form', [
             'banner' => new Banner([
@@ -85,7 +84,7 @@ final class BannerController extends Controller
 
     public function store(SaveBannerRequest $request, SaveBannerAction $save): RedirectResponse
     {
-        $this->authorizePermission(Permission::CmsManage);
+        $this->authorizePermission('cms_banner.create');
 
         $banner = $save->handle($this->actor(), $request);
 
@@ -98,7 +97,7 @@ final class BannerController extends Controller
 
     public function edit(Banner $banner): View
     {
-        $this->authorizePermission(Permission::CmsManage);
+        $this->authorizePermission('cms_banner.update');
 
         return view('admin::cms.banners.form', [
             'banner' => $banner,
@@ -110,7 +109,7 @@ final class BannerController extends Controller
 
     public function update(SaveBannerRequest $request, Banner $banner, SaveBannerAction $save): RedirectResponse
     {
-        $this->authorizePermission(Permission::CmsManage);
+        $this->authorizePermission('cms_banner.update');
 
         $save->handle($this->actor(), $request, $banner);
 
@@ -123,7 +122,7 @@ final class BannerController extends Controller
 
     public function destroy(Banner $banner, DeleteBannerAction $delete): RedirectResponse
     {
-        $this->authorizePermission(Permission::CmsManage);
+        $this->authorizePermission('cms_banner.delete');
 
         $delete->handle($this->actor(), $banner);
 
@@ -134,7 +133,7 @@ final class BannerController extends Controller
 
     public function toggle(Banner $banner, ToggleBannerAction $toggle): RedirectResponse
     {
-        $this->authorizePermission(Permission::CmsManage);
+        $this->authorizePermission('cms_banner.update');
 
         $banner = $toggle->handle($this->actor(), $banner);
 
@@ -143,9 +142,9 @@ final class BannerController extends Controller
             : 'Đã tắt banner.');
     }
 
-    private function authorizePermission(Permission $permission): void
+    private function authorizePermission(string ...$permissions): void
     {
-        abort_unless($this->actor()->can($permission->value), 403);
+        abort_unless($this->actor()->canAny([...$permissions]), 403);
     }
 
     private function actor(): User

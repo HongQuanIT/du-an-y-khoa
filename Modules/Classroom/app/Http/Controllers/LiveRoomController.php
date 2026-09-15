@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Modules\Classroom\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Support\Enums\Permission;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -32,7 +31,7 @@ final class LiveRoomController extends Controller
 
         $observer = $request->routeIs('admin.*');
         if ($observer) {
-            abort_unless($user->can(Permission::ClassroomOversee->value), 403);
+            abort_unless($user->canAny(['classroom_oversight.view_any']), 403);
         }
 
         $classroom->load('host');

@@ -7,7 +7,6 @@ namespace Modules\Admin\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Support\Enums\Entitlement;
-use App\Support\Enums\Permission;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -17,12 +16,13 @@ use Modules\Admin\Actions\SavePlanPriceAction;
 use Modules\Billing\Models\Plan;
 use Modules\Billing\Models\PlanPrice;
 use Modules\Billing\Support\BillingSubscriptionStats;
+use Modules\Billing\Support\EntitlementLabels;
 
 final class BillingPlanController extends Controller
 {
     public function index(): View
     {
-        $this->authorizePermission(Permission::BillingManage);
+        $this->authorizePermission('billing_plan.view');
 
         $plans = Plan::query()
             ->with(['prices' => fn ($query) => $query->ordered()])
@@ -45,13 +45,17 @@ final class BillingPlanController extends Controller
                 ? BillingSubscriptionStats::unassignedSkuForPlan($premiumPlan->id)
                 : null,
             'sourceLabels' => BillingSubscriptionStats::SOURCE_LABELS,
-            'canManage' => $this->actor()->can(Permission::BillingManage->value),
+            'canManage' => $this->actor()->canAny([
+                'billing_plan.update',
+                'billing_price.create',
+                'billing_price.update',
+            ]),
         ]);
     }
 
     public function edit(Plan $plan): View
     {
-        $this->authorizePermission(Permission::BillingManage);
+        $this->authorizePermission('billing_plan.update');
 
         $plan->load(['prices' => fn ($query) => $query->ordered()]);
 
@@ -71,15 +75,18 @@ final class BillingPlanController extends Controller
             'unassignedSku' => $unassignedSku,
             'sourceLabels' => BillingSubscriptionStats::SOURCE_LABELS,
             'entitlements' => Entitlement::cases(),
-            'entitlementLabels' => \Modules\Billing\Support\EntitlementLabels::map(),
+            'entitlementLabels' => EntitlementLabels::map(),
         ]);
     }
 
     public function update(Request $request, Plan $plan, SaveBillingPlanAction $action): RedirectResponse
     {
-        $this->authorizePermission(Permission::BillingManage);
+        $this->authorizePermission('billing_plan.update');
 
         $payload = $this->validatedPlanPayload($request);
+        if ((bool) $payload['is_active'] !== (bool) $plan->is_active) {
+            $this->authorizePermission($payload['is_active'] ? 'billing_plan.publish' : 'billing_plan.archive');
+        }
         $action->handle($this->actor(), $plan, $payload);
 
         return back()->with('status', 'Đã lưu gói '.$plan->name.'.');
@@ -87,7 +94,7 @@ final class BillingPlanController extends Controller
 
     public function createPrice(Plan $plan): View
     {
-        $this->authorizePermission(Permission::BillingManage);
+        $this->authorizePermission('billing_price.create');
 
         return view('admin::billing.plan-prices.form', [
             'plan' => $plan,
@@ -102,7 +109,7 @@ final class BillingPlanController extends Controller
 
     public function storePrice(Request $request, Plan $plan, SavePlanPriceAction $action): RedirectResponse
     {
-        $this->authorizePermission(Permission::BillingManage);
+        $this->authorizePermission('billing_price.create');
 
         $action->handle($this->actor(), $plan, null, $this->validatedPricePayload($request, $plan));
 
@@ -113,7 +120,7 @@ final class BillingPlanController extends Controller
 
     public function editPrice(PlanPrice $planPrice): View
     {
-        $this->authorizePermission(Permission::BillingManage);
+        $this->authorizePermission('billing_price.update');
 
         $planPrice->load('plan');
 
@@ -126,7 +133,7 @@ final class BillingPlanController extends Controller
 
     public function updatePrice(Request $request, PlanPrice $planPrice, SavePlanPriceAction $action): RedirectResponse
     {
-        $this->authorizePermission(Permission::BillingManage);
+        $this->authorizePermission('billing_price.update');
 
         $planPrice->load('plan');
         $action->handle($this->actor(), $planPrice->plan, $planPrice, $this->validatedPricePayload($request, $planPrice->plan, $planPrice));
@@ -138,7 +145,7 @@ final class BillingPlanController extends Controller
 
     public function destroyPrice(PlanPrice $planPrice): RedirectResponse
     {
-        $this->authorizePermission(Permission::BillingManage);
+        $this->authorizePermission('billing_price.delete');
 
         $plan = $planPrice->plan;
         $planPrice->delete();
@@ -214,9 +221,9 @@ final class BillingPlanController extends Controller
         ];
     }
 
-    private function authorizePermission(Permission $permission): void
+    private function authorizePermission(string ...$permissions): void
     {
-        abort_unless($this->actor()->can($permission->value), 403);
+        abort_unless($this->actor()->canAny([...$permissions]), 403);
     }
 
     private function actor(): User

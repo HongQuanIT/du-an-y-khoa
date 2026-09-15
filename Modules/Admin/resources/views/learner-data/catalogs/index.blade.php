@@ -1,7 +1,7 @@
 <x-layouts.admin :title="$config['title']">
     <div x-data="{ formModalOpen: @js($editing !== null || $errors->any() || request()->boolean('create')) }">
     <x-admin.page-header :title="'Quản lý '.$config['title']" description="Danh mục chuẩn được dùng trong hồ sơ và autocomplete của học viên.">
-        @if ($canManage)
+        @if ($canCreate)
             <x-slot:actions>
                 <a href="{{ route($config['route'].'.index', ['create' => 1]) }}" class="rounded-lg bg-primary px-3 py-2 font-label-md text-on-primary hover:opacity-90">Thêm {{ $config['singular'] }}</a>
             </x-slot:actions>
@@ -81,7 +81,7 @@
                                     </span>
                                 </td>
                                 <td class="px-4 py-3 text-right">
-                                    @if ($canManage)
+                                    @if ($canUpdate)
                                         <a href="{{ route($config['route'].'.index', ['edit' => $item->id] + $filters) }}" class="font-label-sm font-semibold text-primary hover:underline">Sửa</a>
                                     @endif
                                 </td>
@@ -97,7 +97,7 @@
 
     </div>
 
-    @if ($canManage)
+    @if ($editing || $canCreate)
         <div x-cloak x-show="formModalOpen" x-transition.opacity @keydown.escape.window="@if($editing) window.location.href = '{{ route($config['route'].'.index') }}' @else formModalOpen = false @endif"
             class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="catalog-form-title">
             @if ($editing)

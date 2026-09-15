@@ -42,7 +42,8 @@
 
     <x-admin.flash />
 
-    <form method="post" action="{{ route('admin.cms.pages.update', $page) }}" class="w-full max-w-4xl space-y-6">
+    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.pages.update'))
+<form method="post" action="{{ route('admin.cms.pages.update', $page) }}" class="w-full max-w-4xl space-y-6">
         @csrf
         @method('PUT')
 
@@ -276,18 +277,22 @@
                         class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 font-label-md text-on-primary hover:opacity-90">
                         Lưu thay đổi
                     </button>
-                    <button type="submit" name="action" value="unpublish"
+                    @can('cms_page.update')
+<button type="submit" name="action" value="unpublish"
                         class="inline-flex items-center justify-center rounded-lg border border-outline-variant px-4 py-2.5 font-label-md text-on-surface hover:bg-surface-container-low"
                         onclick="return confirm(@js($isLanding
                             ? 'Ngừng xuất bản? Trang public sẽ quay về nội dung mặc định.'
                             : 'Ngừng xuất bản trang này? URL công khai sẽ trả về 404.'))">
                         Ngừng xuất bản
                     </button>
+@endcan
                 @else
-                    <button type="submit" name="action" value="publish"
+                    @can('cms_page.update')
+<button type="submit" name="action" value="publish"
                         class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 font-label-md text-on-primary hover:opacity-90">
                         Xuất bản
                     </button>
+@endcan
                     <button type="submit" name="action" value="save"
                         class="inline-flex items-center justify-center rounded-lg border border-outline-variant px-4 py-2.5 font-label-md text-on-surface hover:bg-surface-container-low">
                         Lưu nháp
@@ -296,4 +301,5 @@
             </div>
         </div>
     </form>
+@endif
 </x-layouts.admin>

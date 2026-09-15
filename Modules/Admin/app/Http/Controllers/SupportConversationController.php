@@ -8,9 +8,8 @@ use App\Events\SupportMessageCreated;
 use App\Http\Controllers\Controller;
 use App\Models\SupportConversation;
 use App\Models\SupportMessage;
-use App\Support\Enums\Permission;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -18,7 +17,7 @@ final class SupportConversationController extends Controller
 {
     public function index(Request $request): View
     {
-        $this->authorizeAccess();
+        $this->authorizeAccess('support_conversation.view');
         $admin = $request->user();
         $query = SupportConversation::query()
             ->with([
@@ -53,7 +52,7 @@ final class SupportConversationController extends Controller
 
     public function badge(Request $request): JsonResponse
     {
-        $this->authorizeAccess();
+        $this->authorizeAccess('support_conversation.view');
 
         return response()->json([
             'count' => SupportConversation::pendingAdminAttentionCountFor($request->user()),
@@ -62,7 +61,7 @@ final class SupportConversationController extends Controller
 
     public function seen(Request $request, SupportConversation $conversation): JsonResponse
     {
-        $this->authorizeAccess();
+        $this->authorizeAccess('support_conversation.update');
         $conversation->markSeenByAdmin($request->user());
 
         return response()->json([
@@ -72,7 +71,7 @@ final class SupportConversationController extends Controller
 
     public function claim(Request $request, SupportConversation $conversation): RedirectResponse|JsonResponse
     {
-        $this->authorizeAccess();
+        $this->authorizeAccess('support_conversation.assign');
         abort_if($conversation->status === 'resolved', 422, 'Cuộc trò chuyện đã được đóng.');
 
         $conversation->claimByAdmin($request->user());
@@ -90,7 +89,7 @@ final class SupportConversationController extends Controller
 
     public function show(Request $request, SupportConversation $conversation): View
     {
-        $this->authorizeAccess();
+        $this->authorizeAccess('support_conversation.view');
         $admin = $request->user();
         $conversation->load(['user', 'assignedAdmin', 'messages.sender']);
 
@@ -114,7 +113,7 @@ final class SupportConversationController extends Controller
 
     public function message(Request $request, SupportConversation $conversation): RedirectResponse|JsonResponse
     {
-        $this->authorizeAccess();
+        $this->authorizeAccess('support_conversation.reply');
         abort_if($conversation->status === 'resolved', 422, 'Cuộc trò chuyện đã được đóng.');
         $data = $request->validate(['message' => ['required', 'string', 'max:4000']]);
         $message = $conversation->messages()->create([
@@ -151,14 +150,14 @@ final class SupportConversationController extends Controller
 
     public function resolve(SupportConversation $conversation): RedirectResponse
     {
-        $this->authorizeAccess();
+        $this->authorizeAccess('support_conversation.resolve');
         $conversation->forceFill(['status' => 'resolved', 'resolved_at' => now()])->save();
 
         return redirect()->route('admin.support.index')->with('status', 'Đã đóng yêu cầu hỗ trợ.');
     }
 
-    private function authorizeAccess(): void
+    private function authorizeAccess(string $permission): void
     {
-        abort_unless(auth()->user()?->can(Permission::SupportManage->value), 403);
+        abort_unless(auth()->user()?->canAny([$permission]), 403);
     }
 }

@@ -29,8 +29,8 @@ final class BuildQuestionExportRowsAction
             $row = array_fill_keys(QuestionImportSchema::headers(), '');
 
             $row['code'] = (string) $question->code;
-            $row['stem'] = $this->richField($question->stem);
-            $row['explanation'] = $this->richField($question->explanation);
+            $row['stem'] = trim(strip_tags((string) $question->stem));
+            $row['explanation'] = trim(strip_tags((string) $question->explanation));
             $row['difficulty'] = $question->difficulty->value;
             $row['lesson_slugs'] = $question->lessons
                 ->map(fn ($lesson): string => (string) $lesson->slug)
@@ -39,14 +39,14 @@ final class BuildQuestionExportRowsAction
             $row['tag_slugs'] = $question->tags->pluck('slug')->filter()->implode('; ');
             $row['is_free'] = $question->is_free ? '1' : '0';
             $row['exam_flag'] = $question->exam_flag ? '1' : '0';
-            $row['attending_tip'] = $this->richField($question->attending_tip);
-            $row['hints'] = $this->hintField($question);
+            $row['attending_tip'] = trim(strip_tags((string) $question->attending_tip));
+            $row['hints'] = $question->hints->pluck('content')->filter()->implode(' | ');
 
             foreach ($options->take(QuestionImportSchema::MAX_OPTIONS) as $index => $option) {
                 $letter = chr(65 + $index);
                 $key = 'option_'.strtolower($letter);
-                $row[$key] = $this->richField($option->content);
-                $row[$key.'_explanation'] = $this->richField($option->explanation);
+                $row[$key] = trim(strip_tags((string) $option->content));
+                $row[$key.'_explanation'] = trim(strip_tags((string) $option->explanation));
                 if ($option->is_correct) {
                     $correct = $letter;
                 }
@@ -59,27 +59,5 @@ final class BuildQuestionExportRowsAction
         }
 
         return ['headers' => $headers, 'rows' => $rows];
-    }
-
-    private function richField(mixed $value): string
-    {
-        return trim((string) $value);
-    }
-
-    private function hintField(Question $question): string
-    {
-        $hints = $question->hints
-            ->pluck('content')
-            ->filter(fn (mixed $content): bool => filled($content));
-
-        if ($hints->isEmpty()) {
-            $hints = collect($question->key_info ?? [])
-                ->filter(fn (mixed $content): bool => filled($content));
-        }
-
-        return $hints
-            ->map(fn (mixed $content): string => trim((string) $content))
-            ->filter()
-            ->implode(' | ');
     }
 }

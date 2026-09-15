@@ -84,16 +84,18 @@
         </a>
     @endif
 
-    <a href="{{ route('profile.show') }}"
-        @if ($closeOnNavigate) @click="menu = false" @endif
-        @class([
-            'flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors',
-            'bg-primary/10 font-semibold text-primary' => request()->routeIs('profile.show'),
-            'text-on-surface-variant hover:bg-surface-container-low' => ! request()->routeIs('profile.show'),
-        ])>
-        <span class="material-symbols-outlined" @if (request()->routeIs('profile.show')) style="font-variation-settings: 'FILL' 1;" @endif>manage_accounts</span>
-        <span class="font-body-md text-body-md">Tài khoản</span>
-    </a>
+    @can('profile.view')
+        <a href="{{ route('profile.show') }}"
+            @if ($closeOnNavigate) @click="menu = false" @endif
+            @class([
+                'flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors',
+                'bg-primary/10 font-semibold text-primary' => request()->routeIs('profile.show'),
+                'text-on-surface-variant hover:bg-surface-container-low' => ! request()->routeIs('profile.show'),
+            ])>
+            <span class="material-symbols-outlined" @if (request()->routeIs('profile.show')) style="font-variation-settings: 'FILL' 1;" @endif>manage_accounts</span>
+            <span class="font-body-md text-body-md">Tài khoản</span>
+        </a>
+    @endcan
     <form action="{{ route('logout') }}" method="post">
         @csrf
         <button type="submit"

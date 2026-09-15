@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Modules\Admin\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Support\Enums\Permission;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -18,7 +17,7 @@ final class InstitutionController extends Controller
 {
     public function index(Request $request): View
     {
-        abort_unless($request->user()->can(Permission::UserView->value), 403);
+        abort_unless($request->user()->canAny(['learner_catalog.view_any']), 403);
 
         $query = Institution::query()->with(['country', 'administrativeUnit'])->withCount('learnerProfiles');
         if ($search = trim((string) $request->query('q', ''))) {
@@ -37,8 +36,9 @@ final class InstitutionController extends Controller
             $query->where('is_active', $request->string('status')->toString() === 'active');
         }
 
-        $canManage = $request->user()->can(Permission::UserManage->value);
-        $editing = $canManage && $request->filled('edit')
+        $canCreate = $request->user()->can('learner_catalog.create');
+        $canUpdate = $request->user()->can('learner_catalog.update');
+        $editing = $canUpdate && $request->filled('edit')
             ? Institution::query()->findOrFail($request->integer('edit'))
             : null;
 
@@ -47,14 +47,15 @@ final class InstitutionController extends Controller
             'countries' => Country::query()->where('is_active', true)->orderBy('sort_order')->get(),
             'units' => AdministrativeUnit::query()->where('is_active', true)->orderBy('name')->get(),
             'filters' => $request->only(['q', 'country_id', 'administrative_unit_id', 'status']),
-            'canManage' => $canManage,
+            'canCreate' => $canCreate,
+            'canUpdate' => $canUpdate,
             'editing' => $editing,
         ]);
     }
 
     public function create(Request $request): View
     {
-        abort_unless($request->user()->can(Permission::UserManage->value), 403);
+        abort_unless($request->user()->canAny(['learner_catalog.create']), 403);
 
         $institution = new Institution;
 
@@ -63,14 +64,14 @@ final class InstitutionController extends Controller
 
     public function edit(Request $request, Institution $institution): View
     {
-        abort_unless($request->user()->can(Permission::UserManage->value), 403);
+        abort_unless($request->user()->canAny(['learner_catalog.update']), 403);
 
         return $this->form($institution);
     }
 
     public function store(Request $request): RedirectResponse
     {
-        abort_unless($request->user()->can(Permission::UserManage->value), 403);
+        abort_unless($request->user()->canAny(['learner_catalog.create']), 403);
         $data = $this->validated($request);
         Institution::query()->create($data);
 
@@ -79,18 +80,11 @@ final class InstitutionController extends Controller
 
     public function update(Request $request, Institution $institution): RedirectResponse
     {
-        abort_unless($request->user()->can(Permission::UserManage->value), 403);
-        $institution->update($this->validated($request, $institution));
+        abort_unless($request->user()->canAny(['learner_catalog.update']), 403);
+        $data = $this->validated($request, $institution);
+        $institution->update($data);
 
         return back()->with('status', 'Đã cập nhật trường học.');
-    }
-
-    public function toggle(Request $request, Institution $institution): RedirectResponse
-    {
-        abort_unless($request->user()->can(Permission::UserManage->value), 403);
-        $institution->update(['is_active' => ! $institution->is_active]);
-
-        return back()->with('status', $institution->is_active ? 'Đã kích hoạt trường.' : 'Đã ngừng hiển thị trường.');
     }
 
     private function form(Institution $institution): View

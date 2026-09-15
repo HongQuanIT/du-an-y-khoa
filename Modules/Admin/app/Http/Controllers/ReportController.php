@@ -10,6 +10,7 @@ use App\Support\Enums\Permission;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 use Modules\Admin\Actions\DeleteReportScheduleAction;
@@ -29,7 +30,7 @@ final class ReportController extends Controller
 {
     public function index(): View
     {
-        $this->authorizeReportAccess();
+        $this->authorizeReportAccess('report.view');
 
         $schedules = ReportSchedule::query()
             ->with('creator:id,name,email')
@@ -43,7 +44,7 @@ final class ReportController extends Controller
                 }
                 $permission = $match['category']['permission'];
 
-                return $permission === null || $this->actor()->can($permission->value);
+                return $permission === null || $this->actor()->can($permission);
             })
             ->values();
 
@@ -57,7 +58,7 @@ final class ReportController extends Controller
 
     public function queueWarmAll(): RedirectResponse
     {
-        $this->authorizeReportAccess();
+        $this->authorizeReportAccess('report.refresh');
 
         $status = $this->warmAllStatus();
 
@@ -88,7 +89,7 @@ final class ReportController extends Controller
 
     public function resetWarmAllStatus(): RedirectResponse
     {
-        $this->authorizeReportAccess();
+        $this->authorizeReportAccess('report.refresh');
 
         Cache::forget('admin:report:warm-all:status');
 
@@ -97,14 +98,14 @@ final class ReportController extends Controller
 
     public function warmAllStatusJson(): JsonResponse
     {
-        $this->authorizeReportAccess();
+        $this->authorizeReportAccess('report.view');
 
         return response()->json($this->warmAllStatus());
     }
 
     public function showCategory(string $category): View
     {
-        $this->authorizeReportAccess();
+        $this->authorizeReportAccess('report.view');
 
         $definition = AdminReportCatalog::findCategory($category);
         abort_if($definition === null, 404);
@@ -117,7 +118,7 @@ final class ReportController extends Controller
 
     public function showReport(Request $request, string $category, string $report, GetAdminReportDataAction $action): View
     {
-        $this->authorizeReportAccess();
+        $this->authorizeReportAccess('report.view');
 
         $match = AdminReportCatalog::findReport($category, $report);
         abort_if($match === null, 404);
@@ -164,7 +165,7 @@ final class ReportController extends Controller
         string $report,
         QueueAdminReportRefreshAction $action,
     ): RedirectResponse|JsonResponse {
-        $this->authorizeReportAccess();
+        $this->authorizeReportAccess('report.refresh');
 
         $match = AdminReportCatalog::findReport($category, $report);
         abort_if($match === null, 404);
@@ -195,7 +196,7 @@ final class ReportController extends Controller
 
     public function refreshStatus(Request $request, string $category, string $report): JsonResponse
     {
-        $this->authorizeReportAccess();
+        $this->authorizeReportAccess('report.view');
 
         $match = AdminReportCatalog::findReport($category, $report);
         abort_if($match === null, 404);
@@ -218,7 +219,7 @@ final class ReportController extends Controller
 
     public function export(Request $request, string $category, string $report, GetAdminReportDataAction $action): StreamedResponse
     {
-        $this->authorizeReportExport();
+        $this->authorizeReportExport('report.export');
 
         $match = AdminReportCatalog::findReport($category, $report);
         abort_if($match === null, 404);
@@ -257,7 +258,7 @@ final class ReportController extends Controller
         string $report,
         SaveReportScheduleAction $action,
     ): RedirectResponse {
-        $this->authorizeReportExport();
+        $this->authorizeReportExport('report_schedule.create');
 
         $match = AdminReportCatalog::findReport($category, $report);
         abort_if($match === null, 404);
@@ -288,7 +289,7 @@ final class ReportController extends Controller
 
     public function toggleSchedule(ReportSchedule $schedule, ToggleReportScheduleAction $action): RedirectResponse
     {
-        $this->authorizeReportExport();
+        $this->authorizeReportExport('report_schedule.update');
         $this->authorizeSchedule($schedule);
 
         $action->handle($schedule);
@@ -300,7 +301,7 @@ final class ReportController extends Controller
 
     public function toggleScheduleEmail(ReportSchedule $schedule, ToggleReportScheduleEmailAction $action): RedirectResponse
     {
-        $this->authorizeReportExport();
+        $this->authorizeReportExport('report_schedule.update');
         $this->authorizeSchedule($schedule);
 
         $action->handle($schedule);
@@ -312,7 +313,7 @@ final class ReportController extends Controller
 
     public function destroySchedule(ReportSchedule $schedule, DeleteReportScheduleAction $action): RedirectResponse
     {
-        $this->authorizeReportExport();
+        $this->authorizeReportExport('report_schedule.delete');
         $this->authorizeSchedule($schedule);
 
         $action->handle($schedule);
@@ -320,26 +321,28 @@ final class ReportController extends Controller
         return back()->with('status', 'Đã xóa lịch báo cáo.');
     }
 
-    private function authorizeReportAccess(): void
+    private function authorizeReportAccess(string $permission): void
     {
         $actor = $this->actor();
         abort_unless(
-            $actor->can(Permission::ReportView->value) || $actor->can(Permission::ReportExport->value),
+            $actor->canAny([
+                $permission,
+            ]),
             403,
         );
     }
 
-    private function authorizeReportExport(): void
+    private function authorizeReportExport(string $permission): void
     {
-        abort_unless($this->actor()->can(Permission::ReportExport->value), 403);
+        abort_unless($this->actor()->canAny([$permission]), 403);
     }
 
-    /** @param array{permission: ?\App\Support\Enums\Permission} $category */
+    /** @param array{permission: ?string} $category */
     private function authorizeCategory(array $category): void
     {
         $permission = $category['permission'];
         if ($permission !== null) {
-            abort_unless($this->actor()->can($permission->value), 403);
+            abort_unless($this->actor()->can($permission), 403);
         }
     }
 
@@ -413,7 +416,7 @@ final class ReportController extends Controller
         }
 
         try {
-            return \Illuminate\Support\Carbon::parse($anchor)->lt(now()->subSeconds(120));
+            return Carbon::parse($anchor)->lt(now()->subSeconds(120));
         } catch (\Throwable) {
             return true;
         }

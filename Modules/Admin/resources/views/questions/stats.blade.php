@@ -7,10 +7,12 @@
 <x-layouts.admin title="Thống kê câu hỏi">
     <div class="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div class="flex items-start gap-3">
-            <a href="{{ route('admin.questions.index') }}"
+            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.index'))
+<a href="{{ route('admin.questions.index') }}"
                class="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl border border-outline-variant text-on-surface-variant transition-colors hover:bg-surface-container-low">
                 <span class="material-symbols-outlined text-[20px]">arrow_back</span>
             </a>
+@endif
             <div>
                 <h1 class="font-headline-sm font-bold text-on-surface">Thống kê câu hỏi</h1>
                 <p class="mt-1 max-w-3xl font-body-sm text-on-surface-variant">
@@ -30,11 +32,13 @@
             </div>
         </div>
         <div class="flex flex-wrap items-center gap-2">
-            <a href="{{ route('admin.questions.edit', $question) }}"
+            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.edit'))
+<a href="{{ route('admin.questions.edit', $question) }}"
                class="inline-flex items-center gap-1.5 rounded-xl border border-outline-variant bg-surface px-3 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low">
                 <span class="material-symbols-outlined text-[18px]">edit</span>
                 Chỉnh sửa
             </a>
+@endif
         </div>
     </div>
 

@@ -1,8 +1,10 @@
 <x-layouts.admin title="Nhật ký #{{ $log->id }}">
     <x-admin.page-header :title="'Nhật ký #'.$log->id" :description="$log->actionLabel()">
         <x-slot:actions>
-            <a href="{{ route('admin.audit.index') }}"
+            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.audit.index'))
+<a href="{{ route('admin.audit.index') }}"
                 class="rounded-lg px-3 py-2 font-label-md text-on-surface-variant hover:bg-surface-container-low">← Danh sách</a>
+@endif
         </x-slot:actions>
     </x-admin.page-header>
 
@@ -32,7 +34,9 @@
                     <dt class="font-label-sm text-on-surface-variant">Người thực hiện</dt>
                     <dd>
                         @if ($log->actor)
-                            <a href="{{ route('admin.users.show', $log->actor) }}" class="text-primary hover:underline">{{ $log->actor->name }}</a>
+                            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.users.show'))
+<a href="{{ route('admin.users.show', $log->actor) }}" class="text-primary hover:underline">{{ $log->actor->name }}</a>
+@endif
                             (#{{ $log->actor_id }})
                             <span class="text-on-surface-variant">· {{ \App\Support\Enums\Role::tryFromName($log->actor_role)?->label() ?? '—' }}</span>
                         @else
@@ -49,9 +53,13 @@
                     <dd>
                         @if ($log->auditable_type)
                             @if ($log->auditable instanceof \App\Models\User)
-                                <a href="{{ route('admin.users.show', $log->auditable) }}" class="text-primary hover:underline">Người dùng #{{ $log->auditable_id }}</a>
+                                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.users.show'))
+<a href="{{ route('admin.users.show', $log->auditable) }}" class="text-primary hover:underline">Người dùng #{{ $log->auditable_id }}</a>
+@endif
                             @elseif ($log->auditable instanceof \Modules\QuestionBank\Models\Question)
-                                <a href="{{ route('admin.questions.edit', $log->auditable) }}" class="text-primary hover:underline">Câu hỏi #{{ $log->auditable_id }}</a>
+                                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.edit'))
+<a href="{{ route('admin.questions.edit', $log->auditable) }}" class="text-primary hover:underline">Câu hỏi #{{ $log->auditable_id }}</a>
+@endif
                             @else
                                 {{ $log->auditable_type }} #{{ $log->auditable_id }}
                             @endif

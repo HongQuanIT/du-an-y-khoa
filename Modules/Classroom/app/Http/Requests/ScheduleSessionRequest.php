@@ -19,6 +19,10 @@ final class ScheduleSessionRequest extends FormRequest
 {
     public function authorize(): bool
     {
+        if ($this->routeIs('admin.*')) {
+            return $this->user()?->can('classroom_oversight.schedule') === true;
+        }
+
         $classroom = $this->route('classroom');
 
         return $classroom instanceof Classroom

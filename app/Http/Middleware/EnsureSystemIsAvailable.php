@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
-use App\Support\Enums\Role;
+use App\Support\Auth\PortalAccess;
+use App\Support\Enums\PortalGroup;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -36,8 +37,6 @@ final class EnsureSystemIsAvailable
 
         $user = $request->user();
 
-        return $user !== null
-            && method_exists($user, 'hasAnyRole')
-            && $user->hasAnyRole([Role::SuperAdmin->value, Role::Admin->value]);
+        return PortalAccess::allows($user, PortalGroup::Admin);
     }
 }

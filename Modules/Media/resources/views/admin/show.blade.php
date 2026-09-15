@@ -10,8 +10,10 @@
     <x-admin.page-header :title="$media->original_name ?: 'Chi tiết tệp nội dung'"
         description="Thông tin mô tả, các biến thể trên máy chủ và nơi đang sử dụng.">
         <x-slot:actions>
-            <a href="{{ route('admin.media.index') }}"
+            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.media.index'))
+<a href="{{ route('admin.media.index') }}"
                 class="inline-flex items-center rounded-lg px-3 py-2 font-label-md text-on-surface-variant hover:bg-surface-container-low">← Thư viện</a>
+@endif
         </x-slot:actions>
     </x-admin.page-header>
 
@@ -77,7 +79,8 @@
             </div>
 
             @if ($canManage)
-                <form method="post" action="{{ route('admin.media.update', $media) }}" class="overflow-hidden rounded-xl border border-outline-variant bg-surface">
+                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.media.update'))
+<form method="post" action="{{ route('admin.media.update', $media) }}" class="overflow-hidden rounded-xl border border-outline-variant bg-surface">
                     @csrf
                     @method('PUT')
                     <div class="border-b border-outline-variant px-5 py-4">
@@ -112,6 +115,7 @@
                             class="inline-flex rounded-lg bg-primary px-4 py-2 font-label-md text-on-primary hover:opacity-90">Lưu</button>
                     </div>
                 </form>
+@endif
             @endif
 
             <div class="overflow-hidden rounded-xl border border-outline-variant bg-surface">
@@ -136,7 +140,8 @@
                     @endif
 
                     @if ($canManage)
-                        <form method="post" action="{{ route('admin.media.destroy', $media) }}" class="mt-4"
+                        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.media.destroy'))
+<form method="post" action="{{ route('admin.media.destroy', $media) }}" class="mt-4"
                             onsubmit="return confirm('Xóa tệp nội dung này? Tệp trên máy chủ sẽ bị gỡ.')">
                             @csrf
                             @method('DELETE')
@@ -146,6 +151,7 @@
                                 {{ $inUse > 0 ? 'Đang dùng — không xóa được' : 'Xóa tệp' }}
                             </button>
                         </form>
+@endif
                     @endif
                 </div>
             </div>

@@ -5,12 +5,14 @@
     <x-admin.flash />
 
     <div class="mb-6 flex justify-end">
-        @can(\App\Support\Enums\Permission::ClassroomCreateOnBehalf->value)
-            <a href="{{ route('admin.classrooms.create') }}"
+        @can('classroom_oversight.create_on_behalf')
+            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.classrooms.create'))
+<a href="{{ route('admin.classrooms.create') }}"
                 class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 font-label-md text-label-md font-semibold text-on-primary hover:opacity-90">
                 <span class="material-symbols-outlined text-[18px]">add</span>
                 Tạo lớp và nội dung
             </a>
+@endif
         @endcan
     </div>
 
@@ -19,14 +21,17 @@
             <p class="font-body-sm text-body-sm text-on-surface">
                 <span class="font-semibold">{{ $pendingCount }}</span> lớp đang chờ duyệt trước khi hiển thị cho học viên.
             </p>
-            <a href="{{ route('admin.classrooms.index', ['status' => \Modules\Classroom\Enums\ClassroomStatus::PendingApproval->value]) }}"
+            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.classrooms.index'))
+<a href="{{ route('admin.classrooms.index', ['status' => \Modules\Classroom\Enums\ClassroomStatus::PendingApproval->value]) }}"
                 class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 font-label-md text-label-md text-on-primary hover:opacity-90">
                 Xem chờ duyệt
             </a>
+@endif
         </div>
     @endif
 
-    <form method="get" action="{{ route('admin.classrooms.index') }}"
+    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.classrooms.index'))
+<form method="get" action="{{ route('admin.classrooms.index') }}"
         class="mb-6 rounded-xl border border-outline-variant bg-surface p-4 shadow-sm">
         <div class="grid grid-cols-1 items-end gap-4 lg:grid-cols-[minmax(280px,2fr)_minmax(180px,1fr)_minmax(180px,1fr)_auto]">
             <div>
@@ -62,6 +67,7 @@
             </div>
         </div>
     </form>
+@endif
 
     <div class="overflow-x-auto rounded-xl border border-outline-variant bg-surface">
         <table class="min-w-full text-left font-body-sm text-body-sm">
@@ -123,25 +129,32 @@
                         </td>
                         <td class="px-4 py-3">
                             <div class="flex flex-wrap justify-end gap-2">
-                                <a href="{{ route('admin.classrooms.show', $classroom) }}"
+                                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.classrooms.show'))
+<a href="{{ route('admin.classrooms.show', $classroom) }}"
                                     class="rounded-lg bg-primary px-3 py-1.5 font-label-sm text-label-sm font-semibold text-on-primary hover:opacity-90">
                                     Vào lớp
                                 </a>
+@endif
                                 @if ($classroom->liveSession)
-                                    <a href="{{ route('admin.classrooms.live', [$classroom, $classroom->liveSession]) }}"
+                                    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.classrooms.live'))
+<a href="{{ route('admin.classrooms.live', [$classroom, $classroom->liveSession]) }}"
                                         class="rounded-lg bg-error px-3 py-1.5 font-label-sm text-label-sm font-semibold text-white hover:opacity-90">
                                         Xem live
                                     </a>
+@endif
                                 @endif
                                 @if ($classroom->status === \Modules\Classroom\Enums\ClassroomStatus::PendingApproval)
-                                    <form method="post" action="{{ route('admin.classrooms.approve', $classroom) }}">
+                                    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.classrooms.approve'))
+<form method="post" action="{{ route('admin.classrooms.approve', $classroom) }}">
                                         @csrf
                                         <button type="submit"
                                             class="rounded-lg bg-primary px-3 py-1.5 font-label-sm text-label-sm font-semibold text-on-primary hover:opacity-90">
                                             Duyệt
                                         </button>
                                     </form>
-                                    <form method="post" action="{{ route('admin.classrooms.reject', $classroom) }}"
+@endif
+                                    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.classrooms.reject'))
+<form method="post" action="{{ route('admin.classrooms.reject', $classroom) }}"
                                         onsubmit="return confirm('Từ chối lớp này?')">
                                         @csrf
                                         <button type="submit"
@@ -149,9 +162,11 @@
                                             Từ chối
                                         </button>
                                     </form>
+@endif
                                 @endif
                                 @if ($classroom->live_sessions_count > 0)
-                                    <form method="post" action="{{ route('admin.classrooms.force-end', $classroom) }}"
+                                    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.classrooms.force-end'))
+<form method="post" action="{{ route('admin.classrooms.force-end', $classroom) }}"
                                         onsubmit="return confirm('Force-end buổi live của lớp này?')">
                                         @csrf
                                         <button type="submit"
@@ -159,9 +174,11 @@
                                             Force-end
                                         </button>
                                     </form>
+@endif
                                 @endif
                                 @if ($classroom->status !== \Modules\Classroom\Enums\ClassroomStatus::Archived)
-                                    <form method="post" action="{{ route('admin.classrooms.archive', $classroom) }}"
+                                    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.classrooms.archive'))
+<form method="post" action="{{ route('admin.classrooms.archive', $classroom) }}"
                                         onsubmit="return confirm('Lưu trữ lớp này?')">
                                         @csrf
                                         <button type="submit"
@@ -169,6 +186,7 @@
                                             Lưu trữ
                                         </button>
                                     </form>
+@endif
                                 @endif
                             </div>
                         </td>

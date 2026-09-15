@@ -22,10 +22,11 @@ class UserSeeder extends Seeder
      */
     private const ACCOUNTS = [
         ['Super Admin', 'superadmin@medlearn.local', Role::SuperAdmin, 'SuperAdmin123!'],
+        ['Admin', 'admin@medlearn.local', Role::Admin, 'Admin123!'],
         ['Content Editor', 'editor@medlearn.local', Role::ContentEditor],
-        ['Reviewer QBank', 'reviewer@medlearn.local', Role::Reviewer],
 
         ['Giảng viên Minh', 'instructor@medlearn.local', Role::Instructor],
+        ['Giảng viên Hùng', 'instructor2@medlearn.local', Role::Instructor],
         ['Cộng tác viên Demo', 'partner@medlearn.local', Role::Partner],
         ['Nguyễn Văn An', 'student@medlearn.local', Role::Student],
         ['Trần Thị Bình', 'student2@medlearn.local', Role::Student],
@@ -53,9 +54,7 @@ class UserSeeder extends Seeder
                 'email_verified_at' => $user->email_verified_at ?? now(),
             ])->save();
 
-            if (! $user->hasRole($role->value)) {
-                $user->assignRole($role->value);
-            }
+            $user->syncRoles([$role->value]);
         }
     }
 }

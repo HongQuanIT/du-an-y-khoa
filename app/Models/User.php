@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Support\Auth\Instructor;
 use App\Support\Auth\Staff;
 use App\Support\Enums\Entitlement;
-use App\Support\Enums\Role;
 use App\Support\Enums\UserStatus;
 use App\Support\TargetExams;
 use Database\Factories\UserFactory;
@@ -16,7 +16,6 @@ use Illuminate\Contracts\Auth\CanResetPassword as CanResetPasswordContract;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
@@ -36,7 +35,6 @@ use Modules\Billing\Models\Subscription;
 use Modules\Notification\Models\UserNotification;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionReviewRequest;
-use Modules\QuestionBank\Models\Subject;
 use Spatie\Permission\Traits\HasRoles;
 
 #[Fillable([
@@ -116,7 +114,7 @@ class User extends Authenticatable implements CanResetPasswordContract
         $entitlements = app(ResolveUserEntitlementsAction::class)->handle($this);
 
         // Instructor hosts via role on /teach (not Premium subscription).
-        if ($this->hasRole(Role::Instructor->value)) {
+        if (Instructor::is($this)) {
             $entitlements[] = Entitlement::ClassroomHost->value;
         }
 
@@ -177,7 +175,7 @@ class User extends Authenticatable implements CanResetPasswordContract
 
     public function avatarInitial(): string
     {
-        return strtoupper(substr($this->name, 0, 1));
+        return mb_strtoupper(mb_substr($this->name, 0, 1));
     }
 
     public function studyObjectiveLabel(): string
@@ -215,13 +213,6 @@ class User extends Authenticatable implements CanResetPasswordContract
     public function createdQuestions(): HasMany
     {
         return $this->hasMany(Question::class, 'created_by');
-    }
-
-    /** @return BelongsToMany<Subject, $this> */
-    public function instructorSubjects(): BelongsToMany
-    {
-        return $this->belongsToMany(Subject::class, 'instructor_subject')
-            ->withTimestamps();
     }
 
     /** @return HasMany<QuestionReviewRequest, $this> */

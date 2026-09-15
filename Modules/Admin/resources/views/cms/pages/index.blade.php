@@ -63,8 +63,10 @@
                         </td>
                         <td class="px-4 py-3 text-right whitespace-nowrap">
                             @if ($page)
-                                <a href="{{ route('admin.cms.pages.edit', $page) }}"
+                                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.pages.edit'))
+<a href="{{ route('admin.cms.pages.edit', $page) }}"
                                     class="font-label-md text-primary hover:underline">Sửa</a>
+@endif
                             @endif
                         </td>
                     </tr>

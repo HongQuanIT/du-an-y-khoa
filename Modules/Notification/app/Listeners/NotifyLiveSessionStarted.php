@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace Modules\Notification\Listeners;
 
 use App\Models\User;
-use App\Support\Enums\Role;
+use App\Support\Auth\PortalAccess;
+use App\Support\Enums\PortalGroup;
 use Modules\Classroom\Enums\MemberStatus;
 use Modules\Classroom\Events\LiveSessionStarted;
 use Modules\Notification\Actions\CreateUserNotificationAction;
@@ -36,7 +37,7 @@ final class NotifyLiveSessionStarted
         ]);
         $classroomUrl = route('classroom.show', $classroom);
 
-        foreach (User::query()->role(Role::Student->value)->cursor() as $user) {
+        foreach (User::query()->role(PortalAccess::roleNames(PortalGroup::Learner))->cursor() as $user) {
             $isActiveMember = in_array((int) $user->getKey(), $activeMemberIds, true);
 
             $this->notify->handle(

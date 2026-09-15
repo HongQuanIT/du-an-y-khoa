@@ -15,6 +15,8 @@ use Modules\Auth\Models\Country;
 use Modules\Auth\Models\EducationStage;
 use Modules\Auth\Models\Institution;
 use Modules\Auth\Models\Profession;
+use Spatie\Permission\Models\Role as PermissionRole;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 final class ProfileSettingsUxTest extends TestCase
@@ -38,6 +40,7 @@ final class ProfileSettingsUxTest extends TestCase
     public function test_password_validation_keeps_security_tab(): void
     {
         $user = User::factory()->create(['password' => 'Password1!']);
+        $user->assignRole(Role::Student->value);
 
         $this->actingAs($user)
             ->from(route('profile.show', ['tab' => 'security']))
@@ -53,6 +56,7 @@ final class ProfileSettingsUxTest extends TestCase
     public function test_settings_sub_tabs_are_url_driven(): void
     {
         $user = User::factory()->create();
+        $user->assignRole(Role::Student->value);
 
         $this->actingAs($user)
             ->get(route('profile.show', ['tab' => 'security']))
@@ -90,6 +94,28 @@ final class ProfileSettingsUxTest extends TestCase
         $this->assertSame('Tên học viên mới', $student->fresh()->name);
     }
 
+    public function test_admin_can_open_and_update_name_from_contact_editor(): void
+    {
+        $admin = User::factory()->create(['name' => 'Tên Admin cũ']);
+        $admin->assignRole(Role::Admin->value);
+
+        $this->actingAs($admin)
+            ->get(route('profile.show', ['tab' => 'contact']))
+            ->assertOk()
+            ->assertSee('Thông tin liên hệ')
+            ->assertSee('Tên Admin cũ');
+
+        $this->actingAs($admin)
+            ->put(route('settings.profile'), [
+                '_form' => 'contact',
+                'name' => 'Tên Admin mới',
+            ])
+            ->assertRedirect(route('profile.show'))
+            ->assertSessionHas('status', 'Đã cập nhật tên và liên hệ.');
+
+        $this->assertSame('Tên Admin mới', $admin->fresh()->name);
+    }
+
     public function test_security_tab_shows_last_login_and_linked_login_methods(): void
     {
         $user = User::factory()->create([
@@ -98,6 +124,7 @@ final class ProfileSettingsUxTest extends TestCase
             'last_login_method' => AuthenticationMethod::Google,
             'last_login_at' => now(),
         ]);
+        $user->assignRole(Role::Student->value);
         $user->socialAccounts()->create([
             'provider' => 'google',
             'provider_user_id' => 'google-user-1',
@@ -119,6 +146,7 @@ final class ProfileSettingsUxTest extends TestCase
     public function test_legacy_settings_url_redirects_to_profile(): void
     {
         $user = User::factory()->create();
+        $user->assignRole(Role::Student->value);
 
         $this->actingAs($user)
             ->get(route('settings.edit', ['tab' => 'security']))
@@ -127,6 +155,34 @@ final class ProfileSettingsUxTest extends TestCase
         $this->actingAs($user)
             ->get(route('settings.edit'))
             ->assertRedirect(route('profile.show'));
+    }
+
+    public function test_profile_permissions_can_be_revoked_from_student_role(): void
+    {
+        $student = User::factory()->create();
+        $student->assignRole(Role::Student->value);
+        $role = PermissionRole::findByName(Role::Student->value, 'web');
+
+        $role->revokePermissionTo('profile.view');
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $this->actingAs($student)
+            ->get(route('profile.show'))
+            ->assertForbidden();
+
+        $role->givePermissionTo('profile.view');
+        $role->revokePermissionTo('profile.update');
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $this->actingAs($student)
+            ->get(route('profile.show'))
+            ->assertOk();
+
+        $this->actingAs($student)
+            ->put(route('settings.profile'), ['name' => 'Không được cập nhật'])
+            ->assertForbidden();
+
+        $this->assertNotSame('Không được cập nhật', $student->fresh()->name);
     }
 
     public function test_admin_profile_hides_student_billing_notification_and_extra_tabs(): void

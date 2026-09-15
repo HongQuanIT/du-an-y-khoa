@@ -50,11 +50,11 @@ final class ListDashboardRecommendationsAction
                     'url' => route('study-plan.index'),
                 ],
                 [
-                    'eyebrow' => 'Ôn tập chủ động',
-                    'title' => 'Xem bộ thẻ Flashcard',
-                    'description' => 'Củng cố kiến thức bằng các lượt ôn ngắn.',
-                    'icon' => 'style',
-                    'url' => route('flashcards.index'),
+                    'eyebrow' => 'Tham gia học tập',
+                    'title' => 'Lớp học trực tuyến',
+                    'description' => 'Tham gia các buổi học tương tác cùng giảng viên và bạn bè.',
+                    'icon' => 'cast_for_education',
+                    'url' => route('classroom.index'),
                 ],
             ]);
         }

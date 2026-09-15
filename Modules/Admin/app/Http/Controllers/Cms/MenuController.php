@@ -6,7 +6,6 @@ namespace Modules\Admin\Http\Controllers\Cms;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Support\Enums\Permission;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 use Modules\Admin\Actions\Cms\SaveMenuAction;
@@ -19,7 +18,7 @@ final class MenuController extends Controller
 {
     public function index(): View
     {
-        $this->authorizePermission(Permission::CmsManage);
+        $this->authorizePermission('cms_menu.view');
 
         Menu::syncCatalog();
 
@@ -41,7 +40,7 @@ final class MenuController extends Controller
 
     public function edit(Menu $menu): View
     {
-        $this->authorizePermission(Permission::CmsManage);
+        $this->authorizePermission('cms_menu.update');
 
         return view('admin::cms.menus.form', [
             'menu' => $menu,
@@ -52,7 +51,7 @@ final class MenuController extends Controller
 
     public function update(SaveMenuRequest $request, Menu $menu, SaveMenuAction $save): RedirectResponse
     {
-        $this->authorizePermission(Permission::CmsManage);
+        $this->authorizePermission('cms_menu.update');
 
         $save->handle($this->actor(), $request, $menu);
 
@@ -61,9 +60,9 @@ final class MenuController extends Controller
             ->with('status', 'Menu đã được cập nhật.');
     }
 
-    private function authorizePermission(Permission $permission): void
+    private function authorizePermission(string ...$permissions): void
     {
-        abort_unless($this->actor()->can($permission->value), 403);
+        abort_unless($this->actor()->canAny([...$permissions]), 403);
     }
 
     private function actor(): User

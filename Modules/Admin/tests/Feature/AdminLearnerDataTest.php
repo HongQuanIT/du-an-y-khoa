@@ -10,10 +10,9 @@ use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Auth\Database\Seeders\AuthDatabaseSeeder;
 use Modules\Auth\Models\Country;
-use Modules\Auth\Models\EducationStage;
 use Modules\Auth\Models\Institution;
-use Modules\Auth\Models\LearnerProfile;
 use Modules\Auth\Models\Profession;
+use Spatie\Permission\Models\Role as RoleModel;
 use Tests\TestCase;
 
 final class AdminLearnerDataTest extends TestCase
@@ -26,18 +25,13 @@ final class AdminLearnerDataTest extends TestCase
         $this->seed([RolePermissionSeeder::class, AuthDatabaseSeeder::class]);
     }
 
-    public function test_admin_can_view_demographics_and_manage_institutions(): void
+    public function test_admin_can_manage_institutions(): void
     {
         $admin = User::factory()->create();
         $admin->assignRole(Role::Admin->value);
 
         $country = Country::query()->where('code', 'VN')->firstOrFail();
         $existing = Institution::query()->firstOrFail();
-
-        $this->actingAs($admin)
-            ->get(route('admin.learner-data.demographics'))
-            ->assertOk()
-            ->assertSee('Tổng hợp dữ liệu học viên');
 
         $this->actingAs($admin)
             ->get(route('admin.institutions.index'))
@@ -112,58 +106,44 @@ final class AdminLearnerDataTest extends TestCase
             'code' => 'resident', 'name' => 'Bác sĩ nội trú', 'sort_order' => 10, 'is_active' => '1',
         ])->assertRedirect(route('admin.education-stages.index'));
 
-        $profession = Profession::query()->where('code', 'dentist')->firstOrFail();
-        $this->actingAs($admin)->patch(route('admin.professions.toggle', ['item' => $profession->id]))->assertRedirect();
-
         $this->assertDatabaseHas('administrative_units', ['country_id' => $country->id, 'code' => 'ca']);
-        $this->assertDatabaseHas('professions', ['id' => $profession->id, 'is_active' => false]);
+        $this->assertDatabaseHas('professions', ['code' => 'dentist', 'is_active' => true]);
         $this->assertDatabaseHas('education_stages', ['code' => 'resident']);
     }
 
-    public function test_demographics_can_be_filtered_by_profile_catalog_and_marketing_consent(): void
+    public function test_learner_catalog_actions_follow_each_granular_permission(): void
     {
-        $admin = User::factory()->create();
-        $admin->assignRole(Role::Admin->value);
-        $learner = User::factory()->create();
-        $learner->forceFill(['last_login_method' => 'google', 'last_login_at' => now()])->save();
-        $country = Country::query()->where('code', 'VN')->firstOrFail();
-        $institution = Institution::query()->firstOrFail();
-        $profession = Profession::query()->where('code', 'medical_student')->firstOrFail();
-        $stage = EducationStage::query()->where('code', 'year_1')->firstOrFail();
-
-        LearnerProfile::query()->create([
-            'user_id' => $learner->id,
-            'country_id' => $country->id,
-            'administrative_unit_id' => $institution->administrative_unit_id,
-            'institution_id' => $institution->id,
-            'profession_id' => $profession->id,
-            'education_stage_id' => $stage->id,
-            'registration_method' => 'facebook',
-            'onboarding_completed_at' => now(),
-            'marketing_consent_at' => now(),
-            'utm_source' => 'facebook',
+        $role = RoleModel::create([
+            'name' => 'learner_catalog_editor',
+            'guard_name' => 'web',
+            'portal' => 'admin',
         ]);
+        $role->givePermissionTo(['learner_catalog.view_any', 'learner_catalog.update']);
+        $user = User::factory()->create();
+        $user->assignRole($role);
+        $institution = Institution::query()->where('is_active', true)->firstOrFail();
 
-        $this->actingAs($admin)->get(route('admin.learner-data.demographics', [
-            'institution_id' => $institution->id,
-            'profession_id' => $profession->id,
-            'education_stage_id' => $stage->id,
-            'marketing' => 'yes',
-            'utm_source' => 'facebook',
-        ]))->assertOk()
-            ->assertSee('Theo phương thức đăng ký')
-            ->assertSee('Theo phương thức đăng nhập gần nhất')
-            ->assertSee($institution->name.' — '.$institution->administrativeUnit()->value('name'))
-            ->assertSee('Facebook')
-            ->assertSee('facebook')
-            ->assertSee('Đồng ý');
+        $this->actingAsWithWebSession($user)
+            ->get(route('admin.institutions.index'))
+            ->assertOk()
+            ->assertSee('Chỉnh sửa')
+            ->assertDontSee('Thêm trường');
 
-        $this->actingAs($admin)->get(route('admin.learner-data.demographics', [
-            'registration_method' => 'facebook',
-        ]))->assertOk()->assertSee('Facebook');
+        $this->actingAsWithWebSession($user)
+            ->post(route('admin.institutions.store'), [])
+            ->assertForbidden();
+        $this->actingAsWithWebSession($user)
+            ->put(route('admin.institutions.update', $institution), [
+                'country_id' => $institution->country_id,
+                'administrative_unit_id' => $institution->administrative_unit_id,
+                'name' => $institution->name,
+                'short_name' => $institution->short_name,
+                'type' => $institution->type,
+                'sort_order' => $institution->sort_order,
+                'is_active' => '0',
+            ])
+            ->assertRedirect();
 
-        $this->actingAs($admin)->get(route('admin.learner-data.demographics', [
-            'last_login_method' => 'google',
-        ]))->assertOk()->assertSee('Google');
+        $this->assertFalse($institution->fresh()->is_active);
     }
 }

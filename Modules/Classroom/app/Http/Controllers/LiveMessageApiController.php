@@ -31,7 +31,9 @@ final class LiveMessageApiController extends Controller
         $this->authorize('view', $classroom);
         abort_unless($classroom->canWatchLive($request->user()), 403);
 
-        $isOverseer = $request->user()->can(\App\Support\Enums\Permission::ClassroomOversee->value);
+        $isOverseer = $request->user()->canAny([
+            'classroom_oversight.view_any',
+        ]);
         $canModerate = $isOverseer || ($classroom->roleFor($request->user())?->canModerate() ?? false);
 
         if ($liveSession->chat_muted && ! $canModerate) {

@@ -8,7 +8,8 @@
 
         <x-auth.errors />
 
-        <form class="space-y-5" action="{{ route('admin.login.store') }}" method="post">
+        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.login.store'))
+<form class="space-y-5" action="{{ route('admin.login.store') }}" method="post">
             @csrf
 
             <x-auth.input name="email" label="Email" type="email" placeholder="admin@example.com" required autofocus
@@ -18,5 +19,6 @@
 
             <x-auth.submit>Đăng nhập</x-auth.submit>
         </form>
+@endif
     </x-auth.shell>
 </x-layouts.auth>

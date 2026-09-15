@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace Modules\Notification\Actions;
 
 use App\Models\User;
+use App\Support\Auth\PortalAccess;
 use App\Support\Concerns\AsAction;
-use App\Support\Enums\Role;
+use App\Support\Enums\PortalGroup;
 use Illuminate\Support\Collection;
 use Modules\Admin\Support\Auditor;
 use Modules\Notification\Jobs\FanOutSystemNotificationJob;
@@ -69,14 +70,9 @@ final class BroadcastSystemNotificationAction
         $query = User::query()->select('id');
 
         return match ($audience) {
-            'learners' => $query->role(Role::Student->value)->pluck('id'),
-            'instructors' => $query->role(Role::Instructor->value)->pluck('id'),
-            'staff' => $query->role([
-                Role::Admin->value,
-                Role::SuperAdmin->value,
-                Role::ContentEditor->value,
-                Role::Reviewer->value,
-            ])->pluck('id'),
+            'learners' => $query->role(PortalAccess::roleNames(PortalGroup::Learner))->pluck('id'),
+            'instructors' => $query->role(PortalAccess::roleNames(PortalGroup::Instructor))->pluck('id'),
+            'staff' => $query->role(PortalAccess::roleNames(PortalGroup::Admin))->pluck('id'),
             default => $query->pluck('id'),
         };
     }

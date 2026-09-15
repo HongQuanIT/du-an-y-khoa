@@ -15,11 +15,13 @@
 <x-layouts.admin title="Lịch sử phiên bản câu hỏi">
     <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-            <a href="{{ route('admin.questions.edit', $question) }}"
+            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.edit'))
+<a href="{{ route('admin.questions.edit', $question) }}"
                 class="mb-3 inline-flex items-center gap-1 text-sm text-primary hover:underline">
                 <span class="material-symbols-outlined text-[18px]">arrow_back</span>
                 Quay lại chỉnh sửa
             </a>
+@endif
             <h1 class="font-headline-sm font-bold text-on-surface">Lịch sử phiên bản</h1>
             <p class="mt-1 max-w-3xl text-sm text-on-surface-variant">
                 {{ \Illuminate\Support\Str::limit(SafeHtml::plainText($question->stem), 160) }}
@@ -82,7 +84,8 @@
                     </div>
 
                     @if ($canRestore && ! $isCurrent)
-                        <form method="post" action="{{ route('admin.questions.versions.restore', [$question, $version]) }}"
+                        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.versions.restore'))
+<form method="post" action="{{ route('admin.questions.versions.restore', [$question, $version]) }}"
                             onsubmit="return confirm('Khôi phục phiên bản {{ $version->version }}? Nội dung khôi phục sẽ được lưu thành một phiên bản mới ở trạng thái Bản nháp.')">
                             @csrf
                             <button type="submit"
@@ -91,6 +94,7 @@
                                 Khôi phục
                             </button>
                         </form>
+@endif
                     @endif
                 </div>
 
