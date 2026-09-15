@@ -380,6 +380,65 @@ final class CurriculumTaxonomyManagementTest extends TestCase
         $this->assertTrue($lesson->subjects()->whereKey($subject->id)->exists());
     }
 
+    public function test_subjects_json_includes_linked_lessons_for_drawer(): void
+    {
+        $admin = $this->staffUser(Role::Admin);
+        $subject = $this->makeSubject(['name' => 'Nội khoa']);
+        $lesson = $this->makeLesson([
+            'name' => 'Suy tim',
+            'subjects' => [$subject],
+            'organSystems' => [$this->makeOrganSystem()],
+        ]);
+
+        $this->actingAsStaff($admin)
+            ->getJson(route('admin.curriculum.index', ['tab' => 'subjects']))
+            ->assertOk()
+            ->assertJsonFragment([
+                'name' => 'Nội khoa',
+                'lessons_count' => 1,
+            ])
+            ->assertJsonPath('data.0.lessons.0.id', $lesson->id)
+            ->assertJsonPath('data.0.lessons.0.name', 'Suy tim')
+            ->assertJsonPath('data.0.attach_lessons_url', route('admin.curriculum.subjects.lessons.attach', $subject));
+    }
+
+    public function test_admin_can_attach_and_detach_lessons_from_subject_drawer(): void
+    {
+        $admin = $this->staffUser(Role::Admin);
+        $subject = $this->makeSubject(['name' => 'Nội khoa']);
+        $linked = $this->makeLesson([
+            'name' => 'Đã gắn',
+            'subjects' => [$subject],
+            'organSystems' => [$this->makeOrganSystem()],
+        ]);
+        $extra = $this->makeLesson([
+            'name' => 'Chưa gắn',
+            'subjects' => [$this->makeSubject(['name' => 'Dược lý'])],
+            'organSystems' => [$this->makeOrganSystem(['name' => 'Hô hấp'])],
+        ]);
+
+        $this->actingAsStaff($admin)
+            ->postJson(route('admin.curriculum.subjects.lessons.attach', $subject), [
+                'lesson_id' => $extra->id,
+            ])
+            ->assertOk()
+            ->assertJsonPath('lessons_count', 2)
+            ->assertJsonFragment(['name' => 'Chưa gắn']);
+
+        $this->assertTrue($subject->lessons()->whereKey($extra->id)->exists());
+        $this->assertTrue($subject->lessons()->whereKey($linked->id)->exists());
+
+        $this->actingAsStaff($admin)
+            ->deleteJson(route('admin.curriculum.subjects.lessons.detach', [$subject, $extra]))
+            ->assertOk()
+            ->assertJsonPath('lessons_count', 1)
+            ->assertJsonMissing(['name' => 'Chưa gắn']);
+
+        $this->assertFalse($subject->lessons()->whereKey($extra->id)->exists());
+        $this->assertTrue($extra->subjects()->exists());
+        $this->assertTrue($subject->lessons()->whereKey($linked->id)->exists());
+    }
+
     public function test_admin_can_detach_the_last_subject_from_a_lesson(): void
     {
         $admin = $this->staffUser(Role::Admin);
