@@ -26,7 +26,6 @@ final class PrepareQuestionImportPreviewAction
 
     public function __construct(
         private readonly QuestionSpreadsheet $spreadsheet,
-        private readonly DetectQuestionImportDuplicatesAction $dedup,
     ) {}
 
     /**
@@ -78,8 +77,6 @@ final class PrepareQuestionImportPreviewAction
             $rows[] = $this->validateValues($item['values'], $item['line'], $existingByCode, $seenCodes);
         }
 
-        $rows = $this->dedup->handle($rows);
-
         $valid = collect($rows)->where('ok', true)->count();
         $invalid = count($rows) - $valid;
         $invalidCodes = collect($rows)
@@ -92,22 +89,11 @@ final class PrepareQuestionImportPreviewAction
             ->values()
             ->all();
 
-        $exactDuplicates = collect($rows)
-            ->filter(fn (array $row): bool => collect($row['errors'] ?? [])->contains(
-                fn (string $error): bool => str_contains($error, 'Trùng khớp 100%'),
-            ))
-            ->count();
-        $nearDuplicates = collect($rows)
-            ->filter(fn (array $row): bool => ($row['warnings'] ?? []) !== [])
-            ->count();
-
         $preview = [
             'total' => count($rows),
             'valid' => $valid,
             'invalid' => $invalid,
             'invalid_codes' => $invalidCodes,
-            'exact_duplicates' => $exactDuplicates,
-            'near_duplicates' => $nearDuplicates,
             'rows' => $rows,
         ];
 
@@ -121,8 +107,6 @@ final class PrepareQuestionImportPreviewAction
                     'valid' => $valid,
                     'invalid' => $invalid,
                     'invalid_codes' => $invalidCodes,
-                    'exact_duplicates' => $exactDuplicates,
-                    'near_duplicates' => $nearDuplicates,
                     'created' => (int) ($batch->stats['created'] ?? 0),
                     'updated' => (int) ($batch->stats['updated'] ?? 0),
                 ],
@@ -380,23 +364,10 @@ final class PrepareQuestionImportPreviewAction
             );
         }
 
-        $relative = 'question-imports/'.$batch->getKey().'-errors.xlsx';
+        $relative = 'question-imports/'.$batch->getKey().'-errors.csv';
         $absolute = Storage::disk('local')->path($relative);
         @mkdir(dirname($absolute), 0755, true);
-        Storage::disk('local')->delete([
-            'question-imports/'.$batch->getKey().'-errors.csv',
-            $relative,
-        ]);
-        $this->spreadsheet->writeXlsx(
-            $absolute,
-            $exportHeaders,
-            $exportRows,
-            [
-                ['Trường', 'Bắt buộc', 'Ghi chú'],
-                ['errors', '—', 'Cột cuối: lý do dòng bị loại. Sửa rồi tải lại tệp gốc — không import file lỗi này.'],
-            ],
-            options: ['highlight_errors' => true],
-        );
+        $this->spreadsheet->writeCsv($absolute, $exportHeaders, $exportRows);
         $batch->forceFill(['error_report_path' => $relative])->save();
     }
 }

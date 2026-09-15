@@ -10,7 +10,7 @@ use App\Support\Audit\Auditor;
 use App\Support\Audit\Enums\AuditAction;
 use App\Support\Audit\Enums\AuditPortal;
 use App\Support\Enums\Entitlement;
-use App\Support\Enums\Role;
+use App\Support\Enums\Permission;
 use App\Support\Http\Responses\ApiResponse;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
@@ -43,6 +43,7 @@ use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionFeedback;
 use Modules\QuestionBank\Models\Tag;
+use Modules\QuestionBank\Support\QuestionFilterBuilder;
 
 final class TeachClassroomController extends Controller
 {
@@ -185,7 +186,7 @@ final class TeachClassroomController extends Controller
     public function destroy(Request $request, Classroom $classroom): RedirectResponse
     {
         $this->authorizeTeachClassroom($request, $classroom);
-        $this->authorize('manageLive', $classroom);
+        abort_unless($request->user()?->can('classroom.delete'), 403);
         abort_if($classroom->liveSession()->exists(), 409, 'Hãy kết thúc buổi live trước khi xoá lớp.');
 
         Auditor::record(
@@ -205,7 +206,7 @@ final class TeachClassroomController extends Controller
     public function close(Request $request, Classroom $classroom, CloseClassroomAction $action): RedirectResponse
     {
         $this->authorizeTeachClassroom($request, $classroom);
-        $this->authorize('manageLive', $classroom);
+        abort_unless($request->user()?->can('classroom.close'), 403);
         $action->handle($request->user(), $classroom);
 
         return redirect()
@@ -216,7 +217,7 @@ final class TeachClassroomController extends Controller
     public function reopen(Request $request, Classroom $classroom, ReopenClassroomAction $action): RedirectResponse
     {
         $this->authorizeTeachClassroom($request, $classroom);
-        $this->authorize('manageLive', $classroom);
+        abort_unless($request->user()?->can('classroom.reopen'), 403);
         $action->handle($request->user(), $classroom);
 
         return redirect()
@@ -278,7 +279,7 @@ final class TeachClassroomController extends Controller
             ->all();
 
         // Chỉ trả về câu đã xuất bản và đúng quyền QBank của giảng viên.
-        $filters = app(\Modules\QuestionBank\Support\QuestionFilterBuilder::class);
+        $filters = app(QuestionFilterBuilder::class);
         $questions = Question::query()
             ->with([
                 'latestFeedback.user:id,name',
@@ -529,7 +530,10 @@ final class TeachClassroomController extends Controller
 
         abort_unless($classroom->purpose->isTeachPurpose(), 404);
         abort_unless(
-            $classroom->isHostOrCohost($user) || $user->hasAnyRole([Role::Admin->value, Role::SuperAdmin->value]),
+            $classroom->isHostOrCohost($user) || $user->canAny([
+                'classroom_oversight.view_any',
+                Permission::ClassroomOversee->value,
+            ]),
             403,
         );
     }

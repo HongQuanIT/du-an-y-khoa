@@ -21,38 +21,23 @@ enum Permission: string
     case QuestionDelete = 'question.delete';
     case QuestionSubmit = 'question.submit';
     case QuestionReview = 'question.review';
-    case QuestionFlag = 'question.flag';
     case QuestionPublish = 'question.publish';
     case QuestionRetire = 'question.retire';
-    case TopicView = 'topic.view';
-    case TopicCreate = 'topic.create';
-    case TopicUpdate = 'topic.update';
-    case TopicDelete = 'topic.delete';
+
 
     // Sessions
+    case SessionCreate = 'session.create';
     case SessionStart = 'session.start';
     case SessionSubmit = 'session.submit';
     case SessionReview = 'session.review';
 
-    // Library
-    case LibraryView = 'library.view';
-    case LibraryEdit = 'library.edit';
-    case LibraryPublish = 'library.publish';
-
     // Users & platform admin
     case UserView = 'user.view';
-    case UserManage = 'user.manage';
-    case UserImpersonate = 'user.impersonate';
-    case RoleManage = 'role.manage';
-    case PermissionManage = 'permission.manage';
-    case AuditView = 'audit.view';
     case ReportView = 'report.view';
     case ReportExport = 'report.export';
-    case CmsManage = 'cms.manage';
+
     case MediaView = 'media.view';
-    case MediaManage = 'media.manage';
-    case ContactView = 'contact.view';
-    case ContactManage = 'contact.manage';
+
     case SystemManage = 'system.manage';
     case FeatureFlagManage = 'feature_flag.manage';
     case NotificationBroadcast = 'notification.broadcast';
@@ -60,32 +45,20 @@ enum Permission: string
 
     // Classroom / live review (Module 44)
     case ClassroomCreate = 'classroom.create';
-    case ClassroomCreateOnBehalf = 'classroom.create_on_behalf';
     case ClassroomManage = 'classroom.manage';
     case ClassroomJoin = 'classroom.join';
-    case ClassroomModerate = 'classroom.moderate';
-    case ClassroomOversee = 'classroom.oversee';
-    case LiveStart = 'live.start';
-    case LiveJoin = 'live.join';
     case LiveForceEnd = 'live.force_end';
     case InstructorAssign = 'instructor.assign';
 
     // Feature-gated capabilities
-    case AiUse = 'ai.use';
-    case AnalyticsAdvanced = 'analytics.advanced';
     case ExamTake = 'exam.take';
-    case ExamManage = 'exam.manage';
+
 
     // Billing / subscription admin
     case BillingManage = 'billing.manage';
 
     // Partner / affiliate (Module 46)
     case PartnerPortal = 'partner.portal';
-    case PartnerCodesManage = 'partner.codes.manage';
-    case PartnerReferralsView = 'partner.referrals.view';
-    case PartnerCommissionsView = 'partner.commissions.view';
-    case AdminPartnersManage = 'admin.partners.manage';
-    case AdminPartnersPayouts = 'admin.partners.payouts';
 
     /**
      * Primary portal for catalog grouping. Shared abilities still have one home group.
@@ -93,27 +66,19 @@ enum Permission: string
     public function portal(): PortalGroup
     {
         return match ($this) {
+            self::SessionCreate,
             self::SessionStart,
             self::SessionSubmit,
             self::SessionReview,
             self::QuestionView,
-            self::LibraryView,
             self::ClassroomJoin,
-            self::LiveJoin,
-            self::AiUse,
-            self::AnalyticsAdvanced,
             self::ExamTake => PortalGroup::Learner,
 
             self::ClassroomCreate,
             self::ClassroomManage,
-            self::ClassroomModerate,
-            self::LiveStart,
             self::QuestionReview => PortalGroup::Instructor,
 
-            self::PartnerPortal,
-            self::PartnerCodesManage,
-            self::PartnerReferralsView,
-            self::PartnerCommissionsView => PortalGroup::Partner,
+            self::PartnerPortal => PortalGroup::Partner,
 
             default => PortalGroup::Admin,
         };

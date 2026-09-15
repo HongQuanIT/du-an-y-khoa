@@ -7,10 +7,12 @@
                 · Lần quét: {{ $question->similarity_checked_at->diffForHumans() }}
             @endif
         </p>
-        <a href="{{ route('admin.questions.duplicates.show', $question) }}"
+        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.duplicates.show'))
+<a href="{{ route('admin.questions.duplicates.show', $question) }}"
            class="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2.5 text-sm font-semibold text-on-surface hover:bg-surface-container-low">
             <span class="material-symbols-outlined text-[18px]">content_copy</span>
             Kiểm tra trùng lặp
         </a>
+@endif
     </div>
 @endif

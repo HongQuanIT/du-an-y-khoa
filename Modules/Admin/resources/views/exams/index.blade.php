@@ -3,11 +3,13 @@
         title="Kỳ thi"
         description="Quản lý đề thi mô phỏng, số câu và trạng thái xuất bản cho học viên.">
         <x-slot:actions>
-            <a href="{{ route('admin.exams.create') }}"
+            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.exams.create'))
+<a href="{{ route('admin.exams.create') }}"
                 class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 font-label-md text-on-primary hover:opacity-90">
                 <span class="material-symbols-outlined text-[18px]">add</span>
                 Tạo kỳ thi
             </a>
+@endif
         </x-slot:actions>
     </x-admin.page-header>
 
@@ -59,11 +61,14 @@
                         </td>
                         <td class="px-5 py-4">
                             <div class="flex justify-end gap-2">
-                                <a href="{{ route('admin.exams.edit', $exam) }}"
+                                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.exams.edit'))
+<a href="{{ route('admin.exams.edit', $exam) }}"
                                     class="inline-flex items-center rounded-lg border border-outline-variant px-3 py-2 font-label-sm text-on-surface-variant hover:bg-surface-container-low">
                                     Sửa
                                 </a>
-                                <form action="{{ route('admin.exams.destroy', $exam) }}" method="POST" onsubmit="return confirm('Xoá kỳ thi này?');">
+@endif
+                                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.exams.destroy'))
+<form action="{{ route('admin.exams.destroy', $exam) }}" method="POST" onsubmit="return confirm('Xoá kỳ thi này?');">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit"
@@ -71,6 +76,7 @@
                                         Xoá
                                     </button>
                                 </form>
+@endif
                             </div>
                         </td>
                     </tr>

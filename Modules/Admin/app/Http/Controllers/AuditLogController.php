@@ -18,7 +18,7 @@ final class AuditLogController extends Controller
 {
     public function index(Request $request): View
     {
-        $this->authorizePermission(Permission::AuditView);
+        $this->authorizePermission('audit_log.view');
 
         $query = AuditLog::query()
             ->visibleToAdmin()
@@ -93,7 +93,7 @@ final class AuditLogController extends Controller
 
     public function show(AuditLog $audit): View
     {
-        $this->authorizePermission(Permission::AuditView);
+        $this->authorizePermission('audit_log.view');
 
         $audit->load(['actor', 'auditable']);
 
@@ -102,9 +102,16 @@ final class AuditLogController extends Controller
         ]);
     }
 
-    private function authorizePermission(Permission $permission): void
+    private function authorizePermission(string|Permission ...$permissions): void
     {
-        abort_unless($this->actor()->can($permission->value), 403);
+        $names = array_map(
+            static fn (string|Permission $permission): string => $permission instanceof Permission
+                ? $permission->value
+                : $permission,
+            $permissions,
+        );
+
+        abort_unless($this->actor()->canAny($names), 403);
     }
 
     private function actor(): User

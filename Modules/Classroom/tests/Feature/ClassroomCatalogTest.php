@@ -6,16 +6,14 @@ namespace Modules\Classroom\Tests\Feature;
 
 use App\Models\User;
 use App\Support\Enums\Role;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Classroom\Actions\CreateClassroomAction;
 use Modules\Classroom\Enums\ClassroomPurpose;
 use Modules\Classroom\Enums\ClassroomStatus;
 use Modules\Classroom\Enums\LiveSessionStatus;
-use Modules\Classroom\Enums\RecordingStatus;
 use Modules\Classroom\Models\Classroom;
-use Modules\Classroom\Models\LiveRecording;
 use Modules\Classroom\Models\LiveSession;
-use Spatie\Permission\Models\Role as SpatieRole;
 use Tests\TestCase;
 
 final class ClassroomCatalogTest extends TestCase
@@ -26,10 +24,7 @@ final class ClassroomCatalogTest extends TestCase
     {
         parent::setUp();
 
-        foreach (Role::values() as $role) {
-            SpatieRole::findOrCreate($role, 'web');
-        }
-
+        $this->seed(RolePermissionSeeder::class);
         config(['classroom.open_hosting' => true]);
     }
 
@@ -181,7 +176,6 @@ final class ClassroomCatalogTest extends TestCase
             ->assertSee('<time datetime=', false)
             ->assertSee('id="members-heading"', false);
     }
-
 
     /** @param  array<string, mixed>  $data */
     private function approvedClassroom(User $host, array $data): Classroom

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Modules\Admin\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Support\Enums\Permission;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,7 +19,7 @@ final class LearnerCatalogController extends Controller
 {
     public function index(Request $request, string $catalog): View
     {
-        abort_unless($request->user()->can(Permission::UserView->value), 403);
+        abort_unless($request->user()->canAny(['learner_catalog.view_any']), 403);
         $config = $this->config($catalog);
         $query = $config['model']::query()->withCount($config['counts']);
 
@@ -42,8 +41,9 @@ final class LearnerCatalogController extends Controller
         }
 
         $editing = null;
-        $canManage = $request->user()->can(Permission::UserManage->value);
-        if ($canManage && $request->filled('edit')) {
+        $canCreate = $request->user()->can('learner_catalog.create');
+        $canUpdate = $request->user()->can('learner_catalog.update');
+        if ($canUpdate && $request->filled('edit')) {
             $editing = $config['model']::query()->findOrFail($request->integer('edit'));
         }
 
@@ -54,13 +54,14 @@ final class LearnerCatalogController extends Controller
             'editing' => $editing,
             'countries' => Country::query()->where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(),
             'filters' => $request->only(['q', 'status', 'country_id']),
-            'canManage' => $canManage,
+            'canCreate' => $canCreate,
+            'canUpdate' => $canUpdate,
         ]);
     }
 
     public function store(Request $request, string $catalog): RedirectResponse
     {
-        abort_unless($request->user()->can(Permission::UserManage->value), 403);
+        abort_unless($request->user()->canAny(['learner_catalog.create']), 403);
         $config = $this->config($catalog);
         $config['model']::query()->create($this->validated($request, $catalog));
 
@@ -69,7 +70,7 @@ final class LearnerCatalogController extends Controller
 
     public function update(Request $request, int $item, string $catalog): RedirectResponse
     {
-        abort_unless($request->user()->can(Permission::UserManage->value), 403);
+        abort_unless($request->user()->canAny(['learner_catalog.update']), 403);
         $config = $this->config($catalog);
         $model = $config['model']::query()->findOrFail($item);
         $data = $this->validated($request, $catalog, $model);
@@ -80,16 +81,6 @@ final class LearnerCatalogController extends Controller
         $model->update($data);
 
         return redirect()->route($config['route'].'.index')->with('status', 'Đã cập nhật '.$config['singular'].'.');
-    }
-
-    public function toggle(Request $request, int $item, string $catalog): RedirectResponse
-    {
-        abort_unless($request->user()->can(Permission::UserManage->value), 403);
-        $config = $this->config($catalog);
-        $model = $config['model']::query()->findOrFail($item);
-        $model->update(['is_active' => ! $model->getAttribute('is_active')]);
-
-        return back()->with('status', $model->getAttribute('is_active') ? 'Đã kích hoạt.' : 'Đã ngừng hiển thị.');
     }
 
     /** @return array<string, mixed> */

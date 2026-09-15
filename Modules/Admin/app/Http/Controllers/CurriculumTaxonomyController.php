@@ -41,7 +41,7 @@ final class CurriculumTaxonomyController extends Controller
 
     public function index(Request $request): View|JsonResponse
     {
-        $this->authorizePermission(Permission::TopicView);
+        $this->authorizePermission('curriculum.view');
 
         $filters = $this->catalogFilters($request);
         $tab = $filters['tab'];
@@ -66,9 +66,6 @@ final class CurriculumTaxonomyController extends Controller
             'lessonOrganSystemOptions' => $tab === 'lessons'
                 ? OrganSystem::query()->orderBy('name')->get(['id', 'name', 'slug'])
                 : collect(),
-            'subjectLessonOptions' => $tab === 'subjects'
-                ? Lesson::query()->orderBy('name')->get(['id', 'name', 'slug', 'status'])
-                : collect(),
             'filters' => $filters,
             'stats' => [
                 'organ_systems' => OrganSystem::query()->count(),
@@ -77,9 +74,9 @@ final class CurriculumTaxonomyController extends Controller
             ],
             'statuses' => TaxonomyStatus::cases(),
             'statusLabels' => self::STATUS_LABELS,
-            'canCreate' => $this->actor()->can(Permission::TopicCreate->value),
-            'canUpdate' => $this->actor()->can(Permission::TopicUpdate->value),
-            'canDelete' => $this->actor()->can(Permission::TopicDelete->value),
+            'canCreate' => $this->actor()->can('curriculum.create'),
+            'canUpdate' => $this->actor()->can('curriculum.update'),
+            'canDelete' => $this->actor()->can('curriculum.delete'),
         ]);
     }
 
@@ -89,7 +86,7 @@ final class CurriculumTaxonomyController extends Controller
 
     public function storeOrganSystem(Request $request): RedirectResponse
     {
-        $this->authorizePermission(Permission::TopicCreate);
+        $this->authorizePermission('curriculum.create');
 
         $organSystem = OrganSystem::query()->create(
             $this->validatedAttributes($request, 'organ_systems'),
@@ -101,7 +98,7 @@ final class CurriculumTaxonomyController extends Controller
 
     public function updateOrganSystem(Request $request, OrganSystem $organSystem): RedirectResponse
     {
-        $this->authorizePermission(Permission::TopicUpdate);
+        $this->authorizePermission('curriculum.update');
 
         $organSystem->update(
             $this->validatedAttributes($request, 'organ_systems', $organSystem->id),
@@ -113,7 +110,7 @@ final class CurriculumTaxonomyController extends Controller
 
     public function destroyOrganSystem(OrganSystem $organSystem): RedirectResponse
     {
-        $this->authorizePermission(Permission::TopicDelete);
+        $this->authorizePermission('curriculum.delete');
 
         $blocked = $this->lessonsBlockedBySoleLink($organSystem, 'organSystems');
         if ($blocked > 0) {
@@ -136,7 +133,7 @@ final class CurriculumTaxonomyController extends Controller
 
     public function storeSubject(Request $request): RedirectResponse
     {
-        $this->authorizePermission(Permission::TopicCreate);
+        $this->authorizePermission('curriculum.create');
 
         $subject = Subject::query()->create(
             $this->validatedAttributes($request, 'subjects'),
@@ -148,7 +145,7 @@ final class CurriculumTaxonomyController extends Controller
 
     public function updateSubject(Request $request, Subject $subject): RedirectResponse
     {
-        $this->authorizePermission(Permission::TopicUpdate);
+        $this->authorizePermission('curriculum.update');
 
         $subject->update(
             $this->validatedAttributes($request, 'subjects', $subject->id),
@@ -160,7 +157,7 @@ final class CurriculumTaxonomyController extends Controller
 
     public function destroySubject(Subject $subject): RedirectResponse
     {
-        $this->authorizePermission(Permission::TopicDelete);
+        $this->authorizePermission('curriculum.delete');
 
         $blocked = $this->lessonsBlockedBySoleLink($subject, 'subjects');
         if ($blocked > 0) {
@@ -177,56 +174,13 @@ final class CurriculumTaxonomyController extends Controller
             ->with('status', 'Đã xoá môn học «'.$name.'».');
     }
 
-    public function attachSubjectLessons(Request $request, Subject $subject): JsonResponse|RedirectResponse
-    {
-        $this->authorizePermission(Permission::TopicUpdate);
-
-        $subject->lessons()->syncWithoutDetaching($this->validatedAttachIds(
-            $request,
-            'lesson_ids',
-            'lesson_id',
-            'lessons,id',
-        ));
-        $subject->unsetRelation('lessons');
-
-        if ($request->ajax() || $request->wantsJson()) {
-            return response()->json([
-                'lessons' => $this->presentSubjectLessons($subject),
-                'lessons_count' => $subject->lessons()->count(),
-                'message' => 'Đã gắn bài học vào môn học.',
-            ]);
-        }
-
-        return $this->redirectToTab('subjects', $subject->id)
-            ->with('status', 'Đã gắn bài học vào môn học.');
-    }
-
-    public function detachSubjectLesson(Request $request, Subject $subject, Lesson $lesson): JsonResponse|RedirectResponse
-    {
-        $this->authorizePermission(Permission::TopicUpdate);
-
-        $subject->lessons()->detach($lesson->id);
-        $subject->unsetRelation('lessons');
-
-        if ($request->ajax() || $request->wantsJson()) {
-            return response()->json([
-                'lessons' => $this->presentSubjectLessons($subject),
-                'lessons_count' => $subject->lessons()->count(),
-                'message' => 'Đã gỡ bài học khỏi môn học.',
-            ]);
-        }
-
-        return $this->redirectToTab('subjects', $subject->id)
-            ->with('status', 'Đã gỡ bài học khỏi môn học.');
-    }
-
     // ------------------------------------------------------------------
     // Bài học (Lessons)
     // ------------------------------------------------------------------
 
     public function storeLesson(Request $request): RedirectResponse
     {
-        $this->authorizePermission(Permission::TopicCreate);
+        $this->authorizePermission('curriculum.create');
 
         [$subjectIds, $organSystemIds] = $this->validatedLessonLinks($request);
 
@@ -242,7 +196,7 @@ final class CurriculumTaxonomyController extends Controller
 
     public function updateLesson(Request $request, Lesson $lesson): RedirectResponse
     {
-        $this->authorizePermission(Permission::TopicUpdate);
+        $this->authorizePermission('curriculum.update');
 
         [$subjectIds, $organSystemIds] = $this->validatedLessonLinks($request);
 
@@ -258,7 +212,7 @@ final class CurriculumTaxonomyController extends Controller
 
     public function destroyLesson(Lesson $lesson): RedirectResponse
     {
-        $this->authorizePermission(Permission::TopicDelete);
+        $this->authorizePermission('curriculum.delete');
 
         $blocked = $lesson->questions()
             ->whereDoesntHave('lessons', fn ($query) => $query->whereKeyNot($lesson->getKey()))
@@ -280,7 +234,7 @@ final class CurriculumTaxonomyController extends Controller
 
     public function attachLessonSubject(Request $request, Lesson $lesson): RedirectResponse
     {
-        $this->authorizePermission(Permission::TopicUpdate);
+        $this->authorizePermission('curriculum.update');
 
         $lesson->subjects()->syncWithoutDetaching($this->validatedAttachIds(
             $request,
@@ -295,7 +249,7 @@ final class CurriculumTaxonomyController extends Controller
 
     public function detachLessonSubject(Lesson $lesson, Subject $subject): RedirectResponse
     {
-        $this->authorizePermission(Permission::TopicUpdate);
+        $this->authorizePermission('curriculum.update');
 
         $lesson->subjects()->detach($subject->id);
 
@@ -305,7 +259,7 @@ final class CurriculumTaxonomyController extends Controller
 
     public function attachLessonOrganSystem(Request $request, Lesson $lesson): RedirectResponse
     {
-        $this->authorizePermission(Permission::TopicUpdate);
+        $this->authorizePermission('curriculum.update');
 
         $lesson->organSystems()->syncWithoutDetaching($this->validatedAttachIds(
             $request,
@@ -320,7 +274,7 @@ final class CurriculumTaxonomyController extends Controller
 
     public function detachLessonOrganSystem(Lesson $lesson, OrganSystem $organSystem): RedirectResponse
     {
-        $this->authorizePermission(Permission::TopicUpdate);
+        $this->authorizePermission('curriculum.update');
 
         $lesson->organSystems()->detach($organSystem->id);
 
@@ -526,12 +480,7 @@ final class CurriculumTaxonomyController extends Controller
     {
         return match ($tab) {
             'organ-systems' => $this->paginateCatalog(OrganSystem::query()->withCount('lessons'), $filters),
-            'subjects' => $this->paginateCatalog(
-                Subject::query()
-                    ->withCount('lessons')
-                    ->with(['lessons' => fn ($query) => $query->select('lessons.id', 'lessons.name', 'lessons.slug', 'lessons.status')]),
-                $filters,
-            ),
+            'subjects' => $this->paginateCatalog(Subject::query()->withCount('lessons'), $filters),
             default => $this->paginateLessons($filters),
         };
     }
@@ -572,7 +521,7 @@ final class CurriculumTaxonomyController extends Controller
             ? ['admin.curriculum.subjects.update', 'admin.curriculum.subjects.destroy']
             : ['admin.curriculum.organ-systems.update', 'admin.curriculum.organ-systems.destroy'];
 
-        $payload = [
+        return [
             'id' => $item->id,
             'name' => $item->name,
             'slug' => $item->slug,
@@ -582,40 +531,6 @@ final class CurriculumTaxonomyController extends Controller
             'update_url' => route($updateRoute, $item),
             'destroy_url' => route($destroyRoute, $item),
         ];
-
-        if ($tab === 'subjects' && $item instanceof Subject) {
-            $payload['lessons'] = $this->presentSubjectLessons($item);
-            $payload['attach_lessons_url'] = route('admin.curriculum.subjects.lessons.attach', $item);
-            $payload['create_lesson_url'] = route('admin.curriculum.index', [
-                'tab' => 'lessons',
-                'panel' => 'create',
-                'subject_ids' => [$item->id],
-            ]);
-        }
-
-        return $payload;
-    }
-
-    /**
-     * @return list<array{id: int, name: string, slug: string, status: string, detach_url: string}>
-     */
-    private function presentSubjectLessons(Subject $subject): array
-    {
-        $subject->loadMissing(['lessons' => fn ($query) => $query
-            ->select('lessons.id', 'lessons.name', 'lessons.slug', 'lessons.status')
-            ->orderBy('lessons.sort_order')
-            ->orderBy('lessons.name')]);
-
-        return $subject->lessons
-            ->map(fn (Lesson $lesson): array => [
-                'id' => (int) $lesson->id,
-                'name' => $lesson->name,
-                'slug' => $lesson->slug,
-                'status' => $lesson->status->value,
-                'detach_url' => route('admin.curriculum.subjects.lessons.detach', [$subject, $lesson]),
-            ])
-            ->values()
-            ->all();
     }
 
     /**
@@ -737,9 +652,9 @@ final class CurriculumTaxonomyController extends Controller
         ]));
     }
 
-    private function authorizePermission(Permission $permission): void
+    private function authorizePermission(string $permission): void
     {
-        abort_unless($this->actor()->can($permission->value), 403);
+        abort_unless($this->actor()->can($permission), 403);
     }
 
     private function actor(): User

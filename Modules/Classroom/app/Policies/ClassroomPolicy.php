@@ -15,13 +15,18 @@ final class ClassroomPolicy
 {
     public function viewAny(User $user): bool
     {
-        return true;
+        return $user->can('classroom.view')
+            || $user->can('classroom_oversight.view_any');
     }
 
     public function view(User $user, Classroom $classroom): bool
     {
-        if ($user->can(Permission::ClassroomOversee->value)) {
+        if ($user->can('classroom_oversight.view_any')) {
             return true;
+        }
+
+        if (! $user->can('classroom.view')) {
+            return false;
         }
 
         if ($classroom->isHostOrCohost($user) || $classroom->isActiveMember($user)) {
@@ -53,10 +58,10 @@ final class ClassroomPolicy
         }
 
         return $classroom->isHostOrCohost($user)
-            && (
-                $user->can(Permission::ClassroomManage->value)
-                || $user->hasEntitlement(Entitlement::ClassroomHost->value)
-            );
+            && ($user->canAny([
+                'classroom_settings.update',
+                Permission::ClassroomManage->value,
+            ]) || $user->hasEntitlement(Entitlement::ClassroomHost->value));
     }
 
     public function join(User $user, Classroom $classroom): bool
@@ -82,14 +87,17 @@ final class ClassroomPolicy
 
     public function manageLive(User $user, Classroom $classroom): bool
     {
-        if (! $this->update($user, $classroom)) {
-            return false;
+        if ($user->canAny(['classroom_oversight.schedule', 'classroom_oversight.view_any'])) {
+            return true;
         }
 
-        return $user->can(Permission::ClassroomOversee->value)
-            || $user->can(Permission::LiveStart->value)
-            || $user->can(Permission::ClassroomManage->value)
-            || $user->hasEntitlement(Entitlement::ClassroomHost->value);
+        return $classroom->isHostOrCohost($user)
+            && ($user->canAny([
+                'classroom_session.schedule',
+                'classroom_session.start',
+                'classroom_session.end',
+                Permission::ClassroomManage->value,
+            ]) || $user->hasEntitlement(Entitlement::ClassroomHost->value));
     }
 
     public function startLive(User $user, Classroom $classroom): bool

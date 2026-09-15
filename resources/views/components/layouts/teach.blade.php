@@ -10,32 +10,44 @@
             'icon' => 'dashboard',
             'route' => 'teach.dashboard',
             'match' => 'teach.dashboard',
+            'permission' => 'teaching_dashboard.view',
         ],
         [
             'label' => 'Lớp của tôi',
             'icon' => 'school',
             'route' => 'teach.classes.index',
             'match' => 'teach.classes.*',
+            'permission' => 'classroom.view',
         ],
         [
             'label' => 'Duyệt câu hỏi',
             'icon' => 'fact_check',
             'route' => 'teach.questions.reviews.index',
             'match' => 'teach.questions.reviews.*',
+            'permission' => 'question.review',
         ],
         [
             'label' => 'Thông báo',
             'icon' => 'notifications',
             'route' => 'teach.notifications.index',
             'match' => 'teach.notifications.*',
+            'permission' => 'teach_notification.view',
         ],
         [
             'label' => 'Hàng chờ chữa',
             'icon' => 'queue',
             'route' => null,
             'match' => null,
+            'permission' => null,
         ],
     ];
+    $navItems = array_values(array_filter(
+        $navItems,
+        static fn (array $item): bool => $item['permission'] === null
+            || auth()->user()?->canAny((array) $item['permission']) === true,
+    ));
+    $canViewProfile = auth()->user()?->can('teach_profile.view') === true;
+    $canViewNotifications = auth()->user()?->can('teach_notification.view') === true;
 @endphp
 
 <!DOCTYPE html>
@@ -107,6 +119,7 @@
                 @endif
             @endforeach
         </nav>
+        @if ($canViewProfile)
         <div class="mt-4 border-t border-outline-variant pt-4">
             <a href="{{ route('teach.profile.show') }}"
                 class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 font-label-md text-label-md text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface {{ request()->routeIs('teach.profile.*') ? 'bg-primary/10 font-semibold text-primary' : '' }}">
@@ -114,6 +127,7 @@
                 Hồ sơ
             </a>
         </div>
+        @endif
     </aside>
 
     <div x-show="menu" x-cloak @click="menu = false" class="fixed inset-0 z-50 bg-black/40 md:hidden"></div>
@@ -142,11 +156,13 @@
                     </a>
                 @endif
             @endforeach
+            @if ($canViewProfile)
             <a href="{{ route('teach.profile.show') }}" @click="menu = false"
                 class="flex items-center gap-3 rounded-lg px-3 py-2.5 font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-low">
                 <span class="material-symbols-outlined text-[22px] leading-none">manage_accounts</span>
                 Hồ sơ
             </a>
+            @endif
         </nav>
     </aside>
 
@@ -162,7 +178,9 @@
         </div>
 
         <div class="relative ml-2 flex shrink-0 items-center gap-3">
-            @include('notification::partials.bell', ['indexRoute' => 'teach.notifications.index'])
+            @if ($canViewNotifications)
+                @include('notification::partials.bell', ['indexRoute' => 'teach.notifications.index'])
+            @endif
             <div class="relative" @click.outside="accountMenu = false">
             <button type="button" @click="accountMenu = !accountMenu; notificationsOpen = false"
                 class="flex items-center gap-3 rounded-xl p-1.5 text-left transition-colors hover:bg-surface-container-low focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
@@ -195,10 +213,12 @@
                         <p class="font-title-md text-title-md font-bold text-on-surface">{{ auth()->user()->name }}</p>
                         <p class="font-body-md text-body-md text-on-surface-variant">Giảng viên</p>
                     </div>
+                    @if ($canViewProfile)
                     <a href="{{ route('teach.profile.show') }}" @click="accountMenu = false"
                         class="block w-full rounded-lg bg-primary px-4 py-2.5 text-center font-label-md text-label-md font-bold text-on-primary transition-opacity hover:opacity-90">
                         Quản lý hồ sơ
                     </a>
+                    @endif
                 </div>
 
                 <div class="p-4">

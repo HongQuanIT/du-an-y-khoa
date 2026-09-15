@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\QuestionBank\Tests\Feature;
 
 use App\Models\User;
+use App\Support\Enums\Role;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Enums\SessionMode;
@@ -24,9 +26,17 @@ final class WeakTopicSessionTest extends TestCase
     use CreatesMedicalTaxonomy;
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->seed(RolePermissionSeeder::class);
+    }
+
     public function test_student_can_start_a_topic_session_prioritized_by_incorrect_frequency(): void
     {
         $student = User::factory()->create();
+        $student->assignRole(Role::Student->value);
         $topic = $this->makeMedicalNode(['name' => 'Tim mạch']);
         $otherTopic = $this->makeMedicalNode(['name' => 'Hô hấp']);
         $mostIncorrect = $this->questionFor($topic);
@@ -76,6 +86,7 @@ final class WeakTopicSessionTest extends TestCase
     public function test_exam_mistakes_use_the_existing_exam_repeat_flow(): void
     {
         $student = User::factory()->create();
+        $student->assignRole(Role::Student->value);
         $topic = $this->makeMedicalNode(['name' => 'Tim mạch']);
         $question = $this->questionFor($topic);
         $answeredAt = now()->subMinute();

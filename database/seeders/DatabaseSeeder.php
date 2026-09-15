@@ -60,6 +60,6 @@ class DatabaseSeeder extends Seeder
         $this->call(BannerSeeder::class);
         $this->call(MenuSeeder::class);
 
-        $this->command->info('Đăng nhập dev: student@medlearn.local / password (admin@medlearn.local cho khu vực admin).');
+        $this->command->info('Đăng nhập dev: student@medlearn.local / password; admin@medlearn.local / Admin123!; superadmin@medlearn.local / SuperAdmin123!.');
     }
 }

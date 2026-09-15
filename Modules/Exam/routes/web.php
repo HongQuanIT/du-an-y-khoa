@@ -17,11 +17,11 @@ Route::middleware(['auth', 'learner'])
     ->prefix('exams')
     ->name('exam.')
     ->group(function (): void {
-        Route::get('/', ExamIndexController::class)->name('index');
+        Route::get('/', ExamIndexController::class)->middleware('permission:exam.view')->name('index');
         Route::post('/{exam}/start', StartExamController::class)
             ->middleware('subscription:exam.simulation')
             ->name('start');
-        Route::get('/{session}/summary', ExamSessionSummaryController::class)->name('summary');
-        Route::get('/{session}/review', ExamSessionReviewController::class)->name('review');
-        Route::get('/{session}', [StudySessionController::class, 'show'])->name('session');
+        Route::get('/{session}/summary', ExamSessionSummaryController::class)->middleware('permission:exam.overview')->name('summary');
+        Route::get('/{session}/review', ExamSessionReviewController::class)->middleware('permission:exam.review')->name('review');
+        Route::get('/{session}', [StudySessionController::class, 'show'])->middleware('permission:exam.take')->name('session');
     });

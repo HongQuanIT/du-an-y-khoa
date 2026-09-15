@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\Auth\Tests\Feature;
 
 use App\Models\User;
+use App\Support\Enums\Role;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -14,11 +16,18 @@ final class ProfileAvatarTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(RolePermissionSeeder::class);
+    }
+
     public function test_user_can_upload_and_remove_avatar(): void
     {
         Storage::fake('public');
 
         $user = User::factory()->create();
+        $user->assignRole(Role::Student->value);
 
         $this->actingAs($user)
             ->put(route('settings.avatar'), [
@@ -48,6 +57,7 @@ final class ProfileAvatarTest extends TestCase
         Storage::fake('public');
 
         $user = User::factory()->create();
+        $user->assignRole(Role::Student->value);
 
         $this->actingAs($user)
             ->from(route('profile.show'))

@@ -9,8 +9,10 @@
     <x-admin.page-header :title="$isNew ? 'Thêm banner' : 'Sửa banner'"
         :description="$isNew ? 'Tạo thông báo / khuyến mãi hiển thị trên landing hoặc dashboard.' : 'Cập nhật banner #'.$banner->id">
         <x-slot:actions>
-            <a href="{{ route('admin.cms.banners.index') }}"
+            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.banners.index'))
+<a href="{{ route('admin.cms.banners.index') }}"
                 class="rounded-lg px-3 py-2 font-label-md text-on-surface-variant hover:bg-surface-container-low">← Danh sách</a>
+@endif
         </x-slot:actions>
     </x-admin.page-header>
 
@@ -159,7 +161,8 @@
     </form>
 
     @unless ($isNew)
-        <form method="post" action="{{ route('admin.cms.banners.destroy', $banner) }}" class="mt-4 max-w-3xl"
+        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.banners.destroy'))
+<form method="post" action="{{ route('admin.cms.banners.destroy', $banner) }}" class="mt-4 max-w-3xl"
             onsubmit="return confirm('Xóa banner này?')">
             @csrf
             @method('DELETE')
@@ -167,5 +170,6 @@
                 Xóa banner
             </button>
         </form>
+@endif
     @endunless
 </x-layouts.admin>

@@ -6,7 +6,6 @@ namespace Modules\Admin\Http\Controllers\Cms;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Support\Enums\Permission;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -20,7 +19,7 @@ final class PageController extends Controller
 {
     public function index(Request $request): View
     {
-        $this->authorizePermission(Permission::CmsManage);
+        $this->authorizePermission('cms_page.view_any');
 
         CmsPage::syncCatalog();
 
@@ -64,7 +63,7 @@ final class PageController extends Controller
 
     public function edit(CmsPage $cmsPage): View
     {
-        $this->authorizePermission(Permission::CmsManage);
+        $this->authorizePermission('cms_page.update');
 
         return view('admin::cms.pages.form', [
             'page' => $cmsPage,
@@ -74,7 +73,7 @@ final class PageController extends Controller
 
     public function update(SaveCmsPageRequest $request, CmsPage $cmsPage, SaveCmsPageAction $save): RedirectResponse
     {
-        $this->authorizePermission(Permission::CmsManage);
+        $this->authorizePermission('cms_page.update');
 
         $save->handle($this->actor(), $request, $cmsPage);
 
@@ -95,9 +94,9 @@ final class PageController extends Controller
             ->with('status', $message);
     }
 
-    private function authorizePermission(Permission $permission): void
+    private function authorizePermission(string ...$permissions): void
     {
-        abort_unless($this->actor()->can($permission->value), 403);
+        abort_unless($this->actor()->canAny([...$permissions]), 403);
     }
 
     private function actor(): User

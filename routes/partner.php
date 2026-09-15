@@ -35,12 +35,22 @@ Route::middleware('auth')->group(function (): void {
         ->name('2fa.challenge.verify');
 });
 
-Route::middleware(['auth', 'partner', 'partner.2fa'])->group(function (): void {
-    Route::get('/', [PartnerDashboardController::class, 'index'])->name('dashboard');
+Route::middleware(['auth', 'partner', 'partner.2fa', 'permission:partner.portal'])->group(function (): void {
+    Route::get('/', [PartnerDashboardController::class, 'index'])
+        ->middleware('permission:partner_dashboard.view')
+        ->name('dashboard');
 
-    Route::get('/codes', [PartnerCodeController::class, 'index'])->name('codes.index');
+    Route::get('/codes', [PartnerCodeController::class, 'index'])
+        ->middleware('permission:partner_code.view')
+        ->name('codes.index');
 
-    Route::get('/referrals', [PartnerReferralController::class, 'index'])->name('referrals.index');
-    Route::get('/commissions', [PartnerCommissionController::class, 'index'])->name('commissions.index');
-    Route::get('/payouts', [PartnerPayoutController::class, 'index'])->name('payouts.index');
+    Route::get('/referrals', [PartnerReferralController::class, 'index'])
+        ->middleware('permission:partner_referral.view')
+        ->name('referrals.index');
+    Route::get('/commissions', [PartnerCommissionController::class, 'index'])
+        ->middleware('permission:partner_commission.view')
+        ->name('commissions.index');
+    Route::get('/payouts', [PartnerPayoutController::class, 'index'])
+        ->middleware('permission:partner_payout.view')
+        ->name('payouts.index');
 });

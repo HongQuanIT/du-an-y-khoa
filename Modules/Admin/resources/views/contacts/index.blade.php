@@ -11,21 +11,26 @@
     <x-admin.flash />
 
     <div class="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        <a href="{{ route('admin.contacts.index') }}"
+        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.contacts.index'))
+<a href="{{ route('admin.contacts.index') }}"
             class="rounded-xl border border-outline-variant bg-surface p-4 transition hover:border-primary hover:bg-primary/5">
             <p class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">Đang mở</p>
             <p class="mt-2 text-2xl font-bold text-on-surface">{{ number_format($openCount) }}</p>
         </a>
+@endif
         @foreach ($statuses as $status)
-            <a href="{{ route('admin.contacts.index', ['status' => $status->value]) }}"
+            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.contacts.index'))
+<a href="{{ route('admin.contacts.index', ['status' => $status->value]) }}"
                 class="rounded-xl border border-outline-variant bg-surface p-4 transition hover:border-primary hover:bg-primary/5 {{ $filters['status'] === $status->value ? 'border-primary bg-primary/5' : '' }}">
                 <p class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">{{ $status->label() }}</p>
                 <p class="mt-2 text-2xl font-bold text-on-surface">{{ number_format((int) ($statusCounts[$status->value] ?? 0)) }}</p>
             </a>
+@endif
         @endforeach
     </div>
 
-    <form method="get" action="{{ route('admin.contacts.index') }}" role="search" aria-label="Lọc liên hệ"
+    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.contacts.index'))
+<form method="get" action="{{ route('admin.contacts.index') }}" role="search" aria-label="Lọc liên hệ"
         class="mb-6 grid grid-cols-1 items-end gap-4 rounded-xl border border-outline-variant bg-surface p-4 md:grid-cols-12">
         <label class="md:col-span-4">
             <span class="mb-1.5 block text-sm font-medium text-on-surface-variant">Tìm kiếm</span>
@@ -69,6 +74,7 @@
             </a>
         </div>
     </form>
+@endif
 
     <div class="overflow-hidden rounded-xl border border-outline-variant bg-surface">
         <div class="overflow-x-auto">
@@ -90,7 +96,8 @@
                         @endphp
                         <tr class="align-top {{ $unread ? 'bg-primary-container/20' : '' }}">
                             <td class="max-w-md px-4 py-4">
-                                <a href="{{ route('admin.contacts.show', $inquiry) }}" class="group block">
+                                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.contacts.show'))
+<a href="{{ route('admin.contacts.show', $inquiry) }}" class="group block">
                                     <div class="mb-1 flex items-center gap-2">
                                         @if ($unread)
                                             <span class="size-2 shrink-0 rounded-full bg-error" title="Chưa đọc"></span>
@@ -101,14 +108,17 @@
                                         {{ \Illuminate\Support\Str::limit($inquiry->message, 120) }}
                                     </p>
                                 </a>
+@endif
                             </td>
                             <td class="px-4 py-4">
                                 <p class="font-semibold text-on-surface">{{ $inquiry->name }}</p>
                                 <p class="text-xs text-on-surface-variant">{{ $inquiry->email }}</p>
                                 @if ($inquiry->user)
-                                    <a href="{{ route('admin.users.show', $inquiry->user) }}" class="mt-1 inline-block text-xs text-primary hover:underline">
+                                    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.users.show'))
+<a href="{{ route('admin.users.show', $inquiry->user) }}" class="mt-1 inline-block text-xs text-primary hover:underline">
                                         Tài khoản #{{ $inquiry->user_id }}
                                     </a>
+@endif
                                 @endif
                             </td>
                             <td class="px-4 py-4">

@@ -6,8 +6,9 @@ namespace Modules\Admin\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\Auth\PortalAccess;
 use App\Support\Enums\Permission;
-use App\Support\Enums\Role;
+use App\Support\Enums\PortalGroup;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -35,12 +36,13 @@ use Modules\QuestionBank\Models\CoreClinicalTopic;
 use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionFeedback;
+use Modules\QuestionBank\Support\QuestionFilterBuilder;
 
 final class ClassroomOversightController extends Controller
 {
     public function create(Request $request): View
     {
-        $this->authorizePermission(Permission::ClassroomCreateOnBehalf);
+        $this->authorizePermission('classroom_oversight.create_on_behalf');
 
         $selectedQuestionIds = array_values(array_filter(array_map(
             'strval',
@@ -48,7 +50,7 @@ final class ClassroomOversightController extends Controller
         )));
 
         return view('admin::classrooms.create', [
-            'instructors' => User::role(Role::Instructor->value)->orderBy('name')->get(['id', 'name', 'email']),
+            'instructors' => User::role(PortalAccess::roleNames(PortalGroup::Instructor))->orderBy('name')->get(['id', 'name', 'email']),
             'purposes' => ClassroomPurpose::teachCases(),
             'visibilities' => ClassroomVisibility::cases(),
             'publishedExams' => Exam::query()
@@ -90,14 +92,14 @@ final class ClassroomOversightController extends Controller
 
     public function contentQuestions(Request $request): JsonResponse
     {
-        $this->authorizePermission(Permission::ClassroomCreateOnBehalf);
+        $this->authorizePermission('classroom_oversight.create_on_behalf');
 
         $source = $request->string('source')->toString();
         $search = trim($request->string('q')->toString());
         $coreTopicId = $request->integer('core_topic_id');
         $medicalTopicId = $request->integer('medical_topic_id');
         $difficulty = $request->string('difficulty')->toString();
-        $filters = app(\Modules\QuestionBank\Support\QuestionFilterBuilder::class);
+        $filters = app(QuestionFilterBuilder::class);
 
         $questions = Question::query()
             ->with(['lessons:id,name'])
@@ -154,7 +156,7 @@ final class ClassroomOversightController extends Controller
         ApproveClassroomAction $approve,
         ScheduleLiveSessionAction $schedule,
     ): RedirectResponse {
-        $this->authorizePermission(Permission::ClassroomCreateOnBehalf);
+        $this->authorizePermission('classroom_oversight.create_on_behalf');
         $data = $request->validate([
             'host_user_id' => ['required', 'integer', 'exists:users,id'],
             'title' => ['required', 'string', 'max:200'],
@@ -190,7 +192,7 @@ final class ClassroomOversightController extends Controller
             ],
         ]);
         $host = User::findOrFail($data['host_user_id']);
-        abort_unless($host->hasRole(Role::Instructor->value), 422, 'Host phải là giảng viên.');
+        abort_unless(PortalAccess::allows($host, PortalGroup::Instructor), 422, 'Host phải là giảng viên.');
 
         $source = $data['content_source'] ?? 'none';
         $questionIds = array_values(array_unique(array_map('strval', $data['question_ids'] ?? [])));
@@ -222,7 +224,9 @@ final class ClassroomOversightController extends Controller
             $classroom->forceFill([
                 'meta' => array_merge($classroom->meta ?? [], ['content_source' => $source]),
             ])->save();
-            $approve->handle($this->actor(), $classroom);
+            if ($this->actor()->can('classroom_oversight.approve')) {
+                $approve->handle($this->actor(), $classroom);
+            }
 
             if ($source !== 'none') {
                 $sessionData = [
@@ -265,7 +269,7 @@ final class ClassroomOversightController extends Controller
 
     public function index(Request $request): View
     {
-        $this->authorizePermission(Permission::ClassroomOversee);
+        $this->authorizePermission('classroom_oversight.view_any');
 
         $query = Classroom::query()
             ->with(['host', 'liveSession'])
@@ -316,7 +320,7 @@ final class ClassroomOversightController extends Controller
 
     public function show(Classroom $classroom): View
     {
-        $this->authorizePermission(Permission::ClassroomOversee);
+        $this->authorizePermission('classroom_oversight.view_any');
 
         $classroom->load([
             'host',
@@ -337,7 +341,7 @@ final class ClassroomOversightController extends Controller
         Classroom $classroom,
         ScheduleLiveSessionAction $action,
     ): RedirectResponse {
-        $this->authorizePermission(Permission::ClassroomOversee);
+        $this->authorizePermission('classroom_oversight.schedule');
         $session = $action->handle($classroom, $request->sessionPayload());
 
         return back()->with('status', 'Đã tạo phòng live: '.$session->title);
@@ -345,7 +349,7 @@ final class ClassroomOversightController extends Controller
 
     public function forceEnd(Classroom $classroom, ForceEndClassroomLiveAction $action): RedirectResponse
     {
-        $this->authorizePermission(Permission::ClassroomOversee);
+        $this->authorizePermission('classroom_oversight.view_any');
 
         $ended = $action->handle($this->actor(), $classroom);
 
@@ -358,7 +362,7 @@ final class ClassroomOversightController extends Controller
 
     public function approve(Classroom $classroom, ApproveClassroomAction $action): RedirectResponse
     {
-        $this->authorizePermission(Permission::ClassroomOversee);
+        $this->authorizePermission('classroom_oversight.approve');
 
         $action->handle($this->actor(), $classroom);
 
@@ -367,7 +371,7 @@ final class ClassroomOversightController extends Controller
 
     public function reject(Classroom $classroom, RejectClassroomAction $action): RedirectResponse
     {
-        $this->authorizePermission(Permission::ClassroomOversee);
+        $this->authorizePermission('classroom_oversight.reject');
 
         $action->handle($this->actor(), $classroom);
 
@@ -376,16 +380,23 @@ final class ClassroomOversightController extends Controller
 
     public function archive(Classroom $classroom, ArchiveClassroomAction $action): RedirectResponse
     {
-        $this->authorizePermission(Permission::ClassroomOversee);
+        $this->authorizePermission('classroom_oversight.archive');
 
         $action->handle($this->actor(), $classroom);
 
         return back()->with('status', 'Đã lưu trữ lớp học.');
     }
 
-    private function authorizePermission(Permission $permission): void
+    private function authorizePermission(string|Permission ...$permissions): void
     {
-        abort_unless($this->actor()->can($permission->value), 403);
+        $abilities = array_map(
+            static fn (string|Permission $permission): string => $permission instanceof Permission
+                ? $permission->value
+                : $permission,
+            $permissions,
+        );
+
+        abort_unless($this->actor()->canAny($abilities), 403);
     }
 
     private function actor(): User

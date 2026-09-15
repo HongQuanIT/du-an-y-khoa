@@ -6,6 +6,8 @@ namespace Modules\Auth\Tests\Feature;
 
 use App\Models\User;
 use App\Support\Enums\Entitlement;
+use App\Support\Enums\Role;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Billing\Database\Seeders\BillingDatabaseSeeder;
 use Modules\Billing\Models\InstitutionMember;
@@ -20,12 +22,14 @@ final class ProfileBillingTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->seed(RolePermissionSeeder::class);
         $this->seed(BillingDatabaseSeeder::class);
     }
 
     public function test_user_can_redeem_promo_code(): void
     {
         $user = User::factory()->create();
+        $user->assignRole(Role::Student->value);
 
         $this->actingAs($user)
             ->post(route('settings.redeem'), ['code' => 'medlearn2026'])
@@ -44,6 +48,7 @@ final class ProfileBillingTest extends TestCase
     public function test_invoices_tab_shows_vnd_amount_without_dividing_by_100(): void
     {
         $user = User::factory()->create();
+        $user->assignRole(Role::Student->value);
 
         Invoice::query()->create([
             'user_id' => $user->getKey(),
@@ -65,6 +70,7 @@ final class ProfileBillingTest extends TestCase
     public function test_redeem_rejects_invalid_code(): void
     {
         $user = User::factory()->create();
+        $user->assignRole(Role::Student->value);
 
         $this->actingAs($user)
             ->from(route('profile.show', ['tab' => 'redeem']))
@@ -76,6 +82,7 @@ final class ProfileBillingTest extends TestCase
     public function test_user_can_activate_institution_license_by_email_domain(): void
     {
         $user = User::factory()->create(['email' => 'student@medlearn.local']);
+        $user->assignRole(Role::Student->value);
 
         $this->actingAs($user)
             ->post(route('settings.org-license'), [
@@ -96,6 +103,7 @@ final class ProfileBillingTest extends TestCase
     public function test_user_can_save_account_notes(): void
     {
         $user = User::factory()->create();
+        $user->assignRole(Role::Student->value);
 
         $this->actingAs($user)
             ->put(route('settings.notes'), [

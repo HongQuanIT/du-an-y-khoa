@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Modules\QuestionBank\Actions;
 
 use App\Models\User;
+use App\Support\Auth\PortalAccess;
 use App\Support\Enums\Permission;
+use App\Support\Enums\PortalGroup;
 use App\Support\Enums\Role;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -20,7 +22,7 @@ use Modules\QuestionBank\Models\QuestionReviewRequest;
 use Modules\QuestionBank\Support\QuestionInstructorReviewCycle;
 
 /**
- * Layer-1 assigned-instructor review: approve → in_flag_review, reject → rejected.
+ * Layer-1 instructor review: two distinct accepts, fail-fast on first reject.
  * Does not bump version or publish to Qbank.
  */
 final class InstructorReviewQuestionAction
@@ -31,7 +33,7 @@ final class InstructorReviewQuestionAction
 
     public function approve(User $instructor, Question $question, ?string $note = null): Question
     {
-        $this->authorize($instructor);
+        $this->authorize($instructor, Permission::QuestionReview->value);
 
         return DB::transaction(function () use ($instructor, $question, $note): Question {
             $question = Question::query()->lockForUpdate()->findOrFail($question->getKey());
@@ -46,20 +48,27 @@ final class InstructorReviewQuestionAction
             $versionBefore = (int) $question->version;
             $note = $this->cleanNote($note);
 
-            $this->reviewCycle->recordApproval($question, $instructor, $note);
+            $approvedCount = $this->reviewCycle->recordApproval($question, $instructor, $note);
             $question = $question->refresh();
 
-            $question->forceFill([
-                'status' => QuestionStatus::InFlagReview,
-                'updated_by' => $instructor->getKey(),
-            ])->save();
+            $reachedQuota = $approvedCount >= QuestionInstructorReviewCycle::REQUIRED_APPROVALS;
+            if ($reachedQuota) {
+                $question->forceFill([
+                    'status' => QuestionStatus::PendingPublish,
+                    'updated_by' => $instructor->getKey(),
+                ])->save();
 
-            $this->resolvePendingCreateRequest(
-                $question,
-                $instructor,
-                QuestionReviewStatus::Approved,
-                $note,
-            );
+                $this->resolvePendingCreateRequest(
+                    $question,
+                    $instructor,
+                    QuestionReviewStatus::Approved,
+                    $note,
+                );
+            } else {
+                $question->forceFill([
+                    'updated_by' => $instructor->getKey(),
+                ])->save();
+            }
 
             $question = $question->refresh();
 
@@ -79,7 +88,7 @@ final class InstructorReviewQuestionAction
                     'from_status' => QuestionStatus::InReview->value,
                     'to_status' => $question->status->value,
                     'review_note' => $note,
-                    'approval_count' => 1,
+                    'approval_count' => $approvedCount,
                 ],
             );
 
@@ -89,7 +98,7 @@ final class InstructorReviewQuestionAction
 
     public function reject(User $instructor, Question $question, string $reason): Question
     {
-        $this->authorize($instructor);
+        $this->authorize($instructor, Permission::QuestionReview->value);
 
         $reason = trim(strip_tags($reason));
         if ($reason === '') {
@@ -151,11 +160,11 @@ final class InstructorReviewQuestionAction
         });
     }
 
-    private function authorize(User $instructor): void
+    private function authorize(User $instructor, string $permission): void
     {
         abort_unless(
-            $instructor->hasRole(Role::Instructor->value)
-            && $instructor->can(Permission::QuestionReview->value),
+            PortalAccess::allows($instructor, PortalGroup::Instructor)
+            && $instructor->can($permission),
             403,
             'Chỉ giảng viên được duyệt lớp 1.',
         );

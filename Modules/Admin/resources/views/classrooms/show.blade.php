@@ -4,11 +4,13 @@
 
 <x-layouts.admin :title="$classroom->title">
     <div class="mb-6">
-        <a href="{{ route('admin.classrooms.index') }}"
+        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.classrooms.index'))
+<a href="{{ route('admin.classrooms.index') }}"
             class="mb-4 inline-flex items-center gap-1 font-label-sm text-label-sm text-primary hover:underline">
             <span class="material-symbols-outlined text-[18px]">arrow_back</span>
             Danh sách lớp
         </a>
+@endif
 
         <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
@@ -29,11 +31,13 @@
             </div>
 
             @if ($classroom->liveSession)
-                <a href="{{ route('admin.classrooms.live', [$classroom, $classroom->liveSession]) }}"
+                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.classrooms.live'))
+<a href="{{ route('admin.classrooms.live', [$classroom, $classroom->liveSession]) }}"
                     class="inline-flex items-center justify-center gap-2 rounded-lg bg-error px-4 py-2.5 font-label-md text-label-md font-semibold text-white hover:opacity-90">
                     <span class="material-symbols-outlined text-[20px]">sensors</span>
                     Vào live đang dạy
                 </a>
+@endif
             @endif
         </div>
     </div>
@@ -42,11 +46,13 @@
         <section class="rounded-xl border border-outline-variant bg-surface p-5 shadow-sm">
             <div class="mb-4 flex items-center justify-between gap-3">
                 <h2 class="font-headline-sm text-headline-sm text-on-surface">Các buổi học</h2>
-                <form method="post" action="{{ route('admin.classrooms.sessions.store', $classroom) }}" class="flex items-center gap-2">
+                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.classrooms.sessions.store'))
+<form method="post" action="{{ route('admin.classrooms.sessions.store', $classroom) }}" class="flex items-center gap-2">
                     @csrf
                     <input name="title" required maxlength="200" placeholder="Tên phòng trực tiếp" class="w-40 rounded-lg border border-outline-variant px-2.5 py-1.5 text-sm">
                     <button class="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-on-primary">Tạo buổi trực tiếp</button>
                 </form>
+@endif
             </div>
 
             @if ($classroom->sessions->isEmpty())
@@ -79,10 +85,12 @@
                             </div>
 
                             @if ($session->status === LiveSessionStatus::Live)
-                                <a href="{{ route('admin.classrooms.live', [$classroom, $session]) }}"
+                                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.classrooms.live'))
+<a href="{{ route('admin.classrooms.live', [$classroom, $session]) }}"
                                     class="inline-flex items-center justify-center rounded-lg bg-error px-3 py-1.5 font-label-sm text-label-sm font-semibold text-white hover:opacity-90">
                                     Vào phòng live
                                 </a>
+@endif
                             @endif
                         </div>
                     @endforeach

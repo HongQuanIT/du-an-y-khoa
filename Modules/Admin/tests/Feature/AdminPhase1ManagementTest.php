@@ -186,7 +186,7 @@ final class AdminPhase1ManagementTest extends TestCase
     {
         $super = $this->staffUser(Role::SuperAdmin);
         $role = \Spatie\Permission\Models\Role::findByName(Role::ContentEditor->value, 'web');
-        $permission = Permission::findByName('cms.manage', 'web');
+        $permission = Permission::findByName('cms_page.update', 'web');
 
         $this->actingAsStaff($super)
             ->put(route('admin.roles.permissions', $role), [
@@ -194,7 +194,7 @@ final class AdminPhase1ManagementTest extends TestCase
             ])
             ->assertRedirect();
 
-        $this->assertTrue($role->fresh()->hasPermissionTo('cms.manage'));
+        $this->assertTrue($role->fresh()->hasPermissionTo('cms_page.update'));
         $this->assertDatabaseHas('audit_logs', [
             'action' => 'admin.role.permission_change',
         ]);
@@ -204,7 +204,7 @@ final class AdminPhase1ManagementTest extends TestCase
     {
         $super = $this->staffUser(Role::SuperAdmin);
         $permissions = Permission::query()
-            ->whereIn('name', ['question.update', 'cms.manage'])
+            ->whereIn('name', ['question.update', 'cms_page.update'])
             ->pluck('id')
             ->all();
 
@@ -219,7 +219,7 @@ final class AdminPhase1ManagementTest extends TestCase
 
         $role = \Spatie\Permission\Models\Role::findByName('medical_reviewer', 'web');
         $this->assertTrue($role->hasPermissionTo('question.update'));
-        $this->assertTrue($role->hasPermissionTo('cms.manage'));
+        $this->assertTrue($role->hasPermissionTo('cms_page.update'));
         $this->assertSame(PortalGroup::Admin->value, $role->portal);
         $this->assertSame('Người duyệt nội dung y khoa', $role->display_name);
         $this->assertDatabaseHas('audit_logs', ['action' => 'admin.role.created']);
@@ -230,15 +230,19 @@ final class AdminPhase1ManagementTest extends TestCase
             ->assertSee('Người duyệt nội dung y khoa');
     }
 
-    public function test_admin_cannot_create_custom_role(): void
+    public function test_admin_can_create_custom_role(): void
     {
         $admin = $this->staffUser(Role::Admin);
 
         $this->actingAsStaff($admin)
-            ->post(route('admin.roles.store'), ['name' => 'forbidden_role'])
-            ->assertForbidden();
+            ->post(route('admin.roles.store'), [
+                'portal' => PortalGroup::Admin->value,
+                'name' => 'admin_assistant',
+                'display_name' => 'Trợ lý quản trị',
+            ])
+            ->assertRedirect();
 
-        $this->assertDatabaseMissing('roles', ['name' => 'forbidden_role', 'guard_name' => 'web']);
+        $this->assertDatabaseHas('roles', ['name' => 'admin_assistant', 'guard_name' => 'web']);
     }
 
     public function test_custom_role_name_is_normalized_before_validation(): void
@@ -263,7 +267,7 @@ final class AdminPhase1ManagementTest extends TestCase
     public function test_super_admin_cannot_create_role_with_permission_from_another_portal(): void
     {
         $super = $this->staffUser(Role::SuperAdmin);
-        $adminPermission = Permission::findByName('cms.manage', 'web');
+        $adminPermission = Permission::findByName('cms_page.update', 'web');
 
         $this->actingAsStaff($super)
             ->from(route('admin.roles.create'))
@@ -278,14 +282,36 @@ final class AdminPhase1ManagementTest extends TestCase
         $this->assertDatabaseMissing('roles', ['name' => 'learner_reviewer']);
     }
 
-    public function test_admin_cannot_sync_role_permissions(): void
+    public function test_admin_can_sync_role_permissions(): void
     {
         $admin = $this->staffUser(Role::Admin);
         $role = \Spatie\Permission\Models\Role::findByName(Role::ContentEditor->value, 'web');
-        $permission = Permission::findByName('question.view', 'web');
+        $permission = Permission::findByName('question.view_any', 'web');
 
         $this->actingAsStaff($admin)
             ->put(route('admin.roles.permissions', $role), [
+                'permissions' => [$permission->id],
+            ])
+            ->assertRedirect();
+
+        $this->assertTrue($role->fresh()->hasPermissionTo('question.view_any'));
+    }
+
+    public function test_admin_cannot_sync_super_admin_or_admin_role_permissions(): void
+    {
+        $admin = $this->staffUser(Role::Admin);
+        $superAdminRole = \Spatie\Permission\Models\Role::findByName(Role::SuperAdmin->value, 'web');
+        $adminRole = \Spatie\Permission\Models\Role::findByName(Role::Admin->value, 'web');
+        $permission = Permission::findByName('question.view_any', 'web');
+
+        $this->actingAsStaff($admin)
+            ->put(route('admin.roles.permissions', $superAdminRole), [
+                'permissions' => [$permission->id],
+            ])
+            ->assertForbidden();
+
+        $this->actingAsStaff($admin)
+            ->put(route('admin.roles.permissions', $adminRole), [
                 'permissions' => [$permission->id],
             ])
             ->assertForbidden();

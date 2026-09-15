@@ -7,7 +7,6 @@ namespace Modules\QuestionBank\Policies;
 use App\Models\User;
 use App\Support\Enums\Entitlement;
 use App\Support\Enums\Permission;
-use App\Support\Enums\Role;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Support\ServePublishedQuestion;
 
@@ -20,12 +19,12 @@ final class QuestionPolicy
 {
     public function view(User $user, Question $question): bool
     {
+        if (! $user->can(Permission::QuestionView->value)) {
+            return false;
+        }
+
         if (! ServePublishedQuestion::isAvailable($question)) {
-            return $user->hasAnyRole([
-                Role::SuperAdmin->value,
-                Role::Admin->value,
-                Role::ContentEditor->value,
-            ]) && $user->can(Permission::QuestionView->value);
+            return $this->canManageWorkingCopy($user);
         }
 
         $isFree = ServePublishedQuestion::publishedIsFree($question);
@@ -34,11 +33,7 @@ final class QuestionPolicy
             return true;
         }
 
-        return $user->hasAnyRole([
-            Role::SuperAdmin->value,
-            Role::Admin->value,
-            Role::ContentEditor->value,
-        ]);
+        return $this->canManageWorkingCopy($user);
     }
 
     public function create(User $user): bool
@@ -69,5 +64,14 @@ final class QuestionPolicy
     public function retire(User $user): bool
     {
         return $user->can(Permission::QuestionRetire->value);
+    }
+
+    private function canManageWorkingCopy(User $user): bool
+    {
+        return $user->canAny([
+            Permission::QuestionUpdate->value,
+            Permission::QuestionPublish->value,
+            Permission::QuestionReview->value,
+        ]);
     }
 }

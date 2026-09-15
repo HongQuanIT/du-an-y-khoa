@@ -21,10 +21,12 @@
     <p>File CSV đính kèm chứa bảng chi tiết của báo cáo.</p>
 
     <p>
-        <a href="{{ route('admin.reports.show', [$schedule->category_slug, $schedule->report_slug, 'range' => $schedule->range_key]) }}"
+        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.reports.show'))
+<a href="{{ route('admin.reports.show', [$schedule->category_slug, $schedule->report_slug, 'range' => $schedule->range_key]) }}"
             style="color: #005c55; font-weight: 600;">
             Xem báo cáo trên cổng quản trị
         </a>
+@endif
     </p>
 
     <p style="color: #5f6368; font-size: 0.875rem;">

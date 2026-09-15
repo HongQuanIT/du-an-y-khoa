@@ -6,16 +6,14 @@ namespace Modules\Classroom\Tests\Feature;
 
 use App\Models\User;
 use App\Support\Enums\Role;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Classroom\Actions\CreateClassroomAction;
 use Modules\Classroom\Enums\ClassroomStatus;
 use Modules\Classroom\Enums\LiveSessionStatus;
-use Modules\Classroom\Models\Classroom;
 use Modules\QuestionBank\Models\Question;
-use Spatie\Permission\Models\Role as SpatieRole;
-use Tests\TestCase;
 use Tests\Support\CreatesMedicalTaxonomy;
-
+use Tests\TestCase;
 
 final class ClassroomFlowTest extends TestCase
 {
@@ -26,17 +24,18 @@ final class ClassroomFlowTest extends TestCase
     {
         parent::setUp();
 
-        foreach (Role::values() as $role) {
-            SpatieRole::findOrCreate($role, 'web');
-        }
+        $this->seed(RolePermissionSeeder::class);
 
-        config(['classroom.open_hosting' => true]);
+        config([
+            'broadcasting.default' => 'null',
+            'classroom.open_hosting' => true,
+        ]);
     }
 
     public function test_host_can_create_schedule_start_end_and_chat_locks_after_end(): void
     {
         $host = User::factory()->create();
-        $host->assignRole(Role::Student->value);
+        $host->assignRole([Role::Instructor->value, Role::Student->value]);
 
         $member = User::factory()->create();
         $member->assignRole(Role::Student->value);
@@ -95,7 +94,7 @@ final class ClassroomFlowTest extends TestCase
     public function test_host_can_mute_and_unmute_chat(): void
     {
         $host = User::factory()->create();
-        $host->assignRole(Role::Student->value);
+        $host->assignRole([Role::Instructor->value, Role::Student->value]);
 
         $member = User::factory()->create();
         $member->assignRole(Role::Student->value);
@@ -154,7 +153,7 @@ final class ClassroomFlowTest extends TestCase
     public function test_raise_hand_lists_and_can_be_dismissed_by_host(): void
     {
         $host = User::factory()->create();
-        $host->assignRole(Role::Student->value);
+        $host->assignRole([Role::Instructor->value, Role::Student->value]);
 
         $member = User::factory()->create();
         $member->assignRole(Role::Student->value);
@@ -210,7 +209,7 @@ final class ClassroomFlowTest extends TestCase
     public function test_host_can_invite_mute_and_unmute_speaker(): void
     {
         $host = User::factory()->create();
-        $host->assignRole(Role::Student->value);
+        $host->assignRole([Role::Instructor->value, Role::Student->value]);
 
         $member = User::factory()->create();
         $member->assignRole(Role::Student->value);
@@ -278,7 +277,7 @@ final class ClassroomFlowTest extends TestCase
     public function test_member_can_send_live_reaction(): void
     {
         $host = User::factory()->create();
-        $host->assignRole(Role::Student->value);
+        $host->assignRole([Role::Instructor->value, Role::Student->value]);
         $member = User::factory()->create();
         $member->assignRole(Role::Student->value);
 
@@ -312,7 +311,7 @@ final class ClassroomFlowTest extends TestCase
     public function test_live_room_with_question_set_syncs_panel(): void
     {
         $host = User::factory()->create();
-        $host->assignRole(Role::Student->value);
+        $host->assignRole([Role::Instructor->value, Role::Student->value]);
 
         $topic = $this->makeLesson([
             'name' => 'Test',
@@ -338,7 +337,7 @@ final class ClassroomFlowTest extends TestCase
         $firstOption = $question->options()->orderBy('order')->firstOrFail();
         $secondOption = $question->options()->orderBy('order')->skip(1)->firstOrFail();
         $secondQuestion = Question::factory()->withOptions(2)->create([
-                        'stem' => 'Câu hỏi live thứ hai',
+            'stem' => 'Câu hỏi live thứ hai',
             'is_free' => true,
         ]);
         $secondQuestion->options()->update(['explanation' => 'Giải thích câu 2']);

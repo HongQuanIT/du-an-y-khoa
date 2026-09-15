@@ -15,15 +15,18 @@
 
     <div class="mb-6 grid gap-3 sm:grid-cols-4">
         @foreach ($statuses as $value => $label)
-            <a href="{{ route('admin.question-feedback.index', ['status' => $value]) }}"
+            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.question-feedback.index'))
+<a href="{{ route('admin.question-feedback.index', ['status' => $value]) }}"
                 class="rounded-xl border border-outline-variant bg-surface p-4 transition hover:bg-surface-container-low">
                 <p class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">{{ $label }}</p>
                 <p class="mt-2 text-2xl font-bold text-on-surface">{{ number_format((int) ($statusCounts[$value] ?? 0)) }}</p>
             </a>
+@endif
         @endforeach
     </div>
 
-    <form method="get" action="{{ route('admin.question-feedback.index') }}" role="search"
+    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.question-feedback.index'))
+<form method="get" action="{{ route('admin.question-feedback.index') }}" role="search"
         aria-label="Lọc phản hồi câu hỏi"
         class="mb-6 grid grid-cols-1 items-end gap-4 rounded-xl border border-outline-variant bg-surface p-4 md:grid-cols-12">
         <label class="md:col-span-4">
@@ -69,6 +72,7 @@
             </a>
         </div>
     </form>
+@endif
 
     <div class="overflow-hidden rounded-xl border border-outline-variant bg-surface">
         <div class="overflow-x-auto">
@@ -121,10 +125,12 @@
                             </td>
                             <td class="max-w-sm px-4 py-4">
                                 @if ($feedback->question)
-                                    <a href="{{ route('admin.questions.edit', $feedback->question) }}"
+                                    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.edit'))
+<a href="{{ route('admin.questions.edit', $feedback->question) }}"
                                         class="font-semibold text-primary hover:underline">
                                         {{ \Illuminate\Support\Str::limit(strip_tags($feedback->question->stem), 120) }}
                                     </a>
+@endif
                                     <p class="mt-1 text-xs text-on-surface-variant">ID: {{ $feedback->question_id }}</p>
                                 @else
                                     <span class="text-on-surface-variant">Câu hỏi đã bị xóa</span>
@@ -138,7 +144,8 @@
                                 {{ $feedback->created_at?->format('d/m/Y H:i') }}
                             </td>
                             <td class="min-w-56 px-4 py-4">
-                                <form method="post" action="{{ route('admin.question-feedback.update-status', $feedback) }}" class="space-y-2">
+                                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.question-feedback.update-status'))
+<form method="post" action="{{ route('admin.question-feedback.update-status', $feedback) }}" class="space-y-2">
                                     @csrf
                                     @method('patch')
                                     <span class="inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold {{ $statusTone[$feedback->status] ?? $statusTone['pending'] }}">
@@ -155,6 +162,7 @@
                                         </button>
                                     </div>
                                 </form>
+@endif
                             </td>
                         </tr>
                     @empty

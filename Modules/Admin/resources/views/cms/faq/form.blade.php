@@ -8,8 +8,10 @@
     <x-admin.page-header :title="$isNew ? 'Thêm FAQ' : 'Sửa FAQ'"
         :description="$isNew ? 'Tạo câu hỏi thường gặp mới.' : 'Cập nhật nội dung FAQ #'.$faq->id">
         <x-slot:actions>
-            <a href="{{ route('admin.cms.faq.index') }}"
+            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.faq.index'))
+<a href="{{ route('admin.cms.faq.index') }}"
                 class="rounded-lg px-3 py-2 font-label-md text-on-surface-variant hover:bg-surface-container-low">← Danh sách</a>
+@endif
             @if (! $isNew && $faq->is_published)
                 <a href="{{ route('landing.faq') }}#faq-{{ $faq->id }}" target="_blank" rel="noopener noreferrer"
                     class="rounded-lg border border-outline-variant px-3 py-2 font-label-md text-on-surface hover:bg-surface-container-low">
@@ -93,7 +95,8 @@
     </form>
 
     @unless ($isNew)
-        <form method="post" action="{{ route('admin.cms.faq.destroy', $faq) }}" class="mt-4 max-w-3xl"
+        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.faq.destroy'))
+<form method="post" action="{{ route('admin.cms.faq.destroy', $faq) }}" class="mt-4 max-w-3xl"
             onsubmit="return confirm('Xóa FAQ này?')">
             @csrf
             @method('DELETE')
@@ -102,5 +105,6 @@
                 Xóa FAQ
             </button>
         </form>
+@endif
     @endunless
 </x-layouts.admin>

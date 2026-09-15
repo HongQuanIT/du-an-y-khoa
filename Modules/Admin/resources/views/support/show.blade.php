@@ -17,11 +17,15 @@
                     Bạn có muốn tiếp nhận và xử lý không?
                 </p>
                 <div class="mt-6 flex justify-end gap-2">
-                    <a href="{{ route('admin.support.index') }}" class="rounded-lg border border-outline-variant px-4 py-2 text-sm font-semibold text-on-surface-variant">Quay lại</a>
-                    <form method="post" action="{{ route('admin.support.claim', $conversation) }}">
+                    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.support.index'))
+<a href="{{ route('admin.support.index') }}" class="rounded-lg border border-outline-variant px-4 py-2 text-sm font-semibold text-on-surface-variant">Quay lại</a>
+@endif
+                    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.support.claim'))
+<form method="post" action="{{ route('admin.support.claim', $conversation) }}">
                         @csrf
                         <button type="submit" class="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-on-primary">Tiếp nhận xử lý</button>
                     </form>
+@endif
                 </div>
             </div>
         </div>
@@ -31,7 +35,9 @@
     <div class="flex h-[calc(100dvh-var(--spacing-header-height)-2*var(--spacing-margin-mobile))] flex-col gap-3 overflow-hidden md:h-[calc(100dvh-var(--spacing-header-height)-2*var(--spacing-margin-desktop))] {{ $requiresTakeoverConfirm ? 'pointer-events-none select-none opacity-60' : '' }}">
         <header class="flex shrink-0 items-start justify-between gap-4">
             <div class="min-w-0">
-                <a href="{{ route('admin.support.index') }}" class="text-sm text-primary">← Danh sách hỗ trợ</a>
+                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.support.index'))
+<a href="{{ route('admin.support.index') }}" class="text-sm text-primary">← Danh sách hỗ trợ</a>
+@endif
                 <h1 class="mt-1 truncate font-headline-sm text-on-surface">{{ $conversation->subject ?: 'Yêu cầu hỗ trợ' }}</h1>
                 <p class="truncate text-on-surface-variant">{{ $conversation->user->name }} · {{ $conversation->user->email }}</p>
                 <p class="mt-1 text-xs text-on-surface-variant">
@@ -41,10 +47,12 @@
                 </p>
             </div>
             @if ($conversation->status !== 'resolved' && ! $requiresTakeoverConfirm)
-                <form method="post" action="{{ route('admin.support.resolve', $conversation) }}" class="shrink-0">
+                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.support.resolve'))
+<form method="post" action="{{ route('admin.support.resolve', $conversation) }}" class="shrink-0">
                     @csrf
                     <button type="submit" class="rounded-lg border border-outline-variant bg-surface px-4 py-2 text-sm whitespace-nowrap">Đánh dấu đã xử lý</button>
                 </form>
+@endif
             @elseif ($conversation->status === 'resolved')
                 <span class="shrink-0 rounded-full bg-surface-container px-3 py-1.5 text-xs font-semibold text-on-surface-variant">Đã đóng</span>
             @endif
@@ -95,11 +103,13 @@
             </div>
 
             @if ($conversation->status !== 'resolved' && ! $requiresTakeoverConfirm)
-                <form data-support-message-form id="admin-support-message-form" method="post" action="{{ route('admin.support.messages.store', $conversation) }}" class="flex shrink-0 items-end gap-3 border-t border-outline-variant bg-surface p-4">
+                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.support.messages.store'))
+<form data-support-message-form id="admin-support-message-form" method="post" action="{{ route('admin.support.messages.store', $conversation) }}" class="flex shrink-0 items-end gap-3 border-t border-outline-variant bg-surface p-4">
                     @csrf
                     <textarea data-support-message-input id="admin-support-message-input" name="message" required maxlength="4000" rows="2" class="min-h-[2.75rem] max-h-32 min-w-0 flex-1 resize-y rounded-lg border border-outline-variant bg-surface px-3 py-2" placeholder="Phản hồi người dùng…"></textarea>
                     <button type="submit" class="rounded-lg bg-primary px-4 py-2.5 font-semibold text-on-primary">Gửi</button>
                 </form>
+@endif
             @endif
         </section>
     </div>

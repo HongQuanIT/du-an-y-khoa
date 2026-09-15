@@ -21,11 +21,13 @@
         <x-admin.page-header title="Tạo lớp học"
             description="Tạo lớp cho giảng viên và chuẩn bị sẵn nội dung chữa bài trong cùng một quy trình.">
             <x-slot:actions>
-                <a href="{{ route('admin.classrooms.index') }}"
+                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.classrooms.index'))
+<a href="{{ route('admin.classrooms.index') }}"
                     class="inline-flex items-center gap-2 rounded-lg border border-outline-variant bg-surface px-4 py-2.5 font-label-md text-label-md font-semibold text-on-surface hover:bg-surface-container-low">
                     <span class="material-symbols-outlined text-[18px]">arrow_back</span>
                     Danh sách lớp
                 </a>
+@endif
             </x-slot:actions>
         </x-admin.page-header>
 
@@ -47,7 +49,8 @@
             </section>
         @endif
 
-        <form method="post" action="{{ route('admin.classrooms.store') }}"
+        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.classrooms.store'))
+<form method="post" action="{{ route('admin.classrooms.store') }}"
             class="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_320px]"
             novalidate>
             @csrf
@@ -390,6 +393,7 @@
                 </section>
             </aside>
         </form>
+@endif
     </div>
 
     <script>

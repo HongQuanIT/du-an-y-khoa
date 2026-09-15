@@ -1,4 +1,4 @@
-@can(\App\Support\Enums\Permission::MediaView->value)
+@can('media.view')
     <div x-data="mediaPicker()" x-cloak x-show="open" class="fixed inset-0 z-[80]"
         @media-picker:open.window="openFromEvent($event)"
         @keydown.escape.window="close()">
@@ -16,14 +16,14 @@
                 <button type="button" class="border-b-2 px-4 py-2.5 font-label-md"
                     :class="tab === 'library' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant'"
                     @click="tab = 'library'; load(true)">Thư viện</button>
-                @can(\App\Support\Enums\Permission::MediaManage->value)
+                @canany(['media.upload', 'media.import'])
                     <button type="button" class="border-b-2 px-4 py-2.5 font-label-md"
                         :class="tab === 'upload' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant'"
                         @click="tab = 'upload'">Tải lên</button>
                     <button type="button" class="border-b-2 px-4 py-2.5 font-label-md"
                         :class="tab === 'url' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant'"
                         @click="tab = 'url'">URL / CDN</button>
-                @endcan
+                @endcanany
             </div>
 
             <div class="min-h-[22rem] flex-1 overflow-y-auto p-5" x-show="tab === 'library'">

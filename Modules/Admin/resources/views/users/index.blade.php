@@ -15,15 +15,18 @@
         description="Tìm kiếm, lọc và quản lý tài khoản trên hệ thống.">
         <x-slot:actions>
             @if ($canCreate)
-                <a href="{{ route('admin.users.create') }}"
+                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.users.create'))
+<a href="{{ route('admin.users.create') }}"
                     class="rounded-lg bg-primary px-3 py-2 font-label-md text-label-md text-on-primary hover:opacity-90">Tạo người dùng</a>
+@endif
             @endif
         </x-slot:actions>
     </x-admin.page-header>
 
     <x-admin.flash />
 
-    <form method="get" action="{{ route('admin.users.index') }}" role="search" aria-label="Lọc danh sách người dùng"
+    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.users.index'))
+<form method="get" action="{{ route('admin.users.index') }}" role="search" aria-label="Lọc danh sách người dùng"
         class="mb-6 space-y-4 rounded-xl border border-outline-variant bg-surface p-4">
         <div class="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 xl:grid-cols-12">
             <div class="sm:col-span-2 xl:col-span-3">
@@ -49,7 +52,7 @@
                     name="role"
                     label="Vai trò"
                     placeholder="Tất cả vai trò"
-                    :options="collect($roles)->map(fn ($role) => ['id' => $role->value, 'label' => $role->label()])->all()"
+                    :options="collect($roles)->map(fn ($role) => ['id' => $role->name, 'label' => \Modules\Admin\Support\PermissionCatalog::roleLabel($role)])->all()"
                     :selected="$filters['role'] ?? []"
                 />
             </div>
@@ -91,6 +94,7 @@
             </div>
         </details>
     </form>
+@endif
 
     <div class="overflow-hidden rounded-xl border border-outline-variant bg-surface">
         <div class="w-full overflow-x-auto">
@@ -110,7 +114,14 @@
                 <tbody class="divide-y divide-outline-variant/60">
                     @forelse ($users as $user)
                         @php
+                            $roleModel = $user->roles->first();
                             $roleEnum = \App\Support\Enums\Role::tryFromName($user->primaryRoleName());
+                            $rolePortal = $roleModel
+                                ? (\App\Support\Enums\PortalGroup::tryFrom((string) $roleModel->portal) ?? $roleEnum?->portal())
+                                : null;
+                            $roleLabel = $roleModel
+                                ? \Modules\Admin\Support\PermissionCatalog::roleLabel($roleModel)
+                                : null;
                             $statusEnum = $user->status ?? \App\Support\Enums\UserStatus::Active;
                             $statusClass = match ($statusEnum) {
                                 \App\Support\Enums\UserStatus::Active => 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300',
@@ -137,9 +148,9 @@
                                 </div>
                             </td>
                             <td class="px-4 py-3.5 align-middle">
-                                @if ($roleEnum)
-                                    <div class="truncate text-sm text-on-surface" title="{{ $roleEnum->portal()->label() }}">{{ $roleEnum->portal()->label() }}</div>
-                                    <div class="truncate text-xs text-on-surface-variant" title="{{ $roleEnum->label() }}">{{ $roleEnum->label() }}</div>
+                                @if ($roleModel && $rolePortal)
+                                    <div class="truncate text-sm text-on-surface" title="{{ $rolePortal->label() }}">{{ $rolePortal->label() }}</div>
+                                    <div class="truncate text-xs text-on-surface-variant" title="{{ $roleLabel }}">{{ $roleLabel }}</div>
                                 @else
                                     <span class="text-sm text-on-surface-variant">—</span>
                                 @endif
@@ -184,10 +195,12 @@
                                 @endif
                             </td>
                             <td class="px-5 py-3.5 align-middle text-end">
-                                <a href="{{ route('admin.users.show', $user) }}"
+                                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.users.show'))
+<a href="{{ route('admin.users.show', $user) }}"
                                     class="inline-flex h-8 items-center justify-center whitespace-nowrap rounded-lg border border-outline-variant px-2.5 text-xs font-medium text-on-surface transition hover:bg-surface-container-low">
                                     Chi tiết
                                 </a>
+@endif
                             </td>
                         </tr>
                     @empty

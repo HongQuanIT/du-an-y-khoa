@@ -10,7 +10,7 @@ use Modules\QuestionBank\Http\Controllers\QuestionController;
 | route-name prefix `api.question-bank.`.
 */
 
-Route::middleware('auth:sanctum')->group(function (): void {
+Route::middleware(['auth:sanctum', 'portal:learner', 'permission:question.view'])->group(function (): void {
     Route::get('questions', [QuestionController::class, 'index'])->name('questions.index');
     Route::get('questions/{question}', [QuestionController::class, 'show'])->name('questions.show');
 });

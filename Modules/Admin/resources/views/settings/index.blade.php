@@ -12,7 +12,8 @@
 
     <x-admin.flash />
 
-    <form method="post" action="{{ route('admin.settings.update') }}"
+    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.settings.update'))
+<form method="post" action="{{ route('admin.settings.update') }}"
         x-data="{ active: @js(request()->query('tab', $firstGroup)) }"
         class="rounded-xl border border-outline-variant bg-surface">
         @csrf
@@ -115,4 +116,5 @@
             </button>
         </div>
     </form>
+@endif
 </x-layouts.admin>

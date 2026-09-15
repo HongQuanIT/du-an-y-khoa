@@ -35,7 +35,8 @@
 
     <x-admin.flash />
 
-    <form method="get" action="{{ route('admin.billing.payments.index') }}"
+    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.billing.payments.index'))
+<form method="get" action="{{ route('admin.billing.payments.index') }}"
         role="search" aria-label="Lọc phiên thanh toán"
         class="mb-6 grid grid-cols-1 items-end gap-4 rounded-xl border border-outline-variant bg-surface p-4 sm:grid-cols-2 xl:grid-cols-12">
         <div class="xl:col-span-4">
@@ -64,6 +65,7 @@
                 class="inline-flex h-11 flex-1 items-center justify-center rounded-lg border border-outline-variant px-4 font-label-md text-on-surface-variant hover:bg-surface-container-low">Xóa lọc</a>
         </div>
     </form>
+@endif
 
     <div class="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
         <div class="overflow-x-auto">

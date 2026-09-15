@@ -48,6 +48,9 @@ final class ExamController extends Controller
     {
         $validated = $this->validatedExam($request);
         $status = ExamStatus::from($validated['status']);
+        if ($status === ExamStatus::Published) {
+            abort_unless($request->user()->can('exam.publish'), 403);
+        }
         $examTopicsInput = $this->normalizedExamTopicsInput($validated['exam_topics'] ?? []);
 
         if ($status === ExamStatus::Published && $examTopicsInput === [] && count($validated['questions'] ?? []) === 0) {
@@ -112,6 +115,9 @@ final class ExamController extends Controller
     {
         $validated = $this->validatedExam($request);
         $status = ExamStatus::from($validated['status']);
+        if ($status !== $exam->status) {
+            abort_unless($request->user()->can($status === ExamStatus::Published ? 'exam.publish' : 'exam.archive'), 403);
+        }
         $examTopicsInput = $this->normalizedExamTopicsInput($validated['exam_topics'] ?? []);
 
         if ($status === ExamStatus::Published && $examTopicsInput === [] && count($validated['questions'] ?? []) === 0) {

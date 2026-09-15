@@ -1,13 +1,13 @@
 {{--
   Portal → role picker (Alpine).
   Expects:
-    - $assignableRoles: list<Role>
+    - $assignableRoles: list<Spatie\Permission\Models\Role>
     - $selectedRole: ?string (optional current role value)
     - $inputName: string (default "role")
 --}}
 @php
     use App\Support\Enums\PortalGroup;
-    use App\Support\Enums\Role;
+    use Modules\Admin\Support\PermissionCatalog;
 
     $assignableRoles = $assignableRoles ?? [];
     $selectedRole = $selectedRole ?? old('role');
@@ -17,7 +17,7 @@
     foreach (PortalGroup::cases() as $portal) {
         $roles = array_values(array_filter(
             $assignableRoles,
-            static fn (Role $role): bool => $role->portal() === $portal,
+            static fn ($role): bool => $role->portal === $portal->value,
         ));
         if ($roles !== []) {
             $portalsWithRoles[] = [
@@ -30,12 +30,12 @@
     $initialPortal = null;
     $initialRole = is_string($selectedRole) ? $selectedRole : '';
     if ($initialRole !== '') {
-        $initialPortal = Role::tryFrom($initialRole)?->portal()->value;
+        $initialPortal = collect($assignableRoles)->firstWhere('name', $initialRole)?->portal;
     }
     if ($initialPortal === null && count($portalsWithRoles) === 1) {
         $initialPortal = $portalsWithRoles[0]['portal']->value;
         if (count($portalsWithRoles[0]['roles']) === 1) {
-            $initialRole = $portalsWithRoles[0]['roles'][0]->value;
+            $initialRole = $portalsWithRoles[0]['roles'][0]->name;
         }
     }
 
@@ -44,9 +44,9 @@
         $portal = $item['portal'];
 
         return [
-            $portal->value => collect($item['roles'])->map(fn (Role $role) => [
-                'value' => $role->value,
-                'label' => $role->label(),
+            $portal->value => collect($item['roles'])->map(fn ($role) => [
+                'value' => $role->name,
+                'label' => PermissionCatalog::roleLabel($role),
             ])->values()->all(),
         ];
     })->all();

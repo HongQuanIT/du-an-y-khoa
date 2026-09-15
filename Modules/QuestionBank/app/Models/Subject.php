@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\QuestionBank\Models;
 
-use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
@@ -33,12 +32,6 @@ class Subject extends Model
         'status' => TaxonomyStatus::class,
         'sort_order' => 'integer',
     ];
-
-    /** @return BelongsToMany<User, $this> */
-    public function instructors(): BelongsToMany
-    {
-        return $this->belongsToMany(User::class, 'instructor_subject')->withTimestamps();
-    }
 
     /** @return BelongsToMany<Lesson, $this> */
     public function lessons(): BelongsToMany

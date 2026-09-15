@@ -42,14 +42,6 @@
     a.hover\:underline:hover {
         text-decoration-line: none;
     }
-
-    .question-diff-del {
-        @apply rounded-sm bg-rose-100 px-0.5 text-rose-900 line-through decoration-rose-400;
-    }
-
-    .question-diff-ins {
-        @apply rounded-sm bg-emerald-100 px-0.5 text-emerald-950 no-underline;
-    }
 }
 
 @theme {
@@ -582,149 +574,127 @@ mark[data-hl='#10b981'] {
     animation: live-reaction-float 4s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
 }
 
-/* In @layer base so Tailwind text-* / text-[Npx] utilities can override the 24px default. */
-@layer base {
-    .material-symbols-outlined {
-        font-family: 'Material Symbols Outlined';
-        font-weight: normal;
-        font-style: normal;
-        font-size: 24px;
-        line-height: 1;
-        letter-spacing: normal;
-        text-transform: none;
-        display: inline-block;
-        white-space: nowrap;
-        word-wrap: normal;
-        direction: ltr;
-        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-        -webkit-font-feature-settings: 'liga';
-        -webkit-font-smoothing: antialiased;
-    }
+.material-symbols-outlined {
+    font-family: 'Material Symbols Outlined';
+    font-weight: normal;
+    font-style: normal;
+    font-size: 24px;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    -webkit-font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
 }
 
-/* Admin question / FAQ rich editor */
-.admin-rich-toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 2px;
-    padding: 6px 8px;
+/* Quill (admin question editor) */
+.admin-rich-editor .ql-toolbar.ql-snow {
+    border: none;
     border-bottom: 1px solid var(--color-outline-variant);
     background: var(--color-surface-container-low);
     border-top-left-radius: 0.75rem;
     border-top-right-radius: 0.75rem;
 }
-.admin-rich-toolbar__btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 28px;
-    height: 28px;
-    padding: 0 6px;
-    border: 0;
-    border-radius: 6px;
-    background: transparent;
-    color: var(--color-on-surface-variant);
-    font-size: 0.75rem;
-    font-weight: 700;
-    cursor: pointer;
+.admin-rich-editor .ql-container.ql-snow {
+    border: none;
+    font-family: inherit;
+    font-size: 0.875rem;
+    border-bottom-left-radius: 0.75rem;
+    border-bottom-right-radius: 0.75rem;
 }
-.admin-rich-toolbar__btn:hover {
-    background: var(--color-surface-container-high, #e2e8f0);
-    color: var(--color-on-surface);
-}
-.admin-rich-toolbar__btn .material-symbols-outlined {
-    font-size: 18px;
-    line-height: 1;
-}
-.admin-rich-editor .admin-rich-surface,
 .admin-rich-editor .ql-editor {
     min-height: 160px;
-    padding: 12px 16px;
-    outline: none;
-    user-select: text;
-    -webkit-user-select: text;
-    pointer-events: auto;
-    white-space: pre-wrap;
-    word-wrap: break-word;
 }
-.admin-rich-editor .admin-rich-surface strong,
-.admin-rich-editor .admin-rich-surface b,
 .admin-rich-editor .ql-editor strong,
 .admin-rich-editor .ql-editor b {
     font-weight: 700;
 }
-.admin-rich-editor .admin-rich-surface em,
-.admin-rich-editor .admin-rich-surface i,
 .admin-rich-editor .ql-editor em,
 .admin-rich-editor .ql-editor i {
     font-style: italic;
 }
-.admin-rich-editor .admin-rich-surface u,
 .admin-rich-editor .ql-editor u {
     text-decoration: underline;
 }
-.admin-rich-editor .admin-rich-surface a,
 .admin-rich-editor .ql-editor a {
     text-decoration: underline;
     color: var(--color-primary, #0f766e);
 }
-.admin-rich-editor .admin-rich-surface h2,
 .admin-rich-editor .ql-editor h2 {
     font-size: 1.25rem;
     font-weight: 700;
     line-height: 1.4;
     margin: 0.5em 0;
 }
-.admin-rich-editor .admin-rich-surface h3,
 .admin-rich-editor .ql-editor h3 {
     font-size: 1.1rem;
     font-weight: 600;
     line-height: 1.4;
     margin: 0.4em 0;
 }
-.admin-rich-editor .admin-rich-surface ol,
 .admin-rich-editor .ql-editor ol {
     list-style: decimal;
     padding-left: 1.5rem;
 }
-.admin-rich-editor .admin-rich-surface ul,
 .admin-rich-editor .ql-editor ul {
     list-style: disc;
     padding-left: 1.5rem;
 }
-.admin-rich-editor .admin-rich-surface li,
 .admin-rich-editor .ql-editor li {
     margin: 0.15em 0;
 }
-.admin-rich-editor .admin-rich-surface.is-blank::before,
+.admin-rich-editor .ql-toolbar.ql-snow button {
+    cursor: pointer;
+}
 .admin-rich-editor .ql-editor.ql-blank::before {
-    content: attr(data-placeholder);
     font-style: italic;
     color: var(--color-on-surface-variant);
     opacity: 0.6;
     pointer-events: none;
 }
-.admin-rich-editor .admin-rich-surface img,
 .admin-rich-editor .ql-editor img {
     max-width: 100%;
     height: auto;
     border-radius: 0.5rem;
 }
 
-.dark .admin-rich-editor .admin-rich-surface,
 .dark .admin-rich-editor .ql-container.ql-snow {
     background: var(--color-surface);
     color: var(--color-on-surface);
 }
 
-.dark .admin-rich-editor .admin-rich-surface.is-blank::before,
 .dark .admin-rich-editor .ql-editor.ql-blank::before {
     color: var(--color-on-surface-variant);
 }
 
-.dark .admin-rich-toolbar__btn {
+.dark .admin-rich-editor .ql-snow .ql-stroke {
+    stroke: var(--color-on-surface-variant);
+}
+
+.dark .admin-rich-editor .ql-snow .ql-fill {
+    fill: var(--color-on-surface-variant);
+}
+
+.dark .admin-rich-editor .ql-snow .ql-picker {
     color: var(--color-on-surface-variant);
+}
+
+/* Custom Quill toolbar button: Hint */
+.ql-toolbar button.ql-hint {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 24px;
+    padding: 0;
+}
+.ql-toolbar button.ql-hint:hover {
+    background-color: var(--color-surface-container-high, #f1f5f9);
+    border-radius: 4px;
 }
 
 /* Admin editor: hint always visible with colored underline */
@@ -738,19 +708,18 @@ mark[data-hl='#10b981'] {
     cursor: default;
 }
 
-/* Mini editor (option explanations / hints) */
-.admin-rich-editor.mini .admin-rich-toolbar {
+/* Mini Quill variant (option explanations) */
+.admin-rich-editor.mini .ql-toolbar.ql-snow {
     padding: 4px 8px;
-    border-top-left-radius: 0.5rem;
-    border-top-right-radius: 0.5rem;
 }
-.admin-rich-editor.mini .admin-rich-surface,
+.admin-rich-editor.mini .ql-toolbar.ql-snow .ql-formats {
+    margin-right: 8px;
+}
 .admin-rich-editor.mini .ql-editor {
     min-height: 60px;
     padding: 8px 12px;
     font-size: 0.8125rem;
 }
-.admin-rich-editor.mini .admin-rich-surface img,
 .admin-rich-editor.mini .ql-editor img {
     max-width: 220px;
     height: auto;
@@ -758,7 +727,6 @@ mark[data-hl='#10b981'] {
     margin-top: 4px;
     display: block;
 }
-.admin-rich-editor.mini .admin-rich-surface img + em,
 .admin-rich-editor.mini .ql-editor img + em,
 .admin-rich-editor.mini .ql-editor img ~ p:first-of-type {
     font-size: 0.75rem;

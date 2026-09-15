@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Modules\Classroom\Actions;
 
-use App\Support\Enums\Permission;
 use App\Models\User;
 use App\Support\Concerns\AsAction;
 use Illuminate\Validation\ValidationException;
@@ -25,7 +24,7 @@ final class SendLiveMessageAction
             ]);
         }
 
-        $isOverseer = $user->can(Permission::ClassroomOversee->value);
+        $isOverseer = $user->can('classroom_oversight.view_any');
 
         if (! $isOverseer) {
             $member = $session->classroom->memberFor($user);

@@ -6,7 +6,6 @@ namespace Modules\Admin\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Support\Enums\Permission;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 use Modules\Admin\Actions\RestoreQuestionVersionAction;
@@ -49,7 +48,7 @@ final class QuestionVersionController extends Controller
             'versions' => $versions,
             'lessonNames' => $lessonNames,
             'contentVersion' => $contentVersion,
-            'canRestore' => $this->actor()->can(Permission::QuestionUpdate->value),
+            'canRestore' => $this->actor()->canAny(['question_version.restore']),
         ]);
     }
 
@@ -58,7 +57,7 @@ final class QuestionVersionController extends Controller
         QuestionVersion $version,
         RestoreQuestionVersionAction $action,
     ): RedirectResponse {
-        abort_unless($this->actor()->can(Permission::QuestionUpdate->value), 403);
+        abort_unless($this->actor()->canAny(['question_version.restore']), 403);
         QuestionAccess::authorizeView($this->actor(), $question);
 
         $restored = $action->handle($this->actor(), $question, $version);

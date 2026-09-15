@@ -18,29 +18,15 @@ final class QuestionReviewComparisonTest extends TestCase
     use CreatesMedicalTaxonomy;
     use RefreshDatabase;
 
-    public function test_unpublished_question_compares_against_empty_published_side(): void
+    public function test_returns_null_when_question_has_never_been_published(): void
     {
         $question = Question::factory()->create([
-            'stem' => 'Câu hỏi mới chưa từng xuất bản',
             'status' => QuestionStatus::InReview,
             'version' => 0,
             'published_version' => null,
         ]);
-        $question->options()->create([
-            'label' => 'A',
-            'content' => 'Đáp án mới',
-            'is_correct' => true,
-            'order' => 1,
-        ]);
 
-        $comparison = app(QuestionReviewComparison::class)->compare($question->fresh(['options', 'lessons']));
-
-        $this->assertFalse($comparison['can_compare']);
-        $this->assertNull($comparison['published_version']);
-        $this->assertTrue($comparison['has_changes']);
-        $this->assertContains('Câu mới', $comparison['changed_labels']);
-        $this->assertTrue($comparison['stem']['changed']);
-        $this->assertSame('added', $comparison['options'][0]['change']);
+        $this->assertNull(app(QuestionReviewComparison::class)->compare($question));
     }
 
     public function test_highlights_working_copy_changes_against_published_snapshot(): void
@@ -109,7 +95,7 @@ final class QuestionReviewComparisonTest extends TestCase
         $this->assertTrue($comparison['can_compare']);
         $this->assertSame(1, $comparison['published_version']);
         $this->assertTrue($comparison['has_changes']);
-        $this->assertContains('Câu hỏi', $comparison['changed_labels']);
+        $this->assertContains('Đề bài', $comparison['changed_labels']);
         $this->assertContains('Đáp án', $comparison['changed_labels']);
         $this->assertContains('Bài học', $comparison['changed_labels']);
         $this->assertStringContainsString('<del', $comparison['stem']['published_html']);

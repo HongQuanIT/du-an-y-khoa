@@ -15,11 +15,13 @@
             </div>
         </div>
 
-        <form class="space-y-5" action="{{ route('admin.2fa.confirm') }}" method="post">
+        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.2fa.confirm'))
+<form class="space-y-5" action="{{ route('admin.2fa.confirm') }}" method="post">
             @csrf
             <x-auth.input name="code" label="Mã xác thực (6 số)" type="text" inputmode="numeric" autocomplete="one-time-code"
                 placeholder="000000" required autofocus maxlength="6" />
             <x-auth.submit>Xác nhận và tiếp tục</x-auth.submit>
         </form>
+@endif
     </x-auth.shell>
 </x-layouts.auth>

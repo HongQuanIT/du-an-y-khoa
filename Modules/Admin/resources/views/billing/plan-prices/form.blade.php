@@ -3,10 +3,12 @@
         :title="($isNew ? 'Thêm mức giá' : 'Sửa mức giá').': '.$plan->name"
         description="SKU hiển thị trên /pricing (tháng, năm, prepaid…).">
         <x-slot:actions>
-            <a href="{{ route('admin.billing.plans.edit', $plan) }}"
+            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.billing.plans.edit'))
+<a href="{{ route('admin.billing.plans.edit', $plan) }}"
                 class="rounded-lg border border-outline-variant px-4 py-2 font-label-md text-on-surface-variant hover:bg-surface-container-low">
                 Quay lại
             </a>
+@endif
         </x-slot:actions>
     </x-admin.page-header>
 
@@ -119,7 +121,8 @@
     </form>
 
     @if (! $isNew)
-        <form method="post" action="{{ route('admin.billing.plan-prices.destroy', $price) }}"
+        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.billing.plan-prices.destroy'))
+<form method="post" action="{{ route('admin.billing.plan-prices.destroy', $price) }}"
             class="mx-auto mt-4 max-w-2xl"
             onsubmit="return confirm('Xóa mức giá này?')">
             @csrf
@@ -128,5 +131,6 @@
                 Xóa mức giá
             </button>
         </form>
+@endif
     @endif
 </x-layouts.admin>

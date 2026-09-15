@@ -8,8 +8,10 @@
 <x-layouts.admin title="{{ $inquiry->reference }}">
     <x-admin.page-header :title="'Liên hệ '.$inquiry->reference" :description="$inquiry->subject->label().' · '.$inquiry->created_at?->timezone(config('app.timezone'))->format('d/m/Y H:i')">
         <x-slot:actions>
-            <a href="{{ route('admin.contacts.index') }}"
+            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.contacts.index'))
+<a href="{{ route('admin.contacts.index') }}"
                 class="rounded-lg px-3 py-2 font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-low">← Danh sách</a>
+@endif
         </x-slot:actions>
     </x-admin.page-header>
 
@@ -62,9 +64,11 @@
                         <dt class="font-label-sm text-label-sm text-on-surface-variant">Tài khoản</dt>
                         <dd class="mt-0.5 text-on-surface">
                             @if ($inquiry->user)
-                                <a href="{{ route('admin.users.show', $inquiry->user) }}" class="text-primary hover:underline">
+                                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.users.show'))
+<a href="{{ route('admin.users.show', $inquiry->user) }}" class="text-primary hover:underline">
                                     {{ $inquiry->user->name }} (#{{ $inquiry->user_id }})
                                 </a>
+@endif
                             @else
                                 <span class="text-on-surface-variant">Khách (chưa đăng nhập)</span>
                             @endif
@@ -95,16 +99,19 @@
 
                 @if ($canManage)
                     @if ($inquiry->assigned_admin_id !== auth()->id() && $inquiry->status->isOpen())
-                        <form method="post" action="{{ route('admin.contacts.claim', $inquiry) }}" class="mb-4">
+                        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.contacts.claim'))
+<form method="post" action="{{ route('admin.contacts.claim', $inquiry) }}" class="mb-4">
                             @csrf
                             <button type="submit"
                                 class="w-full rounded-lg border border-primary/30 bg-primary/5 px-3 py-2.5 text-sm font-semibold text-primary hover:bg-primary/10">
                                 Nhận xử lý
                             </button>
                         </form>
+@endif
                     @endif
 
-                    <form method="post" action="{{ route('admin.contacts.update', $inquiry) }}" class="space-y-4">
+                    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.contacts.update'))
+<form method="post" action="{{ route('admin.contacts.update', $inquiry) }}" class="space-y-4">
                         @csrf
                         @method('PATCH')
 
@@ -143,6 +150,7 @@
                             Lưu thay đổi
                         </button>
                     </form>
+@endif
                 @else
                     <dl class="space-y-3 text-sm">
                         <div>
@@ -155,7 +163,7 @@
                                 <dd class="whitespace-pre-wrap rounded-lg bg-surface-container-low p-3 text-on-surface">{{ $inquiry->admin_notes }}</dd>
                             </div>
                         @endif
-                        <p class="text-on-surface-variant">Bạn chỉ có quyền xem. Cần <code class="text-xs">contact.manage</code> để cập nhật.</p>
+                        <p class="text-on-surface-variant">Bạn chỉ có quyền xem. Cần <code class="text-xs">contact.update</code> để cập nhật.</p>
                     </dl>
                 @endif
             </div>

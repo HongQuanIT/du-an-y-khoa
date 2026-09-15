@@ -10,9 +10,9 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Route;
 use Modules\Notification\Http\Controllers\Api\NotificationApiController;
 
-Route::middleware('auth:sanctum')->group(function (): void {
+Route::middleware(['auth:sanctum', 'permission:notification.view'])->group(function (): void {
     Route::get('notifications', [NotificationApiController::class, 'index'])->name('index');
-    Route::post('notifications/{notification}/read', [NotificationApiController::class, 'markRead'])->name('read');
-    Route::post('notifications/read-all', [NotificationApiController::class, 'markAllRead'])->name('read-all');
-    Route::delete('notifications/{notification}', [NotificationApiController::class, 'destroy'])->name('destroy');
+    Route::post('notifications/{notification}/read', [NotificationApiController::class, 'markRead'])->middleware('permission:notification.update')->name('read');
+    Route::post('notifications/read-all', [NotificationApiController::class, 'markAllRead'])->middleware('permission:notification.update')->name('read-all');
+    Route::delete('notifications/{notification}', [NotificationApiController::class, 'destroy'])->middleware('permission:notification.delete')->name('destroy');
 });

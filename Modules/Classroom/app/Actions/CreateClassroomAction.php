@@ -7,13 +7,14 @@ namespace Modules\Classroom\Actions;
 use App\Models\User;
 use App\Support\Audit\Auditor;
 use App\Support\Audit\Enums\AuditAction;
+use App\Support\Auth\PortalAccess;
 use App\Support\Concerns\AsAction;
-use App\Support\Enums\Role;
+use App\Support\Enums\PortalGroup;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use Modules\Classroom\Enums\ClassroomPurpose;
 use Modules\Classroom\Enums\ClassroomApprovalStatus;
 use Modules\Classroom\Enums\ClassroomLifecycleStatus;
+use Modules\Classroom\Enums\ClassroomPurpose;
 use Modules\Classroom\Enums\ClassroomStatus;
 use Modules\Classroom\Enums\ClassroomVisibility;
 use Modules\Classroom\Enums\MemberRole;
@@ -82,7 +83,11 @@ final class CreateClassroomAction
     private function notifyAdminsThatClassroomNeedsApproval(User $host, Classroom $classroom): void
     {
         User::query()
-            ->role([Role::Admin->value, Role::SuperAdmin->value])
+            ->role(PortalAccess::roleNames(PortalGroup::Admin))
+            ->get()
+            ->filter(fn (User $admin): bool => $admin->canAny([
+                'classroom_oversight.view_any',
+            ]))
             ->each(function (User $admin) use ($host, $classroom): void {
                 $this->notify->handle(
                     $admin,

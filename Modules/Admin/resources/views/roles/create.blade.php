@@ -7,10 +7,19 @@
         ])->values()->all();
 
         $permissionsByPortal = collect($permissionGroups)->mapWithKeys(fn ($g) => [
-            $g['portal']->value => $g['permissions']->map(fn ($perm) => [
-                'id' => (int) $perm->id,
-                'name' => $perm->name,
-            ])->values()->all(),
+            $g['portal']->value => collect($g['modules'])->flatMap(fn ($module) =>
+                collect($module['resources'])->flatMap(fn ($resource) =>
+                    $resource['permissions']->map(fn ($perm) => [
+                        'id' => (int) $perm->id,
+                        'name' => $perm->name,
+                        'action' => \Modules\Admin\Support\PermissionCatalog::actionLabel($perm->name),
+                        'module' => $module['key'],
+                        'moduleLabel' => $module['label'],
+                        'resource' => $resource['key'],
+                        'resourceLabel' => $resource['label'],
+                    ])
+                )
+            )->values()->all(),
         ])->all();
     @endphp
 
@@ -39,11 +48,13 @@
             if (this.currentPermissions.length === 0) return false;
             return this.currentPermissions.every(p => this.selectedPermissions.includes(p.id));
         }
-    }" class="max-w-4xl">
+    }" class="w-full">
         <x-admin.page-header title="Tạo vai trò mới"
             description="Chọn cổng truy cập, chọn các quyền tương ứng và đặt tên vai trò.">
             <x-slot:actions>
-                <a href="{{ route('admin.roles.index') }}" class="rounded-lg px-3 py-2 text-on-surface-variant hover:bg-surface-container-low">← Danh sách vai trò</a>
+                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.roles.index'))
+<a href="{{ route('admin.roles.index') }}" class="rounded-lg px-3 py-2 text-on-surface-variant hover:bg-surface-container-low">← Danh sách vai trò</a>
+@endif
             </x-slot:actions>
         </x-admin.page-header>
 
@@ -58,7 +69,8 @@
             </section>
         @endif
 
-        <form method="post" action="{{ route('admin.roles.store') }}" class="space-y-6">
+        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.roles.store'))
+<form method="post" action="{{ route('admin.roles.store') }}" class="space-y-6">
             @csrf
 
             <div class="rounded-2xl border border-outline-variant bg-surface p-6 space-y-6">
@@ -119,12 +131,23 @@
                     </div>
 
                     <div class="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-                        <template x-for="perm in currentPermissions" :key="perm.id">
-                            <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-outline-variant/70 p-3 hover:bg-surface-container-low has-[:checked]:border-primary has-[:checked]:bg-primary/5 transition-colors">
-                                <input type="checkbox" name="permissions[]" :value="perm.id" x-model.number="selectedPermissions"
-                                    class="mt-0.5 size-4 rounded border-outline text-primary focus:ring-primary">
-                                <span class="text-sm font-medium text-on-surface" x-text="perm.name"></span>
-                            </label>
+                        <template x-for="(perm, index) in currentPermissions" :key="perm.id">
+                            <div class="contents">
+                                <div x-show="index === 0 || currentPermissions[index - 1].module !== perm.module"
+                                    class="col-span-full mt-4 flex items-center gap-3 border-b border-outline-variant pb-2 first:mt-0">
+                                    <h4 class="font-headline-sm font-semibold text-on-surface" x-text="perm.moduleLabel"></h4>
+                                </div>
+                                <div x-show="index === 0 || currentPermissions[index - 1].resource !== perm.resource"
+                                    class="col-span-full mt-2 font-label-md font-semibold text-primary" x-text="perm.resourceLabel"></div>
+                                <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-outline-variant/70 p-3 transition-colors hover:bg-surface-container-low has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                                    <input type="checkbox" name="permissions[]" :value="perm.id" x-model.number="selectedPermissions"
+                                        class="mt-0.5 size-4 rounded border-outline text-primary focus:ring-primary">
+                                    <span class="min-w-0">
+                                        <span class="block text-sm font-medium text-on-surface" x-text="perm.action"></span>
+                                        <code class="block text-xs text-on-surface-variant" x-text="perm.name"></code>
+                                    </span>
+                                </label>
+                            </div>
                         </template>
                         <template x-if="currentPermissions.length === 0">
                             <p class="col-span-full py-4 text-center text-sm text-on-surface-variant">Cổng truy cập này chưa có quyền nào trong hệ thống.</p>
@@ -147,5 +170,6 @@
                 </div>
             </div>
         </form>
+@endif
     </div>
 </x-layouts.admin>

@@ -19,7 +19,9 @@
         <p class="mb-4 font-body-sm text-body-sm text-on-surface-variant">
             Chỉ admin tạo và cấu hình mã cho CTV này. CTV chỉ xem và copy link.
             Nếu để trống ngày hết hạn / lượt dùng, hệ thống áp dụng mặc định từ
-            <a href="{{ route('admin.settings.index') }}" class="text-primary hover:underline">Cài đặt → Cộng tác viên</a>
+            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.settings.index'))
+<a href="{{ route('admin.settings.index') }}" class="text-primary hover:underline">Cài đặt → Cộng tác viên</a>
+@endif
             (hiện tại: hết hạn
             {{ \Modules\Partner\Support\PartnerSettings::defaultInviteExpiresDays() > 0
                 ? \Modules\Partner\Support\PartnerSettings::defaultInviteExpiresDays().' ngày'
@@ -28,7 +30,8 @@
             {{ \Modules\Partner\Support\PartnerSettings::defaultInviteMaxUses() ?? 'không giới hạn' }}).
         </p>
 
-        <form method="post" action="{{ route('admin.partners.codes.store', $partner) }}"
+        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.partners.codes.store'))
+<form method="post" action="{{ route('admin.partners.codes.store', $partner) }}"
             class="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             @csrf
             <div>
@@ -68,6 +71,7 @@
                 <button type="submit" class="rounded-lg bg-primary px-4 py-2.5 font-label-md text-on-primary">Tạo mã</button>
             </div>
         </form>
+@endif
 
         <div class="overflow-x-auto rounded-lg border border-outline-variant">
             <table class="min-w-full text-left font-body-sm">
@@ -110,15 +114,18 @@
                                 @endif
                             </td>
                             <td class="px-4 py-3 space-y-2">
-                                <form method="post" action="{{ route('admin.partners.codes.toggle', [$partner, $code]) }}">
+                                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.partners.codes.toggle'))
+<form method="post" action="{{ route('admin.partners.codes.toggle', [$partner, $code]) }}">
                                     @csrf
                                     <button type="submit" class="text-primary hover:underline">
                                         {{ $code->is_active ? 'Tắt' : 'Bật' }}
                                     </button>
                                 </form>
+@endif
                                 <details class="mt-2">
                                     <summary class="cursor-pointer text-on-surface-variant hover:underline">Sửa</summary>
-                                    <form method="post" action="{{ route('admin.partners.codes.update', [$partner, $code]) }}"
+                                    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.partners.codes.update'))
+<form method="post" action="{{ route('admin.partners.codes.update', [$partner, $code]) }}"
                                         class="mt-2 grid max-w-md gap-2 rounded-lg border border-outline-variant p-3">
                                         @csrf
                                         @method('PUT')
@@ -137,6 +144,7 @@
                                             placeholder="% hoa hồng" class="rounded-lg bg-surface-container-low px-3 py-2">
                                         <button type="submit" class="rounded-lg bg-primary px-3 py-2 font-label-md text-on-primary">Lưu mã</button>
                                     </form>
+@endif
                                 </details>
                             </td>
                         </tr>

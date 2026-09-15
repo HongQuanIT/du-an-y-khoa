@@ -6,7 +6,6 @@ namespace Modules\Admin\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Support\Enums\Permission;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Modules\Billing\Actions\ExpireStaleCheckoutSessionsAction;
@@ -16,7 +15,7 @@ final class BillingPaymentController extends Controller
 {
     public function index(Request $request, ExpireStaleCheckoutSessionsAction $expire): View
     {
-        $this->authorizePermission(Permission::BillingManage);
+        $this->authorizePermission('billing_payment.view');
 
         // Keep admin list accurate even if the scheduler is idle locally.
         $expire->handle();
@@ -48,9 +47,9 @@ final class BillingPaymentController extends Controller
         ]);
     }
 
-    private function authorizePermission(Permission $permission): void
+    private function authorizePermission(string $permission): void
     {
-        abort_unless($this->actor()->can($permission->value), 403);
+        abort_unless($this->actor()->canAny([$permission]), 403);
     }
 
     private function actor(): User

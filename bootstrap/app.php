@@ -9,6 +9,7 @@ use App\Http\Middleware\EnsureLearner;
 use App\Http\Middleware\EnsureLearnerOnboarding;
 use App\Http\Middleware\EnsurePartner;
 use App\Http\Middleware\EnsurePartnerTwoFactor;
+use App\Http\Middleware\EnsurePortal;
 use App\Http\Middleware\EnsureStaffTwoFactor;
 use App\Http\Middleware\EnsureStudentTwoFactor;
 use App\Http\Middleware\EnsureSubscriptionActive;
@@ -111,6 +112,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'instructor.2fa' => EnsureInstructorTwoFactor::class,
             'partner' => EnsurePartner::class,
             'partner.2fa' => EnsurePartnerTwoFactor::class,
+            'portal' => EnsurePortal::class,
             'staff.2fa' => EnsureStaffTwoFactor::class,
             'subscription' => EnsureSubscriptionActive::class,
             'role' => RoleMiddleware::class,

@@ -4,10 +4,12 @@
     <x-admin.page-header title="Banner / Thông báo"
         description="Quản lý banner hiển thị trên landing và dashboard học viên (lịch, đối tượng, bật/tắt).">
         <x-slot:actions>
-            <a href="{{ route('admin.cms.banners.create') }}"
+            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.banners.create'))
+<a href="{{ route('admin.cms.banners.create') }}"
                 class="rounded-lg bg-primary px-4 py-2 font-label-md text-on-primary hover:opacity-90">
                 + Thêm banner
             </a>
+@endif
         </x-slot:actions>
     </x-admin.page-header>
 
@@ -19,7 +21,8 @@
         <x-admin.kpi-card label="Đang tắt" :value="number_format($stats['disabled'])" hint="Ẩn khỏi web" icon="visibility_off" />
     </div>
 
-    <form method="get" action="{{ route('admin.cms.banners.index') }}"
+    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.banners.index'))
+<form method="get" action="{{ route('admin.cms.banners.index') }}"
         class="mb-6 grid grid-cols-1 gap-3 rounded-xl border border-outline-variant bg-surface p-4 sm:grid-cols-4">
         <div class="sm:col-span-2">
             <label class="mb-1 block font-label-sm text-label-sm text-on-surface-variant" for="q">Tìm kiếm</label>
@@ -52,6 +55,7 @@
                 class="rounded-lg px-4 py-2 font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-low">Xóa lọc</a>
         </div>
     </form>
+@endif
 
     <div class="overflow-x-auto rounded-xl border border-outline-variant bg-surface">
         <table class="min-w-full text-left font-body-sm text-body-sm">
@@ -92,21 +96,27 @@
                             @endif
                         </td>
                         <td class="px-4 py-3 text-right whitespace-nowrap">
-                            <form method="post" action="{{ route('admin.cms.banners.toggle', $banner) }}" class="inline">
+                            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.banners.toggle'))
+<form method="post" action="{{ route('admin.cms.banners.toggle', $banner) }}" class="inline">
                                 @csrf
                                 <button type="submit" class="font-label-md text-on-surface-variant hover:underline">
                                     {{ $banner->is_enabled ? 'Tắt' : 'Bật' }}
                                 </button>
                             </form>
+@endif
                             <span class="mx-1 text-outline-variant">·</span>
-                            <a href="{{ route('admin.cms.banners.edit', $banner) }}"
+                            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.banners.edit'))
+<a href="{{ route('admin.cms.banners.edit', $banner) }}"
                                 class="font-label-md text-primary hover:underline">Sửa</a>
+@endif
                         </td>
                     </tr>
                 @empty
                     <tr>
                         <td colspan="6" class="px-4 py-10 text-center text-on-surface-variant">
-                            Chưa có banner. <a href="{{ route('admin.cms.banners.create') }}" class="text-primary hover:underline">Tạo banner đầu tiên</a>
+                            Chưa có banner. @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.banners.create'))
+<a href="{{ route('admin.cms.banners.create') }}" class="text-primary hover:underline">Tạo banner đầu tiên</a>
+@endif
                         </td>
                     </tr>
                 @endforelse

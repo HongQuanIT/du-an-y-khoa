@@ -7,6 +7,7 @@ namespace Modules\Admin\Support;
 use App\Support\Enums\Permission as PermissionEnum;
 use App\Support\Enums\PortalGroup;
 use App\Support\Enums\Role as RoleEnum;
+use App\Support\Rbac\PermissionRegistry;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Spatie\Permission\Models\Permission;
@@ -36,12 +37,16 @@ final class PermissionCatalog
      * @return array<string, array{
      *     portal: PortalGroup,
      *     permissions: Collection<int, Permission>,
+     *     modules: list<array{key: string, label: string, count: int, resources: list<array{key: string, label: string, permissions: Collection<int, Permission>}>}>,
      * }>
      */
     public static function groupedByPortal(): array
     {
+        $validNames = app(PermissionRegistry::class)->names();
+
         $permissions = Permission::query()
             ->where('guard_name', 'web')
+            ->whereIn('name', $validNames)
             ->orderBy('name')
             ->get();
 
@@ -55,12 +60,276 @@ final class PermissionCatalog
         }
 
         foreach ($permissions as $permission) {
-            $enum = PermissionEnum::tryFrom($permission->name);
-            $portal = $enum?->portal() ?? PortalGroup::Admin;
-            $grouped[$portal->value]['permissions']->push($permission);
+            foreach (self::portalsForPermission($permission) as $portal) {
+                $grouped[$portal->value]['permissions']->push($permission);
+            }
         }
 
+        foreach ($grouped as &$group) {
+            $group['modules'] = self::modulesFor($group['permissions']);
+        }
+        unset($group);
+
         return $grouped;
+    }
+
+    /**
+     * @param  Collection<int, Permission>  $permissions
+     * @return list<array{key: string, label: string, count: int, resources: list<array{key: string, label: string, permissions: Collection<int, Permission>}>}>
+     */
+    private static function modulesFor(Collection $permissions): array
+    {
+        return $permissions
+            ->groupBy(fn (Permission $permission): string => self::moduleKey($permission))
+            ->map(function (Collection $modulePermissions, string $module): array {
+                $resources = $modulePermissions
+                    ->groupBy(fn (Permission $permission): string => explode('.', $permission->name, 2)[0])
+                    ->map(fn (Collection $items, string $resource): array => [
+                        'key' => $resource,
+                        'label' => self::resourceLabel($resource),
+                        'permissions' => $items->sortBy('name')->values(),
+                    ])
+                    ->sortBy('label')
+                    ->values()
+                    ->all();
+
+                return [
+                    'key' => $module,
+                    'label' => self::moduleLabel($module),
+                    'count' => $modulePermissions->count(),
+                    'resources' => $resources,
+                ];
+            })
+            ->sortBy(fn (array $module): array => [self::moduleOrder($module['key']), $module['label']])
+            ->values()
+            ->all();
+    }
+
+    public static function actionLabel(string $permission): string
+    {
+        $action = explode('.', $permission, 2)[1] ?? $permission;
+
+        return match ($action) {
+            'view_any' => 'Xem danh sách',
+            'view' => 'Xem',
+            'create' => 'Tạo mới',
+            'update', 'edit' => 'Chỉnh sửa',
+            'delete' => 'Xóa',
+            'manage' => 'Quản lý',
+            'assign', 'role_assign', 'instructor_assign' => 'Phân công',
+            'status_update' => 'Đổi trạng thái',
+            'password_reset' => 'Đặt lại mật khẩu',
+            'password_update' => 'Đổi mật khẩu',
+            'avatar_update' => 'Đổi ảnh đại diện',
+            'email_verify' => 'Xác minh email',
+            'publish' => 'Xuất bản',
+            'archive' => 'Lưu trữ',
+            'export' => 'Xuất dữ liệu',
+            'import' => 'Nhập dữ liệu',
+            'toggle' => 'Bật / tắt',
+            'approve' => 'Phê duyệt',
+            'reject' => 'Từ chối',
+            'start' => 'Bắt đầu',
+            'end' => 'Kết thúc',
+            'join' => 'Tham gia',
+            'leave' => 'Rời khỏi',
+            'send' => 'Gửi',
+            'reply' => 'Phản hồi',
+            'resolve' => 'Đóng xử lý',
+            'upload' => 'Tải lên',
+            'download' => 'Tải xuống',
+            'repeat' => 'Làm lại',
+            'submit' => 'Nộp bài / Gửi duyệt',
+            'review' => 'Xem lại / Đánh giá',
+            'schedule' => 'Lên lịch',
+            'ban' => 'Cấm thành viên',
+            'raise' => 'Giơ tay phát biểu',
+            'mute' => 'Tắt tiếng chat',
+            'present' => 'Trình bày',
+            'clone' => 'Nhân bản',
+            'replan' => 'Lập lại kế hoạch',
+            'complete' => 'Hoàn thành',
+            'skip' => 'Bỏ qua',
+            'take' => 'Làm bài thi',
+            'use' => 'Sử dụng',
+            'checkout' => 'Thanh toán',
+            'portal' => 'Truy cập cổng',
+            'close' => 'Đóng lớp',
+            'reopen' => 'Mở lại lớp',
+            'remove' => 'Xóa khỏi lớp',
+            'invite' => 'Mời tham gia',
+            'mark_paid' => 'Đánh dấu đã chi trả',
+            'maintenance_toggle' => 'Bật/tắt bảo trì',
+            'rollout' => 'Triển khai tính năng',
+            'compare' => 'So sánh phiên bản',
+            'restore' => 'Khôi phục',
+            'retire' => 'Thu hồi',
+            'reorder' => 'Sắp xếp thứ tự',
+            'refresh' => 'Làm mới',
+            'progress_view' => 'Xem tiến độ',
+            'recommendation_view' => 'Xem gợi ý',
+            'usage_view' => 'Xem lượt sử dụng',
+            'question_search' => 'Tìm kiếm câu hỏi',
+            'question_assign' => 'Gán câu hỏi',
+            'result_view' => 'Xem kết quả',
+            'result_export' => 'Xuất kết quả',
+            'force_end' => 'Bắt buộc kết thúc',
+            'create_on_behalf' => 'Tạo thay giảng viên',
+            'live_moderate' => 'Điều phối phòng live',
+            'revoke' => 'Thu hồi quyền / phiên',
+            default => Str::headline($action),
+        };
+    }
+
+    private static function moduleKey(Permission $permission): string
+    {
+        $definition = app(PermissionRegistry::class)->find($permission->name);
+        $module = $definition?->module ?? 'other';
+
+        return match ($module) {
+            'user' => 'user_management',
+            'role', 'permission' => 'rbac',
+            'question' => 'question_bank',
+            'topic' => 'taxonomy',
+            'audit', 'report' => 'reporting',
+            'cms', 'media', 'contact' => 'content',
+            'system', 'feature_flag', 'notification', 'support' => 'system',
+            'admin', 'partner' => 'partner_management',
+            'session', 'library', 'analytics' => 'learning',
+            default => $module,
+        };
+    }
+
+    private static function moduleLabel(string $module): string
+    {
+        return match ($module) {
+            'user_management' => 'Người dùng & hồ sơ',
+            'rbac' => 'Vai trò & phân quyền',
+            'question_bank' => 'Ngân hàng câu hỏi',
+            'taxonomy' => 'Danh mục y khoa',
+            'exam' => 'Kỳ thi',
+            'classroom' => 'Lớp học & Live',
+            'content' => 'Nội dung & Media',
+            'reporting' => 'Báo cáo & nhật ký',
+            'billing', 'subscription' => 'Thanh toán & gói',
+            'partner_management', 'affiliate', 'access' => 'Cộng tác viên',
+            'system' => 'Hệ thống & hỗ trợ',
+            'dashboard' => 'Tổng quan',
+            'profile', 'account' => 'Tài khoản cá nhân',
+            'review' => 'Kiểm duyệt',
+            'notification' => 'Thông báo',
+            'study_plan' => 'Kế hoạch học tập',
+            'learning' => 'Hoạt động học tập',
+            'ai' => 'Trợ lý AI',
+            default => Str::headline($module),
+        };
+    }
+
+    private static function resourceLabel(string $resource): string
+    {
+        return match ($resource) {
+            'user' => 'Người dùng',
+            'learner_profile' => 'Hồ sơ học viên',
+            'user_session' => 'Phiên đăng nhập',
+            'learner_catalog' => 'Dữ liệu học viên',
+            'role' => 'Vai trò',
+            'permission', 'role_permission' => 'Quyền hạn',
+            'question' => 'Câu hỏi',
+            'question_version' => 'Phiên bản câu hỏi',
+            'question_feedback' => 'Phản hồi câu hỏi',
+            'session' => 'Phiên luyện tập',
+            'taxonomy' => 'Tổng quan phân loại',
+            'blueprint' => 'Ma trận đề thi',
+            'curriculum' => 'Danh mục kiến thức',
+            'tag' => 'Thẻ tag',
+            'classroom' => 'Lớp học',
+            'classroom_settings' => 'Cài đặt lớp học',
+            'classroom_member' => 'Thành viên lớp học',
+            'classroom_session' => 'Lịch / Buổi học',
+            'classroom_oversight' => 'Giám sát lớp học',
+            'live_message' => 'Tin nhắn Live',
+            'live_hand' => 'Giơ tay phát biểu',
+            'live_chat' => 'Trò chuyện Live',
+            'live_question' => 'Câu hỏi thảo luận Live',
+            'live_moderation' => 'Điều phối phòng Live',
+            'study_plan' => 'Kế hoạch học tập',
+            'study_plan_task' => 'Nhiệm vụ học tập',
+            'search' => 'Tìm kiếm',
+            'bookmark' => 'Câu hỏi đã lưu',
+            'exam' => 'Kỳ thi',
+            'ai' => 'Trợ lý AI',
+            'billing_plan' => 'Gói thanh toán',
+            'billing_price' => 'Mức giá',
+            'billing_subscription' => 'Gói đăng ký',
+            'billing_payment' => 'Giao dịch thanh toán',
+            'billing_gateway' => 'Cổng thanh toán',
+            'invoice' => 'Hóa đơn',
+            'subscription' => 'Gói thuê bao',
+            'partner' => 'Đối tác',
+            'partner_code' => 'Mã giới thiệu',
+            'partner_payout' => 'Thanh toán hoa hồng',
+            'report', 'report_schedule' => 'Báo cáo',
+            'audit', 'audit_log', 'access_audit' => 'Nhật ký kiểm toán',
+            'cms', 'cms_page', 'cms_menu', 'cms_banner', 'cms_faq' => 'CMS & Landing',
+            'media', 'library' => 'Thư viện Media',
+            'contact' => 'Liên hệ & góp ý',
+            'support', 'support_conversation' => 'Hỗ trợ trực tuyến',
+            'system', 'system_setting' => 'Cài đặt hệ thống',
+            'feature_flag' => 'Cờ tính năng',
+            'notification', 'notification_broadcast', 'teach_notification' => 'Thông báo',
+            'profile', 'teach_profile' => 'Hồ sơ tài khoản',
+            'teaching_dashboard', 'learner_dashboard' => 'Bảng điều khiển',
+            default => Str::headline($resource),
+        };
+    }
+
+    private static function moduleOrder(string $module): int
+    {
+        $order = ['dashboard', 'user_management', 'account', 'profile', 'rbac', 'question_bank', 'taxonomy', 'study_plan', 'learning', 'exam', 'classroom', 'review', 'content', 'reporting', 'billing', 'subscription', 'partner_management', 'access', 'affiliate', 'notification', 'ai', 'system'];
+
+        $position = array_search($module, $order, true);
+
+        return $position === false ? 999 : $position;
+    }
+
+    public static function belongsToPortal(Permission $permission, PortalGroup $portal): bool
+    {
+        return in_array($portal, self::portalsForPermission($permission), true);
+    }
+
+    /** @return list<PortalGroup> */
+    public static function portalsForPermission(Permission $permission): array
+    {
+        $definition = app(PermissionRegistry::class)->find($permission->name);
+        if ($definition !== null) {
+            return $definition->portals;
+        }
+
+        $stored = $permission->getAttribute('portals');
+        if (is_string($stored) && $stored !== '') {
+            try {
+                $stored = json_decode($stored, true, flags: JSON_THROW_ON_ERROR);
+            } catch (\JsonException) {
+                $stored = [];
+            }
+        }
+
+        $portals = collect(is_array($stored) ? $stored : [])
+            ->map(fn ($value): ?PortalGroup => PortalGroup::tryFrom((string) $value))
+            ->filter()
+            ->values()
+            ->all();
+
+        if ($portals !== []) {
+            return $portals;
+        }
+
+        $enum = PermissionEnum::tryFrom($permission->name);
+        $portal = $enum?->portal()
+            ?? PortalGroup::tryFrom((string) $permission->getAttribute('portal'))
+            ?? PortalGroup::Admin;
+
+        return [$portal];
     }
 
     /**

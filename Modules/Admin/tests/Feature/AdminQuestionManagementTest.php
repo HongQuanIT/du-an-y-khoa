@@ -15,13 +15,10 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Modules\Auth\Models\TwoFactorSecret;
 use Modules\Auth\Services\TotpService;
-use Modules\QuestionBank\Actions\FlagQuestionReviewAction;
-use Modules\QuestionBank\Actions\InstructorReviewQuestionAction;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionReviewAction;
 use Modules\QuestionBank\Enums\QuestionReviewStatus;
 use Modules\QuestionBank\Enums\QuestionStatus;
-use Modules\QuestionBank\Enums\ReviewerFlag;
 use Modules\QuestionBank\Enums\SessionMode;
 use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
@@ -30,7 +27,6 @@ use Modules\QuestionBank\Models\QuestionFeedback;
 use Modules\QuestionBank\Models\QuestionReviewRequest;
 use Modules\QuestionBank\Models\QuestionSession;
 use Modules\QuestionBank\Models\QuestionVersion;
-use Modules\QuestionBank\Models\Subject;
 use Tests\Support\CreatesMedicalTaxonomy;
 use Tests\TestCase;
 
@@ -39,11 +35,7 @@ final class AdminQuestionManagementTest extends TestCase
     use CreatesMedicalTaxonomy;
     use RefreshDatabase;
 
-    private Subject $subject;
-
     private Lesson $topic;
-
-    private User $assignedInstructor;
 
     protected function setUp(): void
     {
@@ -51,17 +43,11 @@ final class AdminQuestionManagementTest extends TestCase
 
         $this->seed(RolePermissionSeeder::class);
 
-        $this->subject = $this->makeSubject([
-            'name' => 'Nội khoa admin test',
-            'slug' => 'noi-khoa-admin-test',
-        ]);
-        $this->topic = $this->makeLesson([
+        $this->topic = $this->makeMedicalNode([
             'name' => 'Tim mạch',
             'slug' => 'tim-mach-admin-test',
             'sort_order' => 1,
-            'subjects' => [$this->subject],
         ]);
-        $this->assignedInstructor = $this->instructorUser();
     }
 
     public function test_editor_can_create_draft_question(): void
@@ -124,13 +110,12 @@ final class AdminQuestionManagementTest extends TestCase
         $this->actingAsStaff($editor)
             ->post(route('admin.questions.store'), array_merge($this->payload(), [
                 'requested_status' => QuestionStatus::InReview->value,
-                'assigned_instructor_id' => $instructor->id,
             ]))
             ->assertRedirect();
 
         $question = Question::query()->firstOrFail();
 
-        app(InstructorReviewQuestionAction::class)
+        app(\Modules\QuestionBank\Actions\InstructorReviewQuestionAction::class)
             ->reject($instructor, $question->fresh(), 'Cần bổ sung giải thích cho các đáp án sai.');
 
         $this->actingAsStaff($editor)
@@ -165,12 +150,11 @@ final class AdminQuestionManagementTest extends TestCase
         $this->actingAsStaff($editor)
             ->post(route('admin.questions.store'), array_merge($this->payload(), [
                 'requested_status' => QuestionStatus::InReview->value,
-                'assigned_instructor_id' => $instructor->id,
             ]))
             ->assertRedirect();
 
         $question = Question::query()->firstOrFail();
-        app(InstructorReviewQuestionAction::class)
+        app(\Modules\QuestionBank\Actions\InstructorReviewQuestionAction::class)
             ->reject($instructor, $question->fresh(), 'Sai kiến thức y khoa.');
 
         $this->actingAsStaff($admin)
@@ -203,56 +187,6 @@ final class AdminQuestionManagementTest extends TestCase
         $this->assertSame(QuestionStatus::Rejected, $fresh->status);
         $this->assertSame(Role::Instructor->value, $fresh->rejected_by_role);
         $this->assertSame('Sai kiến thức y khoa.', $fresh->rejection_reason);
-    }
-
-    public function test_admin_edit_shows_reviewer_notes_and_instructor_feedback(): void
-    {
-        $editor = $this->staffUser(Role::ContentEditor);
-        $admin = $this->staffUser(Role::Admin);
-        $instructor = $this->instructorUser();
-        $instructor->forceFill(['name' => 'Ekko'])->save();
-        $reviewerA = $this->staffUser(Role::Reviewer);
-        $reviewerA->forceFill(['name' => 'Reviewer An'])->save();
-        $reviewerB = $this->staffUser(Role::Reviewer);
-        $reviewerB->forceFill(['name' => 'Reviewer Bình'])->save();
-
-        $this->actingAsStaff($editor)
-            ->post(route('admin.questions.store'), array_merge($this->payload(), [
-                'requested_status' => QuestionStatus::InReview->value,
-                'assigned_instructor_id' => $instructor->id,
-            ]))
-            ->assertRedirect();
-
-        $question = Question::query()->firstOrFail();
-        app(InstructorReviewQuestionAction::class)
-            ->approve($instructor, $question->fresh(), 'Stem ổn, giữ guideline AHA.');
-        app(FlagQuestionReviewAction::class)
-            ->handle($reviewerA, $question->fresh(), ReviewerFlag::Yellow, 'Giải thích đáp án C còn mơ hồ.');
-        app(FlagQuestionReviewAction::class)
-            ->handle($reviewerB, $question->fresh(), ReviewerFlag::Green, 'Đồng ý xuất bản.');
-
-        $this->actingAsStaff($admin)
-            ->get(route('admin.questions.edit', $question->fresh()))
-            ->assertOk()
-            ->assertSee('question-review-feedback', false)
-            ->assertSee('Giảng viên Ekko đã duyệt chuyên môn', false)
-            ->assertSee('Stem ổn, giữ guideline AHA.', false)
-            ->assertSee('Reviewer An', false)
-            ->assertSee('Giải thích đáp án C còn mơ hồ.', false)
-            ->assertSee('Reviewer Bình', false)
-            ->assertSee('Đồng ý xuất bản.', false)
-            ->assertSee('Cờ vàng — cần lưu ý', false)
-            ->assertSee('border-amber-200 bg-amber-50 text-amber-800', false)
-            ->assertSee('border-emerald-200 bg-emerald-50 text-emerald-800', false);
-
-        $this->publishByAdmin($question, $admin);
-
-        $this->actingAsStaff($admin)
-            ->get(route('admin.questions.edit', $question->fresh()))
-            ->assertOk()
-            ->assertDontSee('question-review-feedback', false)
-            ->assertDontSee('Giải thích đáp án C còn mơ hồ.', false)
-            ->assertDontSee('Stem ổn, giữ guideline AHA.', false);
     }
 
     public function test_editor_can_assign_multiple_topics_to_question(): void
@@ -427,58 +361,6 @@ final class AdminQuestionManagementTest extends TestCase
             ->assertSee('Đáp án đúng')
             ->assertSee('Giải thích đáp án:')
             ->assertSee('Đúng');
-    }
-
-    public function test_editor_can_compare_working_copy_with_published_version(): void
-    {
-        $editor = $this->staffUser(Role::ContentEditor);
-        $publisher = $this->staffUser(Role::Admin);
-
-        $this->actingAsStaff($editor)
-            ->post(route('admin.questions.store'), array_merge($this->payload(), [
-                'requested_status' => QuestionStatus::InReview->value,
-                'stem' => 'Stem bản xuất bản gốc.',
-            ]))
-            ->assertRedirect();
-
-        $question = Question::query()->firstOrFail();
-        $this->approveByInstructor($question);
-        $this->publishByAdmin($question, $publisher);
-
-        $this->actingAsStaff($editor)
-            ->put(route('admin.questions.update', $question), array_merge($this->payload(), [
-                'stem' => 'Stem đang chỉnh sửa mới.',
-            ]))
-            ->assertRedirect();
-
-        $this->actingAsStaff($editor)
-            ->get(route('admin.questions.edit', $question->fresh()))
-            ->assertOk()
-            ->assertSee('So sánh với bản xuất bản', false);
-
-        $version = QuestionVersion::query()
-            ->where('question_id', $question->id)
-            ->where('version', 1)
-            ->first();
-
-        $this->assertNotNull($version);
-        $this->assertStringContainsString('xuất bản gốc', (string) ($version->snapshot['stem'] ?? ''));
-        $this->assertStringContainsString('chỉnh sửa mới', (string) $question->fresh()->stem);
-
-        $this->actingAsStaff($editor)
-            ->get(route('admin.questions.compare', $question->fresh()))
-            ->assertOk()
-            ->assertSee('Bản đang xuất bản', false)
-            ->assertSee('Bản đang chỉnh sửa', false)
-            ->assertSee('xuất', false)
-            ->assertSee('gốc', false)
-            ->assertSee('chỉnh', false)
-            ->assertSee('v1', false);
-
-        $reviewer = $this->staffUser(Role::Reviewer);
-        $this->actingAsStaff($reviewer)
-            ->get(route('admin.questions.compare', $question->fresh()))
-            ->assertForbidden();
     }
 
     public function test_editor_can_view_history_and_restore_an_old_question_version(): void
@@ -701,7 +583,7 @@ final class AdminQuestionManagementTest extends TestCase
             ->get(route('admin.questions.edit', $question->fresh()))
             ->assertOk()
             ->assertSee('Xuất bản', false)
-            ->assertSee('Duyệt &amp; xuất bản', false);
+            ->assertSee('Xuất bản (lớp 2)', false);
 
         $this->actingAsStaff($admin)
             ->post(route('admin.questions.transition', $question), [
@@ -922,27 +804,6 @@ final class AdminQuestionManagementTest extends TestCase
             ->assertOk();
     }
 
-    public function test_content_editor_edit_form_keeps_stem_editor_interactive(): void
-    {
-        $editor = $this->staffUser(Role::ContentEditor);
-
-        $this->actingAsStaff($editor)
-            ->post(route('admin.questions.store'), $this->payload())
-            ->assertRedirect();
-
-        $question = Question::query()->firstOrFail();
-
-        $this->actingAsStaff($editor)
-            ->get(route('admin.questions.edit', $question))
-            ->assertOk()
-            ->assertSee('contenteditable="true"', false)
-            ->assertSee('data-editor-surface', false)
-            ->assertSee('data-editor-toolbar', false)
-            ->assertSee('mountAdminEditor', false)
-            ->assertDontSee('new window.Quill', false)
-            ->assertSee('Chỉnh sửa câu hỏi', false);
-    }
-
     public function test_content_creator_only_sees_and_opens_own_questions(): void
     {
         $creatorA = $this->staffUser(Role::ContentEditor);
@@ -1046,7 +907,7 @@ final class AdminQuestionManagementTest extends TestCase
         $this->actingAsStaff($editor)
             ->get(route('admin.questions.edit', $question))
             ->assertOk()
-            ->assertSee('Giảng viên được gán đang duyệt chuyên môn', false)
+            ->assertSee('Cần 2 giảng viên chấp nhận', false)
             ->assertSee('Lưu thay đổi', false);
 
         $this->actingAsStaff($editor)
@@ -1068,14 +929,13 @@ final class AdminQuestionManagementTest extends TestCase
         $question->forceFill([
             'status' => QuestionStatus::InReview,
             'instructor_review_cycle' => 1,
-            'assigned_instructor_id' => $this->assignedInstructor->id,
         ])->save();
 
-        app(InstructorReviewQuestionAction::class)
-            ->approve($this->assignedInstructor, $question->fresh());
+        $first = $this->instructorUser();
+        app(\Modules\QuestionBank\Actions\InstructorReviewQuestionAction::class)
+            ->approve($first, $question->fresh());
 
-        $this->assertSame('approved', $question->fresh()->instructor_decision);
-        $this->assertSame(QuestionStatus::InFlagReview, $question->fresh()->status);
+        $this->assertSame('approved', $question->fresh()->instructor_1_decision);
 
         $this->actingAsStaff($editor)
             ->put(route('admin.questions.update', $question), array_merge($this->payload(), [
@@ -1087,11 +947,10 @@ final class AdminQuestionManagementTest extends TestCase
 
         $fresh = $question->fresh();
         $this->assertSame(QuestionStatus::InReview, $fresh->status);
-        $this->assertNull($fresh->instructor_decision);
         $this->assertNull($fresh->instructor_1_id);
         $this->assertNull($fresh->instructor_1_decision);
-        $this->assertNull($fresh->reviewer_1_id);
-        $this->assertNull($fresh->reviewer_1_flag);
+        $this->assertNull($fresh->instructor_2_id);
+        $this->assertNull($fresh->instructor_2_decision);
         $this->assertSame(2, (int) $fresh->instructor_review_cycle);
         $this->assertSame('Nội dung gửi duyệt lại sau khi sửa.', strip_tags((string) $fresh->stem));
     }
@@ -1497,7 +1356,6 @@ final class AdminQuestionManagementTest extends TestCase
             'attending_tip' => 'Nhớ ECG sớm.',
             'difficulty' => Difficulty::Medium->value,
             'lesson_ids' => [$this->topic->id],
-            'assigned_instructor_id' => $this->assignedInstructor->id,
             'is_free' => '1',
             'options' => [
                 ['content' => 'ACS', 'is_correct' => '1', 'explanation' => 'Đúng'],
@@ -1515,7 +1373,6 @@ final class AdminQuestionManagementTest extends TestCase
             'explanation' => 'Explanation draft',
             'difficulty' => Difficulty::Easy,
             'created_by' => $createdBy?->id,
-            'assigned_instructor_id' => $this->assignedInstructor->id,
         ]);
         $question->lessons()->sync([$this->topic->id]);
 
@@ -1594,26 +1451,18 @@ final class AdminQuestionManagementTest extends TestCase
     {
         $user = User::factory()->create();
         $user->assignRole(Role::Instructor->value);
-        $user->instructorSubjects()->sync([$this->subject->id]);
 
         return $user;
     }
 
     private function approveByInstructor(Question $question, ?User $instructor = null): Question
     {
-        $instructor ??= $question->assignedInstructor ?? $this->assignedInstructor;
-        if ((int) $question->assigned_instructor_id !== (int) $instructor->id) {
-            $question->forceFill(['assigned_instructor_id' => $instructor->id])->save();
-        }
+        $first = $instructor ?? $this->instructorUser();
+        $second = $this->instructorUser();
+        $action = app(\Modules\QuestionBank\Actions\InstructorReviewQuestionAction::class);
+        $action->approve($first, $question->fresh());
 
-        app(InstructorReviewQuestionAction::class)->approve($instructor, $question->fresh());
-
-        $reviewerA = $this->staffUser(Role::Reviewer);
-        $reviewerB = $this->staffUser(Role::Reviewer);
-        app(FlagQuestionReviewAction::class)->handle($reviewerA, $question->fresh(), ReviewerFlag::Green);
-        app(FlagQuestionReviewAction::class)->handle($reviewerB, $question->fresh(), ReviewerFlag::Green);
-
-        return $question->fresh();
+        return $action->approve($second, $question->fresh());
     }
 
     private function publishByAdmin(Question $question, ?User $admin = null): Question

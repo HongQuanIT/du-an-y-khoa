@@ -21,7 +21,7 @@ final class CreateRoleAction
     /** @param list<int|string> $permissionIds */
     public function handle(User $actor, string $name, string $displayName, PortalGroup $portal, array $permissionIds): RoleModel
     {
-        abort_unless($actor->hasRole(Role::SuperAdmin->value), 403, 'Chỉ Super Admin được tạo role.');
+        abort_unless($actor->hasAnyRole([Role::SuperAdmin->value, Role::Admin->value]), 403, 'Chỉ Super Admin hoặc Admin được tạo role.');
 
         $permissions = Permission::query()
             ->where('guard_name', 'web')

@@ -15,14 +15,22 @@
     <x-admin.flash />
 
     <div class="mb-4 flex flex-wrap gap-2">
-        <a href="{{ route('admin.support.index') }}"
+        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.support.index'))
+<a href="{{ route('admin.support.index') }}"
             class="rounded-lg px-3 py-1.5 text-sm font-semibold {{ ! $filterNeedsReply && ! request()->query('status') ? 'bg-primary text-on-primary' : 'border border-outline-variant text-on-surface-variant' }}">Tất cả</a>
-        <a href="{{ route('admin.support.index', ['needs_reply' => 1]) }}"
+@endif
+        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.support.index'))
+<a href="{{ route('admin.support.index', ['needs_reply' => 1]) }}"
             class="rounded-lg px-3 py-1.5 text-sm font-semibold {{ $filterNeedsReply ? 'bg-primary text-on-primary' : 'border border-outline-variant text-on-surface-variant' }}">Chưa trả lời</a>
-        <a href="{{ route('admin.support.index', ['status' => 'waiting_admin']) }}"
+@endif
+        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.support.index'))
+<a href="{{ route('admin.support.index', ['status' => 'waiting_admin']) }}"
             class="rounded-lg px-3 py-1.5 text-sm font-semibold {{ request()->query('status') === 'waiting_admin' ? 'bg-primary text-on-primary' : 'border border-outline-variant text-on-surface-variant' }}">Chờ xử lý</a>
-        <a href="{{ route('admin.support.index', ['status' => 'admin_active']) }}"
+@endif
+        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.support.index'))
+<a href="{{ route('admin.support.index', ['status' => 'admin_active']) }}"
             class="rounded-lg px-3 py-1.5 text-sm font-semibold {{ request()->query('status') === 'admin_active' ? 'bg-primary text-on-primary' : 'border border-outline-variant text-on-surface-variant' }}">Đang xử lý</a>
+@endif
     </div>
 
     <div class="overflow-x-auto overflow-hidden rounded-xl border border-outline-variant bg-surface">
@@ -56,7 +64,8 @@
                         data-support-row
                         data-conversation-id="{{ $conversation->id }}">
                         <td class="px-4 py-3">
-                            <a
+                            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.support.show'))
+<a
                                 class="inline-flex items-start gap-2 font-semibold text-primary"
                                 href="{{ route('admin.support.show', $conversation) }}"
                                 data-support-open
@@ -76,6 +85,7 @@
                                     <p class="text-sm font-normal text-on-surface-variant">{{ $conversation->subject ?: 'Không có tiêu đề' }}</p>
                                 </span>
                             </a>
+@endif
                         </td>
                         <td class="px-4 py-3 text-sm">{{ \App\Models\SupportConversation::CATEGORY_LABELS[$conversation->category] ?? $conversation->category }}</td>
                         <td class="px-4 py-3">

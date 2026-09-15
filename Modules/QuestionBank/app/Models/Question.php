@@ -25,7 +25,6 @@ use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\InstructorReviewDecision;
 use Modules\QuestionBank\Enums\QuestionReviewStatus;
 use Modules\QuestionBank\Enums\QuestionStatus;
-use Modules\QuestionBank\Enums\ReviewerFlag;
 use Modules\QuestionBank\Support\QuestionCodeAllocator;
 use Modules\QuestionBank\Support\QuestionFilterBuilder;
 use Modules\QuestionBank\Support\ServePublishedQuestion;
@@ -49,21 +48,11 @@ use Modules\QuestionBank\Support\ServePublishedQuestion;
  * @property int|null $updated_by
  * @property int|null $reviewer_id
  * @property int|null $instructor_id
- * @property int|null $assigned_instructor_id
- * @property string|null $instructor_decision
- * @property string|null $instructor_note
- * @property Carbon|null $instructor_reviewed_at
  * @property int $instructor_review_cycle
  * @property int|null $instructor_1_id
  * @property string|null $instructor_1_decision
  * @property int|null $instructor_2_id
  * @property string|null $instructor_2_decision
- * @property int|null $reviewer_1_id
- * @property string|null $reviewer_1_flag
- * @property string|null $reviewer_1_note
- * @property int|null $reviewer_2_id
- * @property string|null $reviewer_2_flag
- * @property string|null $reviewer_2_note
  * @property int|null $publisher_id
  * @property int|null $published_version
  * @property string|null $rejection_reason
@@ -111,21 +100,11 @@ class Question extends Model
         'updated_by',
         'reviewer_id',
         'instructor_id',
-        'assigned_instructor_id',
-        'instructor_decision',
-        'instructor_note',
-        'instructor_reviewed_at',
         'instructor_review_cycle',
         'instructor_1_id',
         'instructor_1_decision',
         'instructor_2_id',
         'instructor_2_decision',
-        'reviewer_1_id',
-        'reviewer_1_flag',
-        'reviewer_1_note',
-        'reviewer_2_id',
-        'reviewer_2_flag',
-        'reviewer_2_note',
         'publisher_id',
         'published_version',
         'rejection_reason',
@@ -169,7 +148,6 @@ class Question extends Model
         'exam_flag' => 'boolean',
         'version' => 'integer',
         'instructor_review_cycle' => 'integer',
-        'instructor_reviewed_at' => 'datetime',
         'published_version' => 'integer',
         'cloned_from_version' => 'integer',
         'stats_cache' => 'array',
@@ -398,12 +376,6 @@ class Question extends Model
     }
 
     /** @return BelongsTo<User, $this> */
-    public function assignedInstructor(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'assigned_instructor_id');
-    }
-
-    /** @return BelongsTo<User, $this> */
     public function instructorSlot1(): BelongsTo
     {
         return $this->belongsTo(User::class, 'instructor_1_id');
@@ -419,24 +391,6 @@ class Question extends Model
     public function instructorReviews(): HasMany
     {
         return $this->hasMany(QuestionInstructorReview::class);
-    }
-
-    /** @return BelongsTo<User, $this> */
-    public function reviewerSlot1(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'reviewer_1_id');
-    }
-
-    /** @return BelongsTo<User, $this> */
-    public function reviewerSlot2(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'reviewer_2_id');
-    }
-
-    /** @return HasMany<QuestionReviewerFlag, $this> */
-    public function reviewerFlags(): HasMany
-    {
-        return $this->hasMany(QuestionReviewerFlag::class);
     }
 
     /**
@@ -459,7 +413,6 @@ class Question extends Model
     {
         return in_array($this->status, [
             QuestionStatus::InReview,
-            QuestionStatus::InFlagReview,
             QuestionStatus::PendingPublish,
             QuestionStatus::Rejected,
         ], true);
@@ -474,8 +427,7 @@ class Question extends Model
         $isUpdate = (int) $this->published_version > 0;
 
         return match ($this->status) {
-            QuestionStatus::InReview => $isUpdate ? 'Đang chờ giảng viên' : 'Đang chờ giảng viên',
-            QuestionStatus::InFlagReview => $isUpdate ? 'Đang gắn cờ cập nhật' : 'Đang chờ gắn cờ',
+            QuestionStatus::InReview => $isUpdate ? 'Đang duyệt cập nhật' : 'Đang chờ duyệt',
             QuestionStatus::PendingPublish => $isUpdate ? 'Cập nhật đủ phiếu' : 'Đủ phiếu · chờ xuất bản',
             QuestionStatus::Rejected => $this->isInstructorRejection()
                 ? 'Giảng viên từ chối'
@@ -489,11 +441,6 @@ class Question extends Model
     {
         if ($this->status !== QuestionStatus::Rejected) {
             return false;
-        }
-
-        if ($this->instructor_decision === InstructorReviewDecision::Rejected->value
-            || $this->instructor_decision === InstructorReviewDecision::Rejected) {
-            return true;
         }
 
         $role = Role::tryFrom((string) $this->rejected_by_role);
@@ -535,84 +482,16 @@ class Question extends Model
     }
 
     /**
-     * Two flags for admin/teach lists — reviewer flags when present, else legacy GV slots.
+     * Two medical-review flags for admin/teach lists.
      *
      * @return list<array{slot: int, decision: string|null, color: string, instructor_name: string|null, label: string}>
      */
     public function instructorReviewFlags(): array
     {
-        if ($this->usesReviewerFlags()) {
-            return $this->reviewerReviewFlags();
-        }
-
         return [
             $this->instructorReviewFlag(1, $this->instructor_1_decision, $this->instructorSlot1?->name),
             $this->instructorReviewFlag(2, $this->instructor_2_decision, $this->instructorSlot2?->name),
         ];
-    }
-
-    public function usesReviewerFlags(): bool
-    {
-        return $this->reviewer_1_flag !== null
-            || $this->reviewer_2_flag !== null
-            || in_array($this->status, [QuestionStatus::InFlagReview, QuestionStatus::PendingPublish], true)
-                && $this->instructor_decision !== null;
-    }
-
-    /**
-     * @return list<array{slot: int, decision: string|null, color: string, instructor_name: string|null, label: string}>
-     */
-    public function reviewerReviewFlags(): array
-    {
-        return [
-            $this->reviewerReviewFlag(1, $this->reviewer_1_flag, $this->reviewerSlot1?->name),
-            $this->reviewerReviewFlag(2, $this->reviewer_2_flag, $this->reviewerSlot2?->name),
-        ];
-    }
-
-    public function hasRedReviewerFlag(): bool
-    {
-        return $this->flagValue($this->reviewer_1_flag) === ReviewerFlag::Red->value
-            || $this->flagValue($this->reviewer_2_flag) === ReviewerFlag::Red->value;
-    }
-
-    public function hasYellowReviewerFlag(): bool
-    {
-        return $this->flagValue($this->reviewer_1_flag) === ReviewerFlag::Yellow->value
-            || $this->flagValue($this->reviewer_2_flag) === ReviewerFlag::Yellow->value;
-    }
-
-    /**
-     * @return array{slot: int, decision: string|null, color: string, instructor_name: string|null, label: string}
-     */
-    private function reviewerReviewFlag(int $slot, mixed $flag, ?string $name): array
-    {
-        $value = $this->flagValue($flag);
-        $color = $value ?? 'white';
-        $who = $name ?: 'Reviewer '.$slot;
-        $label = match ($value) {
-            ReviewerFlag::Green->value => $who.' gắn cờ xanh',
-            ReviewerFlag::Yellow->value => $who.' gắn cờ vàng',
-            ReviewerFlag::Red->value => $who.' gắn cờ đỏ',
-            default => 'Reviewer '.$slot.' chưa gắn cờ',
-        };
-
-        return [
-            'slot' => $slot,
-            'decision' => $value,
-            'color' => $color,
-            'instructor_name' => $name,
-            'label' => $label,
-        ];
-    }
-
-    private function flagValue(mixed $flag): ?string
-    {
-        if ($flag instanceof ReviewerFlag) {
-            return $flag->value;
-        }
-
-        return is_string($flag) && $flag !== '' ? $flag : null;
     }
 
     /**

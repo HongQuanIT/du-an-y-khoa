@@ -33,6 +33,15 @@ final class PortalLoginSeparationTest extends TestCase
             ->assertRedirect(route('admin.login'));
     }
 
+    public function test_admin_login_page_displays_form_for_guest(): void
+    {
+        $this->get(route('admin.login'))
+            ->assertOk()
+            ->assertSee('name="email"', false)
+            ->assertSee('name="password"', false)
+            ->assertSee('action="'.route('admin.login.store').'"', false);
+    }
+
     public function test_student_can_login_via_student_portal(): void
     {
         $user = User::factory()->create(['email' => 'student@example.com']);
@@ -175,21 +184,6 @@ final class PortalLoginSeparationTest extends TestCase
             ->assertOk()
             ->assertSee('Câu hỏi')
             ->assertDontSee('Người dùng');
-    }
-
-    public function test_reviewer_menu_shows_flag_queue_not_user_management(): void
-    {
-        $user = User::factory()->create();
-        $user->assignRole(Role::Reviewer->value);
-        $this->enrollTwoFactor($user);
-
-        $this->actingAs($user)
-            ->withSession([TwoFactorSession::KEY => now()->timestamp])
-            ->get(route('admin.dashboard'))
-            ->assertOk()
-            ->assertSee('Review câu hỏi')
-            ->assertDontSee('Người dùng')
-            ->assertDontSee('Phân loại');
     }
 
     public function test_guest_visiting_teach_is_sent_to_teach_login(): void

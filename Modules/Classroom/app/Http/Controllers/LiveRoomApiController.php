@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Modules\Classroom\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Support\Enums\Permission;
 use App\Support\Http\Responses\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -33,7 +32,7 @@ final class LiveRoomApiController extends Controller
 
         $observer = $request->routeIs('admin.*');
         if ($observer) {
-            abort_unless($request->user()->can(Permission::ClassroomOversee->value), 403);
+            abort_unless($request->user()->canAny(['classroom_oversight.view_any']), 403);
         }
 
         $liveSession->load([
@@ -108,7 +107,7 @@ final class LiveRoomApiController extends Controller
 
         $observer = $request->routeIs('admin.*');
         if ($observer) {
-            abort_unless($request->user()->can(Permission::ClassroomOversee->value), 403);
+            abort_unless($request->user()->canAny(['classroom_oversight.view_any']), 403);
         }
 
         $teachPortal = $request->routeIs('teach.*');

@@ -16,10 +16,9 @@ use Modules\Admin\Actions\CommitQuestionImportAction;
 use Modules\Admin\Actions\PrepareQuestionImportPreviewAction;
 use Modules\QuestionBank\Enums\QuestionImportBatchStatus;
 use Modules\QuestionBank\Models\QuestionImportBatch;
-use Modules\QuestionBank\Enums\TaxonomyStatus;
-use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Support\QuestionImportSchema;
 use Modules\QuestionBank\Support\QuestionSpreadsheet;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class QuestionImportController extends Controller
@@ -43,40 +42,19 @@ final class QuestionImportController extends Controller
         $this->authorizePermission(Permission::QuestionCreate);
 
         $format = $request->query('format') === 'csv' ? 'csv' : 'xlsx';
-        $lessons = Lesson::query()
-            ->where('status', TaxonomyStatus::Active)
-            ->orderBy('sort_order')
-            ->orderBy('name')
-            ->limit(500)
-            ->get(['slug', 'name']);
-        if ($lessons->isEmpty()) {
-            $lessons = Lesson::query()
-                ->orderBy('sort_order')
-                ->orderBy('name')
-                ->limit(500)
-                ->get(['slug', 'name']);
-        }
         $headers = QuestionImportSchema::headers();
-        $rows = [QuestionImportSchema::sampleRow($lessons->first()?->slug)];
-        $catalog = $lessons->isNotEmpty()
-            ? [['name' => 'Bai_hoc', 'rows' => QuestionImportSchema::catalogLessonRows($lessons)]]
-            : [];
+        $rows = [QuestionImportSchema::sampleRow()];
 
         $filename = 'mau-import-cau-hoi.'.$format;
 
-        return response()->streamDownload(function () use ($spreadsheet, $format, $headers, $rows, $catalog): void {
+        return response()->streamDownload(function () use ($spreadsheet, $format, $headers, $rows): void {
             if ($format === 'csv') {
                 echo $spreadsheet->csvString($headers, $rows);
 
                 return;
             }
 
-            echo $spreadsheet->xlsxBinary(
-                $headers,
-                $rows,
-                QuestionImportSchema::guideRows(),
-                $catalog,
-            );
+            echo $spreadsheet->xlsxBinary($headers, $rows, QuestionImportSchema::guideRows());
         }, $filename, [
             'Content-Type' => $format === 'csv'
                 ? 'text/csv; charset=UTF-8'
@@ -242,17 +220,15 @@ final class QuestionImportController extends Controller
             );
     }
 
-    public function errors(QuestionImportBatch $batch): \Symfony\Component\HttpFoundation\Response
+    public function errors(QuestionImportBatch $batch): Response
     {
         $this->authorizePermission(Permission::QuestionCreate);
         $this->authorizeBatch($batch);
         abort_unless(filled($batch->error_report_path) && Storage::disk('local')->exists($batch->error_report_path), 404);
 
-        $extension = str_ends_with((string) $batch->error_report_path, '.xlsx') ? 'xlsx' : 'csv';
-
         return Storage::disk('local')->download(
             $batch->error_report_path,
-            'import-loi-'.$batch->getKey().'.'.$extension,
+            'import-loi-'.$batch->getKey().'.csv',
         );
     }
 
@@ -263,7 +239,7 @@ final class QuestionImportController extends Controller
 
     private function authorizePermission(Permission $permission): void
     {
-        abort_unless($this->actor()->can($permission->value), 403);
+        abort_unless($this->actor()->can('question.import'), 403);
     }
 
     private function actor(): User

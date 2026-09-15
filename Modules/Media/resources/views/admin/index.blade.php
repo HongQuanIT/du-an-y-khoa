@@ -3,18 +3,22 @@
         description="Ảnh hoặc đoạn phim lưu trên máy chủ hay qua đường dẫn CDN. Có thể dùng lại cho trang nội dung, bài viết và câu hỏi.">
         @if ($canManage)
             <x-slot:actions>
+                @can('media.import')
                 <button type="button"
                     class="inline-flex items-center gap-1 rounded-lg border border-outline-variant px-3 py-2 font-label-md text-on-surface hover:bg-surface-container-low"
                     @click="window.dispatchEvent(new CustomEvent('media-picker:open', { detail: { mode: 'url', accept: 'image' } }))">
                     <span class="material-symbols-outlined text-[18px] leading-none">link</span>
                     URL / CDN
                 </button>
+                @endcan
+                @can('media.upload')
                 <button type="button"
                     class="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-2 font-label-md text-on-primary hover:opacity-90"
                     @click="window.dispatchEvent(new CustomEvent('media-picker:open', { detail: { mode: 'upload', accept: 'all' } }))">
                     <span class="material-symbols-outlined text-[18px] leading-none">upload</span>
                     Tải lên
                 </button>
+                @endcan
             </x-slot:actions>
         @endif
     </x-admin.page-header>
@@ -27,7 +31,8 @@
         <x-admin.kpi-card label="Đoạn phim" :value="number_format($stats['videos'])" hint="Lưu trên máy chủ, chưa phát trực tuyến thích ứng" icon="movie" />
     </div>
 
-    <form method="get" action="{{ route('admin.media.index') }}" class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end">
+    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.media.index'))
+<form method="get" action="{{ route('admin.media.index') }}" class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end">
         <div class="min-w-0 flex-1">
             <label class="mb-1.5 block font-label-sm text-on-surface-variant" for="q">Tìm kiếm</label>
             <input id="q" name="q" type="search" value="{{ $filters['q'] }}"
@@ -57,6 +62,7 @@
         <button type="submit"
             class="rounded-lg border border-outline-variant px-4 py-2 font-label-md text-on-surface hover:bg-surface-container-low">Lọc</button>
     </form>
+@endif
 
     @if ($items->isEmpty())
         <div class="rounded-xl border border-dashed border-outline-variant bg-surface px-6 py-16 text-center">
@@ -67,7 +73,8 @@
     @else
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
             @foreach ($items as $item)
-                <a href="{{ route('admin.media.show', $item) }}"
+                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.media.show'))
+<a href="{{ route('admin.media.show', $item) }}"
                     class="group overflow-hidden rounded-xl border border-outline-variant bg-surface hover:border-primary">
                     <div class="relative aspect-square bg-surface-container-low">
                         @if ($item->type === \Modules\Media\Support\Enums\MediaType::Image && $item->thumbUrl())
@@ -86,6 +93,7 @@
                         <p class="font-label-sm text-on-surface-variant">{{ $item->status?->label() }}</p>
                     </div>
                 </a>
+@endif
             @endforeach
         </div>
 

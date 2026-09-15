@@ -263,16 +263,35 @@ final class StudySessionController extends Controller
     public function pause(Request $request, QuestionSession $session): RedirectResponse
     {
         $this->authorize('update', $session);
-        abort_unless(
-            in_array($session->status, [SessionStatus::Active, SessionStatus::Paused], true),
-            409,
-            'Phiên này không thể tạm dừng.',
-        );
+
+        $session->refresh();
+        if ($session->status === SessionStatus::Completed) {
+            return redirect($this->summaryUrl($session))
+                ->with('status', 'Phiên đã hoàn thành nên không thể tạm dừng.');
+        }
+
+        if (! in_array($session->status, [SessionStatus::Active, SessionStatus::Paused], true)) {
+            return redirect()->route('qbank.index')
+                ->with('status', 'Phiên không còn hoạt động. Hãy tạo hoặc chọn một phiên khác.');
+        }
+
         $validated = $request->validate(['current_index' => ['nullable', 'integer', 'min:0']]);
 
-        $this->pauseSession->handle($session, [
-            'current_index' => (int) ($validated['current_index'] ?? 0),
-        ]);
+        try {
+            $this->pauseSession->handle($session, [
+                'current_index' => (int) ($validated['current_index'] ?? 0),
+            ]);
+        } catch (\RuntimeException) {
+            $session->refresh();
+
+            if ($session->status === SessionStatus::Completed) {
+                return redirect($this->summaryUrl($session))
+                    ->with('status', 'Phiên đã hoàn thành nên không thể tạm dừng.');
+            }
+
+            return redirect()->route('qbank.index')
+                ->with('status', 'Trạng thái phiên vừa thay đổi. Vui lòng kiểm tra lại.');
+        }
 
         return redirect()->route('qbank.index')->with('status', 'Đã lưu và tạm dừng phiên luyện tập.');
     }

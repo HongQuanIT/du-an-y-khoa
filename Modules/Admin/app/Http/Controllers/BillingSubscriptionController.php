@@ -6,7 +6,6 @@ namespace Modules\Admin\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Support\Enums\Permission;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Modules\Billing\Models\Plan;
@@ -18,7 +17,7 @@ final class BillingSubscriptionController extends Controller
 {
     public function index(Request $request): View
     {
-        $this->authorizePermission(Permission::BillingManage);
+        $this->authorizePermission('billing_subscription.view');
 
         $query = Subscription::query()
             ->forStudents()
@@ -72,13 +71,13 @@ final class BillingSubscriptionController extends Controller
                 'sku' => $sku,
                 'source' => $request->query('source'),
             ],
-            'canViewUsers' => $this->actor()->can(Permission::UserView->value),
+            'canViewUsers' => $this->actor()->canAny(['user.view', 'user.view_any']),
         ]);
     }
 
-    private function authorizePermission(Permission $permission): void
+    private function authorizePermission(string $permission): void
     {
-        abort_unless($this->actor()->can($permission->value), 403);
+        abort_unless($this->actor()->canAny([$permission]), 403);
     }
 
     private function actor(): User

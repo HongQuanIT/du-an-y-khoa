@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Modules\Admin\Support;
 
 use App\Models\User;
-use App\Support\Enums\Permission;
 use Illuminate\Support\Facades\Route;
 use Modules\Admin\Models\ContactInquiry;
 use Modules\QuestionBank\Enums\QuestionReviewStatus;
@@ -49,14 +48,14 @@ final class AdminMenu
                 'label' => 'Người dùng',
                 'icon' => 'group',
                 'route' => 'admin.users.index',
-                'permission' => Permission::UserView->value,
+                'permission' => 'user.view_any',
                 'match' => 'admin.users.*',
             ],
             [
                 'label' => 'Dữ liệu học viên',
                 'icon' => 'clinical_notes',
-                'route' => 'admin.learner-data.demographics',
-                'permission' => Permission::UserView->value,
+                'route' => 'admin.institutions.index',
+                'permission' => 'learner_catalog.view_any',
                 'match' => [
                     'admin.learner-data.*',
                     'admin.countries.*',
@@ -70,36 +69,21 @@ final class AdminMenu
                 'label' => 'Câu hỏi',
                 'icon' => 'quiz',
                 'route' => 'admin.questions.index',
-                'permission' => [
-                    Permission::QuestionView->value,
-                    Permission::QuestionUpdate->value,
-                    Permission::QuestionCreate->value,
-                    Permission::QuestionPublish->value,
-                ],
+                'permission' => 'question.view_any',
                 'match' => 'admin.questions.*',
-            ],
-            [
-                'label' => 'Review câu hỏi',
-                'icon' => 'flag',
-                'route' => 'admin.questions.flags.index',
-                'permission' => Permission::QuestionFlag->value,
-                'match' => 'admin.questions.flags.*',
             ],
             [
                 'label' => 'Phản hồi câu hỏi',
                 'icon' => 'rate_review',
                 'route' => 'admin.question-feedback.index',
-                'permission' => [
-                    Permission::QuestionUpdate->value,
-                    Permission::QuestionPublish->value,
-                ],
+                'permission' => 'question_feedback.view_any',
                 'match' => 'admin.question-feedback.*',
             ],
             [
                 'label' => 'Phân loại',
                 'icon' => 'category',
                 'route' => 'admin.taxonomy.index',
-                'permission' => Permission::TopicView->value,
+                'permission' => 'taxonomy.view',
                 'match' => [
                     'admin.taxonomy.*',
                     'admin.blueprints.*',
@@ -111,84 +95,77 @@ final class AdminMenu
                 'label' => 'Kỳ thi',
                 'icon' => 'assignment',
                 'route' => 'admin.exams.index',
-                'permission' => Permission::ExamManage->value,
+                'permission' => 'exam.view_any',
                 'match' => 'admin.exams.*',
             ],
             [
                 'label' => 'Lớp học',
                 'icon' => 'school',
                 'route' => 'admin.classrooms.index',
-                'permission' => Permission::ClassroomOversee->value,
+                'permission' => 'classroom_oversight.view_any',
                 'match' => 'admin.classrooms.*',
-            ],
-            [
-                'label' => 'Thư viện',
-                'icon' => 'library_books',
-                'route' => 'admin.library.index',
-                'permission' => Permission::LibraryView->value,
-                'match' => 'admin.library.*',
             ],
             [
                 'label' => 'CMS',
                 'icon' => 'article',
                 'route' => 'admin.cms.pages.index',
-                'permission' => Permission::CmsManage->value,
+                'permission' => 'cms_page.view_any',
                 'match' => 'admin.cms.*',
             ],
             [
                 'label' => 'Liên hệ',
                 'icon' => 'mail',
                 'route' => 'admin.contacts.index',
-                'permission' => Permission::ContactView->value,
+                'permission' => 'contact.view_any',
                 'match' => 'admin.contacts.*',
             ],
             [
                 'label' => 'Media',
                 'icon' => 'perm_media',
                 'route' => 'admin.media.index',
-                'permission' => Permission::MediaView->value,
+                'permission' => 'media.view',
                 'match' => 'admin.media.*',
             ],
             [
                 'label' => 'Báo cáo',
                 'icon' => 'analytics',
                 'route' => 'admin.reports.index',
-                'permission' => Permission::ReportView->value,
+                'permission' => 'report.view',
                 'match' => 'admin.reports.*',
             ],
             [
                 'label' => 'Gói & bảng giá',
                 'icon' => 'sell',
                 'route' => 'admin.billing.plans.index',
-                'permission' => Permission::BillingManage->value,
+                'permission' => 'billing_plan.view',
                 'match' => ['admin.billing.plans.*', 'admin.billing.plan-prices.*'],
             ],
             [
                 'label' => 'Lịch sử Premium',
                 'icon' => 'workspace_premium',
                 'route' => 'admin.billing.subscriptions.index',
-                'permission' => Permission::BillingManage->value,
+                'permission' => 'billing_subscription.view',
                 'match' => 'admin.billing.subscriptions.*',
             ],
             [
                 'label' => 'Thanh toán',
                 'icon' => 'payments',
                 'route' => 'admin.billing.payments.index',
-                'permission' => Permission::BillingManage->value,
+                'permission' => 'billing_payment.view',
                 'match' => 'admin.billing.payments.*',
             ],
             [
                 'label' => 'Cổng thanh toán',
                 'icon' => 'account_balance',
                 'route' => 'admin.billing.gateways.index',
-                'permission' => Permission::BillingManage->value,
+                'permission' => 'billing_gateway.view',
                 'match' => 'admin.billing.gateways.*',
             ],
             [
                 'label' => 'Cộng tác viên',
                 'icon' => 'handshake',
                 'route' => 'admin.partners.index',
-                'permission' => Permission::AdminPartnersManage->value,
+                'permission' => 'partner.view_any',
                 'match' => [
                     'admin.partners.index',
                     'admin.partners.show',
@@ -199,35 +176,35 @@ final class AdminMenu
                 'label' => 'Chi trả CTV',
                 'icon' => 'account_balance_wallet',
                 'route' => 'admin.partners.payouts.index',
-                'permission' => Permission::AdminPartnersPayouts->value,
+                'permission' => 'partner_payout.view',
                 'match' => 'admin.partners.payouts.*',
             ],
             [
                 'label' => 'Phân quyền',
                 'icon' => 'admin_panel_settings',
                 'route' => 'admin.roles.index',
-                'permission' => Permission::RoleManage->value,
+                'permission' => 'role.view_any',
                 'match' => 'admin.roles.*',
             ],
             [
                 'label' => 'Thông báo',
                 'icon' => 'notifications',
                 'route' => 'admin.notifications.index',
-                'permission' => null,
+                'permission' => 'notification.view',
                 'match' => 'admin.notifications.*',
             ],
             [
                 'label' => 'Cài đặt',
                 'icon' => 'settings',
                 'route' => 'admin.settings.index',
-                'permission' => Permission::SystemManage->value,
+                'permission' => 'system_setting.view',
                 'match' => 'admin.settings.*',
             ],
             [
                 'label' => 'Audit',
                 'icon' => 'history',
                 'route' => 'admin.audit.index',
-                'permission' => Permission::AuditView->value,
+                'permission' => 'audit_log.view',
                 'match' => 'admin.audit.*',
             ],
             [
@@ -235,7 +212,7 @@ final class AdminMenu
                 'icon' => 'monitoring',
                 'route' => 'horizon.index',
                 'url' => '/horizon',
-                'permission' => Permission::SystemManage->value,
+                'permission' => 'system_setting.view',
                 'match' => null,
                 'path' => 'horizon*',
                 'external' => true,
@@ -264,8 +241,8 @@ final class AdminMenu
                 'external' => (bool) ($item['external'] ?? false),
                 'coming_soon' => ! $hrefReady && $item['route'] !== 'admin.dashboard',
                 'badge' => match (true) {
-                    $item['route'] === 'admin.questions.flags.index' => \Modules\QuestionBank\Models\Question::query()
-                        ->where('status', \Modules\QuestionBank\Enums\QuestionStatus::InFlagReview->value)
+                    $item['route'] === 'admin.questions.index' && QuestionAccess::isReviewer($user) => QuestionReviewRequest::query()
+                        ->where('status', QuestionReviewStatus::Pending->value)
                         ->count(),
                     $item['route'] === 'admin.contacts.index' => ContactInquiry::newCount(),
                     default => 0,

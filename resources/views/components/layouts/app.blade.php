@@ -9,15 +9,20 @@
 
     // Dashboard, Q-Bank, StudyPlan, Flashcards are wired; the rest land as modules ship.
     $navItems = [
-        ['label' => 'Tổng quan', 'icon' => 'dashboard', 'route' => 'dashboard'],
-        ['label' => 'Ngân hàng câu hỏi', 'icon' => 'quiz', 'route' => 'qbank.index', 'match' => 'qbank.*'],
-        ['label' => 'Thư viện', 'icon' => 'library_books', 'route' => null],
-        ['label' => 'Thẻ ghi nhớ', 'icon' => 'style', 'route' => 'flashcards.index', 'match' => 'flashcards.*'],
-        ['label' => 'Kế hoạch học tập', 'icon' => 'event_note', 'route' => 'study-plan.index', 'match' => 'study-plan.*'],
-        ['label' => 'Lớp học', 'icon' => 'cast_for_education', 'route' => 'classroom.index', 'match' => 'classroom.*'],
-        ['label' => 'Phân tích', 'icon' => 'analytics', 'route' => null],
-        ['label' => 'Kỳ thi', 'icon' => 'assignment', 'route' => 'exam.index', 'match' => 'exam.*'],
+        ['label' => 'Tổng quan', 'icon' => 'dashboard', 'route' => 'dashboard', 'permission' => 'learner_dashboard.view'],
+        ['label' => 'Ngân hàng câu hỏi', 'icon' => 'quiz', 'route' => 'qbank.index', 'match' => 'qbank.*', 'permission' => 'question.view'],
+        ['label' => 'Thư viện', 'icon' => 'library_books', 'route' => null, 'permission' => 'library.view'],
+        ['label' => 'Kế hoạch học tập', 'icon' => 'event_note', 'route' => 'study-plan.index', 'match' => 'study-plan.*', 'permission' => 'study_plan.view_any'],
+        ['label' => 'Lớp học', 'icon' => 'cast_for_education', 'route' => 'classroom.index', 'match' => 'classroom.*', 'permission' => 'classroom.view'],
+        ['label' => 'Phân tích', 'icon' => 'analytics', 'route' => null, 'permission' => 'learning_analytics.view'],
+        ['label' => 'Kỳ thi', 'icon' => 'assignment', 'route' => 'exam.index', 'match' => 'exam.*', 'permission' => ['exam.view', 'exam.take']],
     ];
+    $navItems = array_values(array_filter(
+        $navItems,
+        static fn (array $item): bool => auth()->user()?->canAny((array) $item['permission']) === true,
+    ));
+    $canSearch = auth()->user()?->can('search.use') === true;
+    $canViewNotifications = auth()->user()?->can('notification.view') === true;
 
     $headerSubscription = CurrentSubscription::for(auth()->user());
     $membershipChipParts = [$headerSubscription['is_free'] ? 'Free' : 'Premium'];
@@ -191,6 +196,7 @@
                 <span class="material-symbols-outlined text-[24px] leading-none">menu</span>
             </button>
 
+            @if ($canSearch)
             <div class="relative w-full max-w-2xl" @click.outside="search.open = false">
                 <form method="GET" action="{{ route('search.index') }}" role="search" class="relative" @submit.prevent="search.submit()">
                     <span
@@ -203,11 +209,14 @@
                         class="w-full rounded-lg border border-outline-variant bg-surface-container-low py-2 pr-4 pl-10 font-body-sm text-body-sm hover:border-primary focus:ring-2 focus:ring-primary outline-none focus:outline-none focus-visible:outline-none">
                 </form>
             </div>
+            @endif
         </div>
 
         <div class="ml-2 flex shrink-0 items-center gap-6">
             <div class="flex items-center gap-3">
-                @include('notification::partials.bell', ['indexRoute' => 'notifications.index'])
+                @if ($canViewNotifications)
+                    @include('notification::partials.bell', ['indexRoute' => 'notifications.index'])
+                @endif
             </div>
 
             <div class="hidden h-8 w-px bg-outline-variant sm:block"></div>
@@ -249,6 +258,7 @@
                             </p>
                         </div>
 
+                        @can('profile.view')
                         <a href="{{ route('profile.show', ['tab' => 'membership']) }}" @click="accountMenu = false"
                             @class([
                                 'inline-flex max-w-full items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1 font-label-sm text-[14px] leading-none font-semibold transition-opacity hover:opacity-90',
@@ -264,6 +274,7 @@
                             class="block w-full rounded-lg bg-primary px-4 py-2.5 text-center font-label-md text-label-md font-bold text-on-primary transition-opacity hover:opacity-90">
                             Quản lý tài khoản
                         </a>
+                        @endcan
 
                         @if ($headerSubscription['is_free'])
                             <a href="{{ route('subscription.upgrade') }}" @click="accountMenu = false"

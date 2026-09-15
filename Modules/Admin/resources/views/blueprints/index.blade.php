@@ -2,10 +2,12 @@
     <x-admin.page-header title="Ma trận đề thi" description="Ma trận → Phần → Chủ đề lâm sàng. Map CCT ↔ danh mục y khoa; câu hỏi khớp qua danh mục (không gắn trực tiếp).">
         <x-slot:actions>
             @if ($canCreate)
-                <a href="{{ route('admin.blueprints.create') }}" class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 font-label-md font-semibold text-on-primary">
+                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.blueprints.create'))
+<a href="{{ route('admin.blueprints.create') }}" class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 font-label-md font-semibold text-on-primary">
                     <span class="material-symbols-outlined text-[18px]">add</span>
                     Tạo ma trận
                 </a>
+@endif
             @endif
         </x-slot:actions>
     </x-admin.page-header>
@@ -19,7 +21,7 @@
             <thead class="bg-surface-container-low text-left font-label-sm text-on-surface-variant">
                 <tr>
                     <th class="px-4 py-3">Tên</th>
-                    <th class="px-4 py-3">Mã</th>
+                    <th class="px-4 py-3">Code</th>
                     <th class="px-4 py-3 text-center">Phần</th>
                     <th class="px-4 py-3 text-center">Chủ đề lâm sàng</th>
                     <th class="px-4 py-3">Trạng thái</th>
@@ -44,7 +46,9 @@
                             </span>
                         </td>
                         <td class="px-4 py-3 text-right">
-                            <a href="{{ route('admin.blueprints.edit', $blueprint) }}" class="font-semibold text-primary hover:underline">Quản lý</a>
+                            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.blueprints.edit'))
+<a href="{{ route('admin.blueprints.edit', $blueprint) }}" class="font-semibold text-primary hover:underline">Quản lý</a>
+@endif
                         </td>
                     </tr>
                 @empty
@@ -52,7 +56,9 @@
                         <td colspan="6" class="px-4 py-12 text-center text-on-surface-variant">
                             Chưa có ma trận đề thi.
                             @if ($canCreate)
-                                <a href="{{ route('admin.blueprints.create') }}" class="ml-1 font-semibold text-primary hover:underline">Tạo ma trận đầu tiên</a>
+                                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.blueprints.create'))
+<a href="{{ route('admin.blueprints.create') }}" class="ml-1 font-semibold text-primary hover:underline">Tạo ma trận đầu tiên</a>
+@endif
                             @endif
                         </td>
                     </tr>

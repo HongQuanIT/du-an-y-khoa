@@ -27,7 +27,8 @@
         </div>
     </div>
 
-    <form method="post" action="{{ route('admin.billing.gateways.update') }}" class="space-y-6">
+    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.billing.gateways.update'))
+<form method="post" action="{{ route('admin.billing.gateways.update') }}" class="space-y-6">
         @csrf
         @method('PUT')
 
@@ -120,4 +121,5 @@
             </button>
         </div>
     </form>
+@endif
 </x-layouts.admin>

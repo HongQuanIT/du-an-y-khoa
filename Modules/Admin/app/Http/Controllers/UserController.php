@@ -7,9 +7,7 @@ namespace Modules\Admin\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\UserActivitySession;
-use App\Support\Enums\Permission;
 use App\Support\Enums\PortalGroup;
-use App\Support\Enums\Role;
 use App\Support\Enums\UserStatus;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,21 +17,20 @@ use Modules\Admin\Actions\CreateUserAction;
 use Modules\Admin\Actions\SendUserPasswordResetAction;
 use Modules\Admin\Actions\UpdateUserRoleAction;
 use Modules\Admin\Actions\UpdateUserStatusAction;
-use Modules\Admin\Actions\VerifyUserEmailAction;
+use Modules\Admin\Support\AdminQuestionListQuery;
+use Modules\Admin\Support\AssignableRoles;
 use Modules\Auth\Models\AdministrativeUnit;
 use Modules\Auth\Models\EducationStage;
 use Modules\Auth\Models\Institution;
 use Modules\Auth\Models\Profession;
-use Modules\Admin\Support\AdminQuestionListQuery;
 use Modules\Partner\Models\Partner;
-use Modules\QuestionBank\Enums\TaxonomyStatus;
-use Modules\QuestionBank\Models\Subject;
+use Spatie\Permission\Models\Role as RoleModel;
 
 final class UserController extends Controller
 {
     public function index(Request $request): View
     {
-        $this->authorizePermission(Permission::UserView);
+        $this->authorizeAnyPermission(['user.view_any']);
 
         $query = User::query()->with([
             'roles',
@@ -55,16 +52,11 @@ final class UserController extends Controller
         $statuses = AdminQuestionListQuery::stringValues($request->query('status'));
 
         if ($portals !== []) {
-            $portalRoles = [];
-            foreach ($portals as $portal) {
-                $portalEnum = PortalGroup::tryFrom($portal);
-                if ($portalEnum === null) {
-                    continue;
-                }
-                foreach (Role::rolesIn($portalEnum) as $portalRole) {
-                    $portalRoles[] = $portalRole->value;
-                }
-            }
+            $portalRoles = RoleModel::query()
+                ->where('guard_name', 'web')
+                ->whereIn('portal', $portals)
+                ->pluck('name')
+                ->all();
             if ($portalRoles !== []) {
                 $query->role(array_values(array_unique($portalRoles)));
             }
@@ -94,15 +86,15 @@ final class UserController extends Controller
 
         return view('admin::users.index', [
             'users' => $users,
-            'roles' => Role::cases(),
+            'roles' => RoleModel::query()->where('guard_name', 'web')->orderBy('name')->get(),
             'portals' => PortalGroup::cases(),
             'statuses' => UserStatus::cases(),
             'institutions' => Institution::query()->active()->orderBy('name')->get(['id', 'name']),
             'administrativeUnits' => AdministrativeUnit::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'professions' => Profession::query()->where('is_active', true)->orderBy('sort_order')->get(['id', 'name']),
             'educationStages' => EducationStage::query()->where('is_active', true)->orderBy('sort_order')->get(['id', 'name']),
-            'canCreate' => $this->actor()->can(Permission::UserManage->value)
-                && Role::assignableBy($this->actor()) !== [],
+            'canCreate' => $this->actor()->canAny(['user.create'])
+                && AssignableRoles::for($this->actor())->isNotEmpty(),
             'filters' => [
                 'q' => $search,
                 'portal' => $portals,
@@ -119,21 +111,19 @@ final class UserController extends Controller
 
     public function create(): View
     {
-        $this->authorizePermission(Permission::UserManage);
+        $this->authorizeAnyPermission(['user.create']);
 
         return view('admin::users.create', [
-            'assignableRoles' => Role::assignableBy($this->actor()),
+            'assignableRoles' => AssignableRoles::for($this->actor())->all(),
         ]);
     }
 
     public function store(Request $request, CreateUserAction $action): RedirectResponse
     {
-        $this->authorizePermission(Permission::UserManage);
+        $this->authorizeAnyPermission(['user.create']);
 
-        $assignable = array_map(
-            static fn (Role $role): string => $role->value,
-            Role::assignableBy($this->actor()),
-        );
+        $assignableRoles = AssignableRoles::for($this->actor());
+        $assignable = $assignableRoles->pluck('name')->all();
 
         $data = $request->validate([
             'portal' => ['required', 'string', Rule::in(PortalGroup::values())],
@@ -143,9 +133,10 @@ final class UserController extends Controller
             'password' => ['required', 'string', 'min:8', 'max:255'],
         ]);
 
-        $role = Role::from($data['role']);
+        /** @var RoleModel $role */
+        $role = $assignableRoles->firstWhere('name', $data['role']);
 
-        if ($role->portal()->value !== $data['portal']) {
+        if ($role->portal !== $data['portal']) {
             return back()
                 ->withInput()
                 ->withErrors(['role' => 'Vai trò không thuộc portal đã chọn.']);
@@ -153,7 +144,7 @@ final class UserController extends Controller
 
         $user = $action->handle($this->actor(), $data, $role);
 
-        if ($role === Role::Partner) {
+        if ($role->portal === PortalGroup::Partner->value) {
             $partner = Partner::query()->where('user_id', $user->getKey())->firstOrFail();
 
             return redirect()
@@ -168,7 +159,7 @@ final class UserController extends Controller
 
     public function show(User $user): View
     {
-        $this->authorizePermission(Permission::UserView);
+        $this->authorizeAnyPermission(['user.view']);
 
         $user->load([
             'roles',
@@ -178,7 +169,6 @@ final class UserController extends Controller
             'learnerProfile.profession',
             'learnerProfile.educationStage',
             'socialAccounts',
-            'instructorSubjects',
         ]);
 
         $activities = UserActivitySession::query()
@@ -187,61 +177,42 @@ final class UserController extends Controller
             ->limit(20)
             ->get();
 
+        $canTarget = $this->actor()->isNot($user);
+        $canAssignRole = $canTarget
+            && $this->actor()->canAny(['user.role_assign']);
+        $canUpdateStatus = $canTarget
+            && $this->actor()->canAny(['user.status_update']);
+        $canResetPassword = $canTarget
+            && $this->actor()->canAny(['user.password_reset']);
+
         return view('admin::users.show', [
             'user' => $user,
-            'assignableRoles' => Role::assignableBy($this->actor()),
+            'assignableRoles' => AssignableRoles::for($this->actor())->all(),
             'statuses' => UserStatus::cases(),
             'activities' => $activities,
-            'canManage' => $this->actor()->can(Permission::UserManage->value)
-                && $this->actor()->isNot($user),
-            'subjects' => Subject::query()
-                ->where('status', TaxonomyStatus::Active)
-                ->orderBy('sort_order')
-                ->orderBy('name')
-                ->get(['id', 'name']),
-            'isInstructor' => $user->hasRole(Role::Instructor->value),
+            'canManage' => $canAssignRole || $canUpdateStatus || $canResetPassword,
+            'canAssignRole' => $canAssignRole,
+            'canUpdateStatus' => $canUpdateStatus,
+            'canResetPassword' => $canResetPassword,
         ]);
-    }
-
-    public function updateInstructorSubjects(Request $request, User $user): RedirectResponse
-    {
-        $this->authorizePermission(Permission::UserManage);
-        abort_unless($user->hasRole(Role::Instructor->value), 404);
-
-        $data = $request->validate([
-            'subject_ids' => ['nullable', 'array'],
-            'subject_ids.*' => ['integer', 'exists:subjects,id'],
-        ]);
-
-        $user->instructorSubjects()->sync(
-            collect($data['subject_ids'] ?? [])
-                ->map(fn ($id): int => (int) $id)
-                ->filter(fn (int $id): bool => $id > 0)
-                ->unique()
-                ->values()
-                ->all(),
-        );
-
-        return back()->with('status', 'Đã cập nhật môn học chuyên môn của giảng viên.');
     }
 
     public function updateRole(Request $request, User $user, UpdateUserRoleAction $action): RedirectResponse
     {
-        $this->authorizePermission(Permission::UserManage);
+        $this->authorizeAnyPermission(['user.role_assign']);
 
-        $assignable = array_map(
-            static fn (Role $role): string => $role->value,
-            Role::assignableBy($this->actor()),
-        );
+        $assignableRoles = AssignableRoles::for($this->actor());
+        $assignable = $assignableRoles->pluck('name')->all();
 
         $data = $request->validate([
             'portal' => ['required', 'string', Rule::in(PortalGroup::values())],
             'role' => ['required', 'string', Rule::in($assignable)],
         ]);
 
-        $role = Role::from($data['role']);
+        /** @var RoleModel $role */
+        $role = $assignableRoles->firstWhere('name', $data['role']);
 
-        if ($role->portal()->value !== $data['portal']) {
+        if ($role->portal !== $data['portal']) {
             return back()->withErrors(['role' => 'Vai trò không thuộc portal đã chọn.']);
         }
 
@@ -252,7 +223,7 @@ final class UserController extends Controller
 
     public function updateStatus(Request $request, User $user, UpdateUserStatusAction $action): RedirectResponse
     {
-        $this->authorizePermission(Permission::UserManage);
+        $this->authorizeAnyPermission(['user.status_update']);
 
         $data = $request->validate([
             'status' => ['required', 'string', 'in:'.implode(',', UserStatus::values())],
@@ -271,25 +242,17 @@ final class UserController extends Controller
 
     public function resetPassword(User $user, SendUserPasswordResetAction $action): RedirectResponse
     {
-        $this->authorizePermission(Permission::UserManage);
+        $this->authorizeAnyPermission(['user.password_reset']);
 
         $action->handle($this->actor(), $user);
 
         return back()->with('status', 'Đã gửi email đặt lại mật khẩu (nếu cấu hình mail hoạt động).');
     }
 
-    public function verifyEmail(User $user, VerifyUserEmailAction $action): RedirectResponse
+    /** @param list<string> $permissions */
+    private function authorizeAnyPermission(array $permissions): void
     {
-        $this->authorizePermission(Permission::UserManage);
-
-        $action->handle($this->actor(), $user);
-
-        return back()->with('status', 'Đã xác minh email.');
-    }
-
-    private function authorizePermission(Permission $permission): void
-    {
-        abort_unless($this->actor()->can($permission->value), 403);
+        abort_unless($this->actor()->canAny($permissions), 403);
     }
 
     private function actor(): User

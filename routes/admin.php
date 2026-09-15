@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use App\Support\Enums\Permission;
-use App\Support\Enums\Role;
 use Illuminate\Support\Facades\Route;
 use Modules\Admin\Http\Controllers\AuditLogController;
 use Modules\Admin\Http\Controllers\BillingGatewayController;
@@ -12,24 +11,22 @@ use Modules\Admin\Http\Controllers\BillingPlanController;
 use Modules\Admin\Http\Controllers\BillingSubscriptionController;
 use Modules\Admin\Http\Controllers\BlueprintController;
 use Modules\Admin\Http\Controllers\ClassroomOversightController;
-use Modules\Admin\Http\Controllers\CurriculumTaxonomyController;
 use Modules\Admin\Http\Controllers\Cms\BannerController;
 use Modules\Admin\Http\Controllers\Cms\FaqController;
 use Modules\Admin\Http\Controllers\Cms\MenuController;
 use Modules\Admin\Http\Controllers\Cms\PageController;
 use Modules\Admin\Http\Controllers\ContactInquiryController;
+use Modules\Admin\Http\Controllers\CurriculumTaxonomyController;
 use Modules\Admin\Http\Controllers\DashboardController;
 use Modules\Admin\Http\Controllers\EditorImageUploadController;
 use Modules\Admin\Http\Controllers\ExamController;
 use Modules\Admin\Http\Controllers\InstitutionController;
 use Modules\Admin\Http\Controllers\LearnerCatalogController;
-use Modules\Admin\Http\Controllers\LearnerDemographicsController;
 use Modules\Admin\Http\Controllers\QuestionController;
 use Modules\Admin\Http\Controllers\QuestionDuplicateController;
 use Modules\Admin\Http\Controllers\QuestionExportController;
-use Modules\Admin\Http\Controllers\QuestionFlagController;
-use Modules\Admin\Http\Controllers\QuestionImportController;
 use Modules\Admin\Http\Controllers\QuestionFeedbackController;
+use Modules\Admin\Http\Controllers\QuestionImportController;
 use Modules\Admin\Http\Controllers\QuestionReviewController;
 use Modules\Admin\Http\Controllers\QuestionVersionController;
 use Modules\Admin\Http\Controllers\ReportController;
@@ -39,6 +36,7 @@ use Modules\Admin\Http\Controllers\SupportConversationController;
 use Modules\Admin\Http\Controllers\TagController;
 use Modules\Admin\Http\Controllers\TaxonomyController;
 use Modules\Admin\Http\Controllers\UserController;
+use Modules\Admin\Support\QuestionAccess;
 use Modules\Auth\Http\Controllers\AdminTwoFactorController;
 use Modules\Auth\Http\Controllers\AuthenticatedSessionController;
 use Modules\Classroom\Http\Controllers\LiveMessageApiController;
@@ -49,7 +47,6 @@ use Modules\Media\Http\Controllers\MediaController;
 use Modules\Notification\Http\Controllers\AdminBroadcastController;
 use Modules\Notification\Http\Controllers\NotificationController;
 use Modules\Partner\Http\Controllers\Admin\PartnerAdminController;
-use Modules\Admin\Support\QuestionAccess;
 use Modules\QuestionBank\Http\Controllers\TaxonomyLookupController;
 
 /*
@@ -71,14 +68,7 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroyAdmin'])
     ->middleware('auth')
     ->name('logout');
 
-$staffRoles = implode('|', [
-    Role::Admin->value,
-    Role::SuperAdmin->value,
-    Role::ContentEditor->value,
-    Role::Reviewer->value,
-]);
-
-Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
+Route::middleware(['auth', 'portal:admin'])->group(function (): void {
     Route::get('/2fa/setup', [AdminTwoFactorController::class, 'showSetup'])->name('2fa.setup');
     Route::post('/2fa/confirm', [AdminTwoFactorController::class, 'confirmSetup'])
         ->middleware('throttle:auth')
@@ -93,137 +83,160 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
     Route::middleware('staff.2fa')->group(function (): void {
         Route::get('/', DashboardController::class)->name('dashboard');
 
-        Route::middleware('permission:'.Permission::UserView->value)->group(function (): void {
-            Route::get('/learner-data/demographics', LearnerDemographicsController::class)->name('learner-data.demographics');
-            Route::get('/learner-data/institutions', [InstitutionController::class, 'index'])->name('institutions.index');
-            Route::get('/learner-data/countries', [LearnerCatalogController::class, 'index'])->defaults('catalog', 'countries')->name('countries.index');
-            Route::get('/learner-data/administrative-units', [LearnerCatalogController::class, 'index'])->defaults('catalog', 'administrative-units')->name('administrative-units.index');
-            Route::get('/learner-data/professions', [LearnerCatalogController::class, 'index'])->defaults('catalog', 'professions')->name('professions.index');
-            Route::get('/learner-data/education-stages', [LearnerCatalogController::class, 'index'])->defaults('catalog', 'education-stages')->name('education-stages.index');
-            Route::get('/users', [UserController::class, 'index'])->name('users.index');
+        Route::group([], function (): void {
+            Route::get('/learner-data/institutions', [InstitutionController::class, 'index'])->middleware('permission:learner_catalog.view_any')->name('institutions.index');
+            Route::get('/learner-data/countries', [LearnerCatalogController::class, 'index'])->middleware('permission:learner_catalog.view_any')->defaults('catalog', 'countries')->name('countries.index');
+            Route::get('/learner-data/administrative-units', [LearnerCatalogController::class, 'index'])->middleware('permission:learner_catalog.view_any')->defaults('catalog', 'administrative-units')->name('administrative-units.index');
+            Route::get('/learner-data/professions', [LearnerCatalogController::class, 'index'])->middleware('permission:learner_catalog.view_any')->defaults('catalog', 'professions')->name('professions.index');
+            Route::get('/learner-data/education-stages', [LearnerCatalogController::class, 'index'])->middleware('permission:learner_catalog.view_any')->defaults('catalog', 'education-stages')->name('education-stages.index');
+            Route::get('/users', [UserController::class, 'index'])->middleware('permission:user.view_any')->name('users.index');
             Route::get('/users/{user}', [UserController::class, 'show'])->name('users.show')
+                ->middleware('permission:user.view')
                 ->whereNumber('user');
         });
 
-        Route::middleware('permission:'.Permission::UserManage->value)->group(function (): void {
-            Route::get('/learner-data/institutions/create', [InstitutionController::class, 'create'])->name('institutions.create');
-            Route::post('/learner-data/institutions', [InstitutionController::class, 'store'])->name('institutions.store');
-            Route::get('/learner-data/institutions/{institution}/edit', [InstitutionController::class, 'edit'])->name('institutions.edit');
-            Route::put('/learner-data/institutions/{institution}', [InstitutionController::class, 'update'])->name('institutions.update');
-            Route::patch('/learner-data/institutions/{institution}/toggle', [InstitutionController::class, 'toggle'])->name('institutions.toggle');
-            Route::post('/learner-data/countries', [LearnerCatalogController::class, 'store'])->defaults('catalog', 'countries')->name('countries.store');
-            Route::put('/learner-data/countries/{item}', [LearnerCatalogController::class, 'update'])->defaults('catalog', 'countries')->whereNumber('item')->name('countries.update');
-            Route::patch('/learner-data/countries/{item}/toggle', [LearnerCatalogController::class, 'toggle'])->defaults('catalog', 'countries')->whereNumber('item')->name('countries.toggle');
-            Route::post('/learner-data/administrative-units', [LearnerCatalogController::class, 'store'])->defaults('catalog', 'administrative-units')->name('administrative-units.store');
-            Route::put('/learner-data/administrative-units/{item}', [LearnerCatalogController::class, 'update'])->defaults('catalog', 'administrative-units')->whereNumber('item')->name('administrative-units.update');
-            Route::patch('/learner-data/administrative-units/{item}/toggle', [LearnerCatalogController::class, 'toggle'])->defaults('catalog', 'administrative-units')->whereNumber('item')->name('administrative-units.toggle');
-            Route::post('/learner-data/professions', [LearnerCatalogController::class, 'store'])->defaults('catalog', 'professions')->name('professions.store');
-            Route::put('/learner-data/professions/{item}', [LearnerCatalogController::class, 'update'])->defaults('catalog', 'professions')->whereNumber('item')->name('professions.update');
-            Route::patch('/learner-data/professions/{item}/toggle', [LearnerCatalogController::class, 'toggle'])->defaults('catalog', 'professions')->whereNumber('item')->name('professions.toggle');
-            Route::post('/learner-data/education-stages', [LearnerCatalogController::class, 'store'])->defaults('catalog', 'education-stages')->name('education-stages.store');
-            Route::put('/learner-data/education-stages/{item}', [LearnerCatalogController::class, 'update'])->defaults('catalog', 'education-stages')->whereNumber('item')->name('education-stages.update');
-            Route::patch('/learner-data/education-stages/{item}/toggle', [LearnerCatalogController::class, 'toggle'])->defaults('catalog', 'education-stages')->whereNumber('item')->name('education-stages.toggle');
-            Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
-            Route::post('/users', [UserController::class, 'store'])->name('users.store');
-            Route::patch('/users/{user}/role', [UserController::class, 'updateRole'])->name('users.role');
-            Route::patch('/users/{user}/status', [UserController::class, 'updateStatus'])->name('users.status');
-            Route::post('/users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('users.reset-password');
-            Route::post('/users/{user}/verify-email', [UserController::class, 'verifyEmail'])->name('users.verify-email');
-            Route::patch('/users/{user}/subjects', [UserController::class, 'updateInstructorSubjects'])->name('users.subjects');
+        Route::group([], function (): void {
+            Route::get('/learner-data/institutions/create', [InstitutionController::class, 'create'])->middleware('permission:learner_catalog.create')->name('institutions.create');
+            Route::post('/learner-data/institutions', [InstitutionController::class, 'store'])->middleware('permission:learner_catalog.create')->name('institutions.store');
+            Route::get('/learner-data/institutions/{institution}/edit', [InstitutionController::class, 'edit'])->middleware('permission:learner_catalog.update')->name('institutions.edit');
+            Route::put('/learner-data/institutions/{institution}', [InstitutionController::class, 'update'])->middleware('permission:learner_catalog.update')->name('institutions.update');
+            Route::post('/learner-data/countries', [LearnerCatalogController::class, 'store'])->middleware('permission:learner_catalog.create')->defaults('catalog', 'countries')->name('countries.store');
+            Route::put('/learner-data/countries/{item}', [LearnerCatalogController::class, 'update'])->middleware('permission:learner_catalog.update')->defaults('catalog', 'countries')->whereNumber('item')->name('countries.update');
+            Route::post('/learner-data/administrative-units', [LearnerCatalogController::class, 'store'])->middleware('permission:learner_catalog.create')->defaults('catalog', 'administrative-units')->name('administrative-units.store');
+            Route::put('/learner-data/administrative-units/{item}', [LearnerCatalogController::class, 'update'])->middleware('permission:learner_catalog.update')->defaults('catalog', 'administrative-units')->whereNumber('item')->name('administrative-units.update');
+            Route::post('/learner-data/professions', [LearnerCatalogController::class, 'store'])->middleware('permission:learner_catalog.create')->defaults('catalog', 'professions')->name('professions.store');
+            Route::put('/learner-data/professions/{item}', [LearnerCatalogController::class, 'update'])->middleware('permission:learner_catalog.update')->defaults('catalog', 'professions')->whereNumber('item')->name('professions.update');
+            Route::post('/learner-data/education-stages', [LearnerCatalogController::class, 'store'])->middleware('permission:learner_catalog.create')->defaults('catalog', 'education-stages')->name('education-stages.store');
+            Route::put('/learner-data/education-stages/{item}', [LearnerCatalogController::class, 'update'])->middleware('permission:learner_catalog.update')->defaults('catalog', 'education-stages')->whereNumber('item')->name('education-stages.update');
+            Route::get('/users/create', [UserController::class, 'create'])->middleware('permission:user.create')->name('users.create');
+            Route::post('/users', [UserController::class, 'store'])->middleware('permission:user.create')->name('users.store');
+            Route::patch('/users/{user}/role', [UserController::class, 'updateRole'])->middleware('permission:user.role_assign')->name('users.role');
+            Route::patch('/users/{user}/status', [UserController::class, 'updateStatus'])->middleware('permission:user.status_update')->name('users.status');
+            Route::post('/users/{user}/reset-password', [UserController::class, 'resetPassword'])->middleware('permission:user.password_reset')->name('users.reset-password');
         });
 
-        Route::middleware('permission:'.Permission::RoleManage->value)->group(function (): void {
-            Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');
-            Route::get('/roles/create', [RoleController::class, 'create'])->name('roles.create');
-            Route::post('/roles', [RoleController::class, 'store'])->name('roles.store');
-            Route::get('/roles/{role}', [RoleController::class, 'show'])->name('roles.show');
-            Route::put('/roles/{role}/permissions', [RoleController::class, 'syncPermissions'])->name('roles.permissions');
-            Route::get('/permissions', [RoleController::class, 'permissionsCatalog'])->name('permissions.index');
+        Route::group([], function (): void {
+            Route::get('/roles', [RoleController::class, 'index'])->middleware('permission:role.view_any')->name('roles.index');
+            Route::get('/roles/create', [RoleController::class, 'create'])->middleware('permission:role.create')->name('roles.create');
+            Route::post('/roles', [RoleController::class, 'store'])->middleware('permission:role.create')->name('roles.store');
+            Route::get('/roles/{role}', [RoleController::class, 'show'])->middleware('permission:role.view')->name('roles.show');
+            Route::put('/roles/{role}/permissions', [RoleController::class, 'syncPermissions'])->middleware('permission:role_permission.assign')->name('roles.permissions');
+            Route::get('/permissions', [RoleController::class, 'permissionsCatalog'])->middleware('permission:permission.view_any')->name('permissions.index');
         });
 
-        Route::middleware('permission:'.Permission::SystemManage->value)->group(function (): void {
-            Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
-            Route::post('/settings', [SettingController::class, 'update'])->name('settings.update');
-        });
+        Route::get('/settings', [SettingController::class, 'index'])
+            ->middleware('permission:system_setting.view')
+            ->name('settings.index');
+        Route::post('/settings', [SettingController::class, 'update'])
+            ->middleware('permission:system_setting.update')
+            ->name('settings.update');
 
-        Route::middleware('permission:'.Permission::SupportManage->value)->group(function (): void {
-            Route::get('/support', [SupportConversationController::class, 'index'])->name('support.index');
-            Route::get('/support/badge', [SupportConversationController::class, 'badge'])->name('support.badge');
-            Route::get('/support/{conversation}', [SupportConversationController::class, 'show'])->name('support.show');
-            Route::post('/support/{conversation}/claim', [SupportConversationController::class, 'claim'])->name('support.claim');
-            Route::post('/support/{conversation}/seen', [SupportConversationController::class, 'seen'])->name('support.seen');
-            Route::post('/support/{conversation}/messages', [SupportConversationController::class, 'message'])->name('support.messages.store');
-            Route::post('/support/{conversation}/resolve', [SupportConversationController::class, 'resolve'])->name('support.resolve');
-        });
+        Route::get('/support', [SupportConversationController::class, 'index'])
+            ->middleware('permission:support_conversation.view')
+            ->name('support.index');
+        Route::get('/support/badge', [SupportConversationController::class, 'badge'])
+            ->middleware('permission:support_conversation.view')
+            ->name('support.badge');
+        Route::get('/support/{conversation}', [SupportConversationController::class, 'show'])
+            ->middleware('permission:support_conversation.view')
+            ->name('support.show');
+        Route::post('/support/{conversation}/claim', [SupportConversationController::class, 'claim'])
+            ->middleware('permission:support_conversation.assign')
+            ->name('support.claim');
+        Route::post('/support/{conversation}/seen', [SupportConversationController::class, 'seen'])
+            ->middleware('permission:support_conversation.update')
+            ->name('support.seen');
+        Route::post('/support/{conversation}/messages', [SupportConversationController::class, 'message'])
+            ->middleware('permission:support_conversation.reply')
+            ->name('support.messages.store');
+        Route::post('/support/{conversation}/resolve', [SupportConversationController::class, 'resolve'])
+            ->middleware('permission:support_conversation.resolve')
+            ->name('support.resolve');
 
-        Route::middleware('permission:'.Permission::NotificationBroadcast->value)->group(function (): void {
-            Route::get('/notifications/broadcast', [AdminBroadcastController::class, 'create'])
-                ->name('notifications.broadcast');
-            Route::post('/notifications/broadcast', [AdminBroadcastController::class, 'store'])
-                ->name('notifications.broadcast.store');
-        });
+        Route::get('/notifications/broadcast', [AdminBroadcastController::class, 'create'])
+            ->middleware('permission:notification_broadcast.view')
+            ->name('notifications.broadcast');
+        Route::post('/notifications/broadcast', [AdminBroadcastController::class, 'store'])
+            ->middleware('permission:notification_broadcast.send')
+            ->name('notifications.broadcast.store');
 
-        Route::middleware('permission:'.Permission::ContactView->value)->group(function (): void {
-            Route::get('/contacts', [ContactInquiryController::class, 'index'])->name('contacts.index');
-            Route::get('/contacts/{contact}', [ContactInquiryController::class, 'show'])->name('contacts.show');
-        });
-
-        Route::middleware('permission:'.Permission::ContactManage->value)->group(function (): void {
-            Route::patch('/contacts/{contact}', [ContactInquiryController::class, 'update'])->name('contacts.update');
-            Route::post('/contacts/{contact}/claim', [ContactInquiryController::class, 'claim'])->name('contacts.claim');
-        });
+        Route::get('/contacts', [ContactInquiryController::class, 'index'])
+            ->middleware('permission:contact.view_any')
+            ->name('contacts.index');
+        Route::get('/contacts/{contact}', [ContactInquiryController::class, 'show'])
+            ->middleware('permission:contact.view_any')
+            ->name('contacts.show');
+        Route::patch('/contacts/{contact}', [ContactInquiryController::class, 'update'])
+            ->middleware('permission:contact.update')
+            ->name('contacts.update');
+        Route::post('/contacts/{contact}/claim', [ContactInquiryController::class, 'claim'])
+            ->middleware('permission:contact.update')
+            ->name('contacts.claim');
 
         Route::get('/notifications', [NotificationController::class, 'index'])
+            ->middleware('permission:notification.view')
             ->name('notifications.index');
 
-        Route::middleware('permission:'.Permission::AuditView->value)->group(function (): void {
-            Route::get('/audit', [AuditLogController::class, 'index'])->name('audit.index');
-            Route::get('/audit/{audit}', [AuditLogController::class, 'show'])->name('audit.show');
-        });
+        Route::get('/audit', [AuditLogController::class, 'index'])
+            ->middleware('permission:audit_log.view')
+            ->name('audit.index');
+        Route::get('/audit/{audit}', [AuditLogController::class, 'show'])
+            ->middleware('permission:audit_log.view')
+            ->name('audit.show');
 
-        Route::middleware('permission:'.Permission::ClassroomCreateOnBehalf->value)->group(function (): void {
+        Route::middleware('permission:classroom_oversight.create_on_behalf')->group(function (): void {
             Route::get('/classrooms/create', [ClassroomOversightController::class, 'create'])->name('classrooms.create');
             Route::get('/classrooms/content/questions', [ClassroomOversightController::class, 'contentQuestions'])
                 ->name('classrooms.content.questions');
             Route::post('/classrooms', [ClassroomOversightController::class, 'store'])->name('classrooms.store');
         });
 
-        Route::middleware('permission:'.Permission::ClassroomOversee->value)->group(function (): void {
+        Route::middleware('permission:classroom_oversight.view_any')->group(function (): void {
             Route::get('/classrooms', [ClassroomOversightController::class, 'index'])->name('classrooms.index');
+        });
+
+        Route::middleware('permission:classroom_oversight.view_any')->group(function (): void {
             Route::get('/classrooms/{classroom}', [ClassroomOversightController::class, 'show'])
                 ->name('classrooms.show');
-            Route::post('/classrooms/{classroom}/sessions', [ClassroomOversightController::class, 'scheduleLive'])
-                ->name('classrooms.sessions.store');
             Route::get('/classrooms/{classroom}/live/{liveSession}', [LiveRoomController::class, 'show'])
                 ->scopeBindings()
                 ->name('classrooms.live');
-            Route::post('/classrooms/{classroom}/live/{liveSession}/messages', [LiveRoomController::class, 'message'])
-                ->scopeBindings()
-                ->name('classrooms.live.message');
             Route::get('/classrooms/{classroom}/live/{liveSession}/api/bootstrap', [LiveRoomApiController::class, 'bootstrap'])
                 ->scopeBindings()
                 ->name('classrooms.live.api.bootstrap');
             Route::post('/classrooms/{classroom}/live/{liveSession}/api/token', [LiveRoomApiController::class, 'refreshToken'])
                 ->scopeBindings()
                 ->name('classrooms.live.api.token');
+        });
+
+        Route::post('/classrooms/{classroom}/sessions', [ClassroomOversightController::class, 'scheduleLive'])
+            ->middleware('permission:classroom_oversight.schedule')
+            ->name('classrooms.sessions.store');
+        Route::middleware('permission:classroom_oversight.view_any')->group(function (): void {
+            Route::post('/classrooms/{classroom}/live/{liveSession}/messages', [LiveRoomController::class, 'message'])
+                ->scopeBindings()
+                ->name('classrooms.live.message');
             Route::post('/classrooms/{classroom}/live/{liveSession}/api/messages', [LiveMessageApiController::class, 'store'])
                 ->scopeBindings()
                 ->name('classrooms.live.api.messages');
             Route::post('/classrooms/{classroom}/live/{liveSession}/api/react', [LiveModerationController::class, 'react'])
                 ->scopeBindings()
                 ->name('classrooms.live.api.react');
-            Route::post('/classrooms/{classroom}/force-end', [ClassroomOversightController::class, 'forceEnd'])
-                ->name('classrooms.force-end');
-            Route::post('/classrooms/{classroom}/approve', [ClassroomOversightController::class, 'approve'])
-                ->name('classrooms.approve');
-            Route::post('/classrooms/{classroom}/reject', [ClassroomOversightController::class, 'reject'])
-                ->name('classrooms.reject');
-            Route::post('/classrooms/{classroom}/archive', [ClassroomOversightController::class, 'archive'])
-                ->name('classrooms.archive');
         });
+        Route::post('/classrooms/{classroom}/force-end', [ClassroomOversightController::class, 'forceEnd'])
+            ->middleware('permission:classroom_oversight.view_any')
+            ->name('classrooms.force-end');
+        Route::post('/classrooms/{classroom}/approve', [ClassroomOversightController::class, 'approve'])
+            ->middleware('permission:classroom_oversight.approve')
+            ->name('classrooms.approve');
+        Route::post('/classrooms/{classroom}/reject', [ClassroomOversightController::class, 'reject'])
+            ->middleware('permission:classroom_oversight.reject')
+            ->name('classrooms.reject');
+        Route::post('/classrooms/{classroom}/archive', [ClassroomOversightController::class, 'archive'])
+            ->middleware('permission:classroom_oversight.archive')
+            ->name('classrooms.archive');
 
-        Route::middleware('permission:'.Permission::QuestionCreate->value)->group(function (): void {
-            Route::get('/questions/create', [QuestionController::class, 'create'])->name('questions.create');
+        Route::middleware('permission:question.import')->group(function (): void {
             Route::get('/questions/import', [QuestionImportController::class, 'create'])->name('questions.import');
             Route::get('/questions/import/template', [QuestionImportController::class, 'template'])->name('questions.import.template');
             Route::post('/questions/import', [QuestionImportController::class, 'store'])->name('questions.import.upload');
@@ -231,48 +244,57 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
             Route::get('/questions/import/{batch}/errors', [QuestionImportController::class, 'errors'])->name('questions.import.errors');
             Route::post('/questions/import/{batch}/map', [QuestionImportController::class, 'map'])->name('questions.import.map');
             Route::post('/questions/import/{batch}/commit', [QuestionImportController::class, 'commit'])->name('questions.import.commit');
-            Route::post('/questions', [QuestionController::class, 'store'])->name('questions.store');
-            Route::post('/questions/{question}/clone', [QuestionController::class, 'clone'])->name('questions.clone');
         });
 
-        Route::middleware('permission:'.Permission::QuestionFlag->value)->group(function (): void {
-            Route::get('/questions/flags', [QuestionFlagController::class, 'index'])->name('questions.flags.index');
-            Route::get('/questions/flags/{question}', [QuestionFlagController::class, 'show'])->name('questions.flags.show');
-            Route::post('/questions/flags/{question}', [QuestionFlagController::class, 'store'])->name('questions.flags.store');
-        });
+        Route::get('/questions/create', [QuestionController::class, 'create'])
+            ->middleware('permission:'.Permission::QuestionCreate->value)
+            ->name('questions.create');
+        Route::post('/questions', [QuestionController::class, 'store'])
+            ->middleware('permission:'.Permission::QuestionCreate->value)
+            ->name('questions.store');
+        Route::post('/questions/{question}/clone', [QuestionController::class, 'clone'])
+            ->middleware('permission:question.clone')
+            ->name('questions.clone');
 
         Route::middleware('permission:'.QuestionAccess::workspacePermissionMiddleware())->group(function (): void {
             Route::get('/questions', [QuestionController::class, 'index'])->name('questions.index');
-            Route::get('/questions/eligible-instructors', [QuestionController::class, 'eligibleInstructors'])->name('questions.eligible-instructors');
-            Route::match(['get', 'post'], '/questions/export', QuestionExportController::class)->name('questions.export');
-            Route::get('/question-feedback', [QuestionFeedbackController::class, 'index'])->name('question-feedback.index');
+        });
+        Route::get('/questions/export', QuestionExportController::class)
+            ->middleware('permission:question.export')
+            ->name('questions.export');
+        Route::get('/question-feedback', [QuestionFeedbackController::class, 'index'])
+            ->middleware('permission:question_feedback.view_any')
+            ->name('question-feedback.index');
+        Route::middleware('permission:'.QuestionAccess::workspacePermissionMiddleware())->group(function (): void {
             Route::get('/questions/{question}', [QuestionController::class, 'edit']);
             Route::get('/questions/{question}/edit', [QuestionController::class, 'edit'])->name('questions.edit');
             Route::get('/questions/{question}/duplicates', [QuestionDuplicateController::class, 'show'])
                 ->name('questions.duplicates.show');
-            Route::post('/questions/{question}/check-duplicates', [QuestionDuplicateController::class, 'check'])
-                ->name('questions.check-duplicates');
             Route::get('/questions/{question}/stats', [QuestionController::class, 'stats'])->name('questions.stats');
-            Route::get('/questions/{question}/compare', [QuestionController::class, 'compare'])
-                ->name('questions.compare');
+        });
+        Route::post('/questions/{question}/check-duplicates', [QuestionDuplicateController::class, 'check'])
+            ->middleware('permission:question.update|question.publish')
+            ->name('questions.check-duplicates');
+        Route::middleware('permission:question_version.view')->group(function (): void {
             Route::get('/questions/{question}/versions', [QuestionVersionController::class, 'index'])
                 ->name('questions.versions.index');
         });
 
-        Route::middleware('permission:'.Permission::QuestionUpdate->value)->group(function (): void {
-            Route::put('/questions/{question}', [QuestionController::class, 'update'])->name('questions.update');
-            Route::post(
-                '/questions/{question}/versions/{version}/restore',
-                [QuestionVersionController::class, 'restore'],
-            )->scopeBindings()->name('questions.versions.restore');
-        });
-
+        Route::put('/questions/{question}', [QuestionController::class, 'update'])
+            ->middleware('permission:'.Permission::QuestionUpdate->value)
+            ->name('questions.update');
         Route::patch('/question-feedback/{feedback}/status', [QuestionFeedbackController::class, 'updateStatus'])
-            ->middleware('permission:'.Permission::QuestionUpdate->value.'|'.Permission::QuestionPublish->value)
+            ->middleware('permission:question_feedback.update')
             ->name('question-feedback.update-status');
+        Route::post(
+            '/questions/{question}/versions/{version}/restore',
+            [QuestionVersionController::class, 'restore'],
+        )->middleware('permission:question_version.restore')
+            ->scopeBindings()
+            ->name('questions.versions.restore');
 
         Route::post('/questions/{question}/transition', [QuestionController::class, 'transition'])
-            ->middleware('permission:'.Permission::QuestionUpdate->value.'|'.Permission::QuestionPublish->value)
+            ->middleware('permission:question.update|question.submit|question.publish|question.retire')
             ->name('questions.transition');
 
         Route::middleware('permission:'.Permission::QuestionPublish->value)->group(function (): void {
@@ -289,7 +311,7 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
             ->name('questions.destroy');
 
         // JSON pickers: soạn câu hỏi (create/update) hoặc quản lý phân loại/ma trận (topic.view).
-        Route::middleware('permission:'.Permission::QuestionCreate->value.'|'.Permission::QuestionUpdate->value.'|'.Permission::TopicView->value)->group(function (): void {
+        Route::middleware('permission:'.Permission::QuestionCreate->value.'|'.Permission::QuestionUpdate->value.'|taxonomy.view|blueprint.view|curriculum.view')->group(function (): void {
             Route::get('/taxonomy/lookups/blueprints', [TaxonomyLookupController::class, 'blueprints'])->name('taxonomy.lookups.blueprints');
             Route::get('/taxonomy/lookups/blueprints/{blueprint}/sections', [TaxonomyLookupController::class, 'blueprintSections'])->name('taxonomy.lookups.sections');
             Route::get('/taxonomy/lookups/sections/{section}/core-topics', [TaxonomyLookupController::class, 'coreClinicalTopics'])->name('taxonomy.lookups.core-topics');
@@ -300,178 +322,292 @@ Route::middleware(['auth', 'role:'.$staffRoles])->group(function (): void {
             Route::get('/taxonomy/lookups/tags', [TaxonomyLookupController::class, 'tags'])->name('taxonomy.lookups.tags');
         });
 
-        Route::middleware('permission:'.Permission::TopicView->value)->group(function (): void {
+        Route::middleware('permission:taxonomy.view')->group(function (): void {
             Route::get('/taxonomy', [TaxonomyController::class, 'index'])->name('taxonomy.index');
+        });
+        Route::middleware('permission:blueprint.view')->group(function (): void {
             Route::get('/blueprints', [BlueprintController::class, 'index'])->name('blueprints.index');
-            Route::get('/blueprints/{blueprint}/edit', [BlueprintController::class, 'edit'])->name('blueprints.edit');
+        });
+        Route::middleware('permission:curriculum.view')->group(function (): void {
             Route::get('/categories', [CurriculumTaxonomyController::class, 'index'])->name('curriculum.index');
             Route::redirect('/curriculum', '/admin/categories', 301);
+        });
+        Route::middleware('permission:tag.view')->group(function (): void {
             Route::get('/tags', [TagController::class, 'index'])->name('tags.index');
-            Route::get('/tags/{tag}/edit', [TagController::class, 'edit'])->name('tags.edit');
         });
 
-        Route::middleware('permission:'.Permission::TopicCreate->value)->group(function (): void {
+        Route::middleware('permission:blueprint.create')->group(function (): void {
             Route::get('/blueprints/create', [BlueprintController::class, 'create'])->name('blueprints.create');
             Route::post('/blueprints', [BlueprintController::class, 'store'])->name('blueprints.store');
             Route::post('/blueprints/{blueprint}/sections', [BlueprintController::class, 'storeSection'])->name('blueprints.sections.store');
             Route::post('/blueprint-sections/{section}/core-topics', [BlueprintController::class, 'storeCoreTopic'])->name('blueprint-sections.core-topics.store');
             Route::put('/core-clinical-topics/{topic}/medical-nodes', [BlueprintController::class, 'syncCoreTopicMedicalNodes'])->name('core-clinical-topics.medical-nodes.sync');
+        });
+        Route::middleware('permission:curriculum.create')->group(function (): void {
             Route::post('/categories/organ-systems', [CurriculumTaxonomyController::class, 'storeOrganSystem'])->name('curriculum.organ-systems.store');
             Route::post('/categories/subjects', [CurriculumTaxonomyController::class, 'storeSubject'])->name('curriculum.subjects.store');
             Route::post('/categories/lessons', [CurriculumTaxonomyController::class, 'storeLesson'])->name('curriculum.lessons.store');
+        });
+        Route::middleware('permission:tag.create')->group(function (): void {
             Route::get('/tags/create', [TagController::class, 'create'])->name('tags.create');
             Route::post('/tags', [TagController::class, 'store'])->name('tags.store');
         });
 
-        Route::middleware('permission:'.Permission::TopicUpdate->value)->group(function (): void {
+        Route::middleware('permission:blueprint.update')->group(function (): void {
+            Route::get('/blueprints/{blueprint}/edit', [BlueprintController::class, 'edit'])->name('blueprints.edit');
             Route::put('/blueprints/{blueprint}', [BlueprintController::class, 'update'])->name('blueprints.update');
+        });
+        Route::middleware('permission:curriculum.update')->group(function (): void {
             Route::put('/categories/organ-systems/{organSystem}', [CurriculumTaxonomyController::class, 'updateOrganSystem'])->name('curriculum.organ-systems.update');
             Route::put('/categories/subjects/{subject}', [CurriculumTaxonomyController::class, 'updateSubject'])->name('curriculum.subjects.update');
             Route::put('/categories/lessons/{lesson}', [CurriculumTaxonomyController::class, 'updateLesson'])->name('curriculum.lessons.update');
-            Route::post('/categories/subjects/{subject}/lessons', [CurriculumTaxonomyController::class, 'attachSubjectLessons'])->name('curriculum.subjects.lessons.attach');
-            Route::delete('/categories/subjects/{subject}/lessons/{lesson}', [CurriculumTaxonomyController::class, 'detachSubjectLesson'])->name('curriculum.subjects.lessons.detach');
             Route::post('/categories/lessons/{lesson}/subjects', [CurriculumTaxonomyController::class, 'attachLessonSubject'])->name('curriculum.lessons.subjects.attach');
             Route::delete('/categories/lessons/{lesson}/subjects/{subject}', [CurriculumTaxonomyController::class, 'detachLessonSubject'])->name('curriculum.lessons.subjects.detach');
             Route::post('/categories/lessons/{lesson}/organ-systems', [CurriculumTaxonomyController::class, 'attachLessonOrganSystem'])->name('curriculum.lessons.organ-systems.attach');
             Route::delete('/categories/lessons/{lesson}/organ-systems/{organSystem}', [CurriculumTaxonomyController::class, 'detachLessonOrganSystem'])->name('curriculum.lessons.organ-systems.detach');
+        });
+        Route::middleware('permission:tag.update')->group(function (): void {
+            Route::get('/tags/{tag}/edit', [TagController::class, 'edit'])->name('tags.edit');
             Route::put('/tags/{tag}', [TagController::class, 'update'])->name('tags.update');
         });
 
-        Route::middleware('permission:'.Permission::TopicDelete->value)->group(function (): void {
+        Route::middleware('permission:curriculum.delete')->group(function (): void {
             Route::delete('/categories/organ-systems/{organSystem}', [CurriculumTaxonomyController::class, 'destroyOrganSystem'])->name('curriculum.organ-systems.destroy');
             Route::delete('/categories/subjects/{subject}', [CurriculumTaxonomyController::class, 'destroySubject'])->name('curriculum.subjects.destroy');
             Route::delete('/categories/lessons/{lesson}', [CurriculumTaxonomyController::class, 'destroyLesson'])->name('curriculum.lessons.destroy');
         });
 
         Route::delete('/blueprints/{blueprint}', [BlueprintController::class, 'destroy'])
-            ->middleware('permission:'.Permission::TopicDelete->value)
+            ->middleware('permission:blueprint.delete')
             ->name('blueprints.destroy');
 
         Route::delete('/blueprint-sections/{section}', [BlueprintController::class, 'destroySection'])
-            ->middleware('permission:'.Permission::TopicDelete->value)
+            ->middleware('permission:blueprint.delete')
             ->name('blueprint-sections.destroy');
 
         Route::delete('/core-clinical-topics/{topic}', [BlueprintController::class, 'destroyCoreTopic'])
-            ->middleware('permission:'.Permission::TopicDelete->value)
+            ->middleware('permission:blueprint.delete')
             ->name('core-clinical-topics.destroy');
 
         Route::delete('/tags/{tag}', [TagController::class, 'destroy'])
-            ->middleware('permission:'.Permission::TopicDelete->value)
+            ->middleware('permission:tag.delete')
             ->name('tags.destroy');
 
         // --- Exams ---
-        Route::middleware('permission:'.Permission::ExamManage->value)->group(function (): void {
+        Route::middleware('permission:exam.create|exam.update')->group(function (): void {
             Route::get('/exams/questions/search', [ExamController::class, 'searchQuestions'])->name('exams.questions.search');
             Route::get('/exams/topic-eligibility', [ExamController::class, 'topicEligibility'])->name('exams.topic-eligibility');
-            Route::get('/exams', [ExamController::class, 'index'])->name('exams.index');
-            Route::get('/exams/create', [ExamController::class, 'create'])->name('exams.create');
-            Route::post('/exams', [ExamController::class, 'store'])->name('exams.store');
-            Route::get('/exams/{exam}/edit', [ExamController::class, 'edit'])->name('exams.edit');
-            Route::put('/exams/{exam}', [ExamController::class, 'update'])->name('exams.update');
-            Route::delete('/exams/{exam}', [ExamController::class, 'destroy'])->name('exams.destroy');
         });
+        Route::get('/exams', [ExamController::class, 'index'])
+            ->middleware('permission:exam.view_any')
+            ->name('exams.index');
+        Route::get('/exams/create', [ExamController::class, 'create'])
+            ->middleware('permission:exam.create')
+            ->name('exams.create');
+        Route::post('/exams', [ExamController::class, 'store'])
+            ->middleware('permission:exam.create')
+            ->name('exams.store');
+        Route::get('/exams/{exam}/edit', [ExamController::class, 'edit'])
+            ->middleware('permission:exam.update')
+            ->name('exams.edit');
+        Route::put('/exams/{exam}', [ExamController::class, 'update'])
+            ->middleware('permission:exam.update')
+            ->name('exams.update');
+        Route::delete('/exams/{exam}', [ExamController::class, 'destroy'])
+            ->middleware('permission:exam.delete')
+            ->name('exams.destroy');
 
         Route::post('/editor/images', EditorImageUploadController::class)
-            ->middleware('throttle:30,1')
+            ->middleware([
+                'permission:media.upload',
+                'throttle:30,1',
+            ])
             ->name('editor.images');
 
-        Route::middleware('permission:'.Permission::MediaView->value)->group(function (): void {
+        Route::middleware('permission:media.view')->group(function (): void {
             Route::get('/media', [MediaController::class, 'index'])->name('media.index');
             Route::get('/media/items', [MediaController::class, 'items'])->name('media.items');
             Route::get('/media/{media}', [MediaController::class, 'show'])->name('media.show');
         });
 
-        Route::middleware('permission:'.Permission::MediaManage->value)->group(function (): void {
-            Route::post('/media', [MediaController::class, 'store'])->middleware('throttle:30,1')->name('media.store');
-            Route::post('/media/from-url', [MediaController::class, 'storeFromUrl'])->middleware('throttle:20,1')->name('media.from-url');
-            Route::put('/media/{media}', [MediaController::class, 'update'])->name('media.update');
-            Route::delete('/media/{media}', [MediaController::class, 'destroy'])->name('media.destroy');
-        });
+        Route::post('/media', [MediaController::class, 'store'])
+            ->middleware(['permission:media.upload', 'throttle:30,1'])
+            ->name('media.store');
+        Route::post('/media/from-url', [MediaController::class, 'storeFromUrl'])
+            ->middleware(['permission:media.import', 'throttle:20,1'])
+            ->name('media.from-url');
+        Route::put('/media/{media}', [MediaController::class, 'update'])
+            ->middleware('permission:media.update')
+            ->name('media.update');
+        Route::delete('/media/{media}', [MediaController::class, 'destroy'])
+            ->middleware('permission:media.delete')
+            ->name('media.destroy');
 
-        Route::middleware('permission:'.Permission::CmsManage->value)->group(function (): void {
-            Route::redirect('/cms', '/cms/pages')->name('cms.index');
-            Route::get('/cms/faq', [FaqController::class, 'index'])->name('cms.faq.index');
-            Route::get('/cms/faq/create', [FaqController::class, 'create'])->name('cms.faq.create');
-            Route::post('/cms/faq', [FaqController::class, 'store'])->name('cms.faq.store');
-            Route::get('/cms/faq/{faq}/edit', [FaqController::class, 'edit'])->name('cms.faq.edit');
-            Route::put('/cms/faq/{faq}', [FaqController::class, 'update'])->name('cms.faq.update');
-            Route::delete('/cms/faq/{faq}', [FaqController::class, 'destroy'])->name('cms.faq.destroy');
-            Route::post('/cms/faq/{faq}/move-up', [FaqController::class, 'moveUp'])->name('cms.faq.move-up');
-            Route::post('/cms/faq/{faq}/move-down', [FaqController::class, 'moveDown'])->name('cms.faq.move-down');
+        Route::redirect('/cms', '/admin/cms/pages')
+            ->middleware('permission:cms_page.view_any')
+            ->name('cms.index');
+        Route::get('/cms/faq', [FaqController::class, 'index'])
+            ->middleware('permission:cms_faq.view')
+            ->name('cms.faq.index');
+        Route::get('/cms/faq/create', [FaqController::class, 'create'])
+            ->middleware('permission:cms_faq.create')
+            ->name('cms.faq.create');
+        Route::post('/cms/faq', [FaqController::class, 'store'])
+            ->middleware('permission:cms_faq.create')
+            ->name('cms.faq.store');
+        Route::get('/cms/faq/{faq}/edit', [FaqController::class, 'edit'])
+            ->middleware('permission:cms_faq.update')
+            ->name('cms.faq.edit');
+        Route::put('/cms/faq/{faq}', [FaqController::class, 'update'])
+            ->middleware('permission:cms_faq.update')
+            ->name('cms.faq.update');
+        Route::delete('/cms/faq/{faq}', [FaqController::class, 'destroy'])
+            ->middleware('permission:cms_faq.delete')
+            ->name('cms.faq.destroy');
+        Route::post('/cms/faq/{faq}/move-up', [FaqController::class, 'moveUp'])
+            ->middleware('permission:cms_faq.reorder')
+            ->name('cms.faq.move-up');
+        Route::post('/cms/faq/{faq}/move-down', [FaqController::class, 'moveDown'])
+            ->middleware('permission:cms_faq.reorder')
+            ->name('cms.faq.move-down');
 
-            Route::get('/cms/pages', [PageController::class, 'index'])->name('cms.pages.index');
-            Route::get('/cms/pages/{cmsPage}/edit', [PageController::class, 'edit'])->name('cms.pages.edit');
-            Route::put('/cms/pages/{cmsPage}', [PageController::class, 'update'])->name('cms.pages.update');
+        Route::get('/cms/pages', [PageController::class, 'index'])
+            ->middleware('permission:cms_page.view_any')
+            ->name('cms.pages.index');
+        Route::get('/cms/pages/{cmsPage}/edit', [PageController::class, 'edit'])
+            ->middleware('permission:cms_page.update')
+            ->name('cms.pages.edit');
+        Route::put('/cms/pages/{cmsPage}', [PageController::class, 'update'])
+            ->middleware('permission:cms_page.update')
+            ->name('cms.pages.update');
 
-            Route::get('/cms/banners', [BannerController::class, 'index'])->name('cms.banners.index');
-            Route::get('/cms/banners/create', [BannerController::class, 'create'])->name('cms.banners.create');
-            Route::post('/cms/banners', [BannerController::class, 'store'])->name('cms.banners.store');
-            Route::get('/cms/banners/{banner}/edit', [BannerController::class, 'edit'])->name('cms.banners.edit');
-            Route::put('/cms/banners/{banner}', [BannerController::class, 'update'])->name('cms.banners.update');
-            Route::delete('/cms/banners/{banner}', [BannerController::class, 'destroy'])->name('cms.banners.destroy');
-            Route::post('/cms/banners/{banner}/toggle', [BannerController::class, 'toggle'])->name('cms.banners.toggle');
+        Route::get('/cms/banners', [BannerController::class, 'index'])
+            ->middleware('permission:cms_banner.view')
+            ->name('cms.banners.index');
+        Route::get('/cms/banners/create', [BannerController::class, 'create'])
+            ->middleware('permission:cms_banner.create')
+            ->name('cms.banners.create');
+        Route::post('/cms/banners', [BannerController::class, 'store'])
+            ->middleware('permission:cms_banner.create')
+            ->name('cms.banners.store');
+        Route::get('/cms/banners/{banner}/edit', [BannerController::class, 'edit'])
+            ->middleware('permission:cms_banner.update')
+            ->name('cms.banners.edit');
+        Route::put('/cms/banners/{banner}', [BannerController::class, 'update'])
+            ->middleware('permission:cms_banner.update')
+            ->name('cms.banners.update');
+        Route::delete('/cms/banners/{banner}', [BannerController::class, 'destroy'])
+            ->middleware('permission:cms_banner.delete')
+            ->name('cms.banners.destroy');
+        Route::post('/cms/banners/{banner}/toggle', [BannerController::class, 'toggle'])
+            ->middleware('permission:cms_banner.update')
+            ->name('cms.banners.toggle');
 
-            Route::get('/cms/menus', [MenuController::class, 'index'])->name('cms.menus.index');
-            Route::get('/cms/menus/{menu}/edit', [MenuController::class, 'edit'])->name('cms.menus.edit');
-            Route::put('/cms/menus/{menu}', [MenuController::class, 'update'])->name('cms.menus.update');
-        });
+        Route::get('/cms/menus', [MenuController::class, 'index'])
+            ->middleware('permission:cms_menu.view')
+            ->name('cms.menus.index');
+        Route::get('/cms/menus/{menu}/edit', [MenuController::class, 'edit'])
+            ->middleware('permission:cms_menu.update')
+            ->name('cms.menus.edit');
+        Route::put('/cms/menus/{menu}', [MenuController::class, 'update'])
+            ->middleware('permission:cms_menu.update')
+            ->name('cms.menus.update');
 
-        Route::middleware('permission:'.Permission::ReportView->value.'|'.Permission::ReportExport->value)->group(function (): void {
+        Route::middleware('permission:report.view')->group(function (): void {
             Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
-            Route::post('/reports/cache/warm-all', [ReportController::class, 'queueWarmAll'])
-                ->name('reports.cache.warm-all');
-            Route::post('/reports/cache/warm-all/reset', [ReportController::class, 'resetWarmAllStatus'])
-                ->name('reports.cache.warm-all-reset');
             Route::get('/reports/cache/warm-all/status', [ReportController::class, 'warmAllStatusJson'])
                 ->name('reports.cache.warm-all-status');
             Route::get('/reports/{category}', [ReportController::class, 'showCategory'])->name('reports.show-category');
-            Route::post('/reports/{category}/{report}/refresh', [ReportController::class, 'refresh'])
-                ->name('reports.refresh');
             Route::get('/reports/{category}/{report}/refresh-status', [ReportController::class, 'refreshStatus'])
                 ->name('reports.refresh-status');
             Route::get('/reports/{category}/{report}', [ReportController::class, 'showReport'])->name('reports.show');
         });
+        Route::middleware('permission:report.refresh')->group(function (): void {
+            Route::post('/reports/cache/warm-all', [ReportController::class, 'queueWarmAll'])
+                ->name('reports.cache.warm-all');
+            Route::post('/reports/cache/warm-all/reset', [ReportController::class, 'resetWarmAllStatus'])
+                ->name('reports.cache.warm-all-reset');
+            Route::post('/reports/{category}/{report}/refresh', [ReportController::class, 'refresh'])
+                ->name('reports.refresh');
+        });
 
-        Route::middleware('permission:'.Permission::ReportExport->value)->group(function (): void {
+        Route::middleware('permission:report_schedule.update')->group(function (): void {
             Route::post('/reports/schedules/{schedule}/toggle', [ReportController::class, 'toggleSchedule'])
                 ->name('reports.schedules.toggle');
             Route::post('/reports/schedules/{schedule}/toggle-email', [ReportController::class, 'toggleScheduleEmail'])
                 ->name('reports.schedules.toggle-email');
-            Route::post('/reports/schedules/{schedule}/destroy', [ReportController::class, 'destroySchedule'])
-                ->name('reports.schedules.destroy');
-            Route::post('/reports/{category}/{report}/schedules', [ReportController::class, 'storeSchedule'])
-                ->name('reports.schedules.store');
+        });
+        Route::post('/reports/schedules/{schedule}/destroy', [ReportController::class, 'destroySchedule'])
+            ->middleware('permission:report_schedule.delete')
+            ->name('reports.schedules.destroy');
+        Route::post('/reports/{category}/{report}/schedules', [ReportController::class, 'storeSchedule'])
+            ->middleware('permission:report_schedule.create')
+            ->name('reports.schedules.store');
+        Route::middleware('permission:report.export')->group(function (): void {
             Route::get('/reports/{category}/{report}/export', [ReportController::class, 'export'])->name('reports.export');
         });
 
-        Route::middleware('permission:'.Permission::BillingManage->value)->group(function (): void {
-            Route::get('/billing/plans', [BillingPlanController::class, 'index'])->name('billing.plans.index');
-            Route::get('/billing/subscriptions', [BillingSubscriptionController::class, 'index'])->name('billing.subscriptions.index');
-            Route::get('/billing/payments', [BillingPaymentController::class, 'index'])->name('billing.payments.index');
-            Route::get('/billing/gateways', [BillingGatewayController::class, 'index'])->name('billing.gateways.index');
-            Route::put('/billing/gateways', [BillingGatewayController::class, 'update'])->name('billing.gateways.update');
-            Route::get('/billing/plans/{plan}/edit', [BillingPlanController::class, 'edit'])->name('billing.plans.edit');
-            Route::put('/billing/plans/{plan}', [BillingPlanController::class, 'update'])->name('billing.plans.update');
-            Route::get('/billing/plans/{plan}/prices/create', [BillingPlanController::class, 'createPrice'])->name('billing.plans.prices.create');
-            Route::post('/billing/plans/{plan}/prices', [BillingPlanController::class, 'storePrice'])->name('billing.plans.prices.store');
-            Route::get('/billing/plan-prices/{planPrice}/edit', [BillingPlanController::class, 'editPrice'])->name('billing.plan-prices.edit');
-            Route::put('/billing/plan-prices/{planPrice}', [BillingPlanController::class, 'updatePrice'])->name('billing.plan-prices.update');
-            Route::delete('/billing/plan-prices/{planPrice}', [BillingPlanController::class, 'destroyPrice'])->name('billing.plan-prices.destroy');
-        });
+        Route::get('/billing/plans', [BillingPlanController::class, 'index'])
+            ->middleware('permission:billing_plan.view')
+            ->name('billing.plans.index');
+        Route::get('/billing/subscriptions', [BillingSubscriptionController::class, 'index'])
+            ->middleware('permission:billing_subscription.view')
+            ->name('billing.subscriptions.index');
+        Route::get('/billing/payments', [BillingPaymentController::class, 'index'])
+            ->middleware('permission:billing_payment.view')
+            ->name('billing.payments.index');
+        Route::get('/billing/gateways', [BillingGatewayController::class, 'index'])
+            ->middleware('permission:billing_gateway.view')
+            ->name('billing.gateways.index');
+        Route::put('/billing/gateways', [BillingGatewayController::class, 'update'])
+            ->middleware('permission:billing_gateway.update')
+            ->name('billing.gateways.update');
+        Route::get('/billing/plans/{plan}/edit', [BillingPlanController::class, 'edit'])
+            ->middleware('permission:billing_plan.update')
+            ->name('billing.plans.edit');
+        Route::put('/billing/plans/{plan}', [BillingPlanController::class, 'update'])
+            ->middleware('permission:billing_plan.update')
+            ->name('billing.plans.update');
+        Route::get('/billing/plans/{plan}/prices/create', [BillingPlanController::class, 'createPrice'])
+            ->middleware('permission:billing_price.create')
+            ->name('billing.plans.prices.create');
+        Route::post('/billing/plans/{plan}/prices', [BillingPlanController::class, 'storePrice'])
+            ->middleware('permission:billing_price.create')
+            ->name('billing.plans.prices.store');
+        Route::get('/billing/plan-prices/{planPrice}/edit', [BillingPlanController::class, 'editPrice'])
+            ->middleware('permission:billing_price.update')
+            ->name('billing.plan-prices.edit');
+        Route::put('/billing/plan-prices/{planPrice}', [BillingPlanController::class, 'updatePrice'])
+            ->middleware('permission:billing_price.update')
+            ->name('billing.plan-prices.update');
+        Route::delete('/billing/plan-prices/{planPrice}', [BillingPlanController::class, 'destroyPrice'])
+            ->middleware('permission:billing_price.delete')
+            ->name('billing.plan-prices.destroy');
 
-        Route::middleware('permission:'.Permission::AdminPartnersManage->value)->group(function (): void {
-            Route::get('/partners', [PartnerAdminController::class, 'index'])->name('partners.index');
-            Route::get('/partners/{partner}', [PartnerAdminController::class, 'show'])->name('partners.show');
-            Route::put('/partners/{partner}', [PartnerAdminController::class, 'update'])->name('partners.update');
-            Route::post('/partners/{partner}/codes', [PartnerAdminController::class, 'storeCode'])->name('partners.codes.store');
-            Route::put('/partners/{partner}/codes/{inviteCode}', [PartnerAdminController::class, 'updateCode'])->name('partners.codes.update');
-            Route::post('/partners/{partner}/codes/{inviteCode}/toggle', [PartnerAdminController::class, 'toggleCode'])->name('partners.codes.toggle');
-        });
+        Route::get('/partners', [PartnerAdminController::class, 'index'])
+            ->middleware('permission:partner.view_any')
+            ->name('partners.index');
+        Route::get('/partners/{partner}', [PartnerAdminController::class, 'show'])
+            ->middleware('permission:partner.view')
+            ->name('partners.show');
+        Route::post('/partners/{partner}/codes', [PartnerAdminController::class, 'storeCode'])
+            ->middleware('permission:partner_code.create')
+            ->name('partners.codes.store');
+        Route::put('/partners/{partner}/codes/{inviteCode}', [PartnerAdminController::class, 'updateCode'])
+            ->middleware('permission:partner_code.update')
+            ->name('partners.codes.update');
+        Route::post('/partners/{partner}/codes/{inviteCode}/toggle', [PartnerAdminController::class, 'toggleCode'])
+            ->middleware('permission:partner_code.update')
+            ->name('partners.codes.toggle');
 
-        Route::middleware('permission:'.Permission::AdminPartnersPayouts->value)->group(function (): void {
-            Route::get('/partners-payouts', [PartnerAdminController::class, 'payoutsIndex'])->name('partners.payouts.index');
-            Route::post('/partners-payouts', [PartnerAdminController::class, 'payoutsStore'])->name('partners.payouts.store');
-            Route::post('/partners-payouts/{payout}/mark-paid', [PartnerAdminController::class, 'payoutsMarkPaid'])->name('partners.payouts.mark-paid');
-        });
+        Route::get('/partners-payouts', [PartnerAdminController::class, 'payoutsIndex'])
+            ->middleware('permission:partner_payout.view')
+            ->name('partners.payouts.index');
+        Route::post('/partners-payouts', [PartnerAdminController::class, 'payoutsStore'])
+            ->middleware('permission:partner_payout.create')
+            ->name('partners.payouts.store');
+        Route::post('/partners-payouts/{payout}/mark-paid', [PartnerAdminController::class, 'payoutsMarkPaid'])
+            ->middleware('permission:partner_payout.mark_paid')
+            ->name('partners.payouts.mark-paid');
     });
 });

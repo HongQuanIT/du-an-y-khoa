@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace Modules\Billing\Models;
 
 use App\Models\User;
-use App\Support\Enums\Role;
+use App\Support\Auth\PortalAccess;
+use App\Support\Enums\PortalGroup;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -134,6 +135,9 @@ class Subscription extends Model
      */
     public function scopeForStudents(Builder $query): Builder
     {
-        return $query->whereHas('user', fn (Builder $builder): Builder => $builder->role(Role::Student->value));
+        return $query->whereHas(
+            'user',
+            fn (Builder $builder): Builder => $builder->role(PortalAccess::roleNames(PortalGroup::Learner)),
+        );
     }
 }

@@ -71,31 +71,47 @@ Route::middleware('auth')->group(function (): void {
         ->middleware('throttle:auth')
         ->name('student.2fa.challenge.verify');
 
-    Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
-    Route::get('/settings', [ProfileController::class, 'redirectLegacySettings'])->name('settings.edit');
-    Route::put('/settings/profile', [ProfileController::class, 'updateProfile'])->name('settings.profile');
-    Route::put('/settings/learner-profile', [ProfileController::class, 'updateLearnerProfile'])->name('settings.learner-profile');
-    Route::put('/settings/avatar', [ProfileController::class, 'updateAvatar'])->name('settings.avatar');
-    Route::delete('/settings/avatar', [ProfileController::class, 'destroyAvatar'])->name('settings.avatar.destroy');
-    Route::put('/settings/objective', [ProfileController::class, 'updateObjective'])->name('settings.objective');
-    Route::put('/settings/password', [ProfileController::class, 'updatePassword'])->name('settings.password');
-    Route::put('/settings/appearance', [ProfileController::class, 'updateAppearance'])->name('settings.appearance');
-    Route::put('/settings/notifications', [ProfileController::class, 'updateNotifications'])->name('settings.notifications');
-    Route::post('/settings/redeem', [ProfileController::class, 'redeemCode'])->name('settings.redeem');
-    Route::post('/settings/org-license', [ProfileController::class, 'activateOrgLicense'])->name('settings.org-license');
-    Route::post('/settings/org-license/renew', [ProfileController::class, 'renewOrgLicense'])->name('settings.org-license.renew');
-    Route::put('/settings/notes', [ProfileController::class, 'updateNotes'])->name('settings.notes');
+    Route::get('/profile', [ProfileController::class, 'show'])
+        ->middleware('permission:profile.view')
+        ->name('profile.show');
+    Route::get('/settings', [ProfileController::class, 'redirectLegacySettings'])
+        ->middleware('permission:profile.view')
+        ->name('settings.edit');
+
+    Route::middleware('permission:profile.update')->group(function (): void {
+        Route::put('/settings/profile', [ProfileController::class, 'updateProfile'])->name('settings.profile');
+        Route::put('/settings/learner-profile', [ProfileController::class, 'updateLearnerProfile'])->name('settings.learner-profile');
+        Route::put('/settings/objective', [ProfileController::class, 'updateObjective'])->name('settings.objective');
+        Route::put('/settings/appearance', [ProfileController::class, 'updateAppearance'])->name('settings.appearance');
+        Route::put('/settings/notifications', [ProfileController::class, 'updateNotifications'])->name('settings.notifications');
+        Route::post('/settings/redeem', [ProfileController::class, 'redeemCode'])->name('settings.redeem');
+        Route::post('/settings/org-license', [ProfileController::class, 'activateOrgLicense'])->name('settings.org-license');
+        Route::post('/settings/org-license/renew', [ProfileController::class, 'renewOrgLicense'])->name('settings.org-license.renew');
+        Route::put('/settings/notes', [ProfileController::class, 'updateNotes'])->name('settings.notes');
+    });
+
+    Route::middleware('permission:profile.avatar_update')->group(function (): void {
+        Route::put('/settings/avatar', [ProfileController::class, 'updateAvatar'])->name('settings.avatar');
+        Route::delete('/settings/avatar', [ProfileController::class, 'destroyAvatar'])->name('settings.avatar.destroy');
+    });
+
+    Route::put('/settings/password', [ProfileController::class, 'updatePassword'])
+        ->middleware('permission:profile.password_update')
+        ->name('settings.password');
 
     Route::get('/settings/2fa/setup', [SettingsTwoFactorController::class, 'showSetup'])
+        ->middleware('permission:profile.password_update')
         ->name('settings.2fa.setup');
     Route::post('/settings/2fa/confirm', [SettingsTwoFactorController::class, 'confirmSetup'])
-        ->middleware('throttle:auth')
+        ->middleware(['permission:profile.password_update', 'throttle:auth'])
         ->name('settings.2fa.confirm');
     Route::get('/settings/2fa/recovery', [SettingsTwoFactorController::class, 'showRecovery'])
+        ->middleware('permission:profile.password_update')
         ->name('settings.2fa.recovery');
     Route::post('/settings/2fa/recovery', [SettingsTwoFactorController::class, 'finishRecovery'])
+        ->middleware('permission:profile.password_update')
         ->name('settings.2fa.recovery.finish');
     Route::delete('/settings/2fa', [SettingsTwoFactorController::class, 'disable'])
-        ->middleware('throttle:auth')
+        ->middleware(['permission:profile.password_update', 'throttle:auth'])
         ->name('settings.2fa.disable');
 });

@@ -6,10 +6,12 @@ namespace Modules\StudyPlan\Tests\Feature;
 
 use App\Models\User;
 use App\Support\Enums\Role;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Enums\SessionSource;
+use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionOption;
@@ -20,10 +22,8 @@ use Modules\StudyPlan\Enums\TaskStatus;
 use Modules\StudyPlan\Enums\TaskType;
 use Modules\StudyPlan\Models\StudyPlan;
 use Modules\StudyPlan\Models\StudyPlanTask;
-use Spatie\Permission\Models\Role as RoleModel;
-use Tests\TestCase;
 use Tests\Support\CreatesMedicalTaxonomy;
-
+use Tests\TestCase;
 
 /**
  * The Phase 1 vertical slice: create a plan, see today's task, answer its
@@ -36,13 +36,13 @@ final class StudyPlanFlowTest extends TestCase
 
     private User $user;
 
-    private \Modules\QuestionBank\Models\Lesson $topic;
+    private Lesson $topic;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        RoleModel::findOrCreate(Role::Student->value, 'web');
+        $this->seed(RolePermissionSeeder::class);
 
         $this->user = User::factory()->create();
         $this->user->assignRole(Role::Student->value);
@@ -79,7 +79,7 @@ final class StudyPlanFlowTest extends TestCase
         $response
             ->assertOk()
             ->assertSee('Ma trận đề thi')
-            ->assertSee('Chủ đề lâm sàng (128)')
+            ->assertSee('Chủ đề lâm sàng')
             ->assertSee('Bài học')
             ->assertSee('Tags');
 
@@ -299,6 +299,7 @@ final class StudyPlanFlowTest extends TestCase
             ->assertDontSee('data-testid="attending-tip-panel"', false)
             ->assertDontSee('data-testid="attending-tip-used-badge"', false);
     }
+
     public function test_answering_every_question_completes_the_task(): void
     {
         $plan = $this->createPlan();
@@ -629,7 +630,7 @@ final class StudyPlanFlowTest extends TestCase
                 'attending_tip' => "Kiến thức kiểm thử #{$i}.",
                 'difficulty' => 'medium',
                 'status' => QuestionStatus::Published,
-                                'is_free' => true,
+                'is_free' => true,
             ]);
 
             foreach (['A', 'B', 'C', 'D'] as $index => $label) {

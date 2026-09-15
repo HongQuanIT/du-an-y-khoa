@@ -131,10 +131,12 @@
                     <span class="material-symbols-outlined text-[18px]">play_arrow</span>
                     {{ $studyLabel }}
                 </a>
-                <a href="{{ route('profile.show') }}"
-                    class="block w-full rounded-xl border border-border py-2.5 text-center font-label-md text-label-md text-on-surface hover:bg-surface-container-low">
-                    Hồ sơ của tôi
-                </a>
+                @can('profile.view')
+                    <a href="{{ route('profile.show') }}"
+                        class="block w-full rounded-xl border border-border py-2.5 text-center font-label-md text-label-md text-on-surface hover:bg-surface-container-low">
+                        Hồ sơ của tôi
+                    </a>
+                @endcan
             @else
                 <a href="{{ route('login') }}"
                     class="block w-full rounded-xl border border-border py-2.5 text-center font-label-md text-label-md text-on-surface hover:bg-surface-container-low">Đăng nhập</a>

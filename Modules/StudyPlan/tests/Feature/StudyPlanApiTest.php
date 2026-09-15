@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace Modules\StudyPlan\Tests\Feature;
 
 use App\Models\User;
+use App\Support\Enums\Role;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Event;
 use Modules\QuestionBank\Enums\QuestionStatus;
+use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionOption;
 use Modules\StudyPlan\Actions\CompletePlanTaskAction;
@@ -16,9 +19,8 @@ use Modules\StudyPlan\Enums\TaskType;
 use Modules\StudyPlan\Events\StudyPlanActivity;
 use Modules\StudyPlan\Models\StudyPlan;
 use Modules\StudyPlan\Models\StudyPlanTask;
-use Tests\TestCase;
 use Tests\Support\CreatesMedicalTaxonomy;
-
+use Tests\TestCase;
 
 /**
  * Phase 5: REST endpoints reuse the same actions, and the funnel emits its
@@ -31,13 +33,16 @@ final class StudyPlanApiTest extends TestCase
 
     private User $user;
 
-    private \Modules\QuestionBank\Models\Lesson $topic;
+    private Lesson $topic;
 
     protected function setUp(): void
     {
         parent::setUp();
 
+        $this->seed(RolePermissionSeeder::class);
+
         $this->user = User::factory()->create();
+        $this->user->assignRole(Role::Student->value);
         $this->topic = $this->makeLesson([
             'name' => 'Tim mạch',
             'slug' => 'tim-mach',
@@ -191,7 +196,7 @@ final class StudyPlanApiTest extends TestCase
                 'stem' => "Câu hỏi #{$i}?",
                 'difficulty' => 'medium',
                 'status' => QuestionStatus::Published,
-                                'is_free' => true,
+                'is_free' => true,
             ]);
 
             QuestionOption::create([

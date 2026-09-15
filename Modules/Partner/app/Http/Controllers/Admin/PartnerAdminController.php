@@ -7,16 +7,17 @@ namespace Modules\Partner\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Support\Enums\Permission;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Modules\Billing\Support\CurrentSubscription;
 use Modules\Partner\Actions\CreatePartnerPayoutAction;
 use Modules\Partner\Actions\MarkPartnerPayoutPaidAction;
-use Modules\Partner\Enums\PartnerStatus;
 use Modules\Partner\Models\Partner;
 use Modules\Partner\Models\PartnerAttribution;
 use Modules\Partner\Models\PartnerCommission;
@@ -29,7 +30,7 @@ final class PartnerAdminController extends Controller
 {
     public function index(Request $request): View
     {
-        $this->authorizePermission(Permission::AdminPartnersManage);
+        $this->authorizePermission('partner.view_any');
 
         $period = PartnerPeriodFilter::fromRequest($request);
         $filters = PartnerPeriodFilter::listFilters($request);
@@ -134,7 +135,7 @@ final class PartnerAdminController extends Controller
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Builder<Partner>  $query
+     * @param  Builder<Partner>  $query
      * @param  array{status: string, q: string, sort: string, dir: string}  $filters
      */
     private function applyPartnerListFilters($query, array $filters): void
@@ -157,7 +158,7 @@ final class PartnerAdminController extends Controller
 
     /**
      * @param  array{status: string, q: string, sort: string, dir: string}  $filters
-     * @return \Illuminate\Support\Collection<int, int>
+     * @return Collection<int, int>
      */
     private function filteredPartnerIds(array $filters)
     {
@@ -169,7 +170,7 @@ final class PartnerAdminController extends Controller
 
     public function show(Partner $partner): View
     {
-        $this->authorizePermission(Permission::AdminPartnersManage);
+        $this->authorizePermission('partner.view');
 
         $partner->load(['user', 'inviteCodes']);
 
@@ -195,28 +196,9 @@ final class PartnerAdminController extends Controller
         ]);
     }
 
-    public function update(Request $request, Partner $partner): RedirectResponse
-    {
-        $this->authorizePermission(Permission::AdminPartnersManage);
-
-        $data = $request->validate([
-            'display_name' => ['required', 'string', 'max:120'],
-            'default_commission_rate_percent' => ['required', 'numeric', 'min:0', 'max:100'],
-            'status' => ['required', 'in:active,suspended'],
-        ]);
-
-        $partner->forceFill([
-            'display_name' => $data['display_name'],
-            'default_commission_rate_bps' => (int) round(((float) $data['default_commission_rate_percent']) * 100),
-            'status' => PartnerStatus::from($data['status']),
-        ])->save();
-
-        return back()->with('status', 'Đã cập nhật cộng tác viên.');
-    }
-
     public function storeCode(Request $request, Partner $partner): RedirectResponse
     {
-        $this->authorizePermission(Permission::AdminPartnersManage);
+        $this->authorizePermission('partner_code.create');
 
         $request->merge([
             'code' => Str::upper(trim((string) $request->input('code'))),
@@ -251,7 +233,7 @@ final class PartnerAdminController extends Controller
 
     public function updateCode(Request $request, Partner $partner, PartnerInviteCode $inviteCode): RedirectResponse
     {
-        $this->authorizePermission(Permission::AdminPartnersManage);
+        $this->authorizePermission('partner_code.update');
         abort_unless($inviteCode->partner_id === $partner->getKey(), 404);
 
         $data = $request->validate([
@@ -279,7 +261,7 @@ final class PartnerAdminController extends Controller
 
     public function toggleCode(Partner $partner, PartnerInviteCode $inviteCode): RedirectResponse
     {
-        $this->authorizePermission(Permission::AdminPartnersManage);
+        $this->authorizePermission('partner_code.update');
         abort_unless($inviteCode->partner_id === $partner->getKey(), 404);
 
         $inviteCode->forceFill([
@@ -291,7 +273,7 @@ final class PartnerAdminController extends Controller
 
     public function payoutsIndex(): View
     {
-        $this->authorizePermission(Permission::AdminPartnersPayouts);
+        $this->authorizePermission('partner_payout.view');
 
         $payouts = PartnerPayout::query()
             ->with(['partner.user', 'creator'])
@@ -308,7 +290,7 @@ final class PartnerAdminController extends Controller
 
     public function payoutsStore(Request $request, CreatePartnerPayoutAction $action): RedirectResponse
     {
-        $this->authorizePermission(Permission::AdminPartnersPayouts);
+        $this->authorizePermission('partner_payout.create');
 
         $data = $request->validate([
             'partner_id' => ['required', 'integer', 'exists:partners,id'],
@@ -333,7 +315,7 @@ final class PartnerAdminController extends Controller
 
     public function payoutsMarkPaid(PartnerPayout $payout, MarkPartnerPayoutPaidAction $action): RedirectResponse
     {
-        $this->authorizePermission(Permission::AdminPartnersPayouts);
+        $this->authorizePermission('partner_payout.mark_paid');
 
         $action->handle($payout);
 
@@ -363,9 +345,16 @@ final class PartnerAdminController extends Controller
         return PartnerSettings::defaultInviteMaxUses();
     }
 
-    private function authorizePermission(Permission $permission): void
+    private function authorizePermission(string|Permission ...$permissions): void
     {
-        abort_unless($this->actor()->can($permission->value), 403);
+        $abilities = array_map(
+            static fn (string|Permission $permission): string => $permission instanceof Permission
+                ? $permission->value
+                : $permission,
+            $permissions,
+        );
+
+        abort_unless($this->actor()->canAny($abilities), 403);
     }
 
     private function actor(): User

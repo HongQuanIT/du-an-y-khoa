@@ -26,7 +26,8 @@
 
     <x-admin.flash />
 
-    <form method="get" action="{{ route('admin.partners.index') }}"
+    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.partners.index'))
+<form method="get" action="{{ route('admin.partners.index') }}"
         class="mb-6 space-y-4 rounded-xl border border-outline-variant bg-surface p-4"
         x-data="{ preset: @js($period['preset']) }">
         <div class="flex flex-wrap gap-2">
@@ -101,6 +102,7 @@
             </span>
         </p>
     </form>
+@endif
 
     <div class="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <div class="rounded-xl border border-outline-variant bg-surface p-4">
@@ -175,7 +177,9 @@
                         <td class="px-4 py-3 font-label-md">{{ MoneyFormatter::vnd($commission) }}</td>
                         <td class="px-4 py-3">{{ $partner->status->label() }}</td>
                         <td class="px-4 py-3">
-                            <a href="{{ route('admin.partners.show', $partner) }}" class="text-primary hover:underline">Chi tiết</a>
+                            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.partners.show'))
+<a href="{{ route('admin.partners.show', $partner) }}" class="text-primary hover:underline">Chi tiết</a>
+@endif
                         </td>
                     </tr>
                 @empty

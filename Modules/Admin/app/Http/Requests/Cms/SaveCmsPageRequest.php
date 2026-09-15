@@ -19,7 +19,9 @@ final class SaveCmsPageRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        $page = $this->route('cmsPage');
+
+        return $this->user()?->can('cms_page.update') === true;
     }
 
     protected function prepareForValidation(): void

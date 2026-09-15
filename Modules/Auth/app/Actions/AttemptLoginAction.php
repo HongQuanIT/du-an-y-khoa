@@ -13,8 +13,10 @@ use App\Support\Audit\Enums\AuditPortal;
 use App\Support\Audit\Enums\AuditResult;
 use App\Support\Auth\Instructor;
 use App\Support\Auth\Partner;
+use App\Support\Auth\PortalAccess;
 use App\Support\Auth\Staff;
 use App\Support\Concerns\AsAction;
+use App\Support\Enums\PortalGroup;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
@@ -151,6 +153,10 @@ final class AttemptLoginAction
      */
     private function assertStudentPortal(User $user, string $key): void
     {
+        if (PortalAccess::allows($user, PortalGroup::Learner)) {
+            return;
+        }
+
         if (Staff::isStaff($user)) {
             $this->auditFailure(LoginPortal::Student, AuditResult::Denied, 'portal_mismatch', $user);
             Auth::logout();
@@ -180,6 +186,8 @@ final class AttemptLoginAction
                 'email' => 'Tài khoản cộng tác viên vui lòng đăng nhập tại '.route('partner.login').'.',
             ]);
         }
+
+        $this->rejectPortalMismatch($key, $user, LoginPortal::Student);
     }
 
     /**

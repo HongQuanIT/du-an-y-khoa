@@ -11,6 +11,6 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Route;
 use Modules\Search\Http\Controllers\GlobalSearchSuggestController;
 
-Route::middleware('auth:sanctum')->group(function (): void {
+Route::middleware(['auth:sanctum', 'portal:learner', 'permission:search.use'])->group(function (): void {
     Route::get('search/suggest', GlobalSearchSuggestController::class)->name('search.suggest');
 });

@@ -1,8 +1,10 @@
 <x-layouts.admin :title="'Chi tiết học viên — '.$user->name">
     <x-admin.page-header title="Chi tiết học viên" description="Thông tin tài khoản, hồ sơ học tập và lịch sử hoạt động.">
         <x-slot:actions>
-            <a href="{{ route('admin.users.index') }}"
+            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.users.index'))
+<a href="{{ route('admin.users.index') }}"
                 class="rounded-lg px-3 py-2 font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-low">← Danh sách</a>
+@endif
         </x-slot:actions>
     </x-admin.page-header>
 
@@ -11,6 +13,10 @@
     @php
         $linkedGoogleAccount = $user->socialAccounts->firstWhere('provider', \Modules\Auth\Enums\SocialProvider::Google->value);
         $linkedFacebookAccount = $user->socialAccounts->firstWhere('provider', \Modules\Auth\Enums\SocialProvider::Facebook->value);
+        $primaryRoleModel = $user->roles->first();
+        $systemRole = \App\Support\Enums\Role::tryFromName($primaryRoleModel?->name);
+        $roleLabel = $systemRole?->label() ?? $primaryRoleModel?->display_name ?? $primaryRoleModel?->name ?? 'Chưa có vai trò';
+        $rolePortal = $systemRole?->portal() ?? \App\Support\Enums\PortalGroup::tryFrom((string) $primaryRoleModel?->portal);
         $loginMethods = [
             [
                 'label' => 'Email/password',
@@ -63,7 +69,7 @@
                 <p class="mt-1 break-all font-body-md text-body-md text-on-surface-variant">{{ $user->email }}</p>
                 <div class="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-body-sm text-on-surface-variant">
                     <span class="inline-flex items-center gap-1.5"><span class="material-symbols-outlined text-[17px]" aria-hidden="true">badge</span>Mã #{{ $user->id }}</span>
-                    <span class="inline-flex items-center gap-1.5"><span class="material-symbols-outlined text-[17px]" aria-hidden="true">school</span>{{ \App\Support\Enums\Role::tryFromName($user->primaryRoleName())?->label() ?? 'Chưa có vai trò' }}</span>
+                    <span class="inline-flex items-center gap-1.5"><span class="material-symbols-outlined text-[17px]" aria-hidden="true">school</span>{{ $roleLabel }}</span>
                     <span class="inline-flex items-center gap-1.5"><span class="material-symbols-outlined text-[17px]" aria-hidden="true">login</span>{{ $user->last_login_method?->label() ?? 'Chưa ghi nhận đăng nhập' }}</span>
                 </div>
             </div>
@@ -109,11 +115,11 @@
                 </div>
                 <div>
                     <dt class="font-label-sm text-on-surface-variant">Cổng truy cập</dt>
-                    <dd class="mt-1 font-medium text-on-surface">{{ \App\Support\Enums\Role::tryFromName($user->primaryRoleName())?->portal()->label() ?? '—' }}</dd>
+                    <dd class="mt-1 font-medium text-on-surface">{{ $rolePortal?->label() ?? '—' }}</dd>
                 </div>
                 <div>
                     <dt class="font-label-sm text-on-surface-variant">Vai trò</dt>
-                    <dd class="mt-1 font-medium text-on-surface">{{ \App\Support\Enums\Role::tryFromName($user->primaryRoleName())?->label() ?? '—' }}</dd>
+                    <dd class="mt-1 font-medium text-on-surface">{{ $roleLabel }}</dd>
                 </div>
                 <div>
                     <dt class="font-label-sm text-on-surface-variant">Trạng thái</dt>
@@ -182,7 +188,9 @@
                     <p class="mt-2 font-body-sm text-on-surface-variant">Bạn không có quyền quản lý tài khoản này hoặc đây là tài khoản của chính bạn.</p>
                 </div>
             @else
-                <form method="post" action="{{ route('admin.users.role', $user) }}" class="space-y-4 rounded-xl border border-outline-variant bg-surface p-5 shadow-sm">
+                @if ($canAssignRole)
+                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.users.role'))
+<form method="post" action="{{ route('admin.users.role', $user) }}" class="space-y-4 rounded-xl border border-outline-variant bg-surface p-5 shadow-sm">
                     @csrf
                     @method('PATCH')
                     <div>
@@ -198,32 +206,12 @@
                         Lưu quyền truy cập
                     </button>
                 </form>
-
-                @if ($isInstructor ?? false)
-                    <form method="post" action="{{ route('admin.users.subjects', $user) }}" class="space-y-4 rounded-xl border border-outline-variant bg-surface p-5 shadow-sm">
-                        @csrf
-                        @method('PATCH')
-                        <div>
-                            <h3 class="font-label-lg font-semibold text-on-surface">Môn học chuyên môn</h3>
-                            <p class="mt-1 font-body-sm text-on-surface-variant">Editor chỉ gán câu hỏi thuộc các môn này cho giảng viên.</p>
-                        </div>
-                        <div class="max-h-56 space-y-2 overflow-y-auto rounded-lg border border-outline-variant p-3">
-                            @foreach ($subjects ?? [] as $subject)
-                                <label class="flex items-center gap-2 text-sm">
-                                    <input type="checkbox" name="subject_ids[]" value="{{ $subject->id }}"
-                                        @checked($user->instructorSubjects->contains('id', $subject->id))
-                                        class="size-4 rounded text-primary">
-                                    {{ $subject->name }}
-                                </label>
-                            @endforeach
-                        </div>
-                        <button type="submit" class="inline-flex h-11 w-full items-center justify-center rounded-lg bg-primary px-4 font-label-md font-medium text-on-primary">
-                            Lưu môn học
-                        </button>
-                    </form>
+@endif
                 @endif
 
-                <form method="post" action="{{ route('admin.users.status', $user) }}" class="space-y-4 rounded-xl border border-outline-variant bg-surface p-5 shadow-sm">
+                @if ($canUpdateStatus)
+                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.users.status'))
+<form method="post" action="{{ route('admin.users.status', $user) }}" class="space-y-4 rounded-xl border border-outline-variant bg-surface p-5 shadow-sm">
                     @csrf
                     @method('PATCH')
                     <div>
@@ -245,14 +233,19 @@
                     </div>
                     <button type="submit" class="inline-flex h-11 w-full items-center justify-center rounded-lg border border-outline-variant px-4 font-label-md font-medium text-on-surface transition hover:bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-primary/20">Cập nhật trạng thái</button>
                 </form>
+@endif
+                @endif
 
+                @if ($canResetPassword)
                 <section id="account-security" class="scroll-mt-24 rounded-xl border border-outline-variant bg-surface p-5 shadow-sm" aria-labelledby="security-actions-heading">
                     <div class="mb-4">
                         <h3 id="security-actions-heading" class="font-label-lg font-semibold text-on-surface">Bảo mật tài khoản</h3>
                         <p class="mt-1 font-body-sm text-on-surface-variant">Hỗ trợ người dùng khôi phục quyền truy cập.</p>
                     </div>
                     <div class="flex flex-col gap-2">
-                    <form method="post" action="{{ route('admin.users.reset-password', $user) }}">
+                    @if ($canResetPassword)
+                    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.users.reset-password'))
+<form method="post" action="{{ route('admin.users.reset-password', $user) }}">
                         @csrf
                         <button type="submit" class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-outline-variant px-4 font-label-md font-medium text-on-surface transition hover:bg-surface-container-low"
                             onclick="return confirm('Gửi email đặt lại mật khẩu?')">
@@ -260,17 +253,11 @@
                             Gửi email đặt lại mật khẩu
                         </button>
                     </form>
-                    @unless ($user->email_verified_at)
-                        <form method="post" action="{{ route('admin.users.verify-email', $user) }}">
-                            @csrf
-                            <button type="submit" class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-outline-variant px-4 font-label-md font-medium text-on-surface transition hover:bg-surface-container-low">
-                                <span class="material-symbols-outlined text-[18px]" aria-hidden="true">mark_email_read</span>
-                                Xác minh email
-                            </button>
-                        </form>
-                    @endunless
+@endif
+                    @endif
                     </div>
                 </section>
+                @endif
             @endif
         </aside>
     </div>
@@ -298,7 +285,7 @@
 
     <section id="recent-activity" class="mt-6 scroll-mt-24 rounded-xl border border-outline-variant bg-surface p-5">
         <div class="mb-1 flex flex-wrap items-end justify-between gap-2">
-            <h3 class="font-headline-sm text-headline-sm text-on-surface">Hoạt động gần đây</h3>
+            <h3 class="font-headline-sm text-headline-sm text-on-surface">Hoạt động gần đây của người dùng</h3>
             <p class="font-label-sm text-label-sm text-on-surface-variant">Màn hình đã mở · cùng trang trong 30 phút được gộp một dòng</p>
         </div>
         <ul class="divide-y divide-outline-variant/60">

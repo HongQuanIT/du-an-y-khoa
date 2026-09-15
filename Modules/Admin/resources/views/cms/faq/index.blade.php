@@ -8,10 +8,12 @@
                 class="rounded-lg border border-outline-variant px-4 py-2 font-label-md text-on-surface hover:bg-surface-container-low">
                 Xem trang FAQ ↗
             </a>
-            <a href="{{ route('admin.cms.faq.create') }}"
+            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.faq.create'))
+<a href="{{ route('admin.cms.faq.create') }}"
                 class="rounded-lg bg-primary px-4 py-2 font-label-md text-on-primary hover:opacity-90">
                 + Thêm FAQ
             </a>
+@endif
         </x-slot:actions>
     </x-admin.page-header>
 
@@ -23,7 +25,8 @@
         <x-admin.kpi-card label="Nháp" :value="number_format($stats['draft'])" hint="Chưa hiển thị công khai" icon="draft" />
     </div>
 
-    <form method="get" action="{{ route('admin.cms.faq.index') }}"
+    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.faq.index'))
+<form method="get" action="{{ route('admin.cms.faq.index') }}"
         class="mb-6 grid grid-cols-1 gap-3 rounded-xl border border-outline-variant bg-surface p-4 sm:grid-cols-4">
         <div class="sm:col-span-2">
             <label class="mb-1 block font-label-sm text-label-sm text-on-surface-variant" for="q">Tìm kiếm</label>
@@ -56,6 +59,7 @@
                 class="rounded-lg px-4 py-2 font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-low">Xóa lọc</a>
         </div>
     </form>
+@endif
 
     <div class="overflow-x-auto rounded-xl border border-outline-variant bg-surface">
         <table class="min-w-full text-left font-body-sm text-body-sm">
@@ -76,18 +80,22 @@
                             <div class="flex flex-col gap-1">
                                 <span class="font-mono text-xs">{{ $faq->sort_order }}</span>
                                 <div class="flex gap-0.5">
-                                    <form method="post" action="{{ route('admin.cms.faq.move-up', $faq) }}">
+                                    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.faq.move-up'))
+<form method="post" action="{{ route('admin.cms.faq.move-up', $faq) }}">
                                         @csrf
                                         <button type="submit" class="rounded p-0.5 text-on-surface-variant hover:bg-surface-container-low" title="Lên">
                                             <span class="material-symbols-outlined text-[18px]">arrow_upward</span>
                                         </button>
                                     </form>
-                                    <form method="post" action="{{ route('admin.cms.faq.move-down', $faq) }}">
+@endif
+                                    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.faq.move-down'))
+<form method="post" action="{{ route('admin.cms.faq.move-down', $faq) }}">
                                         @csrf
                                         <button type="submit" class="rounded p-0.5 text-on-surface-variant hover:bg-surface-container-low" title="Xuống">
                                             <span class="material-symbols-outlined text-[18px]">arrow_downward</span>
                                         </button>
                                     </form>
+@endif
                                 </div>
                             </div>
                         </td>
@@ -107,15 +115,19 @@
                             {{ $faq->updated_at?->format('d/m/Y H:i') }}
                         </td>
                         <td class="px-4 py-3 text-right whitespace-nowrap">
-                            <a href="{{ route('admin.cms.faq.edit', $faq) }}"
+                            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.faq.edit'))
+<a href="{{ route('admin.cms.faq.edit', $faq) }}"
                                 class="font-label-md text-primary hover:underline">Sửa</a>
+@endif
                         </td>
                     </tr>
                 @empty
                     <tr>
                         <td colspan="6" class="px-4 py-12 text-center text-on-surface-variant">
                             Chưa có FAQ nào.
-                            <a href="{{ route('admin.cms.faq.create') }}" class="text-primary hover:underline">Thêm FAQ đầu tiên</a>
+                            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.faq.create'))
+<a href="{{ route('admin.cms.faq.create') }}" class="text-primary hover:underline">Thêm FAQ đầu tiên</a>
+@endif
                         </td>
                     </tr>
                 @endforelse

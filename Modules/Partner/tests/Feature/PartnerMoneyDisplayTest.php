@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\SettingService;
 use App\Support\Enums\Permission;
 use App\Support\Enums\Role;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 use Modules\Billing\Models\Payment;
@@ -22,8 +23,6 @@ use Modules\Partner\Models\PartnerAttribution;
 use Modules\Partner\Models\PartnerCommission;
 use Modules\Partner\Models\PartnerInviteCode;
 use Modules\Partner\Models\PartnerPayout;
-use Spatie\Permission\Models\Permission as SpatiePermission;
-use Spatie\Permission\Models\Role as SpatieRole;
 use Tests\TestCase;
 
 final class PartnerMoneyDisplayTest extends TestCase
@@ -34,10 +33,7 @@ final class PartnerMoneyDisplayTest extends TestCase
     {
         parent::setUp();
 
-        SpatieRole::findOrCreate(Role::Admin->value, 'web');
-        SpatieRole::findOrCreate(Role::Partner->value, 'web');
-        SpatiePermission::findOrCreate(Permission::AdminPartnersManage->value, 'web');
-        SpatiePermission::findOrCreate(Permission::AdminPartnersPayouts->value, 'web');
+        $this->seed(RolePermissionSeeder::class);
     }
 
     public function test_admin_partner_report_displays_billing_amounts_as_whole_vnd(): void

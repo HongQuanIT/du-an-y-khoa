@@ -6,7 +6,6 @@ namespace Modules\Media\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Support\Enums\Permission;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -28,7 +27,7 @@ final class MediaController extends Controller
 {
     public function index(Request $request): View
     {
-        $this->authorizePermission(Permission::MediaView);
+        $this->authorizePermission('media.view');
 
         $query = Media::query()->latest('id');
 
@@ -67,13 +66,13 @@ final class MediaController extends Controller
                 'type' => $request->query('type'),
                 'status' => $request->query('status'),
             ],
-            'canManage' => $this->actor()->can(Permission::MediaManage->value),
+            'canManage' => $this->actor()->canAny(['media.upload', 'media.import', 'media.update', 'media.delete']),
         ]);
     }
 
     public function items(Request $request): JsonResponse
     {
-        $this->authorizePermission(Permission::MediaView);
+        $this->authorizePermission('media.view');
 
         $query = Media::query()->latest('id');
 
@@ -109,7 +108,7 @@ final class MediaController extends Controller
 
     public function store(StoreMediaRequest $request, UploadMediaAction $upload): JsonResponse|RedirectResponse
     {
-        $this->authorizePermission(Permission::MediaManage);
+        $this->authorizePermission('media.upload');
 
         $file = $request->file('file');
         assert($file !== null);
@@ -129,7 +128,7 @@ final class MediaController extends Controller
 
     public function storeFromUrl(RegisterExternalMediaRequest $request, RegisterExternalMediaAction $register): JsonResponse|RedirectResponse
     {
-        $this->authorizePermission(Permission::MediaManage);
+        $this->authorizePermission('media.import');
 
         try {
             $media = $register->handle(
@@ -161,19 +160,19 @@ final class MediaController extends Controller
 
     public function show(Media $media): View
     {
-        $this->authorizePermission(Permission::MediaView);
+        $this->authorizePermission('media.view');
 
         $media->load(['usages.usable', 'jobs', 'uploader']);
 
         return view('media::admin.show', [
             'media' => $media,
-            'canManage' => $this->actor()->can(Permission::MediaManage->value),
+            'canManage' => $this->actor()->canAny(['media.update', 'media.delete']),
         ]);
     }
 
     public function update(UpdateMediaRequest $request, Media $media, UpdateMediaMetadataAction $update): RedirectResponse
     {
-        $this->authorizePermission(Permission::MediaManage);
+        $this->authorizePermission('media.update');
 
         $update->handle($this->actor(), $media, $request->validated());
 
@@ -184,7 +183,7 @@ final class MediaController extends Controller
 
     public function destroy(Media $media, DeleteMediaAction $delete): RedirectResponse
     {
-        $this->authorizePermission(Permission::MediaManage);
+        $this->authorizePermission('media.delete');
 
         try {
             $delete->handle($this->actor(), $media);
@@ -199,9 +198,9 @@ final class MediaController extends Controller
             ->with('status', 'Đã xóa media.');
     }
 
-    private function authorizePermission(Permission $permission): void
+    private function authorizePermission(string $permission): void
     {
-        abort_unless($this->actor()->can($permission->value), 403);
+        abort_unless($this->actor()->can($permission), 403);
     }
 
     private function actor(): User

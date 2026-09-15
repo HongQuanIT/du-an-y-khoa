@@ -22,7 +22,7 @@ final class BlueprintController extends Controller
 {
     public function index(): View
     {
-        $this->authorizePermission(Permission::TopicView);
+        $this->authorizePermission('blueprint.view');
 
         $blueprints = Blueprint::query()
             ->withCount('sections')
@@ -38,13 +38,13 @@ final class BlueprintController extends Controller
         return view('admin::blueprints.index', [
             'blueprints' => $blueprints,
             'coreTopicCounts' => $coreTopicCounts,
-            'canCreate' => $this->actor()->can(Permission::TopicCreate->value),
+            'canCreate' => $this->actor()->can('blueprint.create'),
         ]);
     }
 
     public function create(): View
     {
-        $this->authorizePermission(Permission::TopicCreate);
+        $this->authorizePermission('blueprint.create');
 
         return view('admin::blueprints.form', $this->formData(new Blueprint([
             'status' => TaxonomyStatus::Active,
@@ -54,7 +54,7 @@ final class BlueprintController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $this->authorizePermission(Permission::TopicCreate);
+        $this->authorizePermission('blueprint.create');
         $data = $this->validatedBlueprint($request);
         $blueprint = Blueprint::query()->create($data);
 
@@ -63,7 +63,7 @@ final class BlueprintController extends Controller
 
     public function edit(Blueprint $blueprint): View
     {
-        $this->authorizePermission(Permission::TopicView);
+        $this->authorizePermission('blueprint.update');
         $blueprint->load(['sections.coreClinicalTopics.lessons', 'sections.coreClinicalTopics.tags']);
 
         return view('admin::blueprints.form', $this->formData($blueprint));
@@ -71,7 +71,7 @@ final class BlueprintController extends Controller
 
     public function update(Request $request, Blueprint $blueprint): RedirectResponse
     {
-        $this->authorizePermission(Permission::TopicUpdate);
+        $this->authorizePermission('blueprint.update');
         $blueprint->update($this->validatedBlueprint($request, $blueprint));
 
         return back()->with('status', 'Đã cập nhật ma trận đề thi.');
@@ -79,7 +79,7 @@ final class BlueprintController extends Controller
 
     public function destroy(Blueprint $blueprint): RedirectResponse
     {
-        $this->authorizePermission(Permission::TopicDelete);
+        $this->authorizePermission('blueprint.delete');
         $blueprint->update(['status' => TaxonomyStatus::Inactive]);
 
         return redirect()->route('admin.blueprints.index')->with('status', 'Đã vô hiệu hóa ma trận đề thi.');
@@ -87,7 +87,7 @@ final class BlueprintController extends Controller
 
     public function storeSection(Request $request, Blueprint $blueprint): RedirectResponse
     {
-        $this->authorizePermission(Permission::TopicCreate);
+        $this->authorizePermission('blueprint.create');
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'slug' => ['nullable', 'string', 'max:191'],
@@ -108,7 +108,7 @@ final class BlueprintController extends Controller
 
     public function destroySection(BlueprintSection $section): RedirectResponse
     {
-        $this->authorizePermission(Permission::TopicDelete);
+        $this->authorizePermission('blueprint.delete');
 
         $section->delete();
 
@@ -117,7 +117,7 @@ final class BlueprintController extends Controller
 
     public function storeCoreTopic(Request $request, BlueprintSection $section): RedirectResponse
     {
-        $this->authorizePermission(Permission::TopicCreate);
+        $this->authorizePermission('blueprint.create');
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'slug' => ['nullable', 'string', 'max:191'],
@@ -138,7 +138,7 @@ final class BlueprintController extends Controller
 
     public function destroyCoreTopic(CoreClinicalTopic $topic): RedirectResponse
     {
-        $this->authorizePermission(Permission::TopicDelete);
+        $this->authorizePermission('blueprint.delete');
 
         $topic->delete();
 
@@ -147,7 +147,7 @@ final class BlueprintController extends Controller
 
     public function syncCoreTopicMedicalNodes(Request $request, CoreClinicalTopic $topic): RedirectResponse|JsonResponse
     {
-        $this->authorizePermission(Permission::TopicUpdate);
+        $this->authorizePermission('blueprint.update');
 
         $data = $request->validate([
             'lesson_ids' => ['nullable', 'array'],
@@ -185,66 +185,42 @@ final class BlueprintController extends Controller
             'blueprint' => $blueprint,
             'statuses' => TaxonomyStatus::cases(),
             'canUpdate' => $blueprint->exists
-                ? $this->actor()->can(Permission::TopicUpdate->value)
-                : $this->actor()->can(Permission::TopicCreate->value),
-            'canDelete' => $blueprint->exists && $this->actor()->can(Permission::TopicDelete->value),
+                ? $this->actor()->can('blueprint.update')
+                : $this->actor()->can('blueprint.create'),
+            'canDelete' => $blueprint->exists && $this->actor()->can('blueprint.delete'),
         ];
     }
 
     /** @return array<string, mixed> */
     private function validatedBlueprint(Request $request, ?Blueprint $blueprint = null): array
     {
-        $uniqueCode = Rule::unique('blueprints', 'code');
+        $uniqueSlug = Rule::unique('blueprints', 'slug');
         if ($blueprint !== null) {
-            $uniqueCode = $uniqueCode->ignore($blueprint->id);
+            $uniqueSlug = $uniqueSlug->ignore($blueprint->id);
         }
-
-        $code = trim((string) $request->input('code', ''));
-        $request->merge(['code' => $code !== '' ? $code : null]);
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'code' => ['nullable', 'string', 'max:100', $uniqueCode],
+            'slug' => ['nullable', 'string', 'max:191', $uniqueSlug],
+            'code' => ['nullable', 'string', 'max:100'],
             'description' => ['nullable', 'string'],
             'status' => ['required', Rule::in(TaxonomyStatus::values())],
             'sort_order' => ['required', 'integer', 'min:0'],
         ]);
 
+        $slug = trim((string) ($data['slug'] ?? ''));
+        if ($slug === '') {
+            $slug = Str::slug($data['name']);
+        }
+
         return [
             'name' => $data['name'],
-            'slug' => $this->resolveBlueprintSlug($data['name'], $blueprint),
+            'slug' => $slug,
             'code' => $data['code'] ?? null,
             'description' => $data['description'] ?? null,
             'status' => $data['status'],
             'sort_order' => (int) $data['sort_order'],
         ];
-    }
-
-    private function resolveBlueprintSlug(string $name, ?Blueprint $blueprint): string
-    {
-        $existing = trim((string) ($blueprint?->slug ?? ''));
-        if ($existing !== '') {
-            return $existing;
-        }
-
-        return $this->uniqueBlueprintSlug(Str::slug($name) !== '' ? Str::slug($name) : 'blueprint', $blueprint);
-    }
-
-    private function uniqueBlueprintSlug(string $slug, ?Blueprint $blueprint): string
-    {
-        $base = $slug !== '' ? $slug : 'blueprint';
-        $candidate = $base;
-        $suffix = 1;
-
-        while (Blueprint::query()
-            ->where('slug', $candidate)
-            ->when($blueprint?->id, fn ($query, $id) => $query->where('id', '!=', $id))
-            ->exists()) {
-            $candidate = $base.'-'.$suffix;
-            $suffix++;
-        }
-
-        return $candidate;
     }
 
     private function uniqueSectionSlug(Blueprint $blueprint, string $slug): string
@@ -275,9 +251,9 @@ final class BlueprintController extends Controller
         return $candidate;
     }
 
-    private function authorizePermission(Permission $permission): void
+    private function authorizePermission(string $permission): void
     {
-        abort_unless($this->actor()->can($permission->value), 403);
+        abort_unless($this->actor()->can($permission), 403);
     }
 
     private function actor(): User
