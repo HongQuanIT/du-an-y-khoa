@@ -123,7 +123,7 @@
                     </div>
                 </div>
 
-                <div class="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                <div class="grid gap-2 sm:gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     <template x-for="(permission, index) in permissions" :key="permission.id">
                         <div class="contents">
                             <div x-show="index === 0 || permissions[index - 1].module !== permission.module"
@@ -141,16 +141,16 @@
                             <div x-show="(index === 0 || permissions[index - 1].resource !== permission.resource) && !isModuleCollapsed(permission.module)" x-cloak
                                 class="col-span-full mt-2 font-label-md font-semibold text-primary" role="heading" aria-level="4" x-text="permission.resourceLabel"></div>
                             <label x-show="!isModuleCollapsed(permission.module)" x-cloak @class([
-                                'flex items-start gap-3 rounded-xl border border-outline-variant/70 p-3 transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5',
+                                'flex items-start gap-2.5 rounded-xl border border-outline-variant/70 p-2.5 sm:p-3 transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5',
                                 'cursor-pointer hover:bg-surface-container-low' => $canEdit,
                                 'cursor-default opacity-80' => ! $canEdit,
                             ])>
                                 <input type="checkbox" name="permissions[]" :value="permission.id"
                                     x-model.number="selectedPermissions" @disabled(! $canEdit)
                                     class="mt-0.5 size-4 rounded border-outline text-primary focus:ring-primary">
-                                <span class="min-w-0">
-                                    <span class="block text-sm font-medium text-on-surface" x-text="permission.action"></span>
-                                    <code class="block text-xs text-on-surface-variant" x-text="permission.name"></code>
+                                <span class="min-w-0 flex-1">
+                                    <span class="block text-sm font-medium text-on-surface leading-snug" x-text="permission.action"></span>
+                                    <code class="mt-0.5 block text-xs text-on-surface-variant break-words font-mono" x-text="permission.name"></code>
                                 </span>
                             </label>
                         </div>

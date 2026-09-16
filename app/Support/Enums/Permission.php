@@ -71,8 +71,7 @@ enum Permission: string
             self::ExamTake => PortalGroup::Learner,
 
             self::ClassroomCreate,
-            self::ClassroomManage,
-            self::QuestionReview => PortalGroup::Instructor,
+            self::ClassroomManage => PortalGroup::Instructor,
 
             self::PartnerPortal => PortalGroup::Partner,
 

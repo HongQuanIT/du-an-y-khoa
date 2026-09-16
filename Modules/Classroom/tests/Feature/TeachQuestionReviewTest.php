@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Classroom\Tests\Feature;
 
 use App\Models\User;
+use App\Support\Enums\Permission;
 use App\Support\Enums\Role;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -327,5 +328,103 @@ final class TeachQuestionReviewTest extends TestCase
         ]);
 
         return $question->fresh(['options', 'lessons']);
+    }
+
+    public function test_instructor_permission_granularity_for_question_review(): void
+    {
+        $instructor = $this->instructor();
+        $question = $this->makeInReviewQuestion();
+
+        // 1. Instructor có đầy đủ quyền mặc định -> truy cập index và show bình thường
+        $this->actingAs($instructor)
+            ->get(route('teach.questions.reviews.index'))
+            ->assertOk();
+
+        $this->actingAs($instructor)
+            ->get(route('teach.questions.reviews.show', $question))
+            ->assertOk();
+
+        // 2. Tạo role giảng viên bị hạn chế (không có quyền question nào)
+        $restrictedRole = \Spatie\Permission\Models\Role::create([
+            'name' => 'restricted_instructor',
+            'guard_name' => 'web',
+            'portal' => \App\Support\Enums\PortalGroup::Instructor->value,
+        ]);
+        $restrictedInstructor = User::factory()->create();
+        $restrictedInstructor->assignRole($restrictedRole);
+
+        $this->actingAs($restrictedInstructor)
+            ->get(route('teach.questions.reviews.index'))
+            ->assertForbidden();
+
+        $this->actingAs($restrictedInstructor)
+            ->get(route('teach.questions.reviews.show', $question))
+            ->assertForbidden();
+
+        // 3. Chỉ cấp question.view_any -> xem được index nhưng không xem được show và không duyệt được
+        $restrictedRole->givePermissionTo('question.view_any');
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $this->actingAs($restrictedInstructor)
+            ->get(route('teach.questions.reviews.index'))
+            ->assertOk();
+
+        $this->actingAs($restrictedInstructor)
+            ->get(route('teach.questions.reviews.show', $question))
+            ->assertForbidden();
+
+        // 4. Cấp question.view -> xem được show nhưng không duyệt / không từ chối được (403)
+        $restrictedRole->givePermissionTo(Permission::QuestionView->value);
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $this->actingAs($restrictedInstructor)
+            ->get(route('teach.questions.reviews.show', $question))
+            ->assertOk()
+            ->assertDontSee('Duyệt chuyên môn')
+            ->assertDontSee('Từ chối');
+
+        $this->actingAs($restrictedInstructor)
+            ->post(route('teach.questions.reviews.approve', $question), [
+                'review_note' => 'Cố tình duyệt khi không có quyền approve',
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($restrictedInstructor)
+            ->post(route('teach.questions.reviews.reject', $question), [
+                'review_note' => 'Cố tình từ chối khi không có quyền reject',
+            ])
+            ->assertForbidden();
+
+        // 5. Cấp question.approve -> thấy và bấm được Duyệt chuyên môn, nhưng chưa có quyền Từ chối
+        $restrictedRole->givePermissionTo('question.approve');
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $this->actingAs($restrictedInstructor)
+            ->get(route('teach.questions.reviews.show', $question))
+            ->assertOk()
+            ->assertSee('Duyệt chuyên môn')
+            ->assertDontSee('Từ chối');
+
+        $this->actingAs($restrictedInstructor)
+            ->post(route('teach.questions.reviews.reject', $question), [
+                'review_note' => 'Cố tình từ chối khi chưa có quyền reject',
+            ])
+            ->assertForbidden();
+
+        // 6. Cấp question.reject -> thấy và bấm được cả Từ chối
+        $restrictedRole->givePermissionTo('question.reject');
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $this->actingAs($restrictedInstructor)
+            ->get(route('teach.questions.reviews.show', $question))
+            ->assertOk()
+            ->assertSee('Duyệt chuyên môn')
+            ->assertSee('Từ chối');
+
+        $this->actingAs($restrictedInstructor)
+            ->post(route('teach.questions.reviews.reject', $question), [
+                'review_note' => 'Đã có quyền reject hợp lệ',
+            ])
+            ->assertRedirect(route('teach.questions.reviews.index', ['tab' => 'rejected']));
     }
 }

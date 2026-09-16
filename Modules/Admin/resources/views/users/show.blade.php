@@ -130,8 +130,19 @@
                     <dd class="mt-1 font-medium text-on-surface">{{ $user->email_verified_at?->timezone(config('app.timezone'))->format('d/m/Y H:i') ?? 'Chưa xác minh' }}</dd>
                 </div>
                 <div>
-                    <dt class="font-label-sm text-on-surface-variant">Xác thực hai bước</dt>
-                    <dd class="mt-1 font-medium text-on-surface">{{ $user->hasTwoFactorEnabled() ? 'Đã bật' : 'Chưa bật' }}</dd>
+                    <dt class="font-label-sm text-on-surface-variant">Xác thực hai bước (2FA)</dt>
+                    <dd class="mt-1">
+                        @if ($user->hasTwoFactorEnabled())
+                            <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                                <span class="material-symbols-outlined text-[15px]">verified_user</span>
+                                Đã bật ({{ $user->twoFactorSecret?->confirmed_at?->timezone(config('app.timezone'))->format('d/m/Y H:i') ?? 'Đã kích hoạt' }})
+                            </span>
+                        @else
+                            <span class="inline-flex items-center gap-1 rounded-full bg-surface-container px-2.5 py-0.5 text-xs font-medium text-on-surface-variant">
+                                Chưa kích hoạt
+                            </span>
+                        @endif
+                    </dd>
                 </div>
                 <div>
                     <dt class="font-label-sm text-on-surface-variant">Ngày tạo</dt>
@@ -236,13 +247,13 @@
 @endif
                 @endif
 
-                @if ($canResetPassword)
+                @if ($canResetPassword || $canTwoFactorManage)
                 <section id="account-security" class="scroll-mt-24 rounded-xl border border-outline-variant bg-surface p-5 shadow-sm" aria-labelledby="security-actions-heading">
                     <div class="mb-4">
                         <h3 id="security-actions-heading" class="font-label-lg font-semibold text-on-surface">Bảo mật tài khoản</h3>
-                        <p class="mt-1 font-body-sm text-on-surface-variant">Hỗ trợ người dùng khôi phục quyền truy cập.</p>
+                        <p class="mt-1 font-body-sm text-on-surface-variant">Hỗ trợ người dùng khôi phục quyền truy cập và bảo mật.</p>
                     </div>
-                    <div class="flex flex-col gap-2">
+                    <div class="flex flex-col gap-3">
                     @if ($canResetPassword)
                     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.users.reset-password'))
 <form method="post" action="{{ route('admin.users.reset-password', $user) }}">
@@ -254,6 +265,26 @@
                         </button>
                     </form>
 @endif
+                    @endif
+
+                    @if ($canTwoFactorManage)
+                    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.users.reset-2fa'))
+                        @if ($user->hasTwoFactorEnabled())
+<form method="post" action="{{ route('admin.users.reset-2fa', $user) }}">
+                            @csrf
+                            <button type="submit" class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-error/40 bg-error/5 px-4 font-label-md font-medium text-error transition hover:bg-error/10"
+                                onclick="return confirm('Bạn có chắc chắn muốn TẮT / ĐẶT LẠI 2FA cho tài khoản này? Người dùng sẽ không còn bị hỏi OTP khi đăng nhập.')">
+                                <span class="material-symbols-outlined text-[18px]" aria-hidden="true">lock_reset</span>
+                                Đặt lại / Tắt 2FA
+                            </button>
+                        </form>
+                        @else
+                            <div class="flex items-center gap-2 rounded-lg border border-outline-variant/60 bg-surface-container-low p-3 text-body-sm text-on-surface-variant">
+                                <span class="material-symbols-outlined text-[18px]" aria-hidden="true">info</span>
+                                <span>Tài khoản hiện chưa bật 2FA.</span>
+                            </div>
+                        @endif
+                    @endif
                     @endif
                     </div>
                 </section>

@@ -124,15 +124,15 @@ Route::middleware(['auth', 'instructor', 'instructor.2fa'])->group(function (): 
     Route::delete('/profile/avatar', [TeachProfileController::class, 'destroyAvatar'])->middleware('permission:teach_profile.avatar_update')->name('profile.avatar.destroy');
 
     Route::get('/questions/reviews', [TeachQuestionReviewController::class, 'index'])
-        ->middleware('permission:question.review')
+        ->middleware('permission:question.view_any')
         ->name('questions.reviews.index');
     Route::get('/questions/reviews/{question}', [TeachQuestionReviewController::class, 'show'])
-        ->middleware('permission:question.review')
+        ->middleware('permission:question.view')
         ->name('questions.reviews.show');
     Route::post('/questions/reviews/{question}/approve', [TeachQuestionReviewController::class, 'approve'])
-        ->middleware('permission:question.review')
+        ->middleware('permission:question.approve')
         ->name('questions.reviews.approve');
     Route::post('/questions/reviews/{question}/reject', [TeachQuestionReviewController::class, 'reject'])
-        ->middleware('permission:question.review')
+        ->middleware('permission:question.reject')
         ->name('questions.reviews.reject');
 });

@@ -130,7 +130,7 @@
                         </div>
                     </div>
 
-                    <div class="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                    <div class="grid gap-2 sm:gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         <template x-for="(perm, index) in currentPermissions" :key="perm.id">
                             <div class="contents">
                                 <div x-show="index === 0 || currentPermissions[index - 1].module !== perm.module"
@@ -139,12 +139,12 @@
                                 </div>
                                 <div x-show="index === 0 || currentPermissions[index - 1].resource !== perm.resource"
                                     class="col-span-full mt-2 font-label-md font-semibold text-primary" x-text="perm.resourceLabel"></div>
-                                <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-outline-variant/70 p-3 transition-colors hover:bg-surface-container-low has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                                <label class="flex cursor-pointer items-start gap-2.5 rounded-xl border border-outline-variant/70 p-2.5 sm:p-3 transition-colors hover:bg-surface-container-low has-[:checked]:border-primary has-[:checked]:bg-primary/5">
                                     <input type="checkbox" name="permissions[]" :value="perm.id" x-model.number="selectedPermissions"
                                         class="mt-0.5 size-4 rounded border-outline text-primary focus:ring-primary">
-                                    <span class="min-w-0">
-                                        <span class="block text-sm font-medium text-on-surface" x-text="perm.action"></span>
-                                        <code class="block text-xs text-on-surface-variant" x-text="perm.name"></code>
+                                    <span class="min-w-0 flex-1">
+                                        <span class="block text-sm font-medium text-on-surface leading-snug" x-text="perm.action"></span>
+                                        <code class="mt-0.5 block text-xs text-on-surface-variant break-words font-mono" x-text="perm.name"></code>
                                     </span>
                                 </label>
                             </div>

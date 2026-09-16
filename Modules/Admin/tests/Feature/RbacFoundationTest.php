@@ -162,4 +162,64 @@ final class RbacFoundationTest extends TestCase
             ->get(route('partner.commissions.index'))
             ->assertForbidden();
     }
+
+    public function test_permission_catalog_standardizes_action_order(): void
+    {
+        $this->assertSame(10, \Modules\Admin\Support\PermissionCatalog::actionPriority('question.view_any'));
+        $this->assertSame(11, \Modules\Admin\Support\PermissionCatalog::actionPriority('question.view'));
+        $this->assertSame(20, \Modules\Admin\Support\PermissionCatalog::actionPriority('question.create'));
+        $this->assertSame(30, \Modules\Admin\Support\PermissionCatalog::actionPriority('question.update'));
+        $this->assertSame(30, \Modules\Admin\Support\PermissionCatalog::actionPriority('question.edit'));
+        $this->assertSame(40, \Modules\Admin\Support\PermissionCatalog::actionPriority('question.delete'));
+        $this->assertSame(50, \Modules\Admin\Support\PermissionCatalog::actionPriority('question.import'));
+        $this->assertSame(60, \Modules\Admin\Support\PermissionCatalog::actionPriority('question.export'));
+        $this->assertSame(70, \Modules\Admin\Support\PermissionCatalog::actionPriority('question.approve'));
+        $this->assertSame(75, \Modules\Admin\Support\PermissionCatalog::actionPriority('question.reject'));
+        $this->assertSame(100, \Modules\Admin\Support\PermissionCatalog::actionPriority('question.manage'));
+
+        $this->assertSame('Xem danh sách', \Modules\Admin\Support\PermissionCatalog::actionLabel('question.view_any'));
+        $this->assertSame('Xem chi tiết', \Modules\Admin\Support\PermissionCatalog::actionLabel('question.view'));
+        $this->assertSame('Phê duyệt', \Modules\Admin\Support\PermissionCatalog::actionLabel('question.approve'));
+        $this->assertSame('Từ chối', \Modules\Admin\Support\PermissionCatalog::actionLabel('question.reject'));
+
+        $grouped = \Modules\Admin\Support\PermissionCatalog::groupedByPortal();
+        $adminPortal = $grouped[PortalGroup::Admin->value] ?? null;
+        $this->assertNotNull($adminPortal);
+
+        // Verify that in question module, question resource has permissions sorted by standardized action order
+        $questionModule = collect($adminPortal['modules'])->firstWhere('key', 'question_bank');
+        $this->assertNotNull($questionModule);
+        $questionResource = collect($questionModule['resources'])->firstWhere('key', 'question');
+        $this->assertNotNull($questionResource);
+
+        $questionPermNames = $questionResource['permissions']->pluck('name')->all();
+        $this->assertContains('question.view_any', $questionPermNames);
+        $this->assertContains('question.view', $questionPermNames);
+
+        $orderedActionPriorities = $questionResource['permissions']
+            ->map(fn ($perm) => \Modules\Admin\Support\PermissionCatalog::actionPriority($perm->name))
+            ->values()
+            ->all();
+
+        $sortedActionPriorities = $orderedActionPriorities;
+        sort($sortedActionPriorities);
+        $this->assertSame($sortedActionPriorities, $orderedActionPriorities);
+
+        // Verify 2FA toggle permissions exist for all 4 portals
+        $registry = app(\App\Support\Rbac\PermissionRegistry::class);
+        $admin2fa = $registry->find('profile.two_factor_toggle');
+        $this->assertNotNull($admin2fa);
+        $this->assertContains(PortalGroup::Admin, $admin2fa->portals);
+        $this->assertContains(PortalGroup::Learner, $admin2fa->portals);
+
+        $instructor2fa = $registry->find('teach_profile.two_factor_toggle');
+        $this->assertNotNull($instructor2fa);
+        $this->assertContains(PortalGroup::Instructor, $instructor2fa->portals);
+
+        $partner2fa = $registry->find('partner_profile.two_factor_toggle');
+        $this->assertNotNull($partner2fa);
+        $this->assertContains(PortalGroup::Partner, $partner2fa->portals);
+
+        $this->assertSame('Bật / tắt 2FA', \Modules\Admin\Support\PermissionCatalog::actionLabel('profile.two_factor_toggle'));
+    }
 }

@@ -19,21 +19,21 @@ return [
     'catalog' => [
         'admin' => [
             'account' => [
-                'profile' => ['view', 'update', 'password_update', 'avatar_update'],
+                'profile' => ['view', 'update', 'password_update', 'avatar_update', 'two_factor_toggle'],
             ],
             'user_management' => [
-                'user' => ['view_any', 'view', 'create', 'status_update', 'role_assign', 'password_reset'],
-                'learner_catalog' => ['view_any', 'create', 'update'],
+                'user' => ['view_any', 'view', 'create', 'status_update', 'role_assign', 'password_reset', 'two_factor_manage'],
+                'learner_catalog' => ['view_any', 'view', 'create', 'update'],
             ],
             'rbac' => [
                 'role' => ['view_any', 'view', 'create'],
                 'role_permission' => ['assign'],
-                'permission' => ['view_any'],
+                'permission' => ['view_any', 'view'],
             ],
             'question_bank' => [
                 'question' => ['view_any', 'create', 'clone', 'update', 'delete', 'submit', 'flag', 'publish', 'retire', 'import', 'export'],
                 'question_version' => ['view', 'restore'],
-                'question_feedback' => ['view_any', 'update'],
+                'question_feedback' => ['view_any', 'view', 'update'],
             ],
             'taxonomy' => [
                 'taxonomy' => ['view'],
@@ -42,10 +42,10 @@ return [
                 'tag' => ['view', 'create', 'update', 'delete'],
             ],
             'exam' => [
-                'exam' => ['view_any', 'create', 'update', 'delete', 'publish', 'archive'],
+                'exam' => ['view_any', 'view', 'create', 'update', 'delete', 'publish', 'archive'],
             ],
             'classroom' => [
-                'classroom_oversight' => ['view_any', 'approve', 'reject', 'archive', 'create_on_behalf', 'schedule'],
+                'classroom_oversight' => ['view_any', 'view', 'approve', 'reject', 'archive', 'create_on_behalf', 'schedule'],
             ],
             'content' => [
                 'cms_page' => ['view_any', 'view', 'update'],
@@ -53,7 +53,7 @@ return [
                 'cms_banner' => ['view', 'create', 'update', 'delete'],
                 'cms_faq' => ['view', 'create', 'update', 'delete', 'reorder'],
                 'media' => ['view', 'upload', 'update', 'delete', 'import'],
-                'contact' => ['view_any', 'update'],
+                'contact' => ['view_any', 'view', 'update'],
             ],
             'reporting' => [
                 'report' => ['view', 'export', 'refresh'],
@@ -63,8 +63,8 @@ return [
             'billing' => [
                 'billing_plan' => ['view', 'update', 'publish', 'archive'],
                 'billing_price' => ['create', 'update', 'delete'],
-                'billing_subscription' => ['view'],
-                'billing_payment' => ['view'],
+                'billing_subscription' => ['view_any', 'view'],
+                'billing_payment' => ['view_any', 'view'],
                 'billing_gateway' => ['view', 'update'],
             ],
             'partner_management' => [
@@ -85,15 +85,18 @@ return [
                 'teaching_dashboard' => ['view'],
             ],
             'profile' => [
-                'teach_profile' => ['view', 'update', 'password_update', 'avatar_update'],
+                'teach_profile' => ['view', 'update', 'password_update', 'avatar_update', 'two_factor_toggle'],
             ],
             'classroom' => [
                 'classroom' => ['view', 'create', 'close', 'reopen', 'delete'],
                 'classroom_settings' => ['update'],
                 'classroom_session' => ['schedule', 'start', 'end'],
             ],
+            'question_bank' => [
+                'question' => ['view_any', 'view', 'approve', 'reject'],
+            ],
             'notification' => [
-                'teach_notification' => ['view', 'update'],
+                'teach_notification' => ['view'],
             ],
         ],
 
@@ -102,7 +105,7 @@ return [
                 'learner_dashboard' => ['view'],
             ],
             'account' => [
-                'profile' => ['view', 'update', 'password_update', 'avatar_update'],
+                'profile' => ['view', 'update', 'password_update', 'avatar_update', 'two_factor_toggle'],
             ],
             'question_bank' => [
                 'question' => ['view'],
@@ -133,6 +136,9 @@ return [
                 'partner' => ['portal'],
                 'partner_dashboard' => ['view'],
             ],
+            'profile' => [
+                'partner_profile' => ['view', 'update', 'password_update', 'avatar_update', 'two_factor_toggle'],
+            ],
             'affiliate' => [
                 'partner_code' => ['view'],
                 'partner_referral' => ['view'],
@@ -145,6 +151,7 @@ return [
     'sensitive' => [
         'user.status_update',
         'user.password_reset',
+        'user.two_factor_manage',
         'question.publish',
         'question.restore',
         'classroom_oversight.force_end',

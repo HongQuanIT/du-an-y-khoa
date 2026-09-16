@@ -8,6 +8,13 @@
 - Role `reviewer` + quyền `question.flag`; route/menu hàng đợi `/admin/questions/flags`.
 - Eager-load `reviewerSlot*` / `assignedInstructor` để tránh lỗi lazy load trên list/form.
 - Migration giữ dữ liệu `in_flag_review` hiện có; cập nhật SRS Module 35 và test 3 lớp.
+### Feat — Cải thiện quản trị quyền và workflow reviewer
+
+- Chuẩn hóa UI danh sách, tạo mới và chỉnh sửa role/permission theo semantic HTML, responsive và tìm kiếm.
+- Bổ sung workflow reviewer xem/đánh giá câu hỏi, dữ liệu mẫu và kiểm soát quyền tương ứng.
+- Cải thiện quản lý người dùng, reset 2FA và cập nhật route, policy, audit cùng test liên quan.
+
+## 2026-09-16
 
 ### Chore — RBAC: xoá quyền cờ tính năng cũ
 

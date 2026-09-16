@@ -3,6 +3,7 @@
         || filled($filters['portal'] ?? [])
         || filled($filters['role'] ?? [])
         || filled($filters['status'] ?? [])
+        || filled($filters['two_factor'] ?? null)
         || filled($filters['institution_id'] ?? null)
         || filled($filters['administrative_unit_id'] ?? null)
         || filled($filters['profession_id'] ?? null)
@@ -65,20 +66,32 @@
                     :selected="$filters['status'] ?? []"
                 />
             </div>
-            <div class="flex gap-2 sm:col-span-2 xl:col-span-3">
+            <div class="xl:col-span-2">
+                <label class="mb-1.5 block font-label-sm font-medium text-on-surface-variant" for="two_factor">Bảo mật 2FA</label>
+                <select id="two_factor" name="two_factor"
+                    class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-body-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                    <option value="">Tất cả (2FA)</option>
+                    <option value="enabled" @selected(($filters['two_factor'] ?? '') === 'enabled')>Đã bật 2FA</option>
+                    <option value="disabled" @selected(($filters['two_factor'] ?? '') === 'disabled')>Chưa bật 2FA</option>
+                </select>
+            </div>
+            <div class="flex gap-2 sm:col-span-2 xl:col-span-1">
                 <div class="flex-1">
                     <span class="mb-1.5 block font-label-sm font-semibold text-transparent" aria-hidden="true">Lọc</span>
                     <button type="submit"
-                        class="inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-4 font-label-md font-medium text-on-primary transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary/30">
+                        class="inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-3 font-label-md font-medium text-on-primary transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        title="Lọc danh sách">
                         <span class="material-symbols-outlined text-[18px]" aria-hidden="true">filter_alt</span>
-                        Lọc
                     </button>
                 </div>
                 @if ($hasActiveFilters)
                     <div class="flex-1">
                         <span class="mb-1.5 block font-label-sm font-semibold text-transparent" aria-hidden="true">Xóa</span>
                         <a href="{{ route('admin.users.index') }}"
-                            class="inline-flex h-11 w-full items-center justify-center whitespace-nowrap rounded-lg border border-outline-variant px-3 font-label-md font-medium text-on-surface-variant transition hover:bg-surface-container-low">Xóa lọc</a>
+                            class="inline-flex h-11 w-full items-center justify-center rounded-lg border border-outline-variant px-2 font-label-md font-medium text-on-surface-variant transition hover:bg-surface-container-low"
+                            title="Xóa lọc">
+                            <span class="material-symbols-outlined text-[18px]" aria-hidden="true">restart_alt</span>
+                        </a>
                     </div>
                 @endif
             </div>
@@ -104,11 +117,12 @@
                     <tr>
                         <th scope="col" class="w-[240px] px-5 py-3.5">Người dùng</th>
                         <th scope="col" class="w-[180px] px-4 py-3.5">Cổng / Vai trò</th>
-                        <th scope="col" class="w-[140px] px-4 py-3.5">Trạng thái</th>
-                        <th scope="col" class="w-[220px] px-4 py-3.5">Email</th>
-                        <th scope="col" class="w-[160px] px-4 py-3.5">Đăng nhập gần nhất</th>
-                        <th scope="col" class="w-[200px] px-4 py-3.5">Hồ sơ học viên</th>
-                        <th scope="col" class="w-[112px] px-5 py-3.5 text-end">Thao tác</th>
+                        <th scope="col" class="w-[130px] px-4 py-3.5">Trạng thái</th>
+                        <th scope="col" class="w-[120px] px-4 py-3.5">2FA</th>
+                        <th scope="col" class="w-[200px] px-4 py-3.5">Email</th>
+                        <th scope="col" class="w-[150px] px-4 py-3.5">Đăng nhập gần nhất</th>
+                        <th scope="col" class="w-[180px] px-4 py-3.5">Hồ sơ học viên</th>
+                        <th scope="col" class="w-[100px] px-5 py-3.5 text-end">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-outline-variant/60">
@@ -161,6 +175,18 @@
                                 </span>
                             </td>
                             <td class="px-4 py-3.5 align-middle">
+                                @if ($user->hasTwoFactorEnabled())
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                                        <span class="material-symbols-outlined text-[14px]">verified_user</span>
+                                        Đã bật
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-surface-container-high px-2.5 py-0.5 text-xs font-medium text-on-surface-variant">
+                                        Chưa bật
+                                    </span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3.5 align-middle">
                                 <div class="flex min-w-0 items-center gap-1">
                                     <span class="truncate text-sm text-on-surface" title="{{ $user->email }}">{{ $user->email }}</span>
                                     @if ($user->email_verified_at)
@@ -205,7 +231,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="px-5 py-10 text-center text-on-surface-variant">Không có người dùng khớp bộ lọc.</td>
+                            <td colspan="8" class="px-5 py-10 text-center text-on-surface-variant">Không có người dùng khớp bộ lọc.</td>
                         </tr>
                     @endforelse
                 </tbody>

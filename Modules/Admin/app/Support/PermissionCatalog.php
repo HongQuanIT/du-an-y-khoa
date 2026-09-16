@@ -74,6 +74,35 @@ final class PermissionCatalog
     }
 
     /**
+     * Priority weight for permission action within a resource:
+     * 1. view (view_any, view)
+     * 2. create
+     * 3. update / edit
+     * 4. delete
+     * 5. import
+     * 6. export
+     * 7. approve
+     * 8. other actions (stable alphabetically)
+     */
+    public static function actionPriority(string $permissionName): int
+    {
+        $action = explode('.', $permissionName, 2)[1] ?? $permissionName;
+
+        return match ($action) {
+            'view_any' => 10,
+            'view' => 11,
+            'create' => 20,
+            'update', 'edit' => 30,
+            'delete' => 40,
+            'import' => 50,
+            'export' => 60,
+            'approve' => 70,
+            'reject' => 75,
+            default => 100,
+        };
+    }
+
+    /**
      * @param  Collection<int, Permission>  $permissions
      * @return list<array{key: string, label: string, count: int, resources: list<array{key: string, label: string, permissions: Collection<int, Permission>}>}>
      */
@@ -87,7 +116,10 @@ final class PermissionCatalog
                     ->map(fn (Collection $items, string $resource): array => [
                         'key' => $resource,
                         'label' => self::resourceLabel($resource),
-                        'permissions' => $items->sortBy('name')->values(),
+                        'permissions' => $items->sortBy(fn (Permission $permission): array => [
+                            self::actionPriority($permission->name),
+                            $permission->name,
+                        ])->values(),
                     ])
                     ->sortBy('label')
                     ->values()
@@ -111,7 +143,7 @@ final class PermissionCatalog
 
         return match ($action) {
             'view_any' => 'Xem danh sách',
-            'view' => 'Xem',
+            'view' => 'Xem chi tiết',
             'create' => 'Tạo mới',
             'update', 'edit' => 'Chỉnh sửa',
             'delete' => 'Xóa',
@@ -121,6 +153,8 @@ final class PermissionCatalog
             'password_reset' => 'Đặt lại mật khẩu',
             'password_update' => 'Đổi mật khẩu',
             'avatar_update' => 'Đổi ảnh đại diện',
+            'two_factor_toggle' => 'Bật / tắt 2FA',
+            'two_factor_manage' => 'Quản lý / Đặt lại 2FA',
             'email_verify' => 'Xác minh email',
             'publish' => 'Xuất bản',
             'archive' => 'Lưu trữ',
@@ -281,7 +315,7 @@ final class PermissionCatalog
             'support', 'support_conversation' => 'Hỗ trợ trực tuyến',
             'system', 'system_setting' => 'Cài đặt hệ thống',
             'notification', 'notification_broadcast', 'teach_notification' => 'Thông báo',
-            'profile', 'teach_profile' => 'Hồ sơ tài khoản',
+            'profile', 'teach_profile', 'partner_profile' => 'Hồ sơ tài khoản',
             'teaching_dashboard', 'learner_dashboard' => 'Bảng điều khiển',
             default => Str::headline($resource),
         };
