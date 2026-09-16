@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Modules\QuestionBank\Support;
 
+use App\Support\Html\SafeHtml;
+
 /**
  * Word-level split-view highlighter for published vs proposed question text.
+ * Rich HTML is kept for display; comparison still uses plain-text normalize.
  */
 final class QuestionTextDiff
 {
@@ -16,16 +19,24 @@ final class QuestionTextDiff
      */
     public function highlight(?string $published, ?string $proposed): array
     {
-        $left = $this->normalize($published);
-        $right = $this->normalize($proposed);
+        $leftRaw = (string) ($published ?? '');
+        $rightRaw = (string) ($proposed ?? '');
+        $left = $this->normalize($leftRaw);
+        $right = $this->normalize($rightRaw);
 
         if ($left === $right) {
-            $html = $left === '' ? '' : e($left);
-
             return [
                 'changed' => false,
-                'published_html' => $html,
-                'proposed_html' => $html,
+                'published_html' => $this->display($leftRaw),
+                'proposed_html' => $this->display($rightRaw !== '' ? $rightRaw : $leftRaw),
+            ];
+        }
+
+        if (SafeHtml::looksLikeHtml($leftRaw) || SafeHtml::looksLikeHtml($rightRaw)) {
+            return [
+                'changed' => true,
+                'published_html' => $left === '' ? '' : $this->display($leftRaw),
+                'proposed_html' => $right === '' ? '' : $this->display($rightRaw),
             ];
         }
 
@@ -192,11 +203,14 @@ final class QuestionTextDiff
         return $merged;
     }
 
+    private function display(string $value): string
+    {
+        return SafeHtml::forDisplay($value);
+    }
+
     private function wrap(string $text, string $tag): string
     {
-        $class = $tag === 'del'
-            ? 'rounded-sm bg-rose-100 px-0.5 text-rose-900 line-through decoration-rose-400'
-            : 'rounded-sm bg-emerald-100 px-0.5 text-emerald-950 no-underline';
+        $class = $tag === 'del' ? 'question-diff-del' : 'question-diff-ins';
 
         return '<'.$tag.' class="'.$class.'">'.e($text).'</'.$tag.'>';
     }

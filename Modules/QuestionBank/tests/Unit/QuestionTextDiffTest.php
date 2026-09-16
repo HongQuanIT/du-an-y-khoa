@@ -43,4 +43,14 @@ final class QuestionTextDiffTest extends TestCase
         $this->assertFalse($diff['changed']);
         $this->assertSame('ABC', strip_tags($diff['published_html']));
     }
+
+    public function test_preserves_html_markup_when_displaying_identical_content(): void
+    {
+        $html = '<p>Bệnh nhân <strong>sốt cao</strong>.</p><ul><li>Troponin tăng</li></ul>';
+        $diff = (new QuestionTextDiff)->highlight($html, $html);
+
+        $this->assertFalse($diff['changed']);
+        $this->assertStringContainsString('<strong>sốt cao</strong>', $diff['proposed_html']);
+        $this->assertStringContainsString('<li>Troponin tăng</li>', $diff['proposed_html']);
+    }
 }

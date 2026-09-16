@@ -45,6 +45,7 @@ Sau khi **pull code có thêm quyền admin mới** (ví dụ `billing.manage`),
 
 ```bash
 docker compose exec app php artisan db:seed --class=Database\\Seeders\\RolePermissionSeeder
+docker compose exec app php artisan db:seed --class='Modules\QuestionBank\Database\Seeders\SubjectLessonSeeder'
 docker compose exec app php artisan permission:cache-reset
 ```
 
@@ -104,4 +105,3 @@ Self-host trong Docker — không cần tài khoản Cloud:
 4. Vào Classroom → start live → UI báo LiveKit sẵn sàng.
 
 Chi tiết: [`docs/livekit.md`](docs/livekit.md).
-

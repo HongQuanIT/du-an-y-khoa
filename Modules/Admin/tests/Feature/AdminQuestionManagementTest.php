@@ -597,7 +597,7 @@ final class AdminQuestionManagementTest extends TestCase
             ->get(route('admin.questions.edit', $question->fresh()))
             ->assertOk()
             ->assertSee('Xuất bản', false)
-            ->assertSee('Xuất bản (lớp 2)', false);
+            ->assertSee('Duyệt &amp; xuất bản', false);
 
         $this->actingAsStaff($admin)
             ->post(route('admin.questions.transition', $question), [

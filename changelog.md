@@ -2,6 +2,25 @@
 
 ## 2026-09-16
 
+### Chore — QBank: seeder môn học + bài học mẫu
+
+- Thêm `SubjectLessonSeeder` (idempotent theo slug) để seed subject/lesson và pivot.
+- Bổ sung lệnh seed vào `deploy-dev.md` cho môi trường local/dev.
+
+### Feat — Admin: khôi phục gắn/gỡ bài học trong drawer môn học
+
+- Drawer sửa môn học: danh sách bài gắn, tìm gắn có sẵn, gỡ = detach.
+- Nút tạo mới mở tab bài học với môn đã chọn sẵn.
+- API JSON `subjects/{id}/lessons` attach/detach; schema `lesson_subject` không đổi.
+
+### Feat — QBank: hoàn thiện khôi phục duyệt 3 lớp + so sánh bản xuất bản
+
+- Khôi phục `/admin/questions/{id}/compare` (working copy vs bản live) và liên kết trên form.
+- `/teach` duyệt lại đúng 1 GV được gán → `in_flag_review`; reviewer gắn cờ; Admin xuất bản.
+- Gán môn chuyên môn cho giảng viên trên `/admin/users/{id}`; picker GV theo môn.
+- Form hiện phản hồi duyệt; lọc list: nhãn «Trạng thái», placeholder «Tất cả».
+- Giữ bỏ trang `/admin/questions/pending-publish` (xuất bản từ form edit).
+
 ### Feat — QBank: khôi phục duyệt 3 lớp (`in_flag_review`)
 
 - Khôi phục status `in_flag_review` và pipeline GV gán → reviewer gắn cờ → Admin xuất bản.

@@ -169,7 +169,7 @@
                 </div>
 
                 @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.index'))
-<a href="{{ route('admin.questions.index', ['status' => 'in_review']) }}" id="stats-pending-review-link"
+<a href="{{ route('admin.questions.index', ['status' => ['in_review', 'in_flag_review']]) }}" id="stats-pending-review-link"
                     class="rounded-xl border border-outline-variant bg-surface p-4 transition-colors hover:bg-surface-container-low"
                     aria-label="Xem các câu hỏi chờ duyệt: {{ number_format($stats['pending']) }} câu">
                     <div class="flex items-center gap-3">
@@ -243,8 +243,8 @@
                 <div class="sm:col-span-2">
                     <x-admin.multi-select-filter
                         name="status"
-                        label="Vòng đời"
-                        placeholder="Tất cả vòng đời"
+                        label="Trạng thái"
+                        placeholder="Tất cả"
                         :options="collect($statuses)->map(fn ($status) => ['id' => $status->value, 'label' => $status->label()])->all()"
                         :selected="$filters['status'] ?? []"
                     />

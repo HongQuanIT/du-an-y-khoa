@@ -26,6 +26,7 @@ use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionFeedback;
 use Modules\QuestionBank\Models\QuestionImportBatch;
+use Modules\QuestionBank\Support\QuestionReviewComparison;
 
 final class QuestionController extends Controller
 {
@@ -94,7 +95,10 @@ final class QuestionController extends Controller
             'stats' => [
                 'total' => (clone $statsQuery)->count(),
                 'published' => (clone $statsQuery)->where('status', QuestionStatus::Published->value)->count(),
-                'pending' => (clone $statsQuery)->where('status', QuestionStatus::InReview->value)->count(),
+                'pending' => (clone $statsQuery)->whereIn('status', [
+                    QuestionStatus::InReview->value,
+                    QuestionStatus::InFlagReview->value,
+                ])->count(),
                 'free' => (clone $statsQuery)->where('is_free', true)->count(),
             ],
             'canCreate' => $actor->can(Permission::QuestionCreate->value),
@@ -168,6 +172,34 @@ final class QuestionController extends Controller
         return view('admin::questions.form', $this->formData($question));
     }
 
+    public function compare(Question $question, QuestionReviewComparison $reviewComparison): View
+    {
+        QuestionAccess::authorizeWorkspace($this->actor());
+        QuestionAccess::authorizeView($this->actor(), $question);
+
+        $question->load([
+            'options' => fn ($query) => $query->orderBy('order'),
+            'lessons:id,name',
+            'creator:id,name',
+            'assignedInstructor:id,name',
+            'publisher:id,name',
+        ]);
+
+        $inPipeline = in_array($question->status, [
+            QuestionStatus::InReview,
+            QuestionStatus::InFlagReview,
+            QuestionStatus::PendingPublish,
+        ], true);
+
+        return view('admin::questions.compare', [
+            'question' => $question,
+            'comparison' => $reviewComparison->compare($question),
+            'proposedTitle' => $inPipeline ? 'Bản cần duyệt' : 'Bản đang chỉnh sửa',
+            'proposedBadge' => $question->status->label(),
+            'canEditContent' => QuestionAccess::canEdit($this->actor()),
+        ]);
+    }
+
     public function stats(Question $question): View
     {
         QuestionAccess::authorizeWorkspace($this->actor());
@@ -232,7 +264,10 @@ final class QuestionController extends Controller
                 'rejection_reason' => ['nullable', 'string', 'max:2000'],
             ]);
 
-            $wasInReview = $question->status === QuestionStatus::InReview;
+            $wasInPipeline = in_array($question->status, [
+                QuestionStatus::InReview,
+                QuestionStatus::InFlagReview,
+            ], true);
             $nextStatus = QuestionStatus::from($statusData['requested_status']);
 
             $transition->handle(
@@ -242,10 +277,10 @@ final class QuestionController extends Controller
                 $statusData['rejection_reason'] ?? null,
             );
 
-            $resubmitted = $wasInReview && $nextStatus === QuestionStatus::InReview;
+            $resubmitted = $wasInPipeline && $nextStatus === QuestionStatus::InReview;
 
             return back()->with('status', $resubmitted
-                ? 'Đã lưu và gửi duyệt lại. Hai phiếu giảng viên được reset.'
+                ? 'Đã lưu và gửi duyệt lại. Quyết định giảng viên và 2 cờ reviewer được reset.'
                 : ($nextStatus === QuestionStatus::InReview
                     ? 'Đã lưu câu hỏi và gửi giảng viên duyệt.'
                     : 'Đã lưu câu hỏi và cập nhật trạng thái: '.$nextStatus->label()));

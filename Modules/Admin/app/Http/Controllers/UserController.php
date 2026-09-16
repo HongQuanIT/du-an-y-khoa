@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\UserActivitySession;
 use App\Support\Enums\PortalGroup;
+use App\Support\Enums\Role;
 use App\Support\Enums\UserStatus;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,6 +26,8 @@ use Modules\Auth\Models\EducationStage;
 use Modules\Auth\Models\Institution;
 use Modules\Auth\Models\Profession;
 use Modules\Partner\Models\Partner;
+use Modules\QuestionBank\Enums\TaxonomyStatus;
+use Modules\QuestionBank\Models\Subject;
 use Spatie\Permission\Models\Role as RoleModel;
 
 final class UserController extends Controller
@@ -182,6 +185,7 @@ final class UserController extends Controller
             'learnerProfile.profession',
             'learnerProfile.educationStage',
             'socialAccounts',
+            'instructorSubjects',
         ]);
 
         $activities = UserActivitySession::query()
@@ -199,17 +203,27 @@ final class UserController extends Controller
             && $this->actor()->canAny(['user.password_reset']);
         $canTwoFactorManage = $canTarget
             && $this->actor()->canAny(['user.two_factor_manage']);
+        $canManageInstructorSubjects = $canTarget
+            && $user->hasRole(Role::Instructor->value)
+            && $this->actor()->canAny(['user.role_assign', 'user.status_update']);
 
         return view('admin::users.show', [
             'user' => $user,
             'assignableRoles' => AssignableRoles::for($this->actor())->all(),
             'statuses' => UserStatus::cases(),
             'activities' => $activities,
-            'canManage' => $canAssignRole || $canUpdateStatus || $canResetPassword || $canTwoFactorManage,
+            'canManage' => $canAssignRole || $canUpdateStatus || $canResetPassword || $canTwoFactorManage || $canManageInstructorSubjects,
             'canAssignRole' => $canAssignRole,
             'canUpdateStatus' => $canUpdateStatus,
             'canResetPassword' => $canResetPassword,
             'canTwoFactorManage' => $canTwoFactorManage,
+            'canManageInstructorSubjects' => $canManageInstructorSubjects,
+            'subjects' => Subject::query()
+                ->where('status', TaxonomyStatus::Active)
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(['id', 'name']),
+            'isInstructor' => $user->hasRole(Role::Instructor->value),
         ]);
     }
 
@@ -220,6 +234,28 @@ final class UserController extends Controller
         $action->handle($this->actor(), $user);
 
         return back()->with('status', 'Đã đặt lại / tắt xác thực hai bước (2FA) cho tài khoản.');
+    }
+
+    public function updateInstructorSubjects(Request $request, User $user): RedirectResponse
+    {
+        $this->authorizeAnyPermission(['user.role_assign', 'user.status_update']);
+        abort_unless($user->hasRole(Role::Instructor->value), 404);
+
+        $data = $request->validate([
+            'subject_ids' => ['nullable', 'array'],
+            'subject_ids.*' => ['integer', 'exists:subjects,id'],
+        ]);
+
+        $user->instructorSubjects()->sync(
+            collect($data['subject_ids'] ?? [])
+                ->map(fn ($id): int => (int) $id)
+                ->filter(fn (int $id): bool => $id > 0)
+                ->unique()
+                ->values()
+                ->all(),
+        );
+
+        return back()->with('status', 'Đã cập nhật môn học chuyên môn của giảng viên.');
     }
 
     public function updateRole(Request $request, User $user, UpdateUserRoleAction $action): RedirectResponse
