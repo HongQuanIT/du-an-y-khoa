@@ -2,6 +2,11 @@
 
 ## 2026-09-16
 
+### Chore — QBank: seeder môn học + bài học mẫu
+
+- Thêm `SubjectLessonSeeder` (idempotent theo slug) để seed subject/lesson và pivot.
+- Bổ sung lệnh seed vào `deploy-dev.md` cho môi trường local/dev.
+
 ### Feat — Admin: khôi phục gắn/gỡ bài học trong drawer môn học
 
 - Drawer sửa môn học: danh sách bài gắn, tìm gắn có sẵn, gỡ = detach.
