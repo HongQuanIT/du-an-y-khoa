@@ -128,8 +128,10 @@ class RolePermissionSeeder extends Seeder
             ],
 
             RoleEnum::Instructor => array_values(array_unique(array_merge($portalPermissions, [
+                'question.view_any',
                 PermissionEnum::QuestionView->value,
-                PermissionEnum::QuestionReview->value,
+                'question.approve',
+                'question.reject',
                 PermissionEnum::ClassroomCreate->value,
                 PermissionEnum::ClassroomManage->value,
                 PermissionEnum::ClassroomJoin->value,

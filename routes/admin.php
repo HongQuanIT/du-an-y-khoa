@@ -114,6 +114,7 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
             Route::patch('/users/{user}/role', [UserController::class, 'updateRole'])->middleware('permission:user.role_assign')->name('users.role');
             Route::patch('/users/{user}/status', [UserController::class, 'updateStatus'])->middleware('permission:user.status_update')->name('users.status');
             Route::post('/users/{user}/reset-password', [UserController::class, 'resetPassword'])->middleware('permission:user.password_reset')->name('users.reset-password');
+            Route::post('/users/{user}/reset-2fa', [UserController::class, 'resetTwoFactor'])->middleware('permission:user.two_factor_manage')->name('users.reset-2fa');
         });
 
         Route::group([], function (): void {

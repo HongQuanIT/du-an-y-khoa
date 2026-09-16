@@ -374,6 +374,59 @@ final class AdminPhase1ManagementTest extends TestCase
         Notification::assertSentTo($student, ResetPasswordNotification::class);
     }
 
+    public function test_admin_can_filter_users_by_2fa_status(): void
+    {
+        $admin = $this->staffUser(Role::Admin);
+        $userWith2fa = User::factory()->create(['email' => 'has2fa@example.com']);
+        $userWith2fa->assignRole(Role::Student->value);
+        $this->enrollTwoFactor($userWith2fa);
+
+        $userWithout2fa = User::factory()->create(['email' => 'no2fa@example.com']);
+        $userWithout2fa->assignRole(Role::Student->value);
+
+        // Lọc đã bật 2FA
+        $this->actingAsStaff($admin)
+            ->get(route('admin.users.index', ['two_factor' => 'enabled']))
+            ->assertOk()
+            ->assertSee('has2fa@example.com')
+            ->assertDontSee('no2fa@example.com');
+
+        // Lọc chưa bật 2FA
+        $this->actingAsStaff($admin)
+            ->get(route('admin.users.index', ['two_factor' => 'disabled']))
+            ->assertOk()
+            ->assertSee('no2fa@example.com')
+            ->assertDontSee('has2fa@example.com');
+    }
+
+    public function test_admin_can_reset_user_2fa_from_detail_view(): void
+    {
+        $admin = $this->staffUser(Role::Admin);
+        $student = User::factory()->create(['email' => 'student-reset2fa@example.com']);
+        $student->assignRole(Role::Student->value);
+        $this->enrollTwoFactor($student);
+
+        $this->assertTrue($student->fresh()->hasTwoFactorEnabled());
+
+        // Xem trang chi tiết
+        $this->actingAsStaff($admin)
+            ->get(route('admin.users.show', $student))
+            ->assertOk()
+            ->assertSee('Đặt lại / Tắt 2FA');
+
+        // Thực hiện reset 2FA
+        $this->actingAsStaff($admin)
+            ->post(route('admin.users.reset-2fa', $student))
+            ->assertRedirect();
+
+        $this->assertFalse($student->fresh()->hasTwoFactorEnabled());
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'admin.user.two_factor_reset',
+            'actor_id' => $admin->id,
+            'auditable_id' => (string) $student->id,
+        ]);
+    }
+
     private function staffUser(Role $role): User
     {
         $user = User::factory()->create();

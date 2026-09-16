@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Modules\Admin\Actions\CreateUserAction;
+use Modules\Admin\Actions\ResetUserTwoFactorAction;
 use Modules\Admin\Actions\SendUserPasswordResetAction;
 use Modules\Admin\Actions\UpdateUserRoleAction;
 use Modules\Admin\Actions\UpdateUserStatusAction;
@@ -34,6 +35,7 @@ final class UserController extends Controller
 
         $query = User::query()->with([
             'roles',
+            'twoFactorSecret',
             'learnerProfile.institution',
             'learnerProfile.administrativeUnit',
             'learnerProfile.profession',
@@ -70,6 +72,16 @@ final class UserController extends Controller
             $query->whereIn('status', $statuses);
         }
 
+        $twoFactorFilter = $request->query('two_factor');
+        if ($twoFactorFilter === 'enabled') {
+            $query->whereHas('twoFactorSecret', fn ($q) => $q->whereNotNull('confirmed_at'));
+        } elseif ($twoFactorFilter === 'disabled') {
+            $query->where(function ($q): void {
+                $q->whereDoesntHave('twoFactorSecret')
+                    ->orWhereHas('twoFactorSecret', fn ($sq) => $sq->whereNull('confirmed_at'));
+            });
+        }
+
         foreach (['institution_id', 'administrative_unit_id', 'profession_id', 'education_stage_id'] as $field) {
             if ($request->filled($field)) {
                 $query->whereHas('learnerProfile', fn ($profile) => $profile->where($field, $request->integer($field)));
@@ -100,6 +112,7 @@ final class UserController extends Controller
                 'portal' => $portals,
                 'role' => $roles,
                 'status' => $statuses,
+                'two_factor' => $twoFactorFilter,
                 'institution_id' => $request->query('institution_id'),
                 'administrative_unit_id' => $request->query('administrative_unit_id'),
                 'profession_id' => $request->query('profession_id'),
@@ -184,17 +197,29 @@ final class UserController extends Controller
             && $this->actor()->canAny(['user.status_update']);
         $canResetPassword = $canTarget
             && $this->actor()->canAny(['user.password_reset']);
+        $canTwoFactorManage = $canTarget
+            && $this->actor()->canAny(['user.two_factor_manage']);
 
         return view('admin::users.show', [
             'user' => $user,
             'assignableRoles' => AssignableRoles::for($this->actor())->all(),
             'statuses' => UserStatus::cases(),
             'activities' => $activities,
-            'canManage' => $canAssignRole || $canUpdateStatus || $canResetPassword,
+            'canManage' => $canAssignRole || $canUpdateStatus || $canResetPassword || $canTwoFactorManage,
             'canAssignRole' => $canAssignRole,
             'canUpdateStatus' => $canUpdateStatus,
             'canResetPassword' => $canResetPassword,
+            'canTwoFactorManage' => $canTwoFactorManage,
         ]);
+    }
+
+    public function resetTwoFactor(User $user, ResetUserTwoFactorAction $action): RedirectResponse
+    {
+        $this->authorizeAnyPermission(['user.two_factor_manage']);
+
+        $action->handle($this->actor(), $user);
+
+        return back()->with('status', 'Đã đặt lại / tắt xác thực hai bước (2FA) cho tài khoản.');
     }
 
     public function updateRole(Request $request, User $user, UpdateUserRoleAction $action): RedirectResponse

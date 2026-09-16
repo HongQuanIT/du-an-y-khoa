@@ -100,18 +100,18 @@ Route::middleware('auth')->group(function (): void {
         ->name('settings.password');
 
     Route::get('/settings/2fa/setup', [SettingsTwoFactorController::class, 'showSetup'])
-        ->middleware('permission:profile.password_update')
+        ->middleware('permission:profile.two_factor_toggle')
         ->name('settings.2fa.setup');
     Route::post('/settings/2fa/confirm', [SettingsTwoFactorController::class, 'confirmSetup'])
-        ->middleware(['permission:profile.password_update', 'throttle:auth'])
+        ->middleware(['permission:profile.two_factor_toggle', 'throttle:auth'])
         ->name('settings.2fa.confirm');
     Route::get('/settings/2fa/recovery', [SettingsTwoFactorController::class, 'showRecovery'])
-        ->middleware('permission:profile.password_update')
+        ->middleware('permission:profile.two_factor_toggle')
         ->name('settings.2fa.recovery');
     Route::post('/settings/2fa/recovery', [SettingsTwoFactorController::class, 'finishRecovery'])
-        ->middleware('permission:profile.password_update')
+        ->middleware('permission:profile.two_factor_toggle')
         ->name('settings.2fa.recovery.finish');
     Route::delete('/settings/2fa', [SettingsTwoFactorController::class, 'disable'])
-        ->middleware(['permission:profile.password_update', 'throttle:auth'])
+        ->middleware(['permission:profile.two_factor_toggle', 'throttle:auth'])
         ->name('settings.2fa.disable');
 });

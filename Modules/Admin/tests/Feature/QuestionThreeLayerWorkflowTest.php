@@ -47,7 +47,7 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
 
     public function test_reviewer_has_flag_but_not_publish_or_edit(): void
     {
-        $reviewer = $this->staffUser(Role::Reviewer);
+        $reviewer = $this->createReviewer();
 
         $this->assertTrue($reviewer->can(Permission::QuestionFlag->value));
         $this->assertFalse($reviewer->can(Permission::QuestionView->value));
@@ -104,8 +104,8 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
     public function test_happy_path_instructor_then_two_flags_then_publish(): void
     {
         $instructor = $this->instructorWithSubject();
-        $reviewerA = $this->staffUser(Role::Reviewer);
-        $reviewerB = $this->staffUser(Role::Reviewer);
+        $reviewerA = $this->createReviewer();
+        $reviewerB = $this->createReviewer();
         $admin = $this->staffUser(Role::Admin);
         $question = $this->makeQuestion(QuestionStatus::InReview, [
             'assigned_instructor_id' => $instructor->id,
@@ -141,8 +141,8 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
     public function test_red_flag_blocks_publish_but_allows_return(): void
     {
         $instructor = $this->instructorWithSubject();
-        $reviewerA = $this->staffUser(Role::Reviewer);
-        $reviewerB = $this->staffUser(Role::Reviewer);
+        $reviewerA = $this->createReviewer();
+        $reviewerB = $this->createReviewer();
         $admin = $this->staffUser(Role::Admin);
         $question = $this->makeQuestion(QuestionStatus::InReview, [
             'assigned_instructor_id' => $instructor->id,
@@ -174,7 +174,7 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
 
     public function test_reviewer_cannot_see_question_before_instructor_approval(): void
     {
-        $reviewer = $this->staffUser(Role::Reviewer);
+        $reviewer = $this->createReviewer();
         $question = $this->makeQuestion(QuestionStatus::InReview);
 
         $this->actingAsStaff($reviewer)
@@ -189,7 +189,7 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
 
     public function test_reviewer_without_question_view_cannot_open_question_workspace(): void
     {
-        $reviewer = $this->staffUser(Role::Reviewer);
+        $reviewer = $this->createReviewer();
         $instructor = $this->instructorWithSubject();
         $question = $this->makeQuestion(QuestionStatus::InReview, [
             'assigned_instructor_id' => $instructor->id,
@@ -222,8 +222,8 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
     public function test_reviewer_flag_confirmation_does_not_reveal_slot_order(): void
     {
         $instructor = $this->instructorWithSubject();
-        $reviewerA = $this->staffUser(Role::Reviewer);
-        $reviewerB = $this->staffUser(Role::Reviewer);
+        $reviewerA = $this->createReviewer();
+        $reviewerB = $this->createReviewer();
         $question = $this->makeQuestion(QuestionStatus::InReview, [
             'assigned_instructor_id' => $instructor->id,
             'instructor_review_cycle' => 1,
@@ -254,7 +254,7 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
     public function test_reviewer_flag_show_uses_learner_layout_with_hints_and_explanations(): void
     {
         $instructor = $this->instructorWithSubject();
-        $reviewer = $this->staffUser(Role::Reviewer);
+        $reviewer = $this->createReviewer();
         $question = $this->makeQuestion(QuestionStatus::InReview, [
             'assigned_instructor_id' => $instructor->id,
             'instructor_review_cycle' => 1,
@@ -352,6 +352,28 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
         }
 
         return $question->fresh(['options', 'lessons']);
+    }
+
+    /**
+     * Create a staff user in the admin portal with only the question.flag permission.
+     * This simulates a reviewer: any admin-portal user that SuperAdmin granted question.flag to.
+     */
+    private function createReviewer(): User
+    {
+        $user = User::factory()->create();
+        // Assign the admin role so the user belongs to the admin portal (Staff::isStaff() passes).
+        $user->assignRole(Role::Admin->value);
+        // Restrict to ONLY question.flag — no other permissions from the admin baseline.
+        $user->syncPermissions([Permission::QuestionFlag->value]);
+
+        TwoFactorSecret::query()->create([
+            'user_id' => $user->id,
+            'secret' => (new TotpService)->generateSecret(),
+            'recovery_codes' => [Hash::make('ABCD1234')],
+            'confirmed_at' => now(),
+        ]);
+
+        return $user;
     }
 
     private function staffUser(Role $role): User

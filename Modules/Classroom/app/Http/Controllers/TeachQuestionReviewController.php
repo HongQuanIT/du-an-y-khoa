@@ -36,7 +36,7 @@ final class TeachQuestionReviewController extends Controller
 
     public function index(Request $request): View
     {
-        $this->authorizeReview();
+        $this->authorizeViewAny();
 
         $tab = $request->string('tab')->toString();
         if (! in_array($tab, [self::TAB_PENDING, self::TAB_APPROVED, self::TAB_REJECTED], true)) {
@@ -93,7 +93,7 @@ final class TeachQuestionReviewController extends Controller
 
     public function show(Question $question): View
     {
-        $this->authorizeReview();
+        $this->authorizeView();
         abort_unless($this->canViewQuestion($question), 404);
 
         $question->load([
@@ -118,8 +118,8 @@ final class TeachQuestionReviewController extends Controller
         return view('classroom::teach.questions.reviews.show', [
             'question' => $question,
             'canDecide' => $canDecide,
-            'canApprove' => $canDecide && $actor->can(Permission::QuestionReview->value),
-            'canReject' => $canDecide && $actor->can(Permission::QuestionReview->value),
+            'canApprove' => $canDecide && $actor->can('question.approve'),
+            'canReject' => $canDecide && $actor->can('question.reject'),
             'hidePeerVotes' => $canDecide,
             'approvalCount' => $this->reviewCycle->approvedCountFromSlots($question),
             'comparison' => $this->reviewComparison->compare($question),
@@ -131,7 +131,7 @@ final class TeachQuestionReviewController extends Controller
         Question $question,
         InstructorReviewQuestionAction $action,
     ): RedirectResponse {
-        $this->authorizeReview();
+        $this->authorizeApprove();
 
         $data = $request->validate([
             'review_note' => ['nullable', 'string', 'max:2000'],
@@ -153,7 +153,7 @@ final class TeachQuestionReviewController extends Controller
         Question $question,
         InstructorReviewQuestionAction $action,
     ): RedirectResponse {
-        $this->authorizeReview();
+        $this->authorizeReject();
 
         $data = $request->validate([
             'review_note' => ['required', 'string', 'max:2000'],
@@ -268,11 +268,38 @@ final class TeachQuestionReviewController extends Controller
             );
     }
 
-    private function authorizeReview(): void
+    private function authorizeViewAny(): void
     {
         abort_unless(
             PortalAccess::allows($this->actor(), PortalGroup::Instructor)
-            && $this->actor()->can(Permission::QuestionReview->value),
+            && $this->actor()->can('question.view_any'),
+            403,
+        );
+    }
+
+    private function authorizeView(): void
+    {
+        abort_unless(
+            PortalAccess::allows($this->actor(), PortalGroup::Instructor)
+            && $this->actor()->can(Permission::QuestionView->value),
+            403,
+        );
+    }
+
+    private function authorizeApprove(): void
+    {
+        abort_unless(
+            PortalAccess::allows($this->actor(), PortalGroup::Instructor)
+            && $this->actor()->can('question.approve'),
+            403,
+        );
+    }
+
+    private function authorizeReject(): void
+    {
+        abort_unless(
+            PortalAccess::allows($this->actor(), PortalGroup::Instructor)
+            && $this->actor()->can('question.reject'),
             403,
         );
     }

@@ -95,7 +95,7 @@
                         <h3 id="permission-list-{{ $portal->value }}-heading" class="font-headline-sm font-semibold text-on-surface">Danh sách quyền</h3>
                         <span class="text-xs text-on-surface-variant">Bấm vào nhóm để thu gọn</span>
                     </div>
-                    <div class="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                    <div class="grid gap-2 sm:gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     @forelse ($group['modules'] as $module)
                         <div class="col-span-full border-b border-outline-variant pb-2">
                             <button type="button" @click="toggleModule('{{ $portal->value }}', '{{ $module['key'] }}')"
@@ -117,9 +117,9 @@
                             </div>
                             @foreach ($resource['permissions'] as $permission)
                                 <article x-show="!isModuleCollapsed('{{ $portal->value }}', '{{ $module['key'] }}') && (query === '' || @js(mb_strtolower($permission->name.' '.\Modules\Admin\Support\PermissionCatalog::actionLabel($permission->name))).includes(query.toLowerCase()))" x-cloak
-                                    class="rounded-xl border border-outline-variant/70 bg-surface p-3">
-                                    <h5 class="text-sm font-medium text-on-surface">{{ \Modules\Admin\Support\PermissionCatalog::actionLabel($permission->name) }}</h5>
-                                    <code class="mt-0.5 block text-xs text-on-surface-variant">{{ $permission->name }}</code>
+                                    class="rounded-xl border border-outline-variant/70 bg-surface p-2.5 sm:p-3">
+                                    <h5 class="text-sm font-medium text-on-surface leading-snug">{{ \Modules\Admin\Support\PermissionCatalog::actionLabel($permission->name) }}</h5>
+                                    <code class="mt-0.5 block text-xs text-on-surface-variant break-words font-mono">{{ $permission->name }}</code>
                                 </article>
                             @endforeach
                         @endforeach
