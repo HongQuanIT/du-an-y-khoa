@@ -25,41 +25,47 @@ final class QuestionInstructorReviewCycleTest extends TestCase
         $this->seed(RolePermissionSeeder::class);
     }
 
-    public function test_first_approval_stays_in_review_second_moves_to_pending_publish(): void
+    public function test_assigned_instructor_approval_moves_to_flag_review(): void
     {
-        $question = $this->inReviewQuestion();
+        $instructor = $this->instructor();
+        $question = $this->inReviewQuestion(assigned: $instructor);
         $action = app(InstructorReviewQuestionAction::class);
 
-        $first = $action->approve($this->instructor(), $question);
-        $this->assertSame(QuestionStatus::InReview, $first->status);
-        $this->assertSame(1, app(QuestionInstructorReviewCycle::class)->approvedCountFromSlots($first));
-
-        $second = $action->approve($this->instructor(), $first);
-        $this->assertSame(QuestionStatus::PendingPublish, $second->status);
-        $this->assertSame(2, app(QuestionInstructorReviewCycle::class)->approvedCountFromSlots($second));
-        $this->assertTrue(app(QuestionInstructorReviewCycle::class)->hasRequiredApprovals($second));
+        $approved = $action->approve($instructor, $question);
+        $this->assertSame(QuestionStatus::InFlagReview, $approved->status);
+        $this->assertSame('approved', $approved->instructor_decision);
+        $this->assertTrue(app(QuestionInstructorReviewCycle::class)->instructorApproved($approved));
     }
 
     public function test_one_reject_fails_the_question_immediately(): void
     {
-        $question = $this->inReviewQuestion();
-        $action = app(InstructorReviewQuestionAction::class);
-        $action->approve($this->instructor(), $question);
-
-        $rejected = $action->reject($this->instructor(), $question->fresh(), 'Sai kiến thức.');
+        $instructor = $this->instructor();
+        $question = $this->inReviewQuestion(assigned: $instructor);
+        $rejected = app(InstructorReviewQuestionAction::class)
+            ->reject($instructor, $question, 'Sai kiến thức.');
 
         $this->assertSame(QuestionStatus::Rejected, $rejected->status);
-        $this->assertSame('rejected', $rejected->instructor_2_decision);
+        $this->assertSame('rejected', $rejected->instructor_decision);
         $this->assertSame('Sai kiến thức.', $rejected->rejection_reason);
         $this->assertTrue($rejected->isInstructorRejection());
         $this->assertFalse($rejected->isPublisherRejection());
         $this->assertSame('Giảng viên từ chối', $rejected->editorialSubmissionLabel());
     }
 
+    public function test_unassigned_instructor_cannot_approve(): void
+    {
+        $assigned = $this->instructor();
+        $other = $this->instructor();
+        $question = $this->inReviewQuestion(assigned: $assigned);
+
+        $this->expectException(ValidationException::class);
+        app(InstructorReviewQuestionAction::class)->approve($other, $question);
+    }
+
     public function test_creator_cannot_approve_own_question(): void
     {
         $creator = $this->instructor();
-        $question = $this->inReviewQuestion($creator);
+        $question = $this->inReviewQuestion($creator, $creator);
 
         $this->expectException(ValidationException::class);
         app(InstructorReviewQuestionAction::class)->approve($creator, $question);
@@ -67,8 +73,8 @@ final class QuestionInstructorReviewCycleTest extends TestCase
 
     public function test_same_instructor_cannot_vote_twice(): void
     {
-        $question = $this->inReviewQuestion();
         $instructor = $this->instructor();
+        $question = $this->inReviewQuestion(assigned: $instructor);
         $action = app(InstructorReviewQuestionAction::class);
         $action->approve($instructor, $question);
 
@@ -76,19 +82,19 @@ final class QuestionInstructorReviewCycleTest extends TestCase
         $action->approve($instructor, $question->fresh());
     }
 
-    public function test_start_or_reset_clears_slots_and_increments_cycle(): void
+    public function test_start_or_reset_clears_decision_and_increments_cycle(): void
     {
-        $question = $this->inReviewQuestion();
+        $instructor = $this->instructor();
+        $question = $this->inReviewQuestion(assigned: $instructor);
         $cycle = app(QuestionInstructorReviewCycle::class);
-        $action = app(InstructorReviewQuestionAction::class);
-        $action->approve($this->instructor(), $question);
+        app(InstructorReviewQuestionAction::class)->approve($instructor, $question);
 
         $cycle->startOrReset($question->fresh());
         $fresh = $question->fresh();
 
         $this->assertSame(1, (int) $fresh->instructor_review_cycle);
-        $this->assertNull($fresh->instructor_1_id);
-        $this->assertNull($fresh->instructor_1_decision);
+        $this->assertNull($fresh->instructor_decision);
+        $this->assertSame($instructor->id, (int) $fresh->assigned_instructor_id);
         $this->assertSame(0, $cycle->approvedCountFromSlots($fresh));
     }
 
@@ -100,13 +106,14 @@ final class QuestionInstructorReviewCycleTest extends TestCase
         return $user;
     }
 
-    private function inReviewQuestion(?User $creator = null): Question
+    private function inReviewQuestion(?User $creator = null, ?User $assigned = null): Question
     {
         $creator ??= User::factory()->create();
 
         return Question::factory()->create([
             'status' => QuestionStatus::InReview,
             'created_by' => $creator->id,
+            'assigned_instructor_id' => $assigned?->id,
             'version' => 0,
             'instructor_review_cycle' => 0,
         ]);

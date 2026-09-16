@@ -1,7 +1,8 @@
 @php
     /** @var \Modules\QuestionBank\Models\Question $question */
     $instructorDecision = \Modules\QuestionBank\Enums\InstructorReviewDecision::tryFrom((string) $question->instructor_decision);
-    $instructorName = $question->instructor?->name ?? $question->assignedInstructor?->name;
+    $instructorName = $question->instructor?->name
+        ?? ($question->relationLoaded('assignedInstructor') ? $question->assignedInstructor?->name : null);
     $instructorNote = filled($question->instructor_note)
         ? trim((string) $question->instructor_note)
         : null;
@@ -21,8 +22,11 @@
         $note = filled($question->{"reviewer_{$slot}_note"})
             ? trim((string) $question->{"reviewer_{$slot}_note"})
             : null;
-        $name = $question->{"reviewerSlot{$slot}"}?->name;
-        if ($flag === null && $note === null && $name === null) {
+        $relation = "reviewerSlot{$slot}";
+        $name = $question->relationLoaded($relation)
+            ? $question->{$relation}?->name
+            : null;
+        if ($flag === null && $note === null && $name === null && $question->{"reviewer_{$slot}_id"} === null) {
             continue;
         }
         $reviewerRows[] = [

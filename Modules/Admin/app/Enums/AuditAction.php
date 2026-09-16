@@ -28,6 +28,7 @@ enum AuditAction: string
     case QuestionReviewRejected = 'admin.question.review_rejected';
     case QuestionInstructorApproved = 'teach.question.instructor_approved';
     case QuestionInstructorRejected = 'teach.question.instructor_rejected';
+    case QuestionReviewerFlagged = 'admin.question.reviewer_flagged';
     case QuestionImported = 'admin.question.import';
     case QuestionExported = 'admin.question.export';
 
@@ -55,6 +56,7 @@ enum AuditAction: string
             self::QuestionReviewRejected => 'Từ chối thay đổi câu hỏi',
             self::QuestionInstructorApproved => 'Giảng viên duyệt câu hỏi',
             self::QuestionInstructorRejected => 'Giảng viên từ chối câu hỏi',
+            self::QuestionReviewerFlagged => 'Reviewer gắn cờ câu hỏi',
             self::QuestionImported => 'Import câu hỏi',
             self::QuestionExported => 'Export câu hỏi',
         };

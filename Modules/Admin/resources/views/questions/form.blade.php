@@ -69,7 +69,8 @@
         $isInstructorRejection => ['label' => 'Giảng viên từ chối', 'class' => 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'],
         $isPublisherRejection => ['label' => 'Admin trả về', 'class' => 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'],
         $question->status === \Modules\QuestionBank\Enums\QuestionStatus::Published => ['label' => 'Đã xuất bản', 'class' => 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'],
-        $question->status === \Modules\QuestionBank\Enums\QuestionStatus::InReview => ['label' => 'Chờ giảng viên duyệt', 'class' => 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'],
+        $question->status === \Modules\QuestionBank\Enums\QuestionStatus::InReview => ['label' => 'Chờ giảng viên', 'class' => 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'],
+        $question->status === \Modules\QuestionBank\Enums\QuestionStatus::InFlagReview => ['label' => 'Chờ reviewer', 'class' => 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300'],
         $question->status === \Modules\QuestionBank\Enums\QuestionStatus::PendingPublish => ['label' => 'Chờ xuất bản', 'class' => 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300'],
         $question->status === \Modules\QuestionBank\Enums\QuestionStatus::Rejected => ['label' => 'Từ chối', 'class' => 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'],
         $question->status === \Modules\QuestionBank\Enums\QuestionStatus::Private => ['label' => 'Riêng tư', 'class' => 'bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300'],
@@ -228,11 +229,24 @@
     @if (! $isNew && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::InReview)
         <div class="mb-5 rounded-2xl border border-amber-200 bg-amber-50/60 px-4 py-3 text-sm text-amber-900">
             <div class="flex flex-wrap items-center gap-3">
+                <p>
+                    Giảng viên được gán đang duyệt chuyên môn. Một phiếu từ chối là fail ngay, chưa sang reviewer.
+                    @if (! $isReviewer)
+                        Bạn vẫn được sửa; chọn <strong>Lưu và gửi duyệt lại</strong> để reset phiếu giảng viên.
+                    @endif
+                </p>
+            </div>
+        </div>
+    @endif
+
+    @if (! $isNew && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::InFlagReview)
+        <div class="mb-5 rounded-2xl border border-orange-200 bg-orange-50/60 px-4 py-3 text-sm text-orange-900">
+            <div class="flex flex-wrap items-center gap-3">
                 @include('questionbank::partials.instructor-review-flags', ['question' => $question])
                 <p>
-                    Cần 2 giảng viên chấp nhận. Cờ trắng = chờ duyệt, xanh = chấp nhận, đỏ = từ chối (1 phiếu đỏ là fail ngay).
+                    Giảng viên đã duyệt chuyên môn. Câu hỏi đang chờ reviewer gắn cờ.
                     @if (! $isReviewer)
-                        Bạn vẫn được sửa; chọn <strong>Lưu và gửi duyệt lại</strong> để reset 2 phiếu.
+                        Bạn có thể rút về nháp hoặc gửi duyệt lại nếu cần chỉnh sửa.
                     @endif
                 </p>
             </div>
@@ -558,7 +572,9 @@
                         <p class="mt-1 text-xs leading-5">
                             Admin/Super Admin không sửa nội dung câu hỏi.
                             @if ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::InReview)
-                                Đang chờ đủ 2 giảng viên duyệt — không xuất bản trước bước này.
+                                Đang chờ giảng viên duyệt chuyên môn — không xuất bản trước bước này.
+                            @elseif ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::InFlagReview)
+                                Đang chờ reviewer gắn cờ — không xuất bản trước bước này.
                             @elseif ($isRejected)
                                 Câu hỏi đã bị từ chối. Đang chờ biên tập viên xử lý.
                             @elseif ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::Draft)
@@ -783,6 +799,7 @@
                     <h2 class="mb-3 font-label-md font-semibold text-on-surface-variant">Phân loại</h2>
                     <div class="space-y-3">
                         @include('admin::questions.partials.taxonomy-fields')
+                        @include('admin::questions.partials.instructor-picker')
 
                         <div>
                             <label class="mb-1 block text-xs font-semibold text-on-surface-variant" for="difficulty">Độ khó *</label>

@@ -48,6 +48,7 @@ final class SaveAdminQuestionAction
      *     hints?: list<array{id?: int|null, content: string, sort_order?: int}>,
      *     is_free: bool,
      *     exam_flag?: bool,
+     *     assigned_instructor_id?: int|null,
      *     options: list<array{id?: int|null, content: string, is_correct: bool, explanation?: ?string}>
      * }  $data
      */
@@ -117,8 +118,14 @@ final class SaveAdminQuestionAction
             if ($demoteLiveToDraft) {
                 $question->status = QuestionStatus::Draft;
                 $question->instructor_id = null;
+                $question->instructor_decision = null;
+                $question->instructor_note = null;
+                $question->instructor_reviewed_at = null;
                 $question->rejection_reason = null;
                 $question->rejected_by_role = null;
+            }
+            if (array_key_exists('assigned_instructor_id', $data)) {
+                $question->assigned_instructor_id = $data['assigned_instructor_id'] ?: null;
             }
             $question->save();
             if ($demoteLiveToDraft) {

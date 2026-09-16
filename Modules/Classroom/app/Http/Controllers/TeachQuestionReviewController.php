@@ -48,8 +48,11 @@ final class TeachQuestionReviewController extends Controller
             ->with([
                 'creator:id,name,email',
                 'instructor:id,name',
+                'assignedInstructor:id,name',
                 'instructorSlot1:id,name',
                 'instructorSlot2:id,name',
+                'reviewerSlot1:id,name',
+                'reviewerSlot2:id,name',
                 'publisher:id,name',
                 'lessons:id,name',
                 'pendingReviewRequest.requester:id,name',
@@ -98,8 +101,11 @@ final class TeachQuestionReviewController extends Controller
             'lessons:id,name',
             'creator:id,name,email',
             'instructor:id,name',
+            'assignedInstructor:id,name',
             'instructorSlot1:id,name',
             'instructorSlot2:id,name',
+            'reviewerSlot1:id,name',
+            'reviewerSlot2:id,name',
             'publisher:id,name',
             'pendingReviewRequest.requester:id,name',
         ]);

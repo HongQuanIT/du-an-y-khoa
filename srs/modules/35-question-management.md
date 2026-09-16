@@ -49,26 +49,29 @@ CRUD & **workflow duyệt 2 lớp** câu hỏi: Content Creator soạn/sửa →
 │  Lớp 0 — Content Creator (content_editor) trên /admin                   │
 │  Soạn/sửa working copy thoải mái · KHÔNG tăng version                   │
 │  draft / rejected  ──submit──►  in_review                               │
-│  (có thể rút lại in_review → draft nếu chưa được GV xử lý)              │
+│  (gán 1 GV đúng môn; rút lại in_review → draft nếu chưa duyệt)          │
 └───────────────────────────────┬─────────────────────────────────────────┘
                                 │
 ┌───────────────────────────────▼─────────────────────────────────────────┐
-│  Lớp 1 — 2 giảng viên (instructor) trên /teach — độc lập                │
+│  Lớp 1a — 1 giảng viên được gán (instructor) trên /teach                │
 │  Duyệt chuyên môn · KHÔNG tăng version · KHÔNG publish lên Qbank        │
-│  in_review  ──accept #1──► vẫn in_review (1 cờ xanh, 1 cờ trắng)        │
-│  in_review  ──accept #2──► pending_publish (2 cờ xanh)                  │
-│  in_review  ──reject (1 phiếu)──► rejected ngay (cờ đỏ)                 │
-│  Creator được sửa khi in_review; «gửi duyệt lại» reset 2 cờ + cycle +1  │
-│  Creator ≠ reviewer; 2 slot phải 2 người khác nhau                      │
+│  in_review  ──accept──► in_flag_review                                  │
+│  in_review  ──reject──► rejected ngay                                   │
+└───────────────────────────────┬─────────────────────────────────────────┘
+                                │
+┌───────────────────────────────▼─────────────────────────────────────────┐
+│  Lớp 1b — 2 reviewer (`question.flag`) trên /admin/questions/flags      │
+│  Gắn cờ xanh/vàng/đỏ · KHÔNG tăng version · KHÔNG publish               │
+│  in_flag_review ──flag #2──► pending_publish                            │
+│  Cờ đỏ vẫn vào pending_publish nhưng Admin không được publish           │
 └───────────────────────────────┬─────────────────────────────────────────┘
                                 │
 ┌───────────────────────────────▼─────────────────────────────────────────┐
 │  Lớp 2 — Admin có `question.publish` trên /admin                        │
-│  Chỉ publish khi đủ 2 GV accept · KHÔNG duyệt chuyên môn · KHÔNG sửa    │
+│  Chỉ publish khi GV đã duyệt + đủ 2 cờ · KHÔNG sửa nội dung             │
 │  pending_publish  ──publish──►  published (+ question_versions)         │
 │  pending_publish  ──trả về──►  rejected (lý do vận hành, không y khoa)  │
-│  → đồng bộ Meilisearch → học viên thấy bản published                    │
-│  Bắt buộc ≥3 người: 2 GV khác nhau + publisher ∉ {GV1, GV2}             │
+│  Publisher ∉ {GV được gán, 2 reviewer đã gắn cờ}                        │
 └─────────────────────────────────────────────────────────────────────────┘
 
 Report từ user → queue → Creator sửa (working copy, không +version)
@@ -109,25 +112,26 @@ Import: commit tạo hàng loạt `draft`.
 
 | Status | Ý nghĩa | Ai chuyển tới | Hiển thị học viên (Qbank) |
 |--------|---------|---------------|---------------------------|
-| `draft` | Nháp / đang soạn; Creator sửa tự do | Tạo mới; rút lại từ `in_review`; sau reject khi bắt đầu sửa | Không\* |
-| `in_review` | Đã gửi, **chờ đủ 2 GV chấp nhận** (lớp 1) | Creator `submit` / gửi lại | Không\* |
-| `pending_publish` | Đủ 2 GV accept, **chờ Super Admin** (lớp 2) | Instructor accept #2 | Không\* |
-| `published` | Super Admin đã publish phiên bản | Super Admin `publish` | Có (theo gating) |
-| `rejected` | Bị từ chối ở lớp 1 hoặc lớp 2; có `rejection_reason` | Instructor / Super Admin `reject` | Không\* |
-| `private` | Pool exam (`exam_flag=true`) | Super Admin (sau đủ pipeline hoặc quy tắc exam riêng) | Không (Qbank) |
-| `retired` | Ngừng dùng (giữ attempt) | Super Admin | Không |
+| `draft` | Nháp / đang soạn; Creator sửa tự do | Tạo mới; rút lại từ `in_review` / `in_flag_review`; sau reject | Không\* |
+| `in_review` | Đã gửi, **chờ GV được gán** (lớp 1a) | Creator `submit` / gửi lại | Không\* |
+| `in_flag_review` | GV đã duyệt, **chờ 2 reviewer gắn cờ** (lớp 1b) | Instructor accept | Không\* |
+| `pending_publish` | Đủ 2 cờ reviewer, **chờ Admin** (lớp 2) | Reviewer flag #2 | Không\* |
+| `published` | Admin đã publish phiên bản | Admin `publish` | Có (theo gating) |
+| `rejected` | Bị từ chối ở lớp 1a hoặc lớp 2; có `rejection_reason` | Instructor / Admin `reject` | Không\* |
+| `private` | Pool exam (`exam_flag=true`) | Admin (sau đủ pipeline hoặc quy tắc exam riêng) | Không (Qbank) |
+| `retired` | Ngừng dùng (giữ attempt) | Admin | Không |
 
-\* **Ngoại lệ tái bản:** nếu câu đã từng publish (`published_version >= 1`), Qbank **vẫn phục vụ snapshot version đã publish** trong lúc working copy đi lại pipeline (`draft` / `in_review` / `pending_publish` / `rejected`). Nội dung live **chỉ** đổi khi Super Admin publish lần mới (version +1). Câu chưa từng publish thì không lộ Qbank.
+\* **Ngoại lệ tái bản:** nếu câu đã từng publish (`published_version >= 1`), Qbank **vẫn phục vụ snapshot version đã publish** trong lúc working copy đi lại pipeline (`draft` / `in_review` / `in_flag_review` / `pending_publish` / `rejected`). Nội dung live **chỉ** đổi khi Admin publish lần mới (version +1). Câu chưa từng publish thì không lộ Qbank.
 
 **Máy trạng thái (happy path + nhánh từ chối):**
 
 ```
-                  submit          accept×2 (2 GV khác nhau)     publish(SA)
-  draft ────────────────► in_review ──────────────────► pending_publish ──► published
-    ▲                       │  │                            │
-    │         reject(1 GV)  │  │ gửi duyệt lại (reset 2 cờ) │ trả về (vận hành)
-    │◄──── rejected ◄───────┘  └──────── in_review ─────────┘
-    │         ▲
+                  submit       accept(GV)        flag×2 (reviewer)     publish
+  draft ─────────────► in_review ──► in_flag_review ──► pending_publish ──► published
+    ▲                    │                                  │
+    │      reject(GV)    │                                  │ trả về (vận hành)
+    │◄── rejected ◄──────┘                                  ▼
+    │◄─────────────────────────────── rejected ◄────────────┘
     └─ Creator sửa (không +version) ─┘
 ```
 

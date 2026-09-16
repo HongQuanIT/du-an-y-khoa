@@ -7,6 +7,7 @@ namespace Modules\Admin\Support;
 use App\Models\User;
 use App\Support\Enums\Permission;
 use Illuminate\Database\Eloquent\Builder;
+use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
 
 final class QuestionAccess
@@ -25,6 +26,11 @@ final class QuestionAccess
     public static function canCreate(User $user): bool
     {
         return $user->can(Permission::QuestionCreate->value);
+    }
+
+    public static function canFlag(User $user): bool
+    {
+        return $user->can(Permission::QuestionFlag->value);
     }
 
     /**
@@ -87,20 +93,45 @@ final class QuestionAccess
             return $query;
         }
 
+        if (self::canFlag($user) && ! self::canEdit($user)) {
+            $userId = (int) $user->getKey();
+
+            return $query->where(function (Builder $builder) use ($userId): void {
+                $builder
+                    ->where('status', QuestionStatus::InFlagReview->value)
+                    ->orWhere('reviewer_1_id', $userId)
+                    ->orWhere('reviewer_2_id', $userId);
+            });
+        }
+
         return $query->where('created_by', $user->getKey());
     }
 
     public static function canView(User $user, Question $question): bool
     {
-        return $user->can('question.view_any')
-            || self::canPublish($user)
-            || ($user->canAny([
+        if ($user->can('question.view_any') || self::canPublish($user)) {
+            return true;
+        }
+
+        if ((int) $question->created_by === (int) $user->getKey()
+            && $user->canAny([
                 Permission::QuestionView->value,
                 Permission::QuestionUpdate->value,
                 'question_version.view',
                 'question.export',
-            ])
-                && (int) $question->created_by === (int) $user->getKey());
+            ])) {
+            return true;
+        }
+
+        if (! self::canFlag($user)) {
+            return false;
+        }
+
+        $userId = (int) $user->getKey();
+
+        return $question->status === QuestionStatus::InFlagReview
+            || (int) $question->reviewer_1_id === $userId
+            || (int) $question->reviewer_2_id === $userId;
     }
 
     public static function authorizeView(User $user, Question $question): void

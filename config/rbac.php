@@ -31,7 +31,7 @@ return [
                 'permission' => ['view_any'],
             ],
             'question_bank' => [
-                'question' => ['view_any', 'create', 'clone', 'update', 'delete', 'submit', 'publish', 'retire', 'import', 'export'],
+                'question' => ['view_any', 'create', 'clone', 'update', 'delete', 'submit', 'flag', 'publish', 'retire', 'import', 'export'],
                 'question_version' => ['view', 'restore'],
                 'question_feedback' => ['view_any', 'update'],
             ],
