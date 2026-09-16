@@ -26,6 +26,7 @@ use Modules\Admin\Http\Controllers\QuestionController;
 use Modules\Admin\Http\Controllers\QuestionDuplicateController;
 use Modules\Admin\Http\Controllers\QuestionExportController;
 use Modules\Admin\Http\Controllers\QuestionFeedbackController;
+use Modules\Admin\Http\Controllers\QuestionFlagController;
 use Modules\Admin\Http\Controllers\QuestionImportController;
 use Modules\Admin\Http\Controllers\QuestionReviewController;
 use Modules\Admin\Http\Controllers\QuestionVersionController;
@@ -245,6 +246,16 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
             Route::post('/questions/import/{batch}/map', [QuestionImportController::class, 'map'])->name('questions.import.map');
             Route::post('/questions/import/{batch}/commit', [QuestionImportController::class, 'commit'])->name('questions.import.commit');
         });
+
+        Route::middleware('permission:'.Permission::QuestionFlag->value)->group(function (): void {
+            Route::get('/questions/flags', [QuestionFlagController::class, 'index'])->name('questions.flags.index');
+            Route::get('/questions/flags/{question}', [QuestionFlagController::class, 'show'])->name('questions.flags.show');
+            Route::post('/questions/flags/{question}', [QuestionFlagController::class, 'store'])->name('questions.flags.store');
+        });
+
+        Route::get('/questions/eligible-instructors', [QuestionController::class, 'eligibleInstructors'])
+            ->middleware('permission:'.Permission::QuestionCreate->value.'|'.Permission::QuestionUpdate->value)
+            ->name('questions.eligible-instructors');
 
         Route::get('/questions/create', [QuestionController::class, 'create'])
             ->middleware('permission:'.Permission::QuestionCreate->value)

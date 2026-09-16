@@ -110,6 +110,7 @@ class RolePermissionSeeder extends Seeder
                 ->reject(fn ($definition): bool => in_array($definition->name, [
                     'question.view_any',
                     PermissionEnum::QuestionReview->value,
+                    PermissionEnum::QuestionFlag->value,
                     PermissionEnum::QuestionPublish->value,
                     PermissionEnum::QuestionRetire->value,
                     'question.restore',
@@ -117,6 +118,14 @@ class RolePermissionSeeder extends Seeder
                 ], true))
                 ->keys()
                 ->all()))),
+
+            RoleEnum::Reviewer => [
+                PermissionEnum::QuestionFlag->value,
+                'profile.view',
+                'profile.update',
+                'profile.password_update',
+                'profile.avatar_update',
+            ],
 
             RoleEnum::Instructor => array_values(array_unique(array_merge($portalPermissions, [
                 PermissionEnum::QuestionView->value,
@@ -159,6 +168,8 @@ class RolePermissionSeeder extends Seeder
             'question.import',
             // Instructor layer-1 only.
             PermissionEnum::QuestionReview->value,
+            // Reviewer flag queue only.
+            PermissionEnum::QuestionFlag->value,
             // Learner session / feature surface.
             PermissionEnum::SessionStart->value,
             PermissionEnum::SessionSubmit->value,

@@ -2,6 +2,13 @@
 
 ## 2026-09-16
 
+### Feat — QBank: khôi phục duyệt 3 lớp (`in_flag_review`)
+
+- Khôi phục status `in_flag_review` và pipeline GV gán → reviewer gắn cờ → Admin xuất bản.
+- Role `reviewer` + quyền `question.flag`; route/menu hàng đợi `/admin/questions/flags`.
+- Eager-load `reviewerSlot*` / `assignedInstructor` để tránh lỗi lazy load trên list/form.
+- Migration giữ dữ liệu `in_flag_review` hiện có; cập nhật SRS Module 35 và test 3 lớp.
+
 ### Chore — RBAC: xoá quyền cờ tính năng cũ
 
 - Gỡ `feature_flag.manage` khỏi registry và giao diện phân quyền Admin.

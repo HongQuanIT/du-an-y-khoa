@@ -12,35 +12,50 @@ use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionInstructorReview;
 
 /**
- * Dual medical review: two distinct instructors, fail-fast on first reject.
+ * Layer 1: one assigned instructor approves or rejects (fail-fast on reject).
+ * Legacy dual-slot approvals remain valid for already-queued pending_publish rows.
  */
 final class QuestionInstructorReviewCycle
 {
-    public const REQUIRED_APPROVALS = 2;
+    public const REQUIRED_APPROVALS = 1;
+
+    public function __construct(
+        private readonly QuestionReviewerFlagCycle $flagCycle,
+    ) {}
 
     public function startOrReset(Question $question): void
     {
         $question->forceFill([
             'instructor_review_cycle' => (int) $question->instructor_review_cycle + 1,
+            'instructor_decision' => null,
+            'instructor_note' => null,
+            'instructor_reviewed_at' => null,
+            'instructor_id' => $question->assigned_instructor_id,
             'instructor_1_id' => null,
             'instructor_1_decision' => null,
             'instructor_2_id' => null,
             'instructor_2_decision' => null,
-            'instructor_id' => null,
             'rejection_reason' => null,
             'rejected_by_role' => null,
         ])->save();
+
+        $this->flagCycle->clearFlags($question->fresh() ?? $question);
     }
 
     public function clearSlots(Question $question): void
     {
         $question->forceFill([
+            'instructor_decision' => null,
+            'instructor_note' => null,
+            'instructor_reviewed_at' => null,
+            'instructor_id' => $question->assigned_instructor_id,
             'instructor_1_id' => null,
             'instructor_1_decision' => null,
             'instructor_2_id' => null,
             'instructor_2_decision' => null,
-            'instructor_id' => null,
         ])->save();
+
+        $this->flagCycle->clearFlags($question->fresh() ?? $question);
     }
 
     public function recordApproval(Question $question, User $instructor, ?string $note = null): int
@@ -48,15 +63,17 @@ final class QuestionInstructorReviewCycle
         $this->assertCanVote($question, $instructor);
 
         $this->writeReview($question, $instructor, InstructorReviewDecision::Approved, $note);
-        $this->fillNextSlot($question, $instructor, InstructorReviewDecision::Approved);
 
         $question->forceFill([
             'instructor_id' => $instructor->getKey(),
+            'instructor_decision' => InstructorReviewDecision::Approved->value,
+            'instructor_note' => $note,
+            'instructor_reviewed_at' => now(),
             'rejection_reason' => null,
             'rejected_by_role' => null,
         ])->save();
 
-        return $this->approvedCountFromSlots($question->fresh());
+        return 1;
     }
 
     public function recordRejection(Question $question, User $instructor, string $reason): void
@@ -64,20 +81,34 @@ final class QuestionInstructorReviewCycle
         $this->assertCanVote($question, $instructor);
 
         $this->writeReview($question, $instructor, InstructorReviewDecision::Rejected, $reason);
-        $this->fillNextSlot($question, $instructor, InstructorReviewDecision::Rejected);
 
         $question->forceFill([
             'instructor_id' => $instructor->getKey(),
+            'instructor_decision' => InstructorReviewDecision::Rejected->value,
+            'instructor_note' => $reason,
+            'instructor_reviewed_at' => now(),
         ])->save();
     }
 
+    public function instructorApproved(Question $question): bool
+    {
+        return $question->instructor_decision === InstructorReviewDecision::Approved->value
+            || $question->instructor_decision === InstructorReviewDecision::Approved;
+    }
+
+    /**
+     * Ready for Admin publish: assigned GV approved + 2 flags, or legacy 2-instructor accepts.
+     */
     public function hasRequiredApprovals(Question $question): bool
     {
-        if ($this->approvedCountFromSlots($question) >= self::REQUIRED_APPROVALS) {
+        if ($this->instructorApproved($question) && $this->flagCycle->hasRequiredFlags($question)) {
             return true;
         }
 
-        // Cycle 0 = dữ liệu cũ (1 GV). Chỉ cho xuất bản nếu đã ở hàng đợi lớp 2.
+        if ($this->approvedCountFromSlots($question) >= 2) {
+            return true;
+        }
+
         return (int) $question->instructor_review_cycle === 0
             && $question->instructor_id !== null
             && in_array($question->status, [
@@ -85,6 +116,35 @@ final class QuestionInstructorReviewCycle
                 QuestionStatus::Published,
                 QuestionStatus::Private,
             ], true);
+    }
+
+    public function canPublish(Question $question): bool
+    {
+        if (! $this->hasRequiredApprovals($question)) {
+            return false;
+        }
+
+        if ($this->flagCycle->hasRequiredFlags($question) && $this->flagCycle->hasRedFlag($question)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * @return list<int>
+     */
+    public function blockedPublisherIds(Question $question): array
+    {
+        $ids = $this->approvedInstructorIds($question);
+        if ($question->assigned_instructor_id) {
+            $ids[] = (int) $question->assigned_instructor_id;
+        }
+        if ($question->instructor_id) {
+            $ids[] = (int) $question->instructor_id;
+        }
+
+        return array_values(array_unique(array_merge($ids, $this->flagCycle->reviewerIds($question))));
     }
 
     /**
@@ -101,6 +161,10 @@ final class QuestionInstructorReviewCycle
             }
         }
 
+        if ($this->instructorApproved($question) && $question->instructor_id) {
+            $ids[] = (int) $question->instructor_id;
+        }
+
         if ($ids === [] && $question->instructor_id) {
             $ids[] = (int) $question->instructor_id;
         }
@@ -112,12 +176,20 @@ final class QuestionInstructorReviewCycle
     {
         $actorId = (int) $actor->getKey();
 
+        if ((int) $question->assigned_instructor_id === $actorId && $question->instructor_decision !== null) {
+            return true;
+        }
+
         return ((int) $question->instructor_1_id === $actorId && $question->instructor_1_decision !== null)
             || ((int) $question->instructor_2_id === $actorId && $question->instructor_2_decision !== null);
     }
 
     public function approvedCountFromSlots(Question $question): int
     {
+        if ($this->instructorApproved($question)) {
+            return 1;
+        }
+
         $count = 0;
         foreach ([1, 2] as $slot) {
             if ($question->{"instructor_{$slot}_decision"} === InstructorReviewDecision::Approved->value) {
@@ -133,6 +205,13 @@ final class QuestionInstructorReviewCycle
         if ((int) $question->created_by === (int) $instructor->getKey()) {
             throw ValidationException::withMessages([
                 'status' => 'Người soạn không được tự duyệt câu hỏi của mình.',
+            ]);
+        }
+
+        $assignedId = (int) $question->assigned_instructor_id;
+        if ($assignedId > 0 && $assignedId !== (int) $instructor->getKey()) {
+            throw ValidationException::withMessages([
+                'status' => 'Chỉ giảng viên được gán mới duyệt câu hỏi này.',
             ]);
         }
 
@@ -169,34 +248,6 @@ final class QuestionInstructorReviewCycle
             'note' => $note,
             'content_fingerprint' => $question->content_fingerprint,
             'reviewed_at' => now(),
-        ]);
-    }
-
-    private function fillNextSlot(
-        Question $question,
-        User $instructor,
-        InstructorReviewDecision $decision,
-    ): void {
-        if ($question->instructor_1_id === null) {
-            $question->forceFill([
-                'instructor_1_id' => $instructor->getKey(),
-                'instructor_1_decision' => $decision->value,
-            ])->save();
-
-            return;
-        }
-
-        if ($question->instructor_2_id === null) {
-            $question->forceFill([
-                'instructor_2_id' => $instructor->getKey(),
-                'instructor_2_decision' => $decision->value,
-            ])->save();
-
-            return;
-        }
-
-        throw ValidationException::withMessages([
-            'status' => 'Đã đủ 2 phiếu giảng viên cho vòng này.',
         ]);
     }
 }

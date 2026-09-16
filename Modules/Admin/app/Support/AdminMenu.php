@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace Modules\Admin\Support;
 
 use App\Models\User;
+use App\Support\Enums\Permission;
 use Illuminate\Support\Facades\Route;
 use Modules\Admin\Models\ContactInquiry;
 use Modules\QuestionBank\Enums\QuestionReviewStatus;
+use Modules\QuestionBank\Enums\QuestionStatus;
+use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionReviewRequest;
 
 /**
@@ -71,6 +74,13 @@ final class AdminMenu
                 'route' => 'admin.questions.index',
                 'permission' => 'question.view_any',
                 'match' => 'admin.questions.*',
+            ],
+            [
+                'label' => 'Review câu hỏi',
+                'icon' => 'flag',
+                'route' => 'admin.questions.flags.index',
+                'permission' => Permission::QuestionFlag->value,
+                'match' => 'admin.questions.flags.*',
             ],
             [
                 'label' => 'Phản hồi câu hỏi',
@@ -241,6 +251,9 @@ final class AdminMenu
                 'external' => (bool) ($item['external'] ?? false),
                 'coming_soon' => ! $hrefReady && $item['route'] !== 'admin.dashboard',
                 'badge' => match (true) {
+                    $item['route'] === 'admin.questions.flags.index' => Question::query()
+                        ->where('status', QuestionStatus::InFlagReview->value)
+                        ->count(),
                     $item['route'] === 'admin.questions.index' && QuestionAccess::isReviewer($user) => QuestionReviewRequest::query()
                         ->where('status', QuestionReviewStatus::Pending->value)
                         ->count(),

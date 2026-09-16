@@ -21,6 +21,7 @@ enum Permission: string
     case QuestionDelete = 'question.delete';
     case QuestionSubmit = 'question.submit';
     case QuestionReview = 'question.review';
+    case QuestionFlag = 'question.flag';
     case QuestionPublish = 'question.publish';
     case QuestionRetire = 'question.retire';
 

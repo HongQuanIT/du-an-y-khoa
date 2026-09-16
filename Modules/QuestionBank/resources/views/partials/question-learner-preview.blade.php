@@ -113,6 +113,18 @@
             </div>
         @endif
 
+        @if ($hints->isNotEmpty())
+            <div class="space-y-2 rounded-xl border border-outline-variant bg-surface-container-lowest p-4"
+                data-testid="reviewer-hints">
+                <p class="text-[11px] font-bold uppercase tracking-wide text-on-surface-variant">Gợi ý</p>
+                <ul class="list-disc space-y-1 pl-5 text-sm text-on-surface">
+                    @foreach ($hints as $hint)
+                        <li>{{ $hint->content }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
         <section class="space-y-3" data-testid="reviewer-options">
             @foreach ($question->options as $option)
                 @php
