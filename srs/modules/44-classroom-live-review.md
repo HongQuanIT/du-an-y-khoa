@@ -206,7 +206,7 @@ Tham chiếu nhóm Classroom trong `04-mo-hinh-du-lieu.md`.
 | **Content Editor** | Không host mặc định |
 | **Admin / Super Admin** | **Oversight** (`classroom.oversee`): duyệt/từ chối lớp, xem mọi lớp, force-end, archive; **tạo lớp** gán host instructor (`classroom.create_on_behalf`) — **không** thay giảng viên chữa đề hàng ngày |
 
-Permissions: `classroom.create` (instructor), `classroom.create_on_behalf` (admin), `classroom.manage`, `classroom.join`, `classroom.moderate`, `classroom.oversee`, `live.start`, `live.join`, `live.force_end`. Entitlement `classroom.host` = Premium cộng đồng (legacy); Instructor host bằng **role**.
+Permissions: `classroom.create` (instructor), `classroom.create_on_behalf` (admin), `classroom.manage`, `classroom.join`, `classroom.moderate`, `classroom.oversee`, `live.start`, `live.join`. Entitlement `classroom.host` = Premium cộng đồng (legacy); Instructor host bằng **role**.
 
 ## 10. Edge Cases
 

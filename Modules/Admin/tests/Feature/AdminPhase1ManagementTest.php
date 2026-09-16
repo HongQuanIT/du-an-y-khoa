@@ -200,6 +200,23 @@ final class AdminPhase1ManagementTest extends TestCase
         ]);
     }
 
+    public function test_super_admin_matrix_lists_learner_learning_tools_read_only(): void
+    {
+        $super = $this->staffUser(Role::SuperAdmin);
+        $role = \Spatie\Permission\Models\Role::findByName(Role::SuperAdmin->value, 'web');
+
+        $this->actingAsStaff($super)
+            ->get(route('admin.roles.show', $role))
+            ->assertOk()
+            ->assertSee('Super Admin luôn có toàn bộ quyền')
+            ->assertSee('Công cụ học tập')
+            ->assertSee('learning_tool.note', false)
+            ->assertSee('learning_tool.flag', false)
+            ->assertSee('learning_tool.highlight', false)
+            ->assertSee('learning_tool.research', false)
+            ->assertDontSee('Lưu ma trận quyền', false);
+    }
+
     public function test_super_admin_can_create_custom_role_with_existing_permissions(): void
     {
         $super = $this->staffUser(Role::SuperAdmin);

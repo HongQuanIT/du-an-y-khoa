@@ -17,11 +17,8 @@ Route::middleware(['auth:sanctum', 'portal:learner'])
         Route::get('study-plans', [StudyPlanApiController::class, 'index'])->middleware('permission:study_plan.view_any')->name('plans.index');
         Route::post('study-plans', [StudyPlanApiController::class, 'store'])->middleware('permission:study_plan.create')->name('plans.store');
         Route::get('study-plans/{plan}', [StudyPlanApiController::class, 'show'])->middleware('permission:study_plan.view')->name('plans.show');
-        Route::put('study-plans/{plan}', [StudyPlanApiController::class, 'update'])->middleware('permission:study_plan.update')->name('plans.update');
-        Route::delete('study-plans/{plan}', [StudyPlanApiController::class, 'destroy'])->middleware('permission:study_plan.delete')->name('plans.destroy');
 
         Route::get('study-plans/{plan}/tasks', [StudyPlanTaskApiController::class, 'index'])->middleware('permission:study_plan.view')->name('tasks.index');
         Route::post('study-plans/{plan}/tasks/{task}/start', [StudyPlanTaskApiController::class, 'start'])->middleware('permission:study_plan_task.start')->name('tasks.start');
         Route::post('study-plans/{plan}/tasks/{task}/skip', [StudyPlanTaskApiController::class, 'skip'])->middleware('permission:study_plan_task.skip')->name('tasks.skip');
-        Route::patch('study-plans/{plan}/tasks/{task}', [StudyPlanTaskApiController::class, 'reschedule'])->middleware('permission:study_plan.update')->name('tasks.reschedule');
     });

@@ -237,6 +237,8 @@ final class StudySessionController extends Controller
             'attending_tip_used' => ['nullable', 'boolean'],
         ]);
 
+        $this->authorizeAnnotationTools($request, $validated);
+
         abort_unless(
             in_array($validated['question_id'], $session->question_ids ?? [], true),
             422,
@@ -258,6 +260,22 @@ final class StudySessionController extends Controller
         );
 
         return ApiResponse::item($annotation);
+    }
+
+    /** @param array<string, mixed> $validated */
+    private function authorizeAnnotationTools(Request $request, array $validated): void
+    {
+        if (array_key_exists('note', $validated) || array_key_exists('note_html', $validated)) {
+            abort_unless($request->user()?->can('learning_tool.note'), 403);
+        }
+
+        if (array_key_exists('flagged', $validated)) {
+            abort_unless($request->user()?->can('learning_tool.flag'), 403);
+        }
+
+        if (array_key_exists('stem_html', $validated)) {
+            abort_unless($request->user()?->can('learning_tool.highlight'), 403);
+        }
     }
 
     public function pause(Request $request, QuestionSession $session): RedirectResponse

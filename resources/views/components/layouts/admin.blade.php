@@ -4,7 +4,7 @@
 
 @php
     $navItems = \Modules\Admin\Support\AdminMenu::for(auth()->user());
-    $canSupportInbox = auth()->user()?->can(\App\Support\Enums\Permission::SupportManage->value)
+    $canSupportInbox = auth()->user()?->can('support_conversation.view')
         && \Illuminate\Support\Facades\Route::has('admin.support.index');
     $supportBadgeCount = $canSupportInbox
         ? \App\Models\SupportConversation::pendingAdminAttentionCountFor(auth()->user())
@@ -170,7 +170,7 @@
                 :aria-expanded="menu" aria-label="Mở menu">
                 <span class="material-symbols-outlined text-[24px] leading-none">menu</span>
             </button>
-            <h1 class="truncate font-headline-sm text-headline-sm text-on-surface">{{ $title ?? 'Tổng quan' }}</h1>
+            <p class="truncate font-headline-sm text-headline-sm text-on-surface">{{ $title ?? 'Tổng quan' }}</p>
         </div>
         <div class="ml-2 flex shrink-0 items-center gap-3">
             @if ($canSupportInbox)

@@ -8,9 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Support\Http\Responses\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Modules\StudyPlan\Actions\ListTodayTasksAction;
-use Modules\StudyPlan\Actions\RescheduleTaskAction;
 use Modules\StudyPlan\Actions\SkipPlanTaskAction;
 use Modules\StudyPlan\Actions\StartPlanTaskAction;
 use Modules\StudyPlan\Http\Resources\StudyPlanTaskResource;
@@ -30,7 +28,6 @@ final class StudyPlanTaskApiController extends Controller
         private readonly ListTodayTasksAction $todayTasks,
         private readonly StartPlanTaskAction $startTask,
         private readonly SkipPlanTaskAction $skipTask,
-        private readonly RescheduleTaskAction $rescheduleTask,
     ) {}
 
     /** Tasks for one day; defaults to today's list including missed work. */
@@ -49,7 +46,7 @@ final class StudyPlanTaskApiController extends Controller
 
     public function start(StudyPlan $plan, StudyPlanTask $task): JsonResponse
     {
-        $this->authorize('update', $plan);
+        $this->authorize('view', $plan);
 
         if (! $task->type->isSupported()) {
             return ApiResponse::error('task_type_unavailable', 'Loại nhiệm vụ này chưa khả dụng.', 422);
@@ -70,21 +67,9 @@ final class StudyPlanTaskApiController extends Controller
 
     public function skip(StudyPlan $plan, StudyPlanTask $task): JsonResponse
     {
-        $this->authorize('update', $plan);
+        $this->authorize('view', $plan);
 
         return ApiResponse::item(new StudyPlanTaskResource($this->skipTask->handle($task)));
     }
 
-    public function reschedule(Request $request, StudyPlan $plan, StudyPlanTask $task): JsonResponse
-    {
-        $this->authorize('update', $plan);
-
-        $validated = $request->validate([
-            'date' => ['required', 'date', 'after_or_equal:today', 'before_or_equal:'.$plan->exam_target_date->toDateString()],
-        ]);
-
-        return ApiResponse::item(
-            new StudyPlanTaskResource($this->rescheduleTask->handle($task, Carbon::parse($validated['date']))),
-        );
-    }
 }

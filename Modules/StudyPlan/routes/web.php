@@ -30,7 +30,6 @@ Route::middleware(['auth', 'learner'])
 
         Route::post('/{plan}/tasks/{task}/start', [StudyPlanTaskController::class, 'start'])->middleware('permission:study_plan_task.start')->name('tasks.start');
         Route::post('/{plan}/tasks/{task}/skip', [StudyPlanTaskController::class, 'skip'])->middleware('permission:study_plan_task.skip')->name('tasks.skip');
-        Route::post('/{plan}/tasks/{task}/reschedule', [StudyPlanTaskController::class, 'reschedule'])->middleware('permission:study_plan.update')->name('tasks.reschedule');
 
         Route::get('/{plan}/tasks/{task}/session', [StudyPlanSessionController::class, 'show'])->middleware('permission:study_plan_task.start')->name('session');
         Route::post('/{plan}/tasks/{task}/session', [StudyPlanSessionController::class, 'answer'])->middleware('permission:session.start')->name('session.answer');

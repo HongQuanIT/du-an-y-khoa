@@ -81,10 +81,10 @@ session.start, session.submit, session.review
 library.view, library.edit, library.publish
 user.view, user.manage, user.impersonate
 role.manage, permission.manage
-audit.view, report.view, report.export, cms.manage, media.view, media.manage, contact.view, contact.manage, feature_flag.manage
-notification.broadcast, support.manage, system.manage
+audit.view, report.view, report.export, cms.manage, media.view, media.manage, contact.view, contact.manage
+notification_broadcast.view, notification_broadcast.send, system.manage
 classroom.create, classroom.create_on_behalf, classroom.manage, classroom.join, classroom.moderate, classroom.oversee
-live.start, live.join, live.force_end, instructor.assign
+live.start, live.join
 # 🔵 Phase 2 (Organization, chưa dùng): org.manage_members, org.manage_billing, org.view_reports
 ai.use, analytics.advanced, exam.take, exam.manage
 ```
@@ -97,7 +97,7 @@ Catalog `/admin/permissions` và ma trận role nhóm theo **4 portal** (không 
 |--------|-------|------------------|
 | Học viên | `student` | `session.*`, `exam.take`, `classroom.join`, `live.join`, `question.view`, `library.view`, … |
 | Giảng viên | `instructor` | `classroom.create/manage/moderate`, `live.start`, `question.review` (hàng đợi `/teach/questions/reviews`), … |
-| Admin | `content_editor`, `admin`, `super_admin` | CMS, user/RBAC, oversight, billing, `admin.partners.*`, `notification.broadcast`, `support.manage`, … — **`question.publish` / `question.retire`: `admin` + `super_admin`**; **`question.submit` chỉ `content_editor`** |
+| Admin | `content_editor`, `admin`, `super_admin` | CMS, user/RBAC, oversight, billing, `admin.partners.*`, `notification_broadcast.send`, … — **`question.publish` / `question.retire`: `admin` + `super_admin`**; **`question.submit` chỉ `content_editor`** |
 | Cộng tác viên | `partner` | `partner.portal`, `partner.codes.manage`, `partner.referrals.view`, `partner.commissions.view` |
 
 - Mỗi permission có **một portal chính** (catalog). Ability dùng chung vẫn hiện badge “cũng dùng bởi …” theo ma trận role.
@@ -105,10 +105,10 @@ Catalog `/admin/permissions` và ma trận role nhóm theo **4 portal** (không 
 
 | Permission Classroom | Ai có | Ý nghĩa |
 |----------------------|-------|---------|
-| `classroom.create` / `classroom.manage` / `live.*` (lớp mình) | **Instructor** (tạo trên `/teach`; lớp mới `pending_approval`) | Vận hành lớp mình host/cohost sau admin duyệt |
+| `classroom.create` / `classroom.manage` (lớp mình) | **Instructor** (tạo trên `/teach`; lớp mới `pending_approval`) | Vận hành lớp mình host/cohost sau admin duyệt |
 | `classroom.create_on_behalf` | Admin, Super Admin | Tạo lớp trên `/admin/classrooms/create`; **host_user_id** bắt buộc thuộc role `instructor` |
-| `classroom.oversee` / `live.force_end` | Admin, Super Admin | Giám sát, **duyệt/từ chối** lớp, force-end — **không** thay workspace `/teach` |
-| `instructor.assign` | Super Admin (Admin hạn chế) | Gán/thu hồi role `instructor` |
+| `classroom_oversight.view_any` | Admin, Super Admin | Giám sát và force-end lớp — **không** thay workspace `/teach` |
+| `user.role_assign` | Super Admin (Admin hạn chế) | Gán/thu hồi role hệ thống, gồm `instructor` |
 
 ## 5. Subscription entitlements
 

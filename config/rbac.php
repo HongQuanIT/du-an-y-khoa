@@ -75,8 +75,8 @@ return [
             'system' => [
                 'system_setting' => ['view', 'update', 'maintenance_toggle'],
                 'notification_broadcast' => ['view', 'send'],
-                'support_conversation' => ['view', 'assign', 'update', 'reply', 'resolve'],
-                'notification' => ['view', 'update', 'delete'],
+                'support_conversation' => ['view', 'assign', 'reply', 'resolve'],
+                'notification' => ['delete'],
             ],
         ],
 
@@ -90,12 +90,7 @@ return [
             'classroom' => [
                 'classroom' => ['view', 'create', 'close', 'reopen', 'delete'],
                 'classroom_settings' => ['update'],
-                'classroom_member' => ['view', 'remove', 'invite', 'ban'],
                 'classroom_session' => ['schedule', 'start', 'end'],
-                'live_message' => ['create', 'manage'],
-                'live_question' => ['view', 'update'],
-                'live_hand' => ['raise', 'manage'],
-                'live_chat' => ['mute'],
             ],
             'notification' => [
                 'teach_notification' => ['view', 'update'],
@@ -114,17 +109,16 @@ return [
                 'session' => ['create', 'start', 'submit', 'review', 'repeat', 'delete'],
             ],
             'study_plan' => [
-                'study_plan' => ['view_any', 'view', 'create', 'update', 'delete', 'replan'],
+                'study_plan' => ['view_any', 'view', 'create'],
                 'study_plan_task' => ['start', 'complete', 'skip', 'review'],
             ],
             'learning' => [
                 'search' => ['use'],
                 'bookmark' => ['view', 'create', 'update', 'delete'],
+                'learning_tool' => ['note', 'flag', 'highlight', 'research'],
             ],
             'classroom' => [
                 'classroom' => ['view', 'join', 'leave'],
-                'live_message' => ['create'],
-                'live_hand' => ['raise'],
             ],
             'exam' => [
                 'exam' => ['view', 'overview', 'review', 'take'],

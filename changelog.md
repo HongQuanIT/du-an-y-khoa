@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-09-16
+
+### Chore — RBAC: xoá quyền cờ tính năng cũ
+
+- Gỡ `feature_flag.manage` khỏi registry và giao diện phân quyền Admin.
+- Migration dọn permission cùng các gán quyền legacy còn lưu trong database.
+- Gỡ `support_conversation.update` và `support.manage`; đánh dấu đã xem dùng quyền xem hội thoại.
+- Gỡ `notification.broadcast` và `notification.update`; gửi hệ thống dùng `notification_broadcast.*`.
+- Gỡ `instructor.assign` và `live.force_end`; dùng quyền role/classroom oversight hiện hành.
+- Gỡ `study_plan.update`, `study_plan.delete`, `study_plan.replan` cùng toàn bộ API/UI/job sửa, xoá, dời lịch và lập lại kế hoạch học.
+- Gỡ `live_hand.raise` và `live_message.create` khỏi RBAC; giơ tay/gửi tin trong phòng Live dựa trên quyền xem lớp và tư cách thành viên.
+- Gỡ các quyền Live chi tiết của Giảng viên; Studio/điều phối phòng Live dùng `classroom_session.start` kết hợp policy host/cohost.
+- Gỡ toàn bộ `classroom_member.*`; quản lý thành viên lớp dùng `classroom_settings.update` và quyền xem lớp.
+- Gỡ `notification.view`; hộp thư thông báo cá nhân chỉ cần xác thực tài khoản.
+
 ## 2026-09-15
 
 ### Feat — RBAC: phân quyền chi tiết theo portal và chức năng

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Modules\Notification\Tests\Feature;
 
 use App\Models\User;
-use App\Support\Enums\Permission;
 use App\Support\Enums\Role;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -91,8 +90,6 @@ final class NotificationCenterTest extends TestCase
 
         $admin = User::factory()->create();
         $admin->assignRole(Role::Admin->value);
-        $admin->givePermissionTo(Permission::NotificationBroadcast->value);
-
         $learner = User::factory()->create();
         $learner->assignRole(Role::Student->value);
 

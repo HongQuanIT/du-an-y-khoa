@@ -32,12 +32,38 @@ final class RbacFoundationTest extends TestCase
     {
         $names = app(PermissionRegistry::class)->names();
 
-        $this->assertGreaterThanOrEqual(200, count($names));
+        $this->assertGreaterThanOrEqual(170, count($names));
         $this->assertLessThanOrEqual(300, count($names));
         $this->assertCount(count(array_unique($names)), $names);
         $this->assertContains('user.role_assign', $names);
         $this->assertContains('classroom_session.start', $names);
         $this->assertContains('partner_payout.mark_paid', $names);
+        $this->assertContains('learning_tool.note', $names);
+        $this->assertContains('learning_tool.flag', $names);
+        $this->assertContains('learning_tool.highlight', $names);
+        $this->assertContains('learning_tool.research', $names);
+        $this->assertNotContains('feature_flag.manage', $names);
+        $this->assertNotContains('support_conversation.update', $names);
+        $this->assertNotContains('support.manage', $names);
+        $this->assertNotContains('notification.broadcast', $names);
+        $this->assertNotContains('notification.update', $names);
+        $this->assertNotContains('notification.view', $names);
+        $this->assertNotContains('instructor.assign', $names);
+        $this->assertNotContains('live.force_end', $names);
+        $this->assertNotContains('live_hand.raise', $names);
+        $this->assertNotContains('live_message.create', $names);
+        $this->assertNotContains('live_message.manage', $names);
+        $this->assertNotContains('live_hand.manage', $names);
+        $this->assertNotContains('live_question.view', $names);
+        $this->assertNotContains('live_question.update', $names);
+        $this->assertNotContains('live_chat.mute', $names);
+        $this->assertNotContains('classroom_member.view', $names);
+        $this->assertNotContains('classroom_member.invite', $names);
+        $this->assertNotContains('classroom_member.remove', $names);
+        $this->assertNotContains('classroom_member.ban', $names);
+        $this->assertNotContains('study_plan.delete', $names);
+        $this->assertNotContains('study_plan.replan', $names);
+        $this->assertNotContains('study_plan.update', $names);
     }
 
     public function test_permission_sync_is_additive_and_restores_missing_catalog_entries(): void

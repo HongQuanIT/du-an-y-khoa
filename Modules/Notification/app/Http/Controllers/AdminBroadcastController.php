@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Modules\Notification\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Support\Enums\Permission;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -15,7 +14,7 @@ final class AdminBroadcastController extends Controller
 {
     public function create(Request $request): View
     {
-        abort_unless($request->user()?->can(Permission::NotificationBroadcast->value), 403);
+        abort_unless($request->user()?->can('notification_broadcast.view'), 403);
 
         return view('notification::admin.broadcast', [
             'title' => 'Gửi thông báo hệ thống',
@@ -24,7 +23,7 @@ final class AdminBroadcastController extends Controller
 
     public function store(Request $request, BroadcastSystemNotificationAction $action): RedirectResponse
     {
-        abort_unless($request->user()?->can(Permission::NotificationBroadcast->value), 403);
+        abort_unless($request->user()?->can('notification_broadcast.send'), 403);
 
         $data = $request->validate([
             'title' => ['required', 'string', 'max:160'],

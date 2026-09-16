@@ -53,7 +53,7 @@ final class ClassroomPolicy
 
     public function update(User $user, Classroom $classroom): bool
     {
-        if ($user->can(Permission::ClassroomOversee->value)) {
+        if ($user->can('classroom_oversight.view_any')) {
             return true;
         }
 
@@ -82,7 +82,7 @@ final class ClassroomPolicy
         }
 
         return $user->can(Permission::ClassroomJoin->value)
-            || $user->can(Permission::ClassroomOversee->value);
+            || $user->can('classroom_oversight.view_any');
     }
 
     public function manageLive(User $user, Classroom $classroom): bool

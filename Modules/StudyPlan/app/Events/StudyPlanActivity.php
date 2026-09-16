@@ -58,25 +58,4 @@ final class StudyPlanActivity
         ]);
     }
 
-    public static function rescheduled(StudyPlanTask $task, string $from, string $to): self
-    {
-        return new self('study_plan_reschedule', $task->plan, [
-            'task_id' => $task->getKey(),
-            'from' => $from,
-            'to' => $to,
-        ]);
-    }
-
-    public static function replanned(StudyPlan $plan, int $movedTasks): self
-    {
-        return new self('study_plan_replan', $plan, [
-            'auto' => true,
-            'moved_tasks' => $movedTasks,
-        ]);
-    }
-
-    public static function deleted(StudyPlan $plan): self
-    {
-        return new self('study_plan_delete', $plan);
-    }
 }

@@ -39,16 +39,11 @@ enum Permission: string
     case MediaView = 'media.view';
 
     case SystemManage = 'system.manage';
-    case FeatureFlagManage = 'feature_flag.manage';
-    case NotificationBroadcast = 'notification.broadcast';
-    case SupportManage = 'support.manage';
 
     // Classroom / live review (Module 44)
     case ClassroomCreate = 'classroom.create';
     case ClassroomManage = 'classroom.manage';
     case ClassroomJoin = 'classroom.join';
-    case LiveForceEnd = 'live.force_end';
-    case InstructorAssign = 'instructor.assign';
 
     // Feature-gated capabilities
     case ExamTake = 'exam.take';

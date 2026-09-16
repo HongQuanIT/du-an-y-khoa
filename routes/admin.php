@@ -144,7 +144,7 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
             ->middleware('permission:support_conversation.assign')
             ->name('support.claim');
         Route::post('/support/{conversation}/seen', [SupportConversationController::class, 'seen'])
-            ->middleware('permission:support_conversation.update')
+            ->middleware('permission:support_conversation.view')
             ->name('support.seen');
         Route::post('/support/{conversation}/messages', [SupportConversationController::class, 'message'])
             ->middleware('permission:support_conversation.reply')
@@ -174,7 +174,7 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
             ->name('contacts.claim');
 
         Route::get('/notifications', [NotificationController::class, 'index'])
-            ->middleware('permission:notification.view')
+            ->middleware('permission:notification_broadcast.view')
             ->name('notifications.index');
 
         Route::get('/audit', [AuditLogController::class, 'index'])
