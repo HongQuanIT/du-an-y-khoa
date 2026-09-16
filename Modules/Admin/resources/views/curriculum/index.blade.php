@@ -29,8 +29,7 @@
     <div>
         <div class="mb-5 inline-flex rounded-xl border border-outline-variant bg-surface p-1">
             @foreach ($tabs as $tab)
-                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.curriculum.index'))
-<a href="{{ route('admin.curriculum.index', ['tab' => $tab['key']]) }}"
+                <a href="{{ route('admin.curriculum.index', ['tab' => $tab['key']]) }}"
                     class="inline-flex items-center gap-2 rounded-lg px-3 py-2 font-label-sm transition-colors {{ $activeTab === $tab['key']
                         ? 'bg-primary-container text-on-primary-container font-semibold'
                         : 'text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface' }}">
@@ -38,7 +37,6 @@
                     {{ $tab['label'] }}
                     <span class="rounded-md bg-surface-container px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-on-surface-variant">{{ number_format($tab['count']) }}</span>
                 </a>
-@endif
             @endforeach
         </div>
 
@@ -79,6 +77,14 @@
                 confirming: null,
                 subjects: config.subjects || [],
                 organSystems: config.organSystems || [],
+                lessons: config.lessons || [],
+                manageLessons: Boolean(config.manageLessons),
+                canCreateLesson: Boolean(config.canCreateLesson),
+                subjectLessonQuery: '',
+                subjectLessonOpen: false,
+                subjectLessonBusy: false,
+                subjectLessonError: '',
+                openCreatePanel: Boolean(config.openCreatePanel),
                 subjectQuery: '',
                 organSystemQuery: '',
                 subjectOpen: false,
@@ -87,7 +93,7 @@
                 filterOrganSystemQuery: '',
                 filterSubjectOpen: false,
                 filterOrganSystemOpen: false,
-                form: { name: '', slug: '', description: '', status: 'active', subject_ids: [], organ_system_ids: [] },
+                form: { name: '', slug: '', description: '', status: 'active', subject_ids: [], organ_system_ids: [], lessons: [] },
                 fieldErrors: { name: config.fieldErrors?.name || '', slug: config.fieldErrors?.slug || '' },
                 get formAction() {
                     return this.panel === 'edit' && this.form.update_url
@@ -313,27 +319,149 @@
                     this.organSystemQuery = '';
                     this.subjectOpen = false;
                     this.organSystemOpen = false;
+                    this.subjectLessonQuery = '';
+                    this.subjectLessonOpen = false;
+                    this.subjectLessonError = '';
                 },
                 blankForm() {
-                    return { name: '', slug: '', description: '', status: 'active', subject_ids: [], organ_system_ids: [] };
+                    return {
+                        name: '',
+                        slug: '',
+                        description: '',
+                        status: 'active',
+                        subject_ids: [],
+                        organ_system_ids: [],
+                        lessons: [],
+                        attach_lessons_url: '',
+                        create_lesson_url: '',
+                    };
                 },
                 clearFieldErrors() {
                     this.fieldErrors = { name: '', slug: '' };
+                },
+                csrfToken() {
+                    return document.querySelector('meta[name="csrf-token"]')?.content || '';
+                },
+                get subjectLessonSuggestions() {
+                    const q = this.subjectLessonQuery.trim().toLowerCase();
+                    const linked = (this.form.lessons || []).map((lesson) => Number(lesson.id));
+
+                    return (this.lessons || [])
+                        .filter((lesson) => ! linked.includes(Number(lesson.id)))
+                        .filter((lesson) => {
+                            if (q === '') {
+                                return true;
+                            }
+
+                            return [lesson.name, lesson.slug]
+                                .filter(Boolean)
+                                .some((value) => String(value).toLowerCase().includes(q));
+                        })
+                        .slice()
+                        .sort((a, b) => String(a.name).localeCompare(String(b.name), 'vi', { sensitivity: 'base' }))
+                        .slice(0, 10);
+                },
+                attachFirstSubjectLessonSuggestion() {
+                    const first = this.subjectLessonSuggestions[0];
+                    if (first) {
+                        this.attachSubjectLesson(first);
+                    }
+                },
+                applySubjectLessonsPayload(json) {
+                    const lessons = json.lessons || [];
+                    this.form.lessons = lessons;
+                    const count = Number(json.lessons_count ?? lessons.length);
+                    this.form.lessons_count = count;
+                    const item = this.items.find((row) => Number(row.id) === Number(this.form.id));
+                    if (item) {
+                        item.lessons = lessons;
+                        item.lessons_count = count;
+                    }
+                },
+                async attachSubjectLesson(lesson) {
+                    if (! this.canUpdate || ! this.form.attach_lessons_url || this.subjectLessonBusy) {
+                        return;
+                    }
+                    this.subjectLessonBusy = true;
+                    this.subjectLessonError = '';
+                    try {
+                        const response = await fetch(this.form.attach_lessons_url, {
+                            method: 'POST',
+                            headers: {
+                                Accept: 'application/json',
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': this.csrfToken(),
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                            credentials: 'same-origin',
+                            body: JSON.stringify({ lesson_id: Number(lesson.id) }),
+                        });
+                        const json = await response.json().catch(() => ({}));
+                        if (! response.ok) {
+                            this.subjectLessonError = json.message || 'Không gắn được bài học.';
+                            return;
+                        }
+                        this.applySubjectLessonsPayload(json);
+                        this.subjectLessonQuery = '';
+                        this.subjectLessonOpen = false;
+                    } catch (error) {
+                        console.error(error);
+                        this.subjectLessonError = 'Không gắn được bài học.';
+                    } finally {
+                        this.subjectLessonBusy = false;
+                    }
+                },
+                async detachSubjectLesson(lesson) {
+                    if (! this.canUpdate || ! lesson?.detach_url || this.subjectLessonBusy) {
+                        return;
+                    }
+                    this.subjectLessonBusy = true;
+                    this.subjectLessonError = '';
+                    try {
+                        const response = await fetch(lesson.detach_url, {
+                            method: 'DELETE',
+                            headers: {
+                                Accept: 'application/json',
+                                'X-CSRF-TOKEN': this.csrfToken(),
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                            credentials: 'same-origin',
+                        });
+                        const json = await response.json().catch(() => ({}));
+                        if (! response.ok) {
+                            this.subjectLessonError = json.message || 'Không gỡ được bài học.';
+                            return;
+                        }
+                        this.applySubjectLessonsPayload(json);
+                    } catch (error) {
+                        console.error(error);
+                        this.subjectLessonError = 'Không gỡ được bài học.';
+                    } finally {
+                        this.subjectLessonBusy = false;
+                    }
                 },
                 openCreate() {
                     this.resetLinkPickers();
                     this.clearFieldErrors();
                     this.form = this.blankForm();
+                    if (this.filterSubjectIds?.length) {
+                        this.form.subject_ids = [...this.filterSubjectIds];
+                    }
+                    if (this.filterOrganSystemIds?.length) {
+                        this.form.organ_system_ids = [...this.filterOrganSystemIds];
+                    }
                     this.panel = 'create';
                 },
                 openEdit(item) {
                     this.resetLinkPickers();
                     this.clearFieldErrors();
                     this.form = {
+                        ...this.blankForm(),
                         ...item,
                         description: item.description || '',
                         subject_ids: [...(item.subject_ids || [])],
                         organ_system_ids: [...(item.organ_system_ids || [])],
+                        lessons: [...(item.lessons || [])],
                     };
                     this.panel = 'edit';
                 },
@@ -350,6 +478,8 @@
                     if (config.reopenPanel) {
                         this.form = { ...this.blankForm(), ...(config.oldForm || {}) };
                         this.panel = config.reopenPanel;
+                    } else if (this.openCreatePanel) {
+                        this.openCreate();
                     }
                     if (! this.focusId) {
                         return;

@@ -42,7 +42,9 @@ final class TeachQuestionReviewTest extends TestCase
     public function test_instructor_can_list_questions_awaiting_review(): void
     {
         $instructor = $this->instructor();
-        $pending = $this->makeInReviewQuestion();
+        $pending = $this->makeInReviewQuestion($instructor);
+        $other = $this->makeInReviewQuestion();
+        $other->forceFill(['stem' => 'Câu gán giảng viên khác không hiện trong hàng đợi của tôi'])->save();
         $draft = $this->makeDraftQuestion();
 
         $this->actingAs($instructor)
@@ -53,22 +55,27 @@ final class TeachQuestionReviewTest extends TestCase
             ->assertSee('Đã duyệt')
             ->assertSee('Đã từ chối')
             ->assertSee(strip_tags((string) $pending->stem))
+            ->assertDontSee(strip_tags((string) $other->stem))
             ->assertDontSee(strip_tags((string) $draft->stem));
     }
 
     public function test_instructor_can_view_approved_and_rejected_tabs(): void
     {
         $instructor = $this->instructor();
-        $approved = $this->makeInReviewQuestion();
+        $approved = $this->makeInReviewQuestion($instructor);
         $approved->forceFill([
             'status' => QuestionStatus::PendingPublish,
             'instructor_id' => $instructor->id,
+            'assigned_instructor_id' => $instructor->id,
+            'instructor_decision' => 'approved',
         ])->save();
 
-        $rejected = $this->makeInReviewQuestion();
+        $rejected = $this->makeInReviewQuestion($instructor);
         $rejected->forceFill([
             'status' => QuestionStatus::Rejected,
             'instructor_id' => $instructor->id,
+            'assigned_instructor_id' => $instructor->id,
+            'instructor_decision' => 'rejected',
             'rejected_by_role' => Role::Instructor->value,
             'rejection_reason' => 'Cần sửa stem',
             'stem' => 'Câu đã từ chối riêng biệt để assert',
@@ -89,7 +96,7 @@ final class TeachQuestionReviewTest extends TestCase
     public function test_instructor_can_approve_without_bumping_version(): void
     {
         $instructor = $this->instructor();
-        $question = $this->makeInReviewQuestion();
+        $question = $this->makeInReviewQuestion($instructor);
         $versionBefore = (int) $question->version;
 
         $this->actingAs($instructor)
@@ -100,11 +107,10 @@ final class TeachQuestionReviewTest extends TestCase
 
         $question->refresh();
 
-        $this->assertSame(QuestionStatus::InReview, $question->status);
+        $this->assertSame(QuestionStatus::InFlagReview, $question->status);
         $this->assertSame($versionBefore, (int) $question->version);
         $this->assertSame($instructor->id, (int) $question->instructor_id);
-        $this->assertSame('approved', $question->instructor_1_decision);
-        $this->assertNull($question->instructor_2_decision);
+        $this->assertSame('approved', $question->instructor_decision);
         $this->assertNull($question->rejection_reason);
         $this->assertDatabaseHas('question_instructor_reviews', [
             'question_id' => $question->id,
@@ -113,34 +119,17 @@ final class TeachQuestionReviewTest extends TestCase
         ]);
         $this->assertDatabaseHas('question_review_requests', [
             'question_id' => $question->id,
-            'status' => QuestionReviewStatus::Pending->value,
+            'status' => QuestionReviewStatus::Approved->value,
         ]);
         $this->assertDatabaseHas('audit_logs', [
             'action' => 'teach.question.instructor_approved',
-        ]);
-
-        $second = $this->instructor();
-        $this->actingAs($second)
-            ->post(route('teach.questions.reviews.approve', $question), [
-                'review_note' => 'Đồng ý.',
-            ])
-            ->assertRedirect(route('teach.questions.reviews.index', ['tab' => 'approved']));
-
-        $question->refresh();
-        $this->assertSame(QuestionStatus::PendingPublish, $question->status);
-        $this->assertSame($versionBefore, (int) $question->version);
-        $this->assertSame('approved', $question->instructor_2_decision);
-        $this->assertDatabaseHas('question_review_requests', [
-            'question_id' => $question->id,
-            'status' => QuestionReviewStatus::Approved->value,
-            'reviewed_by' => $second->id,
         ]);
     }
 
     public function test_instructor_can_reject_with_reason(): void
     {
         $instructor = $this->instructor();
-        $question = $this->makeInReviewQuestion();
+        $question = $this->makeInReviewQuestion($instructor);
         $versionBefore = (int) $question->version;
 
         $this->actingAs($instructor)
@@ -156,8 +145,7 @@ final class TeachQuestionReviewTest extends TestCase
         $this->assertSame('Thiếu giải thích đáp án nhiễu.', $question->rejection_reason);
         $this->assertSame(Role::Instructor->value, $question->rejected_by_role);
         $this->assertSame($instructor->id, (int) $question->instructor_id);
-        $this->assertSame('rejected', $question->instructor_1_decision);
-        $this->assertNull($question->instructor_2_id);
+        $this->assertSame('rejected', $question->instructor_decision);
         $this->assertDatabaseHas('question_review_requests', [
             'question_id' => $question->id,
             'status' => QuestionReviewStatus::Rejected->value,
@@ -172,7 +160,7 @@ final class TeachQuestionReviewTest extends TestCase
     public function test_reject_requires_reason(): void
     {
         $instructor = $this->instructor();
-        $question = $this->makeInReviewQuestion();
+        $question = $this->makeInReviewQuestion($instructor);
 
         $this->actingAs($instructor)
             ->from(route('teach.questions.reviews.show', $question))
@@ -188,7 +176,7 @@ final class TeachQuestionReviewTest extends TestCase
     public function test_review_detail_compares_working_copy_with_published_snapshot(): void
     {
         $instructor = $this->instructor();
-        $question = $this->makePublishedThenInReviewQuestion();
+        $question = $this->makePublishedThenInReviewQuestion($instructor);
 
         $this->actingAs($instructor)
             ->get(route('teach.questions.reviews.show', $question))
@@ -202,21 +190,52 @@ final class TeachQuestionReviewTest extends TestCase
             ->assertSee('>3<', false)
             ->assertSee('>5<', false)
             ->assertSee('Xóa', false)
+            ->assertSee('Sửa', false)
             ->assertSee('Thêm', false)
-            ->assertDontSee('Câu mới — chưa có bản xuất bản', false);
+            ->assertDontSee('Chưa có phiên bản đang xuất bản để so sánh', false);
     }
 
-    public function test_new_question_review_shows_single_pane_without_published_compare(): void
+    public function test_new_question_review_shows_empty_published_pane(): void
     {
         $instructor = $this->instructor();
-        $question = $this->makeInReviewQuestion();
+        $question = $this->makeInReviewQuestion($instructor);
 
         $this->actingAs($instructor)
             ->get(route('teach.questions.reviews.show', $question))
             ->assertOk()
-            ->assertSee('Câu mới — chưa có bản xuất bản', false)
+            ->assertSee('So sánh với bản đang xuất bản', false)
+            ->assertSee('Bản đang xuất bản', false)
+            ->assertSee('Bản cần duyệt', false)
+            ->assertSee('Chưa có phiên bản đang xuất bản để so sánh', false)
             ->assertSee(strip_tags((string) $question->stem), false)
-            ->assertDontSee('So sánh với bản đang xuất bản', false);
+            ->assertDontSee('Giải thích chung', false)
+            ->assertDontSee('Chưa nhập.', false)
+            ->assertSee('Ý chính cần ghi nhớ', false)
+            ->assertSee('Kiến thức / Gợi ý', false);
+    }
+
+    public function test_review_detail_preserves_stem_html_and_hides_empty_key_info(): void
+    {
+        $instructor = $this->instructor();
+        $question = $this->makeInReviewQuestion($instructor);
+        $question->forceFill([
+            'stem' => '<p>Bệnh nhân <strong>sốt cao</strong>.</p><ul><li>Troponin tăng</li></ul>',
+            'attending_tip' => '<p>Nhớ <em>cấy máu</em> trước kháng sinh.</p>',
+            'key_info' => ['Đau ngực kiểu mạch vành'],
+        ])->save();
+
+        $this->actingAs($instructor)
+            ->get(route('teach.questions.reviews.show', $question->fresh()))
+            ->assertOk()
+            ->assertSee('Câu hỏi', false)
+            ->assertDontSee('>Đề bài<', false)
+            ->assertSee('<strong>sốt cao</strong>', false)
+            ->assertSee('<li>Troponin tăng</li>', false)
+            ->assertSee('<em>cấy máu</em>', false)
+            ->assertSee('Đau ngực kiểu mạch vành', false)
+            ->assertSee('Ý chính cần ghi nhớ', false)
+            ->assertSee('Kiến thức / Gợi ý', false)
+            ->assertDontSee('Giải thích chung', false);
     }
 
     public function test_student_cannot_access_review_queue(): void
@@ -250,7 +269,7 @@ final class TeachQuestionReviewTest extends TestCase
         return $question;
     }
 
-    private function makeInReviewQuestion(): Question
+    private function makeInReviewQuestion(?User $assigned = null): Question
     {
         $creator = User::factory()->create();
         $creator->assignRole(Role::ContentEditor->value);
@@ -261,6 +280,7 @@ final class TeachQuestionReviewTest extends TestCase
             'difficulty' => Difficulty::Medium,
             'status' => QuestionStatus::InReview,
             'created_by' => $creator->id,
+            'assigned_instructor_id' => $assigned?->id,
             'version' => 0,
         ]);
         $question->lessons()->sync([$this->topic->id]);
@@ -285,7 +305,7 @@ final class TeachQuestionReviewTest extends TestCase
         return $question->fresh(['options', 'lessons']);
     }
 
-    private function makePublishedThenInReviewQuestion(): Question
+    private function makePublishedThenInReviewQuestion(?User $assigned = null): Question
     {
         $creator = User::factory()->create();
         $creator->assignRole(Role::ContentEditor->value);
@@ -318,6 +338,7 @@ final class TeachQuestionReviewTest extends TestCase
             'stem' => 'Bệnh nhân sốt nhẹ 5 ngày. Chẩn đoán phù hợp?',
             'explanation' => 'Giải thích bản gửi duyệt.',
             'status' => QuestionStatus::InReview,
+            'assigned_instructor_id' => $assigned?->id,
         ])->save();
 
         QuestionReviewRequest::query()->create([

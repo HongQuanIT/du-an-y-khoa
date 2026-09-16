@@ -115,6 +115,9 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
             Route::patch('/users/{user}/status', [UserController::class, 'updateStatus'])->middleware('permission:user.status_update')->name('users.status');
             Route::post('/users/{user}/reset-password', [UserController::class, 'resetPassword'])->middleware('permission:user.password_reset')->name('users.reset-password');
             Route::post('/users/{user}/reset-2fa', [UserController::class, 'resetTwoFactor'])->middleware('permission:user.two_factor_manage')->name('users.reset-2fa');
+            Route::patch('/users/{user}/subjects', [UserController::class, 'updateInstructorSubjects'])
+                ->middleware('permission:user.role_assign|user.status_update')
+                ->name('users.subjects');
         });
 
         Route::group([], function (): void {
@@ -280,6 +283,8 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
         Route::middleware('permission:'.QuestionAccess::workspacePermissionMiddleware())->group(function (): void {
             Route::get('/questions/{question}', [QuestionController::class, 'edit']);
             Route::get('/questions/{question}/edit', [QuestionController::class, 'edit'])->name('questions.edit');
+            Route::get('/questions/{question}/compare', [QuestionController::class, 'compare'])
+                ->name('questions.compare');
             Route::get('/questions/{question}/duplicates', [QuestionDuplicateController::class, 'show'])
                 ->name('questions.duplicates.show');
             Route::get('/questions/{question}/stats', [QuestionController::class, 'stats'])->name('questions.stats');
@@ -373,6 +378,8 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
             Route::put('/categories/organ-systems/{organSystem}', [CurriculumTaxonomyController::class, 'updateOrganSystem'])->name('curriculum.organ-systems.update');
             Route::put('/categories/subjects/{subject}', [CurriculumTaxonomyController::class, 'updateSubject'])->name('curriculum.subjects.update');
             Route::put('/categories/lessons/{lesson}', [CurriculumTaxonomyController::class, 'updateLesson'])->name('curriculum.lessons.update');
+            Route::post('/categories/subjects/{subject}/lessons', [CurriculumTaxonomyController::class, 'attachSubjectLessons'])->name('curriculum.subjects.lessons.attach');
+            Route::delete('/categories/subjects/{subject}/lessons/{lesson}', [CurriculumTaxonomyController::class, 'detachSubjectLesson'])->name('curriculum.subjects.lessons.detach');
             Route::post('/categories/lessons/{lesson}/subjects', [CurriculumTaxonomyController::class, 'attachLessonSubject'])->name('curriculum.lessons.subjects.attach');
             Route::delete('/categories/lessons/{lesson}/subjects/{subject}', [CurriculumTaxonomyController::class, 'detachLessonSubject'])->name('curriculum.lessons.subjects.detach');
             Route::post('/categories/lessons/{lesson}/organ-systems', [CurriculumTaxonomyController::class, 'attachLessonOrganSystem'])->name('curriculum.lessons.organ-systems.attach');
