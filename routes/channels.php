@@ -2,7 +2,6 @@
 
 use App\Models\SupportConversation;
 use App\Support\Auth\Staff;
-use App\Support\Enums\Permission;
 use Illuminate\Support\Facades\Broadcast;
 use Modules\Classroom\Models\Classroom;
 use Modules\Classroom\Models\LiveSession;
@@ -28,7 +27,7 @@ Broadcast::channel('support-conversation.{conversation}', function ($user, Suppo
 });
 
 Broadcast::channel('support-admin', function ($user) {
-    return Staff::isStaff($user) && $user->can(Permission::SupportManage->value);
+    return Staff::isStaff($user) && $user->can('support_conversation.view');
 });
 
 Broadcast::channel('classroom.{classroomUuid}', function ($user, string $classroomUuid) {

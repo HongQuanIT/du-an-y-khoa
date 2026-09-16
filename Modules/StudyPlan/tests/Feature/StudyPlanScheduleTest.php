@@ -19,7 +19,7 @@ use Tests\Support\CreatesMedicalTaxonomy;
 use Tests\TestCase;
 
 /**
- * Phase 2: moving, skipping and editing a plan after it has been generated.
+ * Phase 2: viewing and progressing through a generated plan.
  */
 final class StudyPlanScheduleTest extends TestCase
 {
@@ -50,31 +50,6 @@ final class StudyPlanScheduleTest extends TestCase
         foreach ($questions as $question) {
             $question->lessons()->sync([$this->topic->id]);
         }
-    }
-
-    public function test_a_task_can_be_moved_to_another_day(): void
-    {
-        $plan = $this->createPlan();
-        $task = $this->firstTask($plan);
-        $newDate = Carbon::today()->addDays(3);
-
-        $this->actingAs($this->user)
-            ->post(route('study-plan.tasks.reschedule', [$plan, $task]), ['date' => $newDate->toDateString()])
-            ->assertRedirect();
-
-        $this->assertTrue($task->refresh()->date->isSameDay($newDate));
-    }
-
-    public function test_a_task_cannot_be_moved_past_the_exam_date(): void
-    {
-        $plan = $this->createPlan();
-        $task = $this->firstTask($plan);
-
-        $this->actingAs($this->user)
-            ->post(route('study-plan.tasks.reschedule', [$plan, $task]), [
-                'date' => $plan->exam_target_date->copy()->addWeek()->toDateString(),
-            ])
-            ->assertSessionHasErrors('date');
     }
 
     public function test_overdue_tasks_are_marked_skipped_automatically(): void

@@ -190,7 +190,7 @@ final class AdminMenu
                 'label' => 'Thông báo',
                 'icon' => 'notifications',
                 'route' => 'admin.notifications.index',
-                'permission' => 'notification.view',
+                'permission' => 'notification_broadcast.view',
                 'match' => 'admin.notifications.*',
             ],
             [

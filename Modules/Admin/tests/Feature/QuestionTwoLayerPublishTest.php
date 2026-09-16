@@ -49,10 +49,10 @@ final class QuestionTwoLayerPublishTest extends TestCase
         $this->assertTrue($admin->can(Permission::QuestionPublish->value));
         $this->assertTrue($admin->can(Permission::QuestionRetire->value));
         $this->assertTrue($admin->can(Permission::QuestionDelete->value));
-        $this->assertTrue($admin->can(Permission::ClassroomCreateOnBehalf->value));
+        $this->assertTrue($admin->can('classroom_oversight.create_on_behalf'));
         $this->assertTrue($admin->can(Permission::ReportView->value));
-        $this->assertTrue($admin->can(Permission::SupportManage->value));
-        $this->assertTrue($admin->can(Permission::NotificationBroadcast->value));
+        $this->assertTrue($admin->can('support_conversation.view'));
+        $this->assertTrue($admin->can('notification_broadcast.send'));
         $this->assertFalse($admin->can(Permission::ClassroomCreate->value));
 
         $this->actingAsStaff($admin)

@@ -9,7 +9,6 @@ use Modules\StudyPlan\Models\StudyPlan;
 
 /**
  * Plans are private to their owner (srs/modules/04 §9, §13 — IDOR).
- * Deleting a plan is an admin-only operation.
  */
 final class StudyPlanPolicy
 {
@@ -17,16 +16,6 @@ final class StudyPlanPolicy
     {
         return ($user->can('study_plan.view') || $user->can('study_plan.view_any'))
             && $this->owns($user, $plan);
-    }
-
-    public function update(User $user, StudyPlan $plan): bool
-    {
-        return $user->can('study_plan.update') && $this->owns($user, $plan);
-    }
-
-    public function delete(User $user, StudyPlan $plan): bool
-    {
-        return $user->can('study_plan.delete') && $this->owns($user, $plan);
     }
 
     private function owns(User $user, StudyPlan $plan): bool

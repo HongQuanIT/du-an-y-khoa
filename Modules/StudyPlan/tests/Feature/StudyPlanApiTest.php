@@ -101,17 +101,6 @@ final class StudyPlanApiTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_a_learner_cannot_delete_their_plan_over_the_api(): void
-    {
-        $plan = $this->createPlan();
-
-        $this->actingAs($this->user, 'sanctum')
-            ->deleteJson(route('api.study-plan.plans.destroy', $plan))
-            ->assertForbidden();
-
-        $this->assertDatabaseHas('study_plans', ['id' => $plan->getKey()]);
-    }
-
     public function test_a_review_task_draws_from_previously_wrong_answers(): void
     {
         $this->seedQuestions(6);

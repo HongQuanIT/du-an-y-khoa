@@ -11,8 +11,7 @@
 @endphp
 
 <x-layouts.app title="Lịch trình học tập">
-    <div class="mx-auto w-full max-w-container-max flex-1 p-4 md:p-8"
-        x-data="{ rescheduleTaskId: null, rescheduleDate: '{{ now()->addDay()->toDateString() }}' }">
+    <div class="mx-auto w-full max-w-container-max flex-1 p-4 md:p-8">
         <!-- Header -->
         <div
             class="mb-8 flex flex-col justify-between gap-6 rounded-xl border border-outline-variant bg-white p-6 shadow-sm md:flex-row md:items-end">
@@ -204,30 +203,8 @@
                                                 </button>
                                             </form>
                                         @endif
-                                        <button type="button"
-                                            @click="rescheduleTaskId = {{ $task->id }}; rescheduleDate = '{{ max($task->date, now())->toDateString() }}'"
-                                            class="rounded-lg border border-outline-variant px-3 py-2 font-label-md text-label-md text-primary transition-colors hover:bg-surface-container-low">
-                                            Dời lịch
-                                        </button>
                                     @endif
                                 </div>
-
-                                <!-- Reschedule -->
-                                <form method="POST" action="{{ route('study-plan.tasks.reschedule', [$plan, $task]) }}"
-                                    x-show="rescheduleTaskId === {{ $task->id }}" x-cloak
-                                    class="mt-3 space-y-2 rounded-lg border border-outline-variant bg-surface-container-lowest p-3">
-                                    @csrf
-                                    <label class="block font-label-sm text-label-sm text-on-surface-variant">Chọn ngày mới</label>
-                                    <input type="date" name="date" x-model="rescheduleDate"
-                                        min="{{ now()->toDateString() }}" max="{{ $plan->exam_target_date->toDateString() }}"
-                                        class="h-10 w-full rounded-lg border border-outline-variant bg-surface px-3 font-body-sm text-body-sm">
-                                    <div class="flex justify-end gap-2">
-                                        <button type="button" @click="rescheduleTaskId = null"
-                                            class="rounded-lg px-3 py-1.5 font-label-sm text-on-surface-variant hover:bg-surface-container">Hủy</button>
-                                        <button type="submit"
-                                            class="rounded-lg bg-primary px-4 py-1.5 font-label-sm text-white hover:opacity-90">Dời</button>
-                                    </div>
-                                </form>
                             </div>
                         @empty
                             <p class="text-body-sm text-on-surface-variant">Không có nhiệm vụ nào trong ngày này.</p>

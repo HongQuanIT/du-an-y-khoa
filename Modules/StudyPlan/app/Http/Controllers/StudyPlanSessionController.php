@@ -104,7 +104,7 @@ final class StudyPlanSessionController extends Controller
 
     public function annotate(Request $request, StudyPlan $plan, StudyPlanTask $task): JsonResponse
     {
-        $this->authorize('update', $plan);
+        $this->authorize('view', $plan);
 
         $validated = $request->validate([
             'question_id' => ['required', 'string'],
@@ -115,6 +115,8 @@ final class StudyPlanSessionController extends Controller
             'key_info_used' => ['nullable', 'boolean'],
             'attending_tip_used' => ['nullable', 'boolean'],
         ]);
+
+        $this->authorizeAnnotationTools($request, $validated);
 
         $session = $this->sessionFor($plan, $task);
         abort_if($session === null, 404, 'Phiên làm bài không tồn tại.');
@@ -139,9 +141,25 @@ final class StudyPlanSessionController extends Controller
         return ApiResponse::item($annotation);
     }
 
+    /** @param array<string, mixed> $validated */
+    private function authorizeAnnotationTools(Request $request, array $validated): void
+    {
+        if (array_key_exists('note', $validated) || array_key_exists('note_html', $validated)) {
+            abort_unless($request->user()?->can('learning_tool.note'), 403);
+        }
+
+        if (array_key_exists('flagged', $validated)) {
+            abort_unless($request->user()?->can('learning_tool.flag'), 403);
+        }
+
+        if (array_key_exists('stem_html', $validated)) {
+            abort_unless($request->user()?->can('learning_tool.highlight'), 403);
+        }
+    }
+
     public function answer(Request $request, StudyPlan $plan, StudyPlanTask $task): RedirectResponse|JsonResponse
     {
-        $this->authorize('update', $plan);
+        $this->authorize('view', $plan);
 
         $validated = $request->validate([
             'question_id' => ['required', 'string'],

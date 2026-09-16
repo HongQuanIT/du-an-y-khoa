@@ -10,7 +10,6 @@ Lộ trình học cá nhân hóa theo ngày thi mục tiêu: chia khối lượn
 | `/study-plan` | Tổng quan kế hoạch |
 | `/study-plan/create` | Wizard tạo kế hoạch |
 | `/study-plan/{id}` | Chi tiết + lịch |
-| `/study-plan/{id}/edit` | Chỉnh sửa |
 
 ## 1. Tổng quan
 - **Mục đích:** Biến mục tiêu thi thành nhiệm vụ hằng ngày khả thi.
@@ -26,9 +25,7 @@ Lộ trình học cá nhân hóa theo ngày thi mục tiêu: chia khối lượn
 | **Today panel** | Task hôm nay + progress | Luôn | Full-width |
 | **Progress bar tổng** | % hoàn thành đến ngày thi | Luôn | — |
 | **Task list** | Danh sách nhiệm vụ (checkbox) | Luôn | List |
-| **Adaptive banner** | Thông báo điều chỉnh kế hoạch | Khi hệ thống re-plan | — |
 | **Empty state** | Chưa có plan → CTA tạo | Khi rỗng | — |
-| **Reschedule modal** | Dời task khi lỡ | Khi lỡ task | Bottom sheet mobile |
 | **Loading/Error** | Skeleton, retry | Theo trạng thái | — |
 
 ## 3. Phân tích Component
@@ -43,7 +40,7 @@ Lộ trình học cá nhân hóa theo ngày thi mục tiêu: chia khối lượn
 
 ### `PlanCalendar`
 - **Props:** `tasks[]`, `range`.
-- **Events:** `onTaskClick`, `onReschedule(dragDrop)`.
+- **Events:** `onTaskClick`.
 - **State:** selected date.
 - **Empty:** ngày trống → "Nghỉ / thêm task".
 
@@ -53,7 +50,7 @@ Lộ trình học cá nhân hóa theo ngày thi mục tiêu: chia khối lượn
 - **State:** progress.
 - **Business:** click → điều hướng đúng module theo `type`.
 
-### `AdaptiveNotice`, `RescheduleModal`, `PlanProgressRing`.
+### `PlanProgressRing`.
 
 ## 4. Luồng người dùng
 ```
@@ -61,16 +58,15 @@ Dashboard/Onboarding → /study-plan/create (wizard)
  → chọn kỳ thi, ngày thi, phạm vi, cường độ → generate
  → /study-plan/{id}: xem lịch + task hôm nay
  → bắt đầu task câu hỏi → Session → hoàn thành → task tự đánh dấu done
- → lỡ ngày → hệ thống re-balance khối lượng còn lại (adaptive)
 Ngoại lệ:
- - Ngày thi quá gần khối lượng lớn → cảnh báo "cường độ cao / dời ngày".
+ - Ngày thi quá gần khối lượng lớn → cảnh báo cường độ cao.
  - Hoàn thành sớm → gợi ý nâng mục tiêu hoặc ôn tập.
 ```
 
 ## 5. Business Logic
 - **Sinh kế hoạch:** `total_needed / days_until_exam` → daily goal; phân bổ theo trọng số Bài học/Môn học (ưu tiên Bài học yếu + high-yield).
-- **Adaptive re-plan:** hằng ngày (scheduler) tính lại: cộng dồn task lỡ, giảm/tăng theo tốc độ thực tế, ưu tiên Bài học đang yếu.
-- **Strategy:** `fixed` (chia đều) vs `adaptive` (điều chỉnh liên tục).
+- **Kế hoạch bất biến sau khi tạo:** học viên không thể sửa, xoá, dời task hoặc lập lại kế hoạch; tạo kế hoạch mới sẽ thay thế kế hoạch đang hoạt động.
+- **Strategy:** `fixed` (chia đều) hoặc `adaptive` (ưu tiên phân bổ theo nội dung yếu lúc tạo).
 - **Task types:** questions / read (article) / flashcards (due) / review (câu sai).
 - **Hoàn thành task** khi đạt target (vd làm đủ N câu Bài học X).
 - **Premium:** adaptive nâng cao + dự báo "đạt mục tiêu"; Free chỉ fixed cơ bản.
@@ -83,37 +79,36 @@ Ngoại lệ:
 ## 7. API
 | Method | URL | Payload | Response | Quyền |
 |--------|-----|---------|----------|-------|
-| POST | `/api/v1/study-plan` | `{exam, target_date, scope[], daily_goal, strategy}` | plan + tasks | Auth |
-| GET | `/api/v1/study-plan/{id}` | — | plan + calendar tasks | Owner |
-| GET | `/api/v1/study-plan/{id}/today` | — | task hôm nay | Owner |
-| PATCH | `/api/v1/study-plan/{id}` | fields | plan | Owner |
-| POST | `/api/v1/study-plan/{id}/tasks/{taskId}/complete` | — | task | Owner |
-| POST | `/api/v1/study-plan/{id}/reschedule` | `{taskId,date}` | task | Owner |
-| DELETE | `/api/v1/study-plan/{id}` | — | 204 | Owner |
+| GET | `/api/v1/study-plans` | — | danh sách kế hoạch | Owner |
+| POST | `/api/v1/study-plans` | `{exam, target_date, scope[], daily_goal, strategy}` | plan + tasks | Auth |
+| GET | `/api/v1/study-plans/{id}` | — | plan | Owner |
+| GET | `/api/v1/study-plans/{id}/tasks` | `date?` | task theo ngày | Owner |
+| POST | `/api/v1/study-plans/{id}/tasks/{taskId}/start` | — | task + session | Owner |
+| POST | `/api/v1/study-plans/{id}/tasks/{taskId}/skip` | — | task | Owner |
 
 Validation: ngày tương lai, scope hợp lệ, quyền owner.
 
 ## 8. State Management
-- **Server:** plan/tasks trong DB; re-plan qua scheduler job.
+- **Server:** plan/tasks trong DB; lịch được giữ nguyên sau khi tạo.
 - **Client:** wizard state, calendar view.
 - **Optimistic:** đánh dấu task done optimistic, rollback nếu lỗi.
-- **Caching:** "today" cache ngắn; invalidations khi complete task.
+- **Caching:** "today" cache ngắn; invalidations khi hoàn thành hoặc bỏ qua task.
 
 ## 9. Phân quyền
-- Owner (Student/Premium). Instructor có thể gán plan mẫu cho lớp (module 32). Free giới hạn 1 plan; Premium nhiều plan + adaptive.
+- Owner (Student/Premium). Quyền chỉ gồm tạo, xem kế hoạch và thực hiện task; không có sửa, xoá, dời lịch hay lập lại kế hoạch.
 
 ## 10. Edge Cases
 | Case | Xử lý |
 |------|-------|
-| Đổi ngày thi | Re-generate hoặc re-balance |
-| Bỏ lỡ nhiều ngày | Adaptive dồn + cảnh báo quá tải |
-| Subscription hết hạn | Adaptive → fixed; plan vẫn xem được |
-| Xóa Bài học khỏi scope | Re-balance task còn lại |
+| Đổi ngày thi | Tạo kế hoạch mới |
+| Bỏ lỡ nhiều ngày | Task cũ vẫn được hiển thị để học viên tự xử lý |
+| Subscription hết hạn | Plan vẫn xem và thực hiện được |
+| Xóa Bài học khỏi scope | Kế hoạch đã tạo không thay đổi |
 | Concurrent complete task | Idempotent, `409` nếu xung đột |
 | Timeout generate | Sinh nền qua queue + thông báo khi xong |
 
 ## 11. Tracking
-`study_plan_create`, `study_plan_view`, `study_plan_task_start`, `study_plan_task_complete`, `study_plan_reschedule`, `study_plan_replan(auto)`, `study_plan_delete`.
+`study_plan_create`, `study_plan_view`, `study_plan_task_start`, `study_plan_task_complete`.
 
 ## 12. Responsive
 - Desktop: calendar tháng + panel bên. Tablet: calendar tuần. Mobile: agenda list theo ngày, task hôm nay nổi bật, swipe complete.
@@ -122,7 +117,7 @@ Validation: ngày tương lai, scope hợp lệ, quyền owner.
 - Scope owner; validate ngày; chống thao tác task của người khác (IDOR).
 
 ## 14. Performance
-- Sinh/re-plan qua queue; task hôm nay cache; calendar phân trang theo tháng.
+- Sinh kế hoạch qua queue; task hôm nay cache; calendar phân trang theo tháng.
 
 ## 15. Đề xuất cải tiến
 - Dự báo AI "khả năng đạt mục tiêu" + đề xuất điều chỉnh.

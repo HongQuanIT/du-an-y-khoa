@@ -532,7 +532,7 @@ final class TeachClassroomController extends Controller
         abort_unless(
             $classroom->isHostOrCohost($user) || $user->canAny([
                 'classroom_oversight.view_any',
-                Permission::ClassroomOversee->value,
+                'classroom_oversight.view_any',
             ]),
             403,
         );

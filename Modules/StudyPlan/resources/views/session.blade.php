@@ -45,14 +45,18 @@
     $keyInfoHtml = $keyInfoRenderer->render((string) $question->stem, $keyInfo);
     $attendingTip = \App\Support\Html\SafeHtml::forDisplay((string) ($question->attending_tip ?? ''));
     $hasAttendingTip = $attendingTip !== '';
+    $canUseLearningNote = auth()->user()?->can('learning_tool.note') ?? false;
+    $canUseLearningFlag = auth()->user()?->can('learning_tool.flag') ?? false;
+    $canUseLearningHighlight = auth()->user()?->can('learning_tool.highlight') ?? false;
+    $canUseLearningResearch = auth()->user()?->can('learning_tool.research') ?? false;
 
-    $tools = [
-        ['icon' => 'flag', 'label' => 'Gắn cờ', 'action' => 'flag'],
-        ['icon' => 'description', 'label' => 'Ghi chú', 'action' => 'notes'],
-        ['icon' => 'menu_book', 'label' => 'Nghiên cứu', 'action' => 'research'],
-        ['icon' => 'drive_file_rename_outline', 'label' => 'Tô màu văn bản', 'action' => 'highlight'],
+    $tools = array_values(array_filter([
+        $canUseLearningFlag ? ['icon' => 'flag', 'label' => 'Gắn cờ', 'action' => 'flag'] : null,
+        $canUseLearningNote ? ['icon' => 'description', 'label' => 'Ghi chú', 'action' => 'notes'] : null,
+        $canUseLearningResearch ? ['icon' => 'menu_book', 'label' => 'Nghiên cứu', 'action' => 'research'] : null,
+        $canUseLearningHighlight ? ['icon' => 'drive_file_rename_outline', 'label' => 'Tô màu văn bản', 'action' => 'highlight'] : null,
         ['icon' => 'psychology', 'label' => 'Hỏi AI Tutor', 'action' => 'ai'],
-    ];
+    ]));
 
     $labReferenceGroups = \Modules\QuestionBank\Support\LabReferenceValues::groups();
 
@@ -510,6 +514,7 @@
                     <nav class="space-y-2 p-4">
                         @foreach ($tools as $tool)
                             <button type="button"
+                                data-testid="learning-tool-{{ $tool['action'] }}"
                                 @if (($tool['action'] ?? null) === 'notes') @click="notesOpen = true"
                                 @elseif (($tool['action'] ?? null) === 'research') @click="openResearch()"
                                 @elseif (($tool['action'] ?? null) === 'highlight') @click="toggleHighlight()"
@@ -665,6 +670,7 @@
                     }">
                     <div class="min-h-0 flex-1 overflow-y-auto pb-28">
                     <div class="flex min-h-full w-full flex-col items-stretch lg:flex-row">
+                        @if ($canUseLearningResearch)
                         <aside x-show="researchOpen" x-cloak x-transition.opacity
                             class="z-30 w-full shrink-0 overflow-hidden border-r border-outline-variant bg-white lg:sticky lg:top-0 lg:h-[calc(100vh-var(--spacing-header-height)-5rem)] lg:w-1/2"
                             data-testid="research-reference-panel">
@@ -673,6 +679,7 @@
                                 'labCloseAction' => 'researchOpen = false',
                             ])
                         </aside>
+                        @endif
 
                         <div class="w-full flex-1 space-y-6 px-4 py-8 md:px-10"
                             :class="researchOpen ? 'max-w-none' : 'mx-auto max-w-4xl'"

@@ -82,6 +82,7 @@ final class LiveRoomController extends Controller
         SendLiveMessageAction $action,
     ): RedirectResponse {
         $this->authorize('view', $classroom);
+        abort_unless($classroom->canWatchLive($request->user()), 403, 'Hãy tham gia lớp trước khi gửi tin nhắn.');
 
         $type = MessageType::tryFrom($request->string('type')->toString()) ?? MessageType::Chat;
 

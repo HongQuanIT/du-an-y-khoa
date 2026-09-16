@@ -61,7 +61,7 @@ final class SupportConversationController extends Controller
 
     public function seen(Request $request, SupportConversation $conversation): JsonResponse
     {
-        $this->authorizeAccess('support_conversation.update');
+        $this->authorizeAccess('support_conversation.view');
         $conversation->markSeenByAdmin($request->user());
 
         return response()->json([

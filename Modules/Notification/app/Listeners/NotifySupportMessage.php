@@ -7,12 +7,11 @@ namespace Modules\Notification\Listeners;
 use App\Events\SupportMessageCreated;
 use App\Models\User;
 use App\Support\Auth\Staff;
-use App\Support\Enums\Permission;
 use Modules\Notification\Actions\CreateUserNotificationAction;
 
 /**
  * - Staff reply → notify conversation owner (personalized).
- * - User message needing admin → notify staff with SupportManage (inbox hint).
+ * - User message needing admin → notify staff who can view the support inbox.
  */
 final class NotifySupportMessage
 {
@@ -50,7 +49,7 @@ final class NotifySupportMessage
             return;
         }
 
-        $staff = User::permission(Permission::SupportManage->value)->get();
+        $staff = User::permission('support_conversation.view')->get();
         $url = route('admin.support.show', $conversation);
 
         foreach ($staff as $admin) {

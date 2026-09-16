@@ -78,7 +78,14 @@ class RolePermissionSeeder extends Seeder
 
         return match ($role) {
             // Super Admin / Admin: oversight + publish; không soạn nội dung / không duyệt lớp 1 / không portal CTV / learner.
-            RoleEnum::SuperAdmin,
+            RoleEnum::SuperAdmin => array_values(array_unique(array_merge(
+                array_filter(
+                    $portalPermissions,
+                    static fn (string $permission): bool => ! in_array($permission, self::staffDeniedPermissions(), true),
+                ),
+                self::superAdminLearnerToolPermissions(),
+            ))),
+
             RoleEnum::Admin => array_values(array_filter(
                 $portalPermissions,
                 static fn (string $permission): bool => ! in_array($permission, self::staffDeniedPermissions(), true),
@@ -163,6 +170,17 @@ class RolePermissionSeeder extends Seeder
             PermissionEnum::ClassroomJoin->value,
             // Partner portal (admin uses admin.partners.*).
             PermissionEnum::PartnerPortal->value,
+        ];
+    }
+
+    /** @return list<string> */
+    private static function superAdminLearnerToolPermissions(): array
+    {
+        return [
+            'learning_tool.flag',
+            'learning_tool.highlight',
+            'learning_tool.note',
+            'learning_tool.research',
         ];
     }
 }

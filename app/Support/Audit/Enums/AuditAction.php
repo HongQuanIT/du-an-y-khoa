@@ -45,13 +45,9 @@ enum AuditAction: string
     case LearningSessionDeleted = 'learning.session.deleted';
     case LearningQuestionAnswered = 'learning.question.answered';
     case LearningPlanCreated = 'learning.plan.created';
-    case LearningPlanUpdated = 'learning.plan.updated';
-    case LearningPlanDeleted = 'learning.plan.deleted';
-    case LearningPlanReplanned = 'learning.plan.replanned';
     case LearningTaskStarted = 'learning.task.started';
     case LearningTaskCompleted = 'learning.task.completed';
     case LearningTaskSkipped = 'learning.task.skipped';
-    case LearningTaskRescheduled = 'learning.task.rescheduled';
     case LearningBookmarkChanged = 'learning.bookmark.changed';
     case LearningBookmarkFolderCreated = 'learning.bookmark_folder.created';
     case LearningBookmarkFolderDeleted = 'learning.bookmark_folder.deleted';
@@ -118,13 +114,9 @@ enum AuditAction: string
             self::LearningSessionDeleted => 'Xóa phiên học',
             self::LearningQuestionAnswered => 'Trả lời câu hỏi',
             self::LearningPlanCreated => 'Tạo kế hoạch học',
-            self::LearningPlanUpdated => 'Cập nhật kế hoạch học',
-            self::LearningPlanDeleted => 'Xóa kế hoạch học',
-            self::LearningPlanReplanned => 'Lập lại kế hoạch học',
             self::LearningTaskStarted => 'Bắt đầu nhiệm vụ học',
             self::LearningTaskCompleted => 'Hoàn thành nhiệm vụ học',
             self::LearningTaskSkipped => 'Bỏ qua nhiệm vụ học',
-            self::LearningTaskRescheduled => 'Đổi lịch nhiệm vụ học',
             self::LearningBookmarkChanged => 'Thay đổi bookmark',
             self::LearningBookmarkFolderCreated => 'Tạo thư mục bookmark',
             self::LearningBookmarkFolderDeleted => 'Xóa thư mục bookmark',

@@ -49,8 +49,8 @@ final class ContentEditorAccessTest extends TestCase
         $this->assertFalse($editor->can(Permission::QuestionRetire->value));
         $this->assertFalse($editor->can(Permission::QuestionReview->value));
         $this->assertFalse($editor->can(Permission::ReportView->value));
-        $this->assertFalse($editor->can(Permission::SupportManage->value));
-        $this->assertFalse($editor->can(Permission::NotificationBroadcast->value));
+        $this->assertFalse($editor->can('support_conversation.view'));
+        $this->assertFalse($editor->can('notification_broadcast.send'));
     }
 
     public function test_content_editor_can_open_content_modules(): void
