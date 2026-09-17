@@ -132,16 +132,21 @@ final class QuestionController extends Controller
         $this->authorizePermission(Permission::QuestionView);
         $this->authorizePermission(Permission::QuestionCreate);
 
-        $question = $action->handle($this->actor(), null, $this->validatedPayload($request));
         $requestedStatus = $request->filled('requested_status')
             ? QuestionStatus::from($request->validate([
                 'requested_status' => ['required', 'string', Rule::in(QuestionStatus::values())],
             ])['requested_status'])
             : QuestionStatus::Draft;
 
-        if ($requestedStatus !== QuestionStatus::Draft) {
-            $transition->handle($this->actor(), $question, $requestedStatus);
-        }
+        $question = DB::transaction(function () use ($request, $action, $transition, $requestedStatus): Question {
+            $question = $action->handle($this->actor(), null, $this->validatedPayload($request));
+
+            if ($requestedStatus !== QuestionStatus::Draft) {
+                $transition->handle($this->actor(), $question, $requestedStatus);
+            }
+
+            return $question;
+        });
 
         return redirect()
             ->route('admin.questions.edit', $question)
@@ -264,27 +269,35 @@ final class QuestionController extends Controller
             ]);
         }
 
-        $question = $action->handle($this->actor(), $question, $this->validatedPayload($request));
-
-        if ($request->filled('requested_status')) {
-            $statusData = $request->validate([
+        $statusData = $request->filled('requested_status')
+            ? $request->validate([
                 'requested_status' => ['required', 'string', Rule::in(QuestionStatus::values())],
                 'rejection_reason' => ['nullable', 'string', 'max:2000'],
-            ]);
+            ])
+            : null;
 
-            $wasInPipeline = in_array($question->status, [
-                QuestionStatus::InReview,
-                QuestionStatus::InFlagReview,
-            ], true);
+        $wasInPipeline = in_array($question->status, [
+            QuestionStatus::InReview,
+            QuestionStatus::InFlagReview,
+        ], true);
+
+        $question = DB::transaction(function () use ($request, $question, $action, $transition, $statusData): Question {
+            $question = $action->handle($this->actor(), $question, $this->validatedPayload($request));
+
+            if ($statusData !== null) {
+                $transition->handle(
+                    $this->actor(),
+                    $question,
+                    QuestionStatus::from($statusData['requested_status']),
+                    $statusData['rejection_reason'] ?? null,
+                );
+            }
+
+            return $question->fresh() ?? $question;
+        });
+
+        if ($statusData !== null) {
             $nextStatus = QuestionStatus::from($statusData['requested_status']);
-
-            $transition->handle(
-                $this->actor(),
-                $question,
-                $nextStatus,
-                $statusData['rejection_reason'] ?? null,
-            );
-
             $resubmitted = $wasInPipeline && $nextStatus === QuestionStatus::InReview;
 
             return back()->with('status', $resubmitted
@@ -519,9 +532,6 @@ final class QuestionController extends Controller
             'key_info' => $this->parseKeyInfo($data['key_info'] ?? null),
             'attending_tip' => $data['attending_tip'] ?? null,
             'difficulty' => $data['difficulty'],
-            'assigned_instructor_id' => isset($data['assigned_instructor_id'])
-                ? (int) $data['assigned_instructor_id']
-                : null,
             'lesson_ids' => collect($data['lesson_ids'] ?? [])
                 ->map(fn ($id): int => (int) $id)->unique()->values()->all(),
             'tag_ids' => collect($data['tag_ids'] ?? [])
@@ -530,6 +540,14 @@ final class QuestionController extends Controller
             'exam_flag' => $request->boolean('exam_flag'),
             'options' => $options,
         ];
+
+        // Chỉ ghi đè khi request có field — select disabled lúc reload không được coi là xoá GV.
+        if (array_key_exists('assigned_instructor_id', $data)) {
+            $rawInstructorId = $data['assigned_instructor_id'];
+            $payload['assigned_instructor_id'] = $rawInstructorId !== null && $rawInstructorId !== ''
+                ? (int) $rawInstructorId
+                : null;
+        }
 
         if ($request->exists('hints')) {
             $payload['hints'] = $hints;

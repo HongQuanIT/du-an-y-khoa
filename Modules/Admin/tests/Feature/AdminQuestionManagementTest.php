@@ -939,6 +939,60 @@ final class AdminQuestionManagementTest extends TestCase
         $this->assertSame(0, $question->fresh()->version);
     }
 
+    public function test_save_without_assigned_instructor_field_keeps_existing_assignment(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+        $question = $this->makeDraftQuestion($editor);
+        $question->forceFill([
+            'status' => QuestionStatus::InReview,
+            'assigned_instructor_id' => $this->assignedInstructor->id,
+        ])->save();
+
+        $payload = $this->payload();
+        unset($payload['assigned_instructor_id']);
+
+        $this->actingAsStaff($editor)
+            ->from(route('admin.questions.edit', $question))
+            ->put(route('admin.questions.update', $question), array_merge($payload, [
+                'stem' => 'Lưu khi select GV đang disabled / thiếu field.',
+                'requested_status' => QuestionStatus::InReview->value,
+            ]))
+            ->assertSessionHasNoErrors()
+            ->assertRedirect();
+
+        $fresh = $question->fresh();
+        $this->assertSame(QuestionStatus::InReview, $fresh->status);
+        $this->assertSame($this->assignedInstructor->id, (int) $fresh->assigned_instructor_id);
+        $this->assertSame('Lưu khi select GV đang disabled / thiếu field.', strip_tags((string) $fresh->stem));
+    }
+
+    public function test_submit_for_review_rolls_back_when_instructor_missing(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+        $question = $this->makeDraftQuestion($editor);
+        $question->forceFill([
+            'status' => QuestionStatus::Draft,
+            'assigned_instructor_id' => null,
+            'stem' => 'Stem trước khi gửi duyệt thất bại.',
+        ])->save();
+
+        $payload = $this->payload();
+        unset($payload['assigned_instructor_id']);
+
+        $this->actingAsStaff($editor)
+            ->from(route('admin.questions.edit', $question))
+            ->put(route('admin.questions.update', $question), array_merge($payload, [
+                'stem' => 'Stem sau lưu nếu không rollback.',
+                'requested_status' => QuestionStatus::InReview->value,
+            ]))
+            ->assertSessionHasErrors('assigned_instructor_id');
+
+        $fresh = $question->fresh();
+        $this->assertSame(QuestionStatus::Draft, $fresh->status);
+        $this->assertNull($fresh->assigned_instructor_id);
+        $this->assertSame('Stem trước khi gửi duyệt thất bại.', strip_tags((string) $fresh->stem));
+    }
+
     public function test_editor_resubmit_while_in_review_resets_instructor_flags(): void
     {
         $editor = $this->staffUser(Role::ContentEditor);

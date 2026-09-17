@@ -2,6 +2,11 @@
 
 ## 2026-09-17
 
+### Fix — QBank: gửi duyệt không mất giảng viên được gán
+
+- Select GV bị `disabled` lúc reload → browser không gửi `assigned_instructor_id`, save ghi null rồi hàng đợi `/teach` trống.
+- Hidden input luôn submit; không ghi đè GV khi field thiếu; store/update + transition trong 1 transaction.
+
 ### Fix — RBAC: tránh PermissionDoesNotExist khi lưu ma trận quyền
 
 - `SyncRolePermissionsAction` sync bằng model + flush cache Spatie trước/sau (tránh cache cũ sau migrate `cms.view`).
