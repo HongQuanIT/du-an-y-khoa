@@ -2,6 +2,15 @@
 
 ## 2026-09-17
 
+### Fix — RBAC: tránh PermissionDoesNotExist khi lưu ma trận quyền
+
+- `SyncRolePermissionsAction` sync bằng model + flush cache Spatie trước/sau (tránh cache cũ sau migrate `cms.view`).
+- Migration consolidate content permissions flush cache sau khi insert.
+
+### UX — Admin: gỡ hint «Chọn dòng rồi xuất» trên danh sách câu hỏi
+
+- Bỏ dòng hướng dẫn xuất cạnh tiêu đề bảng (giữ checkbox + sticky bar).
+
 ### Fix — Admin: khôi phục chọn dòng + format Excel/CSV khi xuất câu hỏi
 
 - Danh sách `/admin/questions`: checkbox chọn dòng, sticky bar xuất, POST `ids[]`; không chọn = xuất theo bộ lọc (tối đa 2000).
