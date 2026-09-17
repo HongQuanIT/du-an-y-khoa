@@ -2,6 +2,11 @@
 
 ## 2026-09-17
 
+### Fix — Admin: khôi phục form ma trận đề thi 2 cột
+
+- Layout SaaS 2 cột (metadata trái, mô tả phải); bỏ ô slug, chỉ giữ Mã; slug tự sinh/giữ ở backend.
+- `code` unique; nhãn danh sách «Code» → «Mã».
+
 ### Fix — Admin: picker giảng viên theo bài học trên form tạo câu hỏi
 
 - Tự reload danh sách GV chuyên môn khi chọn/bỏ bài học (không cần bấm làm mới).
