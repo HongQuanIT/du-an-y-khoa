@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+use Spatie\Permission\PermissionRegistrar;
 
 return new class extends Migration
 {
@@ -36,6 +37,8 @@ return new class extends Migration
             'media.upload' => ['media.import'],
             'report_schedule.schedule' => ['report_schedule.create'],
         ]);
+
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
     /** @param array<string, list<string>> $mapping */

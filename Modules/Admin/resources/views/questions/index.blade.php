@@ -319,7 +319,6 @@
                         hỏi</h2>
                     <span>Hiển thị <strong>{{ number_format($questions->count()) }}</strong> /
                         <strong>{{ number_format($questions->total()) }}</strong> câu hỏi</span>
-                    <span class="hidden font-body-sm font-normal text-on-surface-variant sm:inline">· Chọn dòng rồi xuất, hoặc xuất cả bộ lọc (tối đa {{ number_format($exportLimit) }})</span>
                     @if ($questions->hasPages())
                         <span>· Trang {{ $questions->currentPage() }} / {{ $questions->lastPage() }}</span>
                     @endif

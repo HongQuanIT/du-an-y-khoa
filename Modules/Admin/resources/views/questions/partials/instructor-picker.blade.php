@@ -8,13 +8,15 @@
         selectedName: @js($assignedName),
         url: @js(route('admin.questions.eligible-instructors')),
     })">
-    <label class="mb-1 block text-xs font-semibold text-on-surface-variant" for="assigned_instructor_id">
+    <label class="mb-1 block text-xs font-semibold text-on-surface-variant" for="assigned_instructor_id_ui">
         Giảng viên chuyên môn *
     </label>
     <p class="mb-2 text-[11px] leading-4 text-on-surface-variant">
         Chỉ hiện giảng viên có môn học giao với bài học đã chọn. Chọn đúng chuyên môn — không gửi mọi giảng viên.
     </p>
-    <select id="assigned_instructor_id" name="assigned_instructor_id" required
+    {{-- Hidden luôn submit: select bị disabled lúc reload (loading) nên browser bỏ name nếu gắn trên select. --}}
+    <input type="hidden" name="assigned_instructor_id" :value="selectedId ?? ''">
+    <select id="assigned_instructor_id_ui"
         x-model.number="selectedId"
         class="h-11 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
         :disabled="loading || (empty && !selectedId)">
