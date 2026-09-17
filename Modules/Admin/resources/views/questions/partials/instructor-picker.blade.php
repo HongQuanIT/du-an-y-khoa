@@ -16,17 +16,15 @@
     </p>
     <select id="assigned_instructor_id" name="assigned_instructor_id" required
         x-model.number="selectedId"
-        class="h-11 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
+        class="h-11 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+        :disabled="loading || (empty && !selectedId)">
         <option value="">— Chọn giảng viên —</option>
         <template x-for="instructor in instructors" :key="instructor.id">
-            <option :value="instructor.id" x-text="instructor.name" :selected="selectedId === instructor.id"></option>
+            <option :value="instructor.id" x-text="instructor.name"></option>
         </template>
     </select>
-    <button type="button" @click="reload()"
-        class="mt-2 text-[11px] font-semibold text-primary hover:underline">
-        Làm mới danh sách theo bài học
-    </button>
-    <p x-show="empty" x-cloak class="mt-1 text-[11px] text-amber-700">
+    <p x-show="loading" x-cloak class="mt-1 text-[11px] text-on-surface-variant">Đang tải giảng viên…</p>
+    <p x-show="!loading && empty" x-cloak class="mt-1 text-[11px] text-amber-700">
         Chưa có giảng viên khớp môn. Hãy chọn bài học hoặc nhờ admin gán môn cho giảng viên.
     </p>
     @error('assigned_instructor_id')
@@ -41,21 +39,30 @@
                 ? [{ id: config.selectedId, name: config.selectedName }]
                 : [],
             empty: false,
+            loading: false,
             url: config.url,
             init() {
+                const form = this.$root.closest('form');
+                form?.addEventListener('question-lessons-changed', (event) => {
+                    const ids = event.detail?.lessonIds;
+                    this.reload(Array.isArray(ids) ? ids : null);
+                });
                 this.reload();
             },
-            lessonIds() {
-                return Array.from(this.$root.closest('form').querySelectorAll('input[name="lesson_ids[]"]'))
+            lessonIdsFromForm() {
+                return Array.from(this.$root.closest('form')?.querySelectorAll('input[name="lesson_ids[]"]') ?? [])
                     .map((el) => el.value)
                     .filter(Boolean);
             },
-            async reload() {
+            async reload(lessonIds = null) {
+                const ids = lessonIds ?? this.lessonIdsFromForm();
                 const params = new URLSearchParams();
-                this.lessonIds().forEach((id) => params.append('lesson_ids[]', id));
+                ids.forEach((id) => params.append('lesson_ids[]', String(id)));
+                this.loading = true;
                 try {
                     const response = await fetch(`${this.url}?${params.toString()}`, {
                         headers: { Accept: 'application/json' },
+                        credentials: 'same-origin',
                     });
                     if (!response.ok) {
                         return;
@@ -63,11 +70,13 @@
                     const data = await response.json();
                     this.instructors = data.instructors || [];
                     this.empty = this.instructors.length === 0;
-                    if (this.selectedId && !this.instructors.some((row) => row.id === this.selectedId)) {
+                    if (this.selectedId && !this.instructors.some((row) => Number(row.id) === Number(this.selectedId))) {
                         this.selectedId = null;
                     }
                 } catch {
                     // keep current options
+                } finally {
+                    this.loading = false;
                 }
             },
         }));

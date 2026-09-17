@@ -53,7 +53,7 @@
      })">
     <p class="text-[11px] leading-4 text-on-surface-variant">
         Câu hỏi gắn một hoặc nhiều <strong>bài học</strong> (bắt buộc), không phân biệt chính/phụ.
-        Môn học và hệ cơ quan được suy ra từ bài học đã chọn — không gắn trực tiếp.
+        Môn học và hệ cơ quan theo bài học đã chọn — không gắn trực tiếp.
     </p>
 
     <div>
@@ -127,29 +127,6 @@
         <p x-show="selectedLessonIds.length === 0" class="mt-1 text-xs text-error">Chọn ít nhất một bài học.</p>
     </div>
 
-    <div class="rounded-lg border border-outline-variant/70 bg-surface-container-low/60 p-3"
-         x-show="inferredCurriculum.subjects.length || inferredCurriculum.organSystems.length">
-        <p class="mb-1.5 text-xs font-semibold text-on-surface-variant">Suy ra từ bài học đã chọn</p>
-        <div class="space-y-2">
-            <div x-show="inferredCurriculum.subjects.length">
-                <p class="mb-1 text-[10px] uppercase tracking-wide text-on-surface-variant">Môn học</p>
-                <div class="flex flex-wrap gap-1.5">
-                    <template x-for="name in inferredCurriculum.subjects" :key="'inf-sub-'+name">
-                        <span class="rounded-lg bg-surface-container-high px-2 py-1 text-xs text-on-surface" x-text="name"></span>
-                    </template>
-                </div>
-            </div>
-            <div x-show="inferredCurriculum.organSystems.length">
-                <p class="mb-1 text-[10px] uppercase tracking-wide text-on-surface-variant">Hệ cơ quan</p>
-                <div class="flex flex-wrap gap-1.5">
-                    <template x-for="name in inferredCurriculum.organSystems" :key="'inf-os-'+name">
-                        <span class="rounded-lg bg-surface-container-high px-2 py-1 text-xs text-on-surface" x-text="name"></span>
-                    </template>
-                </div>
-            </div>
-        </div>
-    </div>
-
     @if (count($inferredCoreTopics) > 0)
         <div class="rounded-lg border border-outline-variant/70 bg-surface-container-low/60 p-3">
             <p class="mb-1.5 text-xs font-semibold text-on-surface-variant">Chủ đề lâm sàng (suy ra từ ma trận)</p>
@@ -207,19 +184,13 @@
             lessonLookupError: '',
             tagSearch: '',
             tagResults: [],
-            get inferredCurriculum() {
-                const subjects = new Set();
-                const organSystems = new Set();
-                for (const id of this.selectedLessonIds) {
-                    const lesson = this.selectedLessons[id];
-                    if (! lesson) continue;
-                    (lesson.subject_names || []).forEach(n => subjects.add(n));
-                    (lesson.organ_system_names || []).forEach(n => organSystems.add(n));
-                }
-                return {
-                    subjects: [...subjects].sort((a, b) => a.localeCompare(b, 'vi')),
-                    organSystems: [...organSystems].sort((a, b) => a.localeCompare(b, 'vi')),
-                };
+            notifyLessonsChanged() {
+                this.$nextTick(() => {
+                    this.$root.closest('form')?.dispatchEvent(new CustomEvent('question-lessons-changed', {
+                        bubbles: true,
+                        detail: { lessonIds: [...this.selectedLessonIds] },
+                    }));
+                });
             },
             lessonContext(lesson) {
                 if (! lesson) return '';
@@ -238,6 +209,7 @@
                     // Optional filters; lesson search below still runs.
                 }
                 await this.searchLessons();
+                this.notifyLessonsChanged();
             },
             async fetchJson(url) {
                 const res = await fetch(url, {
@@ -288,11 +260,13 @@
                 } else {
                     this.selectedLessonIds.push(lesson.id);
                     this.selectedLessons[lesson.id] = lesson;
+                    this.notifyLessonsChanged();
                 }
             },
             removeLesson(id) {
                 this.selectedLessonIds = this.selectedLessonIds.filter(x => x !== id);
                 delete this.selectedLessons[id];
+                this.notifyLessonsChanged();
             },
             async searchTags() {
                 const q = this.tagSearch.trim();

@@ -83,6 +83,38 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
         $this->assertSame(QuestionStatus::InReview, $question->fresh()->status);
     }
 
+    public function test_eligible_instructors_filtered_by_lesson_subjects(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+        $match = $this->instructorWithSubject($this->subject);
+        $otherSubject = $this->makeSubject(['name' => 'Ngoại lọc GV', 'slug' => 'ngoai-loc-gv']);
+        $mismatch = $this->instructorWithSubject($otherSubject);
+
+        $this->actingAsStaff($editor)
+            ->getJson(route('admin.questions.eligible-instructors', [
+                'lesson_ids' => [$this->lesson->id],
+            ]))
+            ->assertOk()
+            ->assertJsonFragment(['id' => $match->id, 'name' => $match->name])
+            ->assertJsonMissing(['id' => $mismatch->id]);
+
+        $this->actingAsStaff($editor)
+            ->getJson(route('admin.questions.eligible-instructors'))
+            ->assertOk()
+            ->assertJsonPath('instructors', []);
+    }
+
+    public function test_create_form_omits_inferred_curriculum_heading(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+
+        $this->actingAsStaff($editor)
+            ->get(route('admin.questions.create'))
+            ->assertOk()
+            ->assertDontSee('Suy ra từ bài học đã chọn', false)
+            ->assertSee('Giảng viên chuyên môn', false);
+    }
+
     public function test_mismatched_subject_instructor_cannot_be_submitted(): void
     {
         $editor = $this->staffUser(Role::ContentEditor);
