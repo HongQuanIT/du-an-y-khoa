@@ -2,6 +2,12 @@
 
 ## 2026-09-17
 
+### Fix — Admin: khôi phục chọn dòng + format Excel/CSV khi xuất câu hỏi
+
+- Danh sách `/admin/questions`: checkbox chọn dòng, sticky bar xuất, POST `ids[]`; không chọn = xuất theo bộ lọc (tối đa 2000).
+- Export/import giữ rich text (đậm/nghiêng), độ rộng cột, sheet `Bai_hoc` + hướng dẫn; file lỗi import lại xuất `.xlsx` highlight đỏ.
+- Bổ sung test chọn dòng, rich text và độ rộng cột spreadsheet.
+
 ### Fix — Admin: khôi phục form ma trận đề thi 2 cột
 
 - Layout SaaS 2 cột (metadata trái, mô tả phải); bỏ ô slug, chỉ giữ Mã; slug tự sinh/giữ ở backend.

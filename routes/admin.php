@@ -278,7 +278,7 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
         Route::middleware('permission:'.QuestionAccess::workspacePermissionMiddleware())->group(function (): void {
             Route::get('/questions', [QuestionController::class, 'index'])->name('questions.index');
         });
-        Route::get('/questions/export', QuestionExportController::class)
+        Route::match(['get', 'post'], '/questions/export', QuestionExportController::class)
             ->middleware('permission:question.export')
             ->name('questions.export');
         Route::get('/question-feedback', [QuestionFeedbackController::class, 'index'])

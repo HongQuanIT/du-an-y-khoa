@@ -15,6 +15,8 @@ use Illuminate\View\View;
 use Modules\Admin\Actions\CommitQuestionImportAction;
 use Modules\Admin\Actions\PrepareQuestionImportPreviewAction;
 use Modules\QuestionBank\Enums\QuestionImportBatchStatus;
+use Modules\QuestionBank\Enums\TaxonomyStatus;
+use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\QuestionImportBatch;
 use Modules\QuestionBank\Support\QuestionImportSchema;
 use Modules\QuestionBank\Support\QuestionSpreadsheet;
@@ -44,19 +46,40 @@ final class QuestionImportController extends Controller
         $this->authorizePermission(Permission::QuestionCreate);
 
         $format = $request->query('format') === 'csv' ? 'csv' : 'xlsx';
+        $lessons = Lesson::query()
+            ->where('status', TaxonomyStatus::Active)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->limit(500)
+            ->get(['slug', 'name']);
+        if ($lessons->isEmpty()) {
+            $lessons = Lesson::query()
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->limit(500)
+                ->get(['slug', 'name']);
+        }
         $headers = QuestionImportSchema::headers();
-        $rows = [QuestionImportSchema::sampleRow()];
+        $rows = [QuestionImportSchema::sampleRow($lessons->first()?->slug)];
+        $catalog = $lessons->isNotEmpty()
+            ? [['name' => 'Bai_hoc', 'rows' => QuestionImportSchema::catalogLessonRows($lessons)]]
+            : [];
 
         $filename = 'mau-import-cau-hoi.'.$format;
 
-        return response()->streamDownload(function () use ($spreadsheet, $format, $headers, $rows): void {
+        return response()->streamDownload(function () use ($spreadsheet, $format, $headers, $rows, $catalog): void {
             if ($format === 'csv') {
                 echo $spreadsheet->csvString($headers, $rows);
 
                 return;
             }
 
-            echo $spreadsheet->xlsxBinary($headers, $rows, QuestionImportSchema::guideRows());
+            echo $spreadsheet->xlsxBinary(
+                $headers,
+                $rows,
+                QuestionImportSchema::guideRows(),
+                $catalog,
+            );
         }, $filename, [
             'Content-Type' => $format === 'csv'
                 ? 'text/csv; charset=UTF-8'
@@ -233,9 +256,11 @@ final class QuestionImportController extends Controller
         $this->authorizeBatch($batch);
         abort_unless(filled($batch->error_report_path) && Storage::disk('local')->exists($batch->error_report_path), 404);
 
+        $extension = str_ends_with((string) $batch->error_report_path, '.xlsx') ? 'xlsx' : 'csv';
+
         return Storage::disk('local')->download(
             $batch->error_report_path,
-            'import-loi-'.$batch->getKey().'.csv',
+            'import-loi-'.$batch->getKey().'.'.$extension,
         );
     }
 

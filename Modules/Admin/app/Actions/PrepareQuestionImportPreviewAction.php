@@ -364,10 +364,23 @@ final class PrepareQuestionImportPreviewAction
             );
         }
 
-        $relative = 'question-imports/'.$batch->getKey().'-errors.csv';
+        $relative = 'question-imports/'.$batch->getKey().'-errors.xlsx';
         $absolute = Storage::disk('local')->path($relative);
         @mkdir(dirname($absolute), 0755, true);
-        $this->spreadsheet->writeCsv($absolute, $exportHeaders, $exportRows);
+        Storage::disk('local')->delete([
+            'question-imports/'.$batch->getKey().'-errors.csv',
+            $relative,
+        ]);
+        $this->spreadsheet->writeXlsx(
+            $absolute,
+            $exportHeaders,
+            $exportRows,
+            [
+                ['Trường', 'Bắt buộc', 'Ghi chú'],
+                ['errors', '—', 'Cột cuối: lý do dòng bị loại. Sửa rồi tải lại tệp gốc — không import file lỗi này.'],
+            ],
+            options: ['highlight_errors' => true],
+        );
         $batch->forceFill(['error_report_path' => $relative])->save();
     }
 }
