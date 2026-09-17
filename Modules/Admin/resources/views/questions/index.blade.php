@@ -254,7 +254,7 @@
                     <x-admin.multi-select-filter
                         name="difficulty"
                         label="Độ khó"
-                        placeholder="Tất cả độ khó"
+                        placeholder="Tất cả"
                         :options="collect($difficulties)->map(fn ($difficulty) => ['id' => $difficulty->value, 'label' => $difficulty->label()])->all()"
                         :selected="$filters['difficulty'] ?? []"
                     />
@@ -264,7 +264,7 @@
                     <x-admin.multi-select-filter
                         name="is_free"
                         label="Gói truy cập"
-                        placeholder="Tất cả gói"
+                        placeholder="Tất cả"
                         :options="[
                             ['id' => '1', 'label' => 'Free'],
                             ['id' => '0', 'label' => 'Premium'],
@@ -278,7 +278,7 @@
                         <x-admin.multi-select-filter
                             name="created_by"
                             label="Người tạo"
-                            placeholder="Tất cả người tạo"
+                            placeholder="Tất cả"
                             :options="$creatorOptions"
                             :selected="$filters['created_by'] ?? []"
                         />

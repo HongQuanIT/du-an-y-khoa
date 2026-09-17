@@ -254,7 +254,7 @@
                             <span class="mb-1.5 block text-xs font-bold text-on-surface-variant">Chế độ</span>
                             <select name="mode"
                                 class="w-full rounded-xl border border-outline-variant bg-white px-4 py-2.5 text-body-sm focus:border-primary focus:ring-1 focus:ring-primary">
-                                <option value="">Tất cả chế độ</option>
+                                <option value="">Tất cả</option>
                                 @foreach ($modeOptions as $option)
                                     <option value="{{ $option->value }}" @selected($filters['mode'] === $option->value)>
                                         {{ $modeLabels[$option->value] ?? ucfirst($option->value) }}
@@ -267,7 +267,7 @@
                             <span class="mb-1.5 block text-xs font-bold text-on-surface-variant">Trạng thái</span>
                             <select name="status"
                                 class="w-full rounded-xl border border-outline-variant bg-white px-4 py-2.5 text-body-sm focus:border-primary focus:ring-1 focus:ring-primary">
-                                <option value="">Tất cả trạng thái</option>
+                                <option value="">Tất cả</option>
                                 @foreach ($statusOptions as $option)
                                     <option value="{{ $option->value }}" @selected($filters['status'] === $option->value)>
                                         {{ $statusMeta[$option->value]['label'] ?? ucfirst($option->value) }}

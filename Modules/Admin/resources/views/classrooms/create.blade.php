@@ -241,7 +241,7 @@
                             <div class="mt-2.5 grid gap-2 sm:grid-cols-3 lg:grid-cols-1 2xl:grid-cols-3">
                                 <select x-model="coreTopicId" @change="loadQuestions(true)"
                                     class="h-9 w-full rounded-lg border border-outline-variant bg-surface px-2.5 text-xs text-on-surface focus:border-primary focus:outline-none">
-                                    <option value="">Tất cả chủ đề lâm sàng</option>
+                                    <option value="">Tất cả</option>
                                     @foreach ($coreTopicOptions as $topic)
                                         <option value="{{ $topic->id }}">{{ $topic->name }}</option>
                                     @endforeach
@@ -249,7 +249,7 @@
 
                                 <select x-model="medicalTopicId" @change="loadQuestions(true)"
                                     class="h-9 w-full rounded-lg border border-outline-variant bg-surface px-2.5 text-xs text-on-surface focus:border-primary focus:outline-none">
-                                    <option value="">Tất cả phân loại y khoa</option>
+                                    <option value="">Tất cả</option>
                                     @foreach ($medicalTopicOptions as $topic)
                                         <option value="{{ $topic->id }}">{{ $topic->name }}</option>
                                     @endforeach
@@ -257,7 +257,7 @@
 
                                 <select x-model="difficulty" @change="loadQuestions(true)"
                                     class="h-9 w-full rounded-lg border border-outline-variant bg-surface px-2.5 text-xs text-on-surface focus:border-primary focus:outline-none">
-                                    <option value="">Tất cả độ khó</option>
+                                    <option value="">Tất cả</option>
                                     @foreach ($difficulties as $difficulty)
                                         <option value="{{ $difficulty->value }}">{{ $difficulty->label() }}</option>
                                     @endforeach
