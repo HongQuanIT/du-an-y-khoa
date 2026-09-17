@@ -2,6 +2,11 @@
 
 ## 2026-09-17
 
+### Chore — QBank: seed subject/lesson từ Google Sheet Course
+
+- Thêm `ggsheet.php` xuất `courses_data.php` (short array) từ tab Course.
+- `SubjectLessonSeeder` load map từ `data/courses_data.php` thay map mẫu cứng.
+
 ### UX — Bộ lọc: thống nhất placeholder «Tất cả»
 
 - Questions, Users, Classroom create, QBank index: option/placeholder trống chỉ còn «Tất cả» (bỏ «Tất cả độ khó», «Tất cả vai trò»…).
