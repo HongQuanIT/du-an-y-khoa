@@ -23,7 +23,7 @@ enum Permission: string
     case QuestionReview = 'question.review';
     case QuestionFlag = 'question.flag';
     case QuestionPublish = 'question.publish';
-    case QuestionRetire = 'question.retire';
+
 
 
     // Sessions

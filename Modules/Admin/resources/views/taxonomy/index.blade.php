@@ -8,9 +8,15 @@
     <x-admin.flash />
 
     <div class="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <x-admin.kpi-card label="Ma trận đề thi" :value="number_format($stats['blueprints'])" hint="{{ number_format($stats['sections']) }} phần · {{ number_format($stats['core_topics']) }} chủ đề lâm sàng" icon="assignment" />
-        <x-admin.kpi-card label="Danh mục kiến thức" :value="number_format($stats['lessons'])" hint="{{ number_format($stats['organ_systems']) }} hệ cơ quan · {{ number_format($stats['subjects']) }} môn học · {{ number_format($stats['lessons']) }} bài học" icon="account_tree" />
-        <x-admin.kpi-card label="Thẻ" :value="number_format($stats['tags'])" hint="Nhãn phân loại bổ sung" icon="sell" />
+        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.blueprints.index'))
+            <x-admin.kpi-card label="Ma trận đề thi" :value="number_format($stats['blueprints'])" hint="{{ number_format($stats['sections']) }} phần · {{ number_format($stats['core_topics']) }} chủ đề lâm sàng" icon="assignment" />
+        @endif
+        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.curriculum.index'))
+            <x-admin.kpi-card label="Danh mục kiến thức" :value="number_format($stats['lessons'])" hint="{{ number_format($stats['organ_systems']) }} hệ cơ quan · {{ number_format($stats['subjects']) }} môn học · {{ number_format($stats['lessons']) }} bài học" icon="account_tree" />
+        @endif
+        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.tags.index'))
+            <x-admin.kpi-card label="Thẻ" :value="number_format($stats['tags'])" hint="Nhãn phân loại bổ sung" icon="sell" />
+        @endif
     </div>
 
     <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">

@@ -25,6 +25,7 @@ class UserSeeder extends Seeder
         ['Admin', 'admin@medlearn.local', Role::Admin, 'Admin123!'],
         ['Content Editor', 'editor@medlearn.local', Role::ContentEditor],
         ['Content Editor 2', 'editor2@medlearn.local', Role::ContentEditor],
+        ['Reviewer', 'reviewer@medlearn.local', Role::Reviewer],
 
         ['Giảng viên Minh', 'instructor@medlearn.local', Role::Instructor],
         ['Giảng viên Hùng', 'instructor2@medlearn.local', Role::Instructor],

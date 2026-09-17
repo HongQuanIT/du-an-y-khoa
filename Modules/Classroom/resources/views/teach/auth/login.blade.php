@@ -1,5 +1,5 @@
 <x-layouts.auth title="Đăng nhập giảng viên" description="Cổng đăng nhập dành cho giảng viên chữa đề.">
-    <x-auth.shell tagline="Không gian giảng viên">
+    <x-auth.shell tagline="Hệ thống giảng viên">
         <h2 class="font-headline-md text-headline-md text-on-surface mb-2">Đăng nhập giảng viên</h2>
         <p class="text-body-sm font-body-sm text-on-surface-variant mb-8">
             Chỉ dành cho tài khoản được gán vai trò Giảng viên. Học viên dùng

@@ -93,7 +93,7 @@
         <div class="mb-6 px-2">
             <a href="{{ route('teach.dashboard') }}" class="block">
                 <span class="font-headline-sm text-headline-sm font-extrabold text-primary tracking-tight">{{ config('app.name') }}</span>
-                <span class="mt-0.5 block font-label-sm text-label-sm text-on-surface-variant">Không gian giảng viên</span>
+                <span class="mt-0.5 block font-label-sm text-label-sm text-on-surface-variant">Hệ thống giảng viên</span>
             </a>
         </div>
         <nav class="flex flex-1 flex-col gap-1 overflow-y-auto" aria-label="Menu giảng viên">

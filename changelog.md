@@ -20,6 +20,12 @@
 
 - Bỏ dòng hướng dẫn xuất cạnh tiêu đề bảng (giữ checkbox + sticky bar).
 
+### Fix — Admin/Portal: đồng bộ quyền và nhãn UI
+
+- Ẩn `classroom.manage` khỏi ma trận quyền; gỡ quyền `question.retire` khỏi registry/seeder và migration cleanup.
+- Trang Phân loại ẩn tab/KPI Ma trận đề thi, Danh mục kiến thức, Tags theo quyền route hiện tại.
+- Media đổi nhãn «đoạn phim» thành «video»; portal `/teach` đổi tagline thành «Hệ thống giảng viên».
+
 ### Fix — Admin: khôi phục chọn dòng + format Excel/CSV khi xuất câu hỏi
 
 - Danh sách `/admin/questions`: checkbox chọn dòng, sticky bar xuất, POST `ids[]`; không chọn = xuất theo bộ lọc (tối đa 2000).

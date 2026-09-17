@@ -18,6 +18,10 @@ use Spatie\Permission\Models\Role;
  */
 final class PermissionCatalog
 {
+    private const HIDDEN_PERMISSION_NAMES = [
+        'classroom.manage',
+    ];
+
     public static function roleLabel(Role $role): string
     {
         $systemRole = RoleEnum::tryFrom($role->name);
@@ -47,6 +51,7 @@ final class PermissionCatalog
         $permissions = Permission::query()
             ->where('guard_name', 'web')
             ->whereIn('name', $validNames)
+            ->whereNotIn('name', self::HIDDEN_PERMISSION_NAMES)
             ->orderBy('name')
             ->get();
 

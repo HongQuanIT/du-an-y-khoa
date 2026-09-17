@@ -1,6 +1,6 @@
 <x-layouts.admin title="Media">
     <x-admin.page-header title="Media"
-        description="Ảnh hoặc đoạn phim lưu trên máy chủ hay qua đường dẫn CDN. Có thể dùng lại cho trang nội dung, bài viết và câu hỏi.">
+        description="Ảnh hoặc video lưu trên máy chủ hay qua đường dẫn CDN. Có thể dùng lại cho trang nội dung, bài viết và câu hỏi.">
         @if ($canManage)
             <x-slot:actions>
                 @can('media.upload')
@@ -26,9 +26,9 @@
     <x-admin.flash />
 
     <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <x-admin.kpi-card label="Tổng tệp" :value="number_format($stats['total'])" hint="Ảnh + đoạn phim" icon="perm_media" />
+        <x-admin.kpi-card label="Tổng tệp" :value="number_format($stats['total'])" hint="Ảnh + video" icon="perm_media" />
         <x-admin.kpi-card label="Ảnh" :value="number_format($stats['images'])" hint="Có ảnh thu nhỏ và WebP" icon="image" />
-        <x-admin.kpi-card label="Đoạn phim" :value="number_format($stats['videos'])" hint="Lưu trên máy chủ, chưa phát trực tuyến thích ứng" icon="movie" />
+        <x-admin.kpi-card label="Video" :value="number_format($stats['videos'])" hint="Lưu trên máy chủ, chưa phát trực tuyến thích ứng" icon="movie" />
     </div>
 
     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.media.index'))
