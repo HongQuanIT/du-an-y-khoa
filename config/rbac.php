@@ -22,18 +22,18 @@ return [
                 'profile' => ['view', 'update', 'password_update', 'avatar_update', 'two_factor_toggle'],
             ],
             'user_management' => [
-                'user' => ['view_any', 'view', 'create', 'delete', 'status_update', 'role_assign', 'password_reset', 'two_factor_manage'],
-                'learner_catalog' => ['view_any', 'view', 'create', 'update'],
+                'user' => ['view', 'create', 'delete', 'status_update', 'role_assign', 'password_reset', 'two_factor_manage'],
+                'learner_catalog' => ['view', 'create', 'update'],
             ],
             'rbac' => [
-                'role' => ['view_any', 'view', 'create'],
+                'role' => ['view', 'create'],
                 'role_permission' => ['assign'],
-                'permission' => ['view_any', 'view'],
+                'permission' => ['view'],
             ],
             'question_bank' => [
                 'question' => ['view_any', 'view', 'create', 'clone', 'update', 'delete', 'submit', 'flag', 'publish', 'reject', 'retire', 'import', 'export'],
                 'question_version' => ['view', 'restore'],
-                'question_feedback' => ['view_any', 'view', 'update'],
+                'question_feedback' => ['view', 'update'],
             ],
             'taxonomy' => [
                 'taxonomy' => ['view'],
@@ -42,15 +42,15 @@ return [
                 'tag' => ['view', 'create', 'update', 'delete'],
             ],
             'exam' => [
-                'exam' => ['view_any', 'view', 'create', 'update', 'delete', 'publish', 'archive'],
+                'exam' => ['view', 'create', 'update', 'delete', 'publish', 'archive'],
             ],
             'classroom' => [
-                'classroom_oversight' => ['view_any', 'view', 'create_on_behalf', 'update', 'approve', 'reject', 'archive', 'schedule'],
+                'classroom_oversight' => ['view', 'create_on_behalf', 'update', 'approve', 'reject', 'archive', 'schedule'],
             ],
             'content' => [
                 'cms' => ['view', 'create', 'update', 'delete'],
                 'media' => ['view', 'upload', 'update', 'delete'],
-                'contact' => ['view_any', 'view', 'update'],
+                'contact' => ['view', 'update'],
             ],
             'reporting' => [
                 'report' => ['view', 'export', 'refresh'],
@@ -60,12 +60,12 @@ return [
             'billing' => [
                 'billing_plan' => ['view', 'update', 'publish', 'archive'],
                 'billing_price' => ['create', 'update', 'delete'],
-                'billing_subscription' => ['view_any', 'view'],
-                'billing_payment' => ['view_any', 'view'],
+                'billing_subscription' => ['view'],
+                'billing_payment' => ['view'],
                 'billing_gateway' => ['view', 'update'],
             ],
             'partner_management' => [
-                'partner' => ['view_any', 'view'],
+                'partner' => ['view'],
                 'partner_code' => ['view', 'create', 'update'],
                 'partner_payout' => ['view', 'create', 'mark_paid'],
             ],
@@ -90,7 +90,7 @@ return [
                 'classroom_session' => ['schedule', 'start', 'end'],
             ],
             'question_bank' => [
-                'question' => ['view_any', 'view', 'approve', 'reject'],
+                'question' => ['view', 'review', 'approve', 'reject'],
             ],
             'notification' => [
                 'teach_notification' => ['view'],

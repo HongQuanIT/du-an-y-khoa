@@ -19,7 +19,7 @@ final class LearnerCatalogController extends Controller
 {
     public function index(Request $request, string $catalog): View
     {
-        abort_unless($request->user()->canAny(['learner_catalog.view_any']), 403);
+        abort_unless($request->user()->canAny(['learner_catalog.view']), 403);
         $config = $this->config($catalog);
         $query = $config['model']::query()->withCount($config['counts']);
 

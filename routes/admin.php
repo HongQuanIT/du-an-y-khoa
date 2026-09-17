@@ -85,12 +85,12 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
         Route::get('/', DashboardController::class)->name('dashboard');
 
         Route::group([], function (): void {
-            Route::get('/learner-data/institutions', [InstitutionController::class, 'index'])->middleware('permission:learner_catalog.view_any')->name('institutions.index');
-            Route::get('/learner-data/countries', [LearnerCatalogController::class, 'index'])->middleware('permission:learner_catalog.view_any')->defaults('catalog', 'countries')->name('countries.index');
-            Route::get('/learner-data/administrative-units', [LearnerCatalogController::class, 'index'])->middleware('permission:learner_catalog.view_any')->defaults('catalog', 'administrative-units')->name('administrative-units.index');
-            Route::get('/learner-data/professions', [LearnerCatalogController::class, 'index'])->middleware('permission:learner_catalog.view_any')->defaults('catalog', 'professions')->name('professions.index');
-            Route::get('/learner-data/education-stages', [LearnerCatalogController::class, 'index'])->middleware('permission:learner_catalog.view_any')->defaults('catalog', 'education-stages')->name('education-stages.index');
-            Route::get('/users', [UserController::class, 'index'])->middleware('permission:user.view_any')->name('users.index');
+            Route::get('/learner-data/institutions', [InstitutionController::class, 'index'])->middleware('permission:learner_catalog.view')->name('institutions.index');
+            Route::get('/learner-data/countries', [LearnerCatalogController::class, 'index'])->middleware('permission:learner_catalog.view')->defaults('catalog', 'countries')->name('countries.index');
+            Route::get('/learner-data/administrative-units', [LearnerCatalogController::class, 'index'])->middleware('permission:learner_catalog.view')->defaults('catalog', 'administrative-units')->name('administrative-units.index');
+            Route::get('/learner-data/professions', [LearnerCatalogController::class, 'index'])->middleware('permission:learner_catalog.view')->defaults('catalog', 'professions')->name('professions.index');
+            Route::get('/learner-data/education-stages', [LearnerCatalogController::class, 'index'])->middleware('permission:learner_catalog.view')->defaults('catalog', 'education-stages')->name('education-stages.index');
+            Route::get('/users', [UserController::class, 'index'])->middleware('permission:user.view')->name('users.index');
             Route::get('/users/{user}', [UserController::class, 'show'])->name('users.show')
                 ->middleware('permission:user.view')
                 ->whereNumber('user');
@@ -122,12 +122,12 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
         });
 
         Route::group([], function (): void {
-            Route::get('/roles', [RoleController::class, 'index'])->middleware('permission:role.view_any')->name('roles.index');
+            Route::get('/roles', [RoleController::class, 'index'])->middleware('permission:role.view')->name('roles.index');
             Route::get('/roles/create', [RoleController::class, 'create'])->middleware('permission:role.create')->name('roles.create');
             Route::post('/roles', [RoleController::class, 'store'])->middleware('permission:role.create')->name('roles.store');
             Route::get('/roles/{role}', [RoleController::class, 'show'])->middleware('permission:role.view')->name('roles.show');
             Route::put('/roles/{role}/permissions', [RoleController::class, 'syncPermissions'])->middleware('permission:role_permission.assign')->name('roles.permissions');
-            Route::get('/permissions', [RoleController::class, 'permissionsCatalog'])->middleware('permission:permission.view_any')->name('permissions.index');
+            Route::get('/permissions', [RoleController::class, 'permissionsCatalog'])->middleware('permission:permission.view')->name('permissions.index');
         });
 
         Route::get('/settings', [SettingController::class, 'index'])
@@ -167,10 +167,10 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
             ->name('notifications.broadcast.store');
 
         Route::get('/contacts', [ContactInquiryController::class, 'index'])
-            ->middleware('permission:contact.view_any')
+            ->middleware('permission:contact.view')
             ->name('contacts.index');
         Route::get('/contacts/{contact}', [ContactInquiryController::class, 'show'])
-            ->middleware('permission:contact.view_any')
+            ->middleware('permission:contact.view')
             ->name('contacts.show');
         Route::patch('/contacts/{contact}', [ContactInquiryController::class, 'update'])
             ->middleware('permission:contact.update')
@@ -197,11 +197,11 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
             Route::post('/classrooms', [ClassroomOversightController::class, 'store'])->name('classrooms.store');
         });
 
-        Route::middleware('permission:classroom_oversight.view_any')->group(function (): void {
+        Route::middleware('permission:classroom_oversight.view')->group(function (): void {
             Route::get('/classrooms', [ClassroomOversightController::class, 'index'])->name('classrooms.index');
         });
 
-        Route::middleware('permission:classroom_oversight.view_any')->group(function (): void {
+        Route::middleware('permission:classroom_oversight.view')->group(function (): void {
             Route::get('/classrooms/{classroom}', [ClassroomOversightController::class, 'show'])
                 ->name('classrooms.show');
             Route::get('/classrooms/{classroom}/live/{liveSession}', [LiveRoomController::class, 'show'])
@@ -221,7 +221,7 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
         Route::patch('/classrooms/{classroom}', [ClassroomOversightController::class, 'update'])
             ->middleware('permission:classroom_oversight.update')
             ->name('classrooms.update');
-        Route::middleware('permission:classroom_oversight.view_any')->group(function (): void {
+        Route::middleware('permission:classroom_oversight.view')->group(function (): void {
             Route::post('/classrooms/{classroom}/live/{liveSession}/messages', [LiveRoomController::class, 'message'])
                 ->scopeBindings()
                 ->name('classrooms.live.message');
@@ -233,7 +233,7 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
                 ->name('classrooms.live.api.react');
         });
         Route::post('/classrooms/{classroom}/force-end', [ClassroomOversightController::class, 'forceEnd'])
-            ->middleware('permission:classroom_oversight.view_any')
+            ->middleware('permission:classroom_oversight.view')
             ->name('classrooms.force-end');
         Route::post('/classrooms/{classroom}/approve', [ClassroomOversightController::class, 'approve'])
             ->middleware('permission:classroom_oversight.approve')
@@ -282,7 +282,7 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
             ->middleware('permission:question.export')
             ->name('questions.export');
         Route::get('/question-feedback', [QuestionFeedbackController::class, 'index'])
-            ->middleware('permission:question_feedback.view_any')
+            ->middleware('permission:question_feedback.view')
             ->name('question-feedback.index');
         Route::middleware('permission:'.Permission::QuestionView->value)->group(function (): void {
             Route::get('/questions/{question}', [QuestionController::class, 'edit']);
@@ -426,7 +426,7 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
             Route::get('/exams/topic-eligibility', [ExamController::class, 'topicEligibility'])->name('exams.topic-eligibility');
         });
         Route::get('/exams', [ExamController::class, 'index'])
-            ->middleware('permission:exam.view_any')
+            ->middleware('permission:exam.view')
             ->name('exams.index');
         Route::get('/exams/create', [ExamController::class, 'create'])
             ->middleware('permission:exam.create')
@@ -608,7 +608,7 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
             ->name('billing.plan-prices.destroy');
 
         Route::get('/partners', [PartnerAdminController::class, 'index'])
-            ->middleware('permission:partner.view_any')
+            ->middleware('permission:partner.view')
             ->name('partners.index');
         Route::get('/partners/{partner}', [PartnerAdminController::class, 'show'])
             ->middleware('permission:partner.view')

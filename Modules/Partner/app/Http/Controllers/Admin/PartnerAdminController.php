@@ -30,7 +30,7 @@ final class PartnerAdminController extends Controller
 {
     public function index(Request $request): View
     {
-        $this->authorizePermission('partner.view_any');
+        $this->authorizePermission('partner.view');
 
         $period = PartnerPeriodFilter::fromRequest($request);
         $filters = PartnerPeriodFilter::listFilters($request);

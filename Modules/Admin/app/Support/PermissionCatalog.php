@@ -75,7 +75,7 @@ final class PermissionCatalog
 
     /**
      * Priority weight for permission action within a resource:
-     * 1. view (view_any, view)
+     * 1. view (view, view_any)
      * 2. create
      * 3. update / edit
      * 4. delete
@@ -142,8 +142,8 @@ final class PermissionCatalog
         $action = explode('.', $permission, 2)[1] ?? $permission;
 
         return match ($action) {
-            'view_any' => 'Xem danh sách',
-            'view' => 'Xem chi tiết',
+            'view_any' => 'Xem toàn bộ dữ liệu',
+            'view' => 'Xem',
             'create' => 'Tạo mới',
             'update', 'edit' => 'Chỉnh sửa',
             'delete' => 'Xóa',

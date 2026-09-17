@@ -19,7 +19,7 @@ final class QuestionFeedbackController extends Controller
     public function index(Request $request): View
     {
         abort_unless(
-            $this->actor()->can('question_feedback.view_any'),
+            $this->actor()->can('question_feedback.view'),
             403,
         );
 

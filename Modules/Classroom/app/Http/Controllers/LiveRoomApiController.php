@@ -32,7 +32,7 @@ final class LiveRoomApiController extends Controller
 
         $observer = $request->routeIs('admin.*');
         if ($observer) {
-            abort_unless($request->user()->canAny(['classroom_oversight.view_any']), 403);
+            abort_unless($request->user()->canAny(['classroom_oversight.view']), 403);
         }
 
         $liveSession->load([
@@ -107,7 +107,7 @@ final class LiveRoomApiController extends Controller
 
         $observer = $request->routeIs('admin.*');
         if ($observer) {
-            abort_unless($request->user()->canAny(['classroom_oversight.view_any']), 403);
+            abort_unless($request->user()->canAny(['classroom_oversight.view']), 403);
         }
 
         $teachPortal = $request->routeIs('teach.*');

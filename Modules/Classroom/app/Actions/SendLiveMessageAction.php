@@ -24,7 +24,7 @@ final class SendLiveMessageAction
             ]);
         }
 
-        $isOverseer = $user->can('classroom_oversight.view_any');
+        $isOverseer = $user->can('classroom_oversight.view');
 
         if (! $isOverseer) {
             $member = $session->classroom->memberFor($user);

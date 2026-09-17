@@ -54,7 +54,7 @@ abstract class TestCase extends BaseTestCase
         $guard = $guard ?? config('auth.defaults.guard');
         $this->startSession();
 
-        $this->app['auth']->guard($guard)->login($user);
+        $this->actingAs($user, $guard);
 
         $sessionId = $this->app['session']->getId();
         $now = now()->timestamp;

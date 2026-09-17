@@ -46,8 +46,7 @@ final class TeachQuestionReviewTest extends TestCase
         $other = $this->makeInReviewQuestion();
         $other->forceFill(['stem' => 'Câu gán giảng viên khác không hiện trong hàng đợi của tôi'])->save();
         $draft = $this->makeDraftQuestion();
-
-        $this->actingAs($instructor)
+        $this->actingAsWithWebSession($instructor, 'web')
             ->get(route('teach.questions.reviews.index'))
             ->assertOk()
             ->assertSee('Danh sách duyệt câu hỏi')
@@ -81,12 +80,12 @@ final class TeachQuestionReviewTest extends TestCase
             'stem' => 'Câu đã từ chối riêng biệt để assert',
         ])->save();
 
-        $this->actingAs($instructor)
+        $this->actingAsWithWebSession($instructor, 'web')
             ->get(route('teach.questions.reviews.index', ['tab' => 'approved']))
             ->assertOk()
             ->assertSee(strip_tags((string) $approved->stem));
 
-        $this->actingAs($instructor)
+        $this->actingAsWithWebSession($instructor, 'web')
             ->get(route('teach.questions.reviews.index', ['tab' => 'rejected']))
             ->assertOk()
             ->assertSee('Câu đã từ chối riêng biệt để assert')
@@ -99,7 +98,7 @@ final class TeachQuestionReviewTest extends TestCase
         $question = $this->makeInReviewQuestion($instructor);
         $versionBefore = (int) $question->version;
 
-        $this->actingAs($instructor)
+        $this->actingAsWithWebSession($instructor, 'web')
             ->post(route('teach.questions.reviews.approve', $question), [
                 'review_note' => 'Nội dung ổn.',
             ])
@@ -132,7 +131,7 @@ final class TeachQuestionReviewTest extends TestCase
         $question = $this->makeInReviewQuestion($instructor);
         $versionBefore = (int) $question->version;
 
-        $this->actingAs($instructor)
+        $this->actingAsWithWebSession($instructor, 'web')
             ->post(route('teach.questions.reviews.reject', $question), [
                 'review_note' => 'Thiếu giải thích đáp án nhiễu.',
             ])
@@ -162,7 +161,7 @@ final class TeachQuestionReviewTest extends TestCase
         $instructor = $this->instructor();
         $question = $this->makeInReviewQuestion($instructor);
 
-        $this->actingAs($instructor)
+        $this->actingAsWithWebSession($instructor, 'web')
             ->from(route('teach.questions.reviews.show', $question))
             ->post(route('teach.questions.reviews.reject', $question), [
                 'review_note' => '',
@@ -178,7 +177,7 @@ final class TeachQuestionReviewTest extends TestCase
         $instructor = $this->instructor();
         $question = $this->makePublishedThenInReviewQuestion($instructor);
 
-        $this->actingAs($instructor)
+        $this->actingAsWithWebSession($instructor, 'web')
             ->get(route('teach.questions.reviews.show', $question))
             ->assertOk()
             ->assertSee('So sánh với bản đang xuất bản', false)
@@ -200,7 +199,7 @@ final class TeachQuestionReviewTest extends TestCase
         $instructor = $this->instructor();
         $question = $this->makeInReviewQuestion($instructor);
 
-        $this->actingAs($instructor)
+        $this->actingAsWithWebSession($instructor, 'web')
             ->get(route('teach.questions.reviews.show', $question))
             ->assertOk()
             ->assertSee('So sánh với bản đang xuất bản', false)
@@ -224,7 +223,7 @@ final class TeachQuestionReviewTest extends TestCase
             'key_info' => ['Đau ngực kiểu mạch vành'],
         ])->save();
 
-        $this->actingAs($instructor)
+        $this->actingAsWithWebSession($instructor, 'web')
             ->get(route('teach.questions.reviews.show', $question->fresh()))
             ->assertOk()
             ->assertSee('Câu hỏi', false)
@@ -244,7 +243,7 @@ final class TeachQuestionReviewTest extends TestCase
         $student->assignRole(Role::Student->value);
         $this->makeInReviewQuestion();
 
-        $this->actingAs($student)
+        $this->actingAsWithWebSession($student, 'web')
             ->get(route('teach.questions.reviews.index'))
             ->assertRedirect();
     }
@@ -253,6 +252,15 @@ final class TeachQuestionReviewTest extends TestCase
     {
         $user = User::factory()->create();
         $user->assignRole(Role::Instructor->value);
+        $user->givePermissionTo([
+            Permission::QuestionView->value,
+            Permission::QuestionReview->value,
+            'question.approve',
+            'question.reject',
+        ]);
+        $user->unsetRelation('roles');
+        $user->unsetRelation('permissions');
+        $user->forgetCachedPermissions();
 
         return $user;
     }
@@ -354,14 +362,14 @@ final class TeachQuestionReviewTest extends TestCase
     public function test_instructor_permission_granularity_for_question_review(): void
     {
         $instructor = $this->instructor();
-        $question = $this->makeInReviewQuestion();
+        $question = $this->makeInReviewQuestion($instructor);
 
         // 1. Instructor có đầy đủ quyền mặc định -> truy cập index và show bình thường
-        $this->actingAs($instructor)
+        $this->actingAsWithWebSession($instructor, 'web')
             ->get(route('teach.questions.reviews.index'))
             ->assertOk();
 
-        $this->actingAs($instructor)
+        $this->actingAsWithWebSession($instructor, 'web')
             ->get(route('teach.questions.reviews.show', $question))
             ->assertOk();
 
@@ -373,44 +381,51 @@ final class TeachQuestionReviewTest extends TestCase
         ]);
         $restrictedInstructor = User::factory()->create();
         $restrictedInstructor->assignRole($restrictedRole);
+        $question->forceFill(['assigned_instructor_id' => $restrictedInstructor->id])->save();
 
-        $this->actingAs($restrictedInstructor)
+        $this->actingAsWithWebSession($restrictedInstructor, 'web')
             ->get(route('teach.questions.reviews.index'))
             ->assertForbidden();
 
-        $this->actingAs($restrictedInstructor)
+        $this->actingAsWithWebSession($restrictedInstructor, 'web')
             ->get(route('teach.questions.reviews.show', $question))
             ->assertForbidden();
 
-        // 3. Chỉ cấp question.view_any -> xem được index nhưng không xem được show và không duyệt được
+        // 3. question.view_any không mở cổng giảng viên; teach review chỉ dùng question.view
         $restrictedRole->givePermissionTo('question.view_any');
         app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        $restrictedInstructor->forgetCachedPermissions();
 
-        $this->actingAs($restrictedInstructor)
+        $this->actingAsWithWebSession($restrictedInstructor, 'web')
+            ->get(route('teach.questions.reviews.index'))
+            ->assertForbidden();
+
+        $this->actingAsWithWebSession($restrictedInstructor, 'web')
+            ->get(route('teach.questions.reviews.show', $question))
+            ->assertForbidden();
+
+        // 4. Cấp question.view -> xem được index/show nhưng không duyệt / không từ chối được (403)
+        $restrictedRole->givePermissionTo(Permission::QuestionView->value);
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        $restrictedInstructor->forgetCachedPermissions();
+
+        $this->actingAsWithWebSession($restrictedInstructor, 'web')
             ->get(route('teach.questions.reviews.index'))
             ->assertOk();
 
-        $this->actingAs($restrictedInstructor)
-            ->get(route('teach.questions.reviews.show', $question))
-            ->assertForbidden();
-
-        // 4. Cấp question.view -> xem được show nhưng không duyệt / không từ chối được (403)
-        $restrictedRole->givePermissionTo(Permission::QuestionView->value);
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
-
-        $this->actingAs($restrictedInstructor)
+        $this->actingAsWithWebSession($restrictedInstructor, 'web')
             ->get(route('teach.questions.reviews.show', $question))
             ->assertOk()
             ->assertDontSee('Duyệt chuyên môn')
             ->assertDontSee('Từ chối');
 
-        $this->actingAs($restrictedInstructor)
+        $this->actingAsWithWebSession($restrictedInstructor, 'web')
             ->post(route('teach.questions.reviews.approve', $question), [
                 'review_note' => 'Cố tình duyệt khi không có quyền approve',
             ])
             ->assertForbidden();
 
-        $this->actingAs($restrictedInstructor)
+        $this->actingAsWithWebSession($restrictedInstructor, 'web')
             ->post(route('teach.questions.reviews.reject', $question), [
                 'review_note' => 'Cố tình từ chối khi không có quyền reject',
             ])
@@ -419,30 +434,32 @@ final class TeachQuestionReviewTest extends TestCase
         // 5. Cấp question.approve -> thấy và bấm được Duyệt chuyên môn, nhưng chưa có quyền Từ chối
         $restrictedRole->givePermissionTo('question.approve');
         app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        $restrictedInstructor->forgetCachedPermissions();
 
-        $this->actingAs($restrictedInstructor)
+        $this->actingAsWithWebSession($restrictedInstructor, 'web')
             ->get(route('teach.questions.reviews.show', $question))
             ->assertOk()
             ->assertSee('Duyệt chuyên môn')
             ->assertDontSee('Từ chối');
 
-        $this->actingAs($restrictedInstructor)
+        $this->actingAsWithWebSession($restrictedInstructor, 'web')
             ->post(route('teach.questions.reviews.reject', $question), [
                 'review_note' => 'Cố tình từ chối khi chưa có quyền reject',
             ])
             ->assertForbidden();
 
         // 6. Cấp question.reject -> thấy và bấm được cả Từ chối
-        $restrictedRole->givePermissionTo('question.reject');
+        $restrictedRole->givePermissionTo([Permission::QuestionReview->value, 'question.reject']);
         app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        $restrictedInstructor->forgetCachedPermissions();
 
-        $this->actingAs($restrictedInstructor)
+        $this->actingAsWithWebSession($restrictedInstructor, 'web')
             ->get(route('teach.questions.reviews.show', $question))
             ->assertOk()
             ->assertSee('Duyệt chuyên môn')
             ->assertSee('Từ chối');
 
-        $this->actingAs($restrictedInstructor)
+        $this->actingAsWithWebSession($restrictedInstructor, 'web')
             ->post(route('teach.questions.reviews.reject', $question), [
                 'review_note' => 'Đã có quyền reject hợp lệ',
             ])

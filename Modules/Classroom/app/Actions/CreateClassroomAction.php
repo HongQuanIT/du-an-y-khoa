@@ -86,7 +86,7 @@ final class CreateClassroomAction
             ->role(PortalAccess::roleNames(PortalGroup::Admin))
             ->get()
             ->filter(fn (User $admin): bool => $admin->canAny([
-                'classroom_oversight.view_any',
+                'classroom_oversight.view',
             ]))
             ->each(function (User $admin) use ($host, $classroom): void {
                 $this->notify->handle(

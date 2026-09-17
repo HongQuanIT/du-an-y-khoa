@@ -38,7 +38,7 @@ final class UserController extends Controller
 {
     public function index(Request $request): View
     {
-        $this->authorizeAnyPermission(['user.view_any']);
+        $this->authorizeAnyPermission(['user.view']);
 
         $query = User::query()->with([
             'roles',

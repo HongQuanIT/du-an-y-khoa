@@ -25,6 +25,7 @@ final class QuestionImportController extends Controller
 {
     public function create(): View
     {
+        $this->authorizePermission(Permission::QuestionView);
         $this->authorizePermission(Permission::QuestionCreate);
 
         return view('admin::questions.import', [
@@ -39,6 +40,7 @@ final class QuestionImportController extends Controller
 
     public function template(Request $request, QuestionSpreadsheet $spreadsheet): StreamedResponse
     {
+        $this->authorizePermission(Permission::QuestionView);
         $this->authorizePermission(Permission::QuestionCreate);
 
         $format = $request->query('format') === 'csv' ? 'csv' : 'xlsx';
@@ -64,6 +66,7 @@ final class QuestionImportController extends Controller
 
     public function store(Request $request, QuestionSpreadsheet $spreadsheet): RedirectResponse
     {
+        $this->authorizePermission(Permission::QuestionView);
         $this->authorizePermission(Permission::QuestionCreate);
 
         $data = $request->validate([
@@ -123,6 +126,7 @@ final class QuestionImportController extends Controller
         QuestionImportBatch $batch,
         PrepareQuestionImportPreviewAction $previewAction,
     ): View {
+        $this->authorizePermission(Permission::QuestionView);
         $this->authorizePermission(Permission::QuestionCreate);
         $this->authorizeBatch($batch);
 
@@ -160,6 +164,7 @@ final class QuestionImportController extends Controller
         QuestionImportBatch $batch,
         PrepareQuestionImportPreviewAction $previewAction,
     ): RedirectResponse {
+        $this->authorizePermission(Permission::QuestionView);
         $this->authorizePermission(Permission::QuestionCreate);
         $this->authorizeBatch($batch);
         abort_if($batch->status === QuestionImportBatchStatus::Done, 409, 'Lô này đã import xong.');
@@ -191,6 +196,7 @@ final class QuestionImportController extends Controller
         QuestionImportBatch $batch,
         CommitQuestionImportAction $action,
     ): RedirectResponse {
+        $this->authorizePermission(Permission::QuestionView);
         $this->authorizePermission(Permission::QuestionCreate);
         $this->authorizeBatch($batch);
 
@@ -222,6 +228,7 @@ final class QuestionImportController extends Controller
 
     public function errors(QuestionImportBatch $batch): Response
     {
+        $this->authorizePermission(Permission::QuestionView);
         $this->authorizePermission(Permission::QuestionCreate);
         $this->authorizeBatch($batch);
         abort_unless(filled($batch->error_report_path) && Storage::disk('local')->exists($batch->error_report_path), 404);

@@ -312,7 +312,7 @@ final class GetAdminDashboardDataAction
         /** @var array<string, mixed> $chartSeries */
         $chartSeries = $aggregates['chart_series'];
 
-        if ($viewer->can('user.view_any')) {
+        if ($viewer->can('user.view')) {
             /** @var list<array{label: string, dau: int, signups: int}> $userGrowth */
             $userGrowth = $chartSeries['user_growth'];
             $charts[] = [
@@ -358,7 +358,7 @@ final class GetAdminDashboardDataAction
             ];
         }
 
-        if ($viewer->can('user.view_any')) {
+        if ($viewer->can('user.view')) {
             /** @var list<array{label: string, questions: int, sessions: int}> $engagement */
             $engagement = $chartSeries['engagement'];
             $charts[] = [
@@ -395,7 +395,7 @@ final class GetAdminDashboardDataAction
     {
         $kpis = [];
 
-        if ($viewer->can('user.view_any')) {
+        if ($viewer->can('user.view')) {
             $kpis[] = $this->kpi(
                 label: 'DAU',
                 value: number_format((int) $aggregates['dau_today']),
@@ -497,7 +497,7 @@ final class GetAdminDashboardDataAction
             }
         }
 
-        if ($viewer->can('contact.view_any')) {
+        if ($viewer->can('contact.view')) {
             $contactsNew = (int) $aggregates['contacts_new'];
             $kpis[] = $this->kpi(
                 label: 'Liên hệ mới',
@@ -523,7 +523,7 @@ final class GetAdminDashboardDataAction
             }
         }
 
-        if ($viewer->can('classroom_oversight.view_any')) {
+        if ($viewer->can('classroom_oversight.view')) {
             $classroomsPending = (int) $aggregates['classrooms_pending'];
             if ($classroomsPending > 0) {
                 $kpis[] = $this->kpi(
@@ -568,7 +568,7 @@ final class GetAdminDashboardDataAction
     {
         $alerts = [];
 
-        if ($viewer->can('user.view_any')) {
+        if ($viewer->can('user.view')) {
             $dau = (int) $aggregates['dau_today'];
             $signups = (int) $aggregates['signups_7d'];
             $alerts[] = $this->alert(
@@ -648,7 +648,7 @@ final class GetAdminDashboardDataAction
             }
         }
 
-        if ($viewer->can('question.view_any')) {
+        if ($viewer->can(Permission::QuestionView->value)) {
             $published = (int) $aggregates['questions_published'];
             $inReview = (int) $aggregates['questions_in_review'];
             $feedbackPending = (int) $aggregates['feedback_pending'];
@@ -724,7 +724,7 @@ final class GetAdminDashboardDataAction
             }
         }
 
-        if ($viewer->can('contact.view_any')) {
+        if ($viewer->can('contact.view')) {
             $contactsNew = (int) $aggregates['contacts_new'];
             if ($contactsNew >= 10) {
                 $alerts[] = $this->alert(
@@ -845,7 +845,7 @@ final class GetAdminDashboardDataAction
             }
         }
 
-        if ($viewer->can('classroom_oversight.view_any')) {
+        if ($viewer->can('classroom_oversight.view')) {
             $classroomsPending = (int) $aggregates['classrooms_pending'];
             if ($classroomsPending > 0) {
                 $alerts[] = $this->alert(
@@ -1006,7 +1006,7 @@ final class GetAdminDashboardDataAction
             ];
         }
 
-        if ($viewer->can('question.view_any') && Route::has('admin.question-feedback.index')) {
+        if ($viewer->can(Permission::QuestionView->value) && Route::has('admin.question-feedback.index')) {
             $actions[] = [
                 'label' => 'Xử lý feedback',
                 'icon' => 'rate_review',

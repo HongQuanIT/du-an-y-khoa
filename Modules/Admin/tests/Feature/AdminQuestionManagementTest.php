@@ -788,7 +788,7 @@ final class AdminQuestionManagementTest extends TestCase
         ]);
     }
 
-    public function test_editor_can_open_own_question_edit_with_only_update_permission(): void
+    public function test_editor_cannot_use_question_workspace_without_view_permission(): void
     {
         $editor = $this->staffUser(Role::ContentEditor);
         $role = \Spatie\Permission\Models\Role::findByName(Role::ContentEditor->value, 'web');
@@ -802,20 +802,13 @@ final class AdminQuestionManagementTest extends TestCase
 
         $this->actingAsStaff($editor)
             ->post(route('admin.questions.store'), $this->payload())
-            ->assertRedirect();
-
-        $question = Question::query()->firstOrFail();
-        $this->assertSame($editor->id, $question->created_by);
-
-        $this->actingAsStaff($editor)
-            ->get(route('admin.questions.edit', $question))
-            ->assertOk()
-            ->assertSee('Chỉnh sửa câu hỏi', false)
-            ->assertSee('Bài học *', false);
+            ->assertForbidden();
 
         $this->actingAsStaff($editor)
             ->get(route('admin.questions.index'))
-            ->assertOk();
+            ->assertForbidden();
+
+        $this->assertDatabaseCount('questions', 0);
     }
 
     public function test_content_creator_only_sees_and_opens_own_questions(): void
@@ -861,6 +854,16 @@ final class AdminQuestionManagementTest extends TestCase
             ->get(route('admin.questions.index'))
             ->assertOk()
             ->assertDontSee('created_by-filter-trigger', false);
+
+        $creatorA->givePermissionTo('question.view_any');
+        $creatorA->forgetCachedPermissions();
+
+        $this->actingAsStaff($creatorA)
+            ->get(route('admin.questions.index'))
+            ->assertOk()
+            ->assertSee($ownQuestion->code, false)
+            ->assertSee('Câu hỏi bí mật của creator B', false)
+            ->assertSee('created_by-filter-trigger', false);
     }
 
     public function test_creator_edit_published_becomes_working_copy_and_needs_instructor_then_admin(): void

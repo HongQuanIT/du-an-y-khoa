@@ -94,7 +94,7 @@ final class AdminContactInquiryTest extends TestCase
         $editor = $this->staffUser(Role::ContentEditor);
         $inquiry = $this->makeInquiry();
 
-        $this->assertFalse($editor->can('contact.view_any'));
+        $this->assertFalse($editor->can('contact.view'));
 
         $this->actingAsStaff($editor)
             ->get(route('admin.contacts.index'))

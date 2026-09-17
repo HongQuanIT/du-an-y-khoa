@@ -16,12 +16,12 @@ final class ClassroomPolicy
     public function viewAny(User $user): bool
     {
         return $user->can('classroom.view')
-            || $user->can('classroom_oversight.view_any');
+            || $user->can('classroom_oversight.view');
     }
 
     public function view(User $user, Classroom $classroom): bool
     {
-        if ($user->can('classroom_oversight.view_any')) {
+        if ($user->can('classroom_oversight.view')) {
             return true;
         }
 
@@ -53,7 +53,7 @@ final class ClassroomPolicy
 
     public function update(User $user, Classroom $classroom): bool
     {
-        if ($user->can('classroom_oversight.view_any')) {
+        if ($user->can('classroom_oversight.view')) {
             return true;
         }
 
@@ -82,12 +82,12 @@ final class ClassroomPolicy
         }
 
         return $user->can(Permission::ClassroomJoin->value)
-            || $user->can('classroom_oversight.view_any');
+            || $user->can('classroom_oversight.view');
     }
 
     public function manageLive(User $user, Classroom $classroom): bool
     {
-        if ($user->canAny(['classroom_oversight.schedule', 'classroom_oversight.view_any'])) {
+        if ($user->canAny(['classroom_oversight.schedule', 'classroom_oversight.view'])) {
             return true;
         }
 

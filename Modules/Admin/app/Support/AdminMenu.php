@@ -51,14 +51,14 @@ final class AdminMenu
                 'label' => 'Người dùng',
                 'icon' => 'group',
                 'route' => 'admin.users.index',
-                'permission' => 'user.view_any',
+                'permission' => 'user.view',
                 'match' => 'admin.users.*',
             ],
             [
                 'label' => 'Dữ liệu học viên',
                 'icon' => 'clinical_notes',
                 'route' => 'admin.institutions.index',
-                'permission' => 'learner_catalog.view_any',
+                'permission' => 'learner_catalog.view',
                 'match' => [
                     'admin.learner-data.*',
                     'admin.countries.*',
@@ -72,7 +72,7 @@ final class AdminMenu
                 'label' => 'Câu hỏi',
                 'icon' => 'quiz',
                 'route' => 'admin.questions.index',
-                'permission' => 'question.view_any',
+                'permission' => Permission::QuestionView->value,
                 'match' => 'admin.questions.*',
             ],
             [
@@ -86,7 +86,7 @@ final class AdminMenu
                 'label' => 'Phản hồi câu hỏi',
                 'icon' => 'rate_review',
                 'route' => 'admin.question-feedback.index',
-                'permission' => 'question_feedback.view_any',
+                'permission' => 'question_feedback.view',
                 'match' => 'admin.question-feedback.*',
             ],
             [
@@ -105,14 +105,14 @@ final class AdminMenu
                 'label' => 'Kỳ thi',
                 'icon' => 'assignment',
                 'route' => 'admin.exams.index',
-                'permission' => 'exam.view_any',
+                'permission' => 'exam.view',
                 'match' => 'admin.exams.*',
             ],
             [
                 'label' => 'Lớp học',
                 'icon' => 'school',
                 'route' => 'admin.classrooms.index',
-                'permission' => 'classroom_oversight.view_any',
+                'permission' => 'classroom_oversight.view',
                 'match' => 'admin.classrooms.*',
             ],
             [
@@ -126,7 +126,7 @@ final class AdminMenu
                 'label' => 'Liên hệ',
                 'icon' => 'mail',
                 'route' => 'admin.contacts.index',
-                'permission' => 'contact.view_any',
+                'permission' => 'contact.view',
                 'match' => 'admin.contacts.*',
             ],
             [
@@ -175,7 +175,7 @@ final class AdminMenu
                 'label' => 'Cộng tác viên',
                 'icon' => 'handshake',
                 'route' => 'admin.partners.index',
-                'permission' => 'partner.view_any',
+                'permission' => 'partner.view',
                 'match' => [
                     'admin.partners.index',
                     'admin.partners.show',
@@ -193,7 +193,7 @@ final class AdminMenu
                 'label' => 'Phân quyền',
                 'icon' => 'admin_panel_settings',
                 'route' => 'admin.roles.index',
-                'permission' => 'role.view_any',
+                'permission' => 'role.view',
                 'match' => 'admin.roles.*',
             ],
             [

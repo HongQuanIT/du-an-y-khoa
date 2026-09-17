@@ -269,7 +269,7 @@ final class ClassroomOversightController extends Controller
 
     public function index(Request $request): View
     {
-        $this->authorizePermission('classroom_oversight.view_any');
+        $this->authorizePermission('classroom_oversight.view');
 
         $query = Classroom::query()
             ->with(['host', 'liveSession'])
@@ -336,7 +336,7 @@ final class ClassroomOversightController extends Controller
 
     public function show(Classroom $classroom): View
     {
-        $this->authorizePermission('classroom_oversight.view_any');
+        $this->authorizePermission('classroom_oversight.view');
 
         $classroom->load([
             'host',
@@ -365,7 +365,7 @@ final class ClassroomOversightController extends Controller
 
     public function forceEnd(Classroom $classroom, ForceEndClassroomLiveAction $action): RedirectResponse
     {
-        $this->authorizePermission('classroom_oversight.view_any');
+        $this->authorizePermission('classroom_oversight.view');
 
         $ended = $action->handle($this->actor(), $classroom);
 

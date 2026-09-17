@@ -273,7 +273,7 @@
                     />
                 </div>
 
-                @if ($isReviewer)
+                @if ($canViewAny)
                     <div class="sm:col-span-2">
                         <x-admin.multi-select-filter
                             name="created_by"
@@ -285,7 +285,7 @@
                     </div>
                 @endif
 
-                <div class="{{ $isReviewer ? 'sm:col-span-1' : 'sm:col-span-3' }}">
+                <div class="{{ $canViewAny ? 'sm:col-span-1' : 'sm:col-span-3' }}">
                     <span class="mb-1.5 block font-label-sm font-semibold text-transparent" aria-hidden="true">Lọc</span>
                     <button type="submit" id="btn-apply-filters"
                         class="inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-4 font-label-md font-medium text-on-primary transition hover:opacity-90">
