@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-09-17
+
+### Docs — Phiên luyện thích ứng: chỉnh format giải thích ngắn
+
+- Căn bảng markdown và làm gọn tiêu đề mục tín hiệu trong `adaptive-session-explained.md`.
+
 ## 2026-09-16
 
 ### Chore — QBank: seeder môn học + bài học mẫu
