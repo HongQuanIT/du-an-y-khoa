@@ -51,12 +51,15 @@ final class SyncRolePermissionsAction
             abort(422, 'Vai trò chỉ được nhận permission thuộc đúng portal.');
         }
 
-        $permissions = $permissionModels->pluck('name')->all();
-
         $before = $role->permissions()->pluck('name')->sort()->values()->all();
 
-        DB::transaction(function () use ($role, $permissions): void {
-            $role->syncPermissions($permissions);
+        // Flush before sync: Spatie findByName uses cache; newly migrated
+        // permissions (e.g. cms.view) would throw PermissionDoesNotExist if we
+        // only pass names against a stale cache. Pass models + refresh cache.
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        DB::transaction(function () use ($role, $permissionModels): void {
+            $role->syncPermissions($permissionModels);
         });
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();
