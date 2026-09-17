@@ -18,7 +18,7 @@ final class MenuController extends Controller
 {
     public function index(): View
     {
-        $this->authorizePermission('cms_menu.view');
+        $this->authorizePermission('cms.view');
 
         Menu::syncCatalog();
 
@@ -40,7 +40,7 @@ final class MenuController extends Controller
 
     public function edit(Menu $menu): View
     {
-        $this->authorizePermission('cms_menu.update');
+        $this->authorizePermission('cms.update');
 
         return view('admin::cms.menus.form', [
             'menu' => $menu,
@@ -51,7 +51,7 @@ final class MenuController extends Controller
 
     public function update(SaveMenuRequest $request, Menu $menu, SaveMenuAction $save): RedirectResponse
     {
-        $this->authorizePermission('cms_menu.update');
+        $this->authorizePermission('cms.update');
 
         $save->handle($this->actor(), $request, $menu);
 

@@ -263,11 +263,18 @@ final class TransitionQuestionStatusAction
             return;
         }
 
-        // Lớp 2 — publish / reject-publish / private
+        if ($to === QuestionStatus::Rejected) {
+            if (! $actor->can('question.reject')) {
+                abort(403, 'Cần quyền question.reject.');
+            }
+
+            return;
+        }
+
+        // Lớp 2 — publish / private
         $needsPublishPermission = in_array($to, [
             QuestionStatus::Published,
             QuestionStatus::Private,
-            QuestionStatus::Rejected,
         ], true);
 
         if ($needsPublishPermission) {

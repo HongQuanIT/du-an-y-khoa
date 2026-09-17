@@ -33,10 +33,7 @@ final class QuestionAccess
         return $user->can(Permission::QuestionFlag->value);
     }
 
-    /**
-     * Open the admin question workspace (list, form, stats).
-     * `question.update` is enough to edit — do not require `question.view` or `topic.view`.
-     */
+    /** Open the admin question workspace (list, form, stats). */
     public static function canAccessWorkspace(User $user): bool
     {
         return $user->canAny([
@@ -109,6 +106,12 @@ final class QuestionAccess
 
     public static function canView(User $user, Question $question): bool
     {
+        // `question.view_any` permits listing questions only. Opening a question
+        // (including its comparison and statistics) always requires `question.view`.
+        if (! $user->can(Permission::QuestionView->value)) {
+            return false;
+        }
+
         if ($user->can('question.view_any') || self::canPublish($user)) {
             return true;
         }

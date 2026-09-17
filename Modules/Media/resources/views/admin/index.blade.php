@@ -3,7 +3,7 @@
         description="Ảnh hoặc đoạn phim lưu trên máy chủ hay qua đường dẫn CDN. Có thể dùng lại cho trang nội dung, bài viết và câu hỏi.">
         @if ($canManage)
             <x-slot:actions>
-                @can('media.import')
+                @can('media.upload')
                 <button type="button"
                     class="inline-flex items-center gap-1 rounded-lg border border-outline-variant px-3 py-2 font-label-md text-on-surface hover:bg-surface-container-low"
                     @click="window.dispatchEvent(new CustomEvent('media-picker:open', { detail: { mode: 'url', accept: 'image' } }))">

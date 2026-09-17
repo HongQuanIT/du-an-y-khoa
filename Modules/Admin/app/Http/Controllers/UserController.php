@@ -19,6 +19,10 @@ use Modules\Admin\Actions\ResetUserTwoFactorAction;
 use Modules\Admin\Actions\SendUserPasswordResetAction;
 use Modules\Admin\Actions\UpdateUserRoleAction;
 use Modules\Admin\Actions\UpdateUserStatusAction;
+use Modules\Admin\Enums\AuditAction;
+use Modules\Admin\Support\Auditor;
+use Modules\Admin\Support\AuditSnapshot;
+use Modules\Admin\Support\StaffGuard;
 use Modules\Admin\Support\AdminQuestionListQuery;
 use Modules\Admin\Support\AssignableRoles;
 use Modules\Auth\Models\AdministrativeUnit;
@@ -203,6 +207,8 @@ final class UserController extends Controller
             && $this->actor()->canAny(['user.password_reset']);
         $canTwoFactorManage = $canTarget
             && $this->actor()->canAny(['user.two_factor_manage']);
+        $canDelete = $canTarget
+            && $this->actor()->canAny(['user.delete']);
         $canManageInstructorSubjects = $canTarget
             && $user->hasRole(Role::Instructor->value)
             && $this->actor()->canAny(['user.role_assign', 'user.status_update']);
@@ -212,11 +218,12 @@ final class UserController extends Controller
             'assignableRoles' => AssignableRoles::for($this->actor())->all(),
             'statuses' => UserStatus::cases(),
             'activities' => $activities,
-            'canManage' => $canAssignRole || $canUpdateStatus || $canResetPassword || $canTwoFactorManage || $canManageInstructorSubjects,
+            'canManage' => $canAssignRole || $canUpdateStatus || $canResetPassword || $canTwoFactorManage || $canManageInstructorSubjects || $canDelete,
             'canAssignRole' => $canAssignRole,
             'canUpdateStatus' => $canUpdateStatus,
             'canResetPassword' => $canResetPassword,
             'canTwoFactorManage' => $canTwoFactorManage,
+            'canDelete' => $canDelete,
             'canManageInstructorSubjects' => $canManageInstructorSubjects,
             'subjects' => Subject::query()
                 ->where('status', TaxonomyStatus::Active)
@@ -234,6 +241,19 @@ final class UserController extends Controller
         $action->handle($this->actor(), $user);
 
         return back()->with('status', 'Đã đặt lại / tắt xác thực hai bước (2FA) cho tài khoản.');
+    }
+
+    public function destroy(User $user): RedirectResponse
+    {
+        $this->authorizeAnyPermission(['user.delete']);
+        abort_if($this->actor()->is($user), 422, 'Không thể xóa chính tài khoản đang đăng nhập.');
+        StaffGuard::assertCanManage($this->actor(), $user);
+
+        $before = AuditSnapshot::user($user);
+        Auditor::record(AuditAction::UserDeleted, $this->actor(), $user, $before, []);
+        $user->delete();
+
+        return redirect()->route('admin.users.index')->with('status', 'Đã xóa tài khoản. Có thể khôi phục dữ liệu từ hệ thống khi cần.');
     }
 
     public function updateInstructorSubjects(Request $request, User $user): RedirectResponse

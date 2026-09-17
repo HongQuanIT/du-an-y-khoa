@@ -20,7 +20,7 @@ final class FaqController extends Controller
 {
     public function index(Request $request): View
     {
-        $this->authorizePermission('cms_faq.view');
+        $this->authorizePermission('cms.view');
 
         $query = Faq::query()->ordered();
 
@@ -63,7 +63,7 @@ final class FaqController extends Controller
 
     public function create(): View
     {
-        $this->authorizePermission('cms_faq.create');
+        $this->authorizePermission('cms.create');
 
         return view('admin::cms.faq.form', [
             'faq' => new Faq([
@@ -76,7 +76,7 @@ final class FaqController extends Controller
 
     public function store(SaveFaqRequest $request, SaveFaqAction $save): RedirectResponse
     {
-        $this->authorizePermission('cms_faq.create');
+        $this->authorizePermission('cms.create');
 
         $faq = $save->handle($this->actor(), $request);
 
@@ -89,7 +89,7 @@ final class FaqController extends Controller
 
     public function edit(Faq $faq): View
     {
-        $this->authorizePermission('cms_faq.update');
+        $this->authorizePermission('cms.update');
 
         return view('admin::cms.faq.form', [
             'faq' => $faq,
@@ -99,7 +99,7 @@ final class FaqController extends Controller
 
     public function update(SaveFaqRequest $request, Faq $faq, SaveFaqAction $save): RedirectResponse
     {
-        $this->authorizePermission('cms_faq.update');
+        $this->authorizePermission('cms.update');
 
         $save->handle($this->actor(), $request, $faq);
 
@@ -112,7 +112,7 @@ final class FaqController extends Controller
 
     public function destroy(Faq $faq, DeleteFaqAction $delete): RedirectResponse
     {
-        $this->authorizePermission('cms_faq.delete');
+        $this->authorizePermission('cms.delete');
 
         $delete->handle($this->actor(), $faq);
 
@@ -123,7 +123,7 @@ final class FaqController extends Controller
 
     public function moveUp(Faq $faq, ReorderFaqAction $reorder): RedirectResponse
     {
-        $this->authorizePermission('cms_faq.reorder');
+        $this->authorizePermission('cms.update');
 
         $reorder->handle($faq, 'up');
 
@@ -132,7 +132,7 @@ final class FaqController extends Controller
 
     public function moveDown(Faq $faq, ReorderFaqAction $reorder): RedirectResponse
     {
-        $this->authorizePermission('cms_faq.reorder');
+        $this->authorizePermission('cms.update');
 
         $reorder->handle($faq, 'down');
 

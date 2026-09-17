@@ -14,6 +14,7 @@
         </div>
     @endif
 
+    @can('partner_code.view')
     <section class="mb-8 rounded-xl border border-outline-variant bg-surface p-4">
         <h2 class="mb-1 font-title-md text-title-md">Mã mời</h2>
         <p class="mb-4 font-body-sm text-body-sm text-on-surface-variant">
@@ -157,6 +158,7 @@
             </table>
         </div>
     </section>
+    @endcan
 
     <h2 class="mb-3 font-title-md text-title-md">Người được mời</h2>
     <div class="overflow-x-auto rounded-xl border border-outline-variant bg-surface">

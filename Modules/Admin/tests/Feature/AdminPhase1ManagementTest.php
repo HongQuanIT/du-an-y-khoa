@@ -159,6 +159,24 @@ final class AdminPhase1ManagementTest extends TestCase
         ]);
     }
 
+    public function test_admin_can_soft_delete_a_manageable_user(): void
+    {
+        $admin = $this->staffUser(Role::Admin);
+        $student = User::factory()->create();
+        $student->assignRole(Role::Student->value);
+
+        $this->actingAsStaff($admin)
+            ->delete(route('admin.users.destroy', $student))
+            ->assertRedirect(route('admin.users.index'));
+
+        $this->assertSoftDeleted('users', ['id' => $student->id]);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'admin.user.delete',
+            'actor_id' => $admin->id,
+            'auditable_id' => (string) $student->id,
+        ]);
+    }
+
     public function test_admin_cannot_assign_super_admin_role(): void
     {
         $admin = $this->staffUser(Role::Admin);
@@ -186,7 +204,7 @@ final class AdminPhase1ManagementTest extends TestCase
     {
         $super = $this->staffUser(Role::SuperAdmin);
         $role = \Spatie\Permission\Models\Role::findByName(Role::ContentEditor->value, 'web');
-        $permission = Permission::findByName('cms_page.update', 'web');
+        $permission = Permission::findByName('cms.update', 'web');
 
         $this->actingAsStaff($super)
             ->put(route('admin.roles.permissions', $role), [
@@ -194,7 +212,7 @@ final class AdminPhase1ManagementTest extends TestCase
             ])
             ->assertRedirect();
 
-        $this->assertTrue($role->fresh()->hasPermissionTo('cms_page.update'));
+        $this->assertTrue($role->fresh()->hasPermissionTo('cms.update'));
         $this->assertDatabaseHas('audit_logs', [
             'action' => 'admin.role.permission_change',
         ]);
@@ -221,7 +239,7 @@ final class AdminPhase1ManagementTest extends TestCase
     {
         $super = $this->staffUser(Role::SuperAdmin);
         $permissions = Permission::query()
-            ->whereIn('name', ['question.update', 'cms_page.update'])
+            ->whereIn('name', ['question.update', 'cms.update'])
             ->pluck('id')
             ->all();
 
@@ -236,7 +254,7 @@ final class AdminPhase1ManagementTest extends TestCase
 
         $role = \Spatie\Permission\Models\Role::findByName('medical_reviewer', 'web');
         $this->assertTrue($role->hasPermissionTo('question.update'));
-        $this->assertTrue($role->hasPermissionTo('cms_page.update'));
+        $this->assertTrue($role->hasPermissionTo('cms.update'));
         $this->assertSame(PortalGroup::Admin->value, $role->portal);
         $this->assertSame('Người duyệt nội dung y khoa', $role->display_name);
         $this->assertDatabaseHas('audit_logs', ['action' => 'admin.role.created']);
@@ -284,7 +302,7 @@ final class AdminPhase1ManagementTest extends TestCase
     public function test_super_admin_cannot_create_role_with_permission_from_another_portal(): void
     {
         $super = $this->staffUser(Role::SuperAdmin);
-        $adminPermission = Permission::findByName('cms_page.update', 'web');
+        $adminPermission = Permission::findByName('cms.update', 'web');
 
         $this->actingAsStaff($super)
             ->from(route('admin.roles.create'))

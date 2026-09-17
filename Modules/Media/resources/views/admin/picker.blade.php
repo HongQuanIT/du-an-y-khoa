@@ -16,14 +16,14 @@
                 <button type="button" class="border-b-2 px-4 py-2.5 font-label-md"
                     :class="tab === 'library' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant'"
                     @click="tab = 'library'; load(true)">Thư viện</button>
-                @canany(['media.upload', 'media.import'])
+                @can('media.upload')
                     <button type="button" class="border-b-2 px-4 py-2.5 font-label-md"
                         :class="tab === 'upload' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant'"
                         @click="tab = 'upload'">Tải lên</button>
                     <button type="button" class="border-b-2 px-4 py-2.5 font-label-md"
                         :class="tab === 'url' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant'"
                         @click="tab = 'url'">URL / CDN</button>
-                @endcanany
+                @endcan
             </div>
 
             <div class="min-h-[22rem] flex-1 overflow-y-auto p-5" x-show="tab === 'library'">

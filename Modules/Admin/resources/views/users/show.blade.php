@@ -315,6 +315,16 @@
                     </div>
                 </section>
                 @endif
+
+                @if ($canDelete ?? false)
+                    <form method="post" action="{{ route('admin.users.destroy', $user) }}" class="rounded-xl border border-error/40 bg-error/5 p-5 shadow-sm">
+                        @csrf
+                        @method('DELETE')
+                        <h3 class="font-label-lg font-semibold text-error">Xóa tài khoản</h3>
+                        <p class="mt-1 text-sm text-on-surface-variant">Tài khoản sẽ bị xóa mềm và không thể đăng nhập; dữ liệu được giữ để có thể khôi phục khi cần.</p>
+                        <button type="submit" class="mt-4 inline-flex h-11 w-full items-center justify-center rounded-lg bg-error px-4 font-label-md font-medium text-white" onclick="return confirm('Xóa tài khoản này? Tài khoản sẽ không thể đăng nhập sau khi xóa.')">Xóa tài khoản</button>
+                    </form>
+                @endif
             @endif
         </aside>
     </div>

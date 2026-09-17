@@ -40,6 +40,34 @@
 @endif
             @endif
         </div>
+
+        @can('classroom_oversight.update')
+            <form method="post" action="{{ route('admin.classrooms.update', $classroom) }}" class="mt-5 grid gap-3 rounded-xl border border-outline-variant bg-surface-container-low p-4 md:grid-cols-2">
+                @csrf
+                @method('PATCH')
+                <label class="grid gap-1 text-sm font-semibold text-on-surface">
+                    Tên lớp
+                    <input name="title" required maxlength="200" value="{{ old('title', $classroom->title) }}" class="rounded-lg border border-outline-variant bg-surface px-3 py-2 font-normal">
+                </label>
+                <label class="grid gap-1 text-sm font-semibold text-on-surface">
+                    Số thành viên tối đa
+                    <input name="max_members" type="number" min="2" max="5000" value="{{ old('max_members', $classroom->max_members) }}" class="rounded-lg border border-outline-variant bg-surface px-3 py-2 font-normal">
+                </label>
+                <label class="grid gap-1 text-sm font-semibold text-on-surface">
+                    Chế độ hiển thị
+                    <select name="visibility" class="rounded-lg border border-outline-variant bg-surface px-3 py-2 font-normal">
+                        @foreach (\Modules\Classroom\Enums\ClassroomVisibility::cases() as $visibility)
+                            <option value="{{ $visibility->value }}" @selected(old('visibility', $classroom->visibility->value) === $visibility->value)>{{ $visibility->label() }}</option>
+                        @endforeach
+                    </select>
+                </label>
+                <label class="grid gap-1 text-sm font-semibold text-on-surface md:col-span-2">
+                    Mô tả
+                    <textarea name="description" rows="3" maxlength="5000" class="rounded-lg border border-outline-variant bg-surface px-3 py-2 font-normal">{{ old('description', $classroom->description) }}</textarea>
+                </label>
+                <div class="md:col-span-2"><button class="rounded-lg bg-primary px-4 py-2 font-semibold text-on-primary">Lưu chỉnh sửa lớp</button></div>
+            </form>
+        @endcan
     </div>
 
     <div class="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">

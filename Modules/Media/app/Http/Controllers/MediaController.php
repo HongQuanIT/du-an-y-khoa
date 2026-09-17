@@ -66,7 +66,7 @@ final class MediaController extends Controller
                 'type' => $request->query('type'),
                 'status' => $request->query('status'),
             ],
-            'canManage' => $this->actor()->canAny(['media.upload', 'media.import', 'media.update', 'media.delete']),
+            'canManage' => $this->actor()->canAny(['media.upload', 'media.update', 'media.delete']),
         ]);
     }
 
@@ -128,7 +128,7 @@ final class MediaController extends Controller
 
     public function storeFromUrl(RegisterExternalMediaRequest $request, RegisterExternalMediaAction $register): JsonResponse|RedirectResponse
     {
-        $this->authorizePermission('media.import');
+        $this->authorizePermission('media.upload');
 
         try {
             $media = $register->handle(

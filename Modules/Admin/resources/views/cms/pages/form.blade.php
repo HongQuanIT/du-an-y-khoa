@@ -277,7 +277,7 @@
                         class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 font-label-md text-on-primary hover:opacity-90">
                         Lưu thay đổi
                     </button>
-                    @can('cms_page.update')
+                    @can('cms.update')
 <button type="submit" name="action" value="unpublish"
                         class="inline-flex items-center justify-center rounded-lg border border-outline-variant px-4 py-2.5 font-label-md text-on-surface hover:bg-surface-container-low"
                         onclick="return confirm(@js($isLanding
@@ -287,7 +287,7 @@
                     </button>
 @endcan
                 @else
-                    @can('cms_page.update')
+                    @can('cms.update')
 <button type="submit" name="action" value="publish"
                         class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 font-label-md text-on-primary hover:opacity-90">
                         Xuất bản

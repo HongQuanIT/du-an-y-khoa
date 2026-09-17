@@ -38,6 +38,7 @@ final class QuestionController extends Controller
         $listQuery = app(AdminQuestionListQuery::class);
         $query = $listQuery->apply(
             Question::query()
+                ->select('questions.*')
                 ->with([
                     'lessons',
                     'creator:id,name',
@@ -378,6 +379,7 @@ final class QuestionController extends Controller
             'canFlag' => $this->actor()->can(Permission::QuestionFlag->value),
             'assignedInstructorId' => old('assigned_instructor_id', $question->assigned_instructor_id),
             'canPublish' => $this->actor()->can(Permission::QuestionPublish->value),
+            'canReject' => $this->actor()->can('question.reject'),
             'canSubmit' => $this->actor()->can(Permission::QuestionSubmit->value),
             'canRetire' => $this->actor()->can(Permission::QuestionRetire->value),
             'canDelete' => $question->exists && $this->actor()->can(Permission::QuestionDelete->value),
@@ -397,6 +399,7 @@ final class QuestionController extends Controller
         $canUpdate = $this->actor()->can(Permission::QuestionUpdate->value);
         $canSubmit = $this->actor()->can(Permission::QuestionSubmit->value);
         $canPublish = $this->actor()->can(Permission::QuestionPublish->value);
+        $canReject = $this->actor()->can('question.reject');
         $canRetire = $this->actor()->can(Permission::QuestionRetire->value);
         unset($isReviewer);
 
@@ -410,9 +413,11 @@ final class QuestionController extends Controller
             QuestionStatus::InFlagReview => $canSubmit
                 ? [QuestionStatus::Draft, QuestionStatus::InReview]
                 : [],
-            QuestionStatus::PendingPublish => $canPublish
-                ? [QuestionStatus::Published, QuestionStatus::Private, QuestionStatus::Rejected]
-                : [],
+            QuestionStatus::PendingPublish => array_values(array_filter([
+                $canPublish ? QuestionStatus::Published : null,
+                $canPublish ? QuestionStatus::Private : null,
+                $canReject ? QuestionStatus::Rejected : null,
+            ])),
             QuestionStatus::Published => array_values(array_filter([
                 $canPublish ? QuestionStatus::Private : null,
                 $canRetire ? QuestionStatus::Retired : null,

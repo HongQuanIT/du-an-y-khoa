@@ -7,10 +7,13 @@ use Modules\Notification\Http\Controllers\NotificationController;
 
 Route::middleware(['auth'])->group(function (): void {
     Route::get('/notifications', [NotificationController::class, 'index'])
+        ->middleware('permission:notification.view|notification_broadcast.view|teach_notification.view')
         ->name('notifications.index');
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead'])
+        ->middleware('permission:notification.view|notification_broadcast.view|teach_notification.view')
         ->name('notifications.read');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])
+        ->middleware('permission:notification.view|notification_broadcast.view|teach_notification.view')
         ->name('notifications.read-all');
     Route::delete('/notifications/{notification}', [NotificationController::class, 'destroy'])
         ->middleware('permission:notification.delete')

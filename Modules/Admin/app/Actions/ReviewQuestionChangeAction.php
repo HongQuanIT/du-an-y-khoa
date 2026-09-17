@@ -11,7 +11,6 @@ use Illuminate\Validation\ValidationException;
 use Modules\Admin\Enums\AuditAction;
 use Modules\Admin\Support\Auditor;
 use Modules\Admin\Support\AuditSnapshot;
-use Modules\Admin\Support\QuestionAccess;
 use Modules\QuestionBank\Enums\QuestionReviewAction;
 use Modules\QuestionBank\Enums\QuestionReviewStatus;
 use Modules\QuestionBank\Enums\QuestionStatus;
@@ -26,7 +25,7 @@ final class ReviewQuestionChangeAction
 
     public function approve(User $reviewer, QuestionReviewRequest $reviewRequest, ?string $note = null): Question
     {
-        abort_unless(QuestionAccess::canPublish($reviewer), 403);
+        abort_unless($reviewer->can('question.publish'), 403);
 
         if ($reviewRequest->action === QuestionReviewAction::Create) {
             throw ValidationException::withMessages([
@@ -73,7 +72,7 @@ final class ReviewQuestionChangeAction
 
     public function reject(User $reviewer, QuestionReviewRequest $reviewRequest, ?string $note = null): Question
     {
-        abort_unless(QuestionAccess::canPublish($reviewer), 403);
+        abort_unless($reviewer->can('question.reject'), 403);
 
         if ($reviewRequest->action === QuestionReviewAction::Create) {
             throw ValidationException::withMessages([

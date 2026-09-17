@@ -22,7 +22,7 @@ final class BannerController extends Controller
 {
     public function index(Request $request): View
     {
-        $this->authorizePermission('cms_banner.view');
+        $this->authorizePermission('cms.view');
 
         $query = Banner::query()->ordered();
 
@@ -65,7 +65,7 @@ final class BannerController extends Controller
 
     public function create(): View
     {
-        $this->authorizePermission('cms_banner.create');
+        $this->authorizePermission('cms.create');
 
         return view('admin::cms.banners.form', [
             'banner' => new Banner([
@@ -84,7 +84,7 @@ final class BannerController extends Controller
 
     public function store(SaveBannerRequest $request, SaveBannerAction $save): RedirectResponse
     {
-        $this->authorizePermission('cms_banner.create');
+        $this->authorizePermission('cms.create');
 
         $banner = $save->handle($this->actor(), $request);
 
@@ -97,7 +97,7 @@ final class BannerController extends Controller
 
     public function edit(Banner $banner): View
     {
-        $this->authorizePermission('cms_banner.update');
+        $this->authorizePermission('cms.update');
 
         return view('admin::cms.banners.form', [
             'banner' => $banner,
@@ -109,7 +109,7 @@ final class BannerController extends Controller
 
     public function update(SaveBannerRequest $request, Banner $banner, SaveBannerAction $save): RedirectResponse
     {
-        $this->authorizePermission('cms_banner.update');
+        $this->authorizePermission('cms.update');
 
         $save->handle($this->actor(), $request, $banner);
 
@@ -122,7 +122,7 @@ final class BannerController extends Controller
 
     public function destroy(Banner $banner, DeleteBannerAction $delete): RedirectResponse
     {
-        $this->authorizePermission('cms_banner.delete');
+        $this->authorizePermission('cms.delete');
 
         $delete->handle($this->actor(), $banner);
 
@@ -133,7 +133,7 @@ final class BannerController extends Controller
 
     public function toggle(Banner $banner, ToggleBannerAction $toggle): RedirectResponse
     {
-        $this->authorizePermission('cms_banner.update');
+        $this->authorizePermission('cms.update');
 
         $banner = $toggle->handle($this->actor(), $banner);
 
