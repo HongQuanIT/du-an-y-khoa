@@ -11,9 +11,8 @@ use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Subject;
 
 /**
- * Seed môn học (subjects) + bài học (lessons) từ map đơn giản:
- *
- *   'Tên môn học' => ['Tên bài 1', 'Tên bài 2'],
+ * Seed môn học (subjects) + bài học (lessons) từ
+ * `database/seeders/data/courses_data.php` (Course → Subject, Subject → Lesson).
  *
  * Idempotent theo slug (tự sinh từ tên). Chạy lại chỉ cập nhật / gắn pivot thiếu.
  *
@@ -21,22 +20,14 @@ use Modules\QuestionBank\Models\Subject;
  */
 final class SubjectLessonSeeder extends Seeder
 {
-    /**
-     * Chỉnh map này để seed dữ liệu khác.
-     *
-     * @var array<string, list<string>>
-     */
-    private const MAP = [
-        'Anesthesiology' => ['Endocarditis', 'Arrhythmia', 'Hepatitis', 'Hypertension'],
-        // 'Tim mạch' => ['STEMI', 'Suy tim', 'Rối loạn nhịp'],
-        // 'Hô hấp' => ['Viêm phổi', 'COPD'],
-    ];
-
     public function run(): void
     {
+        /** @var array<string, list<string>> $map */
+        $map = require __DIR__.'/data/courses_data.php';
+
         $subjectSort = 1;
 
-        foreach (self::MAP as $subjectName => $lessonNames) {
+        foreach ($map as $subjectName => $lessonNames) {
             $subjectName = trim((string) $subjectName);
             if ($subjectName === '') {
                 continue;
