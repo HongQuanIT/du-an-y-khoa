@@ -2,6 +2,10 @@
 
 ## 2026-09-17
 
+### Chore — QBank: gỡ dataset seed vm14k
+
+- Xóa `database/seeders/data/vm14k/` (README + 3 file jsonl shuffled).
+
 ### Chore — QBank: seed subject/lesson từ Google Sheet Course
 
 - Thêm `ggsheet.php` xuất `courses_data.php` (short array) từ tab Course.
