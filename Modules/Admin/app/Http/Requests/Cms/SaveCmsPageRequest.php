@@ -21,7 +21,7 @@ final class SaveCmsPageRequest extends FormRequest
     {
         $page = $this->route('cmsPage');
 
-        return $this->user()?->can('cms_page.update') === true;
+        return $this->user()?->can('cms.update') === true;
     }
 
     protected function prepareForValidation(): void

@@ -115,6 +115,7 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
             Route::patch('/users/{user}/status', [UserController::class, 'updateStatus'])->middleware('permission:user.status_update')->name('users.status');
             Route::post('/users/{user}/reset-password', [UserController::class, 'resetPassword'])->middleware('permission:user.password_reset')->name('users.reset-password');
             Route::post('/users/{user}/reset-2fa', [UserController::class, 'resetTwoFactor'])->middleware('permission:user.two_factor_manage')->name('users.reset-2fa');
+            Route::delete('/users/{user}', [UserController::class, 'destroy'])->middleware('permission:user.delete')->name('users.destroy');
             Route::patch('/users/{user}/subjects', [UserController::class, 'updateInstructorSubjects'])
                 ->middleware('permission:user.role_assign|user.status_update')
                 ->name('users.subjects');
@@ -217,6 +218,9 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
         Route::post('/classrooms/{classroom}/sessions', [ClassroomOversightController::class, 'scheduleLive'])
             ->middleware('permission:classroom_oversight.schedule')
             ->name('classrooms.sessions.store');
+        Route::patch('/classrooms/{classroom}', [ClassroomOversightController::class, 'update'])
+            ->middleware('permission:classroom_oversight.update')
+            ->name('classrooms.update');
         Route::middleware('permission:classroom_oversight.view_any')->group(function (): void {
             Route::post('/classrooms/{classroom}/live/{liveSession}/messages', [LiveRoomController::class, 'message'])
                 ->scopeBindings()
@@ -280,7 +284,7 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
         Route::get('/question-feedback', [QuestionFeedbackController::class, 'index'])
             ->middleware('permission:question_feedback.view_any')
             ->name('question-feedback.index');
-        Route::middleware('permission:'.QuestionAccess::workspacePermissionMiddleware())->group(function (): void {
+        Route::middleware('permission:'.Permission::QuestionView->value)->group(function (): void {
             Route::get('/questions/{question}', [QuestionController::class, 'edit']);
             Route::get('/questions/{question}/edit', [QuestionController::class, 'edit'])->name('questions.edit');
             Route::get('/questions/{question}/compare', [QuestionController::class, 'compare'])
@@ -311,15 +315,17 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
             ->name('questions.versions.restore');
 
         Route::post('/questions/{question}/transition', [QuestionController::class, 'transition'])
-            ->middleware('permission:question.update|question.submit|question.publish|question.retire')
+            ->middleware('permission:question.update|question.submit|question.publish|question.reject|question.retire')
             ->name('questions.transition');
 
-        Route::middleware('permission:'.Permission::QuestionPublish->value)->group(function (): void {
+        Route::middleware('permission:question.reject|'.Permission::QuestionPublish->value)->group(function (): void {
             Route::get('/question-reviews/{reviewRequest}', [QuestionReviewController::class, 'show'])
                 ->name('questions.reviews.show');
             Route::post('/question-reviews/{reviewRequest}/approve', [QuestionReviewController::class, 'approve'])
+                ->middleware('permission:question.publish')
                 ->name('questions.reviews.approve');
             Route::post('/question-reviews/{reviewRequest}/reject', [QuestionReviewController::class, 'reject'])
+                ->middleware('permission:question.reject')
                 ->name('questions.reviews.reject');
         });
 
@@ -339,78 +345,80 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
             Route::get('/taxonomy/lookups/tags', [TaxonomyLookupController::class, 'tags'])->name('taxonomy.lookups.tags');
         });
 
+        // `taxonomy.view` is the gate for the whole Classification area. The
+        // individual resource permissions below refine actions inside it.
         Route::middleware('permission:taxonomy.view')->group(function (): void {
             Route::get('/taxonomy', [TaxonomyController::class, 'index'])->name('taxonomy.index');
-        });
-        Route::middleware('permission:blueprint.view')->group(function (): void {
-            Route::get('/blueprints', [BlueprintController::class, 'index'])->name('blueprints.index');
-        });
-        Route::middleware('permission:curriculum.view')->group(function (): void {
-            Route::get('/categories', [CurriculumTaxonomyController::class, 'index'])->name('curriculum.index');
-            Route::redirect('/curriculum', '/admin/categories', 301);
-        });
-        Route::middleware('permission:tag.view')->group(function (): void {
-            Route::get('/tags', [TagController::class, 'index'])->name('tags.index');
-        });
+            Route::middleware('permission:blueprint.view')->group(function (): void {
+                Route::get('/blueprints', [BlueprintController::class, 'index'])->name('blueprints.index');
+            });
+            Route::middleware('permission:curriculum.view')->group(function (): void {
+                Route::get('/categories', [CurriculumTaxonomyController::class, 'index'])->name('curriculum.index');
+                Route::redirect('/curriculum', '/admin/categories', 301);
+            });
+            Route::middleware('permission:tag.view')->group(function (): void {
+                Route::get('/tags', [TagController::class, 'index'])->name('tags.index');
+            });
 
-        Route::middleware('permission:blueprint.create')->group(function (): void {
-            Route::get('/blueprints/create', [BlueprintController::class, 'create'])->name('blueprints.create');
-            Route::post('/blueprints', [BlueprintController::class, 'store'])->name('blueprints.store');
-            Route::post('/blueprints/{blueprint}/sections', [BlueprintController::class, 'storeSection'])->name('blueprints.sections.store');
-            Route::post('/blueprint-sections/{section}/core-topics', [BlueprintController::class, 'storeCoreTopic'])->name('blueprint-sections.core-topics.store');
-            Route::put('/core-clinical-topics/{topic}/medical-nodes', [BlueprintController::class, 'syncCoreTopicMedicalNodes'])->name('core-clinical-topics.medical-nodes.sync');
-        });
-        Route::middleware('permission:curriculum.create')->group(function (): void {
-            Route::post('/categories/organ-systems', [CurriculumTaxonomyController::class, 'storeOrganSystem'])->name('curriculum.organ-systems.store');
-            Route::post('/categories/subjects', [CurriculumTaxonomyController::class, 'storeSubject'])->name('curriculum.subjects.store');
-            Route::post('/categories/lessons', [CurriculumTaxonomyController::class, 'storeLesson'])->name('curriculum.lessons.store');
-        });
-        Route::middleware('permission:tag.create')->group(function (): void {
-            Route::get('/tags/create', [TagController::class, 'create'])->name('tags.create');
-            Route::post('/tags', [TagController::class, 'store'])->name('tags.store');
-        });
+            Route::middleware('permission:blueprint.create')->group(function (): void {
+                Route::get('/blueprints/create', [BlueprintController::class, 'create'])->name('blueprints.create');
+                Route::post('/blueprints', [BlueprintController::class, 'store'])->name('blueprints.store');
+                Route::post('/blueprints/{blueprint}/sections', [BlueprintController::class, 'storeSection'])->name('blueprints.sections.store');
+                Route::post('/blueprint-sections/{section}/core-topics', [BlueprintController::class, 'storeCoreTopic'])->name('blueprint-sections.core-topics.store');
+                Route::put('/core-clinical-topics/{topic}/medical-nodes', [BlueprintController::class, 'syncCoreTopicMedicalNodes'])->name('core-clinical-topics.medical-nodes.sync');
+            });
+            Route::middleware('permission:curriculum.create')->group(function (): void {
+                Route::post('/categories/organ-systems', [CurriculumTaxonomyController::class, 'storeOrganSystem'])->name('curriculum.organ-systems.store');
+                Route::post('/categories/subjects', [CurriculumTaxonomyController::class, 'storeSubject'])->name('curriculum.subjects.store');
+                Route::post('/categories/lessons', [CurriculumTaxonomyController::class, 'storeLesson'])->name('curriculum.lessons.store');
+            });
+            Route::middleware('permission:tag.create')->group(function (): void {
+                Route::get('/tags/create', [TagController::class, 'create'])->name('tags.create');
+                Route::post('/tags', [TagController::class, 'store'])->name('tags.store');
+            });
 
-        Route::middleware('permission:blueprint.update')->group(function (): void {
-            Route::get('/blueprints/{blueprint}/edit', [BlueprintController::class, 'edit'])->name('blueprints.edit');
-            Route::put('/blueprints/{blueprint}', [BlueprintController::class, 'update'])->name('blueprints.update');
+            Route::middleware('permission:blueprint.update')->group(function (): void {
+                Route::get('/blueprints/{blueprint}/edit', [BlueprintController::class, 'edit'])->name('blueprints.edit');
+                Route::put('/blueprints/{blueprint}', [BlueprintController::class, 'update'])->name('blueprints.update');
+            });
+            Route::middleware('permission:curriculum.update')->group(function (): void {
+                Route::put('/categories/organ-systems/{organSystem}', [CurriculumTaxonomyController::class, 'updateOrganSystem'])->name('curriculum.organ-systems.update');
+                Route::put('/categories/subjects/{subject}', [CurriculumTaxonomyController::class, 'updateSubject'])->name('curriculum.subjects.update');
+                Route::put('/categories/lessons/{lesson}', [CurriculumTaxonomyController::class, 'updateLesson'])->name('curriculum.lessons.update');
+                Route::post('/categories/subjects/{subject}/lessons', [CurriculumTaxonomyController::class, 'attachSubjectLessons'])->name('curriculum.subjects.lessons.attach');
+                Route::delete('/categories/subjects/{subject}/lessons/{lesson}', [CurriculumTaxonomyController::class, 'detachSubjectLesson'])->name('curriculum.subjects.lessons.detach');
+                Route::post('/categories/lessons/{lesson}/subjects', [CurriculumTaxonomyController::class, 'attachLessonSubject'])->name('curriculum.lessons.subjects.attach');
+                Route::delete('/categories/lessons/{lesson}/subjects/{subject}', [CurriculumTaxonomyController::class, 'detachLessonSubject'])->name('curriculum.lessons.subjects.detach');
+                Route::post('/categories/lessons/{lesson}/organ-systems', [CurriculumTaxonomyController::class, 'attachLessonOrganSystem'])->name('curriculum.lessons.organ-systems.attach');
+                Route::delete('/categories/lessons/{lesson}/organ-systems/{organSystem}', [CurriculumTaxonomyController::class, 'detachLessonOrganSystem'])->name('curriculum.lessons.organ-systems.detach');
+            });
+            Route::middleware('permission:tag.update')->group(function (): void {
+                Route::get('/tags/{tag}/edit', [TagController::class, 'edit'])->name('tags.edit');
+                Route::put('/tags/{tag}', [TagController::class, 'update'])->name('tags.update');
+            });
+
+            Route::middleware('permission:curriculum.delete')->group(function (): void {
+                Route::delete('/categories/organ-systems/{organSystem}', [CurriculumTaxonomyController::class, 'destroyOrganSystem'])->name('curriculum.organ-systems.destroy');
+                Route::delete('/categories/subjects/{subject}', [CurriculumTaxonomyController::class, 'destroySubject'])->name('curriculum.subjects.destroy');
+                Route::delete('/categories/lessons/{lesson}', [CurriculumTaxonomyController::class, 'destroyLesson'])->name('curriculum.lessons.destroy');
+            });
+
+            Route::delete('/blueprints/{blueprint}', [BlueprintController::class, 'destroy'])
+                ->middleware('permission:blueprint.delete')
+                ->name('blueprints.destroy');
+
+            Route::delete('/blueprint-sections/{section}', [BlueprintController::class, 'destroySection'])
+                ->middleware('permission:blueprint.delete')
+                ->name('blueprint-sections.destroy');
+
+            Route::delete('/core-clinical-topics/{topic}', [BlueprintController::class, 'destroyCoreTopic'])
+                ->middleware('permission:blueprint.delete')
+                ->name('core-clinical-topics.destroy');
+
+            Route::delete('/tags/{tag}', [TagController::class, 'destroy'])
+                ->middleware('permission:tag.delete')
+                ->name('tags.destroy');
         });
-        Route::middleware('permission:curriculum.update')->group(function (): void {
-            Route::put('/categories/organ-systems/{organSystem}', [CurriculumTaxonomyController::class, 'updateOrganSystem'])->name('curriculum.organ-systems.update');
-            Route::put('/categories/subjects/{subject}', [CurriculumTaxonomyController::class, 'updateSubject'])->name('curriculum.subjects.update');
-            Route::put('/categories/lessons/{lesson}', [CurriculumTaxonomyController::class, 'updateLesson'])->name('curriculum.lessons.update');
-            Route::post('/categories/subjects/{subject}/lessons', [CurriculumTaxonomyController::class, 'attachSubjectLessons'])->name('curriculum.subjects.lessons.attach');
-            Route::delete('/categories/subjects/{subject}/lessons/{lesson}', [CurriculumTaxonomyController::class, 'detachSubjectLesson'])->name('curriculum.subjects.lessons.detach');
-            Route::post('/categories/lessons/{lesson}/subjects', [CurriculumTaxonomyController::class, 'attachLessonSubject'])->name('curriculum.lessons.subjects.attach');
-            Route::delete('/categories/lessons/{lesson}/subjects/{subject}', [CurriculumTaxonomyController::class, 'detachLessonSubject'])->name('curriculum.lessons.subjects.detach');
-            Route::post('/categories/lessons/{lesson}/organ-systems', [CurriculumTaxonomyController::class, 'attachLessonOrganSystem'])->name('curriculum.lessons.organ-systems.attach');
-            Route::delete('/categories/lessons/{lesson}/organ-systems/{organSystem}', [CurriculumTaxonomyController::class, 'detachLessonOrganSystem'])->name('curriculum.lessons.organ-systems.detach');
-        });
-        Route::middleware('permission:tag.update')->group(function (): void {
-            Route::get('/tags/{tag}/edit', [TagController::class, 'edit'])->name('tags.edit');
-            Route::put('/tags/{tag}', [TagController::class, 'update'])->name('tags.update');
-        });
-
-        Route::middleware('permission:curriculum.delete')->group(function (): void {
-            Route::delete('/categories/organ-systems/{organSystem}', [CurriculumTaxonomyController::class, 'destroyOrganSystem'])->name('curriculum.organ-systems.destroy');
-            Route::delete('/categories/subjects/{subject}', [CurriculumTaxonomyController::class, 'destroySubject'])->name('curriculum.subjects.destroy');
-            Route::delete('/categories/lessons/{lesson}', [CurriculumTaxonomyController::class, 'destroyLesson'])->name('curriculum.lessons.destroy');
-        });
-
-        Route::delete('/blueprints/{blueprint}', [BlueprintController::class, 'destroy'])
-            ->middleware('permission:blueprint.delete')
-            ->name('blueprints.destroy');
-
-        Route::delete('/blueprint-sections/{section}', [BlueprintController::class, 'destroySection'])
-            ->middleware('permission:blueprint.delete')
-            ->name('blueprint-sections.destroy');
-
-        Route::delete('/core-clinical-topics/{topic}', [BlueprintController::class, 'destroyCoreTopic'])
-            ->middleware('permission:blueprint.delete')
-            ->name('core-clinical-topics.destroy');
-
-        Route::delete('/tags/{tag}', [TagController::class, 'destroy'])
-            ->middleware('permission:tag.delete')
-            ->name('tags.destroy');
 
         // --- Exams ---
         Route::middleware('permission:exam.create|exam.update')->group(function (): void {
@@ -453,7 +461,7 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
             ->middleware(['permission:media.upload', 'throttle:30,1'])
             ->name('media.store');
         Route::post('/media/from-url', [MediaController::class, 'storeFromUrl'])
-            ->middleware(['permission:media.import', 'throttle:20,1'])
+            ->middleware(['permission:media.upload', 'throttle:20,1'])
             ->name('media.from-url');
         Route::put('/media/{media}', [MediaController::class, 'update'])
             ->middleware('permission:media.update')
@@ -462,75 +470,71 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
             ->middleware('permission:media.delete')
             ->name('media.destroy');
 
-        Route::redirect('/cms', '/admin/cms/pages')
-            ->middleware('permission:cms_page.view_any')
-            ->name('cms.index');
+        Route::middleware('permission:cms.view')->group(function (): void {
+        Route::redirect('/cms', '/admin/cms/pages')->name('cms.index');
         Route::get('/cms/faq', [FaqController::class, 'index'])
-            ->middleware('permission:cms_faq.view')
             ->name('cms.faq.index');
         Route::get('/cms/faq/create', [FaqController::class, 'create'])
-            ->middleware('permission:cms_faq.create')
+            ->middleware('permission:cms.create')
             ->name('cms.faq.create');
         Route::post('/cms/faq', [FaqController::class, 'store'])
-            ->middleware('permission:cms_faq.create')
+            ->middleware('permission:cms.create')
             ->name('cms.faq.store');
         Route::get('/cms/faq/{faq}/edit', [FaqController::class, 'edit'])
-            ->middleware('permission:cms_faq.update')
+            ->middleware('permission:cms.update')
             ->name('cms.faq.edit');
         Route::put('/cms/faq/{faq}', [FaqController::class, 'update'])
-            ->middleware('permission:cms_faq.update')
+            ->middleware('permission:cms.update')
             ->name('cms.faq.update');
         Route::delete('/cms/faq/{faq}', [FaqController::class, 'destroy'])
-            ->middleware('permission:cms_faq.delete')
+            ->middleware('permission:cms.delete')
             ->name('cms.faq.destroy');
         Route::post('/cms/faq/{faq}/move-up', [FaqController::class, 'moveUp'])
-            ->middleware('permission:cms_faq.reorder')
+            ->middleware('permission:cms.update')
             ->name('cms.faq.move-up');
         Route::post('/cms/faq/{faq}/move-down', [FaqController::class, 'moveDown'])
-            ->middleware('permission:cms_faq.reorder')
+            ->middleware('permission:cms.update')
             ->name('cms.faq.move-down');
 
         Route::get('/cms/pages', [PageController::class, 'index'])
-            ->middleware('permission:cms_page.view_any')
             ->name('cms.pages.index');
         Route::get('/cms/pages/{cmsPage}/edit', [PageController::class, 'edit'])
-            ->middleware('permission:cms_page.update')
+            ->middleware('permission:cms.update')
             ->name('cms.pages.edit');
         Route::put('/cms/pages/{cmsPage}', [PageController::class, 'update'])
-            ->middleware('permission:cms_page.update')
+            ->middleware('permission:cms.update')
             ->name('cms.pages.update');
 
         Route::get('/cms/banners', [BannerController::class, 'index'])
-            ->middleware('permission:cms_banner.view')
             ->name('cms.banners.index');
         Route::get('/cms/banners/create', [BannerController::class, 'create'])
-            ->middleware('permission:cms_banner.create')
+            ->middleware('permission:cms.create')
             ->name('cms.banners.create');
         Route::post('/cms/banners', [BannerController::class, 'store'])
-            ->middleware('permission:cms_banner.create')
+            ->middleware('permission:cms.create')
             ->name('cms.banners.store');
         Route::get('/cms/banners/{banner}/edit', [BannerController::class, 'edit'])
-            ->middleware('permission:cms_banner.update')
+            ->middleware('permission:cms.update')
             ->name('cms.banners.edit');
         Route::put('/cms/banners/{banner}', [BannerController::class, 'update'])
-            ->middleware('permission:cms_banner.update')
+            ->middleware('permission:cms.update')
             ->name('cms.banners.update');
         Route::delete('/cms/banners/{banner}', [BannerController::class, 'destroy'])
-            ->middleware('permission:cms_banner.delete')
+            ->middleware('permission:cms.delete')
             ->name('cms.banners.destroy');
         Route::post('/cms/banners/{banner}/toggle', [BannerController::class, 'toggle'])
-            ->middleware('permission:cms_banner.update')
+            ->middleware('permission:cms.update')
             ->name('cms.banners.toggle');
 
         Route::get('/cms/menus', [MenuController::class, 'index'])
-            ->middleware('permission:cms_menu.view')
             ->name('cms.menus.index');
         Route::get('/cms/menus/{menu}/edit', [MenuController::class, 'edit'])
-            ->middleware('permission:cms_menu.update')
+            ->middleware('permission:cms.update')
             ->name('cms.menus.edit');
         Route::put('/cms/menus/{menu}', [MenuController::class, 'update'])
-            ->middleware('permission:cms_menu.update')
+            ->middleware('permission:cms.update')
             ->name('cms.menus.update');
+        });
 
         Route::middleware('permission:report.view')->group(function (): void {
             Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
@@ -560,7 +564,7 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
             ->middleware('permission:report_schedule.delete')
             ->name('reports.schedules.destroy');
         Route::post('/reports/{category}/{report}/schedules', [ReportController::class, 'storeSchedule'])
-            ->middleware('permission:report_schedule.create')
+            ->middleware('permission:report_schedule.schedule')
             ->name('reports.schedules.store');
         Route::middleware('permission:report.export')->group(function (): void {
             Route::get('/reports/{category}/{report}/export', [ReportController::class, 'export'])->name('reports.export');

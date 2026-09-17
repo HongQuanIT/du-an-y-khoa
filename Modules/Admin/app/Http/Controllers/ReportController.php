@@ -258,7 +258,7 @@ final class ReportController extends Controller
         string $report,
         SaveReportScheduleAction $action,
     ): RedirectResponse {
-        $this->authorizeReportExport('report_schedule.create');
+        $this->authorizeReportExport('report_schedule.schedule');
 
         $match = AdminReportCatalog::findReport($category, $report);
         abort_if($match === null, 404);

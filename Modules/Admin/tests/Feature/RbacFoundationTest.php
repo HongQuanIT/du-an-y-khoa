@@ -47,7 +47,7 @@ final class RbacFoundationTest extends TestCase
         $this->assertNotContains('support.manage', $names);
         $this->assertNotContains('notification.broadcast', $names);
         $this->assertNotContains('notification.update', $names);
-        $this->assertNotContains('notification.view', $names);
+        $this->assertContains('notification.view', $names);
         $this->assertNotContains('instructor.assign', $names);
         $this->assertNotContains('live.force_end', $names);
         $this->assertNotContains('live_hand.raise', $names);

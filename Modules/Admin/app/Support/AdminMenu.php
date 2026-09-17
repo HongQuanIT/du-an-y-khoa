@@ -119,7 +119,7 @@ final class AdminMenu
                 'label' => 'CMS',
                 'icon' => 'article',
                 'route' => 'admin.cms.pages.index',
-                'permission' => 'cms_page.view_any',
+                'permission' => 'cms.view',
                 'match' => 'admin.cms.*',
             ],
             [

@@ -21,7 +21,7 @@ Route::middleware(['auth', 'learner'])
         Route::post('/{exam}/start', StartExamController::class)
             ->middleware('subscription:exam.simulation')
             ->name('start');
-        Route::get('/{session}/summary', ExamSessionSummaryController::class)->middleware('permission:exam.overview')->name('summary');
+        Route::get('/{session}/summary', ExamSessionSummaryController::class)->middleware('permission:exam.review')->name('summary');
         Route::get('/{session}/review', ExamSessionReviewController::class)->middleware('permission:exam.review')->name('review');
         Route::get('/{session}', [StudySessionController::class, 'show'])->middleware('permission:exam.take')->name('session');
     });

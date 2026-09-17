@@ -22,7 +22,7 @@
         static fn (array $item): bool => auth()->user()?->canAny((array) $item['permission']) === true,
     ));
     $canSearch = auth()->user()?->can('search.use') === true;
-    $canViewNotifications = auth()->check();
+    $canViewNotifications = auth()->user()?->can('notification.view') === true;
 
     $headerSubscription = CurrentSubscription::for(auth()->user());
     $membershipChipParts = [$headerSubscription['is_free'] ? 'Free' : 'Premium'];

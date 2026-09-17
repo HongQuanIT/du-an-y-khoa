@@ -68,6 +68,32 @@ final class AdminGranularPermissionTest extends TestCase
         }
     }
 
+    public function test_taxonomy_view_gates_every_classification_screen(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+        $role = Role::create(['name' => 'classification_viewer', 'guard_name' => 'web', 'portal' => 'admin']);
+        $role->givePermissionTo(['taxonomy.view', 'blueprint.view', 'curriculum.view', 'tag.view']);
+        $user = User::factory()->create();
+        $user->assignRole($role);
+
+        $screens = [
+            'admin.taxonomy.index',
+            'admin.blueprints.index',
+            'admin.curriculum.index',
+            'admin.tags.index',
+        ];
+
+        foreach ($screens as $route) {
+            $this->actingAsWithWebSession($user)->get(route($route))->assertOk();
+        }
+
+        $role->revokePermissionTo('taxonomy.view');
+
+        foreach ($screens as $route) {
+            $this->actingAsWithWebSession($user)->get(route($route))->assertForbidden();
+        }
+    }
+
     public function test_user_view_cannot_change_status_without_status_permission(): void
     {
         $this->seed(RolePermissionSeeder::class);

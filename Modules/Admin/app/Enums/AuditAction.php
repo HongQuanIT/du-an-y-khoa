@@ -17,6 +17,7 @@ enum AuditAction: string
     case UserEmailVerified = 'admin.user.email_verified';
     case UserPasswordResetRequested = 'admin.user.password_reset';
     case UserTwoFactorReset = 'admin.user.two_factor_reset';
+    case UserDeleted = 'admin.user.delete';
 
     case QuestionCreated = 'admin.question.create';
     case QuestionUpdated = 'admin.question.update';
@@ -47,6 +48,7 @@ enum AuditAction: string
             self::UserEmailVerified => 'Xác minh email người dùng',
             self::UserPasswordResetRequested => 'Gửi yêu cầu đặt lại mật khẩu',
             self::UserTwoFactorReset => 'Đặt lại / Tắt 2FA người dùng',
+            self::UserDeleted => 'Xóa người dùng',
             self::QuestionCreated => 'Tạo câu hỏi',
             self::QuestionUpdated => 'Cập nhật câu hỏi',
             self::QuestionUpdateRequested => 'Gửi yêu cầu sửa câu hỏi',

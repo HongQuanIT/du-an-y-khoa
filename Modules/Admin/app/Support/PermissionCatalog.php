@@ -232,7 +232,9 @@ final class PermissionCatalog
             'audit', 'report' => 'reporting',
             'cms', 'media', 'contact' => 'content',
             'system', 'notification', 'support' => 'system',
-            'admin', 'partner' => 'partner_management',
+            // Partner code/payout views are shared with the partner portal,
+            // but on the Admin matrix they belong to one management module.
+            'admin', 'partner', 'affiliate' => 'partner_management',
             'session', 'library', 'analytics' => 'learning',
             default => $module,
         };

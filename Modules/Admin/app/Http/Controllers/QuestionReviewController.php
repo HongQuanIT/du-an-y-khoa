@@ -10,7 +10,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Modules\Admin\Actions\ReviewQuestionChangeAction;
-use Modules\Admin\Support\QuestionAccess;
 use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\QuestionReviewRequest;
 
@@ -18,7 +17,7 @@ final class QuestionReviewController extends Controller
 {
     public function show(QuestionReviewRequest $reviewRequest): View
     {
-        abort_unless(QuestionAccess::isReviewer($this->actor()), 403);
+        abort_unless($this->actor()->canAny(['question.reject', 'question.publish']), 403);
 
         $reviewRequest->load([
             'question.options',

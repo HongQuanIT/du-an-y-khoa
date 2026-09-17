@@ -318,6 +318,22 @@ final class ClassroomOversightController extends Controller
         ]);
     }
 
+    public function update(Request $request, Classroom $classroom): RedirectResponse
+    {
+        $this->authorizePermission('classroom_oversight.update');
+
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:200'],
+            'description' => ['nullable', 'string', 'max:5000'],
+            'visibility' => ['required', Rule::enum(ClassroomVisibility::class)],
+            'max_members' => ['nullable', 'integer', 'min:2', 'max:5000'],
+        ]);
+
+        $classroom->update($data);
+
+        return back()->with('status', 'Đã cập nhật lớp học.');
+    }
+
     public function show(Classroom $classroom): View
     {
         $this->authorizePermission('classroom_oversight.view_any');

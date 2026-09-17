@@ -19,7 +19,7 @@ final class PageController extends Controller
 {
     public function index(Request $request): View
     {
-        $this->authorizePermission('cms_page.view_any');
+        $this->authorizePermission('cms.view');
 
         CmsPage::syncCatalog();
 
@@ -63,7 +63,7 @@ final class PageController extends Controller
 
     public function edit(CmsPage $cmsPage): View
     {
-        $this->authorizePermission('cms_page.update');
+        $this->authorizePermission('cms.update');
 
         return view('admin::cms.pages.form', [
             'page' => $cmsPage,
@@ -73,7 +73,7 @@ final class PageController extends Controller
 
     public function update(SaveCmsPageRequest $request, CmsPage $cmsPage, SaveCmsPageAction $save): RedirectResponse
     {
-        $this->authorizePermission('cms_page.update');
+        $this->authorizePermission('cms.update');
 
         $save->handle($this->actor(), $request, $cmsPage);
 

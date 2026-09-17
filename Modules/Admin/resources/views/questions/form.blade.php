@@ -472,7 +472,7 @@
             {{-- ── RIGHT: Sidebar ── --}}
             <div class="space-y-4">
                 {{-- Workflow trước (luôn bấm được); nội dung khóa nằm dưới --}}
-                @if (! $isNew && $canPublish && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::PendingPublish)
+                @if (! $isNew && ($canPublish || $canReject) && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::PendingPublish)
                     <div class="rounded-2xl border border-primary/30 bg-primary/5 p-4">
                         <h2 class="mb-2 font-label-md font-semibold text-on-surface">Xuất bản</h2>
                         <p class="mb-3 text-xs leading-5 text-on-surface-variant">
@@ -492,7 +492,7 @@
                             @endif
                         </p>
                         <div class="flex flex-col gap-2">
-                            @unless ($question->hasRedReviewerFlag())
+                            @if ($canPublish && ! $question->hasRedReviewerFlag())
                             <button type="submit"
                                 form="question-publish-form"
                                 onclick="return confirm('Xuất bản câu hỏi này lên ngân hàng? Phiên bản sẽ tăng.')"
@@ -507,7 +507,8 @@
                                 <span class="material-symbols-outlined text-[18px]">lock</span>
                                 Đưa vào kho đề thi (private)
                             </button>
-                            @endunless
+                            @endif
+                            @if ($canReject)
                             <button type="submit"
                                 form="question-reject-publish-form"
                                 onclick="const r = prompt('Lý do từ chối xuất bản:'); if (!r || !r.trim()) return false; document.getElementById('question-reject-publish-reason').value = r.trim();"
@@ -515,6 +516,7 @@
                                 <span class="material-symbols-outlined text-[18px]">close</span>
                                 Trả về biên tập
                             </button>
+                            @endif
                         </div>
                     </div>
                     <div class="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-sm text-amber-950">
@@ -879,11 +881,12 @@
 @endif
     @endif
 
-    @if (! $isNew && $canPublish && in_array($question->status, [
+    @if (! $isNew && ($canPublish || $canReject) && in_array($question->status, [
         \Modules\QuestionBank\Enums\QuestionStatus::PendingPublish,
         \Modules\QuestionBank\Enums\QuestionStatus::Published,
         \Modules\QuestionBank\Enums\QuestionStatus::Private,
     ], true))
+        @if ($canPublish)
         @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.transition'))
 <form id="question-publish-form" method="post" action="{{ route('admin.questions.transition', $question) }}" class="hidden">
             @csrf
@@ -896,12 +899,14 @@
             <input type="hidden" name="status" value="{{ \Modules\QuestionBank\Enums\QuestionStatus::Private->value }}">
         </form>
 @endif
+        @endif
         @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.transition'))
 <form id="question-retire-form" method="post" action="{{ route('admin.questions.transition', $question) }}" class="hidden">
             @csrf
             <input type="hidden" name="status" value="{{ \Modules\QuestionBank\Enums\QuestionStatus::Retired->value }}">
         </form>
 @endif
+        @if ($canReject)
         @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.transition'))
 <form id="question-reject-publish-form" method="post" action="{{ route('admin.questions.transition', $question) }}" class="hidden">
             @csrf
@@ -909,6 +914,7 @@
             <input type="hidden" name="rejection_reason" id="question-reject-publish-reason" value="">
         </form>
 @endif
+        @endif
     @endif
 
 </x-layouts.admin>

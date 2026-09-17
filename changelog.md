@@ -18,6 +18,12 @@
 ### Docs — Phiên luyện thích ứng: chỉnh format giải thích ngắn
 
 - Căn bảng markdown và làm gọn tiêu đề mục tín hiệu trong `adaptive-session-explained.md`.
+### Feat — RBAC: hoàn thiện quyền theo portal Admin và Học viên
+
+- Bổ sung quyền xem thông báo cho Học viên, gộp luồng xem lại kỳ thi và đồng bộ ẩn UI theo quyền.
+- Chuẩn hóa quyền ngân hàng câu hỏi, phân loại, CMS, media, lớp học, báo cáo và đối tác; chặn cả truy cập URL khi tắt quyền xem.
+- Thêm quyền `user.delete` cho Admin và xóa mềm tài khoản có audit log, bảo vệ tự xóa và leo thang đặc quyền.
+- Bổ sung migration chuyển đổi quyền cũ an toàn và test kiểm soát quyền trọng yếu.
 
 ## 2026-09-16
 
