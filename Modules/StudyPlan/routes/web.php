@@ -20,7 +20,7 @@ Route::middleware(['auth', 'learner'])
     ->name('study-plan.')
     ->scopeBindings()
     ->group(function (): void {
-        Route::get('/', StudyPlanPageController::class)->middleware('permission:study_plan.view_any')->name('index');
+        Route::get('/', StudyPlanPageController::class)->middleware('permission:study_plan.view')->name('index');
 
         Route::get('/create', [StudyPlanCreateController::class, 'create'])->middleware('permission:study_plan.create')->name('create');
         Route::post('/', [StudyPlanCreateController::class, 'store'])->middleware('permission:study_plan.create')->name('store');

@@ -97,8 +97,7 @@
                                     </label>
                                     <template x-for="opt in toggleableColumns" :key="opt.key">
                                         <label
-                                            class="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-on-surface hover:bg-surface-container-low"
-                                            x-show="opt.key !== 'creator' || isReviewer">
+                                            class="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-on-surface hover:bg-surface-container-low">
                                             <input type="checkbox"
                                                 class="size-4 rounded text-primary focus:ring-primary"
                                                 :checked="cols[opt.key]" @change="toggle(opt.key)">
@@ -354,10 +353,8 @@
                                 Bài học</th>
                             <th scope="col" class="w-[110px] min-w-[100px] px-4 py-3.5 text-center"
                                 x-show="cols.difficulty" x-cloak>Độ khó</th>
-                            @if ($isReviewer)
-                                <th scope="col" class="w-[150px] min-w-[130px] px-4 py-3.5" x-show="cols.creator" x-cloak>
+                            <th scope="col" class="w-[150px] min-w-[130px] px-4 py-3.5" x-show="cols.creator" x-cloak>
                                     Người tạo</th>
-                            @endif
                             <th scope="col" class="w-[140px] min-w-[120px] px-4 py-3.5" x-show="cols.status" x-cloak>
                                 Trạng thái</th>
                             <th scope="col" class="w-[180px] min-w-[160px] px-4 py-3.5" x-show="cols.review_status"
@@ -434,13 +431,11 @@
                                     </span>
                                 </td>
 
-                                @if ($isReviewer)
-                                    <td class="w-[150px] min-w-[130px] px-4 py-4 align-top whitespace-nowrap"
+                                <td class="w-[150px] min-w-[130px] px-4 py-4 align-top whitespace-nowrap"
                                         x-show="cols.creator" x-cloak>
                                         <span
                                             class="text-xs font-medium text-on-surface">{{ $question->creator?->name ?? 'Dữ liệu hệ thống' }}</span>
                                     </td>
-                                @endif
 
                                 {{-- Cột 1: Trạng thái xuất bản (live / private / ngừng dùng) --}}
                                 <td class="w-[140px] min-w-[120px] px-4 py-4 align-top whitespace-nowrap"

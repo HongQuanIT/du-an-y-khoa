@@ -109,7 +109,7 @@ return [
                 'session' => ['create', 'start', 'submit', 'review', 'repeat', 'delete'],
             ],
             'study_plan' => [
-                'study_plan' => ['view_any', 'view', 'create'],
+                'study_plan' => ['view', 'create'],
                 'study_plan_task' => ['start', 'complete', 'skip', 'review'],
             ],
             'learning' => [

@@ -14,7 +14,7 @@ final class StudyPlanPolicy
 {
     public function view(User $user, StudyPlan $plan): bool
     {
-        return ($user->can('study_plan.view') || $user->can('study_plan.view_any'))
+        return $user->can('study_plan.view')
             && $this->owns($user, $plan);
     }
 
