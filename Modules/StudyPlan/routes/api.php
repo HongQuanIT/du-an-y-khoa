@@ -14,7 +14,7 @@ use Modules\StudyPlan\Http\Controllers\Api\StudyPlanTaskApiController;
 Route::middleware(['auth:sanctum', 'portal:learner'])
     ->scopeBindings()
     ->group(function (): void {
-        Route::get('study-plans', [StudyPlanApiController::class, 'index'])->middleware('permission:study_plan.view_any')->name('plans.index');
+        Route::get('study-plans', [StudyPlanApiController::class, 'index'])->middleware('permission:study_plan.view')->name('plans.index');
         Route::post('study-plans', [StudyPlanApiController::class, 'store'])->middleware('permission:study_plan.create')->name('plans.store');
         Route::get('study-plans/{plan}', [StudyPlanApiController::class, 'show'])->middleware('permission:study_plan.view')->name('plans.show');
 
