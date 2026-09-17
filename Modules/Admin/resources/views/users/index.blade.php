@@ -43,7 +43,7 @@
                 <x-admin.multi-select-filter
                     name="portal"
                     label="Cổng truy cập"
-                    placeholder="Tất cả cổng"
+                    placeholder="Tất cả"
                     :options="collect($portals)->map(fn ($portal) => ['id' => $portal->value, 'label' => $portal->label()])->all()"
                     :selected="$filters['portal'] ?? []"
                 />
@@ -52,7 +52,7 @@
                 <x-admin.multi-select-filter
                     name="role"
                     label="Vai trò"
-                    placeholder="Tất cả vai trò"
+                    placeholder="Tất cả"
                     :options="collect($roles)->map(fn ($role) => ['id' => $role->name, 'label' => \Modules\Admin\Support\PermissionCatalog::roleLabel($role)])->all()"
                     :selected="$filters['role'] ?? []"
                 />
@@ -61,7 +61,7 @@
                 <x-admin.multi-select-filter
                     name="status"
                     label="Trạng thái"
-                    placeholder="Tất cả trạng thái"
+                    placeholder="Tất cả"
                     :options="collect($statuses)->map(fn ($status) => ['id' => $status->value, 'label' => $status->label()])->all()"
                     :selected="$filters['status'] ?? []"
                 />
@@ -70,7 +70,7 @@
                 <label class="mb-1.5 block font-label-sm font-medium text-on-surface-variant" for="two_factor">Bảo mật 2FA</label>
                 <select id="two_factor" name="two_factor"
                     class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-body-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
-                    <option value="">Tất cả (2FA)</option>
+                    <option value="">Tất cả</option>
                     <option value="enabled" @selected(($filters['two_factor'] ?? '') === 'enabled')>Đã bật 2FA</option>
                     <option value="disabled" @selected(($filters['two_factor'] ?? '') === 'disabled')>Chưa bật 2FA</option>
                 </select>

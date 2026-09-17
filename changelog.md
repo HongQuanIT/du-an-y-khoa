@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-09-17
+
+### UX — Bộ lọc: thống nhất placeholder «Tất cả»
+
+- Questions, Users, Classroom create, QBank index: option/placeholder trống chỉ còn «Tất cả» (bỏ «Tất cả độ khó», «Tất cả vai trò»…).
+
+### Docs — Phiên luyện thích ứng: chỉnh format giải thích ngắn
+
+- Căn bảng markdown và làm gọn tiêu đề mục tín hiệu trong `adaptive-session-explained.md`.
+
 ## 2026-09-16
 
 ### Chore — QBank: seeder môn học + bài học mẫu
