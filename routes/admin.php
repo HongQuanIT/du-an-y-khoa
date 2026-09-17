@@ -380,6 +380,7 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
             Route::middleware('permission:blueprint.update')->group(function (): void {
                 Route::get('/blueprints/{blueprint}/edit', [BlueprintController::class, 'edit'])->name('blueprints.edit');
                 Route::put('/blueprints/{blueprint}', [BlueprintController::class, 'update'])->name('blueprints.update');
+                Route::put('/blueprints/{blueprint}/weights', [BlueprintController::class, 'updateWeights'])->name('blueprints.weights.update');
             });
             Route::middleware('permission:curriculum.update')->group(function (): void {
                 Route::put('/categories/organ-systems/{organSystem}', [CurriculumTaxonomyController::class, 'updateOrganSystem'])->name('curriculum.organ-systems.update');

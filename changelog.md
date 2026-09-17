@@ -21,6 +21,16 @@
 
 ## 2026-09-17
 
+### Feature — Admin: đánh dấu bài học trọng điểm trong ma trận
+
+- Pivot `core_topic_lessons.is_priority` (mặc định true); sao trên chip bài khi map CCT.
+- Sinh đề: ưu tiên câu từ bài có sao, thiếu mới fallback toàn phạm vi CCT (bài + tag).
+
+### Feature — Admin: cấu hình tỉ trọng ma trận đề thi
+
+- Thêm tổng số câu + tỉ trọng min/max cho phần (% toàn ma trận) và tỉ trọng đơn cho chủ đề (% trong phần, tổng = 100%) trên `/admin/blueprints/{id}/edit`.
+- Cảnh báo realtime khi phần chưa phủ đủ 100% (Σ min ≤ 100 ≤ Σ max) hoặc tổng chủ đề trong phần ≠ 100%; lưu qua endpoint riêng, không chặn lưu.
+
 ### Chore — QBank: đồng bộ courses_data từ Google Sheet mới
 
 - `ggsheet.php` đọc sheet Course-subject (cột = môn, hàng = bài) và ghi lại `courses_data.php`.

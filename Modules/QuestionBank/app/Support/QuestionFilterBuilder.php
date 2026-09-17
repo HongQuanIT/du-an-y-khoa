@@ -185,19 +185,48 @@ final class QuestionFilterBuilder
         ?int $blueprintId = null,
         ?int $blueprintSectionId = null,
         array $coreClinicalTopicIds = [],
+        ?bool $priorityOnly = null,
     ): array {
         $topicIds = $this->resolveCoreTopicIds($blueprintId, $blueprintSectionId, $coreClinicalTopicIds);
         if ($topicIds === []) {
             return [];
         }
 
-        return DB::table('core_topic_lessons')
-            ->whereIn('core_clinical_topic_id', $topicIds)
+        $query = DB::table('core_topic_lessons')
+            ->whereIn('core_clinical_topic_id', $topicIds);
+
+        if ($priorityOnly === true) {
+            $query->where('is_priority', true);
+        } elseif ($priorityOnly === false) {
+            $query->where('is_priority', false);
+        }
+
+        return $query
             ->pluck('lesson_id')
             ->map(fn ($id): int => (int) $id)
             ->unique()
             ->values()
             ->all();
+    }
+
+    /**
+     * Restrict to questions matching priority lessons for a CCT (no tag fallback).
+     */
+    public function whereMatchesCoreClinicalTopicPriorityLessons(Builder $query, int $coreClinicalTopicId): Builder
+    {
+        $lessonIds = $this->mappedLessonIdsForBlueprint(
+            coreClinicalTopicIds: [$coreClinicalTopicId],
+            priorityOnly: true,
+        );
+
+        if ($lessonIds === []) {
+            return $query->whereRaw('0 = 1');
+        }
+
+        return $query->whereHas(
+            'lessons',
+            fn (Builder $lessons) => $lessons->whereIn('lessons.id', $lessonIds),
+        );
     }
 
     /**

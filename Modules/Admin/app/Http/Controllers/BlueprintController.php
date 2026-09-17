@@ -9,13 +9,16 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
 use Modules\QuestionBank\Models\Blueprint;
 use Modules\QuestionBank\Models\BlueprintSection;
 use Modules\QuestionBank\Models\CoreClinicalTopic;
+use Modules\QuestionBank\Models\Lesson;
 
 final class BlueprintController extends Controller
 {
@@ -74,6 +77,95 @@ final class BlueprintController extends Controller
         $blueprint->update($this->validatedBlueprint($request, $blueprint));
 
         return back()->with('status', 'Đã cập nhật ma trận đề thi.');
+    }
+
+    public function updateWeights(Request $request, Blueprint $blueprint): RedirectResponse|JsonResponse
+    {
+        $this->authorizePermission('blueprint.update');
+
+        $data = $request->validate([
+            'total_questions' => ['nullable', 'integer', 'min:1', 'max:10000'],
+            'sections' => ['nullable', 'array'],
+            'sections.*.id' => ['required', 'integer'],
+            'sections.*.weight_min' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'sections.*.weight_max' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'sections.*.topics' => ['nullable', 'array'],
+            'sections.*.topics.*.id' => ['required', 'integer'],
+            'sections.*.topics.*.weight' => ['nullable', 'numeric', 'min:0', 'max:100'],
+        ]);
+
+        $sectionIds = $blueprint->sections()->pluck('id')->map(fn ($id): int => (int) $id)->all();
+        $topicIdsBySection = CoreClinicalTopic::query()
+            ->whereIn('blueprint_section_id', $sectionIds)
+            ->get(['id', 'blueprint_section_id'])
+            ->groupBy(fn (CoreClinicalTopic $topic): int => (int) $topic->blueprint_section_id)
+            ->map(fn ($topics) => $topics->pluck('id')->map(fn ($id): int => (int) $id)->all())
+            ->all();
+
+        $sectionsPayload = $data['sections'] ?? [];
+
+        foreach ($sectionsPayload as $index => $sectionPayload) {
+            $sectionId = (int) $sectionPayload['id'];
+            if (! in_array($sectionId, $sectionIds, true)) {
+                throw ValidationException::withMessages([
+                    "sections.{$index}.id" => 'Phần không thuộc ma trận này.',
+                ]);
+            }
+
+            $this->assertWeightPair(
+                $sectionPayload['weight_min'] ?? null,
+                $sectionPayload['weight_max'] ?? null,
+                "sections.{$index}",
+            );
+
+            foreach ($sectionPayload['topics'] ?? [] as $topicIndex => $topicPayload) {
+                $topicId = (int) $topicPayload['id'];
+                $allowedTopicIds = $topicIdsBySection[$sectionId] ?? [];
+                if (! in_array($topicId, $allowedTopicIds, true)) {
+                    throw ValidationException::withMessages([
+                        "sections.{$index}.topics.{$topicIndex}.id" => 'Chủ đề không thuộc phần này.',
+                    ]);
+                }
+            }
+        }
+
+        DB::transaction(function () use ($blueprint, $data, $sectionsPayload): void {
+            $blueprint->update([
+                'total_questions' => array_key_exists('total_questions', $data)
+                    ? $data['total_questions']
+                    : $blueprint->total_questions,
+            ]);
+
+            foreach ($sectionsPayload as $sectionPayload) {
+                BlueprintSection::query()
+                    ->where('blueprint_id', $blueprint->id)
+                    ->where('id', (int) $sectionPayload['id'])
+                    ->update([
+                        'weight_min' => $this->nullableWeight($sectionPayload['weight_min'] ?? null),
+                        'weight_max' => $this->nullableWeight($sectionPayload['weight_max'] ?? null),
+                    ]);
+
+                foreach ($sectionPayload['topics'] ?? [] as $topicPayload) {
+                    CoreClinicalTopic::query()
+                        ->where('blueprint_section_id', (int) $sectionPayload['id'])
+                        ->where('id', (int) $topicPayload['id'])
+                        ->update([
+                            'weight' => $this->nullableWeight($topicPayload['weight'] ?? null),
+                        ]);
+                }
+            }
+        });
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Đã lưu cấu hình tỉ trọng ma trận.',
+                'data' => [
+                    'total_questions' => $blueprint->fresh()->total_questions,
+                ],
+            ]);
+        }
+
+        return back()->with('status', 'Đã lưu cấu hình tỉ trọng ma trận.');
     }
 
     public function destroy(Blueprint $blueprint): RedirectResponse
@@ -149,23 +241,35 @@ final class BlueprintController extends Controller
         $this->authorizePermission('blueprint.update');
 
         $data = $request->validate([
+            'lessons' => ['nullable', 'array'],
+            'lessons.*.id' => ['required', 'integer', 'exists:lessons,id'],
+            'lessons.*.is_priority' => ['nullable', 'boolean'],
             'lesson_ids' => ['nullable', 'array'],
             'lesson_ids.*' => ['integer', 'exists:lessons,id'],
             'tag_ids' => ['nullable', 'array'],
             'tag_ids.*' => ['integer', 'exists:tags,id'],
         ]);
 
-        $topic->lessons()->sync($data['lesson_ids'] ?? []);
+        $lessonSync = $this->normalizeLessonSyncPayload(
+            $data['lessons'] ?? null,
+            $data['lesson_ids'] ?? null,
+        );
+
+        $topic->lessons()->sync($lessonSync);
         $topic->tags()->sync($data['tag_ids'] ?? []);
 
         if ($request->expectsJson()) {
+            $topic->load('lessons');
+
             return response()->json([
                 'message' => 'Đã cập nhật liên kết bài học và tag cho chủ đề lâm sàng.',
                 'data' => [
-                    'lesson_ids' => collect($data['lesson_ids'] ?? [])
-                        ->map(fn ($id): int => (int) $id)
-                        ->values()
-                        ->all(),
+                    'lessons' => $topic->lessons->map(fn (Lesson $lesson): array => [
+                        'id' => (int) $lesson->id,
+                        'name' => $lesson->name,
+                        'is_priority' => (bool) ($lesson->pivot->is_priority ?? true),
+                    ])->values()->all(),
+                    'lesson_ids' => $topic->lessons->pluck('id')->map(fn ($id): int => (int) $id)->values()->all(),
                     'tag_ids' => collect($data['tag_ids'] ?? [])
                         ->map(fn ($id): int => (int) $id)
                         ->values()
@@ -175,6 +279,53 @@ final class BlueprintController extends Controller
         }
 
         return back()->with('status', 'Đã cập nhật liên kết bài học và tag cho chủ đề lâm sàng.');
+    }
+
+    /**
+     * @param  array<int, array{id: int|string, is_priority?: bool|int|string|null}>|null  $lessons
+     * @param  array<int, int|string>|null  $lessonIds
+     * @return array<int, array{is_priority: bool}>
+     */
+    private function normalizeLessonSyncPayload(?array $lessons, ?array $lessonIds): array
+    {
+        $sync = [];
+
+        if (is_array($lessons) && $lessons !== []) {
+            foreach ($lessons as $lesson) {
+                $id = (int) ($lesson['id'] ?? 0);
+                if ($id <= 0) {
+                    continue;
+                }
+
+                $sync[$id] = [
+                    'is_priority' => array_key_exists('is_priority', $lesson)
+                        ? $this->toBool($lesson['is_priority'], default: true)
+                        : true,
+                ];
+            }
+
+            return $sync;
+        }
+
+        foreach ($lessonIds ?? [] as $lessonId) {
+            $id = (int) $lessonId;
+            if ($id <= 0) {
+                continue;
+            }
+
+            $sync[$id] = ['is_priority' => true];
+        }
+
+        return $sync;
+    }
+
+    private function toBool(mixed $value, bool $default = false): bool
+    {
+        if ($value === null || $value === '') {
+            return $default;
+        }
+
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? $default;
     }
 
     /** @return array<string, mixed> */
@@ -272,6 +423,27 @@ final class BlueprintController extends Controller
         }
 
         return $candidate;
+    }
+
+    private function assertWeightPair(mixed $min, mixed $max, string $prefix): void
+    {
+        $minValue = $this->nullableWeight($min);
+        $maxValue = $this->nullableWeight($max);
+
+        if ($minValue !== null && $maxValue !== null && $minValue > $maxValue) {
+            throw ValidationException::withMessages([
+                "{$prefix}.weight_min" => 'Tỉ trọng min không được lớn hơn max.',
+            ]);
+        }
+    }
+
+    private function nullableWeight(mixed $value): ?float
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return round((float) $value, 2);
     }
 
     private function authorizePermission(string $permission): void

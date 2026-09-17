@@ -366,11 +366,13 @@ final class ExamController extends Controller
                     continue;
                 }
 
-                $questionIds = Question::query()
+                $picked = collect();
+
+                $priorityIds = Question::query()
                     ->where('status', QuestionStatus::Private)
                     ->where('exam_flag', true)
                     ->where('difficulty', $difficulty->value)
-                    ->tap(fn ($query) => $filterBuilder->whereMatchesCoreClinicalTopic(
+                    ->tap(fn ($query) => $filterBuilder->whereMatchesCoreClinicalTopicPriorityLessons(
                         $query,
                         (int) $examTopic->core_clinical_topic_id,
                     ))
@@ -378,6 +380,28 @@ final class ExamController extends Controller
                     ->orderByDesc('created_at')
                     ->limit($needed)
                     ->pluck('id');
+
+                $picked = $picked->merge($priorityIds)->unique()->values();
+
+                $stillNeeded = $needed - $picked->count();
+                if ($stillNeeded > 0) {
+                    $fallbackIds = Question::query()
+                        ->where('status', QuestionStatus::Private)
+                        ->where('exam_flag', true)
+                        ->where('difficulty', $difficulty->value)
+                        ->tap(fn ($query) => $filterBuilder->whereMatchesCoreClinicalTopic(
+                            $query,
+                            (int) $examTopic->core_clinical_topic_id,
+                        ))
+                        ->whereNotIn('id', [...$usedQuestionIds, ...$picked->all()])
+                        ->orderByDesc('created_at')
+                        ->limit($stillNeeded)
+                        ->pluck('id');
+
+                    $picked = $picked->merge($fallbackIds)->unique()->values();
+                }
+
+                $questionIds = $picked;
 
                 if ($questionIds->count() < $needed) {
                     $available = $this->eligibleQuestionCountForDifficulty(

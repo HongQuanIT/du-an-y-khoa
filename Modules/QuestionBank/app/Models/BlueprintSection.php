@@ -14,6 +14,8 @@ use Modules\QuestionBank\Enums\TaxonomyStatus;
  * @property int $blueprint_id
  * @property string $name
  * @property string $slug
+ * @property float|null $weight_min
+ * @property float|null $weight_max
  */
 class BlueprintSection extends Model
 {
@@ -25,12 +27,16 @@ class BlueprintSection extends Model
         'description',
         'status',
         'sort_order',
+        'weight_min',
+        'weight_max',
     ];
 
     protected $casts = [
         'blueprint_id' => 'integer',
         'status' => TaxonomyStatus::class,
         'sort_order' => 'integer',
+        'weight_min' => 'float',
+        'weight_max' => 'float',
     ];
 
     /** @return BelongsTo<Blueprint, $this> */
