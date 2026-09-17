@@ -2,6 +2,11 @@
 
 ## 2026-09-17
 
+### UX — Admin: sắp xếp nhóm quyền câu hỏi
+
+- Tách `question.flag` thành nhóm chức năng «Gắn cờ câu hỏi».
+- Gộp quyền phiên bản câu hỏi vào nhóm «Câu hỏi» trong ma trận quyền Admin.
+
 ### Fix — QBank: reviewer mở trang gắn cờ không còn 404
 
 - `QuestionAccess::canView` cho phép `question.flag` xem câu `in_flag_review` / đã gắn cờ (không bắt buộc `question.view`).
