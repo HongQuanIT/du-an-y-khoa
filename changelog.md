@@ -2,6 +2,11 @@
 
 ## 2026-09-17
 
+### Fix — Admin: picker giảng viên theo bài học trên form tạo câu hỏi
+
+- Tự reload danh sách GV chuyên môn khi chọn/bỏ bài học (không cần bấm làm mới).
+- Bỏ khối UI «Suy ra từ bài học đã chọn»; thêm test API lọc GV theo môn bài học.
+
 ### Chore — QBank: gỡ dataset seed vm14k
 
 - Xóa `database/seeders/data/vm14k/` (README + 3 file jsonl shuffled).
