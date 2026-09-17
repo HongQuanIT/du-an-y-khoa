@@ -2,6 +2,11 @@
 
 ## 2026-09-17
 
+### Chore — QBank: đồng bộ courses_data từ Google Sheet mới
+
+- `ggsheet.php` đọc sheet Course-subject (cột = môn, hàng = bài) và ghi lại `courses_data.php`.
+- Cập nhật dataset seed môn/bài cho `SubjectLessonSeeder`.
+
 ### UX — Admin: sắp xếp nhóm quyền câu hỏi
 
 - Tách `question.flag` thành nhóm chức năng «Gắn cờ câu hỏi».

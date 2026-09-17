@@ -1,60 +1,45 @@
 <?php
-// URL xuất định dạng CSV của tab 'Course' (gid = 525646758)
-$spreadsheetId = '1iKJhTw3HhYc7ZDasnn3-gVOFp7L5q2hNKSgKr9FD1kk';
-$gid = '525646758';
+
+$spreadsheetId = '1xMLRJj9y-gp-rDSt34vE5m1qd8d8DLlh5kEbR5Vc2Mw';
+$gid = '0'; // GID của sheet Course-subject
 $csvUrl = "https://docs.google.com/spreadsheets/d/{$spreadsheetId}/export?format=csv&gid={$gid}";
 
-$courseSubjects = [];
-
-if (($handle = fopen($csvUrl, "r")) !== FALSE) {
-    while (($row = fgetcsv($handle, 0, ",", '"', '\\')) !== FALSE) {
-        // Cột B (index 1): Tên Course
-        $course = isset($row[1]) ? trim($row[1]) : '';
-        if (empty($course)) {
-            continue;
-        }
-
-        // Cột C (index 2): Danh sách Subject phân cách bằng dấu xuống dòng (\n)
-        $subjectsRaw = isset($row[2]) ? $row[2] : '';
-
-        if (!empty(trim($subjectsRaw))) {
-            // Tách theo dòng, loại bỏ khoảng trắng thừa và dòng trống
-            $lines = explode("\n", $subjectsRaw);
-            $subjects = array_values(array_filter(array_map('trim', $lines), function ($item) {
-                return $item !== '';
-            }));
-        } else {
-            $subjects = [];
-        }
-
-        $courseSubjects[$course] = $subjects;
-    }
-    fclose($handle);
+// Đọc nội dung CSV trực tiếp qua URL
+$content = file_get_contents($csvUrl);
+if ($content === false) {
+    die('Không thể kết nối đến Google Sheets');
 }
 
-// Kiểm tra kết quả
-echo '<pre>';
-print_r($courseSubjects);
-echo '</pre>';
+$rows = array_map(static fn (string $line): array => str_getcsv($line, ',', '"', '\\'), explode("\n", $content));
+$headers = [];
+$result = [];
 
-// Xuất file PHP với short array syntax []
-$lines = ["<?php return ["];
-foreach ($courseSubjects as $course => $subjects) {
-    $courseKey = var_export($course, true);
-    if (empty($subjects)) {
-        $lines[] = "    {$courseKey} => [],";
-        continue;
+// Header row
+if (!empty($rows)) {
+    $firstRow = array_shift($rows);
+    foreach ($firstRow as $idx => $name) {
+        $name = trim($name);
+        if ($name !== '') {
+            $headers[$idx] = $name;
+            $result[$name] = [];
+        }
     }
-
-    $lines[] = "    {$courseKey} => [";
-    foreach ($subjects as $subject) {
-        $lines[] = '        ' . var_export($subject, true) . ',';
-    }
-    $lines[] = "    ],";
 }
-$lines[] = "];";
-$lines[] = "";
+
+// Data rows
+foreach ($rows as $row) {
+    foreach ($headers as $idx => $name) {
+        if (isset($row[$idx])) {
+            $val = trim($row[$idx]);
+            if ($val !== '') {
+                $result[$name][] = $val;
+            }
+        }
+    }
+}
 
 $outPath = __DIR__.'/Modules/QuestionBank/database/seeders/data/courses_data.php';
-file_put_contents($outPath, implode("\n", $lines));
+$php = "<?php return ".var_export($result, true).";\n";
+file_put_contents($outPath, $php);
 echo "Wrote: {$outPath}\n";
+echo 'Courses: '.count($result)."\n";
