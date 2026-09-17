@@ -104,12 +104,14 @@ final class QuestionController extends Controller
             ],
             'canCreate' => $actor->can(Permission::QuestionCreate->value),
             'isReviewer' => QuestionAccess::isReviewer($actor),
+            'canViewAny' => $actor->can('question.view_any'),
             'creatorOptions' => $this->creatorFilterOptions($actor),
         ]);
     }
 
     public function create(): View
     {
+        $this->authorizePermission(Permission::QuestionView);
         $this->authorizePermission(Permission::QuestionCreate);
 
         return view('admin::questions.form', $this->formData(new Question([
@@ -124,6 +126,7 @@ final class QuestionController extends Controller
         SaveAdminQuestionAction $action,
         TransitionQuestionStatusAction $transition,
     ): RedirectResponse {
+        $this->authorizePermission(Permission::QuestionView);
         $this->authorizePermission(Permission::QuestionCreate);
 
         $question = $action->handle($this->actor(), null, $this->validatedPayload($request));
@@ -228,6 +231,7 @@ final class QuestionController extends Controller
         SaveAdminQuestionAction $action,
         TransitionQuestionStatusAction $transition,
     ): RedirectResponse {
+        $this->authorizePermission(Permission::QuestionView);
         $this->authorizePermission(Permission::QuestionUpdate);
         QuestionAccess::authorizeView($this->actor(), $question);
 
@@ -295,6 +299,7 @@ final class QuestionController extends Controller
 
     public function destroy(Question $question, RequestQuestionDeletionAction $action): RedirectResponse
     {
+        $this->authorizePermission(Permission::QuestionView);
         $this->authorizePermission(Permission::QuestionDelete);
         QuestionAccess::authorizeView($this->actor(), $question);
 
@@ -312,6 +317,7 @@ final class QuestionController extends Controller
         Question $question,
         TransitionQuestionStatusAction $action,
     ): RedirectResponse {
+        $this->authorizePermission(Permission::QuestionView);
         QuestionAccess::authorizeView($this->actor(), $question);
         $data = $request->validate([
             'status' => ['required', 'string', Rule::in(QuestionStatus::values())],
@@ -330,6 +336,7 @@ final class QuestionController extends Controller
 
     public function clone(Request $request, Question $question, CloneQuestionAction $action): RedirectResponse
     {
+        $this->authorizePermission(Permission::QuestionView);
         abort_unless($this->actor()->canAny(['question.clone']), 403);
         QuestionAccess::authorizeView($this->actor(), $question);
 
@@ -349,6 +356,8 @@ final class QuestionController extends Controller
     private function formData(Question $question): array
     {
         $pendingReview = $question->exists ? $question->pendingReviewRequest : null;
+        $latestRejectedReview = $question->exists ? $question->latestRejectedReviewRequest : null;
+        $rejectionReason = $question->rejection_reason ?: $latestRejectedReview?->review_note;
         $isReviewer = QuestionAccess::isReviewer($this->actor());
         $hasBlockingReview = $pendingReview !== null
             && $pendingReview->action !== QuestionReviewAction::Create;
@@ -385,8 +394,11 @@ final class QuestionController extends Controller
             'canDelete' => $question->exists && $this->actor()->can(Permission::QuestionDelete->value),
             'canClone' => $question->exists && $this->actor()->canAny(['question.clone']),
             'isReviewer' => $isReviewer,
+            'isRejected' => $question->exists && $question->status === QuestionStatus::Rejected,
+            'isInstructorRejection' => $question->rejected_by_role === 'instructor',
+            'rejectionReason' => $rejectionReason,
             'pendingReview' => $pendingReview,
-            'latestRejectedReview' => $question->exists ? $question->latestRejectedReviewRequest : null,
+            'latestRejectedReview' => $latestRejectedReview,
             'canViewAudit' => $this->actor()->can('audit_log.view'),
         ];
     }
@@ -594,7 +606,7 @@ final class QuestionController extends Controller
      */
     private function creatorFilterOptions(User $actor): array
     {
-        if (! QuestionAccess::isReviewer($actor)) {
+        if (! $actor->can('question.view_any')) {
             return [];
         }
 
@@ -612,6 +624,8 @@ final class QuestionController extends Controller
 
     public function eligibleInstructors(Request $request)
     {
+        $this->authorizePermission(Permission::QuestionView);
+
         abort_unless(
             $this->actor()->can(Permission::QuestionCreate->value)
             || $this->actor()->can(Permission::QuestionUpdate->value),

@@ -531,8 +531,7 @@ final class TeachClassroomController extends Controller
         abort_unless($classroom->purpose->isTeachPurpose(), 404);
         abort_unless(
             $classroom->isHostOrCohost($user) || $user->canAny([
-                'classroom_oversight.view_any',
-                'classroom_oversight.view_any',
+                'classroom_oversight.view',
             ]),
             403,
         );

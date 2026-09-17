@@ -36,7 +36,7 @@ final class TeachQuestionReviewController extends Controller
 
     public function index(Request $request): View
     {
-        $this->authorizeViewAny();
+        $this->authorizeView();
 
         $tab = $request->string('tab')->toString();
         if (! in_array($tab, [self::TAB_PENDING, self::TAB_APPROVED, self::TAB_REJECTED], true)) {
@@ -230,15 +230,6 @@ final class TeachQuestionReviewController extends Controller
         }
 
         return $this->reviewCycle->actorHasDecided($question, $actor);
-    }
-
-    private function authorizeViewAny(): void
-    {
-        abort_unless(
-            PortalAccess::allows($this->actor(), PortalGroup::Instructor)
-            && $this->actor()->can('question.view_any'),
-            403,
-        );
     }
 
     private function authorizeView(): void

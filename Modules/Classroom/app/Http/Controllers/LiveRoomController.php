@@ -31,7 +31,7 @@ final class LiveRoomController extends Controller
 
         $observer = $request->routeIs('admin.*');
         if ($observer) {
-            abort_unless($user->canAny(['classroom_oversight.view_any']), 403);
+            abort_unless($user->canAny(['classroom_oversight.view']), 403);
         }
 
         $classroom->load('host');

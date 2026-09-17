@@ -17,7 +17,7 @@ final class InstitutionController extends Controller
 {
     public function index(Request $request): View
     {
-        abort_unless($request->user()->canAny(['learner_catalog.view_any']), 403);
+        abort_unless($request->user()->canAny(['learner_catalog.view']), 403);
 
         $query = Institution::query()->with(['country', 'administrativeUnit'])->withCount('learnerProfiles');
         if ($search = trim((string) $request->query('q', ''))) {

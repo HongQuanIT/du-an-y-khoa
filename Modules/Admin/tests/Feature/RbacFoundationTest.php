@@ -32,7 +32,7 @@ final class RbacFoundationTest extends TestCase
     {
         $names = app(PermissionRegistry::class)->names();
 
-        $this->assertGreaterThanOrEqual(170, count($names));
+        $this->assertGreaterThanOrEqual(160, count($names));
         $this->assertLessThanOrEqual(300, count($names));
         $this->assertCount(count(array_unique($names)), $names);
         $this->assertContains('user.role_assign', $names);
@@ -100,7 +100,7 @@ final class RbacFoundationTest extends TestCase
             'portal' => PortalGroup::Admin->value,
             'display_name' => 'Nhân viên hỗ trợ học viên',
         ]);
-        $role->givePermissionTo('user.view_any');
+        $role->givePermissionTo('user.view');
 
         $user = User::factory()->create();
         $user->assignRole($role);
@@ -177,8 +177,8 @@ final class RbacFoundationTest extends TestCase
         $this->assertSame(75, \Modules\Admin\Support\PermissionCatalog::actionPriority('question.reject'));
         $this->assertSame(100, \Modules\Admin\Support\PermissionCatalog::actionPriority('question.manage'));
 
-        $this->assertSame('Xem danh sách', \Modules\Admin\Support\PermissionCatalog::actionLabel('question.view_any'));
-        $this->assertSame('Xem chi tiết', \Modules\Admin\Support\PermissionCatalog::actionLabel('question.view'));
+        $this->assertSame('Xem toàn bộ dữ liệu', \Modules\Admin\Support\PermissionCatalog::actionLabel('question.view_any'));
+        $this->assertSame('Xem', \Modules\Admin\Support\PermissionCatalog::actionLabel('question.view'));
         $this->assertSame('Phê duyệt', \Modules\Admin\Support\PermissionCatalog::actionLabel('question.approve'));
         $this->assertSame('Từ chối', \Modules\Admin\Support\PermissionCatalog::actionLabel('question.reject'));
 

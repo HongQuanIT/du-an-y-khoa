@@ -17,6 +17,11 @@ use Modules\QuestionBank\Support\ServePublishedQuestion;
  */
 final class QuestionPolicy
 {
+    public function viewAny(User $user): bool
+    {
+        return $user->can(Permission::QuestionView->value);
+    }
+
     public function view(User $user, Question $question): bool
     {
         if (! $user->can(Permission::QuestionView->value)) {
@@ -38,40 +43,47 @@ final class QuestionPolicy
 
     public function create(User $user): bool
     {
-        return $user->can(Permission::QuestionCreate->value);
+        return $user->can(Permission::QuestionView->value)
+            && $user->can(Permission::QuestionCreate->value);
     }
 
     public function update(User $user): bool
     {
-        return $user->can(Permission::QuestionUpdate->value);
+        return $user->can(Permission::QuestionView->value)
+            && $user->can(Permission::QuestionUpdate->value);
     }
 
     public function delete(User $user): bool
     {
-        return $user->can(Permission::QuestionDelete->value);
+        return $user->can(Permission::QuestionView->value)
+            && $user->can(Permission::QuestionDelete->value);
     }
 
     public function publish(User $user): bool
     {
-        return $user->can(Permission::QuestionPublish->value);
+        return $user->can(Permission::QuestionView->value)
+            && $user->can(Permission::QuestionPublish->value);
     }
 
     public function submit(User $user): bool
     {
-        return $user->can(Permission::QuestionSubmit->value);
+        return $user->can(Permission::QuestionView->value)
+            && $user->can(Permission::QuestionSubmit->value);
     }
 
     public function retire(User $user): bool
     {
-        return $user->can(Permission::QuestionRetire->value);
+        return $user->can(Permission::QuestionView->value)
+            && $user->can(Permission::QuestionRetire->value);
     }
 
     private function canManageWorkingCopy(User $user): bool
     {
-        return $user->canAny([
-            Permission::QuestionUpdate->value,
-            Permission::QuestionPublish->value,
-            Permission::QuestionReview->value,
-        ]);
+        return $user->can(Permission::QuestionView->value)
+            && $user->canAny([
+                Permission::QuestionUpdate->value,
+                Permission::QuestionPublish->value,
+                Permission::QuestionReview->value,
+            ]);
     }
 }

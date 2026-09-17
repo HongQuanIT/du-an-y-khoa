@@ -22,7 +22,7 @@ final class RoleController extends Controller
 {
     public function index(): View
     {
-        $this->authorizeAnyPermission(['role.view_any']);
+        $this->authorizeAnyPermission(['role.view']);
 
         $roles = Role::query()
             ->where('guard_name', 'web')
@@ -180,7 +180,7 @@ final class RoleController extends Controller
 
     public function permissionsCatalog(): View
     {
-        $this->authorizeAnyPermission(['permission.view_any']);
+        $this->authorizeAnyPermission(['permission.view']);
 
         $roleModels = Role::query()
             ->where('guard_name', 'web')

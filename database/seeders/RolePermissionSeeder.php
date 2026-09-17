@@ -114,7 +114,7 @@ class RolePermissionSeeder extends Seeder
                     PermissionEnum::QuestionPublish->value,
                     PermissionEnum::QuestionRetire->value,
                     'question.restore',
-                    'question_feedback.view_any',
+                    'question_feedback.view',
                 ], true))
                 ->keys()
                 ->all()))),
@@ -128,8 +128,8 @@ class RolePermissionSeeder extends Seeder
             ],
 
             RoleEnum::Instructor => array_values(array_unique(array_merge($portalPermissions, [
-                'question.view_any',
                 PermissionEnum::QuestionView->value,
+                PermissionEnum::QuestionReview->value,
                 'question.approve',
                 'question.reject',
                 PermissionEnum::ClassroomCreate->value,

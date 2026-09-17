@@ -23,7 +23,7 @@ final class ForceEndClassroomLiveAction
 
     public function handle(User $actor, Classroom $classroom): ?LiveSession
     {
-        abort_unless($actor->can('classroom_oversight.view_any'), 403);
+        abort_unless($actor->can('classroom_oversight.view'), 403);
 
         /** @var LiveSession|null $session */
         $session = $classroom->sessions()

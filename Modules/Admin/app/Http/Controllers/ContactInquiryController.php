@@ -21,7 +21,7 @@ final class ContactInquiryController extends Controller
 {
     public function index(Request $request): View
     {
-        $this->authorizePermission('contact.view_any');
+        $this->authorizePermission('contact.view');
 
         $filters = [
             'q' => trim((string) $request->query('q', '')),
@@ -78,7 +78,7 @@ final class ContactInquiryController extends Controller
 
     public function show(ContactInquiry $contact): View
     {
-        $this->authorizePermission('contact.view_any');
+        $this->authorizePermission('contact.view');
 
         $contact->load(['user:id,name,email', 'assignedAdmin:id,name,email', 'resolver:id,name']);
         $contact->markRead();

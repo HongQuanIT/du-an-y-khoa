@@ -55,7 +55,7 @@
         </div>
     @endif
 
-    @if ($canDecide)
+    @if ($canDecide && ($canApprove || $canReject))
     <div class="mb-6 rounded-2xl border border-outline-variant bg-surface p-5 shadow-sm">
         <p class="mb-3 text-sm text-on-surface-variant">
             Bạn được mời thẩm định chuyên môn câu hỏi này. Hãy rà soát đề, đáp án và giải thích về tính chính xác y khoa.
@@ -72,6 +72,7 @@
             class="w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm"
             placeholder="Góp ý không bắt buộc khi duyệt; bắt buộc khi từ chối...">{{ old('review_note') }}</textarea>
         <div class="mt-3 flex flex-wrap justify-end gap-2">
+            @if ($canReject)
             <form id="reject-review-form" method="post" action="{{ route('teach.questions.reviews.reject', $question) }}">
                 @csrf
                 <input type="hidden" name="review_note" id="reject-review-note">
@@ -81,6 +82,8 @@
                     <span class="material-symbols-outlined text-[18px]">close</span>Từ chối
                 </button>
             </form>
+            @endif
+            @if ($canApprove)
             <form id="approve-review-form" method="post" action="{{ route('teach.questions.reviews.approve', $question) }}">
                 @csrf
                 <button type="submit" onclick="return confirm('Xác nhận duyệt chuyên môn câu hỏi này?')"
@@ -88,6 +91,7 @@
                     <span class="material-symbols-outlined text-[18px]">check</span>Duyệt chuyên môn
                 </button>
             </form>
+            @endif
         </div>
     </div>
     @else

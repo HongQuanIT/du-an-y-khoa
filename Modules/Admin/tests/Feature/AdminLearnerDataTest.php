@@ -118,7 +118,7 @@ final class AdminLearnerDataTest extends TestCase
             'guard_name' => 'web',
             'portal' => 'admin',
         ]);
-        $role->givePermissionTo(['learner_catalog.view_any', 'learner_catalog.update']);
+        $role->givePermissionTo(['learner_catalog.view', 'learner_catalog.update']);
         $user = User::factory()->create();
         $user->assignRole($role);
         $institution = Institution::query()->where('is_active', true)->firstOrFail();

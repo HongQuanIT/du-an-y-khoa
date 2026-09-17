@@ -203,7 +203,7 @@ class Classroom extends Model
     public function canWatchLive(User $user): bool
     {
         return $this->isActiveMember($user)
-            || $user->canAny(['classroom_oversight.view_any']);
+            || $user->canAny(['classroom_oversight.view']);
     }
 
     public function roleFor(User $user): ?MemberRole

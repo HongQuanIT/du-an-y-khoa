@@ -46,16 +46,16 @@ final class AdminGranularPermissionTest extends TestCase
         $user->assignRole($role);
 
         $screens = [
-            'user.view_any' => 'admin.users.index',
-            'learner_catalog.view_any' => 'admin.institutions.index',
-            'role.view_any' => 'admin.roles.index',
+            'user.view' => 'admin.users.index',
+            'learner_catalog.view' => 'admin.institutions.index',
+            'role.view' => 'admin.roles.index',
             'billing_plan.view' => 'admin.billing.plans.index',
-            'exam.view_any' => 'admin.exams.index',
-            'classroom_oversight.view_any' => 'admin.classrooms.index',
+            'exam.view' => 'admin.exams.index',
+            'classroom_oversight.view' => 'admin.classrooms.index',
             'system_setting.view' => 'admin.settings.index',
             'taxonomy.view' => 'admin.taxonomy.index',
             'media.view' => 'admin.media.index',
-            'question_feedback.view_any' => 'admin.question-feedback.index',
+            'question_feedback.view' => 'admin.question-feedback.index',
         ];
 
         foreach ($screens as $permission => $route) {

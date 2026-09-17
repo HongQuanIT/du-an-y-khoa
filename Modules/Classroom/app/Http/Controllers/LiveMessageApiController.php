@@ -32,7 +32,7 @@ final class LiveMessageApiController extends Controller
         abort_unless($classroom->canWatchLive($request->user()), 403);
 
         $isOverseer = $request->user()->canAny([
-            'classroom_oversight.view_any',
+            'classroom_oversight.view',
         ]);
         $canModerate = $isOverseer || ($classroom->roleFor($request->user())?->canModerate() ?? false);
 

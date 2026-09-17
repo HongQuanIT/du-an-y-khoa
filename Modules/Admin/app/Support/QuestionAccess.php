@@ -36,16 +36,7 @@ final class QuestionAccess
     /** Open the admin question workspace (list, form, stats). */
     public static function canAccessWorkspace(User $user): bool
     {
-        return $user->canAny([
-            'question.view_any',
-            Permission::QuestionView->value,
-            Permission::QuestionUpdate->value,
-            Permission::QuestionCreate->value,
-            Permission::QuestionPublish->value,
-            'question.export',
-            'question_feedback.view_any',
-            'question_version.view',
-        ]);
+        return $user->can(Permission::QuestionView->value);
     }
 
     public static function authorizeWorkspace(User $user): void
@@ -56,13 +47,7 @@ final class QuestionAccess
     /** Spatie `permission:a|b` — any of these opens GET question admin routes. */
     public static function workspacePermissionMiddleware(): string
     {
-        return implode('|', [
-            Permission::QuestionView->value,
-            Permission::QuestionUpdate->value,
-            Permission::QuestionCreate->value,
-            Permission::QuestionPublish->value,
-            'question.view_any',
-        ]);
+        return Permission::QuestionView->value;
     }
 
     public static function canSubmit(User $user): bool
@@ -86,6 +71,10 @@ final class QuestionAccess
     /** @param Builder<Question> $query */
     public static function scopeVisibleTo(Builder $query, User $user): Builder
     {
+        if (! $user->can(Permission::QuestionView->value)) {
+            return $query->whereRaw('1 = 0');
+        }
+
         if ($user->can('question.view_any') || self::canPublish($user)) {
             return $query;
         }
@@ -106,7 +95,7 @@ final class QuestionAccess
 
     public static function canView(User $user, Question $question): bool
     {
-        // `question.view_any` permits listing questions only. Opening a question
+        // `question.view_any` only expands data scope. Opening a question
         // (including its comparison and statistics) always requires `question.view`.
         if (! $user->can(Permission::QuestionView->value)) {
             return false;

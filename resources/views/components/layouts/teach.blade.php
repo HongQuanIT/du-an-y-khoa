@@ -24,7 +24,7 @@
             'icon' => 'fact_check',
             'route' => 'teach.questions.reviews.index',
             'match' => 'teach.questions.reviews.*',
-            'permission' => 'question.view_any',
+            'permission' => 'question.view',
         ],
         [
             'label' => 'Thông báo',

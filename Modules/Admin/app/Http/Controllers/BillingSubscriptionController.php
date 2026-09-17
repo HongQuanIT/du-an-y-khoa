@@ -71,7 +71,7 @@ final class BillingSubscriptionController extends Controller
                 'sku' => $sku,
                 'source' => $request->query('source'),
             ],
-            'canViewUsers' => $this->actor()->canAny(['user.view', 'user.view_any']),
+            'canViewUsers' => $this->actor()->can('user.view'),
         ]);
     }
 
