@@ -57,7 +57,7 @@ final class QuestionAccess
 
     public static function canRetire(User $user): bool
     {
-        return $user->can(Permission::QuestionRetire->value);
+        return $user->can(Permission::QuestionPublish->value);
     }
 
     /**

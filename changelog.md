@@ -6,6 +6,11 @@
 
 - `QuestionAccess::canView` cho phép `question.flag` xem câu `in_flag_review` / đã gắn cờ (không bắt buộc `question.view`).
 
+### Fix — Admin: tôn trọng quyền review câu hỏi
+
+- Super Admin không bypass `question.flag`; tắt quyền sẽ ẩn sidebar Review câu hỏi và chặn route flags.
+- Gỡ reference runtime còn sót tới `Permission::QuestionRetire`; thao tác thu hồi dùng quyền `question.publish`.
+
 ### Fix — QBank: gửi duyệt không mất giảng viên được gán
 
 - Select GV bị `disabled` lúc reload → browser không gửi `assigned_instructor_id`, save ghi null rồi hàng đợi `/teach` trống.
@@ -58,6 +63,7 @@
 ### Docs — Phiên luyện thích ứng: chỉnh format giải thích ngắn
 
 - Căn bảng markdown và làm gọn tiêu đề mục tín hiệu trong `adaptive-session-explained.md`.
+
 ### Feat — RBAC: hoàn thiện quyền theo portal Admin và Học viên
 
 - Bổ sung quyền xem thông báo cho Học viên, gộp luồng xem lại kỳ thi và đồng bộ ẩn UI theo quyền.
