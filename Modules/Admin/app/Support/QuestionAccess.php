@@ -71,14 +71,15 @@ final class QuestionAccess
     /** @param Builder<Question> $query */
     public static function scopeVisibleTo(Builder $query, User $user): Builder
     {
-        if (! $user->can(Permission::QuestionView->value)) {
-            return $query->whereRaw('1 = 0');
+        if ($user->can(Permission::QuestionView->value)) {
+            if ($user->can('question.view_any') || self::canPublish($user)) {
+                return $query;
+            }
+
+            return $query->where('created_by', $user->getKey());
         }
 
-        if ($user->can('question.view_any') || self::canPublish($user)) {
-            return $query;
-        }
-
+        // Reviewer: chỉ question.flag — hàng đợi gắn cờ + câu mình đã gắn.
         if (self::canFlag($user) && ! self::canEdit($user)) {
             $userId = (int) $user->getKey();
 
@@ -90,40 +91,37 @@ final class QuestionAccess
             });
         }
 
-        return $query->where('created_by', $user->getKey());
+        return $query->whereRaw('1 = 0');
     }
 
     public static function canView(User $user, Question $question): bool
     {
-        // `question.view_any` only expands data scope. Opening a question
-        // (including its comparison and statistics) always requires `question.view`.
-        if (! $user->can(Permission::QuestionView->value)) {
-            return false;
+        if ($user->can(Permission::QuestionView->value)) {
+            if ($user->can('question.view_any') || self::canPublish($user)) {
+                return true;
+            }
+
+            if ((int) $question->created_by === (int) $user->getKey()
+                && $user->canAny([
+                    Permission::QuestionView->value,
+                    Permission::QuestionUpdate->value,
+                    'question_version.view',
+                    'question.export',
+                ])) {
+                return true;
+            }
         }
 
-        if ($user->can('question.view_any') || self::canPublish($user)) {
-            return true;
+        // Reviewer có question.flag (không cần question.view) xem câu chờ gắn cờ / đã gắn.
+        if (self::canFlag($user)) {
+            $userId = (int) $user->getKey();
+
+            return $question->status === QuestionStatus::InFlagReview
+                || (int) $question->reviewer_1_id === $userId
+                || (int) $question->reviewer_2_id === $userId;
         }
 
-        if ((int) $question->created_by === (int) $user->getKey()
-            && $user->canAny([
-                Permission::QuestionView->value,
-                Permission::QuestionUpdate->value,
-                'question_version.view',
-                'question.export',
-            ])) {
-            return true;
-        }
-
-        if (! self::canFlag($user)) {
-            return false;
-        }
-
-        $userId = (int) $user->getKey();
-
-        return $question->status === QuestionStatus::InFlagReview
-            || (int) $question->reviewer_1_id === $userId
-            || (int) $question->reviewer_2_id === $userId;
+        return false;
     }
 
     public static function authorizeView(User $user, Question $question): void

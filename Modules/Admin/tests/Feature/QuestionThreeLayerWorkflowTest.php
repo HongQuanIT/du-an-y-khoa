@@ -386,17 +386,15 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
         return $question->fresh(['options', 'lessons']);
     }
 
-    /**
-     * Create a staff user in the admin portal with only the question.flag permission.
-     * This simulates a reviewer: any admin-portal user that SuperAdmin granted question.flag to.
-     */
+    /** Reviewer role: portal admin + question.flag, không có question.view / publish / edit. */
     private function createReviewer(): User
     {
         $user = User::factory()->create();
-        // Assign the admin role so the user belongs to the admin portal (Staff::isStaff() passes).
-        $user->assignRole(Role::Admin->value);
-        // Restrict to ONLY question.flag — no other permissions from the admin baseline.
-        $user->syncPermissions([Permission::QuestionFlag->value]);
+        $user->assignRole(Role::Reviewer->value);
+        $user->givePermissionTo(Permission::QuestionFlag->value);
+        $user->unsetRelation('roles');
+        $user->unsetRelation('permissions');
+        $user->forgetCachedPermissions();
 
         TwoFactorSecret::query()->create([
             'user_id' => $user->id,

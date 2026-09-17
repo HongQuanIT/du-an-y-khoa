@@ -2,6 +2,10 @@
 
 ## 2026-09-17
 
+### Fix — QBank: reviewer mở trang gắn cờ không còn 404
+
+- `QuestionAccess::canView` cho phép `question.flag` xem câu `in_flag_review` / đã gắn cờ (không bắt buộc `question.view`).
+
 ### Fix — QBank: gửi duyệt không mất giảng viên được gán
 
 - Select GV bị `disabled` lúc reload → browser không gửi `assigned_instructor_id`, save ghi null rồi hàng đợi `/teach` trống.
