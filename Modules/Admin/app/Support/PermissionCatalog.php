@@ -18,6 +18,10 @@ use Spatie\Permission\Models\Role;
  */
 final class PermissionCatalog
 {
+    private const HIDDEN_PERMISSION_NAMES = [
+        'classroom.manage',
+    ];
+
     public static function roleLabel(Role $role): string
     {
         $systemRole = RoleEnum::tryFrom($role->name);
@@ -47,6 +51,7 @@ final class PermissionCatalog
         $permissions = Permission::query()
             ->where('guard_name', 'web')
             ->whereIn('name', $validNames)
+            ->whereNotIn('name', self::HIDDEN_PERMISSION_NAMES)
             ->orderBy('name')
             ->get();
 
@@ -112,7 +117,7 @@ final class PermissionCatalog
             ->groupBy(fn (Permission $permission): string => self::moduleKey($permission))
             ->map(function (Collection $modulePermissions, string $module): array {
                 $resources = $modulePermissions
-                    ->groupBy(fn (Permission $permission): string => explode('.', $permission->name, 2)[0])
+                    ->groupBy(fn (Permission $permission): string => self::resourceKey($permission))
                     ->map(fn (Collection $items, string $resource): array => [
                         'key' => $resource,
                         'label' => self::resourceLabel($resource),
@@ -240,6 +245,15 @@ final class PermissionCatalog
         };
     }
 
+    private static function resourceKey(Permission $permission): string
+    {
+        return match ($permission->name) {
+            PermissionEnum::QuestionFlag->value => 'question_flag',
+            'question_version.view', 'question_version.restore' => 'question',
+            default => explode('.', $permission->name, 2)[0],
+        };
+    }
+
     private static function moduleLabel(string $module): string
     {
         return match ($module) {
@@ -275,6 +289,7 @@ final class PermissionCatalog
             'role' => 'Vai trò',
             'permission', 'role_permission' => 'Quyền hạn',
             'question' => 'Câu hỏi',
+            'question_flag' => 'Gắn cờ câu hỏi',
             'question_version' => 'Phiên bản câu hỏi',
             'question_feedback' => 'Phản hồi câu hỏi',
             'session' => 'Phiên luyện tập',

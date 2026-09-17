@@ -406,7 +406,7 @@ final class QuestionController extends Controller
             'canPublish' => $this->actor()->can(Permission::QuestionPublish->value),
             'canReject' => $this->actor()->can('question.reject'),
             'canSubmit' => $this->actor()->can(Permission::QuestionSubmit->value),
-            'canRetire' => $this->actor()->can(Permission::QuestionRetire->value),
+            'canRetire' => $this->actor()->can(Permission::QuestionPublish->value),
             'canDelete' => $question->exists && $this->actor()->can(Permission::QuestionDelete->value),
             'canClone' => $question->exists && $this->actor()->canAny(['question.clone']),
             'isReviewer' => $isReviewer,
@@ -428,7 +428,7 @@ final class QuestionController extends Controller
         $canSubmit = $this->actor()->can(Permission::QuestionSubmit->value);
         $canPublish = $this->actor()->can(Permission::QuestionPublish->value);
         $canReject = $this->actor()->can('question.reject');
-        $canRetire = $this->actor()->can(Permission::QuestionRetire->value);
+        $canRetire = $this->actor()->can(Permission::QuestionPublish->value);
         unset($isReviewer);
 
         return match ($current) {

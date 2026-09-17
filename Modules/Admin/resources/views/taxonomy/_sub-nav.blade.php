@@ -11,6 +11,7 @@
 <nav aria-label="Phân loại câu hỏi" class="mb-6 overflow-x-auto rounded-xl border border-outline-variant bg-surface p-1">
     <ul class="flex min-w-max gap-1">
         @foreach ($tabs as $tab)
+            @continue (! \Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), $tab['route']))
             @php
                 $isActive = $active === $tab['key']
                     || ($active === null && request()->routeIs($tab['route']));

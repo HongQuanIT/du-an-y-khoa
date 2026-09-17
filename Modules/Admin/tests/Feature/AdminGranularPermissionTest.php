@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Modules\Admin\Tests\Feature;
 
 use App\Models\User;
+use App\Support\Enums\Permission;
+use App\Support\Enums\Role as SystemRole;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Admin\Support\AdminMenu;
@@ -92,6 +94,22 @@ final class AdminGranularPermissionTest extends TestCase
         foreach ($screens as $route) {
             $this->actingAsWithWebSession($user)->get(route($route))->assertForbidden();
         }
+    }
+
+    public function test_super_admin_question_flag_permission_controls_review_sidebar(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+        $role = Role::findByName(SystemRole::SuperAdmin->value, 'web');
+        $role->revokePermissionTo(Permission::QuestionFlag->value);
+        $user = User::factory()->create();
+        $user->assignRole($role);
+
+        $this->assertFalse($user->can(Permission::QuestionFlag->value));
+        $this->assertNotContains('admin.questions.flags.index', array_column(AdminMenu::for($user), 'route'));
+
+        $this->actingAsWithWebSession($user)
+            ->get(route('admin.questions.flags.index'))
+            ->assertForbidden();
     }
 
     public function test_user_view_cannot_change_status_without_status_permission(): void

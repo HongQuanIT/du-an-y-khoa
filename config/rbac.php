@@ -31,7 +31,7 @@ return [
                 'permission' => ['view'],
             ],
             'question_bank' => [
-                'question' => ['view_any', 'view', 'create', 'clone', 'update', 'delete', 'submit', 'flag', 'publish', 'reject', 'retire', 'import', 'export'],
+                'question' => ['view_any', 'view', 'create', 'clone', 'update', 'delete', 'submit', 'flag', 'publish', 'reject', 'import', 'export'],
                 'question_version' => ['view', 'restore'],
                 'question_feedback' => ['view', 'update'],
             ],
@@ -90,7 +90,7 @@ return [
                 'classroom_session' => ['schedule', 'start', 'end'],
             ],
             'question_bank' => [
-                'question' => ['view', 'review', 'approve', 'reject'],
+                'question' => ['view', 'approve', 'reject'],
             ],
             'notification' => [
                 'teach_notification' => ['view'],

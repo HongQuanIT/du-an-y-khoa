@@ -315,7 +315,7 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
             ->name('questions.versions.restore');
 
         Route::post('/questions/{question}/transition', [QuestionController::class, 'transition'])
-            ->middleware('permission:question.update|question.submit|question.publish|question.reject|question.retire')
+            ->middleware('permission:question.update|question.submit|question.publish|question.reject')
             ->name('questions.transition');
 
         Route::middleware('permission:question.reject|'.Permission::QuestionPublish->value)->group(function (): void {

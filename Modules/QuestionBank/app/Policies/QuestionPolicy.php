@@ -74,7 +74,7 @@ final class QuestionPolicy
     public function retire(User $user): bool
     {
         return $user->can(Permission::QuestionView->value)
-            && $user->can(Permission::QuestionRetire->value);
+            && $user->can(Permission::QuestionPublish->value);
     }
 
     private function canManageWorkingCopy(User $user): bool

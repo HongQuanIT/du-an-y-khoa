@@ -116,6 +116,7 @@ class AppServiceProvider extends ServiceProvider
                 Permission::QuestionUpdate->value,
                 Permission::QuestionSubmit->value,
                 Permission::QuestionReview->value,
+                Permission::QuestionFlag->value,
                 'question.clone',
                 'question.import',
             ], true)) {

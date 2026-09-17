@@ -63,8 +63,8 @@
                     @dragover.prevent="dragging = true"
                     @dragleave.prevent="dragging = false"
                     @drop.prevent="dragging = false; uploadFiles($event.dataTransfer.files)">
-                    <p class="font-label-md text-on-surface">Kéo thả ảnh / đoạn phim vào đây</p>
-                    <p class="mt-1 font-body-sm text-on-surface-variant">Ảnh ≤ 10 MB · Đoạn phim ≤ 100 MB · lưu trên máy chủ</p>
+                    <p class="font-label-md text-on-surface">Kéo thả ảnh / video vào đây</p>
+                    <p class="mt-1 font-body-sm text-on-surface-variant">Ảnh ≤ 10 MB · Video ≤ 100 MB · lưu trên máy chủ</p>
                     <button type="button" class="mt-4 rounded-lg bg-primary px-4 py-2 font-label-md text-on-primary" @click="$refs.file.click()">Chọn tệp</button>
                     <input type="file" class="hidden" x-ref="file" accept="image/*,video/mp4,video/webm,video/quicktime" multiple @change="uploadFiles($event.target.files)">
                 </div>

@@ -254,10 +254,10 @@ final class TransitionQuestionStatusAction
             abort(403, 'Chỉ reviewer gắn đủ 2 cờ mới chuyển câu sang chờ xuất bản.');
         }
 
-        // Retire — tách khỏi publish.
+        // Retire follows the publisher permission after retiring the legacy question.retire ability.
         if ($to === QuestionStatus::Retired) {
-            if (! $actor->can(Permission::QuestionRetire->value)) {
-                abort(403, 'Cần quyền question.retire.');
+            if (! $actor->can(Permission::QuestionPublish->value)) {
+                abort(403, 'Cần quyền question.publish.');
             }
 
             return;

@@ -2,9 +2,19 @@
 
 ## 2026-09-17
 
+### UX — Admin: sắp xếp nhóm quyền câu hỏi
+
+- Tách `question.flag` thành nhóm chức năng «Gắn cờ câu hỏi».
+- Gộp quyền phiên bản câu hỏi vào nhóm «Câu hỏi» trong ma trận quyền Admin.
+
 ### Fix — QBank: reviewer mở trang gắn cờ không còn 404
 
 - `QuestionAccess::canView` cho phép `question.flag` xem câu `in_flag_review` / đã gắn cờ (không bắt buộc `question.view`).
+
+### Fix — Admin: tôn trọng quyền review câu hỏi
+
+- Super Admin không bypass `question.flag`; tắt quyền sẽ ẩn sidebar Review câu hỏi và chặn route flags.
+- Gỡ reference runtime còn sót tới `Permission::QuestionRetire`; thao tác thu hồi dùng quyền `question.publish`.
 
 ### Fix — QBank: gửi duyệt không mất giảng viên được gán
 
@@ -19,6 +29,12 @@
 ### UX — Admin: gỡ hint «Chọn dòng rồi xuất» trên danh sách câu hỏi
 
 - Bỏ dòng hướng dẫn xuất cạnh tiêu đề bảng (giữ checkbox + sticky bar).
+
+### Fix — Admin/Portal: đồng bộ quyền và nhãn UI
+
+- Ẩn `classroom.manage` khỏi ma trận quyền; gỡ quyền `question.retire` khỏi registry/seeder và migration cleanup.
+- Trang Phân loại ẩn tab/KPI Ma trận đề thi, Danh mục kiến thức, Tags theo quyền route hiện tại.
+- Media đổi nhãn «đoạn phim» thành «video»; portal `/teach` đổi tagline thành «Hệ thống giảng viên».
 
 ### Fix — Admin: khôi phục chọn dòng + format Excel/CSV khi xuất câu hỏi
 
@@ -52,6 +68,7 @@
 ### Docs — Phiên luyện thích ứng: chỉnh format giải thích ngắn
 
 - Căn bảng markdown và làm gọn tiêu đề mục tín hiệu trong `adaptive-session-explained.md`.
+
 ### Feat — RBAC: hoàn thiện quyền theo portal Admin và Học viên
 
 - Bổ sung quyền xem thông báo cho Học viên, gộp luồng xem lại kỳ thi và đồng bộ ẩn UI theo quyền.
