@@ -183,7 +183,7 @@
                         @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.import.errors'))
 <a href="{{ route('admin.questions.import.errors', $batch) }}"
                             class="mt-3 inline-flex font-label-sm font-semibold text-primary hover:underline">
-                            Tải danh sách dòng lỗi
+                            Tải file lỗi Excel
                         </a>
 @endif
                     @endif

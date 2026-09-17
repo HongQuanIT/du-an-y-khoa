@@ -26,6 +26,11 @@
             storageKey: 'admin.questions.columns.v1',
             defaults: @js($defaultColumns),
             isReviewer: @js($isReviewer),
+            pageIds: @js($questions->pluck('id')->values()),
+            filteredTotal: {{ (int) $questions->total() }},
+            exportLimit: {{ (int) $exportLimit }},
+            exportUrl: @js(route('admin.questions.export')),
+            exportQuery: @js(request()->except(['page'])),
         })" class="space-y-6">
         {{-- Header chính chuẩn SEO với thẻ H1 --}}
         <header class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -49,17 +54,17 @@
 @endif
                 @endif
                 @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.export'))
-<a href="{{ route('admin.questions.export', request()->query()) }}" id="btn-export-questions-xlsx"
+<button type="button" id="btn-export-questions-xlsx" @click="exportAs('xlsx')"
                     class="inline-flex items-center gap-2 rounded-xl border border-outline-variant bg-surface px-4 py-2.5 font-label-md font-semibold text-on-surface shadow-sm transition-colors hover:bg-surface-container-low">
                     <span class="material-symbols-outlined text-[20px]" aria-hidden="true">download</span>
                     Xuất Excel
-                </a>
+                </button>
 @endif
                 @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.export'))
-<a href="{{ route('admin.questions.export', array_merge(request()->query(), ['format' => 'csv'])) }}" id="btn-export-questions-csv"
+<button type="button" id="btn-export-questions-csv" @click="exportAs('csv')"
                     class="inline-flex items-center gap-2 rounded-xl border border-outline-variant bg-surface px-4 py-2.5 font-label-md font-semibold text-on-surface shadow-sm transition-colors hover:bg-surface-container-low">
                     Xuất CSV
-                </a>
+                </button>
 @endif
                 @if ($canCreate)
                     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.create'))
@@ -123,6 +128,13 @@
         </header>
 
         <x-admin.flash />
+
+        @if (filled($exportBanner ?? null))
+            <p class="flex flex-wrap items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 font-body-sm text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100">
+                <span class="material-symbols-outlined mt-0.5 text-[20px] text-amber-700 dark:text-amber-300" aria-hidden="true">info</span>
+                <span>{{ $exportBanner }}</span>
+            </p>
+        @endif
 
         @if (($importBatch ?? null) && filled($importBatch->original_filename))
             <p class="flex flex-wrap items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 font-body-sm text-on-surface">
@@ -307,6 +319,7 @@
                         hỏi</h2>
                     <span>Hiển thị <strong>{{ number_format($questions->count()) }}</strong> /
                         <strong>{{ number_format($questions->total()) }}</strong> câu hỏi</span>
+                    <span class="hidden font-body-sm font-normal text-on-surface-variant sm:inline">· Chọn dòng rồi xuất, hoặc xuất cả bộ lọc (tối đa {{ number_format($exportLimit) }})</span>
                     @if ($questions->hasPages())
                         <span>· Trang {{ $questions->currentPage() }} / {{ $questions->lastPage() }}</span>
                     @endif
@@ -342,12 +355,21 @@
                 class="relative w-full overflow-x-auto scroll-smooth focus:outline-none" tabindex="0"
                 aria-label="Vùng cuộn bảng dữ liệu câu hỏi">
                 <table id="questions-data-table" aria-label="Bảng danh sách câu hỏi ngân hàng"
-                    class="w-full min-w-[1370px] table-fixed border-collapse text-left font-body-sm text-on-surface">
+                    class="w-full min-w-[1414px] table-fixed border-collapse text-left font-body-sm text-on-surface">
                     <caption class="sr-only">Danh sách câu hỏi ngân hàng, chi tiết độ khó, trạng thái kiểm duyệt và
                         thống kê tỷ lệ đúng</caption>
                     <thead
                         class="border-b border-outline-variant bg-surface-container-low text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
                         <tr>
+                            <th scope="col" class="w-11 min-w-11 px-3 py-3.5">
+                                <label class="sr-only" for="select-all-questions">Chọn tất cả câu trên trang</label>
+                                <input id="select-all-questions" type="checkbox"
+                                    class="size-4 rounded border-outline-variant text-primary focus:ring-primary"
+                                    :checked="allPageSelected"
+                                    x-effect="$el.indeterminate = somePageSelected && !allPageSelected"
+                                    @change="togglePage($event.target.checked)"
+                                    @if ($questions->isEmpty()) disabled @endif>
+                            </th>
                             <th scope="col" class="w-[380px] min-w-[320px] px-5 py-3.5">Nội dung câu hỏi</th>
                             <th scope="col" class="w-[220px] min-w-[180px] px-4 py-3.5" x-show="cols.taxonomy" x-cloak>
                                 Bài học</th>
@@ -376,7 +398,15 @@
                     <tbody class="divide-y divide-outline-variant/60">
                         @forelse ($questions as $question)
                             @php $listStats = $question->listStats(); @endphp
-                            <tr class="transition-colors hover:bg-surface-container-low">
+                            <tr class="transition-colors hover:bg-surface-container-low"
+                                :class="isSelected(@js($question->getKey())) && 'bg-primary/5'">
+                                <td class="w-11 min-w-11 px-3 py-4 align-top">
+                                    <input type="checkbox"
+                                        class="mt-1 size-4 rounded border-outline-variant text-primary focus:ring-primary"
+                                        :checked="isSelected(@js($question->getKey()))"
+                                        @change="toggleOne(@js($question->getKey()), $event.target.checked)"
+                                        aria-label="Chọn câu {{ $question->code ?: $question->id }}">
+                                </td>
                                 <td class="w-[380px] min-w-[320px] px-5 py-4 align-top">
                                     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.edit'))
 <a href="{{ route('admin.questions.edit', $question) }}" class="group block"
@@ -609,7 +639,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="10" class="px-5 py-12 text-center">
+                                <td colspan="11" class="px-5 py-12 text-center">
                                     <div
                                         class="mx-auto flex size-12 items-center justify-center rounded-full bg-surface-container-high text-on-surface-variant">
                                         <span class="material-symbols-outlined text-[28px]"
@@ -633,10 +663,51 @@
                 {{ $questions->links() }}
             </nav>
         @endif
+
+        <form x-ref="exportForm" method="post" action="{{ route('admin.questions.export') }}" class="hidden">
+            @csrf
+            <input type="hidden" name="format" :value="exportFormat">
+            @foreach (request()->except(['page', 'ids', 'format']) as $key => $value)
+                @if (is_array($value))
+                    @foreach ($value as $item)
+                        <input type="hidden" name="{{ $key }}[]" value="{{ $item }}">
+                    @endforeach
+                @elseif (filled($value))
+                    <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                @endif
+            @endforeach
+            <template x-for="id in selectedIds" :key="id">
+                <input type="hidden" name="ids[]" :value="id">
+            </template>
+        </form>
+
+        <div x-show="selectedCount > 0" x-cloak
+            class="sticky bottom-4 z-40 mx-auto flex w-full max-w-3xl flex-wrap items-center justify-between gap-3 rounded-2xl border border-outline-variant bg-surface px-4 py-3 shadow-lg">
+            <p class="font-label-md text-on-surface">
+                <strong x-text="selectedCount"></strong> câu đã chọn
+                <span class="text-on-surface-variant" x-show="selectedCount > exportLimit">
+                    — xuất tối đa <strong x-text="exportLimit"></strong>
+                </span>
+            </p>
+            <div class="flex flex-wrap items-center gap-2">
+                <button type="button" @click="exportAs('xlsx')"
+                    class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 font-label-sm font-semibold text-on-primary hover:bg-primary/90">
+                    Xuất Excel
+                </button>
+                <button type="button" @click="exportAs('csv')"
+                    class="inline-flex items-center gap-1.5 rounded-xl border border-outline-variant px-3 py-2 font-label-sm font-semibold text-on-surface hover:bg-surface-container-low">
+                    Xuất CSV
+                </button>
+                <button type="button" @click="clearSelected()"
+                    class="font-label-sm font-semibold text-on-surface-variant hover:text-on-surface hover:underline">
+                    Bỏ chọn
+                </button>
+            </div>
+        </div>
     </div>
 
     <script>
-        function questionColumnPrefs({ storageKey, defaults, isReviewer }) {
+        function questionColumnPrefs({ storageKey, defaults, isReviewer, pageIds, filteredTotal, exportLimit, exportUrl, exportQuery }) {
             const toggleableColumns = [
                 { key: 'taxonomy', label: 'Bài học' },
                 { key: 'difficulty', label: 'Độ khó' },
@@ -662,6 +733,16 @@
                 }
             };
 
+            const selectionKey = 'admin.questions.export-ids.v1';
+            const loadSelected = () => {
+                try {
+                    const raw = sessionStorage.getItem(selectionKey);
+                    return raw ? JSON.parse(raw) : [];
+                } catch (e) {
+                    return [];
+                }
+            };
+
             return {
                 open: false,
                 isReviewer,
@@ -670,6 +751,13 @@
                 panelStyle: '',
                 canScrollLeft: false,
                 canScrollRight: false,
+                pageIds: pageIds || [],
+                filteredTotal: filteredTotal || 0,
+                exportLimit: exportLimit || 2000,
+                exportUrl,
+                exportQuery: exportQuery || {},
+                exportFormat: 'xlsx',
+                selectedIds: loadSelected(),
                 toggle(key) {
                     this.cols[key] = !this.cols[key];
                     this.persist();
@@ -684,6 +772,79 @@
                     try {
                         localStorage.setItem(storageKey, JSON.stringify(this.cols));
                     } catch (e) { }
+                },
+                get selectedCount() {
+                    return this.selectedIds.length;
+                },
+                get allPageSelected() {
+                    return this.pageIds.length > 0 && this.pageIds.every((id) => this.selectedIds.includes(id));
+                },
+                get somePageSelected() {
+                    return this.pageIds.some((id) => this.selectedIds.includes(id));
+                },
+                isSelected(id) {
+                    return this.selectedIds.includes(id);
+                },
+                persistSelected() {
+                    try {
+                        sessionStorage.setItem(selectionKey, JSON.stringify(this.selectedIds.slice(0, this.exportLimit)));
+                    } catch (e) { }
+                },
+                toggleOne(id, checked) {
+                    if (checked && !this.selectedIds.includes(id)) {
+                        if (this.selectedIds.length >= this.exportLimit) {
+                            return;
+                        }
+                        this.selectedIds = [...this.selectedIds, id];
+                    }
+                    if (!checked) {
+                        this.selectedIds = this.selectedIds.filter((item) => item !== id);
+                    }
+                    this.persistSelected();
+                },
+                togglePage(checked) {
+                    if (checked) {
+                        const next = [...this.selectedIds];
+                        this.pageIds.forEach((id) => {
+                            if (!next.includes(id) && next.length < this.exportLimit) {
+                                next.push(id);
+                            }
+                        });
+                        this.selectedIds = next;
+                    } else {
+                        this.selectedIds = this.selectedIds.filter((id) => !this.pageIds.includes(id));
+                    }
+                    this.persistSelected();
+                },
+                clearSelected() {
+                    this.selectedIds = [];
+                    this.persistSelected();
+                },
+                filterExportUrl(format) {
+                    const params = new URLSearchParams();
+                    Object.entries(this.exportQuery || {}).forEach(([key, value]) => {
+                        if (key === 'ids' || key === 'format' || key === 'page' || value === null || value === '') {
+                            return;
+                        }
+                        if (Array.isArray(value)) {
+                            value.forEach((item) => params.append(`${key}[]`, item));
+                        } else {
+                            params.set(key, value);
+                        }
+                    });
+                    if (format === 'csv') {
+                        params.set('format', 'csv');
+                    }
+                    const query = params.toString();
+                    return query ? `${this.exportUrl}?${query}` : this.exportUrl;
+                },
+                exportAs(format) {
+                    if (this.selectedCount === 0) {
+                        window.location = this.filterExportUrl(format);
+                        return;
+                    }
+                    this.exportFormat = format;
+                    this.$nextTick(() => this.$refs.exportForm.submit());
                 },
                 placePanel() {
                     const btn = this.$refs.columnTrigger;
