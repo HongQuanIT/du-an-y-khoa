@@ -21,7 +21,7 @@
             <thead class="bg-surface-container-low text-left font-label-sm text-on-surface-variant">
                 <tr>
                     <th class="px-4 py-3">Tên</th>
-                    <th class="px-4 py-3">Code</th>
+                    <th class="px-4 py-3">Mã</th>
                     <th class="px-4 py-3 text-center">Phần</th>
                     <th class="px-4 py-3 text-center">Chủ đề lâm sàng</th>
                     <th class="px-4 py-3">Trạng thái</th>
