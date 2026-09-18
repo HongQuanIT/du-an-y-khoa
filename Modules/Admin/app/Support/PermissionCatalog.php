@@ -323,6 +323,8 @@ final class PermissionCatalog
             'subscription' => 'Gói thuê bao',
             'partner' => 'Đối tác',
             'partner_code' => 'Mã giới thiệu',
+            'partner_commission' => 'Hoa hồng',
+            'partner_referral' => 'Người được mời',
             'partner_payout' => 'Chi trả CTV',
             'report', 'report_schedule' => 'Báo cáo',
             'audit', 'audit_log', 'access_audit' => 'Nhật ký kiểm toán',

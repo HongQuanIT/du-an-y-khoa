@@ -7,6 +7,10 @@
 - **Học viên** (`/exams`): chọn kỳ thi = ma trận blueprint → «Tạo bài thi» sinh đề riêng từ tỉ trọng + exam pool, rồi vào phòng thi.
 - **Admin** (`/admin/exams`): chỉ xem/xóa danh sách bài thi đã tạo (học viên, ma trận, số câu); bỏ form tạo/sửa đề.
 - `exams.user_id`; actions `CreateLearnerExamFromBlueprintAction` + `GenerateExamQuestionsAction`; tái dùng `BlueprintExamAllocator`.
+### UX — Partner: Việt hóa nhãn quyền CTV
+
+- Đổi `partner_commission` thành «Hoa hồng» và `partner_referral` thành «Người được mời».
+- Sửa empty state chi tiết CTV khi chưa có người được mời.
 
 ### Fix — Admin: bắt quyền xem khi dùng quyền thao tác
 
