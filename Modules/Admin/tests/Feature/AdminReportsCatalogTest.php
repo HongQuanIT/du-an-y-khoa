@@ -140,7 +140,7 @@ final class AdminReportsCatalogTest extends TestCase
             Permission::ReportExport->value,
         ]);
 
-        $this->assertFalse($editor->can(Permission::BillingManage->value));
+        $this->assertFalse($editor->can('billing_payment.view'));
 
         $this->actingAsStaff($editor)
             ->get(route('admin.reports.show', ['category' => 'revenue', 'report' => 'mrr']))

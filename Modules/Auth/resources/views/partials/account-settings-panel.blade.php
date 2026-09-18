@@ -182,6 +182,7 @@
         </form>
     </section>
 
+    @can('profile.two_factor_toggle')
     <section class="{{ $cardClass }} mt-6">
         <div class="{{ $cardHeaderClass }}">
             <h2 class="flex items-center gap-2 font-title-md text-title-md text-on-surface">
@@ -227,6 +228,7 @@
             @endif
         </div>
     </section>
+    @endcan
 
 @elseif ($tab === 'notifications')
     <section class="{{ $cardClass }}">

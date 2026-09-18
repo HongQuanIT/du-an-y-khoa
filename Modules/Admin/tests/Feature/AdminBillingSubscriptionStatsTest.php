@@ -6,7 +6,6 @@ namespace Modules\Admin\Tests\Feature;
 
 use App\Models\User;
 use App\Support\Auth\TwoFactorSession;
-use App\Support\Enums\Permission;
 use App\Support\Enums\Role;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -17,7 +16,6 @@ use Modules\Billing\Database\Seeders\BillingDatabaseSeeder;
 use Modules\Billing\Models\Plan;
 use Modules\Billing\Models\PlanPrice;
 use Modules\Billing\Models\Subscription;
-use Spatie\Permission\Models\Permission as SpatiePermission;
 use Tests\TestCase;
 
 final class AdminBillingSubscriptionStatsTest extends TestCase
@@ -225,11 +223,9 @@ final class AdminBillingSubscriptionStatsTest extends TestCase
 
     private function staffUser(string $role): User
     {
-        SpatiePermission::findOrCreate(Permission::BillingManage->value, 'web');
-
         $user = User::factory()->create();
         $user->assignRole($role);
-        $user->givePermissionTo(Permission::BillingManage->value);
+        $user->givePermissionTo('billing_subscription.view');
 
         TwoFactorSecret::query()->create([
             'user_id' => $user->id,

@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-09-18
+
+### Fix — RBAC: dọn quyền legacy và ẩn UI 2FA
+
+- Xóa `billing.manage`, `system.manage` khỏi enum và thêm migration dọn permission cũ.
+- Chuyển test Billing/Admin sang quyền chi tiết hiện hành.
+- Ẩn khối bật/tắt 2FA ở tab Bảo mật khi role không có `profile.two_factor_toggle`.
+
 ## 2026-09-17
 
 ### Chore — QBank: đồng bộ courses_data từ Google Sheet mới

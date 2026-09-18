@@ -43,7 +43,6 @@ final class AdminGranularPermissionTest extends TestCase
     {
         $this->seed(RolePermissionSeeder::class);
         $role = Role::create(['name' => 'restricted_admin', 'guard_name' => 'web', 'portal' => 'admin']);
-        $role->givePermissionTo(['billing.manage', 'system.manage']);
         $user = User::factory()->create();
         $user->assignRole($role);
 

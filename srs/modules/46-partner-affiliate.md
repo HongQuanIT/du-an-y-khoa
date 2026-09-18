@@ -87,7 +87,7 @@ Server-side Eloquent; session + encrypted cookie cho `PartnerInviteIntent`; sett
 | Role | Quyền |
 |------|-------|
 | `partner` | portal, codes.view (RO), referrals.view, commissions.view |
-| `admin` / `super_admin` | admin.partners.manage (gồm CRUD mã), admin.partners.payouts; `system.manage` cho settings |
+| `admin` / `super_admin` | admin.partners.manage (gồm CRUD mã), admin.partners.payouts; `system_setting.update` cho settings |
 
 ## 10. Edge Cases
 | Case | Xử lý |

@@ -39,8 +39,6 @@ enum Permission: string
 
     case MediaView = 'media.view';
 
-    case SystemManage = 'system.manage';
-
     // Classroom / live review (Module 44)
     case ClassroomCreate = 'classroom.create';
     case ClassroomManage = 'classroom.manage';
@@ -49,9 +47,6 @@ enum Permission: string
     // Feature-gated capabilities
     case ExamTake = 'exam.take';
 
-
-    // Billing / subscription admin
-    case BillingManage = 'billing.manage';
 
     // Partner / affiliate (Module 46)
     case PartnerPortal = 'partner.portal';

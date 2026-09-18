@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Hash;
 use Modules\Auth\Models\TwoFactorSecret;
 use Modules\Auth\Services\TotpService;
 use PragmaRX\Google2FA\Google2FA;
+use Spatie\Permission\Models\Role as SpatieRole;
 use Tests\TestCase;
 
 final class SettingsTwoFactorTest extends TestCase
@@ -42,6 +43,25 @@ final class SettingsTwoFactorTest extends TestCase
             ->assertOk()
             ->assertSee('Xác thực hai bước (2FA)')
             ->assertSee('Bật 2FA');
+    }
+
+    public function test_security_tab_hides_2fa_section_without_toggle_permission(): void
+    {
+        $role = SpatieRole::create(['name' => 'student_without_2fa_toggle', 'guard_name' => 'web', 'portal' => 'learner']);
+        $role->givePermissionTo([
+            'profile.view',
+            'profile.password_update',
+        ]);
+
+        $user = User::factory()->create();
+        $user->assignRole($role);
+
+        $this->actingAsWithWebSession($user)
+            ->get(route('profile.show', ['tab' => 'security']))
+            ->assertOk()
+            ->assertSee('Đổi mật khẩu')
+            ->assertDontSee('Xác thực hai bước (2FA)')
+            ->assertDontSee('Bật 2FA');
     }
 
     public function test_student_can_enable_2fa_via_settings(): void
