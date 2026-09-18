@@ -44,6 +44,14 @@
             </div>
 
             <div class="flex flex-wrap items-center gap-2.5">
+                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.reports.show') && auth()->user()?->can('question.view') && auth()->user()?->can('report.view'))
+                    <a href="{{ route('admin.reports.show', ['content', 'review-qa']) }}"
+                        class="inline-flex items-center gap-2 rounded-xl border border-outline-variant bg-surface px-4 py-2.5 font-label-md font-semibold text-on-surface shadow-sm transition-colors hover:bg-surface-container-low"
+                        title="Báo cáo QA duyệt câu hỏi">
+                        <span class="material-symbols-outlined text-[20px]" aria-hidden="true">query_stats</span>
+                        QA duyệt
+                    </a>
+                @endif
                 @if ($canCreate)
                     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.import'))
 <a href="{{ route('admin.questions.import') }}" id="btn-import-questions"
@@ -150,7 +158,7 @@
                 <h2 id="heading-stats" class="font-label-lg font-semibold text-on-surface">Tổng quan</h2>
                 <p class="font-body-sm text-on-surface-variant">Tình trạng ngân hàng câu hỏi</p>
             </div>
-            <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
                 <div class="rounded-xl border border-outline-variant bg-surface p-4">
                     <div class="flex items-center gap-3">
                         <div
@@ -192,6 +200,21 @@
                         <div class="min-w-0">
                             <p class="truncate text-label-sm font-medium text-on-surface-variant">Chờ duyệt</p>
                             <p class="text-headline-sm font-bold text-on-surface">{{ number_format($stats['pending']) }}
+                            </p>
+                        </div>
+                    </div>
+                </a>
+                <a href="{{ route('admin.questions.index', ['review' => 'must_reject']) }}" id="stats-must-reject-link"
+                    class="rounded-xl border border-outline-variant bg-surface p-4 transition-colors hover:bg-surface-container-low {{ ($filters['review'] ?? null) === 'must_reject' ? 'ring-2 ring-rose-400' : '' }}"
+                    aria-label="Câu có cờ đỏ — bắt buộc trả về: {{ number_format($stats['must_reject'] ?? 0) }} câu">
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-rose-50 text-rose-700">
+                            <span class="material-symbols-outlined text-[22px]" aria-hidden="true">flag</span>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="truncate text-label-sm font-medium text-on-surface-variant">Cờ đỏ · trả về</p>
+                            <p class="text-headline-sm font-bold text-on-surface">{{ number_format($stats['must_reject'] ?? 0) }}
                             </p>
                         </div>
                     </div>
@@ -494,6 +517,9 @@
                                         <p class="text-[11px] font-medium leading-4 text-on-surface-variant">
                                             {{ $question->editorialSubmissionLabel() }}
                                         </p>
+                                        @if ($label = $question->pipelineProgressLabel())
+                                            <p class="text-[10px] font-semibold leading-4 text-on-surface">{{ $label }}</p>
+                                        @endif
                                         @if ($question->hasEditorialSubmission())
                                             @include('questionbank::partials.instructor-review-flags', ['question' => $question])
                                         @endif

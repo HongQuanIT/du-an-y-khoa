@@ -57,7 +57,6 @@
         $panelClass = match (true) {
             $isRejected => 'border-red-300 bg-red-50 text-red-950',
             $question->hasRedReviewerFlag() => 'border-rose-300 bg-rose-50 text-rose-950',
-            $question->hasYellowReviewerFlag() => 'border-amber-300 bg-amber-50 text-amber-950',
             default => 'border-outline-variant bg-surface text-on-surface',
         };
     @endphp
@@ -119,13 +118,11 @@
                         $flagLabel = $row['flag']?->label() ?? 'Chưa gắn cờ';
                         $flagTone = match ($row['flag']) {
                             \Modules\QuestionBank\Enums\ReviewerFlag::Green => 'bg-emerald-100 text-emerald-800',
-                            \Modules\QuestionBank\Enums\ReviewerFlag::Yellow => 'bg-amber-100 text-amber-800',
                             \Modules\QuestionBank\Enums\ReviewerFlag::Red => 'bg-red-200 text-red-800',
                             default => 'bg-slate-100 text-slate-700',
                         };
                         $noteTone = match ($row['flag']) {
                             \Modules\QuestionBank\Enums\ReviewerFlag::Green => 'border-emerald-200 bg-emerald-50 text-emerald-800',
-                            \Modules\QuestionBank\Enums\ReviewerFlag::Yellow => 'border-amber-200 bg-amber-50 text-amber-800',
                             \Modules\QuestionBank\Enums\ReviewerFlag::Red => 'border-red-200 bg-red-50 text-red-800',
                             default => 'border-outline-variant bg-surface-container-low text-on-surface',
                         };

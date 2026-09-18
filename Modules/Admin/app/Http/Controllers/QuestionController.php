@@ -67,6 +67,9 @@ final class QuestionController extends Controller
         if ($statusFilters === [] && $request->query('review') === 'pending') {
             $statusFilters = [QuestionStatus::InReview->value];
         }
+        if ($statusFilters === [] && $request->query('review') === 'must_reject') {
+            $statusFilters = [QuestionStatus::PendingPublish->value];
+        }
         $difficultyFilters = AdminQuestionListQuery::stringValues($request->query('difficulty'));
         $accessFilters = AdminQuestionListQuery::stringValues($request->query('is_free'));
         $creatorIds = AdminQuestionListQuery::integerIds($request->query('created_by'));
@@ -79,6 +82,15 @@ final class QuestionController extends Controller
         $importBatch = filled($importBatchId)
             ? QuestionImportBatch::query()->find((string) $importBatchId)
             : null;
+
+        $mustRejectCount = (clone $statsQuery)
+            ->where('status', QuestionStatus::PendingPublish->value)
+            ->where(function ($builder): void {
+                $builder
+                    ->where('reviewer_1_flag', 'red')
+                    ->orWhere('reviewer_2_flag', 'red');
+            })
+            ->count();
 
         return view('admin::questions.index', [
             'questions' => $questions,
@@ -93,6 +105,7 @@ final class QuestionController extends Controller
                 'is_free' => $accessFilters,
                 'created_by' => $creatorIds,
                 'import_batch_id' => $importBatchId,
+                'review' => $request->query('review'),
             ],
             'stats' => [
                 'total' => (clone $statsQuery)->count(),
@@ -101,6 +114,7 @@ final class QuestionController extends Controller
                     QuestionStatus::InReview->value,
                     QuestionStatus::InFlagReview->value,
                 ])->count(),
+                'must_reject' => $mustRejectCount,
                 'free' => (clone $statsQuery)->where('is_free', true)->count(),
             ],
             'canCreate' => $actor->can(Permission::QuestionCreate->value),
@@ -338,6 +352,7 @@ final class QuestionController extends Controller
         $data = $request->validate([
             'status' => ['required', 'string', Rule::in(QuestionStatus::values())],
             'rejection_reason' => ['nullable', 'string', 'max:2000'],
+            'red_flag_outcome' => ['nullable', 'string', Rule::in(['confirmed', 'false_positive'])],
         ]);
 
         $action->handle(
@@ -345,6 +360,7 @@ final class QuestionController extends Controller
             $question,
             QuestionStatus::from($data['status']),
             $data['rejection_reason'] ?? null,
+            $data['red_flag_outcome'] ?? null,
         );
 
         return back()->with('status', 'Đã cập nhật trạng thái: '.QuestionStatus::from($data['status'])->label());
@@ -416,6 +432,9 @@ final class QuestionController extends Controller
             'pendingReview' => $pendingReview,
             'latestRejectedReview' => $latestRejectedReview,
             'canViewAudit' => $this->actor()->can('audit_log.view'),
+            'reviewTimeline' => $question->exists
+                ? app(\Modules\QuestionBank\Support\QuestionReviewTimeline::class)->build($question)
+                : null,
         ];
     }
 

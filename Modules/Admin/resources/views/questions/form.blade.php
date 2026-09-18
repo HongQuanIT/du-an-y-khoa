@@ -208,6 +208,10 @@
             'question' => $question,
             'canEditContent' => $canEditContent,
         ])
+        @include('admin::questions.partials.review-timeline', [
+            'question' => $question,
+            'reviewTimeline' => $reviewTimeline ?? null,
+        ])
     @endif
 
     @if (! $isNew && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::InReview)
@@ -473,7 +477,8 @@
             <div class="space-y-4">
                 {{-- Workflow trước (luôn bấm được); nội dung khóa nằm dưới --}}
                 @if (! $isNew && ($canPublish || $canReject) && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::PendingPublish)
-                    <div class="rounded-2xl border border-primary/30 bg-primary/5 p-4">
+                    <div class="rounded-2xl border border-primary/30 bg-primary/5 p-4"
+                        x-data="{ returnOpen: false, redOutcome: 'confirmed' }">
                         <h2 class="mb-2 font-label-md font-semibold text-on-surface">Xuất bản</h2>
                         <p class="mb-3 text-xs leading-5 text-on-surface-variant">
                             GV {{ $question->assignedInstructor?->name ?? $question->instructor?->name ?? '—' }} đã duyệt.
@@ -482,7 +487,7 @@
                                 @include('questionbank::partials.instructor-review-flags', ['question' => $question])
                             </span>
                             @if ($question->hasRedReviewerFlag())
-                                <span class="mt-2 block font-semibold text-rose-700">Có cờ đỏ — không xuất bản được, chỉ trả về biên tập.</span>
+                                <span class="mt-2 block font-semibold text-rose-700">Có ≥1 cờ đỏ — không xuất bản được. Admin phải trả về biên tập.</span>
                             @endif
                             @if ($question->published_version)
                                 <span class="mt-2 block">
@@ -509,13 +514,53 @@
                             </button>
                             @endif
                             @if ($canReject)
-                            <button type="submit"
-                                form="question-reject-publish-form"
-                                onclick="const r = prompt('Lý do từ chối xuất bản:'); if (!r || !r.trim()) return false; document.getElementById('question-reject-publish-reason').value = r.trim();"
-                                class="flex w-full items-center justify-center gap-2 rounded-xl border border-rose-300 py-2.5 font-label-md font-semibold text-rose-700 hover:bg-rose-50">
+                            <button type="button"
+                                @click="returnOpen = !returnOpen"
+                                class="flex w-full items-center justify-center gap-2 rounded-xl border border-rose-300 py-2.5 font-label-md font-semibold text-rose-700 hover:bg-rose-50 {{ $question->hasRedReviewerFlag() ? 'bg-rose-600 text-white hover:bg-rose-700 border-rose-600' : '' }}">
                                 <span class="material-symbols-outlined text-[18px]">close</span>
-                                Trả về biên tập
+                                {{ $question->hasRedReviewerFlag() ? 'Trả về biên tập (bắt buộc)' : 'Trả về biên tập' }}
                             </button>
+
+                            <div x-show="returnOpen" x-cloak
+                                class="mt-1 space-y-3 rounded-xl border border-rose-200 bg-white p-3">
+                                <div>
+                                    <label for="reject-return-reason" class="mb-1 block text-xs font-semibold text-on-surface-variant">Lý do trả về</label>
+                                    <textarea id="reject-return-reason" x-ref="rejectReason" rows="3" required
+                                        class="w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm"
+                                        placeholder="{{ $question->hasRedReviewerFlag() ? 'Tóm tắt lỗi theo ghi chú cờ đỏ…' : 'Vấn đề vận hành / định dạng…' }}"></textarea>
+                                </div>
+                                @if ($question->hasRedReviewerFlag())
+                                    <fieldset class="space-y-2">
+                                        <legend class="text-xs font-semibold text-on-surface-variant">Đánh giá cờ đỏ</legend>
+                                        <label class="flex cursor-pointer items-start gap-2 rounded-lg border border-outline-variant px-3 py-2 has-[:checked]:border-rose-400 has-[:checked]:bg-rose-50">
+                                            <input type="radio" class="mt-1" name="red_flag_outcome_ui" value="confirmed" x-model="redOutcome">
+                                            <span class="text-sm">
+                                                <span class="font-semibold text-on-surface">Cờ đỏ đúng</span>
+                                                <span class="block text-xs text-on-surface-variant">Nội dung cần sửa — ghi nhận chất lượng reviewer.</span>
+                                            </span>
+                                        </label>
+                                        <label class="flex cursor-pointer items-start gap-2 rounded-lg border border-outline-variant px-3 py-2 has-[:checked]:border-amber-400 has-[:checked]:bg-amber-50">
+                                            <input type="radio" class="mt-1" name="red_flag_outcome_ui" value="false_positive" x-model="redOutcome">
+                                            <span class="text-sm">
+                                                <span class="font-semibold text-on-surface">Cờ có thể oan</span>
+                                                <span class="block text-xs text-on-surface-variant">Vẫn trả về nhưng đánh dấu để QA theo dõi.</span>
+                                            </span>
+                                        </label>
+                                    </fieldset>
+                                @endif
+                                <button type="button"
+                                    class="w-full rounded-xl bg-rose-600 py-2.5 text-sm font-semibold text-white hover:bg-rose-700"
+                                    @click="
+                                        const reason = ($refs.rejectReason.value || '').trim();
+                                        if (!reason) { $refs.rejectReason.focus(); return; }
+                                        document.getElementById('question-reject-publish-reason').value = reason;
+                                        const outcomeInput = document.getElementById('question-reject-red-flag-outcome');
+                                        if (outcomeInput) outcomeInput.value = redOutcome;
+                                        document.getElementById('question-reject-publish-form').submit();
+                                    ">
+                                    Xác nhận trả về
+                                </button>
+                            </div>
                             @endif
                         </div>
                     </div>
@@ -839,6 +884,12 @@
                                 <dt class="text-on-surface-variant">Bản gửi duyệt</dt>
                                 <dd>@include('questionbank::partials.instructor-review-flags', ['question' => $question])</dd>
                             </div>
+                            @if ($question->pipelineProgressLabel() !== '')
+                                <div class="flex justify-between gap-3">
+                                    <dt class="text-on-surface-variant">Tiến độ duyệt</dt>
+                                    <dd class="text-right font-semibold text-on-surface">{{ $question->pipelineProgressLabel() }}</dd>
+                                </div>
+                            @endif
                             <div class="flex justify-between">
                                 <dt class="text-on-surface-variant">Người xuất bản</dt>
                                 <dd class="font-semibold text-on-surface">{{ $question->publisher?->name ?? $question->reviewer?->name ?? '—' }}</dd>
@@ -912,6 +963,7 @@
             @csrf
             <input type="hidden" name="status" value="{{ \Modules\QuestionBank\Enums\QuestionStatus::Rejected->value }}">
             <input type="hidden" name="rejection_reason" id="question-reject-publish-reason" value="">
+            <input type="hidden" name="red_flag_outcome" id="question-reject-red-flag-outcome" value="confirmed">
         </form>
 @endif
         @endif

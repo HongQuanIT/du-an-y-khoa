@@ -81,6 +81,45 @@
                             {{ $version->created_at?->timezone(config('app.timezone'))->format('d/m/Y H:i:s') }}
                             · {{ $version->creator?->name ?? 'Hệ thống' }}
                         </p>
+                        @php
+                            $pipeline = is_array($snapshot['review_pipeline'] ?? null) ? $snapshot['review_pipeline'] : null;
+                        @endphp
+                        @if ($pipeline)
+                            <div class="mt-2 flex flex-wrap gap-1.5 text-xs" data-testid="version-review-pipeline">
+                                @if (! empty($pipeline['instructor_name']))
+                                    <span class="rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-800">
+                                        GV: {{ $pipeline['instructor_name'] }}
+                                    </span>
+                                @endif
+                                @foreach ((array) ($pipeline['flags'] ?? []) as $flagRow)
+                                    @if (! empty($flagRow['flag']))
+                                        <span @class([
+                                            'rounded-full px-2 py-0.5 font-medium',
+                                            'bg-rose-50 text-rose-800' => ($flagRow['flag'] ?? '') === 'red',
+                                            'bg-emerald-50 text-emerald-800' => ($flagRow['flag'] ?? '') === 'green',
+                                        ])>
+                                            {{ $flagRow['reviewer_name'] ?? 'Reviewer' }}:
+                                            {{ ($flagRow['flag'] ?? '') === 'red' ? 'cờ đỏ' : 'cờ xanh' }}
+                                        </span>
+                                    @endif
+                                @endforeach
+                                @if (! empty($pipeline['publisher_name']))
+                                    <span class="rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary">
+                                        XB: {{ $pipeline['publisher_name'] }}
+                                    </span>
+                                @endif
+                                @if ((int) ($pipeline['pipeline_reject_count'] ?? 0) > 0)
+                                    <span class="rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-900">
+                                        {{ (int) $pipeline['pipeline_reject_count'] }} lần trả về trước XB
+                                    </span>
+                                @endif
+                                @if ((int) ($pipeline['review_cycle'] ?? 0) > 0)
+                                    <span class="rounded-full bg-surface-container px-2 py-0.5 text-on-surface-variant">
+                                        Vòng {{ (int) $pipeline['review_cycle'] }}
+                                    </span>
+                                @endif
+                            </div>
+                        @endif
                     </div>
 
                     @if ($canRestore && ! $isCurrent)

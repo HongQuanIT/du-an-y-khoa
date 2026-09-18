@@ -32,8 +32,19 @@ final class AdminQuestionListQuery
         if ($statuses === [] && $request->query('review') === 'pending') {
             $statuses = [QuestionStatus::InReview->value];
         }
+        if ($statuses === [] && $request->query('review') === 'must_reject') {
+            $statuses = [QuestionStatus::PendingPublish->value];
+        }
         if ($statuses !== []) {
             $query->whereIn('status', $statuses);
+        }
+
+        if ($request->query('review') === 'must_reject') {
+            $query->where(function ($builder): void {
+                $builder
+                    ->where('reviewer_1_flag', 'red')
+                    ->orWhere('reviewer_2_flag', 'red');
+            });
         }
 
         $difficulties = self::stringValues($request->query('difficulty'));

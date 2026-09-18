@@ -73,12 +73,16 @@ final class QuestionReviewerFlagCycle
             || $question->reviewer_2_flag === ReviewerFlag::Red;
     }
 
-    public function hasYellowFlag(Question $question): bool
+    /**
+     * Ready for Admin decision: 2 greens, or ≥1 red (fail-fast — Admin must reject).
+     */
+    public function readyForAdmin(Question $question): bool
     {
-        return $question->reviewer_1_flag === ReviewerFlag::Yellow->value
-            || $question->reviewer_2_flag === ReviewerFlag::Yellow->value
-            || $question->reviewer_1_flag === ReviewerFlag::Yellow
-            || $question->reviewer_2_flag === ReviewerFlag::Yellow;
+        if ($this->hasRedFlag($question)) {
+            return true;
+        }
+
+        return $this->hasRequiredFlags($question);
     }
 
     /**

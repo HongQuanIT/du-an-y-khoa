@@ -21,9 +21,14 @@ use Modules\Billing\Models\Subscription;
 use Modules\Billing\Support\AdminBillingMetrics;
 use Modules\Billing\Support\BillingSubscriptionStats;
 use Modules\Billing\Support\MoneyFormatter;
+use Modules\QuestionBank\Enums\InstructorReviewOutcome;
 use Modules\QuestionBank\Enums\QuestionStatus;
+use Modules\QuestionBank\Enums\ReviewerFlag;
+use Modules\QuestionBank\Enums\ReviewFlagOutcome;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionFeedback;
+use Modules\QuestionBank\Models\QuestionInstructorReview;
+use Modules\QuestionBank\Models\QuestionReviewerFlag;
 
 /**
  * @phpstan-type ReportKpi array{label: string, value: string, hint: ?string, icon: string, delta: ?float}
@@ -87,6 +92,7 @@ final class GetAdminReportDataAction
             'revenue.funnel' => $this->revenueFunnel(),
             'content.accuracy' => $this->contentAccuracy(),
             'content.flags' => $this->contentFlags($from, $to),
+            'content.review-qa' => $this->contentReviewQa($from, $to),
             'content.coverage' => $this->contentCoverage(),
             'learning.mastery' => $this->learningMastery(),
             'learning.exam-scores' => $this->learningExamScoresUnavailable(),
@@ -688,6 +694,143 @@ final class GetAdminReportDataAction
             ],
             'rows' => $rows,
             'empty_message' => $rows === [] ? 'Không có phản hồi trong kỳ đã chọn.' : null,
+        ];
+    }
+
+    /** @return array{kpis: list<ReportKpi>, charts: list<ReportChart>, columns: list<ReportColumn>, rows: list<ReportRow>, empty_message: ?string} */
+    private function contentReviewQa(Carbon $from, Carbon $to): array
+    {
+        $flagsQuery = QuestionReviewerFlag::query()->whereBetween('reviewed_at', [$from, $to]);
+        $totalFlags = (int) (clone $flagsQuery)->count();
+        $redFlags = (int) (clone $flagsQuery)->where('flag', ReviewerFlag::Red->value)->count();
+        $greenFlags = (int) (clone $flagsQuery)->where('flag', ReviewerFlag::Green->value)->count();
+
+        $redConfirmed = (int) (clone $flagsQuery)
+            ->where('flag', ReviewerFlag::Red->value)
+            ->where('outcome', ReviewFlagOutcome::Confirmed->value)
+            ->count();
+        $redFalsePositive = (int) (clone $flagsQuery)
+            ->where('flag', ReviewerFlag::Red->value)
+            ->where('outcome', ReviewFlagOutcome::FalsePositive->value)
+            ->count();
+        $redAdjudicated = $redConfirmed + $redFalsePositive;
+        $redPrecision = $redAdjudicated > 0
+            ? round($redConfirmed / $redAdjudicated * 100, 1)
+            : null;
+
+        $instructorMisses = (int) QuestionInstructorReview::query()
+            ->whereBetween('reviewed_at', [$from, $to])
+            ->where('outcome', InstructorReviewOutcome::Miss->value)
+            ->count();
+        $instructorOverRejects = (int) QuestionInstructorReview::query()
+            ->whereBetween('reviewed_at', [$from, $to])
+            ->where('outcome', InstructorReviewOutcome::OverReject->value)
+            ->count();
+
+        $labels = [];
+        $greenSeries = [];
+        $redSeries = [];
+        foreach ($this->eachDate($from, $to) as $day) {
+            $labels[] = $day->format('d/m');
+            $dayStart = $day->copy()->startOfDay();
+            $dayEnd = $day->copy()->endOfDay();
+            $greenSeries[] = (int) QuestionReviewerFlag::query()
+                ->whereBetween('reviewed_at', [$dayStart, $dayEnd])
+                ->where('flag', ReviewerFlag::Green->value)
+                ->count();
+            $redSeries[] = (int) QuestionReviewerFlag::query()
+                ->whereBetween('reviewed_at', [$dayStart, $dayEnd])
+                ->where('flag', ReviewerFlag::Red->value)
+                ->count();
+        }
+
+        $reviewerRows = QuestionReviewerFlag::query()
+            ->whereBetween('reviewed_at', [$from, $to])
+            ->select([
+                'reviewer_id',
+                DB::raw('count(*) as flags_total'),
+                DB::raw("sum(case when flag = 'green' then 1 else 0 end) as flags_green"),
+                DB::raw("sum(case when flag = 'red' then 1 else 0 end) as flags_red"),
+                DB::raw("sum(case when flag = 'red' and outcome = 'confirmed' then 1 else 0 end) as red_confirmed"),
+                DB::raw("sum(case when flag = 'red' and outcome = 'false_positive' then 1 else 0 end) as red_false_positive"),
+            ])
+            ->groupBy('reviewer_id')
+            ->orderByDesc('flags_total')
+            ->limit(20)
+            ->get();
+
+        $reviewerNames = User::query()
+            ->whereIn('id', $reviewerRows->pluck('reviewer_id')->filter()->all())
+            ->pluck('name', 'id');
+
+        $rows = $reviewerRows->map(function ($row) use ($reviewerNames): array {
+            $adjudicated = (int) $row->red_confirmed + (int) $row->red_false_positive;
+            $precision = $adjudicated > 0
+                ? round(((int) $row->red_confirmed) / $adjudicated * 100, 1).'%'
+                : '—';
+
+            return [
+                'reviewer' => $reviewerNames[(int) $row->reviewer_id] ?? ('#'.$row->reviewer_id),
+                'flags_total' => (int) $row->flags_total,
+                'flags_green' => (int) $row->flags_green,
+                'flags_red' => (int) $row->flags_red,
+                'red_confirmed' => (int) $row->red_confirmed,
+                'red_false_positive' => (int) $row->red_false_positive,
+                'red_precision' => $precision,
+            ];
+        })->all();
+
+        $instructorMissRows = QuestionInstructorReview::query()
+            ->whereBetween('reviewed_at', [$from, $to])
+            ->where('outcome', InstructorReviewOutcome::Miss->value)
+            ->select('instructor_id', DB::raw('count(*) as misses'))
+            ->groupBy('instructor_id')
+            ->orderByDesc('misses')
+            ->limit(10)
+            ->get();
+
+        $instructorNames = User::query()
+            ->whereIn('id', $instructorMissRows->pluck('instructor_id')->filter()->all())
+            ->pluck('name', 'id');
+
+        $missHint = $instructorMissRows
+            ->map(fn ($row): string => ($instructorNames[(int) $row->instructor_id] ?? '#'.$row->instructor_id).' ('.$row->misses.')')
+            ->take(3)
+            ->implode(', ');
+
+        return [
+            'kpis' => [
+                $this->kpi('Cờ trong kỳ', number_format($totalFlags), $greenFlags.' xanh · '.$redFlags.' đỏ', 'flag'),
+                $this->kpi(
+                    'Độ chính xác cờ đỏ',
+                    $redPrecision !== null ? $redPrecision.'%' : '—',
+                    $redAdjudicated > 0
+                        ? $redConfirmed.' đúng / '.$redFalsePositive.' oan'
+                        : 'Chưa có cờ đỏ đã đánh giá',
+                    'verified',
+                ),
+                $this->kpi('GV duyệt sót', number_format($instructorMisses), $missHint !== '' ? $missHint : 'Accept rồi bị cờ đỏ đúng', 'person_alert'),
+                $this->kpi('GV từ chối oan', number_format($instructorOverRejects), 'Reject rồi nội dung gần như không đổi', 'undo'),
+            ],
+            'charts' => [
+                $this->chart('report-review-qa-flags', 'Cờ reviewer theo ngày', 'Xanh vs đỏ trong kỳ', 'line', 'number', $labels, [
+                    ['label' => 'Cờ xanh', 'data' => $greenSeries, 'color' => '#059669'],
+                    ['label' => 'Cờ đỏ', 'data' => $redSeries, 'color' => '#e11d48'],
+                ], true),
+            ],
+            'columns' => [
+                ['key' => 'reviewer', 'label' => 'Reviewer'],
+                ['key' => 'flags_total', 'label' => 'Tổng cờ', 'align' => 'right'],
+                ['key' => 'flags_green', 'label' => 'Xanh', 'align' => 'right'],
+                ['key' => 'flags_red', 'label' => 'Đỏ', 'align' => 'right'],
+                ['key' => 'red_confirmed', 'label' => 'Đỏ đúng', 'align' => 'right'],
+                ['key' => 'red_false_positive', 'label' => 'Đỏ oan', 'align' => 'right'],
+                ['key' => 'red_precision', 'label' => 'Precision', 'align' => 'right'],
+            ],
+            'rows' => $rows,
+            'empty_message' => $totalFlags === 0
+                ? 'Chưa có cờ reviewer trong kỳ đã chọn.'
+                : null,
         ];
     }
 
