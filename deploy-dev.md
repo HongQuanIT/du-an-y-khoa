@@ -41,7 +41,7 @@ docker compose exec app php artisan key:generate --force
 docker compose exec app php artisan migrate --seed
 ```
 
-Sau khi **pull code có thêm quyền admin mới** (ví dụ `billing.manage`), chạy lại:
+Sau khi **pull code có thêm quyền admin mới** (ví dụ `billing_plan.view`), chạy lại:
 
 ```bash
 docker compose exec app php artisan db:seed --class=Database\\Seeders\\RolePermissionSeeder

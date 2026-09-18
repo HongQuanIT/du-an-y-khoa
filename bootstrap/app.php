@@ -26,6 +26,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
+use Modules\Admin\Http\Middleware\EnsureImpliedViewPermission;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleMiddleware;
 use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
@@ -114,6 +115,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'partner.2fa' => EnsurePartnerTwoFactor::class,
             'portal' => EnsurePortal::class,
             'staff.2fa' => EnsureStaffTwoFactor::class,
+            'admin.implied_view' => EnsureImpliedViewPermission::class,
             'subscription' => EnsureSubscriptionActive::class,
             'role' => RoleMiddleware::class,
             'permission' => PermissionMiddleware::class,

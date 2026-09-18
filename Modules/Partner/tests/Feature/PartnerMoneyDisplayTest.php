@@ -6,7 +6,6 @@ namespace Modules\Partner\Tests\Feature;
 
 use App\Models\User;
 use App\Services\SettingService;
-use App\Support\Enums\Permission;
 use App\Support\Enums\Role;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -41,7 +40,7 @@ final class PartnerMoneyDisplayTest extends TestCase
         $this->createCommission(grossAmount: 1_790_000, commissionAmount: 358_000, rateBps: 2000);
         $admin = User::factory()->create();
         $admin->assignRole(Role::Admin->value);
-        $admin->givePermissionTo(Permission::AdminPartnersManage->value);
+        $admin->givePermissionTo('partner.view');
 
         $this->actingAsWithWebSession($admin)
             ->get(route('admin.partners.index'))
@@ -138,7 +137,7 @@ final class PartnerMoneyDisplayTest extends TestCase
         ]);
         $admin = User::factory()->create();
         $admin->assignRole(Role::Admin->value);
-        $admin->givePermissionTo(Permission::AdminPartnersPayouts->value);
+        $admin->givePermissionTo('partner_payout.view');
 
         $this->actingAsWithWebSession($admin)
             ->get(route('admin.partners.payouts.index'))

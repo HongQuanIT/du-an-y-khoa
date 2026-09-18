@@ -7,7 +7,6 @@ namespace Modules\Admin\Tests\Feature;
 use App\Models\User;
 use App\Services\SettingService;
 use App\Support\Auth\TwoFactorSession;
-use App\Support\Enums\Permission;
 use App\Support\Enums\Role;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -15,7 +14,6 @@ use Illuminate\Support\Facades\Hash;
 use Modules\Auth\Models\TwoFactorSecret;
 use Modules\Auth\Services\TotpService;
 use Modules\Billing\Support\GatewaySettings;
-use Spatie\Permission\Models\Permission as SpatiePermission;
 use Tests\TestCase;
 
 final class AdminBillingGatewaySettingsTest extends TestCase
@@ -125,11 +123,12 @@ final class AdminBillingGatewaySettingsTest extends TestCase
 
     private function staffUser(string $role): User
     {
-        SpatiePermission::findOrCreate(Permission::BillingManage->value, 'web');
-
         $user = User::factory()->create();
         $user->assignRole($role);
-        $user->givePermissionTo(Permission::BillingManage->value);
+        $user->givePermissionTo([
+            'billing_gateway.view',
+            'billing_gateway.update',
+        ]);
 
         TwoFactorSecret::query()->create([
             'user_id' => $user->id,

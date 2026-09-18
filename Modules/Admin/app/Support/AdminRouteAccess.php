@@ -27,6 +27,12 @@ final class AdminRouteAccess
                 if (! $user->canAny(explode('|', $permissions))) {
                     return false;
                 }
+
+                foreach (explode('|', $permissions) as $permission) {
+                    if (ImpliedViewPermissions::missingFor($user, $permission) !== null) {
+                        return false;
+                    }
+                }
             }
         }
 

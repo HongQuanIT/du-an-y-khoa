@@ -10,6 +10,7 @@ use App\Support\Enums\Role as SystemRole;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Admin\Support\AdminMenu;
+use Modules\Admin\Support\AdminRouteAccess;
 use Modules\Classroom\Actions\CreateClassroomAction;
 use Modules\Classroom\Enums\ClassroomApprovalStatus;
 use Modules\Classroom\Enums\ClassroomPurpose;
@@ -35,6 +36,8 @@ final class AdminGranularPermissionTest extends TestCase
         // Ensure without permission, it's forbidden.
         $this->actingAsWithWebSession($user)->post(route('admin.classrooms.approve', $classroom))->assertForbidden();
         $user->givePermissionTo('classroom_oversight.approve');
+        $this->actingAsWithWebSession($user)->post(route('admin.classrooms.approve', $classroom))->assertForbidden();
+        $user->givePermissionTo('classroom_oversight.view');
         $this->actingAsWithWebSession($user)->post(route('admin.classrooms.approve', $classroom))->assertRedirect();
         $this->assertSame(ClassroomApprovalStatus::Approved, $classroom->fresh()->approval_status);
     }
@@ -43,7 +46,6 @@ final class AdminGranularPermissionTest extends TestCase
     {
         $this->seed(RolePermissionSeeder::class);
         $role = Role::create(['name' => 'restricted_admin', 'guard_name' => 'web', 'portal' => 'admin']);
-        $role->givePermissionTo(['billing.manage', 'system.manage']);
         $user = User::factory()->create();
         $user->assignRole($role);
 
@@ -68,6 +70,21 @@ final class AdminGranularPermissionTest extends TestCase
             $user->revokePermissionTo($permission);
             $this->actingAsWithWebSession($user)->get(route($route))->assertForbidden();
         }
+    }
+
+    public function test_action_routes_are_hidden_without_implied_view_permission(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+        $role = Role::create(['name' => 'partner_code_operator', 'guard_name' => 'web', 'portal' => 'admin']);
+        $role->givePermissionTo('partner_code.update');
+        $user = User::factory()->create();
+        $user->assignRole($role);
+
+        $this->assertFalse(AdminRouteAccess::allows($user, 'admin.partners.codes.toggle'));
+
+        $user->givePermissionTo('partner_code.view');
+
+        $this->assertTrue(AdminRouteAccess::allows($user, 'admin.partners.codes.toggle'));
     }
 
     public function test_taxonomy_view_gates_every_classification_screen(): void

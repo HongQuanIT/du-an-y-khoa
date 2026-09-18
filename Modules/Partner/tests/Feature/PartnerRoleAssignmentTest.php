@@ -11,6 +11,7 @@ use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Partner\Enums\PartnerStatus;
 use Modules\Partner\Models\Partner;
+use Spatie\Permission\Models\Role as SpatieRole;
 use Tests\TestCase;
 
 final class PartnerRoleAssignmentTest extends TestCase
@@ -92,5 +93,30 @@ final class PartnerRoleAssignmentTest extends TestCase
         $this->assertSame('CTV tạo từ Admin', $partner->display_name);
         $this->assertSame(1000, $partner->default_commission_rate_bps);
         $this->assertSame(PartnerStatus::Active, $partner->status);
+    }
+
+    public function test_partner_detail_is_hidden_and_forbidden_without_code_view_permission(): void
+    {
+        $role = SpatieRole::create(['name' => 'partner_list_only', 'guard_name' => 'web', 'portal' => 'admin']);
+        $role->givePermissionTo('partner.view');
+        $admin = User::factory()->create();
+        $admin->assignRole($role);
+
+        $partner = Partner::query()->create([
+            'user_id' => User::factory()->create()->getKey(),
+            'display_name' => 'CTV không xem mã',
+            'status' => PartnerStatus::Active,
+            'default_commission_rate_bps' => 1000,
+        ]);
+
+        $this->actingAsWithWebSession($admin)
+            ->get(route('admin.partners.index'))
+            ->assertOk()
+            ->assertSee('CTV không xem mã')
+            ->assertDontSee('Chi tiết');
+
+        $this->actingAsWithWebSession($admin)
+            ->get(route('admin.partners.show', $partner))
+            ->assertForbidden();
     }
 }

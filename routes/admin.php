@@ -81,7 +81,7 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
         ->middleware('throttle:auth')
         ->name('2fa.challenge.verify');
 
-    Route::middleware('staff.2fa')->group(function (): void {
+    Route::middleware(['staff.2fa', 'admin.implied_view'])->group(function (): void {
         Route::get('/', DashboardController::class)->name('dashboard');
 
         Route::group([], function (): void {
@@ -611,7 +611,7 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
             ->middleware('permission:partner.view')
             ->name('partners.index');
         Route::get('/partners/{partner}', [PartnerAdminController::class, 'show'])
-            ->middleware('permission:partner.view')
+            ->middleware('permission:partner_code.view')
             ->name('partners.show');
         Route::post('/partners/{partner}/codes', [PartnerAdminController::class, 'storeCode'])
             ->middleware('permission:partner_code.create')

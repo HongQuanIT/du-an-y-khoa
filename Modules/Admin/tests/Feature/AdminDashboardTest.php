@@ -112,7 +112,7 @@ final class AdminDashboardTest extends TestCase
     {
         $editor = $this->staffUser(Role::ContentEditor);
 
-        $this->assertFalse($editor->can(Permission::BillingManage->value));
+        $this->assertFalse($editor->can('billing_payment.view'));
         $this->assertTrue($editor->can(Permission::QuestionView->value));
 
         $this->actingAsStaff($editor)
@@ -155,7 +155,7 @@ final class AdminDashboardTest extends TestCase
     public function test_dashboard_audit_feed_requires_audit_permission(): void
     {
         $editor = $this->staffUser(Role::ContentEditor);
-        $this->assertFalse($editor->can(Permission::AuditView->value));
+        $this->assertFalse($editor->can('audit_log.view'));
 
         $this->actingAsStaff($editor)
             ->get(route('admin.dashboard'))

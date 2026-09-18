@@ -36,7 +36,7 @@ class HorizonServiceProvider extends HorizonApplicationServiceProvider
     }
 
     /**
-     * Only Admin / Super Admin (system.manage) — not students or instructors.
+     * Only Admin / Super Admin with system settings access — not students or instructors.
      */
     protected function gate(): void
     {
