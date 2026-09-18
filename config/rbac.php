@@ -32,6 +32,7 @@ return [
             ],
             'question_bank' => [
                 'question' => ['view_any', 'view', 'create', 'clone', 'update', 'delete', 'submit', 'flag', 'publish', 'reject', 'import', 'export'],
+                'question_flag' => ['view'],
                 'question_version' => ['view', 'restore'],
                 'question_feedback' => ['view', 'update'],
             ],

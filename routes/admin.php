@@ -255,11 +255,13 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
             Route::post('/questions/import/{batch}/commit', [QuestionImportController::class, 'commit'])->name('questions.import.commit');
         });
 
-        Route::middleware('permission:'.Permission::QuestionFlag->value)->group(function (): void {
+        Route::middleware('permission:question_flag.view')->group(function (): void {
             Route::get('/questions/flags', [QuestionFlagController::class, 'index'])->name('questions.flags.index');
             Route::get('/questions/flags/{question}', [QuestionFlagController::class, 'show'])->name('questions.flags.show');
-            Route::post('/questions/flags/{question}', [QuestionFlagController::class, 'store'])->name('questions.flags.store');
         });
+        Route::post('/questions/flags/{question}', [QuestionFlagController::class, 'store'])
+            ->middleware('permission:'.Permission::QuestionFlag->value)
+            ->name('questions.flags.store');
 
         Route::get('/questions/eligible-instructors', [QuestionController::class, 'eligibleInstructors'])
             ->middleware('permission:'.Permission::QuestionCreate->value.'|'.Permission::QuestionUpdate->value)

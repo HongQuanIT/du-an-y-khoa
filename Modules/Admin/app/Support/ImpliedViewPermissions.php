@@ -25,6 +25,10 @@ final class ImpliedViewPermissions
 
     private static function viewPermissionFor(string $permission): ?string
     {
+        if ($permission === 'question.flag') {
+            return 'question_flag.view';
+        }
+
         if (self::$cache === null) {
             self::$cache = [];
 

@@ -226,6 +226,10 @@ final class PermissionCatalog
 
     private static function moduleKey(Permission $permission): string
     {
+        if (in_array($permission->name, ['question_flag.view', PermissionEnum::QuestionFlag->value], true)) {
+            return 'question_flag';
+        }
+
         $definition = app(PermissionRegistry::class)->find($permission->name);
         $module = $definition?->module ?? 'other';
 
@@ -249,7 +253,9 @@ final class PermissionCatalog
     {
         return match ($permission->name) {
             PermissionEnum::QuestionFlag->value => 'question_flag',
+            'question_flag.view' => 'question_flag',
             'question_version.view', 'question_version.restore' => 'question',
+            'notification.delete' => 'notification_broadcast',
             default => explode('.', $permission->name, 2)[0],
         };
     }
@@ -260,6 +266,7 @@ final class PermissionCatalog
             'user_management' => 'Người dùng & hồ sơ',
             'rbac' => 'Vai trò & phân quyền',
             'question_bank' => 'Ngân hàng câu hỏi',
+            'question_flag' => 'Gắn cờ câu hỏi',
             'taxonomy' => 'Danh mục y khoa',
             'exam' => 'Kỳ thi',
             'classroom' => 'Lớp học & Live',
@@ -326,7 +333,8 @@ final class PermissionCatalog
             'partner_commission' => 'Hoa hồng',
             'partner_referral' => 'Người được mời',
             'partner_payout' => 'Chi trả CTV',
-            'report', 'report_schedule' => 'Báo cáo',
+            'report' => 'Báo cáo',
+            'report_schedule' => 'Lịch báo cáo',
             'audit', 'audit_log', 'access_audit' => 'Nhật ký kiểm toán',
             'cms', 'cms_page', 'cms_menu', 'cms_banner', 'cms_faq' => 'CMS & Landing',
             'media', 'library' => 'Thư viện Media',
@@ -342,7 +350,7 @@ final class PermissionCatalog
 
     private static function moduleOrder(string $module): int
     {
-        $order = ['dashboard', 'user_management', 'account', 'profile', 'rbac', 'question_bank', 'taxonomy', 'study_plan', 'learning', 'exam', 'classroom', 'review', 'content', 'reporting', 'billing', 'subscription', 'partner_management', 'access', 'affiliate', 'notification', 'ai', 'system'];
+        $order = ['dashboard', 'user_management', 'account', 'profile', 'rbac', 'question_bank', 'question_flag', 'taxonomy', 'study_plan', 'learning', 'exam', 'classroom', 'review', 'content', 'reporting', 'billing', 'subscription', 'partner_management', 'access', 'affiliate', 'notification', 'ai', 'system'];
 
         $position = array_search($module, $order, true);
 

@@ -27,7 +27,7 @@ final class QuestionFlagController extends Controller
 
     public function index(Request $request): View
     {
-        $this->authorizeFlag();
+        $this->authorizeFlagView();
 
         $tab = $request->string('tab')->toString();
         if (! in_array($tab, ['pending', 'done'], true)) {
@@ -72,7 +72,7 @@ final class QuestionFlagController extends Controller
 
     public function show(Question $question): View
     {
-        $this->authorizeFlag();
+        $this->authorizeFlagView();
         QuestionAccess::authorizeView($this->actor(), $question);
 
         $question->load([
@@ -162,7 +162,17 @@ final class QuestionFlagController extends Controller
     {
         abort_unless(
             $this->actor()->hasRole(Role::Reviewer->value)
+            && $this->actor()->can('question_flag.view')
             && $this->actor()->can(Permission::QuestionFlag->value),
+            403,
+        );
+    }
+
+    private function authorizeFlagView(): void
+    {
+        abort_unless(
+            $this->actor()->hasRole(Role::Reviewer->value)
+            && $this->actor()->can('question_flag.view'),
             403,
         );
     }

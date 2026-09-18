@@ -117,10 +117,12 @@ final class AdminGranularPermissionTest extends TestCase
     {
         $this->seed(RolePermissionSeeder::class);
         $role = Role::findByName(SystemRole::SuperAdmin->value, 'web');
+        $role->revokePermissionTo('question_flag.view');
         $role->revokePermissionTo(Permission::QuestionFlag->value);
         $user = User::factory()->create();
         $user->assignRole($role);
 
+        $this->assertFalse($user->can('question_flag.view'));
         $this->assertFalse($user->can(Permission::QuestionFlag->value));
         $this->assertNotContains('admin.questions.flags.index', array_column(AdminMenu::for($user), 'route'));
 
