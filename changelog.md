@@ -2,6 +2,12 @@
 
 ## 2026-09-18
 
+### Fix — Admin: bắt quyền xem khi dùng quyền thao tác
+
+- Thêm middleware Admin yêu cầu `*.view` khi route dùng quyền thao tác cùng resource.
+- Đồng bộ `AdminRouteAccess` để tự ẩn link/form nếu thiếu quyền xem kéo theo.
+- Bổ sung test action-only bị chặn cho route và UI access.
+
 ### Fix — Admin: chỉnh nhãn quyền và chi tiết CTV
 
 - Đổi nhãn quyền Billing/CTV cho rõ nghĩa trong ma trận phân quyền.
