@@ -33,6 +33,11 @@ final class QuestionAccess
         return $user->can(Permission::QuestionFlag->value);
     }
 
+    public static function canViewFlagQueue(User $user): bool
+    {
+        return $user->can('question_flag.view');
+    }
+
     /** Open the admin question workspace (list, form, stats). */
     public static function canAccessWorkspace(User $user): bool
     {
@@ -79,8 +84,8 @@ final class QuestionAccess
             return $query->where('created_by', $user->getKey());
         }
 
-        // Reviewer: chỉ question.flag — hàng đợi gắn cờ + câu mình đã gắn.
-        if (self::canFlag($user) && ! self::canEdit($user)) {
+        // Reviewer: xem hàng đợi gắn cờ + câu mình đã gắn.
+        if (self::canViewFlagQueue($user) && ! self::canEdit($user)) {
             $userId = (int) $user->getKey();
 
             return $query->where(function (Builder $builder) use ($userId): void {
@@ -112,8 +117,8 @@ final class QuestionAccess
             }
         }
 
-        // Reviewer có question.flag (không cần question.view) xem câu chờ gắn cờ / đã gắn.
-        if (self::canFlag($user)) {
+        // Reviewer có question_flag.view (không cần question.view) xem câu chờ gắn cờ / đã gắn.
+        if (self::canViewFlagQueue($user)) {
             $userId = (int) $user->getKey();
 
             return $question->status === QuestionStatus::InFlagReview

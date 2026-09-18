@@ -49,6 +49,7 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
     {
         $reviewer = $this->createReviewer();
 
+        $this->assertTrue($reviewer->can('question_flag.view'));
         $this->assertTrue($reviewer->can(Permission::QuestionFlag->value));
         $this->assertFalse($reviewer->can(Permission::QuestionView->value));
         $this->assertFalse($reviewer->can(Permission::QuestionCreate->value));
@@ -386,11 +387,12 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
         return $question->fresh(['options', 'lessons']);
     }
 
-    /** Reviewer role: portal admin + question.flag, không có question.view / publish / edit. */
+    /** Reviewer role: portal admin + question_flag.view/question.flag, không có question.view / publish / edit. */
     private function createReviewer(): User
     {
         $user = User::factory()->create();
         $user->assignRole(Role::Reviewer->value);
+        $user->givePermissionTo('question_flag.view');
         $user->givePermissionTo(Permission::QuestionFlag->value);
         $user->unsetRelation('roles');
         $user->unsetRelation('permissions');

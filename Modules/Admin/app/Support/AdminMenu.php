@@ -79,7 +79,7 @@ final class AdminMenu
                 'label' => 'Review câu hỏi',
                 'icon' => 'flag',
                 'route' => 'admin.questions.flags.index',
-                'permission' => Permission::QuestionFlag->value,
+                'permission' => 'question_flag.view',
                 'match' => 'admin.questions.flags.*',
             ],
             [

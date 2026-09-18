@@ -111,6 +111,7 @@ class RolePermissionSeeder extends Seeder
                     'question.view_any',
                     PermissionEnum::QuestionReview->value,
                     PermissionEnum::QuestionFlag->value,
+                    'question_flag.view',
                     PermissionEnum::QuestionPublish->value,
 
                     'question.restore',
@@ -120,6 +121,7 @@ class RolePermissionSeeder extends Seeder
                 ->all()))),
 
             RoleEnum::Reviewer => [
+                'question_flag.view',
                 PermissionEnum::QuestionFlag->value,
                 'profile.view',
                 'profile.update',
@@ -169,6 +171,7 @@ class RolePermissionSeeder extends Seeder
             'question.import',
             // Instructor layer-1 only.
             PermissionEnum::QuestionReview->value,
+            'question_flag.view',
             // Reviewer flag queue only.
             PermissionEnum::QuestionFlag->value,
             // Learner session / feature surface.

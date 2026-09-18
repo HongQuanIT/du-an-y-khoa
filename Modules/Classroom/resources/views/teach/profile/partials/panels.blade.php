@@ -34,6 +34,7 @@
                 </div>
             </div>
 
+            @can('teach_profile.avatar_update')
             <div class="rounded-lg border border-dashed border-outline-variant bg-surface-container-lowest/50 p-4">
                 <form method="post" action="{{ route('teach.profile.avatar') }}" enctype="multipart/form-data"
                     class="flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -61,9 +62,11 @@
                     </form>
                 @endif
             </div>
+            @endcan
         </div>
     </section>
 
+    @can('teach_profile.update')
     <section class="{{ $cardClass }} mt-6">
         <div class="{{ $cardHeaderClass }}">
             <h3 class="font-title-md text-title-md text-on-surface">Thông tin giảng dạy</h3>
@@ -120,8 +123,10 @@
             </div>
         </form>
     </section>
+    @endcan
 
 @elseif ($tab === 'contact')
+    @can('teach_profile.update')
     <section class="{{ $cardClass }}">
         <div class="{{ $cardHeaderClass }}">
             <h3 class="font-title-md text-title-md text-on-surface">Thông tin liên hệ</h3>
@@ -154,8 +159,10 @@
             </div>
         </form>
     </section>
+    @endcan
 
 @elseif ($tab === 'security')
+    @can('teach_profile.password_update')
     <section class="{{ $cardClass }}">
         <div class="{{ $cardHeaderClass }}">
             <h3 class="font-title-md text-title-md text-on-surface">Đổi mật khẩu</h3>
@@ -199,6 +206,7 @@
             </div>
         </form>
     </section>
+    @endcan
 
 @elseif ($tab === 'appearance')
     <section class="{{ $cardClass }}"

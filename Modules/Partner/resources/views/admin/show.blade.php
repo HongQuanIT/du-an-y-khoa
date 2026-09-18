@@ -188,7 +188,7 @@
                         <td class="px-4 py-3">{{ $row['attribution']->attributed_at?->format('d/m/Y H:i') }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="4" class="px-4 py-6 text-center text-on-surface-variant">Chưa có referral.</td></tr>
+                    <tr><td colspan="4" class="px-4 py-6 text-center text-on-surface-variant">Chưa có người được mời.</td></tr>
                 @endforelse
             </tbody>
         </table>
