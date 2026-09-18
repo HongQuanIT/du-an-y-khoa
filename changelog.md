@@ -2,6 +2,11 @@
 
 ## 2026-09-18
 
+### Fix — Admin: chỉnh nhãn quyền và chi tiết CTV
+
+- Đổi nhãn quyền Billing/CTV cho rõ nghĩa trong ma trận phân quyền.
+- Chặn trang chi tiết CTV và ẩn nút Chi tiết khi thiếu `partner_code.view`.
+
 ### Fix — RBAC: dọn quyền legacy và ẩn UI 2FA
 
 - Xóa `billing.manage`, `system.manage` khỏi enum và thêm migration dọn permission cũ.

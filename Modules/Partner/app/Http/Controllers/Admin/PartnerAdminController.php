@@ -170,7 +170,7 @@ final class PartnerAdminController extends Controller
 
     public function show(Partner $partner): View
     {
-        $this->authorizePermission('partner.view');
+        $this->authorizePermission('partner_code.view');
 
         $partner->load(['user', 'inviteCodes']);
 
