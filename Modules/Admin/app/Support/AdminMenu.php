@@ -102,7 +102,7 @@ final class AdminMenu
                 ],
             ],
             [
-                'label' => 'Kỳ thi',
+                'label' => 'Bài thi',
                 'icon' => 'assignment',
                 'route' => 'admin.exams.index',
                 'permission' => 'exam.view',

@@ -29,7 +29,7 @@
                 <p class="mb-2 text-sm font-bold uppercase tracking-wide text-primary">Mô phỏng kỳ thi</p>
                 <h1 class="font-headline-lg text-headline-lg font-bold text-on-surface">Kỳ thi</h1>
                 <p class="mt-3 text-sm leading-6 text-on-surface-variant sm:text-base">
-                    Làm bài thi thử với cấu trúc mô phỏng kỳ thi thật. Thời gian sẽ được tính lùi giống hệt thi thật.
+                    Chọn kỳ thi theo ma trận đề bộ — hệ thống tạo bài thi riêng với đủ số câu, phân bổ và thời gian tương ứng.
                 </p>
             </div>
             @unless ($canStartExam)
@@ -41,100 +41,129 @@
             @endunless
         </div>
 
+        <div class="mb-4">
+            <h2 class="text-lg font-bold text-on-surface">Chọn kỳ thi</h2>
+            <p class="mt-1 text-sm text-on-surface-variant">Mỗi lần tạo sẽ sinh một bài thi mới từ ma trận (không trùng đề với lần trước).</p>
+        </div>
+
         <div class="grid gap-4 lg:grid-cols-3">
-            @forelse ($examCards as $exam)
+            @forelse ($blueprintCards as $card)
                 @php
                     $locked = ! $canStartExam;
-                    $session = $exam['session'] ?? null;
-                    $isCompleted = $session && $session->status === SessionStatus::Completed;
-                    $isActive = $session && $session->status !== SessionStatus::Completed;
+                    $ready = (bool) ($card['ready'] ?? false);
                 @endphp
-                <article class="flex h-full flex-col rounded-2xl border {{ $isCompleted ? 'border-success/50 bg-success/5' : 'border-outline-variant bg-white' }} p-5 shadow-sm">
+                <article class="flex h-full flex-col rounded-2xl border border-outline-variant bg-white p-5 shadow-sm">
                     <div class="flex min-h-[92px] items-start justify-between gap-4">
-                        <div class="flex min-w-0 flex-1 items-start gap-3">
-                            @if($exam['icon_url'])
-                                <img src="{{ $exam['icon_url'] }}" alt="Icon" class="size-11 shrink-0 rounded-xl object-cover border border-outline-variant">
-                            @else
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-start gap-3">
                                 <span class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary text-white">
-                                    <span class="material-symbols-outlined text-[24px] text-white">quiz</span>
+                                    <span class="material-symbols-outlined text-[24px]">account_tree</span>
                                 </span>
-                            @endif
-                            <div class="min-w-0">
-                                <h2 class="text-lg font-bold text-on-surface line-clamp-2">{{ $exam['title'] }}</h2>
-                                <p class="mt-1 text-sm leading-6 text-on-surface-variant line-clamp-2">{{ $exam['description'] }}</p>
+                                <div class="min-w-0">
+                                    <h2 class="text-lg font-bold text-on-surface line-clamp-2">{{ $card['name'] }}</h2>
+                                    @if ($card['code'])
+                                        <p class="mt-0.5 font-mono text-[11px] text-on-surface-variant">{{ $card['code'] }}</p>
+                                    @endif
+                                    <p class="mt-1 text-sm leading-6 text-on-surface-variant line-clamp-2">
+                                        {{ $card['description'] ?: 'Ma trận đề thi theo cấu trúc chuẩn.' }}
+                                    </p>
+                                </div>
                             </div>
                         </div>
                         @if ($locked)
-                            <span class="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800 shrink-0">Premium</span>
+                            <span class="shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800">Premium</span>
+                        @elseif (! $ready)
+                            <span class="shrink-0 rounded-full bg-surface-container-high px-2.5 py-1 text-xs font-bold text-on-surface-variant">Chưa sẵn sàng</span>
                         @endif
                     </div>
 
                     <div class="mt-5 grid grid-cols-2 gap-3 text-sm">
                         <div class="flex min-h-[84px] flex-col justify-between rounded-xl bg-surface-container-low p-3">
                             <p class="text-xs font-bold text-on-surface-variant">Số câu</p>
-                            <p class="mt-1 text-2xl font-bold text-on-surface">{{ $exam['question_count'] }}</p>
+                            <p class="mt-1 text-2xl font-bold text-on-surface">{{ $ready ? $card['question_count'] : '—' }}</p>
                         </div>
                         <div class="flex min-h-[84px] flex-col justify-between rounded-xl bg-surface-container-low p-3">
                             <p class="text-xs font-bold text-on-surface-variant">Thời gian</p>
-                            <p class="mt-1 text-2xl font-bold text-on-surface">{{ $exam['duration_minutes'] }}'</p>
+                            <p class="mt-1 text-2xl font-bold text-on-surface">{{ $ready ? $card['duration_minutes']."'" : '—' }}</p>
                         </div>
                     </div>
 
-                    @if ($session)
-                        <div class="mt-4 flex items-center justify-between rounded-xl {{ $isCompleted ? 'bg-success/10 text-success' : 'bg-primary/10 text-primary' }} px-4 py-3 text-sm font-bold">
-                            <div class="flex items-center gap-2">
-                                <span class="material-symbols-outlined text-[20px]">{{ $isCompleted ? 'check_circle' : 'pending' }}</span>
-                                <span>{{ $isCompleted ? 'Đã xong' : 'Chưa xong' }} ({{ $session->answered_count }}/{{ $session->total }})</span>
-                            </div>
-                            @if ($isCompleted)
-                                <a href="{{ route('exam.summary', $session) }}" class="underline hover:text-success/80">Xem kết quả</a>
-                            @endif
-                        </div>
+                    <p class="mt-3 text-xs text-on-surface-variant">
+                        {{ $card['sections_count'] }} phần · {{ $card['topic_count'] }} chủ đề
+                    </p>
+
+                    @if (! $ready && $card['reason'])
+                        <p class="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900">{{ $card['reason'] }}</p>
                     @endif
 
-                    <div class="mt-5 flex flex-1 flex-col gap-3">
-                        <div class="mt-auto">
-                            @if ($locked)
-                                <a href="{{ route('billing.plans') }}"
-                                    class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-primary/30 px-4 text-sm font-bold text-primary hover:bg-primary/5">
-                                    <span class="material-symbols-outlined text-[18px]">lock</span>
-                                    Nâng cấp để bắt đầu
-                                </a>
-                            @elseif ($isActive)
-                                <a href="{{ route('exam.session', $session) }}"
+                    <div class="mt-5 mt-auto">
+                        @if ($locked)
+                            <a href="{{ route('billing.plans') }}"
+                                class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-primary/30 px-4 text-sm font-bold text-primary hover:bg-primary/5">
+                                <span class="material-symbols-outlined text-[18px]">lock</span>
+                                Nâng cấp để tạo bài thi
+                            </a>
+                        @elseif (! $ready)
+                            <button type="button" disabled
+                                class="inline-flex h-11 w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-outline px-4 text-sm font-bold text-white">
+                                Kỳ thi chưa sẵn sàng
+                            </button>
+                        @else
+                            <form method="POST" action="{{ route('exam.from-blueprint', $card['id']) }}" class="w-full">
+                                @csrf
+                                <button type="submit"
                                     class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-white transition-colors hover:bg-primary/90">
-                                    <span class="material-symbols-outlined text-[18px]">play_arrow</span>
-                                    Tiếp tục
-                                </a>
-                            @else
-                                <form method="POST" action="{{ route('exam.start', $exam['id']) }}" class="w-full">
-                                    @csrf
-                                    <button type="submit" @disabled($exam['question_count'] == 0)
-                                        class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-outline {{ $isCompleted ? 'bg-surface-container-highest text-on-surface hover:bg-surface-container-highest/80' : 'bg-primary' }}">
-                                        @if($isCompleted)
-                                            <span class="material-symbols-outlined text-[18px] text-on-surface">refresh</span>
-                                            <span class="text-on-surface">Làm lại</span>
-                                        @else
-                                            <span class="material-symbols-outlined text-[18px]">play_arrow</span>
-                                            {{ $exam['question_count'] == 0 ? 'Đề trống' : 'Bắt đầu thi' }}
-                                        @endif
-                                    </button>
-                                </form>
-                            @endif
-                        </div>
+                                    <span class="material-symbols-outlined text-[18px]">add_circle</span>
+                                    Tạo bài thi
+                                </button>
+                            </form>
+                        @endif
                     </div>
                 </article>
             @empty
                 <div class="col-span-full rounded-2xl border border-dashed border-outline-variant bg-white px-6 py-12 text-center">
-                    <p class="font-bold text-on-surface">Chưa có đề thi nào.</p>
+                    <p class="font-bold text-on-surface">Chưa có kỳ thi nào.</p>
+                    <p class="mt-2 text-sm text-on-surface-variant">Admin cần cấu hình ma trận đề thi trước.</p>
                 </div>
             @endforelse
         </div>
 
-        @if ($examCards->hasPages())
+        @if ($blueprintCards->hasPages())
             <div class="mt-8">
-                {{ $examCards->links() }}
+                {{ $blueprintCards->links() }}
             </div>
+        @endif
+
+        @if ($recentExams->isNotEmpty())
+            <section class="mt-10">
+                <div class="mb-4">
+                    <h2 class="text-xl font-bold text-on-surface">Bài thi của bạn</h2>
+                    <p class="mt-1 text-sm text-on-surface-variant">Các bài thi đã tạo từ ma trận — có thể làm lại cùng đề.</p>
+                </div>
+                <div class="grid gap-3 md:grid-cols-2">
+                    @foreach ($recentExams as $exam)
+                        <div class="flex items-center justify-between gap-4 rounded-2xl border border-outline-variant bg-white p-4 shadow-sm">
+                            <div class="min-w-0">
+                                <p class="font-bold text-on-surface line-clamp-1">{{ $exam->title }}</p>
+                                <p class="mt-1 text-sm text-on-surface-variant">
+                                    {{ $exam->questions_count }} câu · {{ $exam->duration_minutes }} phút
+                                    · {{ $exam->created_at?->diffForHumans() }}
+                                </p>
+                            </div>
+                            @if ($canStartExam)
+                                <form method="POST" action="{{ route('exam.start', $exam) }}">
+                                    @csrf
+                                    <button type="submit"
+                                        class="inline-flex h-10 items-center gap-1 rounded-xl border border-outline-variant px-3 text-sm font-bold text-on-surface hover:bg-surface-container-low">
+                                        <span class="material-symbols-outlined text-[18px]">play_arrow</span>
+                                        Làm
+                                    </button>
+                                </form>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+            </section>
         @endif
 
         <section class="mt-10">
@@ -149,14 +178,15 @@
                 <div class="rounded-2xl border border-dashed border-outline-variant bg-white px-6 py-12 text-center">
                     <span class="material-symbols-outlined mb-3 text-5xl text-outline">assignment</span>
                     <p class="font-bold text-on-surface">Chưa có phiên thi nào</p>
-                    <p class="mt-2 text-sm text-on-surface-variant">Bắt đầu một đề mô phỏng để lưu lịch sử tại đây.</p>
+                    <p class="mt-2 text-sm text-on-surface-variant">Tạo bài thi từ kỳ thi ở trên để bắt đầu.</p>
                 </div>
             @else
                 <div class="overflow-hidden rounded-2xl border border-outline-variant bg-white shadow-sm">
                     @foreach ($recentSessions as $session)
                         @php
-                            $examId = is_array($session->filters) ? ($session->filters['exam_id'] ?? null) : null;
-                            $examTitle = $examId ? \Modules\Exam\Models\Exam::find($examId)?->title : 'Kỳ thi';
+                            $examId = $session->exam_id
+                                ?? (is_array($session->filters) ? ($session->filters['exam_id'] ?? null) : null);
+                            $examTitle = $examId ? \Modules\Exam\Models\Exam::find($examId)?->title : 'Bài thi';
                             $status = $session->status->value;
                             $targetRoute = $session->status === SessionStatus::Completed
                                 ? route('exam.summary', $session)

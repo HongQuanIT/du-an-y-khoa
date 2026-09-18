@@ -5,46 +5,50 @@ declare(strict_types=1);
 namespace Modules\Exam\Services;
 
 use App\Models\User;
-use App\Support\TargetExams;
 use Illuminate\Support\Collection;
-use Modules\QuestionBank\Data\CreateSessionData;
 use Modules\QuestionBank\Enums\SessionMode;
 use Modules\QuestionBank\Enums\SessionSource;
+use Modules\QuestionBank\Enums\TaxonomyStatus;
+use Modules\QuestionBank\Models\Blueprint;
 use Modules\QuestionBank\Models\QuestionSession;
-use Modules\QuestionBank\Services\SessionQuestionSelector;
+use Modules\QuestionBank\Support\BlueprintExamAllocator;
 
 final class ExamCatalogService
 {
-    public function __construct(private readonly SessionQuestionSelector $selector) {}
+    public function __construct(private readonly BlueprintExamAllocator $allocator) {}
 
-    public function cards(User $user): \Illuminate\Pagination\LengthAwarePaginator
+    /**
+     * Kỳ thi = ma trận (blueprint) sẵn sàng để học viên tạo bài thi.
+     *
+     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator<int, array<string, mixed>>
+     */
+    public function blueprintCards(): \Illuminate\Contracts\Pagination\LengthAwarePaginator
     {
-        $exams = \Modules\Exam\Models\Exam::withCount('questions')
-            ->where('status', \Modules\Exam\Enums\ExamStatus::Published)
-            ->paginate(6);
+        $blueprints = Blueprint::query()
+            ->where('status', TaxonomyStatus::Active)
+            ->withCount('sections')
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->paginate(9);
 
-        // Get completed sessions for this user for these exams
-        $sessions = QuestionSession::query()
-            ->where('user_id', $user->getKey())
-            ->where('mode', SessionMode::Exam)
-            ->where('source', SessionSource::Exam)
-            ->whereIn('exam_id', $exams->pluck('id'))
-            ->get()
-            ->keyBy('exam_id');
+        $blueprints->getCollection()->transform(function (Blueprint $blueprint): array {
+            $matrix = $this->allocator->allocate($blueprint);
 
-        $exams->getCollection()->transform(function ($exam) use ($sessions) {
             return [
-                'id' => $exam->id,
-                'title' => $exam->title,
-                'icon_url' => $exam->icon ? \Illuminate\Support\Facades\Storage::disk('public')->url($exam->icon) : null,
-                'description' => $exam->description,
-                'question_count' => $exam->questions_count,
-                'duration_minutes' => $exam->duration_minutes,
-                'session' => $sessions->get($exam->id), // Will be null if not started/completed
+                'id' => $blueprint->id,
+                'name' => $blueprint->name,
+                'code' => $blueprint->code,
+                'description' => $blueprint->description,
+                'sections_count' => (int) $blueprint->sections_count,
+                'ready' => $matrix['ready'],
+                'reason' => $matrix['reason'],
+                'question_count' => $matrix['total_questions'],
+                'duration_minutes' => $matrix['suggested_duration_minutes'],
+                'topic_count' => $matrix['topic_count'],
             ];
         });
 
-        return $exams;
+        return $blueprints;
     }
 
     /**
@@ -58,6 +62,20 @@ final class ExamCatalogService
             ->where('source', SessionSource::Exam)
             ->whereNotNull('exam_id')
             ->latest('updated_at')
+            ->limit(8)
+            ->get();
+    }
+
+    /**
+     * @return Collection<int, \Modules\Exam\Models\Exam>
+     */
+    public function recentExams(User $user): Collection
+    {
+        return \Modules\Exam\Models\Exam::query()
+            ->withCount('questions')
+            ->with('blueprint:id,name,code')
+            ->where('user_id', $user->getKey())
+            ->latest()
             ->limit(6)
             ->get();
     }

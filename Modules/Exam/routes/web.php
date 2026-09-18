@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
+use Modules\Exam\Http\Controllers\CreateExamFromBlueprintController;
 use Modules\Exam\Http\Controllers\ExamIndexController;
 use Modules\Exam\Http\Controllers\ExamSessionReviewController;
 use Modules\Exam\Http\Controllers\ExamSessionSummaryController;
@@ -17,11 +18,14 @@ Route::middleware(['auth', 'learner'])
     ->prefix('exams')
     ->name('exam.')
     ->group(function (): void {
-        Route::get('/', ExamIndexController::class)->middleware('permission:exam.view')->name('index');
+        Route::get('/', ExamIndexController::class)->middleware('permission:exam.take')->name('index');
+        Route::post('/from-blueprint/{blueprint}', CreateExamFromBlueprintController::class)
+            ->middleware(['permission:exam.take', 'subscription:exam.simulation'])
+            ->name('from-blueprint');
         Route::post('/{exam}/start', StartExamController::class)
-            ->middleware('subscription:exam.simulation')
+            ->middleware(['permission:exam.take', 'subscription:exam.simulation'])
             ->name('start');
-        Route::get('/{session}/summary', ExamSessionSummaryController::class)->middleware('permission:exam.review')->name('summary');
-        Route::get('/{session}/review', ExamSessionReviewController::class)->middleware('permission:exam.review')->name('review');
+        Route::get('/{session}/summary', ExamSessionSummaryController::class)->middleware('permission:exam.take')->name('summary');
+        Route::get('/{session}/review', ExamSessionReviewController::class)->middleware('permission:exam.take')->name('review');
         Route::get('/{session}', [StudySessionController::class, 'show'])->middleware('permission:exam.take')->name('session');
     });

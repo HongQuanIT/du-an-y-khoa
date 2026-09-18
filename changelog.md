@@ -2,6 +2,12 @@
 
 ## 2026-09-18
 
+### UX — Phân tách kỳ thi (ma trận) / bài thi (học viên tạo)
+
+- **Học viên** (`/exams`): chọn kỳ thi = ma trận blueprint → «Tạo bài thi» sinh đề riêng từ tỉ trọng + exam pool, rồi vào phòng thi.
+- **Admin** (`/admin/exams`): chỉ xem/xóa danh sách bài thi đã tạo (học viên, ma trận, số câu); bỏ form tạo/sửa đề.
+- `exams.user_id`; actions `CreateLearnerExamFromBlueprintAction` + `GenerateExamQuestionsAction`; tái dùng `BlueprintExamAllocator`.
+
 ### Fix — Admin: bắt quyền xem khi dùng quyền thao tác
 
 - Thêm middleware Admin yêu cầu `*.view` khi route dùng quyền thao tác cùng resource.

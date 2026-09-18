@@ -2,6 +2,7 @@
 
 namespace Modules\Exam\Models;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -13,6 +14,7 @@ use Modules\QuestionBank\Models\Question;
 class Exam extends Model
 {
     protected $fillable = [
+        'user_id',
         'blueprint_id',
         'title',
         'description',
@@ -23,11 +25,18 @@ class Exam extends Model
     ];
 
     protected $casts = [
+        'user_id' => 'integer',
         'blueprint_id' => 'integer',
         'is_published' => 'boolean',
         'duration_minutes' => 'integer',
         'status' => ExamStatus::class,
     ];
+
+    /** @return BelongsTo<User, $this> */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 
     /** @return BelongsTo<Blueprint, $this> */
     public function blueprint(): BelongsTo
