@@ -54,11 +54,13 @@
                     @if ($roleLabel)
                         <span class="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 font-label-sm text-label-sm font-medium text-primary">{{ $roleLabel }}</span>
                     @endif
+                    @can('profile.update')
                     <a href="{{ route('profile.show', ['tab' => 'contact']) }}"
                         class="inline-flex items-center gap-1.5 font-label-md text-label-md text-primary hover:underline">
                         Chỉnh sửa tên &amp; liên hệ
                         <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
                     </a>
+                    @endcan
                 </div>
             </div>
             @if ($user->hasRole(\App\Support\Enums\Role::Student->value))
@@ -69,11 +71,13 @@
                         <h3 class="font-label-lg text-label-lg font-semibold text-on-surface">Thông tin học viên</h3>
                         <p class="mt-0.5 font-body-sm text-body-sm text-on-surface-variant">Thông tin học tập đã cung cấp khi hoàn thiện hồ sơ.</p>
                     </div>
+                    @can('profile.update')
                     <button type="button" @click="open('learner')"
                         class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-outline-variant px-3 py-2 font-label-sm text-label-sm font-medium text-primary transition hover:border-primary hover:bg-primary/5">
                         <span class="material-symbols-outlined text-[17px]">edit</span>
                         Chỉnh sửa
                     </button>
+                    @endcan
                 </div>
 
                 <dl class="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -240,6 +244,7 @@
                     </script>
                 @endonce
             @endif
+            @can('profile.avatar_update')
             <div class="rounded-lg border border-dashed border-outline-variant bg-surface-container-lowest/50 p-4">
                 <form method="post" action="{{ route('settings.avatar') }}" enctype="multipart/form-data" class="flex flex-col gap-3 sm:flex-row sm:items-end">
                     @csrf
@@ -263,6 +268,7 @@
                     </form>
                 @endif
             </div>
+            @endcan
         </div>
     </section>
 </div>

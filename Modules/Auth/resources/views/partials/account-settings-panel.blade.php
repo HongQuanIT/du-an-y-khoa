@@ -11,6 +11,7 @@
 @endphp
 
 @if ($tab === 'contact')
+    @can('profile.update')
     <section class="{{ $cardClass }}">
         <div class="{{ $cardHeaderClass }}">
             <h2 class="font-title-md text-title-md text-on-surface">Thông tin liên hệ</h2>
@@ -47,6 +48,7 @@
             </div>
         </form>
     </section>
+    @endcan
 
 @elseif ($tab === 'security')
     @php
@@ -129,6 +131,7 @@
         </div>
     </section>
 
+    @can('profile.password_update')
     <section class="{{ $cardClass }}">
         <div class="{{ $cardHeaderClass }}">
             <h2 class="font-title-md text-title-md text-on-surface">Đổi mật khẩu</h2>
@@ -181,6 +184,7 @@
             </div>
         </form>
     </section>
+    @endcan
 
     @can('profile.two_factor_toggle')
     <section class="{{ $cardClass }} mt-6">

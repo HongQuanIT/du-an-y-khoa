@@ -7,6 +7,16 @@
 - **Học viên** (`/exams`): chọn kỳ thi = ma trận blueprint → «Tạo bài thi» sinh đề riêng từ tỉ trọng + exam pool, rồi vào phòng thi.
 - **Admin** (`/admin/exams`): chỉ xem/xóa danh sách bài thi đã tạo (học viên, ma trận, số câu); bỏ form tạo/sửa đề.
 - `exams.user_id`; actions `CreateLearnerExamFromBlueprintAction` + `GenerateExamQuestionsAction`; tái dùng `BlueprintExamAllocator`.
+
+### Feat — Admin: Phân quyền xem báo cáo lỗi câu hỏi
+
+- Tách quyền `question_flag.view` từ quyền quản lý chung để cho phép Reviewer/Admin xem danh sách báo cáo mà không cần quyền thao tác.
+- Cập nhật RolePermissionSeeder và các routes, middleware liên quan.
+
+### Feat — Profile: Ẩn giao diện thao tác theo phân quyền
+
+- Cập nhật giao diện Hồ sơ của Learner và Admin để ẩn các form đổi thông tin, mật khẩu và ảnh đại diện khi thiếu quyền `profile.update`, `profile.password_update`, `profile.avatar_update`.
+- Tương tự với giao diện Hồ sơ của Instructor dựa trên nhóm quyền `teach_profile.*`.
 ### UX — Partner: Việt hóa nhãn quyền CTV
 
 - Đổi `partner_commission` thành «Hoa hồng» và `partner_referral` thành «Người được mời».
