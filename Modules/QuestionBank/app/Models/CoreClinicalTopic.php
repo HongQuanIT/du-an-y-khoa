@@ -14,6 +14,7 @@ use Modules\QuestionBank\Enums\TaxonomyStatus;
  * @property int $blueprint_section_id
  * @property string $name
  * @property string $slug
+ * @property float|null $weight
  */
 class CoreClinicalTopic extends Model
 {
@@ -25,12 +26,14 @@ class CoreClinicalTopic extends Model
         'description',
         'status',
         'sort_order',
+        'weight',
     ];
 
     protected $casts = [
         'blueprint_section_id' => 'integer',
         'status' => TaxonomyStatus::class,
         'sort_order' => 'integer',
+        'weight' => 'float',
     ];
 
     /** @return BelongsTo<BlueprintSection, $this> */
@@ -47,7 +50,9 @@ class CoreClinicalTopic extends Model
             'core_topic_lessons',
             'core_clinical_topic_id',
             'lesson_id',
-        )->withTimestamps();
+        )->withPivot('is_priority')
+            ->withCasts(['is_priority' => 'boolean'])
+            ->withTimestamps();
     }
 
     /** @return BelongsToMany<Tag, $this> */

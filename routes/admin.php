@@ -380,6 +380,7 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
             Route::middleware('permission:blueprint.update')->group(function (): void {
                 Route::get('/blueprints/{blueprint}/edit', [BlueprintController::class, 'edit'])->name('blueprints.edit');
                 Route::put('/blueprints/{blueprint}', [BlueprintController::class, 'update'])->name('blueprints.update');
+                Route::put('/blueprints/{blueprint}/weights', [BlueprintController::class, 'updateWeights'])->name('blueprints.weights.update');
             });
             Route::middleware('permission:curriculum.update')->group(function (): void {
                 Route::put('/categories/organ-systems/{organSystem}', [CurriculumTaxonomyController::class, 'updateOrganSystem'])->name('curriculum.organ-systems.update');
@@ -420,26 +421,13 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
                 ->name('tags.destroy');
         });
 
-        // --- Exams ---
-        Route::middleware('permission:exam.create|exam.update')->group(function (): void {
-            Route::get('/exams/questions/search', [ExamController::class, 'searchQuestions'])->name('exams.questions.search');
-            Route::get('/exams/topic-eligibility', [ExamController::class, 'topicEligibility'])->name('exams.topic-eligibility');
-        });
+        // --- Exams (bài thi do học viên tạo — admin chỉ xem/xóa) ---
         Route::get('/exams', [ExamController::class, 'index'])
             ->middleware('permission:exam.view')
             ->name('exams.index');
-        Route::get('/exams/create', [ExamController::class, 'create'])
-            ->middleware('permission:exam.create')
-            ->name('exams.create');
-        Route::post('/exams', [ExamController::class, 'store'])
-            ->middleware('permission:exam.create')
-            ->name('exams.store');
-        Route::get('/exams/{exam}/edit', [ExamController::class, 'edit'])
-            ->middleware('permission:exam.update')
-            ->name('exams.edit');
-        Route::put('/exams/{exam}', [ExamController::class, 'update'])
-            ->middleware('permission:exam.update')
-            ->name('exams.update');
+        Route::get('/exams/{exam}', [ExamController::class, 'show'])
+            ->middleware('permission:exam.view')
+            ->name('exams.show');
         Route::delete('/exams/{exam}', [ExamController::class, 'destroy'])
             ->middleware('permission:exam.delete')
             ->name('exams.destroy');

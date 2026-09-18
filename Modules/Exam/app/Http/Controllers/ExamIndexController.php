@@ -21,8 +21,9 @@ final class ExamIndexController extends Controller
         abort_unless($user instanceof User, 403);
 
         return view('exam::index', [
-            'examCards' => $this->catalog->cards($user),
+            'blueprintCards' => $this->catalog->blueprintCards(),
             'recentSessions' => $this->catalog->recentSessions($user),
+            'recentExams' => $this->catalog->recentExams($user),
             'canStartExam' => $user->hasEntitlement(Entitlement::ExamSimulation->value),
         ]);
     }

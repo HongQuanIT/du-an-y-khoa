@@ -16,6 +16,7 @@ use Modules\QuestionBank\Enums\TaxonomyStatus;
  * @property string|null $description
  * @property TaxonomyStatus $status
  * @property int $sort_order
+ * @property int|null $total_questions
  */
 class Blueprint extends Model
 {
@@ -26,11 +27,13 @@ class Blueprint extends Model
         'description',
         'status',
         'sort_order',
+        'total_questions',
     ];
 
     protected $casts = [
         'status' => TaxonomyStatus::class,
         'sort_order' => 'integer',
+        'total_questions' => 'integer',
     ];
 
     /** @return HasMany<BlueprintSection, $this> */

@@ -2,6 +2,12 @@
 
 ## 2026-09-18
 
+### UX — Phân tách kỳ thi (ma trận) / bài thi (học viên tạo)
+
+- **Học viên** (`/exams`): chọn kỳ thi = ma trận blueprint → «Tạo bài thi» sinh đề riêng từ tỉ trọng + exam pool, rồi vào phòng thi.
+- **Admin** (`/admin/exams`): chỉ xem/xóa danh sách bài thi đã tạo (học viên, ma trận, số câu); bỏ form tạo/sửa đề.
+- `exams.user_id`; actions `CreateLearnerExamFromBlueprintAction` + `GenerateExamQuestionsAction`; tái dùng `BlueprintExamAllocator`.
+
 ### Fix — Admin: bắt quyền xem khi dùng quyền thao tác
 
 - Thêm middleware Admin yêu cầu `*.view` khi route dùng quyền thao tác cùng resource.
@@ -20,6 +26,16 @@
 - Ẩn khối bật/tắt 2FA ở tab Bảo mật khi role không có `profile.two_factor_toggle`.
 
 ## 2026-09-17
+
+### Feature — Admin: đánh dấu bài học trọng điểm trong ma trận
+
+- Pivot `core_topic_lessons.is_priority` (mặc định true); sao trên chip bài khi map CCT.
+- Sinh đề: ưu tiên câu từ bài có sao, thiếu mới fallback toàn phạm vi CCT (bài + tag).
+
+### Feature — Admin: cấu hình tỉ trọng ma trận đề thi
+
+- Thêm tổng số câu + tỉ trọng min/max cho phần (% toàn ma trận) và tỉ trọng đơn cho chủ đề (% trong phần, tổng = 100%) trên `/admin/blueprints/{id}/edit`.
+- Cảnh báo realtime khi phần chưa phủ đủ 100% (Σ min ≤ 100 ≤ Σ max) hoặc tổng chủ đề trong phần ≠ 100%; lưu qua endpoint riêng, không chặn lưu.
 
 ### Chore — QBank: đồng bộ courses_data từ Google Sheet mới
 

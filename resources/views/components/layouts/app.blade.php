@@ -15,7 +15,7 @@
         ['label' => 'Kế hoạch học tập', 'icon' => 'event_note', 'route' => 'study-plan.index', 'match' => 'study-plan.*', 'permission' => 'study_plan.view'],
         ['label' => 'Lớp học', 'icon' => 'cast_for_education', 'route' => 'classroom.index', 'match' => 'classroom.*', 'permission' => 'classroom.view'],
         ['label' => 'Phân tích', 'icon' => 'analytics', 'route' => null, 'permission' => 'learning_analytics.view'],
-        ['label' => 'Kỳ thi', 'icon' => 'assignment', 'route' => 'exam.index', 'match' => 'exam.*', 'permission' => ['exam.view', 'exam.take']],
+        ['label' => 'Kỳ thi', 'icon' => 'assignment', 'route' => 'exam.index', 'match' => 'exam.*', 'permission' => 'exam.take'],
     ];
     $navItems = array_values(array_filter(
         $navItems,
