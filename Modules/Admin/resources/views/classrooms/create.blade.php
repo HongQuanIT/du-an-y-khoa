@@ -305,6 +305,7 @@
                     </div>
                 </section>
 
+                @can('classroom_oversight.schedule')
                 <section x-show="source !== 'none'" x-cloak class="rounded-xl border border-outline-variant bg-surface p-5 shadow-sm md:p-6">
                     <div class="mb-5 flex items-start gap-3 border-b border-outline-variant pb-4">
                         <span class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -346,6 +347,7 @@
                         </label>
                     </div>
                 </section>
+                @endcan
             </main>
 
             <aside class="space-y-4 xl:sticky xl:top-24">

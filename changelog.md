@@ -1,6 +1,11 @@
 # Changelog
 
-## 2026-09-18
+## 2026-09-19
+
+### Fix — RBAC: sửa lỗi chặn quyền cứng và đồng bộ UI Admin
+- Bỏ kiểm tra cứng `Role::Reviewer` khi gắn cờ câu hỏi; hệ thống giờ tuân thủ hoàn toàn theo Permission (`question.flag`, `question_flag.view`).
+- Ẩn hoàn toàn form thao tác gắn cờ trên giao diện nếu người dùng không có quyền thao tác (dù được cấp quyền xem).
+- Ẩn phần thiết lập lịch học (thời gian, thời lượng) ở giao diện tạo lớp Admin khi thiếu quyền `classroom_oversight.schedule`.
 
 ### UX — Phân tách kỳ thi (ma trận) / bài thi (học viên tạo)
 
