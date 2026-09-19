@@ -2,6 +2,12 @@
 
 ## 2026-09-19
 
+### Refactor — RBAC: Tinh gọn quyền kỳ thi trên portal Admin
+
+- Giản lược danh mục quyền `exam` trên portal Admin: chỉ giữ lại 2 quyền `exam.view` (Xem) và `exam.delete` (Xóa).
+- Loại bỏ các quyền không sử dụng trong mô hình bài thi sinh tự động (`exam.create`, `exam.update`, `exam.publish`, `exam.archive`).
+- Cập nhật ngưỡng kiểm tra quy mô permission trong `RbacFoundationTest`.
+
 ### Fix — RBAC: Rà soát phân quyền Portal Học viên, Portal Giảng viên & Portal Admin
 
 - **Portal Giảng viên**:

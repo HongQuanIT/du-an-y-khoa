@@ -43,7 +43,7 @@ return [
                 'tag' => ['view', 'create', 'update', 'delete'],
             ],
             'exam' => [
-                'exam' => ['view', 'create', 'update', 'delete', 'publish', 'archive'],
+                'exam' => ['view', 'delete'],
             ],
             'classroom' => [
                 'classroom_oversight' => ['view', 'create_on_behalf', 'update', 'approve', 'reject', 'archive', 'schedule'],
