@@ -25,7 +25,7 @@ final class ClassroomPolicy
             return true;
         }
 
-        if (! $user->can('classroom.view')) {
+        if (! $user->canAny(['classroom.view', 'classroom.join', 'classroom.leave'])) {
             return false;
         }
 
@@ -92,17 +92,38 @@ final class ClassroomPolicy
         }
 
         return $classroom->isHostOrCohost($user)
-            && ($user->canAny([
+            && $user->canAny([
                 'classroom_session.schedule',
                 'classroom_session.start',
                 'classroom_session.end',
                 Permission::ClassroomManage->value,
-            ]) || $user->hasEntitlement(Entitlement::ClassroomHost->value));
+            ]);
+    }
+
+    public function scheduleLive(User $user, Classroom $classroom): bool
+    {
+        if ($user->canAny(['classroom_oversight.schedule', 'classroom_oversight.view'])) {
+            return true;
+        }
+
+        return $classroom->isHostOrCohost($user) && $user->can('classroom_session.schedule');
     }
 
     public function startLive(User $user, Classroom $classroom): bool
     {
-        return $this->manageLive($user, $classroom)
-            && $classroom->isVisibleToLearners();
+        if ($user->canAny(['classroom_oversight.schedule', 'classroom_oversight.view'])) {
+            return true;
+        }
+
+        return $classroom->isHostOrCohost($user) && $user->can('classroom_session.start');
+    }
+
+    public function endLive(User $user, Classroom $classroom): bool
+    {
+        if ($user->canAny(['classroom_oversight.schedule', 'classroom_oversight.view'])) {
+            return true;
+        }
+
+        return $classroom->isHostOrCohost($user) && $user->can('classroom_session.end');
     }
 }

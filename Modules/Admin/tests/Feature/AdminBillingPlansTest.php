@@ -36,7 +36,16 @@ final class AdminBillingPlansTest extends TestCase
             ->get(route('admin.billing.plans.index'))
             ->assertOk()
             ->assertSee('Gói & bảng giá')
-            ->assertSee('Premium');
+            ->assertSee('Premium')
+            ->assertDontSee('Cổng thanh toán');
+
+        $admin->givePermissionTo('billing_gateway.view');
+        $admin->load('permissions');
+
+        $this->actingAsStaff($admin->fresh())
+            ->get(route('admin.billing.plans.index'))
+            ->assertOk()
+            ->assertSee('Cổng thanh toán');
     }
 
     public function test_admin_can_update_plan_tier(): void

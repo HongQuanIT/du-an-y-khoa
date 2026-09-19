@@ -197,11 +197,13 @@
         <header class="sticky top-0 z-40 border-b border-outline-variant bg-white/95 backdrop-blur">
             <div class="flex h-header-height items-center justify-between gap-3 px-4 md:px-8">
                 <div class="flex min-w-0 flex-1 items-center gap-3">
+                    @can('session.submit')
                     <button type="button" @click="exitOpen = true"
                         class="flex size-10 shrink-0 items-center justify-center rounded-full text-outline transition-colors hover:bg-surface-container-high"
                         aria-label="Tạm dừng và thoát">
                         <span class="material-symbols-outlined">close</span>
                     </button>
+                    @endcan
                     <div class="hidden min-w-0 sm:block">
                         <p class="truncate font-label-md font-bold text-primary">{{ config('app.name') }}</p>
                         <p class="text-[10px] font-bold tracking-wider text-on-surface-variant uppercase">
@@ -412,11 +414,13 @@
                         <span class="hidden sm:inline">Bản đồ</span>
                     </button>
                     @if ($isExam)
+                        @can('session.submit')
                         <button type="button" @click="finishOpen = true"
                             class="inline-flex items-center gap-2 rounded-lg bg-error px-4 py-2 font-bold text-white transition-opacity hover:opacity-90">
                             <span class="material-symbols-outlined text-[20px]">task_alt</span>
                             Nộp bài
                         </button>
+                        @endcan
                     @elseif ($nextIndex !== null && ! $isAnswered)
                         <a href="{{ route('qbank.session', [$session, 'index' => $nextIndex]) }}"
                             class="inline-flex items-center gap-1 rounded-lg px-3 py-2 font-bold text-on-surface-variant hover:bg-surface-container-low hover:text-primary">
@@ -471,8 +475,10 @@
                 </div>
                 @if ($isExam)
                     <div class="border-t border-outline-variant p-5">
+                        @can('session.submit')
                         <button type="button" @click="navigatorOpen = false; finishOpen = true"
                             class="w-full rounded-xl bg-error px-5 py-3 font-bold text-white">Nộp bài thi</button>
+                        @endcan
                     </div>
                 @endif
             </aside>
@@ -522,7 +528,9 @@
                     <form method="POST" action="{{ route('qbank.session.pause', $session) }}">
                         @csrf
                         <input type="hidden" name="current_index" value="{{ $index }}">
+                        @can('session.submit')
                         <button type="submit" class="w-full rounded-xl bg-primary px-4 py-3 font-bold text-white">Lưu & thoát</button>
+                        @endcan
                     </form>
                 </div>
             </section>
@@ -541,11 +549,14 @@
                     <button type="button" @click="finishOpen = false" class="rounded-xl border border-outline-variant px-4 py-3 font-bold text-on-surface-variant">Kiểm tra lại</button>
                     <form x-ref="finishForm" method="POST" action="{{ route('qbank.session.finish', $session) }}">
                         @csrf
+                        @can('session.submit')
                         <button type="submit" class="w-full rounded-xl bg-error px-4 py-3 font-bold text-white">Nộp bài</button>
+                        @endcan
                     </form>
                 </div>
             </section>
         <!-- Save question in folder modal -->
+        @can('bookmark.create')
         <div x-show="folderModalOpen" x-cloak
             class="fixed inset-0 z-[90] flex items-center justify-center p-4"
             @keydown.escape.window="folderModalOpen = false">
@@ -622,6 +633,7 @@
                 </div>
             </div>
         </div>
+        @endcan
 
         <div x-show="imageViewerOpen" x-cloak x-transition.opacity
             class="fixed inset-0 z-[150] flex items-center justify-center bg-black/90 p-4"

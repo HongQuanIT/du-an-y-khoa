@@ -165,6 +165,7 @@
                 </div>
 
                 @if (! $isClosed && ! $classroom->liveSession)
+                    @can('classroom_session.schedule')
                     <div @if ($classroom->purpose === \Modules\Classroom\Enums\ClassroomPurpose::FeedbackReview) x-data="classroomQuestionPicker(@js(route('teach.classes.questions.search', $classroom)), @js(route('teach.classes.questions.feedback', [$classroom, '__QUESTION__'])))" x-init="loadQuestions()" @endif
                         class="mb-5 rounded-lg border border-outline-variant bg-surface-container-lowest p-4 md:p-5">
                         <form method="post" action="{{ route('teach.classes.sessions.store', $classroom) }}" class="space-y-5">
@@ -466,6 +467,7 @@
                             </div>
                         @endif
                     </div>
+                    @endcan
                 @endif
 
                 @if ($errors->any())
@@ -482,15 +484,19 @@
                                 <h3 class="mt-1 font-semibold text-on-surface">{{ $classroom->liveSession->title }}</h3>
                             </div>
                             <div class="flex flex-wrap gap-2">
+                                @can('classroom_session.start')
                                 <a href="{{ route('teach.classes.sessions.studio', [$classroom, $classroom->liveSession]) }}"
                                     class="inline-flex items-center gap-2 rounded-lg bg-error px-3 py-2 text-sm font-semibold text-on-error hover:opacity-90">
                                     <span class="material-symbols-outlined text-[18px]">videocam</span>Vào phòng điều khiển trực tiếp
                                 </a>
+                                @endcan
+                                @can('classroom_session.end')
                                 <form method="post" action="{{ route('teach.classes.sessions.end', [$classroom, $classroom->liveSession]) }}"
                                     onsubmit="return confirm('Bạn chắc chắn muốn kết thúc buổi trực tiếp? Học viên sẽ bị ngắt khỏi phòng. Bạn vẫn có thể mở lại buổi này từ trang lớp nếu kết thúc nhầm.')">
                                     @csrf
                                     <button type="submit" class="rounded-lg border border-error px-3 py-2 text-sm font-semibold text-error hover:bg-error/5">Kết thúc buổi trực tiếp</button>
                                 </form>
+                                @endcan
                             </div>
                         </div>
                     </div>
@@ -516,10 +522,12 @@
                                     </p>
                                 </div>
                                 @if (! $isClosed && $session->status === LiveSessionStatus::Scheduled)
+                                    @can('classroom_session.start')
                                     <form method="post" action="{{ route('teach.classes.sessions.start', [$classroom, $session]) }}">
                                         @csrf
                                         <button type="submit" class="rounded-lg bg-primary px-3 py-1.5 font-label-sm font-semibold text-on-primary hover:opacity-90">Bắt đầu</button>
                                     </form>
+                                    @endcan
                                 @endif
                             </li>
                         @endforeach
@@ -547,6 +555,7 @@
                                     </div>
                                     <div class="flex flex-wrap gap-2">
                                         @if (! $isClosed && $session->status === LiveSessionStatus::Ended)
+                                            @can('classroom_session.start')
                                             <form method="post" action="{{ route('teach.classes.sessions.start', [$classroom, $session]) }}"
                                                 onsubmit="return confirm('Mở lại buổi trực tiếp này? Học viên có thể vào lại phòng và nội dung câu hỏi hiện tại sẽ được giữ nguyên.')">
                                                 @csrf
@@ -556,6 +565,7 @@
                                                     Mở lại buổi trực tiếp
                                                 </button>
                                             </form>
+                                            @endcan
                                         @endif
                                     </div>
                                 </li>

@@ -632,9 +632,11 @@
                 <div class="flex flex-col gap-2 bg-surface-container-low p-4">
                     <form x-ref="finishForm" method="POST" action="{{ route('qbank.session.finish', $session) }}">
                         @csrf
+                        @can('session.submit')
                         <button type="submit" class="w-full rounded-xl bg-error py-3 font-bold text-white hover:bg-red-700">
                             Nộp bài
                         </button>
+                        @endcan
                     </form>
                     <button type="button" @click="finishOpen = false"
                         class="w-full rounded-xl border border-outline-variant bg-white py-3 font-bold text-on-surface-variant hover:bg-surface">

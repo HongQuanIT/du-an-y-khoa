@@ -14,18 +14,18 @@ use Modules\QuestionBank\Http\Controllers\StudySessionController;
 | Exam — web routes (exam player, results). Add pages here.
 */
 
-Route::middleware(['auth', 'learner'])
+Route::middleware(['auth', 'learner', 'permission:exam.view'])
     ->prefix('exams')
     ->name('exam.')
     ->group(function (): void {
-        Route::get('/', ExamIndexController::class)->middleware('permission:exam.take')->name('index');
+        Route::get('/', ExamIndexController::class)->middleware('permission:exam.view')->name('index');
         Route::post('/from-blueprint/{blueprint}', CreateExamFromBlueprintController::class)
             ->middleware(['permission:exam.take', 'subscription:exam.simulation'])
             ->name('from-blueprint');
         Route::post('/{exam}/start', StartExamController::class)
             ->middleware(['permission:exam.take', 'subscription:exam.simulation'])
             ->name('start');
-        Route::get('/{session}/summary', ExamSessionSummaryController::class)->middleware('permission:exam.take')->name('summary');
-        Route::get('/{session}/review', ExamSessionReviewController::class)->middleware('permission:exam.take')->name('review');
+        Route::get('/{session}/summary', ExamSessionSummaryController::class)->middleware('permission:exam.view|exam.take|exam.review')->name('summary');
+        Route::get('/{session}/review', ExamSessionReviewController::class)->middleware('permission:exam.review')->name('review');
         Route::get('/{session}', [StudySessionController::class, 'show'])->middleware('permission:exam.take')->name('session');
     });

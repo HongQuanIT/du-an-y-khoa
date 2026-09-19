@@ -448,19 +448,27 @@ final class TeachQuestionReviewTest extends TestCase
             ])
             ->assertForbidden();
 
+        $this->actingAsWithWebSession($restrictedInstructor, 'web')
+            ->post(route('teach.questions.reviews.approve', $question), [
+                'review_note' => 'Duyệt thành công khi có quyền question.approve',
+            ])
+            ->assertRedirect(route('teach.questions.reviews.index', ['tab' => 'approved']));
+
         // 6. Cấp question.reject -> thấy và bấm được cả Từ chối
-        $restrictedRole->givePermissionTo([Permission::QuestionReview->value, 'question.reject']);
+        $restrictedRole->givePermissionTo('question.reject');
         app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
         $restrictedInstructor->forgetCachedPermissions();
 
+        $rejectedQuestion = $this->makeInReviewQuestion($restrictedInstructor);
+
         $this->actingAsWithWebSession($restrictedInstructor, 'web')
-            ->get(route('teach.questions.reviews.show', $question))
+            ->get(route('teach.questions.reviews.show', $rejectedQuestion))
             ->assertOk()
             ->assertSee('Duyệt chuyên môn')
             ->assertSee('Từ chối');
 
         $this->actingAsWithWebSession($restrictedInstructor, 'web')
-            ->post(route('teach.questions.reviews.reject', $question), [
+            ->post(route('teach.questions.reviews.reject', $rejectedQuestion), [
                 'review_note' => 'Đã có quyền reject hợp lệ',
             ])
             ->assertRedirect(route('teach.questions.reviews.index', ['tab' => 'rejected']));

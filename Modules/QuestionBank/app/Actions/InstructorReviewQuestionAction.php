@@ -157,7 +157,7 @@ final class InstructorReviewQuestionAction
     {
         abort_unless(
             PortalAccess::allows($instructor, PortalGroup::Instructor)
-            && $instructor->can(Permission::QuestionReview->value),
+            && $instructor->canAny(['question.approve', 'question.reject', Permission::QuestionReview->value]),
             403,
             'Chỉ giảng viên được duyệt lớp 1.',
         );

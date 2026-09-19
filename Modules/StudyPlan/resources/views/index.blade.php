@@ -24,11 +24,13 @@
                     @endif
                 </p>
             </div>
+            @can('study_plan.create')
             <a href="{{ route('study-plan.create') }}"
                 class="flex items-center gap-2 rounded-lg bg-primary-container px-4 py-2 font-label-md text-white shadow-sm transition-all hover:opacity-90">
                 <span class="material-symbols-outlined text-[20px]">add</span>
                 Tạo kế hoạch mới
             </a>
+            @endcan
         </div>
 
         @if ($plans->isEmpty())
@@ -40,11 +42,13 @@
                     Chọn kỳ thi mục tiêu, phạm vi ôn tập và cường độ — hệ thống sẽ chia khối lượng thành nhiệm vụ mỗi
                     ngày cho bạn.
                 </p>
+                @can('study_plan.create')
                 <a href="{{ route('study-plan.create') }}"
                     class="mt-2 flex items-center gap-2 rounded-lg bg-primary-container px-6 py-3 font-label-md text-white shadow-sm transition-all hover:opacity-90">
                     <span class="material-symbols-outlined text-[20px]">add</span>
                     Tạo kế hoạch đầu tiên
                 </a>
+                @endcan
             </div>
         @else
             <!-- All plans -->

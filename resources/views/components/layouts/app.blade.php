@@ -10,12 +10,12 @@
     // Dashboard, Q-Bank, StudyPlan, Flashcards are wired; the rest land as modules ship.
     $navItems = [
         ['label' => 'Tổng quan', 'icon' => 'dashboard', 'route' => 'dashboard', 'permission' => 'learner_dashboard.view'],
-        ['label' => 'Ngân hàng câu hỏi', 'icon' => 'quiz', 'route' => 'qbank.index', 'match' => 'qbank.*', 'permission' => 'question.view'],
+        ['label' => 'Ngân hàng câu hỏi', 'icon' => 'quiz', 'route' => 'qbank.index', 'match' => 'qbank.*', 'permission' => ['question.view', 'session.create', 'session.start', 'session.submit', 'session.review', 'session.repeat', 'session.delete', 'bookmark.view', 'bookmark.create']],
         ['label' => 'Thư viện', 'icon' => 'library_books', 'route' => null, 'permission' => 'library.view'],
-        ['label' => 'Kế hoạch học tập', 'icon' => 'event_note', 'route' => 'study-plan.index', 'match' => 'study-plan.*', 'permission' => 'study_plan.view'],
-        ['label' => 'Lớp học', 'icon' => 'cast_for_education', 'route' => 'classroom.index', 'match' => 'classroom.*', 'permission' => 'classroom.view'],
+        ['label' => 'Kế hoạch học tập', 'icon' => 'event_note', 'route' => 'study-plan.index', 'match' => 'study-plan.*', 'permission' => ['study_plan.view', 'study_plan.create', 'study_plan_task.start', 'study_plan_task.complete', 'study_plan_task.review']],
+        ['label' => 'Lớp học', 'icon' => 'cast_for_education', 'route' => 'classroom.index', 'match' => 'classroom.*', 'permission' => ['classroom.view', 'classroom.join', 'classroom.leave']],
         ['label' => 'Phân tích', 'icon' => 'analytics', 'route' => null, 'permission' => 'learning_analytics.view'],
-        ['label' => 'Kỳ thi', 'icon' => 'assignment', 'route' => 'exam.index', 'match' => 'exam.*', 'permission' => 'exam.take'],
+        ['label' => 'Kỳ thi', 'icon' => 'assignment', 'route' => 'exam.index', 'match' => 'exam.*', 'permission' => ['exam.view', 'exam.take', 'exam.review']],
     ];
     $navItems = array_values(array_filter(
         $navItems,

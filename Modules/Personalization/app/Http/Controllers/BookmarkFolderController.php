@@ -12,6 +12,7 @@ use Modules\Personalization\Actions\CreateBookmarkFolderAction;
 use Modules\Personalization\Actions\GetBookmarkFoldersAction;
 use Modules\Personalization\Actions\ToggleBookmarkFolderItemAction;
 use Modules\Personalization\Models\BookmarkFolder;
+use Modules\Personalization\Models\BookmarkFolderItem;
 
 final class BookmarkFolderController extends Controller
 {
@@ -69,11 +70,29 @@ final class BookmarkFolderController extends Controller
 
         abort_if((int) $folder->user_id !== (int) $user->getKey(), 403);
 
+        $questionId = (string) $validated['question_id'];
+        $requestedInFolder = isset($validated['in_folder']) ? (bool) $validated['in_folder'] : null;
+        $willBeInFolder = $requestedInFolder;
+
+        if ($willBeInFolder === null) {
+            $exists = BookmarkFolderItem::query()
+                ->where('folder_id', $folder->id)
+                ->where('question_id', $questionId)
+                ->exists();
+            $willBeInFolder = ! $exists;
+        }
+
+        if ($willBeInFolder) {
+            abort_unless($user->can('bookmark.create'), 403);
+        } else {
+            abort_unless($user->can('bookmark.delete'), 403);
+        }
+
         $result = $toggleFolder->handle(
             $user,
             $folder,
-            (string) $validated['question_id'],
-            isset($validated['in_folder']) ? (bool) $validated['in_folder'] : null,
+            $questionId,
+            $requestedInFolder,
         );
 
         return ApiResponse::item($result);

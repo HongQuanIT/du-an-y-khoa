@@ -11,7 +11,7 @@ use Modules\StudyPlan\Http\Controllers\Api\StudyPlanTaskApiController;
 | learning path CRUD/progress. See srs/modules/04.
 */
 
-Route::middleware(['auth:sanctum', 'portal:learner'])
+Route::middleware(['auth:sanctum', 'portal:learner', 'permission:study_plan.view'])
     ->scopeBindings()
     ->group(function (): void {
         Route::get('study-plans', [StudyPlanApiController::class, 'index'])->middleware('permission:study_plan.view')->name('plans.index');
@@ -20,5 +20,5 @@ Route::middleware(['auth:sanctum', 'portal:learner'])
 
         Route::get('study-plans/{plan}/tasks', [StudyPlanTaskApiController::class, 'index'])->middleware('permission:study_plan.view')->name('tasks.index');
         Route::post('study-plans/{plan}/tasks/{task}/start', [StudyPlanTaskApiController::class, 'start'])->middleware('permission:study_plan_task.start')->name('tasks.start');
-        Route::post('study-plans/{plan}/tasks/{task}/skip', [StudyPlanTaskApiController::class, 'skip'])->middleware('permission:study_plan_task.skip')->name('tasks.skip');
+        Route::post('study-plans/{plan}/tasks/{task}/skip', [StudyPlanTaskApiController::class, 'skip'])->middleware('permission:study_plan_task.start')->name('tasks.skip');
     });

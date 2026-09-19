@@ -12,7 +12,7 @@ final class QuestionSessionPolicy
 {
     public function view(User $user, QuestionSession $session): bool
     {
-        return $user->can('session.start')
+        return $user->canAny(['session.start', 'session.submit', 'session.review', 'session.repeat'])
             && (int) $session->user_id === (int) $user->getKey();
     }
 

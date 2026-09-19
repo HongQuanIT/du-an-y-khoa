@@ -25,14 +25,16 @@
 
 <nav class="mb-6 flex flex-wrap gap-2 border-b border-outline-variant pb-3" aria-label="Billing">
     @foreach ($billingNav as $tab)
-        @php $active = request()->routeIs($tab['match']); @endphp
-        <a href="{{ route($tab['route']) }}"
-            @class([
-                'rounded-lg px-3 py-1.5 font-label-md transition-colors',
-                'bg-primary text-on-primary' => $active,
-                'text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface' => ! $active,
-            ])>
-            {{ $tab['label'] }}
-        </a>
+        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), $tab['route']))
+            @php $active = request()->routeIs($tab['match']); @endphp
+            <a href="{{ route($tab['route']) }}"
+                @class([
+                    'rounded-lg px-3 py-1.5 font-label-md transition-colors',
+                    'bg-primary text-on-primary' => $active,
+                    'text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface' => ! $active,
+                ])>
+                {{ $tab['label'] }}
+            </a>
+        @endif
     @endforeach
 </nav>

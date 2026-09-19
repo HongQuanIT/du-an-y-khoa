@@ -19,8 +19,10 @@ use Modules\QuestionBank\Http\Controllers\WeakTopicSessionController;
 | Add server-rendered pages here; API lives in routes/api.php.
 */
 
-Route::middleware(['auth', 'learner', 'permission:question.view'])->group(function (): void {
-    Route::get('/qbank', QuestionBankPageController::class)->name('qbank.index');
+Route::middleware(['auth', 'learner'])->group(function (): void {
+    Route::get('/qbank', QuestionBankPageController::class)
+        ->middleware('permission:question.view|session.create|session.start|session.submit|session.review|session.repeat|session.delete|bookmark.view')
+        ->name('qbank.index');
     Route::get('/qbank/bookmarks', [QuestionBookmarkPageController::class, 'index'])
         ->middleware('permission:bookmark.view')->name('qbank.bookmarks');
     Route::delete('/qbank/bookmarks/{question}', [QuestionBookmarkPageController::class, 'destroy'])
@@ -36,7 +38,7 @@ Route::middleware(['auth', 'learner', 'permission:question.view'])->group(functi
         ->middleware('permission:session.create')
         ->name('qbank.weak-topics.session');
 
-    Route::prefix('qbank/taxonomy/lookups')->name('qbank.taxonomy.lookups.')->group(function (): void {
+    Route::prefix('qbank/taxonomy/lookups')->name('qbank.taxonomy.lookups.')->middleware('permission:session.create')->group(function (): void {
         Route::get('/blueprints', [TaxonomyLookupController::class, 'blueprints'])->name('blueprints');
         Route::get('/blueprints/{blueprint}/sections', [TaxonomyLookupController::class, 'blueprintSections'])->name('sections');
         Route::get('/sections/{section}/core-topics', [TaxonomyLookupController::class, 'coreClinicalTopics'])->name('core-topics');

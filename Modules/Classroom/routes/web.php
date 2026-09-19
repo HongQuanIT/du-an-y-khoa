@@ -25,9 +25,11 @@ Route::middleware(['auth', 'learner', 'permission:classroom.view'])
     ->name('classroom.')
     ->scopeBindings()
     ->group(function (): void {
-        Route::get('/', ClassroomIndexController::class)->name('index');
+        Route::get('/', ClassroomIndexController::class)
+            ->middleware('permission:classroom.view|classroom.join|classroom.leave')
+            ->name('index');
 
-        Route::get('/{classroom}', ClassroomShowController::class)->name('show');
+        Route::get('/{classroom}', ClassroomShowController::class)->middleware('permission:classroom.view')->name('show');
         Route::get('/{classroom}/settings', [ClassroomSettingsController::class, 'edit'])->middleware('permission:classroom_settings.update')->name('settings');
         Route::patch('/{classroom}/settings', [ClassroomSettingsController::class, 'update'])->middleware('permission:classroom_settings.update')->name('settings.update');
         Route::post('/{classroom}/invite', [ClassroomInviteController::class, 'store'])->middleware('permission:classroom_settings.update')->name('invite');

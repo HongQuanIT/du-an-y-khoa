@@ -209,16 +209,20 @@
                 </nav>
             </div>
             <div class="flex flex-wrap gap-2">
+                @can('bookmark.view')
                 <a href="{{ route('qbank.bookmarks') }}"
                     class="inline-flex items-center justify-center gap-2 rounded-xl border border-outline-variant px-5 py-3 text-label-md font-bold text-on-surface transition-colors hover:bg-surface-container-low">
                     <span class="material-symbols-outlined text-[20px]">folder_managed</span>
                     Câu hỏi đã lưu
                 </a>
+                @endcan
+                @can('session.create')
                 <a href="{{ route('qbank.create') }}"
                     class="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 text-label-md font-bold text-white shadow-md transition-all hover:bg-primary/90 active:scale-95">
                     <span class="material-symbols-outlined text-[20px]">add</span>
                     Tạo phiên luyện tập
                 </a>
+                @endcan
             </div>
         </div>
 
@@ -313,10 +317,12 @@
                                 Xem tất cả phiên
                             </a>
                         @endif
+                        @can('session.create')
                         <a href="{{ route('qbank.create') }}"
                             class="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-primary/90">
                             Tạo phiên luyện tập
                         </a>
+                        @endcan
                     </div>
                 </div>
             @else
@@ -369,11 +375,14 @@
                                         <div class="flex min-w-44 items-start justify-end gap-2">
                                             <div class="flex min-w-32 flex-col items-stretch gap-2">
                                                 @if ($row['status'] === 'active')
+                                                    @can('session.start')
                                                     <a href="{{ route('qbank.session', $session) }}"
                                                         class="rounded-xl bg-primary px-4 py-2 text-center text-xs font-bold text-white shadow-sm hover:bg-primary/90">
                                                         Tiếp tục
                                                     </a>
+                                                    @endcan
                                                 @elseif ($row['status'] === 'paused')
+                                                    @can('session.submit')
                                                     <form method="POST" action="{{ route('qbank.session.resume', $session) }}">
                                                         @csrf
                                                         <button type="submit"
@@ -381,7 +390,9 @@
                                                             Tiếp tục
                                                         </button>
                                                     </form>
+                                                    @endcan
                                                 @elseif ($row['status'] === 'completed')
+                                                    @can('session.review')
                                                     <a href="{{ route('qbank.review', $session) }}"
                                                         class="rounded-xl border-2 border-primary/20 px-4 py-2 text-center text-xs font-bold text-primary hover:border-primary hover:bg-primary/5">
                                                         Xem lại
@@ -390,6 +401,7 @@
                                                         class="rounded-xl border border-outline-variant px-4 py-2 text-center text-xs font-bold text-on-surface-variant hover:bg-surface-container-low">
                                                         Tổng kết
                                                     </a>
+                                                    @endcan
                                                 @else
                                                     <span class="rounded-xl bg-surface-container-low px-4 py-2 text-center text-xs font-bold text-on-surface-variant">
                                                         Không còn hoạt động
@@ -397,6 +409,7 @@
                                                 @endif
                                             </div>
 
+                                            @canany(['session.submit', 'session.repeat', 'session.delete'])
                                             <div class="relative" @click.outside="if (openMenu === @js((string) $session->getKey())) openMenu = null">
                                                 <button type="button"
                                                     @click.stop="openMenu = openMenu === @js((string) $session->getKey()) ? null : @js((string) $session->getKey())"
@@ -407,26 +420,33 @@
                                                 <div x-show="openMenu === @js((string) $session->getKey())" x-cloak
                                                     x-transition.origin.top.right
                                                     class="absolute top-10 right-0 z-30 w-44 overflow-hidden rounded-xl border border-outline-variant bg-white py-1 shadow-xl">
+                                                    @can('session.submit')
                                                     <button type="button"
                                                         @click="openRename(@js(['title' => $row['title'], 'renameUrl' => route('qbank.session.rename', $session, absolute: false)]))"
                                                         class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-surface-container-low">
                                                         <span class="material-symbols-outlined text-[19px]">edit</span>
                                                         Đặt lại tên
                                                     </button>
+                                                    @endcan
+                                                    @can('session.repeat')
                                                     <button type="button"
                                                         @click="openRepeat(@js(['title' => $row['title'], 'mode' => $row['mode'], 'repeatUrl' => route('qbank.session.repeat', $session, absolute: false), 'counts' => $row['repeatCounts']]))"
                                                         class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-surface-container-low">
                                                         <span class="material-symbols-outlined text-[19px]">replay</span>
                                                         Làm lại
                                                     </button>
+                                                    @endcan
+                                                    @can('session.delete')
                                                     <button type="button"
                                                         @click="openDelete(@js(['title' => $row['title'], 'deleteUrl' => route('qbank.session.destroy', $session, absolute: false)]))"
                                                         class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-error hover:bg-error-container/20">
                                                         <span class="material-symbols-outlined text-[19px]">delete</span>
                                                         Xoá
                                                     </button>
+                                                    @endcan
                                                 </div>
                                             </div>
+                                            @endcanany
                                         </div>
                                     </td>
                                 </tr>

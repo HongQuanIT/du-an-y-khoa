@@ -105,7 +105,7 @@ class RolePermissionSeeder extends Seeder
                 'profile.password_update',
                 'profile.avatar_update',
             ], collect($registry->all())
-                ->filter(fn ($definition): bool => in_array($definition->module, ['content', 'question_bank'], true))
+                ->filter(fn ($definition): bool => in_array($definition->module, ['cms', 'media', 'content', 'question_bank'], true))
                 ->reject(fn ($definition): bool => str_starts_with($definition->name, 'contact.'))
                 ->reject(fn ($definition): bool => in_array($definition->name, [
                     'question.view_any',

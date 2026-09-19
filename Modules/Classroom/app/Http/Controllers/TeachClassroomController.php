@@ -228,7 +228,7 @@ final class TeachClassroomController extends Controller
     public function scheduleLive(ScheduleSessionRequest $request, Classroom $classroom, ScheduleLiveSessionAction $action): RedirectResponse
     {
         $this->authorizeTeachClassroom($request, $classroom);
-        $this->authorize('manageLive', $classroom);
+        $this->authorize('scheduleLive', $classroom);
         abort_if($classroom->status === ClassroomStatus::Closed, 409, 'Lớp đã đóng. Không thể lên lịch buổi live mới.');
         $session = $action->handle($classroom, $request->sessionPayload());
         $this->auditLive($request, AuditAction::ClassroomLiveScheduled, $classroom, $session);
@@ -471,8 +471,7 @@ final class TeachClassroomController extends Controller
     public function startLive(Request $request, Classroom $classroom, LiveSession $liveSession, StartLiveSessionAction $action): RedirectResponse
     {
         $this->authorizeTeachClassroom($request, $classroom);
-        // Instructors may test/host a pending classroom; learners remain blocked until approval.
-        $this->authorize('manageLive', $classroom);
+        $this->authorize('startLive', $classroom);
         abort_if($classroom->status === ClassroomStatus::Closed, 409, 'Lớp đã đóng. Không thể bắt đầu buổi live.');
         $action->handle($classroom, $liveSession, allowReopen: true);
         $this->auditLive($request, AuditAction::ClassroomLiveStarted, $classroom, $liveSession->fresh() ?? $liveSession);
@@ -483,7 +482,7 @@ final class TeachClassroomController extends Controller
     public function studio(Request $request, Classroom $classroom, LiveSession $liveSession, LiveKitTokenService $tokens): View|RedirectResponse
     {
         $this->authorizeTeachClassroom($request, $classroom);
-        $this->authorize('manageLive', $classroom);
+        $this->authorize('startLive', $classroom);
         if ($liveSession->status === LiveSessionStatus::Ended) {
             return redirect()
                 ->route('teach.classes.show', $classroom)
@@ -516,7 +515,7 @@ final class TeachClassroomController extends Controller
     public function endLive(Request $request, Classroom $classroom, LiveSession $liveSession, EndLiveSessionAction $action): RedirectResponse
     {
         $this->authorizeTeachClassroom($request, $classroom);
-        $this->authorize('manageLive', $classroom);
+        $this->authorize('endLive', $classroom);
         $action->handle($classroom, $liveSession);
         $this->auditLive($request, AuditAction::ClassroomLiveEnded, $classroom, $liveSession->fresh() ?? $liveSession);
 

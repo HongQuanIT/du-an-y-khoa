@@ -2,6 +2,17 @@
 
 ## 2026-09-19
 
+### Fix — RBAC: Rà soát phân quyền Portal Học viên, Portal Giảng viên & Portal Admin
+
+- **Portal Giảng viên**:
+  - Phân tách và áp dụng chính xác 3 quyền buổi học: `classroom_session.schedule` (Lên lịch), `classroom_session.start` (Bắt đầu) và `classroom_session.end` (Kết thúc) trong Policy, Controller và View `show.blade.php`.
+  - Sửa lỗi 403 khi Duyệt chuyên môn câu hỏi: `InstructorReviewQuestionAction` cho phép phân quyền `question.approve` và `question.reject` hoạt động thay vì chỉ đòi `question.review`.
+- **Portal Học viên**:
+  - Thêm middleware kiểm tra quyền `view` tổng thể cho Classroom (`classroom.view`), Exam (`exam.view`), QBank (`question.view`) và Study Plan (`study_plan.view`), chặn truy cập trực tiếp URL và ẩn các widget Dashboard khi bị Admin tắt quyền.
+- **Portal Admin**:
+  - Tách nhãn quyền CMS, Media, Liên hệ thành các mục độc lập; đổi tên "Nhật ký kiểm toán" thành "Audit Log".
+  - Ẩn tab Thanh toán / Cổng thanh toán khi Admin tắt permission view tương ứng.
+
 ### Fix — RBAC: sửa lỗi chặn quyền cứng và đồng bộ UI Admin
 - Bỏ kiểm tra cứng `Role::Reviewer` khi gắn cờ câu hỏi; hệ thống giờ tuân thủ hoàn toàn theo Permission (`question.flag`, `question_flag.view`).
 - Ẩn hoàn toàn form thao tác gắn cờ trên giao diện nếu người dùng không có quyền thao tác (dù được cấp quyền xem).
