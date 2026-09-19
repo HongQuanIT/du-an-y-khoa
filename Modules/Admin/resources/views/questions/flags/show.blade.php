@@ -49,7 +49,11 @@
                 </form>
             @else
                 <div class="rounded-2xl border border-outline-variant bg-surface-container-low p-5 text-sm text-on-surface-variant">
-                    Bạn đã gắn cờ cho câu này — chỉ xem lại nội dung.
+                    @if (! $hasFlagPermission)
+                        Bạn không có quyền thao tác gắn cờ.
+                    @else
+                        Bạn đã gắn cờ cho câu này — chỉ xem lại nội dung.
+                    @endif
                 </div>
             @endif
         </div>

@@ -29,10 +29,9 @@ final class FlagQuestionReviewAction
     public function handle(User $reviewer, Question $question, ReviewerFlag $flag, ?string $note = null): Question
     {
         abort_unless(
-            $reviewer->hasRole(Role::Reviewer->value)
-            && $reviewer->can(Permission::QuestionFlag->value),
+            $reviewer->can(Permission::QuestionFlag->value),
             403,
-            'Chỉ reviewer được gắn cờ.',
+            'Bạn không có quyền gắn cờ.',
         );
 
         $note = trim(strip_tags((string) $note));

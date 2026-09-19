@@ -86,13 +86,16 @@ final class QuestionFlagController extends Controller
         ]);
 
         $actor = $this->actor();
+        $hasFlagPermission = $actor->can(Permission::QuestionFlag->value);
         $canFlag = $question->status === QuestionStatus::InFlagReview
             && (int) $question->created_by !== (int) $actor->getKey()
-            && ! $this->flagCycle->actorHasFlagged($question, $actor);
+            && ! $this->flagCycle->actorHasFlagged($question, $actor)
+            && $hasFlagPermission;
 
         return view('admin::questions.flags.show', [
             'question' => $question,
             'canFlag' => $canFlag,
+            'hasFlagPermission' => $hasFlagPermission,
             'ownFlag' => $this->flagCycle->actorFlag($question, $actor),
             'flags' => ReviewerFlag::cases(),
         ]);
@@ -161,8 +164,7 @@ final class QuestionFlagController extends Controller
     private function authorizeFlag(): void
     {
         abort_unless(
-            $this->actor()->hasRole(Role::Reviewer->value)
-            && $this->actor()->can('question_flag.view')
+            $this->actor()->can('question_flag.view')
             && $this->actor()->can(Permission::QuestionFlag->value),
             403,
         );
@@ -171,8 +173,7 @@ final class QuestionFlagController extends Controller
     private function authorizeFlagView(): void
     {
         abort_unless(
-            $this->actor()->hasRole(Role::Reviewer->value)
-            && $this->actor()->can('question_flag.view'),
+            $this->actor()->can('question_flag.view'),
             403,
         );
     }
