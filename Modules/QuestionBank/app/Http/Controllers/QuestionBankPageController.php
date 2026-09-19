@@ -72,7 +72,10 @@ final class QuestionBankPageController extends Controller
                 'mode' => $mode?->value,
                 'status' => $status?->value,
             ],
-            'modeOptions' => SessionMode::cases(),
+            'modeOptions' => collect(SessionMode::cases())
+                ->filter(fn ($m) => $m !== SessionMode::Exam || $request->user()->can('exam.take'))
+                ->values()
+                ->all(),
             'statusOptions' => SessionStatus::cases(),
         ]);
     }

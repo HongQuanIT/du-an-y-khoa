@@ -43,14 +43,18 @@ return [
                 'tag' => ['view', 'create', 'update', 'delete'],
             ],
             'exam' => [
-                'exam' => ['view', 'create', 'update', 'delete', 'publish', 'archive'],
+                'exam' => ['view', 'delete'],
             ],
             'classroom' => [
                 'classroom_oversight' => ['view', 'create_on_behalf', 'update', 'approve', 'reject', 'archive', 'schedule'],
             ],
-            'content' => [
+            'cms' => [
                 'cms' => ['view', 'create', 'update', 'delete'],
+            ],
+            'media' => [
                 'media' => ['view', 'upload', 'update', 'delete'],
+            ],
+            'contact' => [
                 'contact' => ['view', 'update'],
             ],
             'reporting' => [
@@ -111,11 +115,11 @@ return [
             ],
             'study_plan' => [
                 'study_plan' => ['view', 'create'],
-                'study_plan_task' => ['start', 'complete', 'skip', 'review'],
+                'study_plan_task' => ['start', 'complete', 'review'],
             ],
             'learning' => [
                 'search' => ['use'],
-                'bookmark' => ['view', 'create', 'update', 'delete'],
+                'bookmark' => ['view', 'create', 'delete'],
                 'learning_tool' => ['note', 'flag', 'highlight', 'research'],
             ],
             'classroom' => [

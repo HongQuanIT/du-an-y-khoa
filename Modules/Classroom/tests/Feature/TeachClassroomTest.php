@@ -770,6 +770,48 @@ final class TeachClassroomTest extends TestCase
             ->assertOk();
     }
 
+    public function test_revoking_session_permissions_hides_ui_and_returns_403(): void
+    {
+        $instructor = $this->instructor(['email' => 'session-permissions-test@example.com']);
+        $classroom = $this->seedClassroom($instructor, ClassroomPurpose::FeedbackReview);
+        $scheduledSession = LiveSession::query()->create([
+            'classroom_id' => $classroom->id,
+            'title' => 'Buổi live chờ bắt đầu',
+            'status' => LiveSessionStatus::Scheduled,
+            'scheduled_at' => now()->addHour(),
+        ]);
+
+        $role = \Spatie\Permission\Models\Role::findByName(Role::Instructor->value);
+        $role->revokePermissionTo('classroom_session.schedule');
+        $role->revokePermissionTo('classroom_session.start');
+        $role->revokePermissionTo('classroom_session.end');
+
+        $this->actingAs($instructor)
+            ->get(route('teach.classes.show', $classroom))
+            ->assertOk()
+            ->assertDontSee(route('teach.classes.sessions.store', $classroom), false)
+            ->assertDontSee(route('teach.classes.sessions.start', [$classroom, $scheduledSession]), false);
+
+        $this->actingAs($instructor)
+            ->post(route('teach.classes.sessions.store', $classroom), [
+                'title' => 'Buổi live mới',
+                'scheduled_at' => now()->addHours(2)->toDateTimeString(),
+            ])
+            ->assertStatus(403);
+
+        $this->actingAs($instructor)
+            ->post(route('teach.classes.sessions.start', [$classroom, $scheduledSession]))
+            ->assertStatus(403);
+
+        $this->actingAs($instructor)
+            ->get(route('teach.classes.sessions.studio', [$classroom, $scheduledSession]))
+            ->assertStatus(403);
+
+        $this->actingAs($instructor)
+            ->post(route('teach.classes.sessions.end', [$classroom, $scheduledSession]))
+            ->assertStatus(403);
+    }
+
     /** @param  array<string, mixed>  $attributes */
     private function instructor(array $attributes = []): User
     {

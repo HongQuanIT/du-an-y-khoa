@@ -22,7 +22,7 @@ Route::middleware(['auth', 'learner'])->group(function (): void {
         ->middleware('permission:bookmark.create')
         ->name('bookmarks.folders.store');
     Route::post('/bookmarks/folders/{folder}/toggle', [BookmarkFolderController::class, 'toggle'])
-        ->middleware('permission:bookmark.update|bookmark.create')
+        ->middleware('permission:bookmark.create|bookmark.delete')
         ->name('bookmarks.folders.toggle');
     Route::delete('/bookmarks/folders/{folder}', [BookmarkFolderController::class, 'destroy'])
         ->middleware('permission:bookmark.delete')

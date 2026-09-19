@@ -7,3 +7,7 @@ declare(strict_types=1);
 | exams + self-assessment. Gate with `subscription:exam.simulation`.
 | See srs/modules/23,24.
 */
+
+Route::middleware(['auth:sanctum', 'portal:learner', 'permission:exam.view'])->group(function (): void {
+    //
+});

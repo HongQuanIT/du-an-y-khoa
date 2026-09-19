@@ -530,6 +530,7 @@
                                     @include('questionbank::partials.taxonomy-session-filter-rows')
                                 </div>
 
+                                @can('bookmark.view')
                                 <button type="button" x-show="!isAdaptive()" @click="foldersModalOpen = true"
                                     class="group flex w-full items-center justify-between border-b border-outline-variant px-6 py-4 text-left transition-colors hover:bg-surface-container-lowest">
                                     <span class="flex items-center gap-4">
@@ -543,6 +544,7 @@
                                         <span class="material-symbols-outlined text-[18px] text-on-surface-variant">chevron_right</span>
                                     </span>
                                 </button>
+                                @endcan
                             </div>
                         </div>
                     </div>
@@ -728,13 +730,16 @@
                         <input type="radio" name="mode" value="study" x-model="mode" class="sr-only">
                         Chế độ học tập
                     </label>
+                    @can('exam.take')
                     <label class="cursor-pointer rounded-lg px-3 py-2 text-sm font-bold transition-all md:px-6"
                         :class="mode === 'exam' ? 'border border-primary bg-white text-primary shadow-sm' : 'text-on-surface-variant hover:text-on-surface'">
                         <input type="radio" name="mode" value="exam" x-model="mode" class="sr-only">
                         Chế độ thi
                     </label>
+                    @endcan
                 </div>
             </div>
+            @can('session.start')
             <button type="submit"
                 :disabled="!canStart()"
                 class="rounded-lg px-6 py-2.5 font-bold text-white transition-all md:px-12"
@@ -743,6 +748,7 @@
                     : 'bg-primary shadow-md hover:bg-primary/90'">
                 <span x-text="submitting ? 'Đang tạo…' : 'Bắt đầu'"></span>
             </button>
+            @endcan
         </div>
 
         <div x-show="activeFilter" x-cloak

@@ -15,12 +15,14 @@ use Modules\StudyPlan\Http\Controllers\StudyPlanTaskController;
 | another plan cannot be addressed (srs/modules/04 §13).
 */
 
-Route::middleware(['auth', 'learner'])
+Route::middleware(['auth', 'learner', 'permission:study_plan.view'])
     ->prefix('study-plan')
     ->name('study-plan.')
     ->scopeBindings()
     ->group(function (): void {
-        Route::get('/', StudyPlanPageController::class)->middleware('permission:study_plan.view')->name('index');
+        Route::get('/', StudyPlanPageController::class)
+            ->middleware('permission:study_plan.view|study_plan.create|study_plan_task.start|study_plan_task.complete|study_plan_task.review')
+            ->name('index');
 
         Route::get('/create', [StudyPlanCreateController::class, 'create'])->middleware('permission:study_plan.create')->name('create');
         Route::post('/', [StudyPlanCreateController::class, 'store'])->middleware('permission:study_plan.create')->name('store');
@@ -29,7 +31,7 @@ Route::middleware(['auth', 'learner'])
         Route::get('/{plan}/schedule', StudyPlanScheduleController::class)->middleware('permission:study_plan.view')->name('schedule');
 
         Route::post('/{plan}/tasks/{task}/start', [StudyPlanTaskController::class, 'start'])->middleware('permission:study_plan_task.start')->name('tasks.start');
-        Route::post('/{plan}/tasks/{task}/skip', [StudyPlanTaskController::class, 'skip'])->middleware('permission:study_plan_task.skip')->name('tasks.skip');
+        Route::post('/{plan}/tasks/{task}/skip', [StudyPlanTaskController::class, 'skip'])->middleware('permission:study_plan_task.start')->name('tasks.skip');
 
         Route::get('/{plan}/tasks/{task}/session', [StudyPlanSessionController::class, 'show'])->middleware('permission:study_plan_task.start')->name('session');
         Route::post('/{plan}/tasks/{task}/session', [StudyPlanSessionController::class, 'answer'])->middleware('permission:session.start')->name('session.answer');

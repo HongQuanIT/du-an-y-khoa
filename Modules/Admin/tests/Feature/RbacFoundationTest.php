@@ -32,7 +32,7 @@ final class RbacFoundationTest extends TestCase
     {
         $names = app(PermissionRegistry::class)->names();
 
-        $this->assertGreaterThanOrEqual(160, count($names));
+        $this->assertGreaterThanOrEqual(150, count($names));
         $this->assertLessThanOrEqual(300, count($names));
         $this->assertCount(count(array_unique($names)), $names);
         $this->assertContains('user.role_assign', $names);

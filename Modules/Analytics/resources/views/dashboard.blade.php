@@ -232,6 +232,7 @@
             </section>
 
             <!-- Weak Subjects -->
+            @can('question.view')
             <div class="col-span-12 rounded-xl border border-outline-variant bg-surface p-6 md:col-span-6">
                 <div class="mb-6 flex items-center justify-between">
                     <h3 class="font-headline-sm text-headline-sm text-on-surface">Chủ đề cần cải thiện</h3>
@@ -277,8 +278,10 @@
                     </p>
                 @enderror
             </div>
+            @endcan
 
             <!-- Today's Tasks -->
+            @can('study_plan.view')
             <div class="col-span-12 rounded-xl border border-outline-variant bg-surface p-6 md:col-span-6">
                 <div class="mb-6 flex items-center justify-between">
                     <h3 class="font-headline-sm text-headline-sm text-on-surface">Nhiệm vụ hôm nay</h3>
@@ -323,6 +326,7 @@
                     @endforelse
                 </div>
             </div>
+            @endcan
 
             <!-- Recommendation Carousel -->
             <div class="col-span-12">

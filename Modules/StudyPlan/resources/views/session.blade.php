@@ -772,6 +772,7 @@
                                     <span>Kiến thức</span>
                                 </button>
                             @endif
+                            @can('bookmark.create')
                             <button type="button" @click="openFolderModal()" :disabled="bookmarkSaving"
                                 class="inline-flex h-12 items-center gap-2 border-b-2 px-3 text-label-sm font-bold transition-colors disabled:cursor-wait disabled:opacity-60"
                                 :class="bookmarked
@@ -785,6 +786,7 @@
                                     :class="bookmarked && 'fill-1'">folder_managed</span>
                                 <span class="hidden sm:inline" x-text="bookmarked ? 'Đã lưu' : 'Lưu'"></span>
                             </button>
+                            @endcan
                             <button type="button" @click="openFeedback('question')"
                                 class="inline-flex h-12 items-center gap-2 border-b-2 border-transparent px-3 text-label-sm font-bold text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-primary"
                                 aria-label="Phản hồi về nội dung câu hỏi">
@@ -798,6 +800,7 @@
                         </div>
 
                         <!-- Save question in folder modal -->
+                        @can('bookmark.create')
                         <div x-show="folderModalOpen" x-cloak
                             class="fixed inset-0 z-50 flex items-center justify-center p-4"
                             @keydown.escape.window="folderModalOpen = false">
@@ -874,6 +877,7 @@
                                 </div>
                             </div>
                         </div>
+                        @endcan
 
                         @if ($hasAttendingTip)
                             <div x-show="attendingTipOpen" x-cloak x-transition class="space-y-3"
