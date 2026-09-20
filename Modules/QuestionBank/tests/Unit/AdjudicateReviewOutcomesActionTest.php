@@ -109,4 +109,74 @@ final class AdjudicateReviewOutcomesActionTest extends TestCase
             QuestionReviewerFlag::query()->where('question_id', $question->id)->first()?->outcome,
         );
     }
+
+    public function test_publish_confirms_undisputed_green_flags(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole(Role::Admin->value);
+        $reviewer = User::factory()->create();
+
+        $question = Question::factory()->create([
+            'status' => QuestionStatus::Published,
+            'difficulty' => Difficulty::Medium,
+            'instructor_review_cycle' => 1,
+            'content_fingerprint' => 'fp-ok',
+        ]);
+
+        QuestionReviewerFlag::query()->create([
+            'question_id' => $question->id,
+            'review_cycle' => 1,
+            'reviewer_id' => $reviewer->id,
+            'flag' => ReviewerFlag::Green,
+            'note' => null,
+            'content_fingerprint' => 'fp-ok',
+            'reviewed_at' => now()->subHour(),
+            'outcome' => ReviewFlagOutcome::Pending,
+        ]);
+
+        app(AdjudicateReviewOutcomesAction::class)->onPublish($question, $admin);
+
+        $this->assertSame(
+            ReviewFlagOutcome::Confirmed,
+            QuestionReviewerFlag::query()->where('question_id', $question->id)->first()?->outcome,
+        );
+    }
+
+    public function test_manual_marks_instructor_reject_as_over_reject(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole(Role::Admin->value);
+        $instructor = User::factory()->create();
+
+        $question = Question::factory()->create([
+            'status' => QuestionStatus::Rejected,
+            'difficulty' => Difficulty::Medium,
+            'instructor_review_cycle' => 1,
+            'content_fingerprint' => 'fp-ok',
+        ]);
+
+        $review = QuestionInstructorReview::query()->create([
+            'question_id' => $question->id,
+            'review_cycle' => 1,
+            'instructor_id' => $instructor->id,
+            'decision' => InstructorReviewDecision::Rejected,
+            'note' => 'Từ chối nhầm',
+            'content_fingerprint' => 'fp-ok',
+            'reviewed_at' => now(),
+            'outcome' => InstructorReviewOutcome::Pending,
+        ]);
+
+        app(AdjudicateReviewOutcomesAction::class)->manualInstructorOutcome(
+            $review,
+            $admin,
+            InstructorReviewOutcome::OverReject,
+            'Admin xác nhận từ chối oan',
+        );
+
+        $review->refresh();
+        $this->assertSame(InstructorReviewOutcome::OverReject, $review->outcome);
+        $this->assertSame('admin', $review->outcome_source);
+        $this->assertSame($admin->id, (int) $review->outcome_by);
+        $this->assertSame('Admin xác nhận từ chối oan', $review->outcome_note);
+    }
 }

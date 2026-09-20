@@ -57,11 +57,6 @@
                     'bg-emerald-100 text-emerald-900' => $lesson['change'] === 'added',
                     'bg-surface-container-high text-on-surface' => $lesson['change'] === 'same',
                 ])>
-                    @if ($lesson['change'] === 'removed')
-                        <span class="no-underline font-bold">Xóa</span>
-                    @elseif ($lesson['change'] === 'added')
-                        <span class="font-bold">Thêm</span>
-                    @endif
                     {{ $lesson['label'] }}
                 </span>
             @empty
@@ -170,9 +165,6 @@
                 'text-emerald-900' => $item['change'] === 'added',
                 'text-on-surface' => $item['change'] === 'same',
             ])>
-                @if ($item['change'] === 'removed')
-                    <span class="mr-1 no-underline font-bold">Xóa</span>
-                @endif
                 • {!! $item['html'] !!}
             </p>
         @endforeach

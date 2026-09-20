@@ -103,13 +103,22 @@ Import: commit tạo hàng loạt `draft`.
 - Nguồn: `question_instructor_reviews` + `question_reviewer_flags` + `question_workflow_events` (`submit` / `admin_reject` / `publish`).
 - UI form: partial «Lịch sử duyệt» nhóm theo `review_cycle` — ai duyệt, ai gắn cờ, ai trả về, ghi chú, thời gian.
 - Khi publish: ghi `snapshot.review_pipeline` (cycle, reject count, instructor, 2 cờ, publisher) vào `question_versions`.
-- List admin: nhãn `pipelineProgressLabel()` = «Vòng N · X lần trả về».
+- List admin: nhãn `pipelineProgressLabel()` = «Vòng N · X lần trả về» **chỉ khi còn trong pipeline** (nháp/chờ duyệt/chờ XB/từ chối). Đã xuất bản / private / retire → không hiện (tránh hiểu nhầm còn đang vòng duyệt).
+- Timeline «Lịch sử duyệt»: nhóm theo **phiên bản** — «Bản hiện tại» (trạng thái working copy + các vòng sau XB gần nhất) và từng **Phiên bản N đã xuất bản** (các vòng duyệt dẫn tới XB đó). Mỗi segment mở/đóng; trong segment là các vòng + QA.
 
 ### 5.1c QA chất lượng duyệt (Admin)
-- Outcome trên `question_reviewer_flags` / `question_instructor_reviews`: cờ đỏ `confirmed|false_positive|inconclusive`; GV `confirmed|miss|over_reject|inconclusive`.
-- Admin trả về khi có cờ đỏ: chọn **Cờ đỏ đúng** (mặc định) hoặc **Cờ có thể oan** — ghi outcome ngay.
-- Khi publish: heuristic so fingerprint lúc gắn cờ vs fingerprint hiện tại để adjudicate các outcome còn `pending`.
-- Báo cáo `content.review-qa` (Module 41 / Báo cáo → Hiệu quả nội dung): KPI kỳ, trend cờ, bảng precision reviewer. Permission: `report.view` + `question.view`.
+- Outcome trên `question_reviewer_flags` / `question_instructor_reviews` (theo từng **vòng** `review_cycle` + actor):
+  - Reviewer: `pending|confirmed|false_positive|inconclusive` — `confirmed` = gắn đúng, `false_positive` = **gắn sai** (đỏ oan **hoặc** xanh sai).
+  - GV: `pending|confirmed|miss|over_reject|inconclusive` — Admin chỉ thấy **Duyệt đúng / Duyệt sai**; `miss` (approve sai) và `over_reject` (reject sai) đều là duyệt sai (cùng nhãn).
+- **Đánh dấu ngay tại vòng (khuyến nghị UX):** trên «Lịch sử duyệt», mỗi entry cờ/duyệt có badge outcome + Admin (permission `question.update`) chỉnh outcome thủ công khi phát hiện sai — ghi `outcome_source=admin`, `outcome_by`, `outcome_at`, `outcome_note`.
+- **Cascade theo vòng khi Admin adjudicate:**
+  - Xác nhận cờ đỏ đúng → set red flags vòng đó `confirmed` + approve GV cùng vòng → `miss` (hiển thị **Duyệt sai**).
+  - Đánh cờ đỏ gắn sai → red flags `false_positive`; không quy lỗi GV.
+  - Đánh cờ xanh gắn sai (nên đỏ) → green flags `false_positive`; nếu cùng vòng có approve GV → `miss`.
+  - Đánh GV duyệt sai khi reject → lưu `over_reject` (UI: **Duyệt sai**).
+- **Tự động (giữ):** Admin trả về khi có cờ đỏ chọn Cờ đỏ đúng / Cờ đỏ gắn sai; khi publish heuristic fingerprint adjudicate pending đỏ + reject GV; approve không bị tranh chấp → `confirmed`.
+- Báo cáo `content.review-qa`: KPI + bảng Reviewer (tổng/đỏ/xanh/gắn sai) + bảng GV (tổng/approve/reject/duyệt sai). Permission: `report.view` + `question.view`.
+- **UI:** «Lịch sử duyệt» — Admin chọn **Duyệt đúng / Duyệt sai** (hoặc Gắn đúng / Gắn sai) rồi Lưu QA; ghi đúng `review_cycle` + actor.
 
 ### 5.2 Versioning — **chỉ tăng khi Super Admin publish**
 - Mọi chỉnh sửa của Content Creator trên **working copy** (`questions` + options…): **không** tạo / tăng version.
@@ -120,7 +129,7 @@ Import: commit tạo hàng loạt `draft`.
   - gán `publisher_id`, `published_at`; giữ `instructor_id` của lần duyệt lớp 1 tương ứng
 - Version tăng dần (1, 2, 3…); mới nhất = `MAX(version_number)`.
 - Session/review đang chạy dùng snapshot version lúc làm bài.
-- **Không** rollback in-place — muốn bản cũ độc lập → **Clone** từ snapshot (§5.5).
+- **Khôi phục phiên bản (Editor):** áp snapshot vào **working copy** + về `draft`; **không** +version, **không** tạo `question_versions`. QBank vẫn phục vụ `published_version` đến khi Admin publish lại. Muốn bản cũ thành câu độc lập → **Clone** (§5.5).
 - Admin UI version history: `version_number`, instructor, publisher, thời gian publish, xem snapshot read-only.
 
 ### 5.3 Workflow & trạng thái câu hỏi

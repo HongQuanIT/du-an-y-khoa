@@ -20,10 +20,15 @@ enum InstructorReviewOutcome: string
     {
         return match ($this) {
             self::Pending => 'Chưa đánh giá',
-            self::Confirmed => 'Quyết định đúng',
-            self::Miss => 'Duyệt sót',
-            self::OverReject => 'Từ chối oan',
+            self::Confirmed => 'Duyệt đúng',
+            // miss (approve sai) + over_reject (reject sai) = cùng nhãn «Duyệt sai» cho Admin.
+            self::Miss, self::OverReject => 'Duyệt sai',
             self::Inconclusive => 'Chưa rõ',
         };
+    }
+
+    public function isIncorrect(): bool
+    {
+        return $this === self::Miss || $this === self::OverReject;
     }
 }

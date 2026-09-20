@@ -320,6 +320,10 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
             ->middleware('permission:question.update|question.submit|question.publish|question.reject')
             ->name('questions.transition');
 
+        Route::post('/questions/{question}/review-outcomes', [QuestionController::class, 'adjudicateReviewOutcome'])
+            ->middleware('permission:question.update|question.publish|question.reject')
+            ->name('questions.review-outcomes');
+
         Route::middleware('permission:question.reject|'.Permission::QuestionPublish->value)->group(function (): void {
             Route::get('/question-reviews/{reviewRequest}', [QuestionReviewController::class, 'show'])
                 ->name('questions.reviews.show');

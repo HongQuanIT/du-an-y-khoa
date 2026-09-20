@@ -31,7 +31,7 @@
                 <span class="material-symbols-outlined text-[18px]" :class="{ 'animate-spin': inFlight }" x-text="inFlight ? 'progress_activity' : 'cached'"></span>
                 <span x-text="inFlight ? 'Đang xử lý…' : 'Làm mới báo cáo'"></span>
             </button>
-            @if (count($data['columns']) > 0)
+            @if (count($data['columns']) > 0 || count($data['sections'] ?? []) > 0)
                 @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.reports.export'))
 <a href="{{ route('admin.reports.export', ['category' => $category['slug'], 'report' => $report['slug'], 'range' => $range]) }}"
                     class="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 font-label-md text-label-md text-on-primary transition hover:opacity-90">
@@ -123,7 +123,55 @@
             </div>
         @endif
 
-        @if (count($data['columns']) > 0)
+        @if (count($data['sections'] ?? []) > 0)
+            @foreach ($data['sections'] as $section)
+                <section class="mb-6 overflow-hidden rounded-xl border border-outline-variant bg-surface">
+                    <div class="flex items-center justify-between border-b border-outline-variant px-5 py-4">
+                        <div>
+                            <h3 class="font-headline-sm text-headline-sm text-on-surface">{{ $section['title'] }}</h3>
+                            @if (! empty($section['empty_message']) && count($section['rows']) === 0)
+                                <p class="mt-0.5 font-body-sm text-body-sm text-on-surface-variant">{{ $section['empty_message'] }}</p>
+                            @else
+                                <p class="mt-0.5 font-body-sm text-body-sm text-on-surface-variant">{{ count($section['rows']) }} dòng</p>
+                            @endif
+                        </div>
+                    </div>
+
+                    @if (count($section['rows']) === 0)
+                        <p class="px-5 py-10 text-center font-body-sm text-body-sm text-on-surface-variant">
+                            {{ $section['empty_message'] ?? 'Không có dòng dữ liệu trong kỳ này.' }}
+                        </p>
+                    @else
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full text-left font-body-sm text-body-sm">
+                                <thead class="border-b border-outline-variant bg-surface-container-low font-label-md text-label-md text-on-surface-variant">
+                                    <tr>
+                                        @foreach ($section['columns'] as $column)
+                                            <th @class([
+                                                'px-4 py-3 whitespace-nowrap',
+                                                'text-right' => ($column['align'] ?? 'left') === 'right',
+                                            ])>{{ $column['label'] }}</th>
+                                        @endforeach
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach ($section['rows'] as $row)
+                                        <tr class="border-b border-outline-variant/60 last:border-0">
+                                            @foreach ($section['columns'] as $column)
+                                                <td @class([
+                                                    'px-4 py-3 whitespace-nowrap text-on-surface',
+                                                    'text-right tabular-nums' => ($column['align'] ?? 'left') === 'right',
+                                                ])>{{ $row[$column['key']] ?? '—' }}</td>
+                                            @endforeach
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
+                </section>
+            @endforeach
+        @elseif (count($data['columns']) > 0)
             <section class="mb-6 overflow-hidden rounded-xl border border-outline-variant bg-surface">
                 <div class="flex items-center justify-between border-b border-outline-variant px-5 py-4">
                     <div>

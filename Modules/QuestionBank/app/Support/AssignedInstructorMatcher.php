@@ -87,6 +87,10 @@ final class AssignedInstructorMatcher
                     ->orWhere('status', UserStatus::Active->value);
             })
             ->whereHas('instructorSubjects', fn ($query) => $query->whereIn('subjects.id', $subjects))
+            ->with(['instructorSubjects' => fn ($query) => $query
+                ->whereIn('subjects.id', $subjects)
+                ->orderBy('name')
+                ->select('subjects.id', 'subjects.name')])
             ->orderBy('name')
             ->get(['id', 'name', 'email']);
     }

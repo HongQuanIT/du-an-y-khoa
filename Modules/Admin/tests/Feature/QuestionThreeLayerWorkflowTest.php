@@ -97,6 +97,7 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
             ]))
             ->assertOk()
             ->assertJsonFragment(['id' => $match->id, 'name' => $match->name])
+            ->assertJsonPath('instructors.0.subjects.0', $this->subject->name)
             ->assertJsonMissing(['id' => $mismatch->id]);
 
         $this->actingAsStaff($editor)
@@ -230,7 +231,8 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
             ->get(route('admin.reports.show', ['content', 'review-qa', 'range' => '30d']))
             ->assertOk()
             ->assertSee('QA duyệt câu hỏi', false)
-            ->assertSee('Độ chính xác cờ đỏ', false);
+            ->assertSee('Cờ gắn sai', false)
+            ->assertSee('Duyệt sai', false);
     }
 
     public function test_review_timeline_and_version_pipeline_metadata(): void
@@ -297,6 +299,12 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
         $this->assertSame(2, $timeline['current_cycle']);
         $this->assertGreaterThanOrEqual(2, count($timeline['cycles']));
         $this->assertSame(1, $timeline['total_rejects']);
+        $this->assertNotEmpty($timeline['segments']);
+        $publishedSegment = collect($timeline['segments'])->firstWhere('kind', 'published');
+        $this->assertNotNull($publishedSegment);
+        $this->assertSame(1, $publishedSegment['version']);
+        $this->assertSame(2, $publishedSegment['cycle_count']);
+        $this->assertStringContainsString('vòng duyệt', $publishedSegment['summary']);
 
         $version = \Modules\QuestionBank\Models\QuestionVersion::query()
             ->where('question_id', $question->id)
@@ -312,12 +320,13 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
             ->assertOk()
             ->assertSee('Lịch sử duyệt', false)
             ->assertSee($instructor->name, false)
-            ->assertSee('Giảng viên từ chối', false);
+            ->assertSee('Giảng viên từ chối', false)
+            ->assertSee('Phiên bản 1', false);
 
         $this->actingAsStaff($admin)
             ->get(route('admin.questions.versions.index', $question))
             ->assertOk()
-            ->assertSee('lần trả về trước XB', false)
+            ->assertSee('lần từ chối', false)
             ->assertSee($instructor->name, false);
     }
 

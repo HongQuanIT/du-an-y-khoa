@@ -13,6 +13,7 @@ use Modules\Admin\Support\QuestionAccess;
 use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionVersion;
+use Modules\QuestionBank\Support\QuestionReviewTimeline;
 
 final class QuestionVersionController extends Controller
 {
@@ -43,12 +44,29 @@ final class QuestionVersionController extends Controller
             )
             ->pluck('name', 'id');
 
+        $timeline = app(QuestionReviewTimeline::class)->build($question);
+        $versionPipelineSummaries = collect($timeline['segments'] ?? [])
+            ->where('kind', 'published')
+            ->mapWithKeys(fn (array $segment): array => [
+                (int) $segment['version'] => [
+                    'summary' => (string) ($segment['summary'] ?? ''),
+                    'cycle_count' => (int) ($segment['cycle_count'] ?? 0),
+                    'reject_count' => (int) ($segment['reject_count'] ?? 0),
+                    'cycle_numbers' => array_map(
+                        fn (array $cycle): int => (int) $cycle['cycle'],
+                        $segment['cycles'] ?? [],
+                    ),
+                ],
+            ])
+            ->all();
+
         return view('admin::questions.versions', [
             'question' => $question,
             'versions' => $versions,
             'lessonNames' => $lessonNames,
             'contentVersion' => $contentVersion,
             'canRestore' => $this->actor()->canAny(['question_version.restore']),
+            'versionPipelineSummaries' => $versionPipelineSummaries,
         ]);
     }
 
@@ -64,7 +82,10 @@ final class QuestionVersionController extends Controller
 
         return redirect()
             ->route('admin.questions.edit', $restored)
-            ->with('status', "Đã khôi phục phiên bản {$version->version} thành phiên bản {$restored->version} (bản nháp).");
+            ->with(
+                'status',
+                "Đã áp dụng phiên bản {$version->version} vào bản làm việc (nháp). Số phiên bản không đổi — chỉ tăng khi Admin xuất bản.",
+            );
     }
 
     private function actor(): User

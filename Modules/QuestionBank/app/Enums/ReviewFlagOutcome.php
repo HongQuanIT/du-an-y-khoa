@@ -19,8 +19,8 @@ enum ReviewFlagOutcome: string
     {
         return match ($this) {
             self::Pending => 'Chưa đánh giá',
-            self::Confirmed => 'Cờ đỏ đúng',
-            self::FalsePositive => 'Cờ oan',
+            self::Confirmed => 'Gắn đúng',
+            self::FalsePositive => 'Gắn sai',
             self::Inconclusive => 'Chưa rõ',
         };
     }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\QuestionBank\Actions;
 
 use App\Models\User;
+use Illuminate\Validation\ValidationException;
 use Modules\QuestionBank\Enums\InstructorReviewDecision;
 use Modules\QuestionBank\Enums\InstructorReviewOutcome;
 use Modules\QuestionBank\Enums\ReviewerFlag;
@@ -17,7 +18,9 @@ use Modules\QuestionBank\Models\QuestionReviewerFlag;
  * Adjudicate review quality outcomes (SaaS QA).
  *
  * - Admin reject with red flags: explicit confirmed / false_positive.
- * - Publish: fingerprint heuristic for pending red flags & instructor rejects.
+ * - Publish: fingerprint heuristic for pending red flags & instructor rejects;
+ *   undisputed greens + approvals → confirmed.
+ * - Manual: Admin marks outcome on timeline for a specific cycle entry.
  */
 final class AdjudicateReviewOutcomesAction
 {
@@ -126,6 +129,114 @@ final class AdjudicateReviewOutcomesAction
                 'outcome_note' => 'Xuất bản thành công — không phát hiện duyệt sót',
                 'updated_at' => now(),
             ]);
+
+        // Green flags that reached publish without dispute → confirmed (gắn đúng).
+        QuestionReviewerFlag::query()
+            ->where('question_id', $question->getKey())
+            ->where('flag', ReviewerFlag::Green->value)
+            ->where(function ($query): void {
+                $query->whereNull('outcome')
+                    ->orWhere('outcome', ReviewFlagOutcome::Pending->value);
+            })
+            ->update([
+                'outcome' => ReviewFlagOutcome::Confirmed->value,
+                'outcome_source' => 'auto',
+                'outcome_by' => $actor->getKey(),
+                'outcome_at' => now(),
+                'outcome_note' => 'Xuất bản thành công — cờ xanh không bị tranh chấp',
+                'updated_at' => now(),
+            ]);
+    }
+
+    /**
+     * Admin marks a single instructor decision on the timeline.
+     *
+     * Reject → confirmed | over_reject
+     * Approve → confirmed | miss
+     */
+    public function manualInstructorOutcome(
+        QuestionInstructorReview $review,
+        User $actor,
+        InstructorReviewOutcome $outcome,
+        ?string $note = null,
+    ): void {
+        $decision = $review->decision instanceof InstructorReviewDecision
+            ? $review->decision
+            : InstructorReviewDecision::tryFrom((string) $review->decision);
+
+        $allowed = match ($decision) {
+            InstructorReviewDecision::Rejected => [
+                InstructorReviewOutcome::Confirmed,
+                InstructorReviewOutcome::OverReject,
+                InstructorReviewOutcome::Pending,
+            ],
+            InstructorReviewDecision::Approved => [
+                InstructorReviewOutcome::Confirmed,
+                InstructorReviewOutcome::Miss,
+                InstructorReviewOutcome::Pending,
+            ],
+            default => [InstructorReviewOutcome::Pending],
+        };
+
+        if (! in_array($outcome, $allowed, true)) {
+            throw ValidationException::withMessages([
+                'outcome' => 'Outcome không khớp với quyết định giảng viên (approve/reject).',
+            ]);
+        }
+
+        $this->setInstructorOutcome(
+            $review,
+            $outcome,
+            $actor,
+            'admin',
+            $note,
+        );
+    }
+
+    /**
+     * Admin marks a single reviewer flag on the timeline.
+     * When green is marked false_positive, optionally mark same-cycle instructor approve as miss.
+     */
+    public function manualFlagOutcome(
+        QuestionReviewerFlag $flag,
+        User $actor,
+        ReviewFlagOutcome $outcome,
+        ?string $note = null,
+        bool $cascadeInstructorMiss = true,
+    ): void {
+        if (! in_array($outcome, [
+            ReviewFlagOutcome::Confirmed,
+            ReviewFlagOutcome::FalsePositive,
+            ReviewFlagOutcome::Pending,
+            ReviewFlagOutcome::Inconclusive,
+        ], true)) {
+            throw ValidationException::withMessages([
+                'outcome' => 'Outcome cờ không hợp lệ.',
+            ]);
+        }
+
+        $this->setFlagOutcome(
+            $flag,
+            $outcome,
+            $actor,
+            'admin',
+            $note,
+        );
+
+        $isGreen = ($flag->flag instanceof ReviewerFlag ? $flag->flag : ReviewerFlag::tryFrom((string) $flag->flag))
+            === ReviewerFlag::Green;
+
+        if ($cascadeInstructorMiss && $outcome === ReviewFlagOutcome::FalsePositive && $isGreen) {
+            $question = $flag->question ?? Question::query()->find($flag->question_id);
+            if ($question instanceof Question) {
+                $this->markInstructorMissForCycle(
+                    $question,
+                    (int) $flag->review_cycle,
+                    $actor,
+                    'admin',
+                );
+            }
+        }
     }
 
     private function markInstructorMissForCycle(

@@ -438,10 +438,23 @@ class Question extends Model
     }
 
     /**
-     * Compact label for admin list: cycle + rejects in current unpublished pipeline.
+     * Compact label for admin list while the question is still in the review pipeline.
+     * Hidden after publish/private/retire — «Vòng N» would look like an active round.
      */
     public function pipelineProgressLabel(): string
     {
+        $status = $this->status instanceof QuestionStatus
+            ? $this->status
+            : QuestionStatus::tryFrom((string) $this->status);
+
+        if (in_array($status, [
+            QuestionStatus::Published,
+            QuestionStatus::Private,
+            QuestionStatus::Retired,
+        ], true)) {
+            return '';
+        }
+
         $cycle = (int) $this->instructor_review_cycle;
         if ($cycle < 1 && (int) $this->pipeline_reject_count < 1) {
             return '';

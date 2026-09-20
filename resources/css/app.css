@@ -236,6 +236,18 @@
 }
 
 @layer components {
+    /* Question compare / review diff markers */
+    del.question-diff-del {
+        @apply mx-0.5 rounded-sm bg-rose-100 px-0.5 text-rose-900 no-underline;
+        text-decoration-line: line-through;
+        text-decoration-color: rgb(244 63 94);
+    }
+
+    ins.question-diff-ins {
+        @apply mx-0.5 rounded-sm bg-emerald-100 px-0.5 font-semibold text-emerald-950 no-underline;
+        text-decoration-line: none;
+    }
+
     .premium-card {
         @apply bg-surface rounded-2xl border border-border shadow-sm;
     }

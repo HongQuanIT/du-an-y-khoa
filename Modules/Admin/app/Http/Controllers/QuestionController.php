@@ -7,6 +7,7 @@ namespace Modules\Admin\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Support\Enums\Permission;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -19,13 +20,18 @@ use Modules\Admin\Actions\SaveAdminQuestionAction;
 use Modules\Admin\Actions\TransitionQuestionStatusAction;
 use Modules\Admin\Support\AdminQuestionListQuery;
 use Modules\Admin\Support\QuestionAccess;
+use Modules\QuestionBank\Actions\AdjudicateReviewOutcomesAction;
 use Modules\QuestionBank\Actions\SyncQuestionStatsAction;
 use Modules\QuestionBank\Enums\Difficulty;
+use Modules\QuestionBank\Enums\InstructorReviewOutcome;
 use Modules\QuestionBank\Enums\QuestionReviewAction;
 use Modules\QuestionBank\Enums\QuestionStatus;
+use Modules\QuestionBank\Enums\ReviewFlagOutcome;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionFeedback;
 use Modules\QuestionBank\Models\QuestionImportBatch;
+use Modules\QuestionBank\Models\QuestionInstructorReview;
+use Modules\QuestionBank\Models\QuestionReviewerFlag;
 use Modules\QuestionBank\Support\QuestionExportLimits;
 use Modules\QuestionBank\Support\QuestionReviewComparison;
 
@@ -185,6 +191,7 @@ final class QuestionController extends Controller
             'creator:id,name,email',
             'instructor:id,name',
             'assignedInstructor:id,name',
+            'assignedInstructor.instructorSubjects:id,name',
             'instructorSlot1:id,name',
             'instructorSlot2:id,name',
             'reviewerSlot1:id,name',
@@ -366,6 +373,100 @@ final class QuestionController extends Controller
         return back()->with('status', 'Đã cập nhật trạng thái: '.QuestionStatus::from($data['status'])->label());
     }
 
+    public function adjudicateReviewOutcome(
+        Request $request,
+        Question $question,
+        AdjudicateReviewOutcomesAction $action,
+    ): RedirectResponse|JsonResponse {
+        $this->authorizePermission(Permission::QuestionView);
+        QuestionAccess::authorizeView($this->actor(), $question);
+
+        abort_unless(
+            $this->actor()->canAny([
+                Permission::QuestionUpdate->value,
+                Permission::QuestionPublish->value,
+                'question.reject',
+            ]),
+            403,
+        );
+
+        $data = $request->validate([
+            'kind' => ['required', 'string', Rule::in(['instructor', 'flag'])],
+            'id' => ['required', 'integer', 'min:1'],
+            'outcome' => ['required', 'string', 'max:40'],
+            'outcome_note' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $note = filled($data['outcome_note'] ?? null) ? trim((string) $data['outcome_note']) : null;
+        if ($note === '') {
+            $note = null;
+        }
+
+        if ($data['kind'] === 'instructor') {
+            $review = QuestionInstructorReview::query()
+                ->where('question_id', $question->getKey())
+                ->whereKey($data['id'])
+                ->firstOrFail();
+
+            $outcome = InstructorReviewOutcome::tryFrom($data['outcome']);
+            abort_unless($outcome instanceof InstructorReviewOutcome, 422);
+
+            $action->manualInstructorOutcome(
+                $review,
+                $this->actor(),
+                $outcome,
+                $note,
+            );
+
+            $review->refresh();
+            $message = 'Đã đánh dấu QA giảng viên: '.$outcome->label();
+
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'ok' => true,
+                    'message' => $message,
+                    'outcome' => $outcome->value,
+                    'outcome_label' => $outcome === InstructorReviewOutcome::Pending ? null : $outcome->label(),
+                    'outcome_note' => filled($review->outcome_note) ? (string) $review->outcome_note : null,
+                    'locked' => $outcome !== InstructorReviewOutcome::Pending,
+                ]);
+            }
+
+            return back()->with('status', $message);
+        }
+
+        $flag = QuestionReviewerFlag::query()
+            ->where('question_id', $question->getKey())
+            ->whereKey($data['id'])
+            ->firstOrFail();
+
+        $outcome = ReviewFlagOutcome::tryFrom($data['outcome']);
+        abort_unless($outcome instanceof ReviewFlagOutcome, 422);
+
+        $action->manualFlagOutcome(
+            $flag,
+            $this->actor(),
+            $outcome,
+            $note,
+        );
+
+        $flag->refresh();
+        $message = 'Đã đánh dấu QA cờ reviewer: '.$outcome->label();
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'ok' => true,
+                'message' => $message,
+                'outcome' => $outcome->value,
+                'outcome_label' => $outcome === ReviewFlagOutcome::Pending ? null : $outcome->label(),
+                'outcome_note' => filled($flag->outcome_note) ? (string) $flag->outcome_note : null,
+                'locked' => $outcome !== ReviewFlagOutcome::Pending,
+            ]);
+        }
+
+        return back()->with('status', $message);
+    }
+
     public function clone(Request $request, Question $question, CloneQuestionAction $action): RedirectResponse
     {
         $this->authorizePermission(Permission::QuestionView);
@@ -432,8 +533,18 @@ final class QuestionController extends Controller
             'pendingReview' => $pendingReview,
             'latestRejectedReview' => $latestRejectedReview,
             'canViewAudit' => $this->actor()->can('audit_log.view'),
+            'canAdjudicateQa' => $this->actor()->canAny([
+                Permission::QuestionUpdate->value,
+                Permission::QuestionPublish->value,
+                'question.reject',
+            ]),
             'reviewTimeline' => $question->exists
                 ? app(\Modules\QuestionBank\Support\QuestionReviewTimeline::class)->build($question)
+                : null,
+            'publishedVersionAt' => $question->exists && (int) $question->published_version > 0
+                ? $question->versions()
+                    ->where('version', (int) $question->published_version)
+                    ->value('created_at')
                 : null,
         ];
     }
@@ -685,6 +796,11 @@ final class QuestionController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'subjects' => $user->instructorSubjects
+                    ->pluck('name')
+                    ->filter()
+                    ->values()
+                    ->all(),
             ])->values()->all(),
         ]);
     }
