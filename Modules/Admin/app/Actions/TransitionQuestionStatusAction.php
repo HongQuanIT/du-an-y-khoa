@@ -366,7 +366,7 @@ final class TransitionQuestionStatusAction
             }
 
             if ($to === QuestionStatus::Private && $from === QuestionStatus::PendingPublish) {
-                $this->assertLayerOneComplete($question, $actor, 'đưa vào kho đề thi');
+                $this->assertLayerOneComplete($question, $actor, 'ẩn khỏi ngân hàng câu hỏi');
             }
 
             if ($to === QuestionStatus::Rejected && $from !== QuestionStatus::PendingPublish) {
@@ -456,12 +456,6 @@ final class TransitionQuestionStatusAction
         if ($question->options->count() < 2 || $question->options->where('is_correct', true)->count() !== 1) {
             throw ValidationException::withMessages([
                 'status' => 'Cần ≥2 đáp án và đúng 1 đáp án đúng.',
-            ]);
-        }
-
-        if ($to === QuestionStatus::Private && ! $question->exam_flag) {
-            throw ValidationException::withMessages([
-                'status' => 'Câu exam pool cần bật exam_flag.',
             ]);
         }
     }

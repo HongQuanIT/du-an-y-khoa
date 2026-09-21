@@ -90,7 +90,7 @@ final class AdminAuditArchitectureTest extends TestCase
                     ['content' => '<p>Dấu hiệu gợi ý</p>', 'sort_order' => 0],
                 ],
                 'is_free' => '1',
-                'exam_flag' => '1',
+                'is_priority' => '1',
                 'options' => [
                     ['content' => '<p>Đáp án đúng</p>', 'is_correct' => '1', 'explanation' => '<p>Vì sao đúng</p>'],
                     ['content' => '<p>Đáp án sai</p>', 'is_correct' => '0'],
@@ -108,7 +108,7 @@ final class AdminAuditArchitectureTest extends TestCase
         $this->assertSame('Vì sao đúng', strip_tags($log->after['explanation']));
         $this->assertSame([$topic->id], $log->after['lesson_ids']);
         $this->assertSame('Dấu hiệu gợi ý', strip_tags($log->after['hints'][0]['content']));
-        $this->assertTrue($log->after['exam_flag']);
+        $this->assertTrue($log->after['is_priority']);
         $this->assertCount(2, $log->after['options']);
         $this->assertTrue($log->after['options'][0]['is_correct']);
         $this->assertNull($log->metadata);

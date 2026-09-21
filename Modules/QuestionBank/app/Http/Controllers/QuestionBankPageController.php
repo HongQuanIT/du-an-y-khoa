@@ -147,6 +147,7 @@ final class QuestionBankPageController extends Controller
             'searchQuery' => $query,
             'searchFilters' => $filters,
             'searchError' => $searchError,
+            'canBrowsePremium' => $request->user()->hasEntitlement(Entitlement::QbankFull->value),
             'searchTopics' => Lesson::query()
                 ->whereIn('id', $lessonIds->unique()->filter()->values())
                 ->orderBy('name')

@@ -69,7 +69,7 @@ Chuẩn RBAC: `roles(id,name,slug)`, `permissions(id,name,slug)`, `permission_ro
 | type | VARCHAR | single_best/multi/matching |
 | difficulty | VARCHAR | easy/medium/hard (hoặc 1–5) |
 | status | VARCHAR | draft / in_review / pending_publish / published / rejected / private / retired |
-| exam_flag | BOOL default false | `true` = câu dành cho exam pool (kèm `private`) |
+| is_priority | BOOL default false | `true` = Câu ưu tiên (đề Bộ / kỳ thi gần đây → livestream chữa đề) |
 | is_free | BOOL | dùng cho preview free tier |
 | explanation | LONGTEXT | giải thích tổng |
 | references | JSON | nguồn (guideline, sách) |
@@ -92,7 +92,7 @@ Chuẩn RBAC: `roles(id,name,slug)`, `permissions(id,name,slug)`, `permission_ro
 | created_by, updated_by | | creator_id / editor gần nhất |
 | timestamps, soft delete | | |
 
-Index: `status`, `exam_flag`, `(status, exam_flag, created_at)`, `difficulty`, `is_free`. Full-text → Meilisearch (chỉ `published`).
+Index: `status`, `is_priority`, `(status, is_priority, created_at)`, `difficulty`, `is_free`. Full-text → Meilisearch (chỉ bản live trong ngân hàng).
 
 ### QuestionInstructorReview
 `id, question_id FK, review_cycle UINT, instructor_id FK, decision (approved/rejected), note, content_fingerprint, reviewed_at, timestamps`. Unique `(question_id, review_cycle, instructor_id)`. Lớp 1 cần **2 accept khác người**; 1 reject = fail ngay. Xem Module 35 §5.3.

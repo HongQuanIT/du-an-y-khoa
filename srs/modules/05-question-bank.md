@@ -75,7 +75,7 @@ Ngoại lệ:
 - **Trạng thái câu theo user:** unseen/incorrect/correct/omitted/marked (từ `question_status`).
 - **Gating:** Free chỉ `is_free` + quota/ngày; Premium full. Server enforce.
 - **Random/ordering:** shuffle hoặc theo độ khó tăng dần (tùy chọn).
-- **Exclude:** câu chưa từng live hoặc đã `retired`/`private` (kể cả `exam_flag`). Include khi có `published_version` (snapshot live) — kể cả lúc working copy đang `draft`/`in_review`/`pending_publish`/`rejected` để tái bản; learner **không** đọc working copy chưa publish. Gating tier vẫn áp dụng.
+- **Exclude:** câu chưa từng live hoặc đã `retired`/`private`. Include khi có `published_version` (snapshot live) — kể cả lúc working copy đang `draft`/`in_review`/`pending_publish`/`rejected` để tái bản; learner **không** đọc working copy chưa publish. Gating tier vẫn áp dụng.
 - **Taxonomy filter:** chọn Hệ cơ quan và/hoặc Môn học → đếm/lọc gồm mọi Bài học gắn trực tiếp (`lesson_organ_system` / `lesson_subject`). Hai trục độc lập, không cha–con. Câu hỏi gắn ≥1 Bài học (các bài ngang hàng).
 - **Saved filters:** lưu snapshot tiêu chí.
 - **Adaptive option:** phiên luyện thích ứng chỉ yêu cầu chọn đề thi (blueprint/ma trận); server bỏ độ khó/trạng thái; chọn câu theo ma trận + chủ đề yếu / câu sai / chưa làm.

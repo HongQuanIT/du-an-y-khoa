@@ -264,7 +264,7 @@ final class PrepareQuestionImportPreviewAction
                 'lesson_ids' => $lessonIds,
                 'tag_ids' => $tagIds,
                 'is_free' => QuestionImportSchema::parseBoolean($values['is_free']),
-                'exam_flag' => QuestionImportSchema::parseBoolean($values['exam_flag']),
+                'is_priority' => QuestionImportSchema::parseBoolean($values['is_priority'] ?? $values['exam_flag'] ?? null),
                 'options' => $options,
             ],
         ];

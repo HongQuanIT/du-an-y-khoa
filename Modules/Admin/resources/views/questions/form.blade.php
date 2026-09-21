@@ -508,10 +508,10 @@
                             </button>
                             <button type="submit"
                                 form="question-private-form"
-                                onclick="return confirm('Đưa câu này vào kho đề thi (riêng tư)? Cần bật exam_flag.')"
+                                onclick="return confirm('Ẩn câu này khỏi ngân hàng câu hỏi (private)? Học viên sẽ không thấy câu trong QBank / bài thi mới.')"
                                 class="flex w-full items-center justify-center gap-2 rounded-xl border border-violet-300 py-2.5 font-label-md font-semibold text-violet-800 hover:bg-violet-50">
                                 <span class="material-symbols-outlined text-[18px]">lock</span>
-                                Đưa vào kho đề thi (private)
+                                Ẩn khỏi ngân hàng (private)
                             </button>
                             @endif
                             @if ($canReject)
@@ -584,10 +584,10 @@
                             @if ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::Published)
                                 <button type="submit"
                                     form="question-private-form"
-                                    onclick="return confirm('Chuyển câu đã xuất bản sang kho đề thi (private)?')"
+                                    onclick="return confirm('Ẩn câu đã xuất bản khỏi ngân hàng câu hỏi (private)?')"
                                     class="flex w-full items-center justify-center gap-2 rounded-xl border border-violet-300 py-2.5 font-label-md font-semibold text-violet-800 hover:bg-violet-50">
                                     <span class="material-symbols-outlined text-[18px]">lock</span>
-                                    Chuyển sang private
+                                    Ẩn khỏi ngân hàng (private)
                                 </button>
                             @else
                                 <button type="submit"
@@ -715,18 +715,28 @@
                         </div>
                         <div>
                             <p class="mb-1.5 text-xs font-semibold text-on-surface-variant">Truy cập</p>
-                            <label class="flex h-11 cursor-pointer items-center gap-2 rounded-xl border border-outline-variant px-3 transition-colors hover:bg-surface-container-low">
+                            <label class="flex min-h-11 cursor-pointer items-start gap-2 rounded-xl border border-outline-variant px-3 py-2.5 transition-colors hover:bg-surface-container-low has-[:checked]:border-primary has-[:checked]:bg-primary/5">
                                 <input type="checkbox" name="is_free" value="1"
                                        @checked(old('is_free', $question->is_free))
-                                       class="size-4 rounded text-primary focus:ring-primary">
-                                <span class="text-sm font-semibold text-on-surface">Miễn phí (không cần Premium)</span>
+                                       class="mt-0.5 size-4 rounded text-primary focus:ring-primary">
+                                <span>
+                                    <span class="block text-sm font-semibold text-on-surface">Miễn phí</span>
+                                    <span class="mt-0.5 block text-[11px] leading-4 text-on-surface-variant">
+                                        Tick nếu tài khoản miễn phí được làm câu này. Không tick → chỉ Premium; tài khoản Premium vẫn thấy mọi câu.
+                                    </span>
+                                </span>
                             </label>
                         </div>
-                        <label class="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-outline-variant px-3 py-2 transition-colors hover:bg-surface-container-low">
-                            <input type="checkbox" name="exam_flag" value="1"
-                                   @checked(old('exam_flag', $question->exam_flag))
-                                   class="size-4 rounded text-primary focus:ring-primary">
-                            <span class="text-sm font-semibold text-on-surface">Câu dành cho kho đề thi</span>
+                        <label class="flex min-h-11 cursor-pointer items-start gap-2 rounded-xl border border-outline-variant px-3 py-2.5 transition-colors hover:bg-surface-container-low has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                            <input type="checkbox" name="is_priority" value="1"
+                                   @checked(old('is_priority', $question->is_priority))
+                                   class="mt-0.5 size-4 rounded text-primary focus:ring-primary">
+                            <span>
+                                <span class="block text-sm font-semibold text-on-surface">Câu ưu tiên</span>
+                                <span class="mt-0.5 block text-[11px] leading-4 text-on-surface-variant">
+                                    Câu hỏi từ kỳ thi quan trọng gần đây — dùng khi chọn nội dung livestream chữa đề.
+                                </span>
+                            </span>
                         </label>
                     </div>
                 </div>

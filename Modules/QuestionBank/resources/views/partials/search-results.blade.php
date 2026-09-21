@@ -73,23 +73,33 @@
             </select>
         </label>
 
-        <label class="block">
-            <span class="mb-1.5 block text-xs font-bold text-on-surface-variant">Quyền truy cập</span>
-            <select name="filter[is_free]"
-                class="w-full rounded-xl border border-outline-variant bg-surface px-3 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary">
-                <option value="">Tất cả</option>
-                @if ($accessCounts->has('free'))
-                    <option value="1" @selected(($searchFilters['is_free'] ?? null) === true)>
-                        Miễn phí · {{ data_get($accessCounts->get('free'), 'count', 0) }}
-                    </option>
-                @endif
-                @if ($accessCounts->has('premium'))
-                    <option value="0" @selected(($searchFilters['is_free'] ?? null) === false)>
-                        Cao cấp · {{ data_get($accessCounts->get('premium'), 'count', 0) }}
-                    </option>
-                @endif
-            </select>
-        </label>
+        @if ($canBrowsePremium ?? false)
+            <label class="block">
+                <span class="mb-1.5 block text-xs font-bold text-on-surface-variant">Truy cập</span>
+                <select name="filter[is_free]"
+                    class="w-full rounded-xl border border-outline-variant bg-surface px-3 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary">
+                    <option value="">Tất cả</option>
+                    @if ($accessCounts->has('free'))
+                        <option value="1" @selected(($searchFilters['is_free'] ?? null) === true)>
+                            Miễn phí · {{ data_get($accessCounts->get('free'), 'count', 0) }}
+                        </option>
+                    @endif
+                    @if ($accessCounts->has('premium'))
+                        <option value="0" @selected(($searchFilters['is_free'] ?? null) === false)>
+                            Premium · {{ data_get($accessCounts->get('premium'), 'count', 0) }}
+                        </option>
+                    @endif
+                </select>
+            </label>
+        @else
+            <input type="hidden" name="filter[is_free]" value="1">
+            <div class="block">
+                <span class="mb-1.5 block text-xs font-bold text-on-surface-variant">Truy cập</span>
+                <p class="rounded-xl border border-outline-variant bg-surface px-3 py-2.5 text-sm text-on-surface-variant">
+                    Chỉ câu Miễn phí
+                </p>
+            </div>
+        @endif
 
         <div class="flex gap-2">
             <a href="{{ route('qbank.index', ['q' => $searchQuery]) }}"

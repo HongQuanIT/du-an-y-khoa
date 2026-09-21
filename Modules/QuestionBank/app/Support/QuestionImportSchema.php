@@ -73,10 +73,10 @@ final class QuestionImportSchema
                 'required' => false,
                 'aliases' => ['is_free', 'free', 'mien phi'],
             ],
-            'exam_flag' => [
-                'label' => 'Pool thi (0/1)',
+            'is_priority' => [
+                'label' => 'Câu ưu tiên (0/1)',
                 'required' => false,
-                'aliases' => ['exam_flag', 'exam', 'thi'],
+                'aliases' => ['is_priority', 'priority', 'uu tien', 'exam_flag', 'exam', 'thi'],
             ],
             'attending_tip' => [
                 'label' => 'Gợi ý giảng viên',
@@ -265,7 +265,7 @@ final class QuestionImportSchema
         $row['difficulty'] = 'medium';
         $row['lesson_slugs'] = $lessonSlug ?: 'tim-mach-admin-test';
         $row['is_free'] = '0';
-        $row['exam_flag'] = '0';
+        $row['is_priority'] = '0';
 
         return array_values($row);
     }
@@ -322,7 +322,7 @@ final class QuestionImportSchema
             'lesson_slugs' => 30.0,
             'tag_slugs' => 22.0,
             'is_free' => 10.0,
-            'exam_flag' => 12.0,
+            'is_priority' => 12.0,
             'attending_tip' => 34.0,
             'hints' => 30.0,
             'status' => 16.0,
@@ -378,7 +378,7 @@ final class QuestionImportSchema
             'correct' => 'A,B,C,D,E',
             'difficulty' => 'very_easy,easy,medium,hard,very_hard',
             'is_free' => '0,1',
-            'exam_flag' => '0,1',
+            'is_priority' => '0,1',
         ];
     }
 }

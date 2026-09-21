@@ -220,8 +220,8 @@ final class ExamModuleTest extends TestCase
                 'stem' => 'Hình ảnh X-quang ngực',
                 'stem_image_path' => 'questions/test-chest-xray.jpg',
                 'difficulty' => Difficulty::Medium,
-                'status' => QuestionStatus::Private,
-                'exam_flag' => true,
+                'status' => QuestionStatus::Published,
+                'is_priority' => false,
             ]);
 
         $exam = Exam::query()->create([
@@ -264,8 +264,8 @@ final class ExamModuleTest extends TestCase
             ->create([
                 'stem' => $stem,
                 'difficulty' => Difficulty::Medium,
-                'status' => QuestionStatus::Private,
-                'exam_flag' => true,
+                'status' => QuestionStatus::Published,
+                'is_priority' => false,
             ]);
     }
 

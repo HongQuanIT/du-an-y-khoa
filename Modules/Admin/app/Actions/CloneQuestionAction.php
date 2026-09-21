@@ -74,7 +74,7 @@ final class CloneQuestionAction
                 'attending_tip' => $snapshot['attending_tip'] ?? $source->attending_tip,
                 'difficulty' => Difficulty::from((string) ($snapshot['difficulty'] ?? $source->difficulty->value)),
                 'is_free' => (bool) ($snapshot['is_free'] ?? $source->is_free),
-                'exam_flag' => (bool) ($snapshot['exam_flag'] ?? $source->exam_flag ?? false),
+                'is_priority' => (bool) ($snapshot['is_priority'] ?? $snapshot['exam_flag'] ?? $source->is_priority ?? false),
             ]);
             $clone->save();
             $clone->lessons()->sync($lessonIds);

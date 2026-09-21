@@ -2,6 +2,13 @@
 
 ## 2026-09-21
 
+### Refactor — Câu ưu tiên & bài thi lấy từ ngân hàng đã xuất bản
+
+- Đổi `exam_flag` → `is_priority` (nhãn **Câu ưu tiên**): đánh dấu câu đề Bộ / kỳ thi gần đây cho livestream chữa đề.
+- Sinh bài thi từ ngân hàng đã xuất bản (`ServePublishedQuestion`); câu `private` ẩn khỏi ngân hàng và không pick vào đề mới.
+- Form câu hỏi: checkbox **Miễn phí**; QBank free chỉ thấy câu miễn phí (ẩn filter Premium).
+- Tài liệu thuật toán tạo bài thi từ ma trận: `docs/exam-creation-from-blueprint.md`; cập nhật SRS 23/35/38.
+
 ### Fix — List câu hỏi: nháp không hiện «Vòng N»
 
 - Cột bản gửi: trạng thái nháp hiện **Bản nháp** (thay «Không có bản gửi»).
