@@ -6,21 +6,24 @@ namespace Modules\QuestionBank\Actions;
 
 use App\Models\User;
 use Illuminate\Validation\ValidationException;
+use Modules\QuestionBank\Enums\EditorSubmitOutcome;
 use Modules\QuestionBank\Enums\InstructorReviewDecision;
 use Modules\QuestionBank\Enums\InstructorReviewOutcome;
+use Modules\QuestionBank\Enums\QuestionWorkflowEventType;
 use Modules\QuestionBank\Enums\ReviewerFlag;
 use Modules\QuestionBank\Enums\ReviewFlagOutcome;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionInstructorReview;
 use Modules\QuestionBank\Models\QuestionReviewerFlag;
+use Modules\QuestionBank\Models\QuestionWorkflowEvent;
 
 /**
  * Adjudicate review quality outcomes (SaaS QA).
  *
- * - Admin reject with red flags: explicit confirmed / false_positive.
- * - Publish: fingerprint heuristic for pending red flags & instructor rejects;
+ * - Admin reject with red flags: explicit confirmed / false_positive (+ editor submit).
+ * - Publish: fingerprint heuristic for pending reds, instructor rejects, editor submits;
  *   undisputed greens + approvals → confirmed.
- * - Manual: Admin marks outcome on timeline for a specific cycle entry.
+ * - Manual: Admin marks outcome on timeline for instructor / flag / editor submit.
  */
 final class AdjudicateReviewOutcomesAction
 {
@@ -51,6 +54,25 @@ final class AdjudicateReviewOutcomesAction
 
         if ($outcome === ReviewFlagOutcome::Confirmed && $redFlags->isNotEmpty()) {
             $this->markInstructorMissForCycle($question, $cycle, $actor, 'admin');
+            $this->markEditorOutcomeForCycle(
+                $question,
+                $cycle,
+                EditorSubmitOutcome::NeedsRework,
+                $actor,
+                'admin',
+                'Cờ đỏ đúng — bản gửi cần sửa',
+            );
+        }
+
+        if ($outcome === ReviewFlagOutcome::FalsePositive && $redFlags->isNotEmpty()) {
+            $this->markEditorOutcomeForCycle(
+                $question,
+                $cycle,
+                EditorSubmitOutcome::Confirmed,
+                $actor,
+                'admin',
+                'Cờ đỏ gắn sai — bản gửi của biên tập đạt',
+            );
         }
     }
 
@@ -85,6 +107,14 @@ final class AdjudicateReviewOutcomesAction
                     $actor,
                     'auto',
                 );
+                $this->markEditorOutcomeForCycle(
+                    $question,
+                    (int) $flag->review_cycle,
+                    EditorSubmitOutcome::NeedsRework,
+                    $actor,
+                    'auto',
+                    'Cờ đỏ được xác nhận khi xuất bản',
+                );
             }
         }
 
@@ -110,6 +140,20 @@ final class AdjudicateReviewOutcomesAction
                 $actor,
                 'auto',
                 'Heuristic fingerprint khi xuất bản',
+            );
+
+            $editorOutcome = match ($outcome) {
+                InstructorReviewOutcome::Confirmed => EditorSubmitOutcome::NeedsRework,
+                InstructorReviewOutcome::OverReject => EditorSubmitOutcome::Confirmed,
+                default => EditorSubmitOutcome::Inconclusive,
+            };
+            $this->markEditorOutcomeForCycle(
+                $question,
+                (int) $review->review_cycle,
+                $editorOutcome,
+                $actor,
+                'auto',
+                'Theo kết quả reject GV khi xuất bản',
             );
         }
 
@@ -146,6 +190,27 @@ final class AdjudicateReviewOutcomesAction
                 'outcome_note' => 'Xuất bản thành công — cờ xanh không bị tranh chấp',
                 'updated_at' => now(),
             ]);
+
+        $pendingSubmits = QuestionWorkflowEvent::query()
+            ->where('question_id', $question->getKey())
+            ->where('event_type', QuestionWorkflowEventType::Submit->value)
+            ->where(function ($query): void {
+                $query->whereNull('outcome')
+                    ->orWhere('outcome', EditorSubmitOutcome::Pending->value);
+            })
+            ->get();
+
+        foreach ($pendingSubmits as $event) {
+            $submitFp = (string) ($event->content_fingerprint ?? '');
+            $editorOutcome = $this->editorOutcomeFromFingerprints($submitFp, $currentFingerprint);
+            $this->setEditorOutcome(
+                $event,
+                $editorOutcome,
+                $actor,
+                'auto',
+                'Heuristic fingerprint khi xuất bản',
+            );
+        }
     }
 
     /**
@@ -191,6 +256,31 @@ final class AdjudicateReviewOutcomesAction
             'admin',
             $note,
         );
+
+        $question = $review->question ?? Question::query()->find($review->question_id);
+        if (! $question instanceof Question) {
+            return;
+        }
+
+        $editorOutcome = match ($outcome) {
+            InstructorReviewOutcome::Confirmed => $decision === InstructorReviewDecision::Rejected
+                ? EditorSubmitOutcome::NeedsRework
+                : EditorSubmitOutcome::Confirmed,
+            InstructorReviewOutcome::OverReject => EditorSubmitOutcome::Confirmed,
+            InstructorReviewOutcome::Miss => EditorSubmitOutcome::NeedsRework,
+            default => null,
+        };
+
+        if ($editorOutcome !== null) {
+            $this->markEditorOutcomeForCycle(
+                $question,
+                (int) $review->review_cycle,
+                $editorOutcome,
+                $actor,
+                'admin',
+                'Theo đánh giá QA giảng viên',
+            );
+        }
     }
 
     /**
@@ -225,18 +315,80 @@ final class AdjudicateReviewOutcomesAction
 
         $isGreen = ($flag->flag instanceof ReviewerFlag ? $flag->flag : ReviewerFlag::tryFrom((string) $flag->flag))
             === ReviewerFlag::Green;
+        $isRed = ($flag->flag instanceof ReviewerFlag ? $flag->flag : ReviewerFlag::tryFrom((string) $flag->flag))
+            === ReviewerFlag::Red;
 
-        if ($cascadeInstructorMiss && $outcome === ReviewFlagOutcome::FalsePositive && $isGreen) {
-            $question = $flag->question ?? Question::query()->find($flag->question_id);
-            if ($question instanceof Question) {
-                $this->markInstructorMissForCycle(
+        $question = $flag->question ?? Question::query()->find($flag->question_id);
+
+        if ($cascadeInstructorMiss && $outcome === ReviewFlagOutcome::FalsePositive && $isGreen && $question instanceof Question) {
+            $this->markInstructorMissForCycle(
+                $question,
+                (int) $flag->review_cycle,
+                $actor,
+                'admin',
+            );
+            $this->markEditorOutcomeForCycle(
+                $question,
+                (int) $flag->review_cycle,
+                EditorSubmitOutcome::NeedsRework,
+                $actor,
+                'admin',
+                'Cờ xanh gắn sai — nội dung còn thiếu sót',
+            );
+        }
+
+        if ($question instanceof Question && $isRed) {
+            if ($outcome === ReviewFlagOutcome::Confirmed) {
+                $this->markEditorOutcomeForCycle(
                     $question,
                     (int) $flag->review_cycle,
+                    EditorSubmitOutcome::NeedsRework,
                     $actor,
                     'admin',
+                    'Cờ đỏ đúng — bản gửi cần sửa',
+                );
+            }
+            if ($outcome === ReviewFlagOutcome::FalsePositive) {
+                $this->markEditorOutcomeForCycle(
+                    $question,
+                    (int) $flag->review_cycle,
+                    EditorSubmitOutcome::Confirmed,
+                    $actor,
+                    'admin',
+                    'Cờ đỏ gắn sai — bản gửi của biên tập đạt',
                 );
             }
         }
+    }
+
+    public function manualEditorOutcome(
+        QuestionWorkflowEvent $event,
+        User $actor,
+        EditorSubmitOutcome $outcome,
+        ?string $note = null,
+    ): void {
+        $type = $event->event_type instanceof QuestionWorkflowEventType
+            ? $event->event_type
+            : QuestionWorkflowEventType::tryFrom((string) $event->event_type);
+
+        if ($type !== QuestionWorkflowEventType::Submit) {
+            throw ValidationException::withMessages([
+                'kind' => 'Chỉ đánh giá QA trên sự kiện gửi duyệt của biên tập viên.',
+            ]);
+        }
+
+        if (! in_array($outcome, [
+            EditorSubmitOutcome::Confirmed,
+            EditorSubmitOutcome::NeedsRework,
+            EditorSubmitOutcome::Pending,
+            EditorSubmitOutcome::Inconclusive,
+        ], true)) {
+            throw ValidationException::withMessages([
+                'outcome' => 'Outcome biên tập không hợp lệ.',
+            ]);
+        }
+
+        $this->setEditorOutcome($event, $outcome, $actor, 'admin', $note);
     }
 
     private function markInstructorMissForCycle(
@@ -268,6 +420,28 @@ final class AdjudicateReviewOutcomesAction
             });
     }
 
+    private function markEditorOutcomeForCycle(
+        Question $question,
+        int $cycle,
+        EditorSubmitOutcome $outcome,
+        User $actor,
+        string $source,
+        ?string $note,
+    ): void {
+        QuestionWorkflowEvent::query()
+            ->where('question_id', $question->getKey())
+            ->where('review_cycle', $cycle)
+            ->where('event_type', QuestionWorkflowEventType::Submit->value)
+            ->where(function ($query): void {
+                $query->whereNull('outcome')
+                    ->orWhere('outcome', EditorSubmitOutcome::Pending->value);
+            })
+            ->get()
+            ->each(function (QuestionWorkflowEvent $event) use ($outcome, $actor, $source, $note): void {
+                $this->setEditorOutcome($event, $outcome, $actor, $source, $note);
+            });
+    }
+
     private function compareFingerprints(string $atDecision, string $atLater): ReviewFlagOutcome
     {
         if ($atDecision === '' || $atLater === '') {
@@ -277,6 +451,18 @@ final class AdjudicateReviewOutcomesAction
         return $atDecision === $atLater
             ? ReviewFlagOutcome::FalsePositive
             : ReviewFlagOutcome::Confirmed;
+    }
+
+    private function editorOutcomeFromFingerprints(string $atSubmit, string $atPublish): EditorSubmitOutcome
+    {
+        if ($atSubmit === '' || $atPublish === '') {
+            return EditorSubmitOutcome::Inconclusive;
+        }
+
+        // Same content published → editor submit stood; different → that revision needed rework.
+        return $atSubmit === $atPublish
+            ? EditorSubmitOutcome::Confirmed
+            : EditorSubmitOutcome::NeedsRework;
     }
 
     private function setFlagOutcome(
@@ -303,6 +489,22 @@ final class AdjudicateReviewOutcomesAction
         ?string $note,
     ): void {
         $review->forceFill([
+            'outcome' => $outcome->value,
+            'outcome_source' => $source,
+            'outcome_by' => $actor->getKey(),
+            'outcome_at' => now(),
+            'outcome_note' => $note,
+        ])->save();
+    }
+
+    private function setEditorOutcome(
+        QuestionWorkflowEvent $event,
+        EditorSubmitOutcome $outcome,
+        User $actor,
+        string $source,
+        ?string $note,
+    ): void {
+        $event->forceFill([
             'outcome' => $outcome->value,
             'outcome_source' => $source,
             'outcome_by' => $actor->getKey(),

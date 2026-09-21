@@ -487,6 +487,13 @@
                             </span>
                             @if ($question->hasRedReviewerFlag())
                                 <span class="mt-2 block font-semibold text-rose-700">Có ≥1 cờ đỏ — không xuất bản được. Admin phải trả về biên tập.</span>
+                            @elseif (! empty($qaBlocksPublish))
+                                <span class="mt-2 block font-semibold text-amber-800">
+                                    Pipeline {{ (int) ($qaAssessment['pipeline_cycles'] ?? 0) }} vòng — phải đánh giá QA trên «Lịch sử duyệt» trước khi xuất bản.
+                                    @if (! empty($qaAssessment['summary']))
+                                        <span class="mt-1 block font-medium">{{ $qaAssessment['summary'] }}</span>
+                                    @endif
+                                </span>
                             @endif
                             @if ($question->published_version)
                                 <span class="mt-2 block">
@@ -496,7 +503,7 @@
                             @endif
                         </p>
                         <div class="flex flex-col gap-2">
-                            @if ($canPublish && ! $question->hasRedReviewerFlag())
+                            @if ($canPublish && ! $question->hasRedReviewerFlag() && empty($qaBlocksPublish))
                             <button type="submit"
                                 form="question-publish-form"
                                 onclick="return confirm('Xuất bản câu hỏi này lên ngân hàng? Phiên bản sẽ tăng.')"
@@ -510,6 +517,12 @@
                                 class="flex w-full items-center justify-center gap-2 rounded-xl border border-violet-300 py-2.5 font-label-md font-semibold text-violet-800 hover:bg-violet-50">
                                 <span class="material-symbols-outlined text-[18px]">lock</span>
                                 Ẩn khỏi ngân hàng (private)
+                            </button>
+                            @elseif ($canPublish && ! $question->hasRedReviewerFlag() && ! empty($qaBlocksPublish))
+                            <button type="button" disabled
+                                class="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-primary/40 py-2.5 font-label-md font-semibold text-on-primary">
+                                <span class="material-symbols-outlined text-[18px]">publish</span>
+                                Duyệt &amp; xuất bản (thiếu QA)
                             </button>
                             @endif
                             @if ($canReject)

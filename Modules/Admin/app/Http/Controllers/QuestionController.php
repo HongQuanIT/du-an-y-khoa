@@ -14,6 +14,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Modules\Admin\Actions\BulkTransitionQuestionsAction;
 use Modules\Admin\Actions\CloneQuestionAction;
 use Modules\Admin\Actions\RequestQuestionDeletionAction;
 use Modules\Admin\Actions\SaveAdminQuestionAction;
@@ -23,9 +24,11 @@ use Modules\Admin\Support\QuestionAccess;
 use Modules\QuestionBank\Actions\AdjudicateReviewOutcomesAction;
 use Modules\QuestionBank\Actions\SyncQuestionStatsAction;
 use Modules\QuestionBank\Enums\Difficulty;
+use Modules\QuestionBank\Enums\EditorSubmitOutcome;
 use Modules\QuestionBank\Enums\InstructorReviewOutcome;
 use Modules\QuestionBank\Enums\QuestionReviewAction;
 use Modules\QuestionBank\Enums\QuestionStatus;
+use Modules\QuestionBank\Enums\QuestionWorkflowEventType;
 use Modules\QuestionBank\Enums\ReviewFlagOutcome;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionFeedback;
@@ -33,7 +36,9 @@ use Modules\QuestionBank\Models\QuestionImportBatch;
 use Modules\QuestionBank\Models\QuestionInstructorReview;
 use Modules\QuestionBank\Models\QuestionReviewerFlag;
 use Modules\QuestionBank\Models\QuestionVersion;
+use Modules\QuestionBank\Models\QuestionWorkflowEvent;
 use Modules\QuestionBank\Support\QuestionExportLimits;
+use Modules\QuestionBank\Support\QuestionQaCompleteness;
 use Modules\QuestionBank\Support\QuestionReviewComparison;
 
 final class QuestionController extends Controller
@@ -66,6 +71,12 @@ final class QuestionController extends Controller
                         ->select('created_at')
                         ->whereColumn('question_versions.question_id', 'questions.id')
                         ->whereColumn('question_versions.version', 'questions.version')
+                        ->limit(1),
+                    'last_published_review_cycle' => QuestionWorkflowEvent::query()
+                        ->select('review_cycle')
+                        ->whereColumn('question_workflow_events.question_id', 'questions.id')
+                        ->where('event_type', QuestionWorkflowEventType::Publish->value)
+                        ->orderByDesc('published_version')
                         ->limit(1),
                 ])
                 ->withCount([
@@ -132,10 +143,12 @@ final class QuestionController extends Controller
                 'free' => (clone $statsQuery)->where('is_free', true)->count(),
             ],
             'canCreate' => $actor->can(Permission::QuestionCreate->value),
+            'canPublish' => $actor->can(Permission::QuestionPublish->value),
             'isReviewer' => QuestionAccess::isReviewer($actor),
             'canViewAny' => $actor->can('question.view_any'),
             'creatorOptions' => $this->creatorFilterOptions($actor),
             'exportLimit' => QuestionExportLimits::MAX_ROWS,
+            'bulkLimit' => BulkTransitionQuestionsAction::MAX_IDS,
             'exportBanner' => QuestionExportLimits::banner($questions->total()),
         ]);
     }
@@ -384,6 +397,47 @@ final class QuestionController extends Controller
         return back()->with('status', 'Đã cập nhật trạng thái: '.QuestionStatus::from($data['status'])->label());
     }
 
+    public function bulkTransition(
+        Request $request,
+        BulkTransitionQuestionsAction $action,
+    ): RedirectResponse|JsonResponse {
+        $this->authorizePermission(Permission::QuestionView);
+        abort_unless($this->actor()->can(Permission::QuestionPublish->value), 403);
+
+        $data = $request->validate([
+            'ids' => ['required', 'array', 'min:1', 'max:'.BulkTransitionQuestionsAction::MAX_IDS],
+            'ids.*' => ['required', 'uuid'],
+        ]);
+
+        $result = $action->handle(
+            $this->actor(),
+            $data['ids'],
+        );
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'ok' => true,
+                'message' => $result['message'],
+                'published' => $result['published'],
+                'skipped' => $result['skipped'],
+                'failed' => $result['failed'],
+            ]);
+        }
+
+        $flash = $result['message'];
+        if ($result['skipped'] !== []) {
+            $sample = collect($result['skipped'])->take(5)->map(
+                fn (array $row): string => $row['code'].': '.$row['reason'],
+            )->implode('; ');
+            $flash .= ' Chi tiết bỏ qua: '.$sample;
+            if (count($result['skipped']) > 5) {
+                $flash .= '…';
+            }
+        }
+
+        return back()->with('status', $flash);
+    }
+
     public function adjudicateReviewOutcome(
         Request $request,
         Question $question,
@@ -395,7 +449,7 @@ final class QuestionController extends Controller
         abort_unless($this->actor()->can(Permission::QuestionAdjudicate->value), 403);
 
         $data = $request->validate([
-            'kind' => ['required', 'string', Rule::in(['instructor', 'flag'])],
+            'kind' => ['required', 'string', Rule::in(['instructor', 'flag', 'submit'])],
             'id' => ['required', 'integer', 'min:1'],
             'outcome' => ['required', 'string', 'max:40'],
             'outcome_note' => ['nullable', 'string', 'max:500'],
@@ -433,6 +487,40 @@ final class QuestionController extends Controller
                     'outcome_label' => $outcome === InstructorReviewOutcome::Pending ? null : $outcome->label(),
                     'outcome_note' => filled($review->outcome_note) ? (string) $review->outcome_note : null,
                     'locked' => $outcome !== InstructorReviewOutcome::Pending,
+                ]);
+            }
+
+            return back()->with('status', $message);
+        }
+
+        if ($data['kind'] === 'submit') {
+            $event = QuestionWorkflowEvent::query()
+                ->where('question_id', $question->getKey())
+                ->where('event_type', QuestionWorkflowEventType::Submit->value)
+                ->whereKey($data['id'])
+                ->firstOrFail();
+
+            $outcome = EditorSubmitOutcome::tryFrom($data['outcome']);
+            abort_unless($outcome instanceof EditorSubmitOutcome, 422);
+
+            $action->manualEditorOutcome(
+                $event,
+                $this->actor(),
+                $outcome,
+                $note,
+            );
+
+            $event->refresh();
+            $message = 'Đã đánh dấu QA biên tập viên: '.$outcome->label();
+
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'ok' => true,
+                    'message' => $message,
+                    'outcome' => $outcome->value,
+                    'outcome_label' => $outcome === EditorSubmitOutcome::Pending ? null : $outcome->label(),
+                    'outcome_note' => filled($event->outcome_note) ? (string) $event->outcome_note : null,
+                    'locked' => $outcome !== EditorSubmitOutcome::Pending,
                 ]);
             }
 
@@ -499,6 +587,16 @@ final class QuestionController extends Controller
         $hasBlockingReview = $pendingReview !== null
             && $pendingReview->action !== QuestionReviewAction::Create;
 
+        $qaAssessment = $question->exists
+            ? app(QuestionQaCompleteness::class)->assess($question)
+            : [
+                'required' => false,
+                'complete' => true,
+                'pipeline_cycles' => 0,
+                'pending_total' => 0,
+                'summary' => '',
+            ];
+
         return [
             'question' => $question,
             'statuses' => QuestionStatus::cases(),
@@ -534,6 +632,8 @@ final class QuestionController extends Controller
             'canClone' => $question->exists && $this->actor()->canAny(['question.clone']),
             'isReviewer' => $isReviewer,
             'isRejected' => $question->exists && $question->status === QuestionStatus::Rejected,
+            'qaAssessment' => $qaAssessment,
+            'qaBlocksPublish' => ($qaAssessment['required'] ?? false) && ! ($qaAssessment['complete'] ?? true),
             'isInstructorRejection' => $question->rejected_by_role === 'instructor',
             'rejectionReason' => $rejectionReason,
             'pendingReview' => $pendingReview,
