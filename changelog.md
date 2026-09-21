@@ -2,6 +2,14 @@
 
 ## 2026-09-21
 
+### Feat — QA Editor + Gate ≥2 vòng + XB hàng loạt
+
+- Editor QA trên «Lịch sử duyệt»: **Soạn đạt / Soạn lỗi** (`outcome` trên submit); auto adjudicate khi XB/trả về; báo cáo `review-qa` thêm KPI/bảng biên tập (cache SCHEMA_VERSION=4).
+- «Vòng N» = vòng trong bản làm việc sau XB gần nhất (không cộng dồn lifetime).
+- Pipeline ≥2 vòng: chặn xuất bản nếu còn QA `pending`; 1 vòng vẫn auto QA khi XB.
+- List: **Xuất bản** hàng loạt (`POST …/bulk-transition`, tối đa 20) — chỉ chờ XB + 1 vòng + 2 cờ xanh; còn lại duyệt thủ công. **Không** từ chối hàng loạt.
+- Form XB: banner + disable nút khi thiếu QA; list badge «Cần QA trước XB».
+
 ### Fix — AJAX bộ lọc Nhật ký hoạt động Admin
 
 - Chuyển tìm kiếm, xoá bộ lọc và phân trang nhật ký hoạt động sang AJAX.

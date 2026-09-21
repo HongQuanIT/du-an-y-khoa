@@ -232,7 +232,11 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
             ->assertOk()
             ->assertSee('QA duyệt câu hỏi', false)
             ->assertSee('Cờ gắn sai', false)
-            ->assertSee('Duyệt sai', false);
+            ->assertSee('Duyệt sai', false)
+            ->assertSee('Soạn đạt', false)
+            ->assertSee('Soạn lỗi', false)
+            ->assertSee('Hiệu suất biên tập viên', false)
+            ->assertSee('>Biên tập viên<', false);
     }
 
     public function test_admin_can_adjudicate_review_outcomes_with_dedicated_permission(): void
@@ -339,6 +343,8 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
         app(InstructorReviewQuestionAction::class)->approve($instructor, $question->fresh());
         app(FlagQuestionReviewAction::class)->handle($reviewerA, $question->fresh(), ReviewerFlag::Green, 'OK');
         app(FlagQuestionReviewAction::class)->handle($reviewerB, $question->fresh(), ReviewerFlag::Green, 'Đạt');
+
+        $this->markCurrentPipelineQaComplete($question->fresh());
 
         $this->actingAsStaff($admin)
             ->post(route('admin.questions.transition', $question->fresh()), [
@@ -582,6 +588,39 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
             ->assertRedirect();
 
         $this->assertSame(QuestionStatus::Published, $question->fresh()->status);
+    }
+
+    private function markCurrentPipelineQaComplete(Question $question): void
+    {
+        $minCycle = $question->lastPublishedReviewCycle() + 1;
+
+        \Modules\QuestionBank\Models\QuestionWorkflowEvent::query()
+            ->where('question_id', $question->getKey())
+            ->where('event_type', 'submit')
+            ->where('review_cycle', '>=', $minCycle)
+            ->update([
+                'outcome' => 'confirmed',
+                'outcome_source' => 'admin',
+                'outcome_at' => now(),
+            ]);
+
+        \Modules\QuestionBank\Models\QuestionInstructorReview::query()
+            ->where('question_id', $question->getKey())
+            ->where('review_cycle', '>=', $minCycle)
+            ->update([
+                'outcome' => 'confirmed',
+                'outcome_source' => 'admin',
+                'outcome_at' => now(),
+            ]);
+
+        \Modules\QuestionBank\Models\QuestionReviewerFlag::query()
+            ->where('question_id', $question->getKey())
+            ->where('review_cycle', '>=', $minCycle)
+            ->update([
+                'outcome' => 'confirmed',
+                'outcome_source' => 'admin',
+                'outcome_at' => now(),
+            ]);
     }
 
     private function instructorWithSubject(?Subject $subject = null): User

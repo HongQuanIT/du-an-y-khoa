@@ -21,15 +21,18 @@ use Modules\Billing\Models\Subscription;
 use Modules\Billing\Support\AdminBillingMetrics;
 use Modules\Billing\Support\BillingSubscriptionStats;
 use Modules\Billing\Support\MoneyFormatter;
+use Modules\QuestionBank\Enums\EditorSubmitOutcome;
 use Modules\QuestionBank\Enums\InstructorReviewDecision;
 use Modules\QuestionBank\Enums\InstructorReviewOutcome;
 use Modules\QuestionBank\Enums\QuestionStatus;
+use Modules\QuestionBank\Enums\QuestionWorkflowEventType;
 use Modules\QuestionBank\Enums\ReviewerFlag;
 use Modules\QuestionBank\Enums\ReviewFlagOutcome;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionFeedback;
 use Modules\QuestionBank\Models\QuestionInstructorReview;
 use Modules\QuestionBank\Models\QuestionReviewerFlag;
+use Modules\QuestionBank\Models\QuestionWorkflowEvent;
 
 /**
  * @phpstan-type ReportKpi array{label: string, value: string, hint: ?string, icon: string, delta: ?float}
@@ -847,6 +850,52 @@ final class GetAdminReportDataAction
         })->values()->all();
         $instructorIncorrectSeries = $instructorChartRows->map(fn ($row): int => (int) $row->reviews_incorrect)->values()->all();
 
+        $submitsQuery = QuestionWorkflowEvent::query()
+            ->where('event_type', QuestionWorkflowEventType::Submit->value)
+            ->whereBetween('occurred_at', [$from, $to]);
+        $totalSubmits = (int) (clone $submitsQuery)->count();
+        $editorConfirmed = (int) (clone $submitsQuery)
+            ->where('outcome', EditorSubmitOutcome::Confirmed->value)
+            ->count();
+        $editorNeedsRework = (int) (clone $submitsQuery)
+            ->where('outcome', EditorSubmitOutcome::NeedsRework->value)
+            ->count();
+
+        $editorRows = QuestionWorkflowEvent::query()
+            ->where('event_type', QuestionWorkflowEventType::Submit->value)
+            ->whereBetween('occurred_at', [$from, $to])
+            ->select([
+                'actor_id',
+                DB::raw('count(*) as submits_total'),
+                DB::raw("sum(case when outcome = 'confirmed' then 1 else 0 end) as submits_ok"),
+                DB::raw("sum(case when outcome = 'needs_rework' then 1 else 0 end) as submits_rework"),
+                DB::raw("sum(case when outcome in ('confirmed', 'needs_rework') then 1 else 0 end) as submits_adjudicated"),
+            ])
+            ->groupBy('actor_id')
+            ->orderByDesc('submits_total')
+            ->limit(20)
+            ->get();
+
+        $editorNames = User::query()
+            ->whereIn('id', $editorRows->pluck('actor_id')->filter()->all())
+            ->pluck('name', 'id');
+
+        $editorTableRows = $editorRows->map(function ($row) use ($editorNames): array {
+            return [
+                'editor' => $editorNames[(int) $row->actor_id] ?? ('#'.$row->actor_id),
+                'submits_total' => (int) $row->submits_total,
+                'submits_ok' => (int) $row->submits_ok,
+                'submits_rework' => (int) $row->submits_rework,
+            ];
+        })->all();
+
+        $editorChartRows = $editorRows->take(10);
+        $editorChartLabels = $editorChartRows->map(
+            fn ($row): string => $this->shortReportLabel($editorNames[(int) $row->actor_id] ?? ('#'.$row->actor_id)),
+        )->values()->all();
+        $editorOkSeries = $editorChartRows->map(fn ($row): int => (int) $row->submits_ok)->values()->all();
+        $editorReworkSeries = $editorChartRows->map(fn ($row): int => (int) $row->submits_rework)->values()->all();
+
         $reviewerColumns = [
             ['key' => 'reviewer', 'label' => 'Reviewer'],
             ['key' => 'flags_total', 'label' => 'Tổng cờ', 'align' => 'right'],
@@ -861,6 +910,13 @@ final class GetAdminReportDataAction
             ['key' => 'reviews_approve', 'label' => 'Approve', 'align' => 'right'],
             ['key' => 'reviews_reject', 'label' => 'Reject', 'align' => 'right'],
             ['key' => 'reviews_incorrect', 'label' => 'Duyệt sai', 'align' => 'right'],
+        ];
+
+        $editorColumns = [
+            ['key' => 'editor', 'label' => 'Biên tập viên'],
+            ['key' => 'submits_total', 'label' => 'Lần gửi duyệt', 'align' => 'right'],
+            ['key' => 'submits_ok', 'label' => 'Soạn đạt', 'align' => 'right'],
+            ['key' => 'submits_rework', 'label' => 'Soạn lỗi', 'align' => 'right'],
         ];
 
         return [
@@ -883,6 +939,9 @@ final class GetAdminReportDataAction
                     'Approve hoặc reject không đúng',
                     'person_alert',
                 ),
+                $this->kpi('Lần gửi duyệt', number_format($totalSubmits), 'Biên tập viên submit trong kỳ', 'edit_note'),
+                $this->kpi('Soạn đạt', number_format($editorConfirmed), 'Bản gửi đạt khi QA', 'check_circle'),
+                $this->kpi('Soạn lỗi', number_format($editorNeedsRework), 'Bản gửi cần sửa', 'error'),
             ],
             'charts' => [
                 $this->chart(
@@ -909,6 +968,18 @@ final class GetAdminReportDataAction
                         ['label' => 'Duyệt sai', 'data' => $instructorIncorrectSeries, 'color' => '#d97706'],
                     ],
                 ),
+                $this->chart(
+                    'report-review-qa-editors',
+                    'Hiệu suất biên tập viên',
+                    'Top lần gửi duyệt · soạn đạt vs soạn lỗi (đã đánh giá QA)',
+                    'bar',
+                    'number',
+                    $editorChartLabels,
+                    [
+                        ['label' => 'Soạn đạt', 'data' => $editorOkSeries, 'color' => '#2563eb'],
+                        ['label' => 'Soạn lỗi', 'data' => $editorReworkSeries, 'color' => '#c2410c'],
+                    ],
+                ),
             ],
             'columns' => $reviewerColumns,
             'rows' => $reviewerTableRows,
@@ -925,9 +996,15 @@ final class GetAdminReportDataAction
                     'rows' => $instructorTableRows,
                     'empty_message' => $totalReviews === 0 ? 'Chưa có lần duyệt giảng viên trong kỳ đã chọn.' : null,
                 ],
+                [
+                    'title' => 'Biên tập viên',
+                    'columns' => $editorColumns,
+                    'rows' => $editorTableRows,
+                    'empty_message' => $totalSubmits === 0 ? 'Chưa có lần gửi duyệt của biên tập viên trong kỳ đã chọn.' : null,
+                ],
             ],
-            'empty_message' => ($totalFlags === 0 && $totalReviews === 0)
-                ? 'Chưa có hoạt động duyệt / gắn cờ trong kỳ đã chọn.'
+            'empty_message' => ($totalFlags === 0 && $totalReviews === 0 && $totalSubmits === 0)
+                ? 'Chưa có hoạt động duyệt / gắn cờ / gửi duyệt trong kỳ đã chọn.'
                 : null,
         ];
     }

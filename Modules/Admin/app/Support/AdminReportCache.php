@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Cache;
 final class AdminReportCache
 {
     /** Bump when report payload shape/labels change so stale snapshots are ignored. */
-    public const SCHEMA_VERSION = 3;
+    public const SCHEMA_VERSION = 4;
 
     /** Fallback TTL khi chưa có setting (2 ngày). */
     public const TTL_SECONDS = 172800;

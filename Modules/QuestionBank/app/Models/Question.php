@@ -25,6 +25,7 @@ use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\InstructorReviewDecision;
 use Modules\QuestionBank\Enums\QuestionReviewStatus;
 use Modules\QuestionBank\Enums\QuestionStatus;
+use Modules\QuestionBank\Enums\QuestionWorkflowEventType;
 use Modules\QuestionBank\Enums\ReviewerFlag;
 use Modules\QuestionBank\Support\QuestionCodeAllocator;
 use Modules\QuestionBank\Support\QuestionFilterBuilder;
@@ -438,8 +439,64 @@ class Question extends Model
     }
 
     /**
+     * Absolute review-cycle counter (lifetime). Prefer {@see currentPipelineReviewCycle()} for UI.
+     */
+    public function lastPublishedReviewCycle(): int
+    {
+        if (array_key_exists('last_published_review_cycle', $this->attributes)
+            && $this->attributes['last_published_review_cycle'] !== null) {
+            return (int) $this->attributes['last_published_review_cycle'];
+        }
+
+        if ((int) ($this->published_version ?? 0) < 1) {
+            return 0;
+        }
+
+        $fromEvent = $this->workflowEvents()
+            ->where('event_type', QuestionWorkflowEventType::Publish->value)
+            ->orderByDesc('published_version')
+            ->value('review_cycle');
+
+        if ($fromEvent !== null) {
+            return (int) $fromEvent;
+        }
+
+        $snapshotCycle = $this->versions()
+            ->where('version', (int) $this->published_version)
+            ->value('snapshot');
+
+        if (is_array($snapshotCycle)) {
+            return (int) ($snapshotCycle['review_pipeline']['review_cycle'] ?? 0);
+        }
+
+        if (is_string($snapshotCycle)) {
+            $decoded = json_decode($snapshotCycle, true);
+            if (is_array($decoded)) {
+                return (int) ($decoded['review_pipeline']['review_cycle'] ?? 0);
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * Round number within the current working-copy pipeline (after last publish).
+     * Matches timeline «display_cycle» — not the lifetime instructor_review_cycle.
+     */
+    public function currentPipelineReviewCycle(): int
+    {
+        $absolute = (int) $this->instructor_review_cycle;
+        if ($absolute < 1) {
+            return 0;
+        }
+
+        return max(0, $absolute - $this->lastPublishedReviewCycle());
+    }
+
+    /**
      * Compact label for admin list while the question is still in the review pipeline.
      * Hidden for draft / published / private / retire — «Vòng N» would look like an active round.
+     * «Vòng N» = vòng trong bản làm việc hiện tại (sau XB gần nhất), không cộng dồn mọi phiên bản.
      */
     public function pipelineProgressLabel(): string
     {
@@ -457,7 +514,7 @@ class Question extends Model
             return '';
         }
 
-        $cycle = (int) $this->instructor_review_cycle;
+        $cycle = $this->currentPipelineReviewCycle();
         if ($cycle < 1 && (int) $this->pipeline_reject_count < 1) {
             return '';
         }

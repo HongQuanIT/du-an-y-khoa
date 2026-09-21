@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\QuestionBank\Support;
 
 use App\Models\User;
+use Modules\QuestionBank\Enums\EditorSubmitOutcome;
 use Modules\QuestionBank\Enums\QuestionWorkflowEventType;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionWorkflowEvent;
@@ -24,6 +25,7 @@ final class QuestionWorkflowRecorder
         ?int $publishedVersion = null,
     ): QuestionWorkflowEvent {
         $note = filled($note) ? mb_substr(trim(strip_tags((string) $note)), 0, 2000) : null;
+        $isSubmit = $type === QuestionWorkflowEventType::Submit;
 
         return QuestionWorkflowEvent::query()->create([
             'question_id' => $question->getKey(),
@@ -33,6 +35,10 @@ final class QuestionWorkflowRecorder
             'actor_id' => $actor?->getKey(),
             'actor_role' => $actorRole,
             'note' => $note,
+            'outcome' => EditorSubmitOutcome::Pending->value,
+            'content_fingerprint' => $isSubmit
+                ? ($question->content_fingerprint ?: null)
+                : null,
             'meta' => $meta,
             'occurred_at' => now(),
         ]);

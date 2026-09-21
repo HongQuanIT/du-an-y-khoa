@@ -26,10 +26,14 @@
             storageKey: 'admin.questions.columns.v1',
             defaults: @js($defaultColumns),
             isReviewer: @js($isReviewer),
+            canPublish: @js($canPublish ?? false),
             pageIds: @js($questions->pluck('id')->values()),
             filteredTotal: {{ (int) $questions->total() }},
             exportLimit: {{ (int) $exportLimit }},
+            bulkLimit: {{ (int) ($bulkLimit ?? 20) }},
             exportUrl: @js(route('admin.questions.export')),
+            bulkUrl: @js(route('admin.questions.bulk-transition')),
+            csrf: @js(csrf_token()),
             exportQuery: @js(request()->except(['page'])),
         })" class="space-y-6">
         {{-- Header chính chuẩn SEO với thẻ H1 --}}
@@ -545,6 +549,10 @@
                                         @if ($label = $question->pipelineProgressLabel())
                                             <p class="text-[10px] font-semibold leading-4 text-on-surface">{{ $label }}</p>
                                         @endif
+                                        @if ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::PendingPublish
+                                            && (int) $question->currentPipelineReviewCycle() >= 2)
+                                            <span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-900">Cần QA trước XB</span>
+                                        @endif
                                         @if ($question->hasEditorialSubmission())
                                             @include('questionbank::partials.instructor-review-flags', ['question' => $question])
                                         @endif
@@ -733,16 +741,27 @@
         </form>
 
         <div x-show="selectedCount > 0" x-cloak
-            class="sticky bottom-4 z-40 mx-auto flex w-full max-w-3xl flex-wrap items-center justify-between gap-3 rounded-2xl border border-outline-variant bg-surface px-4 py-3 shadow-lg">
+            class="sticky bottom-4 z-40 mx-auto flex w-full max-w-4xl flex-wrap items-center justify-between gap-3 rounded-2xl border border-outline-variant bg-surface px-4 py-3 shadow-lg">
             <p class="font-label-md text-on-surface">
                 <strong x-text="selectedCount"></strong> câu đã chọn
                 <span class="text-on-surface-variant" x-show="selectedCount > exportLimit">
                     — xuất tối đa <strong x-text="exportLimit"></strong>
                 </span>
+                <span class="text-on-surface-variant" x-show="canPublish && selectedCount > bulkLimit">
+                    — XB hàng loạt tối đa <strong x-text="bulkLimit"></strong>/lần (chỉ 1 vòng + 2 xanh)
+                </span>
             </p>
             <div class="flex flex-wrap items-center gap-2">
+                @if (! empty($canPublish))
+                    <button type="button" @click="bulkPublish()" :disabled="bulkBusy"
+                        class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 font-label-sm font-semibold text-on-primary hover:bg-primary/90 disabled:opacity-60"
+                        title="Chỉ xuất bản câu chờ XB, đúng 1 vòng và đủ 2 cờ xanh">
+                        <span class="material-symbols-outlined text-[16px]">publish</span>
+                        Xuất bản
+                    </button>
+                @endif
                 <button type="button" @click="exportAs('xlsx')"
-                    class="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 font-label-sm font-semibold text-on-primary hover:bg-primary/90">
+                    class="inline-flex items-center gap-1.5 rounded-xl border border-outline-variant px-3 py-2 font-label-sm font-semibold text-on-surface hover:bg-surface-container-low">
                     Xuất Excel
                 </button>
                 <button type="button" @click="exportAs('csv')"
@@ -758,7 +777,7 @@
     </div>
 
     <script>
-        function questionColumnPrefs({ storageKey, defaults, isReviewer, pageIds, filteredTotal, exportLimit, exportUrl, exportQuery }) {
+        function questionColumnPrefs({ storageKey, defaults, isReviewer, canPublish, pageIds, filteredTotal, exportLimit, bulkLimit, exportUrl, bulkUrl, csrf, exportQuery }) {
             const toggleableColumns = [
                 { key: 'taxonomy', label: 'Bài học' },
                 { key: 'difficulty', label: 'Độ khó' },
@@ -798,6 +817,7 @@
                 open: false,
                 ajaxLoading: false,
                 isReviewer,
+                canPublish: Boolean(canPublish),
                 toggleableColumns,
                 cols: load(),
                 panelStyle: '',
@@ -806,10 +826,14 @@
                 pageIds: pageIds || [],
                 filteredTotal: filteredTotal || 0,
                 exportLimit: exportLimit || 2000,
+                bulkLimit: bulkLimit || 20,
                 exportUrl,
+                bulkUrl,
+                csrf,
                 exportQuery: exportQuery || {},
                 exportFormat: 'xlsx',
                 selectedIds: loadSelected(),
+                bulkBusy: false,
                 toggle(key) {
                     this.cols[key] = !this.cols[key];
                     this.persist();
@@ -871,6 +895,48 @@
                 clearSelected() {
                     this.selectedIds = [];
                     this.persistSelected();
+                },
+                bulkIds() {
+                    return this.selectedIds.slice(0, this.bulkLimit);
+                },
+                async bulkPublish() {
+                    if (this.selectedCount === 0 || this.bulkBusy) return;
+                    const ids = this.bulkIds();
+                    const msg = ids.length < this.selectedCount
+                        ? `Xuất bản tối đa ${this.bulkLimit} câu đầu? Chỉ câu 1 vòng + 2 cờ xanh được XB; còn lại bỏ qua (duyệt thủ công).`
+                        : 'Xuất bản các câu đủ điều kiện (1 vòng + 2 cờ xanh)? Câu ≥2 vòng / có cờ đỏ / không chờ XB sẽ bị bỏ qua — duyệt thủ công trên form.';
+                    if (!window.confirm(msg)) return;
+                    await this.runBulk({ ids });
+                },
+                async runBulk(payload) {
+                    this.bulkBusy = true;
+                    try {
+                        const res = await fetch(this.bulkUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': this.csrf,
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                            body: JSON.stringify(payload),
+                        });
+                        const data = await res.json().catch(() => ({}));
+                        if (!res.ok) {
+                            const firstError = data?.errors
+                                ? Object.values(data.errors).flat()[0]
+                                : (data?.message || 'Xuất bản hàng loạt thất bại.');
+                            window.alert(firstError);
+                            return;
+                        }
+                        window.alert(data.message || 'Đã xử lý.');
+                        this.clearSelected();
+                        window.location.reload();
+                    } catch (e) {
+                        window.alert('Không kết nối được máy chủ.');
+                    } finally {
+                        this.bulkBusy = false;
+                    }
                 },
                 filterExportUrl(format) {
                     const params = new URLSearchParams();

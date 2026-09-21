@@ -6,6 +6,7 @@ namespace Modules\QuestionBank\Support;
 
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Modules\QuestionBank\Enums\EditorSubmitOutcome;
 use Modules\QuestionBank\Enums\InstructorReviewDecision;
 use Modules\QuestionBank\Enums\InstructorReviewOutcome;
 use Modules\QuestionBank\Enums\QuestionStatus;
@@ -31,7 +32,7 @@ use Modules\QuestionBank\Models\QuestionWorkflowEvent;
  *   outcome_label: string|null,
  *   occurred_at: Carbon|null,
  *   qa: array{
- *     kind: 'instructor'|'flag',
+ *     kind: 'instructor'|'flag'|'submit',
  *     id: int,
  *     current: string|null,
  *     current_label: string|null,
@@ -556,6 +557,31 @@ final class QuestionReviewTimeline
             $label = 'Xuất bản phiên bản '.(int) $event->published_version;
         }
 
+        $outcome = $event->outcome instanceof EditorSubmitOutcome
+            ? $event->outcome
+            : EditorSubmitOutcome::tryFrom((string) $event->outcome);
+
+        $qa = null;
+        $outcomeLabel = null;
+        if ($type === QuestionWorkflowEventType::Submit) {
+            $outcomeLabel = $outcome && $outcome !== EditorSubmitOutcome::Pending
+                ? $outcome->label()
+                : null;
+            $qa = [
+                'kind' => 'submit',
+                'id' => (int) $event->getKey(),
+                'current' => $outcome?->value ?? EditorSubmitOutcome::Pending->value,
+                'current_label' => $outcomeLabel,
+                'note' => filled($event->outcome_note) ? (string) $event->outcome_note : null,
+                'locked' => $outcome !== null && $outcome !== EditorSubmitOutcome::Pending,
+                'options' => [
+                    ['value' => EditorSubmitOutcome::Confirmed->value, 'label' => 'Soạn đạt'],
+                    ['value' => EditorSubmitOutcome::NeedsRework->value, 'label' => 'Soạn lỗi'],
+                    ['value' => EditorSubmitOutcome::Pending->value, 'label' => 'Chưa đánh giá'],
+                ],
+            ];
+        }
+
         return [
             'type' => $type?->value ?? 'unknown',
             'label' => $label,
@@ -563,12 +589,14 @@ final class QuestionReviewTimeline
             'actor_role' => $event->actor_role,
             'note' => filled($event->note) ? (string) $event->note : null,
             'tone' => $tone,
-            'outcome_label' => null,
+            'outcome_label' => $outcomeLabel,
             'occurred_at' => $event->occurred_at ?? $event->created_at,
-            'qa' => null,
+            'qa' => $qa,
             'meta' => array_merge((array) $event->meta, [
                 'review_cycle' => (int) $event->review_cycle,
                 'published_version' => $event->published_version,
+                'outcome' => $outcome?->value,
+                'record_id' => (int) $event->getKey(),
             ]),
         ];
     }

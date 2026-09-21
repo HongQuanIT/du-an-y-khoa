@@ -23,6 +23,7 @@ use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionReviewRequest;
 use Modules\QuestionBank\Support\AssignedInstructorMatcher;
 use Modules\QuestionBank\Support\QuestionInstructorReviewCycle;
+use Modules\QuestionBank\Support\QuestionQaCompleteness;
 use Modules\QuestionBank\Support\QuestionReviewerFlagCycle;
 use Modules\QuestionBank\Support\QuestionReviewTimeline;
 use Modules\QuestionBank\Support\QuestionWorkflowRecorder;
@@ -42,6 +43,7 @@ final class TransitionQuestionStatusAction
         private readonly QuestionWorkflowRecorder $workflowRecorder,
         private readonly QuestionReviewTimeline $reviewTimeline,
         private readonly AdjudicateReviewOutcomesAction $adjudicateOutcomes,
+        private readonly QuestionQaCompleteness $qaCompleteness,
     ) {}
 
     public function handle(
@@ -408,6 +410,12 @@ final class TransitionQuestionStatusAction
         if (! $this->reviewCycle->hasRequiredApprovals($question)) {
             throw ValidationException::withMessages([
                 'status' => 'Cần giảng viên duyệt và đủ 2 cờ xanh trước khi '.$actionLabel.'.',
+            ]);
+        }
+
+        if ($this->qaCompleteness->blocksPublish($question)) {
+            throw ValidationException::withMessages([
+                'status' => $this->qaCompleteness->publishBlockedMessage($question),
             ]);
         }
 

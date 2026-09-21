@@ -91,7 +91,7 @@ Import: commit tạo hàng loạt `draft`.
 | `instructor_id` | Giảng viên lớp 1 quyết định gần nhất | Basic info |
 | `instructor_1_*` / `instructor_2_*` | Legacy 2 slot GV (id + decision) | — |
 | `reviewer_1_*` / `reviewer_2_*` | 2 slot cờ reviewer (id + green/red + note) | 2 cờ trắng/xanh/đỏ |
-| `instructor_review_cycle` | Vòng duyệt; +1 mỗi lần submit / gửi lại | Timeline / list |
+| `instructor_review_cycle` | Vòng duyệt tuyệt đối (lifetime); +1 mỗi submit / gửi lại | Timeline nội bộ; list dùng vòng tương đối sau XB |
 | `pipeline_reject_count` | Số lần trả về (GV + Admin) trong pipeline chưa XB; reset khi publish | List «Vòng N · X lần trả về» |
 | `publisher_id` | Super Admin publish gần nhất (lớp 2) | Basic info |
 | `rejection_reason` | Lý do từ chối (GV hoặc Super Admin) | Badge / alert |
@@ -103,22 +103,28 @@ Import: commit tạo hàng loạt `draft`.
 - Nguồn: `question_instructor_reviews` + `question_reviewer_flags` + `question_workflow_events` (`submit` / `admin_reject` / `publish`).
 - UI form: partial «Lịch sử duyệt» nhóm theo `review_cycle` — ai duyệt, ai gắn cờ, ai trả về, ghi chú, thời gian.
 - Khi publish: ghi `snapshot.review_pipeline` (cycle, reject count, instructor, 2 cờ, publisher) vào `question_versions`.
-- List admin: nhãn `pipelineProgressLabel()` = «Vòng N · X lần trả về» **chỉ khi đang trong pipeline** (chờ GV / chờ cờ / chờ XB / từ chối). Nháp, đã xuất bản, private, retire → không hiện «Vòng N». Cột bản gửi: nháp → «Bản nháp».
+- List admin: nhãn `pipelineProgressLabel()` = «Vòng N · X lần trả về» **chỉ khi đang trong pipeline** (chờ GV / chờ cờ / chờ XB / từ chối). **N = vòng trong bản làm việc hiện tại** (sau XB gần nhất), không cộng dồn vòng của các phiên bản đã XB. Nháp, đã xuất bản, private, retire → không hiện «Vòng N». Cột bản gửi: nháp → «Bản nháp».
 - Timeline «Lịch sử duyệt»: nhóm theo **phiên bản** — «Bản hiện tại» (trạng thái working copy + các vòng sau XB gần nhất) và từng **Phiên bản N đã xuất bản** (các vòng duyệt dẫn tới XB đó). Mỗi segment mở/đóng; trong segment là các vòng + QA.
 
 ### 5.1c QA chất lượng duyệt (Admin)
-- Outcome trên `question_reviewer_flags` / `question_instructor_reviews` (theo từng **vòng** `review_cycle` + actor):
+- Outcome trên `question_reviewer_flags` / `question_instructor_reviews` / **`question_workflow_events` (submit Editor)** (theo từng **vòng** `review_cycle` + actor):
   - Reviewer: `pending|confirmed|false_positive|inconclusive` — `confirmed` = gắn đúng, `false_positive` = **gắn sai** (đỏ oan **hoặc** xanh sai).
   - GV: `pending|confirmed|miss|over_reject|inconclusive` — Admin chỉ thấy **Duyệt đúng / Duyệt sai**; `miss` (approve sai) và `over_reject` (reject sai) đều là duyệt sai (cùng nhãn).
-- **Đánh dấu ngay tại vòng (khuyến nghị UX):** trên «Lịch sử duyệt», mỗi entry cờ/duyệt có badge outcome + Admin (permission **`question.adjudicate`**) chỉnh outcome thủ công khi phát hiện sai — ghi `outcome_source=admin`, `outcome_by`, `outcome_at`, `outcome_note`.
+  - Editor (submit): `pending|confirmed|needs_rework|inconclusive` — UI **Soạn đạt / Soạn lỗi**. «Trả về oan» không cần nhãn riêng: suy ra khi bản gửi Soạn đạt mà pipeline vẫn trả về (cùng lúc cờ đỏ gắn sai / GV over_reject).
+- **Đánh dấu ngay tại vòng (khuyến nghị UX):** trên «Lịch sử duyệt», mỗi entry cờ/duyệt/**gửi duyệt** có badge outcome + Admin (permission **`question.adjudicate`**) chỉnh outcome thủ công khi phát hiện sai — ghi `outcome_source=admin`, `outcome_by`, `outcome_at`, `outcome_note`.
 - **Cascade theo vòng khi Admin adjudicate:**
-  - Xác nhận cờ đỏ đúng → set red flags vòng đó `confirmed` + approve GV cùng vòng → `miss` (hiển thị **Duyệt sai**).
-  - Đánh cờ đỏ gắn sai → red flags `false_positive`; không quy lỗi GV.
-  - Đánh cờ xanh gắn sai (nên đỏ) → green flags `false_positive`; nếu cùng vòng có approve GV → `miss`.
-  - Đánh GV duyệt sai khi reject → lưu `over_reject` (UI: **Duyệt sai**).
-- **Tự động (giữ):** Admin trả về khi có cờ đỏ chọn Cờ đỏ đúng / Cờ đỏ gắn sai; khi publish heuristic fingerprint adjudicate pending đỏ + reject GV; approve không bị tranh chấp → `confirmed`.
-- Báo cáo `content.review-qa`: KPI + bảng Reviewer (tổng/đỏ/xanh/gắn sai) + bảng GV (tổng/approve/reject/duyệt sai). Permission: `report.view` + `question.view`.
-- **UI:** «Lịch sử duyệt» — Admin chọn **Duyệt đúng / Duyệt sai** (hoặc Gắn đúng / Gắn sai) rồi Lưu QA; ghi đúng `review_cycle` + actor. Route `POST …/review-outcomes` yêu cầu `question.adjudicate` (mặc định `admin` + `super_admin`; **không** cấp cho `content_editor`).
+  - Xác nhận cờ đỏ đúng → set red flags vòng đó `confirmed` + approve GV cùng vòng → `miss` (hiển thị **Duyệt sai**) + submit Editor → `needs_rework`.
+  - Đánh cờ đỏ gắn sai → red flags `false_positive`; submit Editor → `confirmed` (bản gửi đạt); không quy lỗi GV.
+  - Đánh cờ xanh gắn sai (nên đỏ) → green flags `false_positive`; nếu cùng vòng có approve GV → `miss`; submit Editor → `needs_rework`.
+  - Đánh GV duyệt sai khi reject → lưu `over_reject` (UI: **Duyệt sai**) + submit Editor → `confirmed`.
+  - Đánh GV reject đúng → submit Editor → `needs_rework`; approve đúng → submit → `confirmed`.
+- **Tự động (giữ):** Admin trả về khi có cờ đỏ chọn Cờ đỏ đúng / Cờ đỏ gắn sai; khi publish heuristic fingerprint adjudicate pending đỏ + reject GV + **submit Editor**; approve/green không bị tranh chấp → `confirmed`.
+- **Gate xuất bản theo số vòng (pipeline hiện tại, sau XB gần nhất):**
+  - **1 vòng:** được XB ngay; `onPublish` auto gắn đạt (Editor / GV approve / cờ xanh).
+  - **≥2 vòng:** **chặn** `pending_publish → published|private` nếu còn outcome `pending` trên submit / phiếu GV / cờ reviewer của các vòng sau XB gần nhất. Admin phải đánh giá trên «Lịch sử duyệt» rồi mới XB. Trả về biên tập **không** bắt buộc đủ QA.
+- **Bulk trên list** (`POST /admin/questions/bulk-transition`, tối đa 20 câu): **chỉ Xuất bản** câu `pending_publish` + **đúng 1 vòng** pipeline + **2 cờ xanh**. ≥2 vòng / cờ đỏ / thiếu điều kiện → bỏ qua (duyệt thủ công trên form). **Không** có từ chối hàng loạt. Permission: `question.publish`.
+- Báo cáo `content.review-qa`: KPI + bảng/chart Reviewer, GV, **Biên tập viên** (lần gửi / soạn đạt / soạn lỗi). Permission: `report.view` + `question.view`.
+- **UI:** «Lịch sử duyệt» — Admin chọn **Duyệt đúng / Duyệt sai** (hoặc Gắn đúng / Gắn sai / Soạn đạt / Soạn lỗi) rồi Lưu QA; ghi đúng `review_cycle` + actor. Route `POST …/review-outcomes` (`kind=instructor|flag|submit`) yêu cầu `question.adjudicate` (mặc định `admin` + `super_admin`; **không** cấp cho `content_editor`).
 
 ### 5.2 Versioning — **chỉ tăng khi Super Admin publish**
 - Mọi chỉnh sửa của Content Creator trên **working copy** (`questions` + options…): **không** tạo / tăng version.
@@ -244,7 +250,7 @@ Tránh N+1: eager load creator / instructor / publisher trên list; **không** j
 - `question_versions`: `question_id`, `version_number`, `snapshot` JSON (kèm `review_pipeline` khi publish), `created_by`, `event`, `created_at`; unique `(question_id, version_number)`; **chỉ tạo khi Super Admin publish**
 - `question_instructor_reviews`: `question_id`, `review_cycle`, `instructor_id`, `decision` (approved/rejected), `note`, `content_fingerprint`, `reviewed_at`; unique `(question_id, review_cycle, instructor_id)`
 - `question_reviewer_flags`: `question_id`, `review_cycle`, `reviewer_id`, `flag` (green/red), `note`, `content_fingerprint`, `reviewed_at`
-- `question_workflow_events`: `question_id`, `review_cycle`, `event_type` (submit/admin_reject/publish), `actor_id`, `note`, `meta` JSON, `occurred_at`
+- `question_workflow_events`: `question_id`, `review_cycle`, `event_type` (submit/admin_reject/publish), `actor_id`, `note`, `outcome` (+ source/by/at/note), `content_fingerprint` (submit), `meta` JSON, `occurred_at`
 - `question_review_requests` (optional / giữ): theo dõi yêu cầu submit lớp 1; status pending/approved/rejected; **không** thay thế `questions.status`
 - `organ_systems`, `subjects`, `lessons` (mỗi bảng: `id, name, slug UK, description null, status, sort_order`); pivot `lesson_organ_system`, `lesson_subject`
 - `question_import_batches(id, uploaded_by, original_filename, disk_path, format, status, source_headers, column_map, stats, error_report_path, committed_at)`

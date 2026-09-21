@@ -316,6 +316,10 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
             ->scopeBindings()
             ->name('questions.versions.restore');
 
+        Route::post('/questions/bulk-transition', [QuestionController::class, 'bulkTransition'])
+            ->middleware('permission:'.Permission::QuestionPublish->value)
+            ->name('questions.bulk-transition');
+
         Route::post('/questions/{question}/transition', [QuestionController::class, 'transition'])
             ->middleware('permission:question.update|question.submit|question.publish|question.reject')
             ->name('questions.transition');
