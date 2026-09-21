@@ -153,7 +153,7 @@
         @endif
 
         {{-- Section 1: Thống kê tổng quan --}}
-        <section aria-labelledby="heading-stats">
+        <section id="question-stats" aria-labelledby="heading-stats">
             <div class="mb-3 flex items-center justify-between gap-3">
                 <h2 id="heading-stats" class="font-label-lg font-semibold text-on-surface">Tổng quan</h2>
                 <p class="font-body-sm text-on-surface-variant">Tình trạng ngân hàng câu hỏi</p>
@@ -247,19 +247,23 @@
                 </div>
                 @if ($hasActiveFilters)
                     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.index'))
-<a href="{{ route('admin.questions.index') }}" id="btn-reset-filters"
+                    <a href="{{ route('admin.questions.index') }}" id="btn-reset-filters"
+                        @click.prevent="resetQuestionFilters($event.currentTarget.href)"
                         class="font-label-md text-on-surface-variant underline underline-offset-4 hover:text-on-surface">Xóa
                         bộ lọc</a>
 @endif
                 @endif
             </div>
             @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.index'))
+            <div class="px-1 pb-1">
 <form method="get" action="{{ route('admin.questions.index') }}" id="question-filter-form" role="search"
-                class="grid grid-cols-1 items-start gap-4 sm:grid-cols-12">
+                aria-label="Tìm kiếm và lọc câu hỏi"
+                @submit.prevent="applyQuestionFilters()"
+                class="grid grid-cols-1 items-end gap-4 sm:grid-cols-12">
                 @if (filled($filters['import_batch_id'] ?? null))
                     <input type="hidden" name="import_batch_id" value="{{ $filters['import_batch_id'] }}">
                 @endif
-                <div class="sm:col-span-3">
+                <div class="sm:col-span-4">
                     <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant"
                         for="question-search-input">
                         Tìm kiếm từ khóa
@@ -269,7 +273,7 @@
                             class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant"
                             aria-hidden="true">search</span>
                         <input id="question-search-input" name="q" value="{{ $filters['q'] }}" type="search"
-                            autocomplete="off" placeholder="Mã câu hỏi hoặc từ khóa đề bài..."
+                            autocomplete="off" placeholder="Mã, từ khóa hoặc nội dung câu hỏi..."
                             class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 pl-9 font-body-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
                     </div>
                 </div>
@@ -319,18 +323,27 @@
                     </div>
                 @endif
 
-                <div class="{{ $canViewAny ? 'sm:col-span-1' : 'sm:col-span-3' }}">
-                    <span class="mb-1.5 block font-label-sm font-semibold text-transparent" aria-hidden="true">Lọc</span>
-                    <button type="submit" id="btn-apply-filters"
-                        class="inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-4 font-label-md font-medium text-on-primary transition hover:opacity-90">
-                        <span class="material-symbols-outlined text-[18px]" aria-hidden="true">filter_alt</span>
-                        Lọc
+                <div class="flex justify-end gap-2 sm:col-span-12">
+                    <button type="submit" id="btn-apply-filters" :disabled="ajaxLoading"
+                        aria-label="Tìm kiếm câu hỏi"
+                        class="inline-flex h-11 w-36 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 font-label-md font-medium text-on-primary transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50">
+                        <span class="material-symbols-outlined shrink-0 text-[18px]" aria-hidden="true"
+                            x-text="ajaxLoading ? 'progress_activity' : 'search'">search</span>
+                        <span class="whitespace-nowrap" x-text="ajaxLoading ? 'Đang tải' : 'Tìm kiếm'">Tìm kiếm</span>
+                    </button>
+                    <button type="button" id="btn-reset-question-filters" @click="resetQuestionFilters(@js(route('admin.questions.index')))"
+                        aria-label="Xoá bộ lọc"
+                        class="inline-flex h-11 w-28 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-outline-variant bg-surface px-3 font-label-md font-medium text-on-surface-variant transition hover:bg-surface-container-low focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:opacity-50">
+                        <span class="material-symbols-outlined shrink-0 text-[18px]" aria-hidden="true">delete</span>
+                        <span class="whitespace-nowrap">Xoá</span>
                     </button>
                 </div>
             </form>
+            </div>
 @endif
         </section>
 
+        <div id="question-results-region">
         {{-- Section 3: Bảng dữ liệu câu hỏi - Scroll trái phải đồng đều --}}
         <section aria-labelledby="heading-questions-list"
             class="overflow-hidden rounded-xl border border-outline-variant bg-surface">
@@ -496,24 +509,29 @@
                                             class="text-xs font-medium text-on-surface">{{ $question->creator?->name ?? 'Dữ liệu hệ thống' }}</span>
                                     </td>
 
-                                {{-- Cột 1: Trạng thái xuất bản (live / private / ngừng dùng) --}}
+                                {{-- Trạng thái workflow, đồng bộ với bộ lọc QuestionStatus --}}
                                 <td class="w-[140px] min-w-[120px] px-4 py-4 align-top whitespace-nowrap"
                                     x-show="cols.status" x-cloak>
                                     @php
-                                        $pubLabel = $question->publicationStateLabel();
-                                        $pubBadgeClass = match ($pubLabel) {
-                                            'Đã xuất bản' => 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300',
-                                            'Riêng tư (exam)' => 'bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300',
-                                            'Ngừng dùng' => 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300',
+                                        $statusLabel = $question->status->label();
+                                        $statusBadgeClass = match ($question->status) {
+                                            \Modules\QuestionBank\Enums\QuestionStatus::Draft => 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+                                            \Modules\QuestionBank\Enums\QuestionStatus::InReview => 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300',
+                                            \Modules\QuestionBank\Enums\QuestionStatus::InFlagReview => 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300',
+                                            \Modules\QuestionBank\Enums\QuestionStatus::PendingPublish => 'bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300',
+                                            \Modules\QuestionBank\Enums\QuestionStatus::Published => 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300',
+                                            \Modules\QuestionBank\Enums\QuestionStatus::Rejected => 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300',
+                                            \Modules\QuestionBank\Enums\QuestionStatus::Private => 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300',
+                                            \Modules\QuestionBank\Enums\QuestionStatus::Retired => 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
                                             default => 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
                                         };
-                                        if ((int) $question->published_version > 0 && $pubLabel === 'Đã xuất bản') {
-                                            $pubLabel .= ' · v'.$question->published_version;
+                                        if ((int) $question->published_version > 0 && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::Published) {
+                                            $statusLabel .= ' · v'.$question->published_version;
                                         }
                                     @endphp
                                     <span
-                                        class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold {{ $pubBadgeClass }}">
-                                        {{ $pubLabel }}
+                                        class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold {{ $statusBadgeClass }}">
+                                        {{ $statusLabel }}
                                     </span>
                                 </td>
 
@@ -695,6 +713,7 @@
                 {{ $questions->links() }}
             </nav>
         @endif
+        </div>
 
         <form x-ref="exportForm" method="post" action="{{ route('admin.questions.export') }}" class="hidden">
             @csrf
@@ -777,6 +796,7 @@
 
             return {
                 open: false,
+                ajaxLoading: false,
                 isReviewer,
                 toggleableColumns,
                 cols: load(),
@@ -900,6 +920,71 @@
                     this.canScrollLeft = el.scrollLeft > 10;
                     this.canScrollRight = el.scrollLeft < (el.scrollWidth - el.clientWidth - 10);
                 },
+                async applyQuestionFilters() {
+                    const form = document.getElementById('question-filter-form');
+                    if (!form) return;
+
+                    const url = new URL(form.action, window.location.origin);
+                    const params = new URLSearchParams(new FormData(form));
+                    params.delete('page');
+                    url.search = params.toString();
+                    await this.fetchQuestionResults(url.toString());
+                },
+                async resetQuestionFilters(url) {
+                    const form = document.getElementById('question-filter-form');
+                    if (form) {
+                        const queryInput = form.querySelector('[name="q"]');
+                        if (queryInput) queryInput.value = '';
+                    }
+                    window.dispatchEvent(new CustomEvent('question-filters-reset'));
+                    await this.fetchQuestionResults(url);
+                },
+                async fetchQuestionResults(url) {
+                    this.ajaxLoading = true;
+                    try {
+                        const response = await fetch(url, {
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Accept': 'text/html',
+                            },
+                        });
+                        if (!response.ok) throw new Error('Lỗi tải danh sách câu hỏi');
+
+                        const html = await response.text();
+                        const documentHtml = new DOMParser().parseFromString(html, 'text/html');
+                        const nextStats = documentHtml.getElementById('question-stats');
+                        const nextResults = documentHtml.getElementById('question-results-region');
+                        const currentStats = document.getElementById('question-stats');
+                        const currentResults = document.getElementById('question-results-region');
+
+                        if (!nextStats || !nextResults || !currentStats || !currentResults) {
+                            throw new Error('Không tìm thấy vùng kết quả câu hỏi');
+                        }
+
+                        currentStats.replaceWith(nextStats);
+                        currentResults.replaceWith(nextResults);
+                        window.history.pushState({}, '', url);
+                        this.$nextTick(() => {
+                            this.bindQuestionPagination();
+                            this.updateScrollState();
+                        });
+                    } catch (error) {
+                        console.error(error);
+                        alert('Có lỗi xảy ra khi tải danh sách câu hỏi. Vui lòng thử lại.');
+                    } finally {
+                        this.ajaxLoading = false;
+                    }
+                },
+                bindQuestionPagination() {
+                    const container = document.getElementById('question-results-region');
+                    if (!container) return;
+                    container.querySelectorAll('nav a').forEach((link) => {
+                        link.addEventListener('click', (event) => {
+                            event.preventDefault();
+                            if (link.href) this.fetchQuestionResults(link.href);
+                        });
+                    });
+                },
                 init() {
                     this.$watch('open', (value) => {
                         if (value) {
@@ -918,6 +1003,8 @@
                         }
                     }, true);
                     this.$nextTick(() => {
+                        this.ajaxLoading = false;
+                        this.bindQuestionPagination();
                         this.updateScrollState();
                     });
                 },
