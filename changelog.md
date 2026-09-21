@@ -9,6 +9,14 @@
 - Form câu hỏi: checkbox **Miễn phí**; QBank free chỉ thấy câu miễn phí (ẩn filter Premium).
 - Tài liệu thuật toán tạo bài thi từ ma trận: `docs/exam-creation-from-blueprint.md`; cập nhật SRS 23/35/38.
 
+### Feat — AJAX bộ lọc người dùng Admin
+
+- Chuyển tìm kiếm, reset và phân trang danh sách người dùng sang AJAX.
+- Chuẩn hóa nút `Tìm kiếm` và `Xoá`, đồng thời reset cả multi-select và bộ lọc hồ sơ nâng cao.
+- Cho phép chọn nhiều tỉnh/thành phố, trường, chức danh, năm học và trạng thái hồ sơ học viên.
+- Cập nhật bảng kết quả mà không reload toàn trang và đồng bộ URL theo bộ lọc.
+- Sửa cấu trúc vùng kết quả để bảng người dùng không bị lệch cột.
+
 ### Fix — List câu hỏi: nháp không hiện «Vòng N»
 
 - Cột bản gửi: trạng thái nháp hiện **Bản nháp** (thay «Không có bản gửi»).
