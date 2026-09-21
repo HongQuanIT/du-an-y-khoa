@@ -76,17 +76,7 @@
                 placeholder="Ví dụ: 192.168.1.1" autocomplete="off" spellcheck="false"
                 class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-body-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20">
         </div>
-        <div class="flex self-end gap-2 sm:col-span-2 xl:col-auto">
-            <button type="submit" :disabled="loading" aria-label="Tìm kiếm nhật ký hoạt động"
-                class="inline-flex h-11 w-36 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 font-label-md font-medium text-on-primary transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50">
-                <span class="material-symbols-outlined text-[18px]" aria-hidden="true" x-text="loading ? 'progress_activity' : 'search'">search</span>
-                <span class="whitespace-nowrap" x-text="loading ? 'Đang tải' : 'Tìm kiếm'">Tìm kiếm</span>
-            </button>
-            <button type="button" @click="resetFilters(@js(route('admin.audit.index')))" :disabled="loading" aria-label="Xoá bộ lọc nhật ký hoạt động"
-                class="inline-flex h-11 w-28 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-outline-variant bg-surface px-3 font-label-md font-medium text-on-surface-variant transition hover:bg-surface-container-low focus-visible:ring-2 focus-visible:ring-primary/20 disabled:opacity-50">
-                <span class="material-symbols-outlined text-[18px]" aria-hidden="true">delete</span><span>Xoá</span>
-            </button>
-        </div>
+        <x-admin.filter-action-buttons class="self-end sm:col-span-2 xl:col-auto" :reset-url="route('admin.audit.index')" search-aria-label="Tìm kiếm nhật ký hoạt động" reset-aria-label="Xoá bộ lọc nhật ký hoạt động" />
         </div>
     </form>
 @endif

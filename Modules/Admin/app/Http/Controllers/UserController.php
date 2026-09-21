@@ -26,6 +26,7 @@ use Modules\Admin\Support\StaffGuard;
 use Modules\Admin\Support\AdminQuestionListQuery;
 use Modules\Admin\Support\AssignableRoles;
 use Modules\Auth\Models\AdministrativeUnit;
+use Modules\Auth\Models\Country;
 use Modules\Auth\Models\EducationStage;
 use Modules\Auth\Models\Institution;
 use Modules\Auth\Models\Profession;
@@ -89,7 +90,7 @@ final class UserController extends Controller
             });
         }
 
-        foreach (['institution_id', 'administrative_unit_id', 'profession_id', 'education_stage_id'] as $field) {
+        foreach (['country_id', 'institution_id', 'administrative_unit_id', 'profession_id', 'education_stage_id'] as $field) {
             $ids = AdminQuestionListQuery::integerIds($request->query($field));
             if ($ids !== []) {
                 $query->whereHas('learnerProfile', fn ($profile) => $profile->whereIn($field, $ids));
@@ -112,6 +113,7 @@ final class UserController extends Controller
             'roles' => RoleModel::query()->where('guard_name', 'web')->orderBy('name')->get(),
             'portals' => PortalGroup::cases(),
             'statuses' => UserStatus::cases(),
+            'countries' => Country::query()->where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(['id', 'name']),
             'institutions' => Institution::query()->active()->orderBy('name')->get(['id', 'name']),
             'administrativeUnits' => AdministrativeUnit::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'professions' => Profession::query()->where('is_active', true)->orderBy('sort_order')->get(['id', 'name']),
@@ -124,6 +126,7 @@ final class UserController extends Controller
                 'role' => $roles,
                 'status' => $statuses,
                 'two_factor' => $twoFactorFilter,
+                'country_id' => AdminQuestionListQuery::integerIds($request->query('country_id')),
                 'institution_id' => AdminQuestionListQuery::integerIds($request->query('institution_id')),
                 'administrative_unit_id' => AdminQuestionListQuery::integerIds($request->query('administrative_unit_id')),
                 'profession_id' => AdminQuestionListQuery::integerIds($request->query('profession_id')),

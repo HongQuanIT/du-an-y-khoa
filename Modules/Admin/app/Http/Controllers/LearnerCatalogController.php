@@ -10,6 +10,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Modules\Admin\Support\AdminQuestionListQuery;
 use Modules\Auth\Models\AdministrativeUnit;
 use Modules\Auth\Models\Country;
 use Modules\Auth\Models\EducationStage;
@@ -25,8 +26,9 @@ final class LearnerCatalogController extends Controller
 
         if ($catalog === 'administrative-units') {
             $query->with('country');
-            if ($request->filled('country_id')) {
-                $query->where('country_id', $request->integer('country_id'));
+            $countryIds = AdminQuestionListQuery::integerIds($request->query('country_id'));
+            if ($countryIds !== []) {
+                $query->whereIn('country_id', $countryIds);
             }
         }
 
@@ -36,8 +38,12 @@ final class LearnerCatalogController extends Controller
                     ->orWhere('code', 'like', "%{$search}%");
             });
         }
-        if (in_array($request->query('status'), ['active', 'inactive'], true)) {
-            $query->where('is_active', $request->query('status') === 'active');
+        $statuses = array_values(array_intersect(
+            AdminQuestionListQuery::stringValues($request->query('status')),
+            ['active', 'inactive'],
+        ));
+        if ($statuses !== []) {
+            $query->whereIn('is_active', array_map(fn (string $status): bool => $status === 'active', $statuses));
         }
 
         $editing = null;
@@ -53,7 +59,11 @@ final class LearnerCatalogController extends Controller
             'items' => $query->orderBy('sort_order')->orderBy('name')->paginate(20)->withQueryString(),
             'editing' => $editing,
             'countries' => Country::query()->where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(),
-            'filters' => $request->only(['q', 'status', 'country_id']),
+            'filters' => [
+                'q' => $search,
+                'status' => $statuses,
+                'country_id' => AdminQuestionListQuery::integerIds($request->query('country_id')),
+            ],
             'canCreate' => $canCreate,
             'canUpdate' => $canUpdate,
         ]);

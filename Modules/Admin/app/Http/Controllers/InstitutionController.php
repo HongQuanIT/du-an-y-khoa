@@ -9,6 +9,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Modules\Admin\Support\AdminQuestionListQuery;
 use Modules\Auth\Models\AdministrativeUnit;
 use Modules\Auth\Models\Country;
 use Modules\Auth\Models\Institution;
@@ -26,14 +27,20 @@ final class InstitutionController extends Controller
                     ->orWhere('short_name', 'like', "%{$search}%");
             });
         }
-        if ($request->filled('administrative_unit_id')) {
-            $query->where('administrative_unit_id', $request->integer('administrative_unit_id'));
+        $administrativeUnitIds = AdminQuestionListQuery::integerIds($request->query('administrative_unit_id'));
+        if ($administrativeUnitIds !== []) {
+            $query->whereIn('administrative_unit_id', $administrativeUnitIds);
         }
-        if ($request->filled('country_id')) {
-            $query->where('country_id', $request->integer('country_id'));
+        $countryIds = AdminQuestionListQuery::integerIds($request->query('country_id'));
+        if ($countryIds !== []) {
+            $query->whereIn('country_id', $countryIds);
         }
-        if ($request->filled('status')) {
-            $query->where('is_active', $request->string('status')->toString() === 'active');
+        $statuses = array_values(array_intersect(
+            AdminQuestionListQuery::stringValues($request->query('status')),
+            ['active', 'inactive'],
+        ));
+        if ($statuses !== []) {
+            $query->whereIn('is_active', array_map(fn (string $status): bool => $status === 'active', $statuses));
         }
 
         $canCreate = $request->user()->can('learner_catalog.create');
@@ -46,7 +53,12 @@ final class InstitutionController extends Controller
             'institutions' => $query->orderBy('name')->paginate(20)->withQueryString(),
             'countries' => Country::query()->where('is_active', true)->orderBy('sort_order')->get(),
             'units' => AdministrativeUnit::query()->where('is_active', true)->orderBy('name')->get(),
-            'filters' => $request->only(['q', 'country_id', 'administrative_unit_id', 'status']),
+            'filters' => [
+                'q' => $search,
+                'country_id' => $countryIds,
+                'administrative_unit_id' => $administrativeUnitIds,
+                'status' => $statuses,
+            ],
             'canCreate' => $canCreate,
             'canUpdate' => $canUpdate,
             'editing' => $editing,

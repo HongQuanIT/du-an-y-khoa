@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Modules\Admin\Models\AuditLog;
 use Modules\Auth\Enums\AuthenticationMethod;
+use Modules\Auth\Models\Country;
 use Modules\Auth\Models\TwoFactorSecret;
 use Modules\Auth\Notifications\ResetPasswordNotification;
 use Modules\Auth\Services\TotpService;
@@ -127,6 +128,37 @@ final class AdminPhase1ManagementTest extends TestCase
             ->assertSee('active-student@example.com')
             ->assertSee('suspended-student@example.com')
             ->assertDontSee('editor-user@example.com');
+    }
+
+    public function test_admin_can_filter_users_by_multiple_profile_countries_with_ajax(): void
+    {
+        $admin = $this->staffUser(Role::Admin);
+        $countries = collect([
+            ['code' => 'VN', 'name' => 'Việt Nam'],
+            ['code' => 'US', 'name' => 'Hoa Kỳ'],
+            ['code' => 'JP', 'name' => 'Nhật Bản'],
+        ])->map(fn (array $attributes) => Country::query()->create([
+            ...$attributes,
+            'is_active' => true,
+            'sort_order' => 0,
+        ]));
+
+        foreach ($countries as $index => $country) {
+            $student = User::factory()->create(['email' => "profile-country-{$index}@example.com"]);
+            $student->assignRole(Role::Student->value);
+            $student->learnerProfile()->create(['country_id' => $country->id]);
+        }
+
+        $this->actingAsStaff($admin)
+            ->withHeader('X-Requested-With', 'XMLHttpRequest')
+            ->get(route('admin.users.index', [
+                'country_id' => [$countries[0]->id, $countries[2]->id],
+            ]))
+            ->assertOk()
+            ->assertSee('id="users-results-region"', false)
+            ->assertSee('profile-country-0@example.com')
+            ->assertDontSee('profile-country-1@example.com')
+            ->assertSee('profile-country-2@example.com');
     }
 
     public function test_admin_can_change_student_role_and_status(): void

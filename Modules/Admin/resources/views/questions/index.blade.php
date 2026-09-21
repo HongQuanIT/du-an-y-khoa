@@ -249,14 +249,6 @@
                     <p class="mt-1 font-body-sm text-on-surface-variant">Tìm theo nội dung hoặc thu hẹp danh sách theo
                         các tiêu chí bên dưới.</p>
                 </div>
-                @if ($hasActiveFilters)
-                    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.index'))
-                    <a href="{{ route('admin.questions.index') }}" id="btn-reset-filters"
-                        @click.prevent="resetQuestionFilters($event.currentTarget.href)"
-                        class="font-label-md text-on-surface-variant underline underline-offset-4 hover:text-on-surface">Xóa
-                        bộ lọc</a>
-@endif
-                @endif
             </div>
             @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.index'))
             <div class="px-1 pb-1">
@@ -327,21 +319,9 @@
                     </div>
                 @endif
 
-                <div class="flex justify-end gap-2 sm:col-span-12">
-                    <button type="submit" id="btn-apply-filters" :disabled="ajaxLoading"
-                        aria-label="Tìm kiếm câu hỏi"
-                        class="inline-flex h-11 w-36 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 font-label-md font-medium text-on-primary transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50">
-                        <span class="material-symbols-outlined shrink-0 text-[18px]" aria-hidden="true"
-                            x-text="ajaxLoading ? 'progress_activity' : 'search'">search</span>
-                        <span class="whitespace-nowrap" x-text="ajaxLoading ? 'Đang tải' : 'Tìm kiếm'">Tìm kiếm</span>
-                    </button>
-                    <button type="button" id="btn-reset-question-filters" @click="resetQuestionFilters(@js(route('admin.questions.index')))"
-                        aria-label="Xoá bộ lọc"
-                        class="inline-flex h-11 w-28 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-outline-variant bg-surface px-3 font-label-md font-medium text-on-surface-variant transition hover:bg-surface-container-low focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:opacity-50">
-                        <span class="material-symbols-outlined shrink-0 text-[18px]" aria-hidden="true">delete</span>
-                        <span class="whitespace-nowrap">Xoá</span>
-                    </button>
-                </div>
+                <x-admin.filter-action-buttons class="justify-end sm:col-span-12" loading-expression="ajaxLoading"
+                    reset-method="resetQuestionFilters" :reset-url="route('admin.questions.index')"
+                    search-aria-label="Tìm kiếm câu hỏi" reset-aria-label="Xoá bộ lọc câu hỏi" />
             </form>
             </div>
 @endif
