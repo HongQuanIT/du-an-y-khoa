@@ -24,26 +24,35 @@ final class BillingPaymentController extends Controller
             ->with(['user', 'planPrice.plan', 'payments' => fn ($q) => $q->latest('id')])
             ->latest('id');
 
-        if ($status = $request->query('status')) {
-            $query->where('status', (string) $status);
+        $statusLabels = [
+            'pending' => 'Chờ thanh toán',
+            'completed' => 'Thành công',
+            'failed' => 'Thất bại',
+            'expired' => 'Hết hạn',
+        ];
+        $statuses = array_values(array_intersect(
+            array_map('strval', (array) $request->query('status', [])),
+            array_keys($statusLabels),
+        ));
+        if ($statuses !== []) {
+            $query->whereIn('status', $statuses);
         }
 
-        if ($provider = $request->query('provider')) {
-            $query->where('gateway', (string) $provider);
+        $providers = array_values(array_intersect(
+            array_map('strval', (array) $request->query('provider', [])),
+            ['fake', 'vnpay', 'momo', 'zalopay'],
+        ));
+        if ($providers !== []) {
+            $query->whereIn('gateway', $providers);
         }
 
         return view('admin::billing.payments.index', [
             'sessions' => $query->paginate(25)->withQueryString(),
             'filters' => [
-                'status' => $request->query('status'),
-                'provider' => $request->query('provider'),
+                'status' => $statuses,
+                'provider' => $providers,
             ],
-            'statusLabels' => [
-                'pending' => 'Chờ thanh toán',
-                'completed' => 'Thành công',
-                'failed' => 'Thất bại',
-                'expired' => 'Hết hạn',
-            ],
+            'statusLabels' => $statusLabels,
         ]);
     }
 
