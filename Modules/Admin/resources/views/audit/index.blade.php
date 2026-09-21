@@ -1,13 +1,21 @@
 <x-layouts.admin title="Nhật ký hoạt động">
+    <div x-data="adminAuditFilter()" class="space-y-6">
     <x-admin.page-header title="Nhật ký hoạt động"
         description="Nhật ký bất biến các thao tác nhạy cảm (chỉ đọc)." />
 
     <x-admin.flash />
 
     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.audit.index'))
-<form method="get" action="{{ route('admin.audit.index') }}" role="search" aria-label="Lọc nhật ký hoạt động"
-        class="mb-6 grid grid-cols-1 items-end gap-4 rounded-xl border border-outline-variant bg-surface p-4 sm:grid-cols-2 xl:grid-cols-12">
-        <div class="relative min-w-0 xl:col-span-3"
+<form id="audit-filter-form" method="get" action="{{ route('admin.audit.index') }}" role="search"
+        aria-labelledby="audit-filter-heading" aria-describedby="audit-filter-description"
+        @submit.prevent="applyFilters()"
+        class="space-y-4 rounded-xl border border-outline-variant bg-surface p-4">
+        <div>
+            <h2 id="audit-filter-heading" class="font-label-lg font-semibold text-on-surface">Tìm kiếm nhật ký hoạt động</h2>
+            <p id="audit-filter-description" class="mt-1 font-body-sm text-on-surface-variant">Tìm theo hành động, người thực hiện, vai trò và địa chỉ IP.</p>
+        </div>
+        <div class="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 xl:grid-cols-[minmax(240px,1.2fr)_minmax(200px,1fr)_minmax(200px,0.9fr)_minmax(180px,0.8fr)_auto]">
+        <div class="relative min-w-0"
             x-data='{
                 open: false,
                 query: @json((string) ($filters["action"] ?? "")),
@@ -24,10 +32,11 @@
                     return rows.slice(0, 8);
                 }
             }'
-            @click.outside="open = false">
-            <label class="mb-1.5 block font-label-sm font-medium text-on-surface-variant" for="action">Hành động</label>
+            @click.outside="open = false"
+            @audit-filters-reset.window="query = ''">
+            <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant" for="action">Hành động</label>
             <div class="relative">
-                <span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant">search</span>
+                <span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant" aria-hidden="true">search</span>
                 <input id="action" name="action" x-model="query" type="search"
                     @focus="open = true" @input="open = true" @keydown.escape="open = false"
                     placeholder="Nhập mã hoặc tên hành động" autocomplete="new-password" autocapitalize="none"
@@ -39,7 +48,7 @@
                 class="absolute inset-x-0 z-40 mt-1 max-h-72 overflow-y-auto rounded-xl border border-outline-variant bg-surface p-1.5 shadow-xl">
                 <template x-for="item in matches()" :key="item.value">
                     <button type="button"
-                        @click="query = item.value; open = false; $nextTick(() => $el.closest('form').requestSubmit())"
+                        @click="query = item.value; open = false"
                         class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-surface-container-low">
                         <span class="material-symbols-outlined text-[18px] text-primary">bolt</span>
                         <span class="min-w-0 flex-1">
@@ -50,52 +59,52 @@
                 </template>
             </div>
         </div>
-        <div class="min-w-0 xl:col-span-2">
-            <label class="mb-1.5 block font-label-sm font-medium text-on-surface-variant" for="actor">Người thực hiện</label>
+        <div class="min-w-0">
+            <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant" for="actor">Người thực hiện</label>
             <input id="actor" name="actor" value="{{ $filters['actor'] }}" type="search"
                 placeholder="Nhập tên hoặc ID" autocomplete="off"
                 class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-body-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20">
         </div>
-        <div class="min-w-0 xl:col-span-2">
-            <label class="mb-1.5 block font-label-sm font-medium text-on-surface-variant" for="actor_role">Vai trò</label>
-            <select id="actor_role" name="actor_role"
-                class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-body-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20">
-                <option value="">Tất cả</option>
-                @foreach ($roles as $role)
-                    <option value="{{ $role->value }}" @selected($filters['actor_role'] === $role->value)>{{ $role->label() }}</option>
-                @endforeach
-            </select>
+        <div class="min-w-0">
+            <x-admin.multi-select-filter name="actor_role" label="Vai trò" placeholder="Tất cả"
+                :options="collect($roles)->map(fn ($role) => ['id' => $role->value, 'label' => $role->label()])->values()->all()"
+                :selected="$filters['actor_role']" />
         </div>
-        <div class="min-w-0 xl:col-span-3">
-            <label class="mb-1.5 block font-label-sm font-medium text-on-surface-variant" for="ip">Địa chỉ IP</label>
+        <div class="min-w-0">
+            <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant" for="ip">Địa chỉ IP</label>
             <input id="ip" name="ip" value="{{ $filters['ip'] }}" type="search"
                 placeholder="Ví dụ: 192.168.1.1" autocomplete="off" spellcheck="false"
                 class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-body-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20">
         </div>
-        <div class="grid grid-cols-2 gap-2 sm:col-span-2 xl:col-span-2">
-            <button type="submit"
-                class="inline-flex h-11 items-center justify-center whitespace-nowrap rounded-lg bg-primary px-4 font-label-md text-on-primary transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary/30">
-                Lọc
+        <div class="flex self-end gap-2 sm:col-span-2 xl:col-auto">
+            <button type="submit" :disabled="loading" aria-label="Tìm kiếm nhật ký hoạt động"
+                class="inline-flex h-11 w-36 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 font-label-md font-medium text-on-primary transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50">
+                <span class="material-symbols-outlined text-[18px]" aria-hidden="true" x-text="loading ? 'progress_activity' : 'search'">search</span>
+                <span class="whitespace-nowrap" x-text="loading ? 'Đang tải' : 'Tìm kiếm'">Tìm kiếm</span>
             </button>
-            <a href="{{ route('admin.audit.index') }}"
-                class="inline-flex h-11 items-center justify-center whitespace-nowrap rounded-lg border border-outline-variant px-4 font-label-md text-on-surface-variant transition hover:bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-primary/20">
-                Xóa lọc
-            </a>
+            <button type="button" @click="resetFilters(@js(route('admin.audit.index')))" :disabled="loading" aria-label="Xoá bộ lọc nhật ký hoạt động"
+                class="inline-flex h-11 w-28 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-outline-variant bg-surface px-3 font-label-md font-medium text-on-surface-variant transition hover:bg-surface-container-low focus-visible:ring-2 focus-visible:ring-primary/20 disabled:opacity-50">
+                <span class="material-symbols-outlined text-[18px]" aria-hidden="true">delete</span><span>Xoá</span>
+            </button>
+        </div>
         </div>
     </form>
 @endif
 
-    <div class="overflow-x-auto rounded-xl border border-outline-variant bg-surface">
+    <div id="audit-results-region" aria-live="polite">
+    <div class="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
+    <div class="overflow-x-auto">
         <table class="min-w-full text-left font-body-sm text-body-sm">
+            <caption class="sr-only">Danh sách nhật ký hoạt động quản trị</caption>
             <thead class="border-b border-outline-variant bg-surface-container-low font-label-md text-label-md text-on-surface-variant">
                 <tr>
-                    <th class="px-4 py-3">Thời gian</th>
-                    <th class="px-4 py-3">Người thực hiện</th>
-                    <th class="px-4 py-3">Hành động</th>
-                    <th class="px-4 py-3">Đối tượng</th>
-                    <th class="px-4 py-3">IP</th>
-                    <th class="px-4 py-3">Thiết bị truy cập</th>
-                    <th class="px-4 py-3"></th>
+                    <th scope="col" class="px-4 py-3">Thời gian</th>
+                    <th scope="col" class="px-4 py-3">Người thực hiện</th>
+                    <th scope="col" class="px-4 py-3">Hành động</th>
+                    <th scope="col" class="px-4 py-3">Đối tượng</th>
+                    <th scope="col" class="px-4 py-3">IP</th>
+                    <th scope="col" class="px-4 py-3">Thiết bị truy cập</th>
+                    <th scope="col" class="px-4 py-3"><span class="sr-only">Thao tác</span></th>
                 </tr>
             </thead>
             <tbody>
@@ -158,6 +167,61 @@
             </tbody>
         </table>
     </div>
+    </div>
 
-    <div class="mt-4">{{ $logs->links() }}</div>
+    @if ($logs->hasPages())
+        <div class="mt-4" id="audit-pagination">{{ $logs->links() }}</div>
+    @endif
+    </div>
+
+    <script>
+        function adminAuditFilter() {
+            return {
+                loading: false,
+                filterForm() { return this.$root.querySelector('#audit-filter-form'); },
+                async applyFilters() {
+                    const form = this.filterForm();
+                    if (!form) return;
+                    const url = new URL(form.getAttribute('action'), window.location.origin);
+                    const params = new URLSearchParams(new FormData(form));
+                    params.delete('cursor');
+                    url.search = params.toString();
+                    await this.fetchResults(url.toString());
+                },
+                async resetFilters(url) {
+                    const form = this.filterForm();
+                    form?.reset();
+                    window.dispatchEvent(new CustomEvent('audit-filters-reset'));
+                    await this.fetchResults(url);
+                },
+                async fetchResults(url) {
+                    this.loading = true;
+                    try {
+                        const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } });
+                        if (!response.ok) throw new Error('Lỗi tải nhật ký hoạt động');
+                        const parsed = new DOMParser().parseFromString(await response.text(), 'text/html');
+                        const next = parsed.getElementById('audit-results-region');
+                        const current = document.getElementById('audit-results-region');
+                        if (!next || !current) throw new Error('Không tìm thấy vùng kết quả nhật ký');
+                        current.replaceWith(next);
+                        window.history.pushState({}, '', url);
+                        this.bindPagination();
+                    } catch (error) {
+                        console.error(error);
+                        alert('Có lỗi xảy ra khi tải nhật ký hoạt động. Vui lòng thử lại.');
+                    } finally { this.loading = false; }
+                },
+                bindPagination() {
+                    document.querySelectorAll('#audit-pagination a').forEach((link) => {
+                        link.addEventListener('click', (event) => {
+                            event.preventDefault();
+                            if (link.href) this.fetchResults(link.href);
+                        });
+                    });
+                },
+                init() { this.bindPagination(); },
+            };
+        }
+    </script>
+    </div>
 </x-layouts.admin>

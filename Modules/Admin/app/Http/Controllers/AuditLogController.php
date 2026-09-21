@@ -52,8 +52,14 @@ final class AuditLogController extends Controller
             });
         }
 
-        if ($actorRole = Role::tryFrom((string) $request->query('actor_role', ''))) {
-            $query->where('actor_role', $actorRole->value);
+        $actorRoles = array_values(array_filter(
+            array_map(
+                static fn (mixed $role): ?string => Role::tryFrom((string) $role)?->value,
+                (array) $request->query('actor_role', []),
+            ),
+        ));
+        if ($actorRoles !== []) {
+            $query->whereIn('actor_role', $actorRoles);
         }
 
         $subjectTypes = [
@@ -81,7 +87,7 @@ final class AuditLogController extends Controller
             'filters' => [
                 'action' => $request->query('action'),
                 'actor' => $actor,
-                'actor_role' => $request->query('actor_role'),
+                'actor_role' => $actorRoles,
                 'ip' => $request->query('ip'),
             ],
             'roles' => Role::cases(),

@@ -2,6 +2,12 @@
 
 ## 2026-09-21
 
+### Fix — AJAX bộ lọc Nhật ký hoạt động Admin
+
+- Chuyển tìm kiếm, xoá bộ lọc và phân trang nhật ký hoạt động sang AJAX.
+- Hỗ trợ chọn nhiều vai trò; backend lọc bằng `whereIn` theo các vai trò hợp lệ.
+- Sửa lỗi URL AJAX bị sai do input `action` che thuộc tính action của form.
+
 ### Feat — AJAX bộ lọc Cộng tác viên Admin
 
 - Chuyển tìm kiếm, xoá bộ lọc và phân trang danh sách CTV sang AJAX.
