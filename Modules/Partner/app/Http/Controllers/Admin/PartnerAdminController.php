@@ -118,7 +118,7 @@ final class PartnerAdminController extends Controller
             'preset' => $period['preset'],
             'from' => $period['preset'] === PartnerPeriodFilter::PRESET_CUSTOM ? $period['from']->toDateString() : null,
             'to' => $period['preset'] === PartnerPeriodFilter::PRESET_CUSTOM ? $period['to']->toDateString() : null,
-            'status' => $filters['status'] !== 'all' ? $filters['status'] : null,
+            'status' => $filters['status'] !== [] ? $filters['status'] : null,
             'q' => $filters['q'] !== '' ? $filters['q'] : null,
             'sort' => $filters['sort'],
             'dir' => $filters['dir'],
@@ -136,12 +136,12 @@ final class PartnerAdminController extends Controller
 
     /**
      * @param  Builder<Partner>  $query
-     * @param  array{status: string, q: string, sort: string, dir: string}  $filters
+     * @param  array{status: list<string>, q: string, sort: string, dir: string}  $filters
      */
     private function applyPartnerListFilters($query, array $filters): void
     {
-        if ($filters['status'] !== 'all') {
-            $query->where('status', $filters['status']);
+        if ($filters['status'] !== []) {
+            $query->whereIn('status', $filters['status']);
         }
 
         if ($filters['q'] !== '') {
@@ -157,7 +157,7 @@ final class PartnerAdminController extends Controller
     }
 
     /**
-     * @param  array{status: string, q: string, sort: string, dir: string}  $filters
+     * @param  array{status: list<string>, q: string, sort: string, dir: string}  $filters
      * @return Collection<int, int>
      */
     private function filteredPartnerIds(array $filters)

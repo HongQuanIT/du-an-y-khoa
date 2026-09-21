@@ -119,4 +119,33 @@ final class PartnerRoleAssignmentTest extends TestCase
             ->get(route('admin.partners.show', $partner))
             ->assertForbidden();
     }
+
+    public function test_admin_partner_list_filters_multiple_statuses_with_ajax(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole(Role::Admin->value);
+        $admin->givePermissionTo('partner.view');
+
+        Partner::query()->create([
+            'user_id' => User::factory()->create()->getKey(),
+            'display_name' => 'CTV đang hoạt động',
+            'status' => PartnerStatus::Active,
+            'default_commission_rate_bps' => 1000,
+        ]);
+        Partner::query()->create([
+            'user_id' => User::factory()->create()->getKey(),
+            'display_name' => 'CTV tạm dừng',
+            'status' => PartnerStatus::Suspended,
+            'default_commission_rate_bps' => 1000,
+        ]);
+
+        $this->actingAsWithWebSession($admin)
+            ->get(route('admin.partners.index', ['status' => ['active']]), [
+                'X-Requested-With' => 'XMLHttpRequest',
+            ])
+            ->assertOk()
+            ->assertSee('id="partner-results-region"', false)
+            ->assertSee('CTV đang hoạt động')
+            ->assertDontSee('CTV tạm dừng');
+    }
 }
