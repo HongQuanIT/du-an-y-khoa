@@ -77,7 +77,7 @@ final class CreateLearnerExamFromBlueprintAction
 
             if ($result['synced'] === 0) {
                 throw ValidationException::withMessages([
-                    'blueprint' => 'Không tạo được câu hỏi cho bài thi từ exam pool.',
+                    'blueprint' => 'Không tạo được câu hỏi cho bài thi từ ngân hàng câu hỏi.',
                 ]);
             }
 

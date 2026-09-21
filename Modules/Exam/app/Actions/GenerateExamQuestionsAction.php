@@ -4,15 +4,17 @@ declare(strict_types=1);
 
 namespace Modules\Exam\Actions;
 
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Modules\Exam\Models\Exam;
 use Modules\Exam\Models\ExamTopic;
 use Modules\QuestionBank\Enums\Difficulty;
-use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Support\QuestionFilterBuilder;
+use Modules\QuestionBank\Support\ServePublishedQuestion;
 
 /**
- * Pick exam-pool questions for an exam's CCT quotas and sync the exam_question pivot.
+ * Pick published bank questions for an exam's CCT quotas and sync the exam_question pivot.
  */
 final class GenerateExamQuestionsAction
 {
@@ -119,21 +121,18 @@ final class GenerateExamQuestionsAction
 
     /**
      * @param  list<string>  $usedQuestionIds
-     * @return \Illuminate\Support\Collection<int, int|string>
+     * @return Collection<int, int|string>
      */
     private function pick(
         int $coreClinicalTopicId,
         int $needed,
         ?Difficulty $difficulty,
         array $usedQuestionIds,
-    ) {
+    ): Collection {
         $picked = collect();
 
-        $priorityIds = Question::query()
-            ->where('status', QuestionStatus::Private)
-            ->where('exam_flag', true)
-            ->when($difficulty !== null, fn ($query) => $query->where('difficulty', $difficulty->value))
-            ->tap(fn ($query) => $this->filterBuilder->whereMatchesCoreClinicalTopicPriorityLessons(
+        $priorityIds = $this->bankQuery($difficulty)
+            ->tap(fn (Builder $query) => $this->filterBuilder->whereMatchesCoreClinicalTopicPriorityLessons(
                 $query,
                 $coreClinicalTopicId,
             ))
@@ -146,11 +145,8 @@ final class GenerateExamQuestionsAction
 
         $stillNeeded = $needed - $picked->count();
         if ($stillNeeded > 0) {
-            $fallbackIds = Question::query()
-                ->where('status', QuestionStatus::Private)
-                ->where('exam_flag', true)
-                ->when($difficulty !== null, fn ($query) => $query->where('difficulty', $difficulty->value))
-                ->tap(fn ($query) => $this->filterBuilder->whereMatchesCoreClinicalTopic(
+            $fallbackIds = $this->bankQuery($difficulty)
+                ->tap(fn (Builder $query) => $this->filterBuilder->whereMatchesCoreClinicalTopic(
                     $query,
                     $coreClinicalTopicId,
                 ))
@@ -172,11 +168,9 @@ final class GenerateExamQuestionsAction
     {
         $counts = ExamTopic::emptyDifficultyCounts();
 
-        $rows = Question::query()
+        $rows = $this->bankQuery()
             ->selectRaw('difficulty, COUNT(*) as aggregate')
-            ->where('status', QuestionStatus::Private)
-            ->where('exam_flag', true)
-            ->tap(fn ($query) => $this->filterBuilder->whereMatchesCoreClinicalTopic($query, $coreClinicalTopicId))
+            ->tap(fn (Builder $query) => $this->filterBuilder->whereMatchesCoreClinicalTopic($query, $coreClinicalTopicId))
             ->groupBy('difficulty')
             ->pluck('aggregate', 'difficulty');
 
@@ -192,11 +186,15 @@ final class GenerateExamQuestionsAction
 
     private function eligibleCountForDifficulty(int $coreClinicalTopicId, Difficulty $difficulty): int
     {
-        return Question::query()
-            ->where('status', QuestionStatus::Private)
-            ->where('exam_flag', true)
-            ->where('difficulty', $difficulty->value)
-            ->tap(fn ($query) => $this->filterBuilder->whereMatchesCoreClinicalTopic($query, $coreClinicalTopicId))
+        return $this->bankQuery($difficulty)
+            ->tap(fn (Builder $query) => $this->filterBuilder->whereMatchesCoreClinicalTopic($query, $coreClinicalTopicId))
             ->count();
+    }
+
+    /** @return Builder<Question> */
+    private function bankQuery(?Difficulty $difficulty = null): Builder
+    {
+        return ServePublishedQuestion::scopeAvailable(Question::query())
+            ->when($difficulty !== null, fn (Builder $query) => $query->where('difficulty', $difficulty->value));
     }
 }

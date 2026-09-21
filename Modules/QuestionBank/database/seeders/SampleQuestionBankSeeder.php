@@ -41,7 +41,7 @@ final class SampleQuestionBankSeeder extends Seeder
                     'difficulty' => $row['difficulty'],
                     'status' => QuestionStatus::Published,
                     'is_free' => $index % 3 === 0,
-                    'exam_flag' => $index % 5 === 0,
+                    'is_priority' => $index % 5 === 0,
                     'key_info' => [$row['hint']],
                     'attending_tip' => $row['tip'],
                 ];

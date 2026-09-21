@@ -50,7 +50,7 @@ Ngoại lệ: mất mạng → resume trong thời gian còn lại; hết giờ 
 - **Số lần làm:** giới hạn/không theo cấu hình đề.
 - **Availability window:** `available_from/to` (đề tổ chức).
 - **Gating:** đề Premium/theo gói; **access control server-side** — học viên không start/submit nếu chưa mua/đăng ký/được cấp quyền (không chỉ ẩn UI).
-- **Câu trong exam:** lấy từ `exam_questions` snapshot; học viên không tiếp cận pool `private`+`exam_flag` qua Qbank.
+- **Câu trong exam:** lấy từ `exam_questions` snapshot; nguồn pick = ngân hàng đã xuất bản (không lấy câu `private`/`retired`).
 - **Anti-cheat:** không lộ đáp án; phát hiện rời tab (tùy chọn); 1 attempt/đề đang mở.
 
 ## 6. Database

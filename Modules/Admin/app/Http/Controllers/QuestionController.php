@@ -149,6 +149,7 @@ final class QuestionController extends Controller
             'status' => QuestionStatus::Draft,
             'difficulty' => Difficulty::Medium,
             'is_free' => false,
+            'is_priority' => false,
         ])));
     }
 
@@ -596,7 +597,7 @@ final class QuestionController extends Controller
      *     difficulty: string,
      *     lesson_ids: list<int>,
      *     is_free: bool,
-     *     exam_flag: bool,
+     *     is_priority: bool,
      *     options: list<array{id?: int|null, content: string, is_correct: bool, explanation?: ?string}>
      * }
      */
@@ -617,7 +618,8 @@ final class QuestionController extends Controller
             'hints.*.id' => ['nullable', 'integer'],
             'hints.*.content' => ['nullable', 'string', 'max:2000'],
             'is_free' => ['sometimes', 'boolean'],
-            'exam_flag' => ['sometimes', 'boolean'],
+            'is_priority' => ['sometimes', 'boolean'],
+            'exam_flag' => ['sometimes', 'boolean'], // legacy alias — mapped to is_priority
             'options' => ['required', 'array', 'min:2'],
             'options.*.id' => ['nullable', 'integer'],
             'options.*.content' => ['required', 'string'],
@@ -664,7 +666,7 @@ final class QuestionController extends Controller
             'tag_ids' => collect($data['tag_ids'] ?? [])
                 ->map(fn ($id): int => (int) $id)->unique()->values()->all(),
             'is_free' => $request->boolean('is_free'),
-            'exam_flag' => $request->boolean('exam_flag'),
+            'is_priority' => $request->boolean('is_priority') || $request->boolean('exam_flag'),
             'options' => $options,
         ];
 

@@ -47,7 +47,7 @@ final class SaveAdminQuestionAction
      *     tag_ids?: list<int>,
      *     hints?: list<array{id?: int|null, content: string, sort_order?: int}>,
      *     is_free: bool,
-     *     exam_flag?: bool,
+     *     is_priority?: bool,
      *     assigned_instructor_id?: int|null,
      *     options: list<array{id?: int|null, content: string, is_correct: bool, explanation?: ?string}>
      * }  $data
@@ -112,7 +112,7 @@ final class SaveAdminQuestionAction
                 'attending_tip' => SafeHtml::fromEditor($data['attending_tip'] ?? null) ?: null,
                 'difficulty' => Difficulty::from($data['difficulty']),
                 'is_free' => $data['is_free'],
-                'exam_flag' => (bool) ($data['exam_flag'] ?? false),
+                'is_priority' => (bool) ($data['is_priority'] ?? $data['exam_flag'] ?? false),
                 'updated_by' => $actor->getKey(),
             ]);
             if ($demoteLiveToDraft) {

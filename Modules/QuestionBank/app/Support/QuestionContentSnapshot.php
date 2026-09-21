@@ -45,7 +45,7 @@ final class QuestionContentSnapshot
             'lesson_names' => $question->lessons->pluck('name')->values()->all(),
             'tag_ids' => $question->tags->pluck('id')->map(fn ($id): int => (int) $id)->values()->all(),
             'is_free' => $question->is_free,
-            'exam_flag' => $question->exam_flag,
+            'is_priority' => (bool) $question->is_priority,
             'status' => $question->status->value,
             'options' => $question->options->map(fn ($option): array => [
                 'id' => $option->id,

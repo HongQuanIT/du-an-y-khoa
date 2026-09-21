@@ -56,7 +56,7 @@ final class CaptureQuestionVersionAction
             'lesson_ids' => $question->lessons->pluck('id')->map(fn ($id): int => (int) $id)->values()->all(),
             'tag_ids' => $question->tags->pluck('id')->map(fn ($id): int => (int) $id)->values()->all(),
             'is_free' => (bool) $question->is_free,
-            'exam_flag' => (bool) $question->exam_flag,
+            'is_priority' => (bool) $question->is_priority,
             'options' => $question->options->map(fn (QuestionOption $option): array => [
                 'id' => (int) $option->getKey(),
                 'label' => (string) $option->label, // authoring letter only; display remapped per session

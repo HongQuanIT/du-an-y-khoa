@@ -135,7 +135,7 @@ final class ServePublishedQuestion
             'attending_tip' => $snapshot['attending_tip'] ?? $question->attending_tip,
             'difficulty' => Difficulty::tryFrom((string) ($snapshot['difficulty'] ?? '')) ?? $question->difficulty,
             'is_free' => (bool) ($snapshot['is_free'] ?? $question->is_free),
-            'exam_flag' => (bool) ($snapshot['exam_flag'] ?? $question->exam_flag),
+            'is_priority' => (bool) ($snapshot['is_priority'] ?? $snapshot['exam_flag'] ?? $question->is_priority),
         ]);
         $question->syncOriginal();
 

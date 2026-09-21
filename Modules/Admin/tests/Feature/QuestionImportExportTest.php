@@ -470,7 +470,7 @@ final class QuestionImportExportTest extends TestCase
         $row['difficulty'] = 'medium';
         $row['lesson_slugs'] = $this->lesson->slug;
         $row['is_free'] = '0';
-        $row['exam_flag'] = '0';
+        $row['is_priority'] = '0';
 
         return array_values($row);
     }

@@ -46,7 +46,7 @@ final class QuestionDemoSeeder extends Seeder
             'difficulty' => Difficulty::Hard,
             'status' => QuestionStatus::Published,
             'is_free' => true,
-            'exam_flag' => true,
+            'is_priority' => true,
         ];
 
         if ($existing !== null) {

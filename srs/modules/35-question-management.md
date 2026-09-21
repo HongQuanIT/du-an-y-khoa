@@ -142,7 +142,7 @@ Import: commit tạo hàng loạt `draft`.
 | `pending_publish` | Đủ 2 cờ xanh **hoặc** ≥1 cờ đỏ (chờ Admin) | Reviewer flag #2 hoặc cờ đỏ fail-fast | Không\* |
 | `published` | Admin đã publish phiên bản | Admin `publish` | Có (theo gating) |
 | `rejected` | Bị từ chối ở lớp 1a hoặc lớp 2; có `rejection_reason` | Instructor / Admin `reject` | Không\* |
-| `private` | Pool exam (`exam_flag=true`) | Admin (sau đủ pipeline hoặc quy tắc exam riêng) | Không (Qbank) |
+| `private` | Ẩn khỏi ngân hàng câu hỏi (không hiện QBank / không lấy vào bài thi mới) | Admin | Không (Qbank) |
 | `retired` | Ngừng dùng (giữ attempt) | Admin | Không |
 
 \* **Ngoại lệ tái bản:** nếu câu đã từng publish (`published_version >= 1`), Qbank **vẫn phục vụ snapshot version đã publish** trong lúc working copy đi lại pipeline (`draft` / `in_review` / `in_flag_review` / `pending_publish` / `rejected`). Nội dung live **chỉ** đổi khi Admin publish lần mới (version +1). Câu chưa từng publish thì không lộ Qbank.
@@ -202,7 +202,7 @@ Tránh N+1: eager load creator / instructor / publisher trên list; **không** j
 ### 5.6 Phân loại nội dung (Hệ cơ quan ∥ Môn học → Bài học)
 - Phân loại: `organ_systems` và `subjects` **độc lập**; bài học gắn qua `lesson_organ_system`, `lesson_subject` (0 hoặc nhiều mỗi trục), thay cho cây `topics` cũ.
 - Admin UI editor: chọn **Bài học** (lọc tuỳ chọn theo hệ cơ quan và/hoặc môn học — không cascade cha–con).
-- Câu gắn **≥1 Bài học** (`question_lesson`); các bài ngang hàng, không phân biệt primary. Filter Qbank/exam pool: chọn Hệ cơ quan và/hoặc Môn học → gồm câu thuộc bài học gắn trực tiếp.
+- Câu gắn **≥1 Bài học** (`question_lesson`); các bài ngang hàng, không phân biệt primary. Filter Qbank/bài thi: chọn Hệ cơ quan và/hoặc Môn học → gồm câu thuộc bài học gắn trực tiếp.
 
 ### 5.7 Kiểm tra trùng lặp (lexical — phase 1)
 - **Mục đích:** trên form edit một câu, mở **trang chi tiết** để quét ngân hàng xem câu nào trùng / gần trùng. **Không** chặn workflow cứng (chỉ cảnh báo).
@@ -224,7 +224,7 @@ Tránh N+1: eager load creator / instructor / publisher trên list; **không** j
 - **Import:** map cột, validate, dedup, preview trước commit; rollback batch; sau import vẫn `draft` → Creator submit từng câu / hàng loạt vào lớp 1.
 - **Report handling:** open→reviewing→resolved/rejected; ảnh hưởng hiển thị (ẩn tạm nếu nghiêm trọng).
 - **Retire** thay vì xóa cứng (giữ lịch sử attempt) — chỉ Super Admin.
-- **Đồng bộ Meilisearch** khi publish/retire (chỉ bản live `published`; không index `private` exam pool).
+- **Đồng bộ Meilisearch** khi publish/retire (chỉ bản live trong ngân hàng; không index `private`/`retired`).
 - **Stats:** correct rate thực nghiệm → gợi ý câu quá dễ/khó/mơ hồ.
 
 ## 6. Database
@@ -236,7 +236,7 @@ Tránh N+1: eager load creator / instructor / publisher trên list; **không** j
   - `instructor_review_cycle` UINT default 0; `pipeline_reject_count` UINT default 0 (reset khi publish)
   - `instructor_1_id` / `instructor_1_decision`; `instructor_2_id` / `instructor_2_decision` (legacy)
   - `rejection_reason` TEXT null, `rejected_by_role` ENUM(`instructor`,`super_admin`) null
-  - `exam_flag`, `cloned_from_id`, `cloned_from_version`, `created_by`, `updated_by`, timestamps
+  - `is_priority` (Câu ưu tiên — chữa đề livestream), `cloned_from_id`, `cloned_from_version`, `created_by`, `updated_by`, timestamps
   - `content_fingerprint` CHAR(64) null + index; `similarity_checked_at` timestamp null
 - `question_similarity_matches`: `question_id_low`, `question_id_high` (UUID, low < high), `score`, `severity`, `signals` JSON, `detected_at`; unique cặp
 - `question_options`, `question_lesson` (`question_id` uuid, `lesson_id`), `question_tags`, `question_reports`

@@ -90,7 +90,7 @@ final class AuditSnapshot
                 ->values()
                 ->all(),
             'is_free' => (bool) $question->is_free,
-            'exam_flag' => (bool) $question->exam_flag,
+            'is_priority' => (bool) $question->is_priority,
             'version' => (int) $question->version,
             'created_by' => $question->created_by !== null ? (int) $question->created_by : null,
             'updated_by' => $question->updated_by !== null ? (int) $question->updated_by : null,
@@ -151,7 +151,7 @@ final class AuditSnapshot
                 ])
                 ->all(),
             'is_free' => (bool) ($payload['is_free'] ?? false),
-            'exam_flag' => (bool) ($payload['exam_flag'] ?? false),
+            'is_priority' => (bool) ($payload['is_priority'] ?? $payload['exam_flag'] ?? false),
             'options' => collect((array) ($payload['options'] ?? []))
                 ->filter(fn (mixed $option): bool => is_array($option))
                 ->values()

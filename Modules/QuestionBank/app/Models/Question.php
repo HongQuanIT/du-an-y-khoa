@@ -43,7 +43,7 @@ use Modules\QuestionBank\Support\ServePublishedQuestion;
  * @property Difficulty $difficulty
  * @property QuestionStatus $status
  * @property bool $is_free
- * @property bool $exam_flag
+ * @property bool $is_priority
  * @property int $version
  * @property int|null $created_by
  * @property int|null $updated_by
@@ -108,7 +108,7 @@ class Question extends Model
         'difficulty',
         'status',
         'is_free',
-        'exam_flag',
+        'is_priority',
         'created_by',
         'updated_by',
         'reviewer_id',
@@ -169,7 +169,7 @@ class Question extends Model
         'status' => QuestionStatus::class,
         'key_info' => 'array',
         'is_free' => 'boolean',
-        'exam_flag' => 'boolean',
+        'is_priority' => 'boolean',
         'version' => 'integer',
         'instructor_review_cycle' => 'integer',
         'pipeline_reject_count' => 'integer',
@@ -858,9 +858,10 @@ class Question extends Model
         return ServePublishedQuestion::isAvailable($this);
     }
 
-    public function isExamPool(): bool
+    /** Câu ưu tiên (đề Bộ / kỳ thi gần đây) — dùng chọn nội dung livestream chữa đề. */
+    public function isPriority(): bool
     {
-        return $this->exam_flag && $this->status === QuestionStatus::Private;
+        return (bool) $this->is_priority;
     }
 
     protected static function newFactory(): QuestionFactory

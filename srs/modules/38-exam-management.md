@@ -5,9 +5,9 @@
 > 🔵 Tính năng **giao đề cho lớp/tổ chức** (Assign panel, `/assign`, role Instructor/Org Admin, org scope) thuộc **Phase 2** (Module Organization 32 đã hoãn). Phạm vi hiện tại: tạo & quản lý đề, cấu hình, chấm, xuất kết quả toàn hệ thống.
 
 ## 0. Tóm tắt module
-Tạo & quản lý đề thi/kỳ thi: **cấu hình phân bổ câu theo Core Clinical Topic (CCT)** trong ma trận thi — CCT map sang Bài học qua `core_topic_lessons` (admin không chọn từng câu thủ công); hệ thống **tự động lấy câu exam pool** (`status=private`, `exam_flag=true`), cấu hình thời gian/điểm chuẩn/lịch, publish + **access control** (mua/đăng ký mới được làm), chấm & xuất kết quả.
+Tạo & quản lý đề thi/kỳ thi: **cấu hình phân bổ câu theo Core Clinical Topic (CCT)** trong ma trận thi — CCT map sang Bài học qua `core_topic_lessons` (admin không chọn từng câu thủ công); hệ thống **tự động lấy câu từ ngân hàng đã xuất bản** (ServePublished / không `private`/`retired`), cấu hình thời gian/điểm chuẩn/lịch, publish + **access control** (mua/đăng ký mới được làm), chấm & xuất kết quả.
 
-> **Exam question pool:** Câu dành riêng cho exam — học viên **không** làm trước qua Qbank. Chỉ lộ khi có quyền làm exam đã publish.
+> **Nguồn câu bài thi:** cùng ngân hàng QBank (câu đã publish / còn snapshot live). Câu `private` bị ẩn khỏi ngân hàng và **không** được pick vào bài thi mới.
 
 | Route | Màn hình |
 |-------|----------|
@@ -39,17 +39,17 @@ Tạo & quản lý đề thi/kỳ thi: **cấu hình phân bổ câu theo Core C
 ## 4. Luồng người dùng
 ```
 Admin → tạo exam → cấu hình CCT (Internal 10, Surgery 10, …) → Generate
-→ hệ thống resolve CCT → Bài học đã map → auto-select từ exam pool → preview → validate đủ câu → publish
+→ hệ thống resolve CCT → Bài học đã map → auto-select từ ngân hàng đã xuất bản → preview → validate đủ câu → publish
 → học viên chỉ thấy/làm khi có entitlement (mua/đăng ký/cấp quyền) — backend enforce
 → làm bài → results + item analysis.
 ```
 
 ## 5. Business Logic
 
-### 5.1 Exam question pool (nguồn câu riêng)
-- Câu exam: `status = private` **và** `exam_flag = true`.
-- **Không** xuất hiện trong Qbank/browse học viên (module 05).
-- Content editor tạo câu exam qua Question Management (35) với flag tương ứng.
+### 5.1 Nguồn câu = ngân hàng đã xuất bản
+- Eligibility: câu **available trong ngân hàng** (status `published`, hoặc còn `published_version` live khi working copy đang sửa).
+- Câu `private` / `retired` **không** nằm trong ngân hàng → không pick.
+- Cờ `is_priority` (Câu ưu tiên) dùng cho livestream chữa đề — **không** giới hạn pool sinh bài thi.
 
 ### 5.2 CCT configuration & auto-selection (admin KHÔNG chọn từng câu)
 Bảng `exam_topics`: `exam_id`, `core_clinical_topic_id`, `question_count`, `sort_order`. Mỗi dòng = 1 Core Clinical Topic (CCT) trong ma trận thi. Câu hỏi **không** gắn trực tiếp CCT — eligibility suy ra qua Bài học/Tag đã map.
@@ -57,7 +57,7 @@ Bảng `exam_topics`: `exam_id`, `core_clinical_topic_id`, `question_count`, `so
 **Thuật toán generate** (cho mỗi `exam_topic`):
 1. Resolve `core_clinical_topic_id` → tập **Bài học** đã map (qua `core_topic_lessons`) [+ Tag đã map qua `core_topic_tags` nếu cấu hình].
 2. Filter `questions` gắn một trong các Bài học đó (qua `question_lesson`) [+ khớp Tag nếu có].
-3. Filter `status = private` AND `exam_flag = true`.
+3. Filter ngân hàng đã xuất bản (ServePublished); ưu tiên bài học `is_priority` trên map CCT, thiếu thì nới full CCT.
 4. Sort `created_at DESC`.
 5. Take `question_count` câu mới nhất.
 6. **Không** lấy câu ngoài phạm vi CCT khi thiếu.
@@ -88,7 +88,7 @@ Kết quả generate lưu `exam_questions(exam_id, question_id, core_clinical_to
 - `exam_topics`: `exam_id FK`, `core_clinical_topic_id FK`, `question_count INT`, `sort_order INT`; unique `(exam_id, core_clinical_topic_id)`.
 - `exam_questions`: `exam_id FK`, `question_id FK`, `core_clinical_topic_id FK null`, `sort_order INT`; unique `(exam_id, question_id)`.
 - `exam_attempts`, liên kết `question_sessions` (mode=exam).
-- Index: `questions(status, exam_flag, created_at)` cho pool query; `exam_topics(exam_id)`; pivot `core_topic_lessons(core_clinical_topic_id)`, `question_lesson(lesson_id)` cho resolve eligibility.
+- Index: `questions(status, is_priority, created_at)` cho list/filter; `exam_topics(exam_id)`; pivot `core_topic_lessons(core_clinical_topic_id)`, `question_lesson(lesson_id)` cho resolve eligibility.
 
 ## 7. API
 | Method | URL | Payload | Response | Quyền |

@@ -66,7 +66,7 @@ final class RestoreQuestionVersionAction
                 'difficulty' => (string) ($snapshot['difficulty'] ?? 'medium'),
                 'status' => QuestionStatus::Draft,
                 'is_free' => (bool) ($snapshot['is_free'] ?? false),
-                'exam_flag' => (bool) ($snapshot['exam_flag'] ?? false),
+                'is_priority' => (bool) ($snapshot['is_priority'] ?? $snapshot['exam_flag'] ?? false),
                 'updated_by' => $actor->getKey(),
                 // Keep questions.version / published_version unchanged — bump only on publish.
             ])->save();

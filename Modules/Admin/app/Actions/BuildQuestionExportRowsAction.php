@@ -38,7 +38,7 @@ final class BuildQuestionExportRowsAction
                 ->implode('; ');
             $row['tag_slugs'] = $question->tags->pluck('slug')->filter()->implode('; ');
             $row['is_free'] = $question->is_free ? '1' : '0';
-            $row['exam_flag'] = $question->exam_flag ? '1' : '0';
+            $row['is_priority'] = $question->is_priority ? '1' : '0';
             $row['attending_tip'] = $this->richField($question->attending_tip);
             $row['hints'] = $this->hintField($question);
 
