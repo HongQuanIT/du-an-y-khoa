@@ -6,6 +6,14 @@
 
 - Bộ lọc / cột / KPI list và trang thống kê: bỏ Free–Premium, dùng **Miễn phí** (Có/Không).
 
+### Feat — AJAX bộ lọc lớp học Admin
+
+- Chuẩn hóa giao diện tìm kiếm lớp học với nhãn ngữ nghĩa, icon và nút `Tìm kiếm`, `Xoá`.
+- Cho phép chọn nhiều trạng thái, mục đích và giảng viên mà không tự tải lại trang.
+- Chỉ gửi bộ lọc khi bấm nút, cập nhật danh sách và phân trang bằng AJAX, đồng thời đồng bộ URL.
+- Loại bỏ trạng thái `Nháp` khỏi bộ lọc Admin vì luồng tạo lớp hiện tại gửi lớp thẳng sang `Chờ duyệt`.
+- Mở rộng từ khoá tìm kiếm sang UUID và tên giảng viên, đồng thời xử lý ký tự đặc biệt trong truy vấn `LIKE`.
+
 ### Refactor — Câu ưu tiên & bài thi lấy từ ngân hàng đã xuất bản
 
 - Đổi `exam_flag` → `is_priority` (nhãn **Câu ưu tiên**): đánh dấu câu đề Bộ / kỳ thi gần đây cho livestream chữa đề.
