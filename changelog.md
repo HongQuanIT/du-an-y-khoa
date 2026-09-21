@@ -2,6 +2,12 @@
 
 ## 2026-09-21
 
+### Fix — Admin: Chuẩn hóa SEO và UI nút bộ lọc Hộp thư liên hệ
+
+- Sửa lỗi xuống dòng chữ «Xóa lọc» trên các màn hình vừa và nhỏ: cân đối lại tỉ lệ cột grid và thêm `whitespace-nowrap`.
+- Bổ sung định danh ID, thuộc tính `aria-label`, `aria-haspopup`, `aria-expanded` và `title` trợ năng cho các nút bấm và dropdown trigger.
+- Ẩn các icon khỏi screen reader bằng `aria-hidden="true"`.
+
 ### Feat — Admin: Bộ lọc AJAX đa lựa chọn cho Hộp thư liên hệ
 
 - Chuyển đổi bộ lọc Trạng thái, Chủ đề và Phân công thành dropdown đa chọn (Alpine.js multi-select) hiển thị số lượng badge đã chọn.

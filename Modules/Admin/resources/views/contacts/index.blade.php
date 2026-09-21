@@ -53,13 +53,17 @@
                 <div class="relative md:col-span-2" @click.outside="statusOpen = false">
                     <span class="mb-1.5 block text-sm font-medium text-on-surface-variant">Trạng thái</span>
                     <button type="button" @click="statusOpen = !statusOpen; subjectOpen = false; assignedOpen = false"
+                        id="contact-filter-status-trigger"
+                        aria-haspopup="true"
+                        :aria-expanded="statusOpen"
+                        aria-label="Lọc theo trạng thái"
                         class="flex h-11 w-full items-center justify-between rounded-lg border border-outline-variant bg-surface-container-low px-3 text-sm text-on-surface hover:border-outline focus:border-primary focus:ring-1 focus:ring-primary">
                         <span class="truncate" x-text="statusLabel()"></span>
                         <div class="flex items-center gap-1">
                             <template x-if="statuses.length > 0">
                                 <span class="flex size-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-on-primary" x-text="statuses.length"></span>
                             </template>
-                            <span class="material-symbols-outlined text-[20px] text-on-surface-variant transition-transform duration-200" :class="statusOpen ? 'rotate-180' : ''">expand_more</span>
+                            <span class="material-symbols-outlined text-[20px] text-on-surface-variant transition-transform duration-200" :class="statusOpen ? 'rotate-180' : ''" aria-hidden="true">expand_more</span>
                         </div>
                     </button>
 
@@ -85,16 +89,20 @@
                 </div>
 
                 <!-- Multi-select: Chủ đề -->
-                <div class="relative md:col-span-3" @click.outside="subjectOpen = false">
+                <div class="relative md:col-span-2" @click.outside="subjectOpen = false">
                     <span class="mb-1.5 block text-sm font-medium text-on-surface-variant">Chủ đề</span>
                     <button type="button" @click="subjectOpen = !subjectOpen; statusOpen = false; assignedOpen = false"
+                        id="contact-filter-subject-trigger"
+                        aria-haspopup="true"
+                        :aria-expanded="subjectOpen"
+                        aria-label="Lọc theo chủ đề"
                         class="flex h-11 w-full items-center justify-between rounded-lg border border-outline-variant bg-surface-container-low px-3 text-sm text-on-surface hover:border-outline focus:border-primary focus:ring-1 focus:ring-primary">
                         <span class="truncate" x-text="subjectLabel()"></span>
                         <div class="flex items-center gap-1">
                             <template x-if="subjects.length > 0">
                                 <span class="flex size-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-on-primary" x-text="subjects.length"></span>
                             </template>
-                            <span class="material-symbols-outlined text-[20px] text-on-surface-variant transition-transform duration-200" :class="subjectOpen ? 'rotate-180' : ''">expand_more</span>
+                            <span class="material-symbols-outlined text-[20px] text-on-surface-variant transition-transform duration-200" :class="subjectOpen ? 'rotate-180' : ''" aria-hidden="true">expand_more</span>
                         </div>
                     </button>
 
@@ -122,13 +130,17 @@
                 <div class="relative md:col-span-2" @click.outside="assignedOpen = false">
                     <span class="mb-1.5 block text-sm font-medium text-on-surface-variant">Phân công</span>
                     <button type="button" @click="assignedOpen = !assignedOpen; statusOpen = false; subjectOpen = false"
+                        id="contact-filter-assigned-trigger"
+                        aria-haspopup="true"
+                        :aria-expanded="assignedOpen"
+                        aria-label="Lọc theo người được phân công"
                         class="flex h-11 w-full items-center justify-between rounded-lg border border-outline-variant bg-surface-container-low px-3 text-sm text-on-surface hover:border-outline focus:border-primary focus:ring-1 focus:ring-primary">
                         <span class="truncate" x-text="assignedLabel()"></span>
                         <div class="flex items-center gap-1">
                             <template x-if="assigned.length > 0">
                                 <span class="flex size-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-on-primary" x-text="assigned.length"></span>
                             </template>
-                            <span class="material-symbols-outlined text-[20px] text-on-surface-variant transition-transform duration-200" :class="assignedOpen ? 'rotate-180' : ''">expand_more</span>
+                            <span class="material-symbols-outlined text-[20px] text-on-surface-variant transition-transform duration-200" :class="assignedOpen ? 'rotate-180' : ''" aria-hidden="true">expand_more</span>
                         </div>
                     </button>
 
@@ -155,21 +167,25 @@
                 </div>
 
                 <!-- Action Buttons: Lọc & Xóa lọc -->
-                <div class="grid grid-cols-2 gap-2 md:col-span-2">
-                    <button type="submit" :disabled="loading"
-                        class="inline-flex h-11 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-semibold text-on-primary shadow-xs transition hover:opacity-90 disabled:opacity-50">
+                <div class="flex items-center gap-2 md:col-span-3">
+                    <button type="submit" id="btn-contacts-apply-filter" :disabled="loading"
+                        title="Áp dụng bộ lọc liên hệ"
+                        aria-label="Áp dụng bộ lọc"
+                        class="inline-flex h-11 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-3 text-sm font-semibold text-on-primary shadow-xs transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-50">
                         <template x-if="loading">
-                            <span class="size-4 animate-spin rounded-full border-2 border-on-primary border-t-transparent"></span>
+                            <span class="size-4 animate-spin rounded-full border-2 border-on-primary border-t-transparent" aria-hidden="true"></span>
                         </template>
                         <template x-if="!loading">
-                            <span class="material-symbols-outlined text-[18px]">filter_alt</span>
+                            <span class="material-symbols-outlined text-[18px] shrink-0" aria-hidden="true">filter_alt</span>
                         </template>
-                        <span>Lọc</span>
+                        <span class="whitespace-nowrap">Lọc</span>
                     </button>
-                    <button type="button" @click="resetFilter()" :disabled="loading"
-                        class="inline-flex h-11 items-center justify-center gap-1.5 rounded-lg border border-outline-variant px-4 text-sm font-semibold text-on-surface-variant transition hover:bg-surface-container-low disabled:opacity-50">
-                        <span class="material-symbols-outlined text-[18px]">restart_alt</span>
-                        <span>Xóa lọc</span>
+                    <button type="button" id="btn-contacts-reset-filter" @click="resetFilter()" :disabled="loading"
+                        title="Xóa bộ lọc về mặc định"
+                        aria-label="Xóa bộ lọc"
+                        class="inline-flex h-11 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-outline-variant bg-surface px-3 text-sm font-semibold text-on-surface-variant transition hover:bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50">
+                        <span class="material-symbols-outlined text-[18px] shrink-0" aria-hidden="true">restart_alt</span>
+                        <span class="whitespace-nowrap">Xóa lọc</span>
                     </button>
                 </div>
             </form>
