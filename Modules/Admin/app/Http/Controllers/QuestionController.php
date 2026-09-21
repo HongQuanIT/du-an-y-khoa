@@ -273,8 +273,12 @@ final class QuestionController extends Controller
         $this->authorizePermission(Permission::QuestionUpdate);
         QuestionAccess::authorizeView($this->actor(), $question);
 
-        // Chờ xuất bản: không lưu nội dung qua form soạn — chỉ chuyển trạng thái (nếu có).
-        if ($question->status === QuestionStatus::PendingPublish) {
+        // Đang duyệt / chờ xuất bản: không lưu nội dung qua form soạn — chỉ chuyển trạng thái (nếu có).
+        if (in_array($question->status, [
+            QuestionStatus::InReview,
+            QuestionStatus::InFlagReview,
+            QuestionStatus::PendingPublish,
+        ], true)) {
             if ($request->filled('requested_status')) {
                 $statusData = $request->validate([
                     'requested_status' => ['required', 'string', Rule::in(QuestionStatus::values())],
@@ -294,8 +298,14 @@ final class QuestionController extends Controller
                 );
             }
 
+            $lockMessage = match ($question->status) {
+                QuestionStatus::InReview => 'Câu đang chờ giảng viên duyệt. Không chỉnh sửa — rút về nháp nếu cần sửa.',
+                QuestionStatus::InFlagReview => 'Câu đã qua duyệt giảng viên, đang chờ reviewer. Không chỉnh sửa và không rút về nháp.',
+                default => 'Câu đang chờ xuất bản. Dùng nút «Duyệt & xuất bản» hoặc «Từ chối xuất bản» bên phải.',
+            };
+
             return back()->withErrors([
-                'status' => 'Câu đang chờ xuất bản. Dùng nút «Duyệt & xuất bản» hoặc «Từ chối xuất bản» bên phải.',
+                'status' => $lockMessage,
             ]);
         }
 
@@ -305,11 +315,6 @@ final class QuestionController extends Controller
                 'rejection_reason' => ['nullable', 'string', 'max:2000'],
             ])
             : null;
-
-        $wasInPipeline = in_array($question->status, [
-            QuestionStatus::InReview,
-            QuestionStatus::InFlagReview,
-        ], true);
 
         $question = DB::transaction(function () use ($request, $question, $action, $transition, $statusData): Question {
             $question = $action->handle($this->actor(), $question, $this->validatedPayload($request));
@@ -328,13 +333,10 @@ final class QuestionController extends Controller
 
         if ($statusData !== null) {
             $nextStatus = QuestionStatus::from($statusData['requested_status']);
-            $resubmitted = $wasInPipeline && $nextStatus === QuestionStatus::InReview;
 
-            return back()->with('status', $resubmitted
-                ? 'Đã lưu và gửi duyệt lại. Quyết định giảng viên và 2 cờ reviewer được reset.'
-                : ($nextStatus === QuestionStatus::InReview
-                    ? 'Đã lưu câu hỏi và gửi giảng viên duyệt.'
-                    : 'Đã lưu câu hỏi và cập nhật trạng thái: '.$nextStatus->label()));
+            return back()->with('status', $nextStatus === QuestionStatus::InReview
+                ? 'Đã lưu câu hỏi và gửi giảng viên duyệt.'
+                : 'Đã lưu câu hỏi và cập nhật trạng thái: '.$nextStatus->label());
         }
 
         return back()->with('status', match (true) {
@@ -508,13 +510,15 @@ final class QuestionController extends Controller
                 ($question->exists === false && $this->actor()->can(Permission::QuestionCreate->value))
                 || ($this->actor()->can(Permission::QuestionUpdate->value) && ! $hasBlockingReview)
             ),
-            // Nội dung khóa khi chờ xuất bản / đã retire — chỉ dùng panel xuất bản hoặc chuyển trạng thái riêng.
+            // Nội dung khóa khi đang duyệt / chờ xuất bản / đã retire — chỉ rút nháp hoặc panel xuất bản.
             'canEditContent' => (
                 ($question->exists === false && $this->actor()->can(Permission::QuestionCreate->value))
                 || (
                     $this->actor()->can(Permission::QuestionUpdate->value)
                     && ! $hasBlockingReview
                     && ! in_array($question->status, [
+                        QuestionStatus::InReview,
+                        QuestionStatus::InFlagReview,
                         QuestionStatus::PendingPublish,
                         QuestionStatus::Retired,
                     ], true)
@@ -566,9 +570,7 @@ final class QuestionController extends Controller
             QuestionStatus::InReview => $canSubmit
                 ? [QuestionStatus::Draft]
                 : [],
-            QuestionStatus::InFlagReview => $canSubmit
-                ? [QuestionStatus::Draft, QuestionStatus::InReview]
-                : [],
+            QuestionStatus::InFlagReview => [],
             QuestionStatus::PendingPublish => array_values(array_filter([
                 $canPublish ? QuestionStatus::Published : null,
                 $canPublish ? QuestionStatus::Private : null,

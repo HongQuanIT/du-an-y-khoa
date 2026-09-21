@@ -217,14 +217,12 @@
 
     @if (! $isNew && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::InReview)
         <div class="mb-5 rounded-2xl border border-amber-200 bg-amber-50/60 px-4 py-3 text-sm text-amber-900">
-            <div class="flex flex-wrap items-center gap-3">
-                <p>
-                    Giảng viên được gán đang duyệt chuyên môn. Một phiếu từ chối là fail ngay, chưa sang reviewer.
-                    @if (! $isReviewer)
-                        Bạn vẫn được sửa; chọn <strong>Lưu &amp; gửi duyệt lại</strong> để reset phiếu giảng viên.
-                    @endif
-                </p>
-            </div>
+            <p>
+                Giảng viên được gán đang duyệt chuyên môn. Một phiếu từ chối là fail ngay, chưa sang reviewer.
+                @if (! $isReviewer)
+                    <strong>Không chỉnh sửa nội dung</strong> trong lúc chờ duyệt — vẫn có thể <strong>rút về nháp</strong> nếu cần sửa rồi gửi lại.
+                @endif
+            </p>
         </div>
     @endif
 
@@ -235,7 +233,7 @@
                 <p>
                     Giảng viên đã duyệt chuyên môn. Câu hỏi đang chờ reviewer gắn cờ.
                     @if (! $isReviewer)
-                        Bạn vẫn được sửa; chọn <strong>Lưu &amp; gửi duyệt lại</strong> để reset phiếu GV và 2 cờ.
+                        <strong>Không chỉnh sửa</strong> và <strong>không rút về nháp</strong> — chờ reviewer / Admin xử lý.
                     @endif
                 </p>
             </div>
@@ -684,9 +682,33 @@
                     </p>
                     <p x-show="error" x-cloak class="mt-2 text-xs font-medium text-error" x-text="error"></p>
                 </div>
+                </div>{{-- /locked sidebar media --}}
 
                 {{-- Gửi duyệt + chọn GV — CTA rõ ràng, không dùng dropdown trạng thái --}}
                 @include('admin::questions.partials.editor-submit-panel')
+
+                @if (! $isNew && ! $canEditContent && ! $isReviewer && $canSubmit && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::InReview)
+                    <div class="rounded-2xl border border-outline-variant bg-surface p-4">
+                        <h2 class="font-label-md font-semibold text-on-surface">Đang chờ giảng viên</h2>
+                        <p class="mt-1 text-[11px] leading-4 text-on-surface-variant">
+                            Nội dung bị khóa khi chờ GV. Vẫn có thể rút về nháp để chỉnh sửa rồi gửi duyệt lại (chỉ khi GV chưa approve/reject).
+                        </p>
+                        <button type="submit"
+                            form="editor-return-draft-form"
+                            onclick="return confirm('Rút câu về nháp? Phiếu duyệt hiện tại sẽ bị hủy.')"
+                            class="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-outline-variant py-2.5 font-label-md font-semibold text-on-surface hover:bg-surface-container-low">
+                            <span class="material-symbols-outlined text-[18px]">undo</span>
+                            Rút về nháp
+                        </button>
+                    </div>
+                @elseif (! $isNew && ! $canEditContent && ! $isReviewer && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::InFlagReview)
+                    <div class="rounded-2xl border border-outline-variant bg-surface p-4">
+                        <h2 class="font-label-md font-semibold text-on-surface">Đã qua duyệt giảng viên</h2>
+                        <p class="mt-1 text-[11px] leading-4 text-on-surface-variant">
+                            Không thể chỉnh sửa. Chờ reviewer gắn cờ / Admin xử lý tiếp.
+                        </p>
+                    </div>
+                @endif
 
                 @if (! $isNew && $canEditContent && $question->published_version && $question->status !== \Modules\QuestionBank\Enums\QuestionStatus::Published)
                     <div class="rounded-2xl border border-sky-200 bg-sky-50/70 p-4 text-sm text-sky-950">
@@ -698,6 +720,10 @@
                     </div>
                 @endif
 
+                <div @class([
+                    'space-y-4',
+                    'pointer-events-none select-none opacity-70' => ! $canEditContent,
+                ])>
                 {{-- Phân loại --}}
                 <div class="rounded-2xl border border-outline-variant bg-surface p-4">
                     <h2 class="mb-3 font-label-md font-semibold text-on-surface-variant">Phân loại</h2>
@@ -800,16 +826,14 @@
             </div>{{-- /sidebar --}}
     </form>
 
-    @if (! $isNew && $canEditContent && in_array($question->status, [
+    @if (! $isNew && $canSubmit && in_array($question->status, [
         \Modules\QuestionBank\Enums\QuestionStatus::InReview,
         \Modules\QuestionBank\Enums\QuestionStatus::Rejected,
     ], true))
-        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.transition'))
-<form id="editor-return-draft-form" method="post" action="{{ route('admin.questions.transition', $question) }}" class="hidden">
+        <form id="editor-return-draft-form" method="post" action="{{ route('admin.questions.transition', $question) }}" class="hidden">
             @csrf
             <input type="hidden" name="status" value="{{ \Modules\QuestionBank\Enums\QuestionStatus::Draft->value }}">
         </form>
-@endif
     @endif
 
     @if (! $isNew && ($canPublish || $canReject) && in_array($question->status, [

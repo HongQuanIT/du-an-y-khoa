@@ -27,14 +27,6 @@
         'tag_ids',
         collect($selectedTags)->pluck('id')->all(),
     ))->map(fn ($id) => (int) $id)->unique()->values()->all();
-
-    $inferredCoreTopics = $question->exists
-        ? $question->inferredCoreClinicalTopics()->map(fn ($t) => [
-            'id' => $t->id,
-            'name' => $t->name,
-            'section_name' => $t->section?->name,
-        ])->values()->all()
-        : [];
 @endphp
 
 <div class="space-y-4 border-t border-outline-variant pt-3"
@@ -43,7 +35,6 @@
          selectedLessonIds: @js($selectedLessonIds),
          selectedTags: @js(collect($selectedTags)->keyBy('id')->all()),
          selectedTagIds: @js($selectedTagIds),
-         inferredCoreTopics: @js($inferredCoreTopics),
          urls: {
              organSystems: @js(route('admin.taxonomy.lookups.organ-systems')),
              subjects: @js(route('admin.taxonomy.lookups.subjects')),
@@ -126,22 +117,6 @@
         </template>
         <p x-show="selectedLessonIds.length === 0" class="mt-1 text-xs text-error">Chọn ít nhất một bài học.</p>
     </div>
-
-    @if (count($inferredCoreTopics) > 0)
-        <div class="rounded-lg border border-outline-variant/70 bg-surface-container-low/60 p-3">
-            <p class="mb-1.5 text-xs font-semibold text-on-surface-variant">Chủ đề lâm sàng (suy ra từ ma trận)</p>
-            <div class="flex flex-wrap gap-1.5">
-                @foreach ($inferredCoreTopics as $topic)
-                    <span class="inline-flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
-                        {{ $topic['name'] }}
-                        @if (! empty($topic['section_name']))
-                            <span class="font-normal text-primary/70">· {{ $topic['section_name'] }}</span>
-                        @endif
-                    </span>
-                @endforeach
-            </div>
-        </div>
-    @endif
 
     <div>
         <label class="mb-1 block text-xs font-semibold text-on-surface-variant">Thẻ</label>
