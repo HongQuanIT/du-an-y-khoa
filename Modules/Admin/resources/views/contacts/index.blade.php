@@ -162,27 +162,8 @@
                 </div>
 
                 <!-- Action Buttons: Tìm kiếm & Xóa lọc -->
-                <div class="flex items-center gap-2 md:col-span-3">
-                    <button type="submit" id="btn-contacts-apply-filter" :disabled="loading"
-                        title="Tìm kiếm liên hệ"
-                        aria-label="Tìm kiếm liên hệ"
-                        class="inline-flex h-11 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-3 text-sm font-semibold text-on-primary shadow-xs transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-50">
-                        <template x-if="loading">
-                            <span class="size-4 animate-spin rounded-full border-2 border-on-primary border-t-transparent" aria-hidden="true"></span>
-                        </template>
-                        <template x-if="!loading">
-                            <span class="material-symbols-outlined text-[18px] shrink-0" aria-hidden="true">search</span>
-                        </template>
-                        <span class="whitespace-nowrap">Tìm kiếm</span>
-                    </button>
-                    <button type="button" id="btn-contacts-reset-filter" @click="resetFilter()" :disabled="loading"
-                        title="Xoá"
-                        aria-label="Xoá"
-                        class="inline-flex h-11 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-outline-variant bg-surface px-3 text-sm font-semibold text-on-surface-variant transition hover:bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50">
-                        <span class="material-symbols-outlined text-[18px] shrink-0" aria-hidden="true">delete</span>
-                        <span class="whitespace-nowrap">Xoá</span>
-                    </button>
-                </div>
+                <x-admin.filter-action-buttons class="md:col-span-3" reset-method="resetFilter" fill
+                    search-aria-label="Tìm kiếm liên hệ" reset-aria-label="Xoá bộ lọc liên hệ" />
             </form>
         @endif
 

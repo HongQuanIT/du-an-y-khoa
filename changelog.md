@@ -9,6 +9,11 @@
 - Pipeline ≥2 vòng: chặn xuất bản nếu còn QA `pending`; 1 vòng vẫn auto QA khi XB.
 - List: **Xuất bản** hàng loạt (`POST …/bulk-transition`, tối đa 20) — chỉ chờ XB + 1 vòng + 2 cờ xanh; còn lại duyệt thủ công. **Không** từ chối hàng loạt.
 - Form XB: banner + disable nút khi thiếu QA; list badge «Cần QA trước XB».
+### Fix — Đồng bộ UI bộ lọc tìm kiếm Admin
+
+- Chuẩn hóa nút `Tìm kiếm` và `Xoá` bằng component dùng chung với icon, loading, disabled và focus state nhất quán.
+- Đồng bộ giao diện bộ lọc cho Liên hệ, Người dùng, Câu hỏi, Phản hồi câu hỏi, Audit và các danh sách quản trị liên quan.
+- Bổ sung AJAX và multi-select cho bộ lọc dữ liệu học viên; lọc nhiều quốc gia, tỉnh/thành phố và trạng thái từ database.
 
 ### Fix — AJAX bộ lọc Nhật ký hoạt động Admin
 

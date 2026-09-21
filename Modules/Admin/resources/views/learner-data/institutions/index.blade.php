@@ -16,32 +16,21 @@
 
     <x-admin.flash />
 
-    <form method="get" class="mb-6 grid grid-cols-1 items-end gap-4 rounded-xl border border-outline-variant bg-surface p-4 md:grid-cols-2 xl:grid-cols-5">
-        <div>
-            <label for="q" class="mb-1.5 block font-label-sm text-on-surface-variant">Tên hoặc tên viết tắt</label>
-            <input id="q" name="q" value="{{ $filters['q'] ?? '' }}" class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3" placeholder="VD: Đại học Y Hà Nội">
+    <form id="institution-filter-form" method="get" action="{{ route('admin.institutions.index') }}" role="search" x-data="adminInstitutionFilter()" @submit.prevent="applyFilters()" class="mb-6 space-y-4 rounded-xl border border-outline-variant bg-surface p-4" aria-labelledby="institution-filter-heading">
+        <div><h2 id="institution-filter-heading" class="font-label-lg font-semibold text-on-surface">Tìm kiếm trường học</h2><p class="mt-1 font-body-sm text-on-surface-variant">Tìm theo tên hoặc tên viết tắt, sau đó thu hẹp theo quốc gia, tỉnh/thành phố và trạng thái.</p></div>
+        <div class="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 xl:grid-cols-5">
+            <div class="sm:col-span-2 xl:col-span-2"><label for="institution-search-q" class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant">Tìm kiếm</label><div class="relative"><span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[19px] text-on-surface-variant" aria-hidden="true">search</span><input id="institution-search-q" name="q" value="{{ $filters['q'] }}" type="search" autocomplete="off" class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low py-2 pl-10 pr-3 font-body-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" placeholder="Tên hoặc tên viết tắt"></div></div>
+            <div class="min-w-0"><x-admin.multi-select-filter name="country_id" label="Quốc gia" placeholder="Tất cả" :options="$countries->map(fn ($country) => ['id' => $country->id, 'label' => $country->name])->all()" :selected="$filters['country_id']" /></div>
+            <div class="min-w-0"><x-admin.multi-select-filter name="administrative_unit_id" label="Tỉnh/Thành phố" placeholder="Tất cả" :options="$units->map(fn ($unit) => ['id' => $unit->id, 'label' => $unit->name])->all()" :selected="$filters['administrative_unit_id']" /></div>
+            <div class="min-w-0"><x-admin.multi-select-filter name="status" label="Trạng thái" placeholder="Tất cả" :options="[['id' => 'active', 'label' => 'Đang hiển thị'], ['id' => 'inactive', 'label' => 'Đã ẩn']]" :selected="$filters['status']" /></div>
         </div>
-        <div>
-            <label for="country_id" class="mb-1.5 block font-label-sm text-on-surface-variant">Quốc gia</label>
-            <select id="country_id" name="country_id" class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3"><option value="">Tất cả</option>@foreach($countries as $country)<option value="{{ $country->id }}" @selected((string)($filters['country_id'] ?? '') === (string)$country->id)>{{ $country->name }}</option>@endforeach</select>
-        </div>
-        <div>
-            <label for="administrative_unit_id" class="mb-1.5 block font-label-sm text-on-surface-variant">Tỉnh/Thành phố</label>
-            <select id="administrative_unit_id" name="administrative_unit_id" class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3"><option value="">Tất cả</option>@foreach($units as $unit)<option value="{{ $unit->id }}" @selected((string)($filters['administrative_unit_id'] ?? '') === (string)$unit->id)>{{ $unit->name }}</option>@endforeach</select>
-        </div>
-        <div>
-            <label for="status" class="mb-1.5 block font-label-sm text-on-surface-variant">Trạng thái</label>
-            <select id="status" name="status" class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3">
-                <option value="">Tất cả</option>
-                <option value="active" @selected(($filters['status'] ?? '') === 'active')>Đang hiển thị</option>
-                <option value="inactive" @selected(($filters['status'] ?? '') === 'inactive')>Đã ẩn</option>
-            </select>
-        </div>
-        <button class="h-11 rounded-lg bg-primary px-4 font-label-md font-semibold text-on-primary">Lọc</button>
+        <div class="flex justify-end gap-2 border-t border-outline-variant pt-4"><button type="submit" :disabled="loading" class="inline-flex h-11 w-36 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 font-label-md font-medium text-on-primary transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50" aria-label="Tìm kiếm trường học"><span class="material-symbols-outlined text-[18px]" aria-hidden="true" x-text="loading ? 'progress_activity' : 'search'">search</span><span x-text="loading ? 'Đang tải' : 'Tìm kiếm'">Tìm kiếm</span></button><button type="button" @click="resetFilters(@js(route('admin.institutions.index')))" :disabled="loading" class="inline-flex h-11 w-28 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-outline-variant bg-surface px-3 font-label-md font-medium text-on-surface-variant transition hover:bg-surface-container-low focus-visible:ring-2 focus-visible:ring-primary/20 disabled:opacity-50" aria-label="Xoá bộ lọc trường học"><span class="material-symbols-outlined text-[18px]" aria-hidden="true">delete</span><span>Xoá</span></button></div>
     </form>
 
+    <div id="institution-results-region" aria-live="polite">
     <div class="overflow-x-auto rounded-xl border border-outline-variant bg-surface">
         <table class="min-w-full text-left text-body-sm">
+            <caption class="sr-only">Danh sách trường học và cơ sở đào tạo</caption>
             <thead class="border-b border-outline-variant bg-surface-container-low text-label-md text-on-surface-variant">
                 <tr><th class="px-4 py-3">Trường</th><th class="px-4 py-3">Địa phương</th><th class="px-4 py-3">Học viên</th><th class="px-4 py-3">Trạng thái</th><th class="px-4 py-3"></th></tr>
             </thead>
@@ -64,7 +53,8 @@
             </tbody>
         </table>
     </div>
-    <div class="mt-4">{{ $institutions->links() }}</div>
+    <div class="mt-4" id="institution-pagination">{{ $institutions->links() }}</div>
+    </div>
 
     @if ($editing || $canCreate)
         <div x-cloak x-show="formModalOpen" x-transition.opacity @keydown.escape.window="@if($editing) window.location.href = '{{ route('admin.institutions.index') }}' @else formModalOpen = false @endif"
@@ -115,5 +105,8 @@
             </section>
         </div>
     @endif
+    <script>
+        function adminInstitutionFilter() { return { loading: false, filterForm() { return document.getElementById('institution-filter-form'); }, async applyFilters() { const form = this.filterForm(); if (!form) return; const url = new URL(form.getAttribute('action'), window.location.origin); const params = new URLSearchParams(new FormData(form)); params.delete('page'); url.search = params.toString(); await this.fetchResults(url.toString()); }, async resetFilters(url) { this.filterForm()?.reset(); window.dispatchEvent(new CustomEvent('learner-catalog-filters-reset')); await this.fetchResults(url); }, async fetchResults(url) { this.loading = true; try { const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } }); if (!response.ok) throw new Error('Không thể tải danh sách'); const parsed = new DOMParser().parseFromString(await response.text(), 'text/html'); const next = parsed.getElementById('institution-results-region'); const current = document.getElementById('institution-results-region'); if (!next || !current) throw new Error('Không tìm thấy vùng kết quả'); current.replaceWith(next); window.history.pushState({}, '', url); this.bindPagination(); } catch (error) { console.error(error); alert('Có lỗi xảy ra khi tải danh sách. Vui lòng thử lại.'); } finally { this.loading = false; } }, bindPagination() { document.querySelectorAll('#institution-pagination a').forEach((link) => link.addEventListener('click', (event) => { event.preventDefault(); if (link.href) this.fetchResults(link.href); })); }, init() { this.bindPagination(); } }; }
+    </script>
     </div>
 </x-layouts.admin>

@@ -14,39 +14,45 @@
 
     <div>
         <section>
-            <form method="get" class="mb-4 grid gap-3 rounded-xl border border-outline-variant bg-surface p-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div class="sm:col-span-2">
-                    <label for="q" class="mb-1 block text-label-sm text-on-surface-variant">Tên hoặc mã</label>
-                    <input id="q" name="q" value="{{ $filters['q'] ?? '' }}" placeholder="Nhập từ khóa tìm kiếm"
-                        class="h-10 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 text-body-sm">
-                </div>
-                @if ($catalog === 'administrative-units')
-                    <div>
-                        <label for="country_filter" class="mb-1 block text-label-sm text-on-surface-variant">Quốc gia</label>
-                        <select id="country_filter" name="country_id" class="h-10 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 text-body-sm">
-                            <option value="">Tất cả</option>
-                            @foreach ($countries as $country)
-                                <option value="{{ $country->id }}" @selected((string) ($filters['country_id'] ?? '') === (string) $country->id)>{{ $country->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                @endif
+            <form id="learner-catalog-filter-form" method="get" action="{{ route($config['route'].'.index') }}" role="search" x-data="adminLearnerCatalogFilter()" @submit.prevent="applyFilters()"
+                class="mb-4 space-y-4 rounded-xl border border-outline-variant bg-surface p-4" aria-labelledby="learner-catalog-filter-heading">
                 <div>
-                    <label for="status" class="mb-1 block text-label-sm text-on-surface-variant">Trạng thái</label>
-                    <select id="status" name="status" class="h-10 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 text-body-sm">
-                        <option value="">Tất cả</option>
-                        <option value="active" @selected(($filters['status'] ?? '') === 'active')>Đang hiển thị</option>
-                        <option value="inactive" @selected(($filters['status'] ?? '') === 'inactive')>Đã ẩn</option>
-                    </select>
+                    <h2 id="learner-catalog-filter-heading" class="font-label-lg font-semibold text-on-surface">Tìm kiếm {{ strtolower($config['title']) }}</h2>
+                    <p class="mt-1 font-body-sm text-on-surface-variant">Tìm theo tên hoặc mã, sau đó thu hẹp danh sách theo các tiêu chí bên dưới.</p>
                 </div>
-                <div class="flex items-end gap-2">
-                    <button class="h-10 rounded-lg bg-primary px-4 font-label-sm font-semibold text-on-primary">Lọc</button>
-                    <a href="{{ route($config['route'].'.index') }}" class="flex h-10 items-center px-2 text-label-sm text-on-surface-variant hover:underline">Xóa</a>
+                <div class="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    <div class="sm:col-span-2 xl:col-auto">
+                        <label for="catalog-search-q" class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant">Tìm kiếm</label>
+                        <div class="relative">
+                            <span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[19px] text-on-surface-variant" aria-hidden="true">search</span>
+                            <input id="catalog-search-q" name="q" value="{{ $filters['q'] }}" type="search" placeholder="Tên hoặc mã danh mục" autocomplete="off" class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low py-2 pl-10 pr-3 font-body-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                        </div>
+                    </div>
+                    @if ($catalog === 'administrative-units')
+                        <div class="min-w-0">
+                            <x-admin.multi-select-filter name="country_id" label="Quốc gia" placeholder="Tất cả"
+                                :options="$countries->map(fn ($country) => ['id' => $country->id, 'label' => $country->name])->all()" :selected="$filters['country_id']" />
+                        </div>
+                    @endif
+                    <div class="min-w-0">
+                        <x-admin.multi-select-filter name="status" label="Trạng thái" placeholder="Tất cả"
+                            :options="[['id' => 'active', 'label' => 'Đang hiển thị'], ['id' => 'inactive', 'label' => 'Đã ẩn']]" :selected="$filters['status']" />
+                    </div>
+                    <div class="flex self-end gap-2 sm:col-span-2 xl:col-auto">
+                        <button type="submit" :disabled="loading" class="inline-flex h-11 w-36 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 font-label-md font-medium text-on-primary transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50" aria-label="Tìm kiếm {{ strtolower($config['title']) }}">
+                            <span class="material-symbols-outlined text-[18px]" aria-hidden="true" x-text="loading ? 'progress_activity' : 'search'">search</span><span x-text="loading ? 'Đang tải' : 'Tìm kiếm'">Tìm kiếm</span>
+                        </button>
+                        <button type="button" @click="resetFilters(@js(route($config['route'].'.index')))" :disabled="loading" class="inline-flex h-11 w-28 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-outline-variant bg-surface px-3 font-label-md font-medium text-on-surface-variant transition hover:bg-surface-container-low focus-visible:ring-2 focus-visible:ring-primary/20 disabled:opacity-50" aria-label="Xoá bộ lọc {{ strtolower($config['title']) }}">
+                            <span class="material-symbols-outlined text-[18px]" aria-hidden="true">delete</span><span>Xoá</span>
+                        </button>
+                    </div>
                 </div>
             </form>
 
+            <div id="learner-catalog-results-region" aria-live="polite">
             <div class="overflow-x-auto rounded-xl border border-outline-variant bg-surface">
                 <table class="min-w-full text-left text-body-sm">
+                    <caption class="sr-only">Danh sách {{ strtolower($config['title']) }} của học viên</caption>
                     <thead class="border-b border-outline-variant bg-surface-container-low text-label-md text-on-surface-variant">
                         <tr>
                             <th class="px-4 py-3">Tên danh mục</th>
@@ -92,7 +98,8 @@
                     </tbody>
                 </table>
             </div>
-            <div class="mt-4">{{ $items->links() }}</div>
+            <div class="mt-4" id="learner-catalog-pagination">{{ $items->links() }}</div>
+            </div>
         </section>
 
     </div>
@@ -118,5 +125,18 @@
             </section>
         </div>
     @endif
+    <script>
+        function adminLearnerCatalogFilter() {
+            return {
+                loading: false,
+                filterForm() { return document.getElementById('learner-catalog-filter-form'); },
+                async applyFilters() { const form = this.filterForm(); if (!form) return; const url = new URL(form.getAttribute('action'), window.location.origin); const params = new URLSearchParams(new FormData(form)); params.delete('page'); url.search = params.toString(); await this.fetchResults(url.toString()); },
+                async resetFilters(url) { const form = this.filterForm(); form?.reset(); window.dispatchEvent(new CustomEvent('learner-catalog-filters-reset')); await this.fetchResults(url); },
+                async fetchResults(url) { this.loading = true; try { const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } }); if (!response.ok) throw new Error('Không thể tải danh sách'); const parsed = new DOMParser().parseFromString(await response.text(), 'text/html'); const next = parsed.getElementById('learner-catalog-results-region'); const current = document.getElementById('learner-catalog-results-region'); if (!next || !current) throw new Error('Không tìm thấy vùng kết quả'); current.replaceWith(next); window.history.pushState({}, '', url); this.bindPagination(); } catch (error) { console.error(error); alert('Có lỗi xảy ra khi tải danh sách. Vui lòng thử lại.'); } finally { this.loading = false; } },
+                bindPagination() { document.querySelectorAll('#learner-catalog-pagination a').forEach((link) => link.addEventListener('click', (event) => { event.preventDefault(); if (link.href) this.fetchResults(link.href); })); },
+                init() { this.bindPagination(); },
+            };
+        }
+    </script>
     </div>
 </x-layouts.admin>

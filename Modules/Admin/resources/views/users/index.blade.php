@@ -4,6 +4,7 @@
         || filled($filters['role'] ?? [])
         || filled($filters['status'] ?? [])
         || filled($filters['two_factor'] ?? null)
+        || filled($filters['country_id'] ?? null)
         || filled($filters['institution_id'] ?? null)
         || filled($filters['administrative_unit_id'] ?? null)
         || filled($filters['profession_id'] ?? null)
@@ -88,11 +89,16 @@
                 </div>
             </div>
         </div>
-        <details @if(collect($filters)->only(['institution_id', 'administrative_unit_id', 'profession_id', 'education_stage_id', 'onboarding'])->filter()->isNotEmpty()) open @endif>
+        <details @if(collect($filters)->only(['country_id', 'institution_id', 'administrative_unit_id', 'profession_id', 'education_stage_id', 'onboarding'])->filter()->isNotEmpty()) open @endif>
             <summary class="cursor-pointer rounded-lg py-1 font-label-sm font-semibold text-primary outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
                 Bộ lọc hồ sơ học viên
             </summary>
-            <div class="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+                <div>
+                    <x-admin.multi-select-filter name="country_id" label="Quốc gia" placeholder="Mọi quốc gia"
+                        :options="$countries->map(fn ($country) => ['id' => $country->id, 'label' => $country->name])->all()"
+                        :selected="$filters['country_id'] ?? []" />
+                </div>
                 <div>
                     <x-admin.multi-select-filter name="administrative_unit_id" label="Tỉnh/Thành phố" placeholder="Mọi tỉnh/thành"
                         :options="$administrativeUnits->map(fn ($unit) => ['id' => $unit->id, 'label' => $unit->name])->all()"
@@ -123,20 +129,8 @@
                 </div>
             </div>
         </details>
-        <div class="flex justify-end gap-2 border-t border-outline-variant pt-4">
-            <button type="submit" :disabled="loading" aria-label="Tìm kiếm người dùng"
-                class="inline-flex h-11 w-36 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 font-label-md font-medium text-on-primary transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50">
-                <span class="material-symbols-outlined shrink-0 text-[18px]" aria-hidden="true"
-                    x-text="loading ? 'progress_activity' : 'search'">search</span>
-                <span class="whitespace-nowrap" x-text="loading ? 'Đang tải' : 'Tìm kiếm'">Tìm kiếm</span>
-            </button>
-            <button type="button" @click="resetFilters(@js(route('admin.users.index')))" :disabled="loading"
-                aria-label="Xoá bộ lọc người dùng"
-                class="inline-flex h-11 w-28 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-outline-variant bg-surface px-3 font-label-md font-medium text-on-surface-variant transition hover:bg-surface-container-low focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:opacity-50">
-                <span class="material-symbols-outlined shrink-0 text-[18px]" aria-hidden="true">delete</span>
-                <span class="whitespace-nowrap">Xoá</span>
-            </button>
-        </div>
+        <x-admin.filter-action-buttons class="justify-end border-t border-outline-variant pt-4" :reset-url="route('admin.users.index')"
+            search-aria-label="Tìm kiếm người dùng" reset-aria-label="Xoá bộ lọc người dùng" />
     </form>
 @endif
 

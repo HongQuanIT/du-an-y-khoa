@@ -11,6 +11,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Auth\Database\Seeders\AuthDatabaseSeeder;
 use Modules\Auth\Models\Country;
 use Modules\Auth\Models\Institution;
+use Modules\Auth\Models\AdministrativeUnit;
 use Modules\Auth\Models\Profession;
 use Spatie\Permission\Models\Role as RoleModel;
 use Tests\TestCase;
@@ -109,6 +110,55 @@ final class AdminLearnerDataTest extends TestCase
         $this->assertDatabaseHas('administrative_units', ['country_id' => $country->id, 'code' => 'ca']);
         $this->assertDatabaseHas('professions', ['code' => 'dentist', 'is_active' => true]);
         $this->assertDatabaseHas('education_stages', ['code' => 'resident']);
+    }
+
+    public function test_admin_can_filter_institutions_by_multiple_catalog_values_with_ajax(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole(Role::Admin->value);
+        $vietnam = Country::query()->where('code', 'VN')->firstOrFail();
+        $unitedStates = Country::query()->create([
+            'code' => 'US',
+            'name' => 'Hoa Kỳ',
+            'is_active' => true,
+            'sort_order' => 1,
+        ]);
+        $vietnamUnit = AdministrativeUnit::query()->create([
+            'country_id' => $vietnam->id,
+            'code' => 'test-vn',
+            'name' => 'Tỉnh kiểm thử Việt Nam',
+            'type' => 'province',
+            'is_active' => true,
+        ]);
+        $unitedStatesUnit = AdministrativeUnit::query()->create([
+            'country_id' => $unitedStates->id,
+            'code' => 'test-us',
+            'name' => 'Tiểu bang kiểm thử Hoa Kỳ',
+            'type' => 'state',
+            'is_active' => true,
+        ]);
+
+        foreach ([[$vietnam, $vietnamUnit, 'Trường kiểm thử Việt Nam', true], [$unitedStates, $unitedStatesUnit, 'Trường kiểm thử Hoa Kỳ', false]] as [$country, $unit, $name, $active]) {
+            Institution::query()->create([
+                'country_id' => $country->id,
+                'administrative_unit_id' => $unit->id,
+                'name' => $name,
+                'type' => 'university',
+                'is_active' => $active,
+            ]);
+        }
+
+        $this->actingAs($admin)
+            ->withHeader('X-Requested-With', 'XMLHttpRequest')
+            ->get(route('admin.institutions.index', [
+                'country_id' => [$vietnam->id, $unitedStates->id],
+                'administrative_unit_id' => [$vietnamUnit->id, $unitedStatesUnit->id],
+                'status' => ['active', 'inactive'],
+            ]))
+            ->assertOk()
+            ->assertSee('institution-results-region', false)
+            ->assertSee('Trường kiểm thử Việt Nam')
+            ->assertSee('Trường kiểm thử Hoa Kỳ');
     }
 
     public function test_learner_catalog_actions_follow_each_granular_permission(): void
