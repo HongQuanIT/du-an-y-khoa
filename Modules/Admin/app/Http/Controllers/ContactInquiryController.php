@@ -19,15 +19,40 @@ use Modules\Admin\Models\ContactInquiry;
 
 final class ContactInquiryController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request): View|\Illuminate\Http\JsonResponse
     {
         $this->authorizePermission('contact.view');
 
+        $rawStatus = $request->query('status');
+        $rawSubject = $request->query('subject');
+        $rawAssigned = $request->query('assigned');
+
+        $statusList = collect(is_array($rawStatus) ? $rawStatus : ($rawStatus !== null && $rawStatus !== '' ? explode(',', (string) $rawStatus) : []))
+            ->map(fn ($val) => trim((string) $val))
+            ->filter(fn ($val) => ContactInquiryStatus::tryFrom($val) !== null)
+            ->unique()
+            ->values()
+            ->all();
+
+        $subjectList = collect(is_array($rawSubject) ? $rawSubject : ($rawSubject !== null && $rawSubject !== '' ? explode(',', (string) $rawSubject) : []))
+            ->map(fn ($val) => trim((string) $val))
+            ->filter(fn ($val) => ContactSubject::tryFrom($val) !== null)
+            ->unique()
+            ->values()
+            ->all();
+
+        $assignedList = collect(is_array($rawAssigned) ? $rawAssigned : ($rawAssigned !== null && $rawAssigned !== '' ? explode(',', (string) $rawAssigned) : []))
+            ->map(fn ($val) => trim((string) $val))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
         $filters = [
             'q' => trim((string) $request->query('q', '')),
-            'status' => (string) $request->query('status', ''),
-            'subject' => (string) $request->query('subject', ''),
-            'assigned' => (string) $request->query('assigned', ''),
+            'status' => $statusList,
+            'subject' => $subjectList,
+            'assigned' => $assignedList,
         ];
 
         $query = ContactInquiry::query()
@@ -45,18 +70,29 @@ final class ContactInquiryController extends Controller
             });
         }
 
-        if (ContactInquiryStatus::tryFrom($filters['status'])) {
-            $query->where('status', $filters['status']);
+        if (! empty($statusList)) {
+            $query->whereIn('status', $statusList);
         }
 
-        if (ContactSubject::tryFrom($filters['subject'])) {
-            $query->where('subject', $filters['subject']);
+        if (! empty($subjectList)) {
+            $query->whereIn('subject', $subjectList);
         }
 
-        if ($filters['assigned'] === 'me') {
-            $query->where('assigned_admin_id', $request->user()?->getKey());
-        } elseif ($filters['assigned'] === 'unassigned') {
-            $query->whereNull('assigned_admin_id');
+        if (! empty($assignedList)) {
+            $hasMe = in_array('me', $assignedList, true);
+            $hasUnassigned = in_array('unassigned', $assignedList, true);
+            $userKey = $request->user()?->getKey();
+
+            $query->where(function ($builder) use ($hasMe, $hasUnassigned, $userKey): void {
+                if ($hasMe && $hasUnassigned) {
+                    $builder->where('assigned_admin_id', $userKey)
+                        ->orWhereNull('assigned_admin_id');
+                } elseif ($hasMe) {
+                    $builder->where('assigned_admin_id', $userKey);
+                } elseif ($hasUnassigned) {
+                    $builder->whereNull('assigned_admin_id');
+                }
+            });
         }
 
         $statusCounts = ContactInquiry::query()
@@ -65,12 +101,33 @@ final class ContactInquiryController extends Controller
             ->pluck('aggregate', 'status')
             ->map(fn ($count): int => (int) $count);
 
+        $statuses = ContactInquiryStatus::cases();
+        $statusTone = collect($statuses)->mapWithKeys(
+            fn ($status) => [$status->value => $status->tone()]
+        )->all();
+
+        $inquiries = $query->paginate(20)->withQueryString();
+
+        if ($request->ajax()) {
+            return response()->json([
+                'table_html' => view('admin::contacts.partials.table', [
+                    'inquiries' => $inquiries,
+                    'statusTone' => $statusTone,
+                ])->render(),
+                'statusCounts' => $statusCounts,
+                'openCount' => ContactInquiry::query()->open()->count(),
+                'newCount' => ContactInquiry::newCount(),
+                'total' => $inquiries->total(),
+            ]);
+        }
+
         return view('admin::contacts.index', [
-            'inquiries' => $query->paginate(20)->withQueryString(),
+            'inquiries' => $inquiries,
             'filters' => $filters,
-            'statuses' => ContactInquiryStatus::cases(),
+            'statuses' => $statuses,
             'subjects' => ContactSubject::cases(),
             'statusCounts' => $statusCounts,
+            'statusTone' => $statusTone,
             'openCount' => ContactInquiry::query()->open()->count(),
             'newCount' => ContactInquiry::newCount(),
         ]);

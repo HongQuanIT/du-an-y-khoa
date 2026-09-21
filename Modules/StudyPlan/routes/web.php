@@ -21,7 +21,7 @@ Route::middleware(['auth', 'learner', 'permission:study_plan.view'])
     ->scopeBindings()
     ->group(function (): void {
         Route::get('/', StudyPlanPageController::class)
-            ->middleware('permission:study_plan.view|study_plan.create|study_plan_task.start|study_plan_task.complete|study_plan_task.review')
+            ->middleware('permission:study_plan.view')
             ->name('index');
 
         Route::get('/create', [StudyPlanCreateController::class, 'create'])->middleware('permission:study_plan.create')->name('create');
