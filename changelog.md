@@ -8,6 +8,18 @@
 - Ẩn «Vòng N» khi câu đang nháp — số vòng lịch sử không còn là vòng đang duyệt.
 - List: «Cập nhật» cạnh phiên bản lấy thời điểm snapshot `question_versions`, không phải lúc sửa bản nháp.
 
+### Fix — Đồng bộ trạng thái và UI bộ lọc câu hỏi Admin
+
+- Đồng bộ nhãn trạng thái trong bảng với `QuestionStatus` dùng cho bộ lọc.
+- Cải thiện dropdown multi-select: menu nổi, không làm tăng chiều cao form và đánh dấu rõ option đã chọn.
+- Tối ưu bố cục ô tìm kiếm và các nút thao tác, tránh cắt chữ hoặc tràn khung.
+
+### Feat — AJAX bộ lọc danh sách câu hỏi Admin
+
+- Chuyển thao tác tìm kiếm, reset và phân trang danh sách câu hỏi sang AJAX.
+- Cập nhật động thống kê, bảng kết quả và URL theo các bộ lọc hiện tại.
+- Giữ nguyên phân quyền, chọn cột, chọn câu hỏi và các thao tác quản trị trong bảng.
+
 ### UX — Chuẩn hóa tab trạng thái và thao tác tìm kiếm Hộp thư liên hệ
 
 - Chuyển nhóm trạng thái thành thanh tab liền mạch, cân đều trên màn hình lớn và hỗ trợ hiển thị nhiều trạng thái đang chọn.
