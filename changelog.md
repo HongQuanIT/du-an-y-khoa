@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-09-21
+
+### Feat — Permission `question.adjudicate` (QA duyệt)
+
+- Quyền riêng để Admin đánh dấu GV duyệt đúng/sai và reviewer gắn cờ đúng/sai trên «Lịch sử duyệt».
+- Route `POST /admin/questions/{id}/review-outcomes` chỉ chấp nhận `question.adjudicate` (mặc định `admin` + `super_admin`; không cấp Editor).
+- Nhãn ma trận RBAC: «Đánh dấu QA duyệt».
+
 ## 2026-09-20
 
 ### Fix — Khôi phục phiên bản không tăng version

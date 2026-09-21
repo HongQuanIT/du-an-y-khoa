@@ -110,7 +110,7 @@ Import: commit tạo hàng loạt `draft`.
 - Outcome trên `question_reviewer_flags` / `question_instructor_reviews` (theo từng **vòng** `review_cycle` + actor):
   - Reviewer: `pending|confirmed|false_positive|inconclusive` — `confirmed` = gắn đúng, `false_positive` = **gắn sai** (đỏ oan **hoặc** xanh sai).
   - GV: `pending|confirmed|miss|over_reject|inconclusive` — Admin chỉ thấy **Duyệt đúng / Duyệt sai**; `miss` (approve sai) và `over_reject` (reject sai) đều là duyệt sai (cùng nhãn).
-- **Đánh dấu ngay tại vòng (khuyến nghị UX):** trên «Lịch sử duyệt», mỗi entry cờ/duyệt có badge outcome + Admin (permission `question.update`) chỉnh outcome thủ công khi phát hiện sai — ghi `outcome_source=admin`, `outcome_by`, `outcome_at`, `outcome_note`.
+- **Đánh dấu ngay tại vòng (khuyến nghị UX):** trên «Lịch sử duyệt», mỗi entry cờ/duyệt có badge outcome + Admin (permission **`question.adjudicate`**) chỉnh outcome thủ công khi phát hiện sai — ghi `outcome_source=admin`, `outcome_by`, `outcome_at`, `outcome_note`.
 - **Cascade theo vòng khi Admin adjudicate:**
   - Xác nhận cờ đỏ đúng → set red flags vòng đó `confirmed` + approve GV cùng vòng → `miss` (hiển thị **Duyệt sai**).
   - Đánh cờ đỏ gắn sai → red flags `false_positive`; không quy lỗi GV.
@@ -118,7 +118,7 @@ Import: commit tạo hàng loạt `draft`.
   - Đánh GV duyệt sai khi reject → lưu `over_reject` (UI: **Duyệt sai**).
 - **Tự động (giữ):** Admin trả về khi có cờ đỏ chọn Cờ đỏ đúng / Cờ đỏ gắn sai; khi publish heuristic fingerprint adjudicate pending đỏ + reject GV; approve không bị tranh chấp → `confirmed`.
 - Báo cáo `content.review-qa`: KPI + bảng Reviewer (tổng/đỏ/xanh/gắn sai) + bảng GV (tổng/approve/reject/duyệt sai). Permission: `report.view` + `question.view`.
-- **UI:** «Lịch sử duyệt» — Admin chọn **Duyệt đúng / Duyệt sai** (hoặc Gắn đúng / Gắn sai) rồi Lưu QA; ghi đúng `review_cycle` + actor.
+- **UI:** «Lịch sử duyệt» — Admin chọn **Duyệt đúng / Duyệt sai** (hoặc Gắn đúng / Gắn sai) rồi Lưu QA; ghi đúng `review_cycle` + actor. Route `POST …/review-outcomes` yêu cầu `question.adjudicate` (mặc định `admin` + `super_admin`; **không** cấp cho `content_editor`).
 
 ### 5.2 Versioning — **chỉ tăng khi Super Admin publish**
 - Mọi chỉnh sửa của Content Creator trên **working copy** (`questions` + options…): **không** tạo / tăng version.
@@ -173,10 +173,10 @@ Import: commit tạo hàng loạt `draft`.
 |-------|------|----------|
 | Content Creator | `content_editor` | CRUD working copy; `submit`; withdraw; clone; import draft; xử lý report (sửa) |
 | Giảng viên | `instructor` | 1 phiếu `approve` / `reject` trên `/teach` (**không** publish, **không** +version); `pending_publish` chỉ khi đủ 2 accept khác người; 1 reject = fail ngay; xem lại đã duyệt / đã từ chối |
-| Admin | `admin` | Xem + **publish / private / retire / xoá** (`question.publish`, `question.delete`); **không** `question.create` / `question.update` / không duyệt thay GV |
-| Super Admin | `super_admin` | Oversight + cùng quyền trạng thái/xoá như Admin; **không** soạn/sửa nội dung (tránh xung đột biên tập); publish vẫn cần đã qua lớp GV + khác người duyệt |
+| Admin | `admin` | Xem + **publish / private / retire / xoá** (`question.publish`, `question.delete`); **đánh dấu QA duyệt** (`question.adjudicate`); **không** `question.create` / `question.update` / không duyệt thay GV |
+| Super Admin | `super_admin` | Oversight + cùng quyền trạng thái/xoá/QA như Admin; **không** soạn/sửa nội dung (tránh xung đột biên tập); publish vẫn cần đã qua lớp GV + khác người duyệt |
 
-Permissions: `question.create|update|delete|submit` (create/update chỉ `content_editor`), `question.review` (instructor), `question.publish` (`admin` + `super_admin`).
+Permissions: `question.create|update|delete|submit` (create/update chỉ `content_editor`), `question.review` (instructor), `question.publish` + `question.adjudicate` (`admin` + `super_admin`).
 
 ### 5.4 Question analytics (Admin — **rollup job**, không COUNT realtime trên list)
 - **Danh sách câu hỏi:** chỉ đọc `stats_cache` JSON trên `questions` — **không** aggregate trực tiếp từ `question_attempts`.

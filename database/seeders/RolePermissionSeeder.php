@@ -113,7 +113,8 @@ class RolePermissionSeeder extends Seeder
                     PermissionEnum::QuestionFlag->value,
                     'question_flag.view',
                     PermissionEnum::QuestionPublish->value,
-
+                    PermissionEnum::QuestionAdjudicate->value,
+                    'question.reject',
                     'question.restore',
                     'question_feedback.view',
                 ], true))

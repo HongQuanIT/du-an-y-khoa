@@ -175,12 +175,15 @@ final class RbacFoundationTest extends TestCase
         $this->assertSame(60, \Modules\Admin\Support\PermissionCatalog::actionPriority('question.export'));
         $this->assertSame(70, \Modules\Admin\Support\PermissionCatalog::actionPriority('question.approve'));
         $this->assertSame(75, \Modules\Admin\Support\PermissionCatalog::actionPriority('question.reject'));
+        $this->assertSame(78, \Modules\Admin\Support\PermissionCatalog::actionPriority('question.adjudicate'));
         $this->assertSame(100, \Modules\Admin\Support\PermissionCatalog::actionPriority('question.manage'));
 
         $this->assertSame('Xem toàn bộ dữ liệu', \Modules\Admin\Support\PermissionCatalog::actionLabel('question.view_any'));
         $this->assertSame('Xem', \Modules\Admin\Support\PermissionCatalog::actionLabel('question.view'));
         $this->assertSame('Phê duyệt', \Modules\Admin\Support\PermissionCatalog::actionLabel('question.approve'));
         $this->assertSame('Từ chối', \Modules\Admin\Support\PermissionCatalog::actionLabel('question.reject'));
+        $this->assertSame('Đánh dấu QA duyệt', \Modules\Admin\Support\PermissionCatalog::actionLabel('question.adjudicate'));
+        $this->assertContains('question.adjudicate', app(PermissionRegistry::class)->names());
 
         $grouped = \Modules\Admin\Support\PermissionCatalog::groupedByPortal();
         $adminPortal = $grouped[PortalGroup::Admin->value] ?? null;

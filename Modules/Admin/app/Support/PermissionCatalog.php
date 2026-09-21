@@ -103,6 +103,8 @@ final class PermissionCatalog
             'export' => 60,
             'approve' => 70,
             'reject' => 75,
+            'adjudicate' => 78,
+            'publish' => 80,
             default => 100,
         };
     }
@@ -168,6 +170,7 @@ final class PermissionCatalog
             'toggle' => 'Bật / tắt',
             'approve' => 'Phê duyệt',
             'reject' => 'Từ chối',
+            'adjudicate' => 'Đánh dấu QA duyệt',
             'start' => 'Bắt đầu',
             'end' => 'Kết thúc',
             'join' => 'Tham gia',

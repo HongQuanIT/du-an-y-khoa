@@ -235,6 +235,61 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
             ->assertSee('Duyệt sai', false);
     }
 
+    public function test_admin_can_adjudicate_review_outcomes_with_dedicated_permission(): void
+    {
+        $admin = $this->staffUser(Role::Admin);
+        $editor = $this->staffUser(Role::ContentEditor);
+        $instructor = $this->instructorWithSubject();
+
+        $this->assertTrue($admin->can(Permission::QuestionAdjudicate->value));
+        $this->assertFalse($editor->can(Permission::QuestionAdjudicate->value));
+
+        $question = $this->makeQuestion(QuestionStatus::Draft, [
+            'created_by' => $editor->id,
+            'assigned_instructor_id' => $instructor->id,
+            'instructor_review_cycle' => 1,
+        ]);
+
+        $review = \Modules\QuestionBank\Models\QuestionInstructorReview::query()->create([
+            'question_id' => $question->id,
+            'review_cycle' => 1,
+            'instructor_id' => $instructor->id,
+            'decision' => \Modules\QuestionBank\Enums\InstructorReviewDecision::Approved,
+            'note' => null,
+            'content_fingerprint' => 'fp-qa',
+            'reviewed_at' => now(),
+            'outcome' => \Modules\QuestionBank\Enums\InstructorReviewOutcome::Pending,
+        ]);
+
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.review-outcomes', $question), [
+                'kind' => 'instructor',
+                'id' => $review->id,
+                'outcome' => 'miss',
+                'outcome_note' => 'Editor không được chấm QA',
+            ])
+            ->assertForbidden();
+
+        $this->actingAsStaff($admin)
+            ->get(route('admin.questions.edit', $question))
+            ->assertOk()
+            ->assertSee('data-testid="question-review-timeline"', false);
+
+        $this->actingAsStaff($admin)
+            ->postJson(route('admin.questions.review-outcomes', $question), [
+                'kind' => 'instructor',
+                'id' => $review->id,
+                'outcome' => 'miss',
+                'outcome_note' => 'Approve oan',
+            ])
+            ->assertOk()
+            ->assertJsonPath('ok', true);
+
+        $review->refresh();
+        $this->assertSame(\Modules\QuestionBank\Enums\InstructorReviewOutcome::Miss, $review->outcome);
+        $this->assertSame($admin->id, (int) $review->outcome_by);
+    }
+
     public function test_review_timeline_and_version_pipeline_metadata(): void
     {
         $editor = $this->staffUser(Role::ContentEditor);
