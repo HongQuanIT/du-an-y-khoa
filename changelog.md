@@ -8,6 +8,13 @@
 - Sửa nút «Rút về nháp» không bấm được do nằm trong `pointer-events-none`; form transition luôn render khi có quyền gửi duyệt.
 - Bỏ khối CCT suy ra từ ma trận trên form; cập nhật SRS 35 và test tương ứng.
 
+### Feat — AJAX bộ lọc Lịch sử Premium Admin
+
+- Chuyển tìm kiếm, xoá bộ lọc và phân trang sang AJAX; vẫn giữ GET fallback cho URL có thể chia sẻ.
+- Chuẩn hóa UI bộ lọc với nút `Tìm kiếm`, `Xoá`, icon và trạng thái focus nhất quán; nút đặt ở hàng thao tác riêng.
+- Hỗ trợ chọn nhiều trạng thái, gói, SKU và nguồn khi tìm kiếm lịch sử Premium.
+- Cải thiện semantic bảng lịch sử Premium bằng caption và phạm vi tiêu đề cột.
+
 ### Feat — AJAX bộ lọc phản hồi câu hỏi Admin
 
 - Chuyển tìm kiếm, xoá bộ lọc và phân trang sang AJAX; không tải trang khi thay đổi điều kiện.

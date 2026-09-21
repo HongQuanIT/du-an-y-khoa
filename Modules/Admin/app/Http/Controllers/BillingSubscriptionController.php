@@ -24,32 +24,53 @@ final class BillingSubscriptionController extends Controller
             ->with(['user', 'plan', 'planPrice'])
             ->latest('starts_at');
 
-        $status = (string) $request->query('status', 'active');
-        if ($status === 'active') {
+        $statuses = array_values(array_intersect(
+            array_map('strval', (array) $request->query('status', [])),
+            ['active', 'expired'],
+        ));
+        $statuses = $statuses === [] ? ['active'] : $statuses;
+        if ($statuses === ['active']) {
             $query->active();
-        } elseif ($status === 'expired') {
+        } elseif ($statuses === ['expired']) {
             $query->expired();
         }
 
-        if ($planId = $request->query('plan')) {
-            $query->where('plan_id', (int) $planId);
+        $planIds = array_values(array_filter(array_map(
+            static fn (mixed $id): int => (int) $id,
+            (array) $request->query('plan', []),
+        )));
+        if ($planIds !== []) {
+            $query->whereIn('plan_id', $planIds);
         }
 
-        $sku = $request->query('sku');
-        if ($sku === 'unassigned') {
-            $query->whereNull('plan_price_id');
-        } elseif ($sku !== null && $sku !== '') {
-            $query->where('plan_price_id', (int) $sku);
+        $skus = array_values(array_filter(array_map('strval', (array) $request->query('sku', []))));
+        if ($skus !== []) {
+            $skuIds = array_values(array_filter(array_map('intval', $skus)));
+            $hasUnassignedSku = in_array('unassigned', $skus, true);
+            $query->where(function ($builder) use ($skuIds, $hasUnassignedSku): void {
+                if ($skuIds !== []) {
+                    $builder->whereIn('plan_price_id', $skuIds);
+                }
+                if ($hasUnassignedSku) {
+                    $method = $skuIds !== [] ? 'orWhereNull' : 'whereNull';
+                    $builder->{$method}('plan_price_id');
+                }
+            });
         }
 
-        if ($source = $request->query('source')) {
-            $query->where('source', (string) $source);
+        $sources = array_values(array_intersect(
+            array_map('strval', (array) $request->query('source', [])),
+            array_keys(BillingSubscriptionStats::SOURCE_LABELS),
+        ));
+        if ($sources !== []) {
+            $query->whereIn('source', $sources);
         }
 
         if ($search = trim((string) $request->query('q', ''))) {
-            $query->whereHas('user', function ($builder) use ($search): void {
-                $builder->where('name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%");
+            $keyword = '%'.addcslashes($search, '\\%_').'%';
+            $query->whereHas('user', function ($builder) use ($keyword): void {
+                $builder->where('name', 'like', $keyword)
+                    ->orWhere('email', 'like', $keyword);
             });
         }
 
@@ -66,10 +87,10 @@ final class BillingSubscriptionController extends Controller
             'sourceLabels' => BillingSubscriptionStats::SOURCE_LABELS,
             'filters' => [
                 'q' => $search,
-                'status' => $status,
-                'plan' => $request->query('plan'),
-                'sku' => $sku,
-                'source' => $request->query('source'),
+                'status' => $statuses,
+                'plan' => array_map('strval', $planIds),
+                'sku' => $skus,
+                'source' => $sources,
             ],
             'canViewUsers' => $this->actor()->can('user.view'),
         ]);
