@@ -66,6 +66,60 @@ final class AdminQuestionFeedbackTest extends TestCase
         $this->assertSame(QuestionFeedback::STATUS_RESOLVED, $feedback->fresh()->status);
     }
 
+    public function test_admin_can_filter_question_feedback_with_multiple_values(): void
+    {
+        $admin = $this->staffUser(Role::Admin);
+        $student = User::factory()->create();
+        $question = Question::factory()->free()->withOptions()->create();
+        $option = $question->options()->firstOrFail();
+        $session = QuestionSession::factory()->for($student)->create([
+            'question_ids' => [$question->getKey()],
+        ]);
+
+        $first = QuestionFeedback::query()->create([
+            'user_id' => $student->getKey(),
+            'question_id' => $question->getKey(),
+            'question_session_id' => $session->getKey(),
+            'question_option_id' => $option->getKey(),
+            'target' => 'answer',
+            'category' => 'incorrect',
+            'message' => 'Phản hồi đáp án cần xem xét',
+            'status' => QuestionFeedback::STATUS_PENDING,
+        ]);
+        $second = QuestionFeedback::query()->create([
+            'user_id' => $student->getKey(),
+            'question_id' => $question->getKey(),
+            'question_session_id' => $session->getKey(),
+            'target' => 'question',
+            'category' => 'missing',
+            'message' => 'Phản hồi câu hỏi cần bổ sung',
+            'status' => QuestionFeedback::STATUS_REVIEWING,
+        ]);
+        QuestionFeedback::query()->create([
+            'user_id' => $student->getKey(),
+            'question_id' => $question->getKey(),
+            'question_session_id' => $session->getKey(),
+            'target' => 'knowledge',
+            'category' => 'technical',
+            'message' => 'Phản hồi không phù hợp',
+            'status' => QuestionFeedback::STATUS_RESOLVED,
+        ]);
+
+        $this->actingAsStaff($admin)
+            ->withHeader('X-Requested-With', 'XMLHttpRequest')
+            ->get(route('admin.question-feedback.index', [
+                'status' => [QuestionFeedback::STATUS_PENDING, QuestionFeedback::STATUS_REVIEWING],
+                'target' => ['answer', 'question'],
+                'category' => ['incorrect', 'missing'],
+            ]))
+            ->assertOk()
+            ->assertSee('id="question-feedback-results-region"', false)
+            ->assertViewHas('feedbackItems', fn ($items): bool => $items->pluck('id')->sort()->values()->all() === collect([
+                $first->id,
+                $second->id,
+            ])->sort()->values()->all());
+    }
+
     private function staffUser(Role $role): User
     {
         $user = User::factory()->create();
