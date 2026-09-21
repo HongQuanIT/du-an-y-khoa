@@ -2,6 +2,12 @@
 
 ## 2026-09-21
 
+### Feat — AJAX bộ lọc Cộng tác viên Admin
+
+- Chuyển tìm kiếm, xoá bộ lọc và phân trang danh sách CTV sang AJAX.
+- Hỗ trợ chọn nhiều trạng thái; thay đổi điều kiện không tự tải lại dữ liệu.
+- Chuẩn hoá giao diện tìm kiếm, semantic form và bảng báo cáo CTV.
+
 ### Fix — Khóa sửa khi chờ duyệt; rút nháp chỉ trước khi GV xử lý
 
 - `in_review` / `in_flag_review`: khóa chỉnh nội dung; editor chỉ rút về nháp khi còn `in_review` (GV chưa approve/reject).

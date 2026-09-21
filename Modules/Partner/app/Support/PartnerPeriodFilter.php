@@ -135,14 +135,14 @@ final class PartnerPeriodFilter
     }
 
     /**
-     * @return array{status: string, q: string, sort: string, dir: string}
+     * @return array{status: list<string>, q: string, sort: string, dir: string}
      */
     public static function listFilters(Request $request): array
     {
-        $status = (string) $request->query('status', 'all');
-        if (! in_array($status, ['all', 'active', 'suspended'], true)) {
-            $status = 'all';
-        }
+        $status = array_values(array_intersect(
+            ['active', 'suspended'],
+            array_map('strval', (array) $request->query('status', [])),
+        ));
 
         $sort = (string) $request->query('sort', self::SORT_COMMISSION);
         if (! in_array($sort, [self::SORT_COMMISSION, self::SORT_GROSS, self::SORT_REFERRALS, self::SORT_NAME], true)) {
