@@ -12,6 +12,7 @@
 @endphp
 
 <x-layouts.admin title="Người dùng">
+    <div x-data="adminUserFilter()" class="space-y-6">
     <x-admin.page-header title="Người dùng"
         description="Tìm kiếm, lọc và quản lý tài khoản trên hệ thống.">
         <x-slot:actions>
@@ -27,10 +28,18 @@
     <x-admin.flash />
 
     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.users.index'))
-<form method="get" action="{{ route('admin.users.index') }}" role="search" aria-label="Lọc danh sách người dùng"
+<form method="get" action="{{ route('admin.users.index') }}" id="user-filter-form" role="search"
+        aria-labelledby="user-filter-heading" aria-describedby="user-filter-description"
+        @submit.prevent="applyFilters()"
         class="mb-6 space-y-4 rounded-xl border border-outline-variant bg-surface p-4">
+        <div>
+            <h2 id="user-filter-heading" class="font-label-lg font-semibold text-on-surface">Tìm kiếm người dùng</h2>
+            <p id="user-filter-description" class="mt-1 font-body-sm text-on-surface-variant">
+                Tìm theo tên hoặc email, sau đó lọc theo cổng truy cập, vai trò và trạng thái tài khoản.
+            </p>
+        </div>
         <div class="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 xl:grid-cols-12">
-            <div class="sm:col-span-2 xl:col-span-3">
+            <div class="sm:col-span-2 xl:col-span-4">
                 <label class="mb-1.5 block font-label-sm font-medium text-on-surface-variant" for="q">Tìm kiếm</label>
                 <div class="relative">
                     <span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[19px] text-on-surface-variant" aria-hidden="true">search</span>
@@ -68,47 +77,70 @@
             </div>
             <div class="xl:col-span-2">
                 <label class="mb-1.5 block font-label-sm font-medium text-on-surface-variant" for="two_factor">Bảo mật 2FA</label>
-                <select id="two_factor" name="two_factor"
-                    class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-body-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
-                    <option value="">Tất cả</option>
-                    <option value="enabled" @selected(($filters['two_factor'] ?? '') === 'enabled')>Đã bật 2FA</option>
-                    <option value="disabled" @selected(($filters['two_factor'] ?? '') === 'disabled')>Chưa bật 2FA</option>
-                </select>
-            </div>
-            <div class="flex gap-2 sm:col-span-2 xl:col-span-1">
-                <div class="flex-1">
-                    <span class="mb-1.5 block font-label-sm font-semibold text-transparent" aria-hidden="true">Lọc</span>
-                    <button type="submit"
-                        class="inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-3 font-label-md font-medium text-on-primary transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary/30"
-                        title="Lọc danh sách">
-                        <span class="material-symbols-outlined text-[18px]" aria-hidden="true">filter_alt</span>
-                    </button>
+                <div class="relative">
+                    <select id="two_factor" name="two_factor"
+                        class="h-11 w-full appearance-none rounded-lg border border-outline-variant bg-surface-container-low px-3 pr-10 font-body-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                        <option value="">Tất cả</option>
+                        <option value="enabled" @selected(($filters['two_factor'] ?? '') === 'enabled')>Đã bật 2FA</option>
+                        <option value="disabled" @selected(($filters['two_factor'] ?? '') === 'disabled')>Chưa bật 2FA</option>
+                    </select>
+                    <span class="material-symbols-outlined pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant" aria-hidden="true">expand_more</span>
                 </div>
-                @if ($hasActiveFilters)
-                    <div class="flex-1">
-                        <span class="mb-1.5 block font-label-sm font-semibold text-transparent" aria-hidden="true">Xóa</span>
-                        <a href="{{ route('admin.users.index') }}"
-                            class="inline-flex h-11 w-full items-center justify-center rounded-lg border border-outline-variant px-2 font-label-md font-medium text-on-surface-variant transition hover:bg-surface-container-low"
-                            title="Xóa lọc">
-                            <span class="material-symbols-outlined text-[18px]" aria-hidden="true">restart_alt</span>
-                        </a>
-                    </div>
-                @endif
             </div>
         </div>
         <details @if(collect($filters)->only(['institution_id', 'administrative_unit_id', 'profession_id', 'education_stage_id', 'onboarding'])->filter()->isNotEmpty()) open @endif>
-            <summary class="cursor-pointer font-label-sm font-semibold text-primary">Bộ lọc hồ sơ học viên</summary>
+            <summary class="cursor-pointer rounded-lg py-1 font-label-sm font-semibold text-primary outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
+                Bộ lọc hồ sơ học viên
+            </summary>
             <div class="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-                <select name="administrative_unit_id" aria-label="Tỉnh thành" class="h-10 rounded-lg border border-outline-variant bg-surface-container-low px-3 text-body-sm"><option value="">Mọi tỉnh/thành</option>@foreach($administrativeUnits as $unit)<option value="{{ $unit->id }}" @selected((string)($filters['administrative_unit_id'] ?? '') === (string)$unit->id)>{{ $unit->name }}</option>@endforeach</select>
-                <select name="institution_id" aria-label="Trường" class="h-10 rounded-lg border border-outline-variant bg-surface-container-low px-3 text-body-sm"><option value="">Mọi trường</option>@foreach($institutions as $institution)<option value="{{ $institution->id }}" @selected((string)($filters['institution_id'] ?? '') === (string)$institution->id)>{{ $institution->name }}</option>@endforeach</select>
-                <select name="profession_id" aria-label="Chức danh" class="h-10 rounded-lg border border-outline-variant bg-surface-container-low px-3 text-body-sm"><option value="">Mọi chức danh</option>@foreach($professions as $profession)<option value="{{ $profession->id }}" @selected((string)($filters['profession_id'] ?? '') === (string)$profession->id)>{{ $profession->name }}</option>@endforeach</select>
-                <select name="education_stage_id" aria-label="Năm học" class="h-10 rounded-lg border border-outline-variant bg-surface-container-low px-3 text-body-sm"><option value="">Mọi năm học</option>@foreach($educationStages as $stage)<option value="{{ $stage->id }}" @selected((string)($filters['education_stage_id'] ?? '') === (string)$stage->id)>{{ $stage->name }}</option>@endforeach</select>
-                <select name="onboarding" aria-label="Onboarding" class="h-10 rounded-lg border border-outline-variant bg-surface-container-low px-3 text-body-sm"><option value="">Mọi hồ sơ</option><option value="completed" @selected(($filters['onboarding'] ?? '') === 'completed')>Đã hoàn thiện</option><option value="incomplete" @selected(($filters['onboarding'] ?? '') === 'incomplete')>Chưa hoàn thiện</option></select>
+                <div>
+                    <x-admin.multi-select-filter name="administrative_unit_id" label="Tỉnh/Thành phố" placeholder="Mọi tỉnh/thành"
+                        :options="$administrativeUnits->map(fn ($unit) => ['id' => $unit->id, 'label' => $unit->name])->all()"
+                        :selected="$filters['administrative_unit_id'] ?? []" />
+                </div>
+                <div>
+                    <x-admin.multi-select-filter name="institution_id" label="Trường" placeholder="Mọi trường"
+                        :options="$institutions->map(fn ($institution) => ['id' => $institution->id, 'label' => $institution->name])->all()"
+                        :selected="$filters['institution_id'] ?? []" />
+                </div>
+                <div>
+                    <x-admin.multi-select-filter name="profession_id" label="Chức danh" placeholder="Mọi chức danh"
+                        :options="$professions->map(fn ($profession) => ['id' => $profession->id, 'label' => $profession->name])->all()"
+                        :selected="$filters['profession_id'] ?? []" />
+                </div>
+                <div>
+                    <x-admin.multi-select-filter name="education_stage_id" label="Năm học" placeholder="Mọi năm học"
+                        :options="$educationStages->map(fn ($stage) => ['id' => $stage->id, 'label' => $stage->name])->all()"
+                        :selected="$filters['education_stage_id'] ?? []" />
+                </div>
+                <div>
+                    <x-admin.multi-select-filter name="onboarding" label="Hồ sơ" placeholder="Mọi hồ sơ"
+                        :options="[
+                            ['id' => 'completed', 'label' => 'Đã hoàn thiện'],
+                            ['id' => 'incomplete', 'label' => 'Chưa hoàn thiện'],
+                        ]"
+                        :selected="$filters['onboarding'] ?? []" />
+                </div>
             </div>
         </details>
+        <div class="flex justify-end gap-2 border-t border-outline-variant pt-4">
+            <button type="submit" :disabled="loading" aria-label="Tìm kiếm người dùng"
+                class="inline-flex h-11 w-36 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 font-label-md font-medium text-on-primary transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50">
+                <span class="material-symbols-outlined shrink-0 text-[18px]" aria-hidden="true"
+                    x-text="loading ? 'progress_activity' : 'search'">search</span>
+                <span class="whitespace-nowrap" x-text="loading ? 'Đang tải' : 'Tìm kiếm'">Tìm kiếm</span>
+            </button>
+            <button type="button" @click="resetFilters(@js(route('admin.users.index')))" :disabled="loading"
+                aria-label="Xoá bộ lọc người dùng"
+                class="inline-flex h-11 w-28 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-outline-variant bg-surface px-3 font-label-md font-medium text-on-surface-variant transition hover:bg-surface-container-low focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:opacity-50">
+                <span class="material-symbols-outlined shrink-0 text-[18px]" aria-hidden="true">delete</span>
+                <span class="whitespace-nowrap">Xoá</span>
+            </button>
+        </div>
     </form>
 @endif
 
+    <div id="users-results-region">
     <div class="overflow-hidden rounded-xl border border-outline-variant bg-surface">
         <div class="w-full overflow-x-auto">
             <table class="w-full min-w-[1120px] table-fixed border-collapse text-left font-body-sm text-on-surface">
@@ -239,5 +271,75 @@
         </div>
     </div>
 
-    <div class="mt-4">{{ $users->links() }}</div>
+    <div class="mt-4" id="users-pagination">{{ $users->links() }}</div>
+    </div>
+
+    <script>
+        function adminUserFilter() {
+            return {
+                loading: false,
+                filterForm() {
+                    return document.querySelector('form[role="search"]');
+                },
+                async applyFilters() {
+                    const form = this.filterForm();
+                    if (!form) return;
+                    const url = new URL(form.action, window.location.origin);
+                    const params = new URLSearchParams(new FormData(form));
+                    params.delete('page');
+                    url.search = params.toString();
+                    await this.fetchResults(url.toString());
+                },
+                async resetFilters(url) {
+                    const form = this.filterForm();
+                    form?.reset();
+                    form?.querySelectorAll('select').forEach((select) => {
+                        select.value = '';
+                    });
+                    const queryInput = form?.querySelector('[name="q"]');
+                    if (queryInput) queryInput.value = '';
+                    form?.querySelectorAll('details').forEach((details) => { details.open = false; });
+                    window.dispatchEvent(new CustomEvent('user-filters-reset'));
+                    await this.fetchResults(url);
+                },
+                async fetchResults(url) {
+                    this.loading = true;
+                    try {
+                        const response = await fetch(url, {
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Accept': 'text/html',
+                            },
+                        });
+                        if (!response.ok) throw new Error('Lỗi tải danh sách người dùng');
+                        const html = await response.text();
+                        const parsed = new DOMParser().parseFromString(html, 'text/html');
+                        const next = parsed.getElementById('users-results-region');
+                        const current = document.getElementById('users-results-region');
+                        if (!next || !current) throw new Error('Không tìm thấy vùng kết quả người dùng');
+                        current.replaceWith(next);
+                        window.history.pushState({}, '', url);
+                        this.bindPagination();
+                    } catch (error) {
+                        console.error(error);
+                        alert('Có lỗi xảy ra khi tải danh sách người dùng. Vui lòng thử lại.');
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                bindPagination() {
+                    document.querySelectorAll('#users-pagination a').forEach((link) => {
+                        link.addEventListener('click', (event) => {
+                            event.preventDefault();
+                            if (link.href) this.fetchResults(link.href);
+                        });
+                    });
+                },
+                init() {
+                    this.bindPagination();
+                },
+            };
+        }
+    </script>
+    </div>
 </x-layouts.admin>

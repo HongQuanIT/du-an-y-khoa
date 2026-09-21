@@ -90,15 +90,19 @@ final class UserController extends Controller
         }
 
         foreach (['institution_id', 'administrative_unit_id', 'profession_id', 'education_stage_id'] as $field) {
-            if ($request->filled($field)) {
-                $query->whereHas('learnerProfile', fn ($profile) => $profile->where($field, $request->integer($field)));
+            $ids = AdminQuestionListQuery::integerIds($request->query($field));
+            if ($ids !== []) {
+                $query->whereHas('learnerProfile', fn ($profile) => $profile->whereIn($field, $ids));
             }
         }
 
-        if ($request->filled('onboarding')) {
-            $request->string('onboarding')->toString() === 'completed'
-                ? $query->whereHas('learnerProfile', fn ($profile) => $profile->whereNotNull('onboarding_completed_at'))
-                : $query->whereHas('learnerProfile', fn ($profile) => $profile->whereNull('onboarding_completed_at'));
+        $onboardingFilters = AdminQuestionListQuery::stringValues($request->query('onboarding'));
+        if ($onboardingFilters !== []) {
+            if ($onboardingFilters === ['completed']) {
+                $query->whereHas('learnerProfile', fn ($profile) => $profile->whereNotNull('onboarding_completed_at'));
+            } elseif ($onboardingFilters === ['incomplete']) {
+                $query->whereHas('learnerProfile', fn ($profile) => $profile->whereNull('onboarding_completed_at'));
+            }
         }
 
         $users = $query->paginate(20)->withQueryString();
@@ -120,11 +124,11 @@ final class UserController extends Controller
                 'role' => $roles,
                 'status' => $statuses,
                 'two_factor' => $twoFactorFilter,
-                'institution_id' => $request->query('institution_id'),
-                'administrative_unit_id' => $request->query('administrative_unit_id'),
-                'profession_id' => $request->query('profession_id'),
-                'education_stage_id' => $request->query('education_stage_id'),
-                'onboarding' => $request->query('onboarding'),
+                'institution_id' => AdminQuestionListQuery::integerIds($request->query('institution_id')),
+                'administrative_unit_id' => AdminQuestionListQuery::integerIds($request->query('administrative_unit_id')),
+                'profession_id' => AdminQuestionListQuery::integerIds($request->query('profession_id')),
+                'education_stage_id' => AdminQuestionListQuery::integerIds($request->query('education_stage_id')),
+                'onboarding' => $onboardingFilters,
             ],
         ]);
     }
