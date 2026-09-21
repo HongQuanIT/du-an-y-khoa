@@ -13,12 +13,15 @@ use Illuminate\Support\Facades\Cache;
  */
 final class AdminReportCache
 {
+    /** Bump when report payload shape/labels change so stale snapshots are ignored. */
+    public const SCHEMA_VERSION = 3;
+
     /** Fallback TTL khi chưa có setting (2 ngày). */
     public const TTL_SECONDS = 172800;
 
     public static function key(string $category, string $report, string $range): string
     {
-        return sprintf('admin:report:%s:%s:%s', $category, $report, $range);
+        return sprintf('admin:report:v%d:%s:%s:%s', self::SCHEMA_VERSION, $category, $report, $range);
     }
 
     public static function metaKey(): string
@@ -99,6 +102,7 @@ final class AdminReportCache
             'charts' => $payload['charts'],
             'columns' => $payload['columns'],
             'rows' => $payload['rows'],
+            'sections' => $payload['sections'] ?? [],
             'empty_message' => $payload['empty_message'] ?? null,
             'cached_at' => now()->toIso8601String(),
         ];
@@ -113,7 +117,7 @@ final class AdminReportCache
 
     public static function statusKey(string $category, string $report, string $range): string
     {
-        return sprintf('admin:report:refresh:%s:%s:%s', $category, $report, $range);
+        return sprintf('admin:report:refresh:v%d:%s:%s:%s', self::SCHEMA_VERSION, $category, $report, $range);
     }
 
     /**
@@ -239,6 +243,7 @@ final class AdminReportCache
             'charts' => $cached['charts'],
             'columns' => $cached['columns'],
             'rows' => $cached['rows'],
+            'sections' => $cached['sections'] ?? [],
             'empty_message' => $cached['empty_message'] ?? null,
             'cached_at' => Carbon::parse($cached['cached_at']),
         ];

@@ -1,11 +1,11 @@
 @php
     /** @var array $comparison */
     $empty = 'Chưa nhập.';
-    $heading = $heading ?? 'So sánh với bản đang xuất bản';
+    $heading = $heading ?? 'So sánh với bản đang dùng';
     $proposedTitle = $proposedTitle ?? 'Bản cần duyệt';
     $proposedBadge = $proposedBadge ?? 'Hiện tại';
     $newCopy = $newCopy ?? 'Câu này chưa từng xuất bản — bên trái trống, bên phải là toàn bộ nội dung mới.';
-    $sameCopy = $sameCopy ?? 'Nội dung gửi duyệt trùng với bản đang xuất bản.';
+    $sameCopy = $sameCopy ?? 'Nội dung gửi duyệt trùng với bản đang dùng.';
 @endphp
 
 <section class="mb-6 rounded-2xl border border-outline-variant bg-surface p-5">
@@ -42,7 +42,7 @@
     <section class="rounded-2xl border border-outline-variant bg-surface p-5 lg:sticky lg:top-4"
         aria-labelledby="published-review-title">
         <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
-            <h3 id="published-review-title" class="font-label-lg font-bold text-on-surface">Bản đang xuất bản</h3>
+            <h3 id="published-review-title" class="font-label-lg font-bold text-on-surface">Bản đang dùng</h3>
             @if ($comparison['published_version'])
                 <span class="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800">v{{ $comparison['published_version'] }}</span>
             @else
@@ -57,7 +57,7 @@
             ])
         @else
             <div class="rounded-xl border border-dashed border-outline-variant bg-surface-container-low px-4 py-10 text-center text-sm text-on-surface-variant">
-                Chưa có phiên bản đang xuất bản để so sánh.
+                Chưa có bản đang dùng để so sánh.
             </div>
         @endif
     </section>

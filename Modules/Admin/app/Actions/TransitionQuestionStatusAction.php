@@ -14,14 +14,18 @@ use Modules\Admin\Enums\AuditAction;
 use Modules\Admin\Support\Auditor;
 use Modules\Admin\Support\AuditSnapshot;
 use Modules\Admin\Support\QuestionAccess;
+use Modules\QuestionBank\Actions\AdjudicateReviewOutcomesAction;
 use Modules\QuestionBank\Enums\QuestionReviewAction;
 use Modules\QuestionBank\Enums\QuestionReviewStatus;
 use Modules\QuestionBank\Enums\QuestionStatus;
+use Modules\QuestionBank\Enums\QuestionWorkflowEventType;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionReviewRequest;
 use Modules\QuestionBank\Support\AssignedInstructorMatcher;
 use Modules\QuestionBank\Support\QuestionInstructorReviewCycle;
 use Modules\QuestionBank\Support\QuestionReviewerFlagCycle;
+use Modules\QuestionBank\Support\QuestionReviewTimeline;
+use Modules\QuestionBank\Support\QuestionWorkflowRecorder;
 
 /**
  * Transition publication workflow for a question.
@@ -35,6 +39,9 @@ final class TransitionQuestionStatusAction
         private readonly QuestionInstructorReviewCycle $reviewCycle,
         private readonly AssignedInstructorMatcher $instructorMatcher,
         private readonly QuestionReviewerFlagCycle $flagCycle,
+        private readonly QuestionWorkflowRecorder $workflowRecorder,
+        private readonly QuestionReviewTimeline $reviewTimeline,
+        private readonly AdjudicateReviewOutcomesAction $adjudicateOutcomes,
     ) {}
 
     public function handle(
@@ -42,6 +49,7 @@ final class TransitionQuestionStatusAction
         Question $question,
         QuestionStatus $to,
         ?string $rejectionReason = null,
+        ?string $redFlagOutcome = null,
     ): Question {
         $from = $question->status;
 
@@ -52,6 +60,12 @@ final class TransitionQuestionStatusAction
                 $before = AuditSnapshot::question($question);
                 $this->reviewCycle->startOrReset($question);
                 $this->queueCreationReview($actor, $question->refresh());
+                $this->workflowRecorder->record(
+                    $question->refresh(),
+                    QuestionWorkflowEventType::Submit,
+                    $actor,
+                    actorRole: 'content_editor',
+                );
                 Auditor::record(
                     AuditAction::QuestionStatusChanged,
                     $actor,
@@ -93,6 +107,31 @@ final class TransitionQuestionStatusAction
                     : ($question->rejected_by_role ?? 'admin'),
                 'updated_by' => $actor->getKey(),
             ])->save();
+
+            if ($from === QuestionStatus::PendingPublish) {
+                $this->workflowRecorder->record(
+                    $question->refresh(),
+                    QuestionWorkflowEventType::AdminReject,
+                    $actor,
+                    note: trim((string) $rejectionReason),
+                    actorRole: 'admin',
+                    meta: [
+                        'had_red_flag' => $this->flagCycle->hasRedFlag($question),
+                        'red_flag_outcome' => $redFlagOutcome,
+                    ],
+                );
+                $this->workflowRecorder->bumpRejectCount($question->refresh());
+
+                if ($this->flagCycle->hasRedFlag($question)) {
+                    $this->adjudicateOutcomes->onAdminReject(
+                        $question->refresh(),
+                        $actor,
+                        in_array($redFlagOutcome, ['confirmed', 'false_positive'], true)
+                            ? $redFlagOutcome
+                            : 'confirmed',
+                    );
+                }
+            }
 
             Auditor::record(
                 AuditAction::QuestionStatusChanged,
@@ -176,6 +215,12 @@ final class TransitionQuestionStatusAction
         if ($to === QuestionStatus::InReview && ! QuestionAccess::isReviewer($actor)) {
             $this->queueCreationReview($actor, $question);
             $this->reviewCycle->startOrReset($question);
+            $this->workflowRecorder->record(
+                $question->refresh(),
+                QuestionWorkflowEventType::Submit,
+                $actor,
+                actorRole: 'content_editor',
+            );
         }
 
         if ($to === QuestionStatus::Draft && in_array($from, [
@@ -190,8 +235,32 @@ final class TransitionQuestionStatusAction
         }
 
         if ($isPublishing) {
-            $question->load(['options' => fn ($query) => $query->orderBy('order'), 'lessons:id']);
-            $this->captureVersion->handle($question, $actor, 'publish');
+            $question->load([
+                'options' => fn ($query) => $query->orderBy('order'),
+                'lessons:id',
+                'instructor:id,name',
+                'assignedInstructor:id,name',
+                'publisher:id,name',
+                'reviewerSlot1:id,name',
+                'reviewerSlot2:id,name',
+            ]);
+            $pipelineMeta = $this->reviewTimeline->publishMeta($question);
+            $this->captureVersion->handle(
+                $question,
+                $actor,
+                'publish',
+                reviewPipeline: $pipelineMeta,
+            );
+            $this->workflowRecorder->record(
+                $question,
+                QuestionWorkflowEventType::Publish,
+                $actor,
+                actorRole: 'admin',
+                meta: $pipelineMeta,
+                publishedVersion: (int) $question->version,
+            );
+            $this->adjudicateOutcomes->onPublish($question->refresh(), $actor);
+            $this->workflowRecorder->resetRejectCount($question->refresh());
         }
 
         Auditor::record(
@@ -335,15 +404,15 @@ final class TransitionQuestionStatusAction
 
     private function assertLayerOneComplete(Question $question, User $actor, string $actionLabel): void
     {
-        if (! $this->reviewCycle->hasRequiredApprovals($question)) {
+        if ($this->flagCycle->hasRedFlag($question)) {
             throw ValidationException::withMessages([
-                'status' => 'Cần giảng viên duyệt và đủ 2 cờ reviewer trước khi '.$actionLabel.'.',
+                'status' => 'Có cờ đỏ — không xuất bản được. Chỉ được trả về biên tập.',
             ]);
         }
 
-        if ($this->flagCycle->hasRequiredFlags($question) && $this->flagCycle->hasRedFlag($question)) {
+        if (! $this->reviewCycle->hasRequiredApprovals($question)) {
             throw ValidationException::withMessages([
-                'status' => 'Có cờ đỏ — không xuất bản được. Chỉ được trả về biên tập.',
+                'status' => 'Cần giảng viên duyệt và đủ 2 cờ xanh trước khi '.$actionLabel.'.',
             ]);
         }
 

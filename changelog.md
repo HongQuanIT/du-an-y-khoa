@@ -1,5 +1,32 @@
 # Changelog
 
+## 2026-09-20
+
+### Fix — Khôi phục phiên bản không tăng version
+
+- Editor khôi phục snapshot chỉ áp vào **working copy** + về **nháp**; không tạo `question_versions`, không +version.
+- Version chỉ tăng khi Admin xuất bản (khớp SRS § versioning).
+
+### UX — Editor: gửi duyệt + chọn giảng viên
+
+- Bỏ dropdown «Trạng thái» lẫn Lưu/Gửi duyệt; panel **Gửi duyệt chuyên môn** với CTA rõ: «Gửi duyệt» / «Lưu nháp» (hoặc «Rút về nháp»).
+- Checklist bài học + GV trước khi submit; chặn gửi nếu thiếu.
+- Chọn GV dropdown (lọc theo bài học); đưa picker ra khỏi «Phân loại» vào panel gửi duyệt.
+- API `eligible-instructors` trả thêm `subjects`; form load `assignedInstructor.instructorSubjects`.
+- Panel **Thông tin**: bỏ «Bản gửi duyệt» + «Tiến độ duyệt» (vòng N dễ hiểu nhầm); thêm GV được gán, phiên bản QBank, thời gian xuất bản bản đang phục vụ.
+
+### Feat — Báo cáo QA duyệt: metric reviewer + giảng viên
+
+- `content.review-qa`: KPI/bảng **Reviewer** (tổng cờ, đỏ, xanh, gắn sai) và **Giảng viên** (tổng duyệt, approve, reject, duyệt sai = miss + over_reject).
+- Biểu đồ hiệu suất reviewer / giảng viên (đúng vs sai theo người), thay trend cờ theo ngày.
+- Gắn sai = `outcome=false_positive` (đỏ oan hoặc xanh sai); publish xác nhận cờ xanh không tranh chấp → `confirmed`.
+- Form trả về: nhãn «Cờ đỏ đúng / Cờ đỏ gắn sai» + cascade GV miss; SRS §5.1c mô tả đánh dấu theo vòng trên timeline.
+- **Đánh dấu QA trên lịch sử duyệt:** Ajax gọn (select + ghi chú + Lưu QA); sau khi lưu khóa input, hiện badge/ghi chú + **Mở QA**. Approve sai → `miss`, reject sai → `over_reject` (cùng nhãn Duyệt sai).
+- List câu hỏi: ẩn «Vòng N» khi đã xuất bản / private / retire (tránh hiểu nhầm còn đang duyệt).
+- Teach «Đã duyệt»: ẩn câu đã xuất bản / private / retire — chỉ còn câu đang chờ reviewer hoặc xuất bản.
+- So sánh phiên bản: highlight diff khi stem/HTML thay đổi; thêm style `question-diff-del` / `question-diff-ins`.
+- Timeline duyệt: nhóm theo **Bản hiện tại** + từng **Phiên bản N**; bản QBank gắn «Bản đang dùng», bản cũ «Không còn phục vụ»; số vòng đánh lại từ 1 trong mỗi phiên bản.
+
 ## 2026-09-19
 
 ### Refactor — RBAC: Tinh gọn quyền kỳ thi trên portal Admin
@@ -23,6 +50,27 @@
 - Bỏ kiểm tra cứng `Role::Reviewer` khi gắn cờ câu hỏi; hệ thống giờ tuân thủ hoàn toàn theo Permission (`question.flag`, `question_flag.view`).
 - Ẩn hoàn toàn form thao tác gắn cờ trên giao diện nếu người dùng không có quyền thao tác (dù được cấp quyền xem).
 - Ẩn phần thiết lập lịch học (thời gian, thời lượng) ở giao diện tạo lớp Admin khi thiếu quyền `classroom_oversight.schedule`.
+
+### Feat — QBank: QA duyệt câu hỏi (P2)
+
+- Outcome chất lượng: cờ đỏ `confirmed` / `false_positive`; GV `miss` / `over_reject` (Admin chọn khi trả về + heuristic fingerprint khi publish).
+- Báo cáo **Báo cáo → Hiệu quả nội dung → QA duyệt câu hỏi** (`content.review-qa`): KPI, trend cờ, bảng precision theo reviewer; filter 7d/30d/90d/365d.
+- Form trả về: panel lý do + đánh giá cờ đỏ (không dùng `prompt`); timeline hiện nhãn outcome.
+- Nút «QA duyệt» trên list câu hỏi (người có `report.view` + `question.view`).
+
+### Feat — QBank: timeline duyệt + metadata version (P1)
+
+- Timeline «Lịch sử duyệt» trên form câu hỏi: nhóm theo `review_cycle`, hiện ai duyệt / gắn cờ / trả về + ghi chú.
+- `question_workflow_events` (`submit` / `admin_reject` / `publish`) + `pipeline_reject_count` trên `questions`.
+- Publish ghi `snapshot.review_pipeline` (vòng, số lần trả về, GV, 2 cờ, publisher); list hiện «Vòng N · X lần trả về».
+
+### Feat — QBank: reviewer chỉ cờ xanh/đỏ + fail-fast cờ đỏ
+
+- Bỏ cờ vàng; reviewer chỉ gắn **xanh** (đạt) hoặc **đỏ** (không đạt).
+- Cờ đỏ **bắt buộc ghi chú**; ≥1 đỏ fail-fast vào `pending_publish` — Admin không publish, phải trả editor.
+- Thẻ thống kê «Cờ đỏ · trả về» + filter `?review=must_reject` trên `/admin/questions`.
+- `question.flag` được miễn implied `question.view` (reviewer queue độc lập).
+- Migration map `yellow` → `green`; cập nhật SRS Module 35.
 
 ### UX — Phân tách kỳ thi (ma trận) / bài thi (học viên tạo)
 

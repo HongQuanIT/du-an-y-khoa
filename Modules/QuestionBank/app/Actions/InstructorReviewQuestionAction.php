@@ -20,6 +20,7 @@ use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionReviewRequest;
 use Modules\QuestionBank\Support\QuestionInstructorReviewCycle;
+use Modules\QuestionBank\Support\QuestionWorkflowRecorder;
 
 /**
  * Layer-1 assigned-instructor review: approve → in_flag_review, reject → rejected.
@@ -29,6 +30,7 @@ final class InstructorReviewQuestionAction
 {
     public function __construct(
         private readonly QuestionInstructorReviewCycle $reviewCycle,
+        private readonly QuestionWorkflowRecorder $workflowRecorder,
     ) {}
 
     public function approve(User $instructor, Question $question, ?string $note = null): Question
@@ -120,6 +122,8 @@ final class InstructorReviewQuestionAction
                 'rejected_by_role' => Role::Instructor->value,
                 'updated_by' => $instructor->getKey(),
             ])->save();
+
+            $this->workflowRecorder->bumpRejectCount($question->refresh());
 
             $this->resolvePendingCreateRequest(
                 $question,

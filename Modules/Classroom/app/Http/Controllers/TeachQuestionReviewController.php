@@ -177,21 +177,28 @@ final class TeachQuestionReviewController extends Controller
     {
         $actorId = (int) $actor->getKey();
 
-        return $query->where(function ($builder) use ($actorId): void {
-            $builder
-                ->where(function ($inner) use ($actorId): void {
-                    $inner->where('assigned_instructor_id', $actorId)
-                        ->where('instructor_decision', InstructorReviewDecision::Approved->value);
-                })
-                ->orWhere(function ($inner) use ($actorId): void {
-                    $inner->where('instructor_1_id', $actorId)
-                        ->where('instructor_1_decision', InstructorReviewDecision::Approved->value);
-                })
-                ->orWhere(function ($inner) use ($actorId): void {
-                    $inner->where('instructor_2_id', $actorId)
-                        ->where('instructor_2_decision', InstructorReviewDecision::Approved->value);
-                });
-        });
+        // Chỉ câu đã duyệt chuyên môn nhưng chưa xuất bản / private / retire.
+        return $query
+            ->whereNotIn('status', [
+                QuestionStatus::Published->value,
+                QuestionStatus::Private->value,
+                QuestionStatus::Retired->value,
+            ])
+            ->where(function ($builder) use ($actorId): void {
+                $builder
+                    ->where(function ($inner) use ($actorId): void {
+                        $inner->where('assigned_instructor_id', $actorId)
+                            ->where('instructor_decision', InstructorReviewDecision::Approved->value);
+                    })
+                    ->orWhere(function ($inner) use ($actorId): void {
+                        $inner->where('instructor_1_id', $actorId)
+                            ->where('instructor_1_decision', InstructorReviewDecision::Approved->value);
+                    })
+                    ->orWhere(function ($inner) use ($actorId): void {
+                        $inner->where('instructor_2_id', $actorId)
+                            ->where('instructor_2_decision', InstructorReviewDecision::Approved->value);
+                    });
+            });
     }
 
     /**

@@ -54,6 +54,7 @@ use Modules\QuestionBank\Support\ServePublishedQuestion;
  * @property string|null $instructor_note
  * @property Carbon|null $instructor_reviewed_at
  * @property int $instructor_review_cycle
+ * @property int $pipeline_reject_count
  * @property int|null $instructor_1_id
  * @property string|null $instructor_1_decision
  * @property int|null $instructor_2_id
@@ -90,6 +91,7 @@ class Question extends Model
     protected $attributes = [
         'version' => 0,
         'instructor_review_cycle' => 0,
+        'pipeline_reject_count' => 0,
     ];
 
     /**
@@ -116,6 +118,7 @@ class Question extends Model
         'instructor_note',
         'instructor_reviewed_at',
         'instructor_review_cycle',
+        'pipeline_reject_count',
         'instructor_1_id',
         'instructor_1_decision',
         'instructor_2_id',
@@ -169,6 +172,7 @@ class Question extends Model
         'exam_flag' => 'boolean',
         'version' => 'integer',
         'instructor_review_cycle' => 'integer',
+        'pipeline_reject_count' => 'integer',
         'instructor_reviewed_at' => 'datetime',
         'published_version' => 'integer',
         'cloned_from_version' => 'integer',
@@ -421,6 +425,53 @@ class Question extends Model
         return $this->hasMany(QuestionInstructorReview::class);
     }
 
+    /** @return HasMany<QuestionReviewerFlag, $this> */
+    public function reviewerFlags(): HasMany
+    {
+        return $this->hasMany(QuestionReviewerFlag::class);
+    }
+
+    /** @return HasMany<QuestionWorkflowEvent, $this> */
+    public function workflowEvents(): HasMany
+    {
+        return $this->hasMany(QuestionWorkflowEvent::class);
+    }
+
+    /**
+     * Compact label for admin list while the question is still in the review pipeline.
+     * Hidden after publish/private/retire — «Vòng N» would look like an active round.
+     */
+    public function pipelineProgressLabel(): string
+    {
+        $status = $this->status instanceof QuestionStatus
+            ? $this->status
+            : QuestionStatus::tryFrom((string) $this->status);
+
+        if (in_array($status, [
+            QuestionStatus::Published,
+            QuestionStatus::Private,
+            QuestionStatus::Retired,
+        ], true)) {
+            return '';
+        }
+
+        $cycle = (int) $this->instructor_review_cycle;
+        if ($cycle < 1 && (int) $this->pipeline_reject_count < 1) {
+            return '';
+        }
+
+        $parts = [];
+        if ($cycle >= 1) {
+            $parts[] = 'Vòng '.$cycle;
+        }
+        $rejects = (int) $this->pipeline_reject_count;
+        if ($rejects > 0) {
+            $parts[] = $rejects.' lần trả về';
+        }
+
+        return implode(' · ', $parts);
+    }
+
     /** @return BelongsTo<User, $this> */
     public function reviewerSlot1(): BelongsTo
     {
@@ -431,12 +482,6 @@ class Question extends Model
     public function reviewerSlot2(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewer_2_id');
-    }
-
-    /** @return HasMany<QuestionReviewerFlag, $this> */
-    public function reviewerFlags(): HasMany
-    {
-        return $this->hasMany(QuestionReviewerFlag::class);
     }
 
     /**
@@ -576,23 +621,20 @@ class Question extends Model
             || $this->flagValue($this->reviewer_2_flag) === ReviewerFlag::Red->value;
     }
 
-    public function hasYellowReviewerFlag(): bool
-    {
-        return $this->flagValue($this->reviewer_1_flag) === ReviewerFlag::Yellow->value
-            || $this->flagValue($this->reviewer_2_flag) === ReviewerFlag::Yellow->value;
-    }
-
     /**
      * @return array{slot: int, decision: string|null, color: string, instructor_name: string|null, label: string}
      */
     private function reviewerReviewFlag(int $slot, mixed $flag, ?string $name): array
     {
         $value = $this->flagValue($flag);
+        // Legacy yellow rows (pre-migration) render as green visually.
+        if ($value === 'yellow') {
+            $value = ReviewerFlag::Green->value;
+        }
         $color = $value ?? 'white';
         $who = $name ?: 'Reviewer '.$slot;
         $label = match ($value) {
             ReviewerFlag::Green->value => $who.' gắn cờ xanh',
-            ReviewerFlag::Yellow->value => $who.' gắn cờ vàng',
             ReviewerFlag::Red->value => $who.' gắn cờ đỏ',
             default => 'Reviewer '.$slot.' chưa gắn cờ',
         };

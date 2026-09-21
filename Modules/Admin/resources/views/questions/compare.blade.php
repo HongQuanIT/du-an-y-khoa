@@ -7,11 +7,11 @@
                 <span class="material-symbols-outlined text-[20px]" aria-hidden="true">arrow_back</span>
             </a>
             <div class="min-w-0">
-                <h1 class="font-headline-md text-headline-md font-bold text-on-surface">So sánh với bản đang xuất bản</h1>
+                <h1 class="font-headline-md text-headline-md font-bold text-on-surface">So sánh với bản đang dùng</h1>
                 <p class="mt-1 font-mono text-sm font-semibold tracking-wide text-on-surface-variant">{{ $question->code }}</p>
                 <p class="mt-1.5 text-sm text-on-surface-variant">
                     @if ($comparison['can_compare'])
-                        Bên trái là bản học viên đang làm (v{{ $comparison['published_version'] }}).
+                        Bên trái là bản đang dùng (v{{ $comparison['published_version'] }}).
                         Bên phải là {{ $proposedTitle }} — chưa thay thế bản live cho đến khi xuất bản lại.
                     @else
                         Câu này chưa có bản live. Cột phải là nội dung đang lưu.
@@ -43,6 +43,6 @@
         'proposedTitle' => $proposedTitle,
         'proposedBadge' => $proposedBadge,
         'newCopy' => 'Câu này chưa từng xuất bản — bên trái trống, bên phải là nội dung đang lưu.',
-        'sameCopy' => 'Bản làm việc trùng với bản đang xuất bản. Ngân hàng đang phục vụ nội dung này.',
+        'sameCopy' => 'Bản làm việc trùng với bản đang dùng.',
     ])
 </x-layouts.admin>

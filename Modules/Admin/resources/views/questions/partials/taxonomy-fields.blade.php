@@ -148,7 +148,7 @@
         <input type="search" x-model="tagSearch" @input.debounce.300ms="searchTags()"
                placeholder="Tìm thẻ (ECG, cấp cứu…)"
                class="mb-2 h-10 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm">
-        <div class="max-h-28 space-y-1 overflow-y-auto rounded-lg border border-outline-variant p-2">
+        <div x-show="tagResults.length > 0" x-cloak class="max-h-28 space-y-1 overflow-y-auto">
             <template x-for="tag in tagResults" :key="tag.id">
                 <label class="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm hover:bg-surface-container-low">
                     <input type="checkbox" :checked="selectedTagIds.includes(tag.id)"

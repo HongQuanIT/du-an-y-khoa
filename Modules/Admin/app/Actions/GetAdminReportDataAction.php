@@ -21,9 +21,15 @@ use Modules\Billing\Models\Subscription;
 use Modules\Billing\Support\AdminBillingMetrics;
 use Modules\Billing\Support\BillingSubscriptionStats;
 use Modules\Billing\Support\MoneyFormatter;
+use Modules\QuestionBank\Enums\InstructorReviewDecision;
+use Modules\QuestionBank\Enums\InstructorReviewOutcome;
 use Modules\QuestionBank\Enums\QuestionStatus;
+use Modules\QuestionBank\Enums\ReviewerFlag;
+use Modules\QuestionBank\Enums\ReviewFlagOutcome;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionFeedback;
+use Modules\QuestionBank\Models\QuestionInstructorReview;
+use Modules\QuestionBank\Models\QuestionReviewerFlag;
 
 /**
  * @phpstan-type ReportKpi array{label: string, value: string, hint: ?string, icon: string, delta: ?float}
@@ -39,6 +45,12 @@ use Modules\QuestionBank\Models\QuestionFeedback;
  * }
  * @phpstan-type ReportColumn array{key: string, label: string, align?: 'left'|'right'}
  * @phpstan-type ReportRow array<string, string|int|float|null>
+ * @phpstan-type ReportSection array{
+ *     title: string,
+ *     columns: list<ReportColumn>,
+ *     rows: list<ReportRow>,
+ *     empty_message?: ?string,
+ * }
  * @phpstan-type ReportPayload array{
  *     range: string,
  *     from: Carbon,
@@ -47,6 +59,7 @@ use Modules\QuestionBank\Models\QuestionFeedback;
  *     charts: list<ReportChart>,
  *     columns: list<ReportColumn>,
  *     rows: list<ReportRow>,
+ *     sections?: list<ReportSection>,
  *     empty_message: ?string,
  * }
  */
@@ -87,6 +100,7 @@ final class GetAdminReportDataAction
             'revenue.funnel' => $this->revenueFunnel(),
             'content.accuracy' => $this->contentAccuracy(),
             'content.flags' => $this->contentFlags($from, $to),
+            'content.review-qa' => $this->contentReviewQa($from, $to),
             'content.coverage' => $this->contentCoverage(),
             'learning.mastery' => $this->learningMastery(),
             'learning.exam-scores' => $this->learningExamScoresUnavailable(),
@@ -108,6 +122,7 @@ final class GetAdminReportDataAction
             'charts' => $payload['charts'],
             'columns' => $payload['columns'],
             'rows' => $payload['rows'],
+            'sections' => $payload['sections'] ?? [],
             'empty_message' => $payload['empty_message'] ?? null,
         ];
 
@@ -127,6 +142,37 @@ final class GetAdminReportDataAction
     public function exportRows(string $category, string $report, string $range = '30d'): array
     {
         $payload = $this->handle($category, $report, $range);
+        $sections = $payload['sections'] ?? [];
+
+        if ($sections !== []) {
+            $headers = ['Nhóm'];
+            $maxColumns = [];
+            foreach ($sections as $section) {
+                foreach ($section['columns'] as $column) {
+                    $maxColumns[$column['key']] = $column['label'];
+                }
+            }
+            foreach ($maxColumns as $label) {
+                $headers[] = $label;
+            }
+
+            $rows = [];
+            foreach ($sections as $section) {
+                $keys = array_map(fn (array $col): string => $col['key'], $section['columns']);
+                foreach ($section['rows'] as $row) {
+                    $flat = [(string) $section['title']];
+                    foreach (array_keys($maxColumns) as $key) {
+                        $flat[] = in_array($key, $keys, true)
+                            ? (string) ($row[$key] ?? '')
+                            : '';
+                    }
+                    $rows[] = $flat;
+                }
+            }
+
+            return ['headers' => $headers, 'rows' => $rows];
+        }
+
         $headers = array_map(fn (array $col): string => $col['label'], $payload['columns']);
         $keys = array_map(fn (array $col): string => $col['key'], $payload['columns']);
 
@@ -691,6 +737,201 @@ final class GetAdminReportDataAction
         ];
     }
 
+    /** @return array{kpis: list<ReportKpi>, charts: list<ReportChart>, columns: list<ReportColumn>, rows: list<ReportRow>, sections: list<ReportSection>, empty_message: ?string} */
+    private function contentReviewQa(Carbon $from, Carbon $to): array
+    {
+        $flagsQuery = QuestionReviewerFlag::query()->whereBetween('reviewed_at', [$from, $to]);
+        $totalFlags = (int) (clone $flagsQuery)->count();
+        $redFlags = (int) (clone $flagsQuery)->where('flag', ReviewerFlag::Red->value)->count();
+        $greenFlags = (int) (clone $flagsQuery)->where('flag', ReviewerFlag::Green->value)->count();
+        // Gắn sai = outcome false_positive (đỏ oan hoặc xanh sai — cùng cột sau khi adjudicate).
+        $flagIncorrect = (int) (clone $flagsQuery)
+            ->where('outcome', ReviewFlagOutcome::FalsePositive->value)
+            ->count();
+
+        $reviewsQuery = QuestionInstructorReview::query()->whereBetween('reviewed_at', [$from, $to]);
+        $totalReviews = (int) (clone $reviewsQuery)->count();
+        $approveCount = (int) (clone $reviewsQuery)
+            ->where('decision', InstructorReviewDecision::Approved->value)
+            ->count();
+        $rejectCount = (int) (clone $reviewsQuery)
+            ->where('decision', InstructorReviewDecision::Rejected->value)
+            ->count();
+        $reviewIncorrect = (int) (clone $reviewsQuery)
+            ->whereIn('outcome', [
+                InstructorReviewOutcome::Miss->value,
+                InstructorReviewOutcome::OverReject->value,
+            ])
+            ->count();
+
+        $reviewerRows = QuestionReviewerFlag::query()
+            ->whereBetween('reviewed_at', [$from, $to])
+            ->select([
+                'reviewer_id',
+                DB::raw('count(*) as flags_total'),
+                DB::raw("sum(case when flag = 'green' then 1 else 0 end) as flags_green"),
+                DB::raw("sum(case when flag = 'red' then 1 else 0 end) as flags_red"),
+                DB::raw("sum(case when outcome = 'false_positive' then 1 else 0 end) as flags_incorrect"),
+                DB::raw("sum(case when outcome in ('confirmed', 'false_positive') then 1 else 0 end) as flags_adjudicated"),
+            ])
+            ->groupBy('reviewer_id')
+            ->orderByDesc('flags_total')
+            ->limit(20)
+            ->get();
+
+        $reviewerNames = User::query()
+            ->whereIn('id', $reviewerRows->pluck('reviewer_id')->filter()->all())
+            ->pluck('name', 'id');
+
+        $reviewerTableRows = $reviewerRows->map(function ($row) use ($reviewerNames): array {
+            return [
+                'reviewer' => $reviewerNames[(int) $row->reviewer_id] ?? ('#'.$row->reviewer_id),
+                'flags_total' => (int) $row->flags_total,
+                'flags_red' => (int) $row->flags_red,
+                'flags_green' => (int) $row->flags_green,
+                'flags_incorrect' => (int) $row->flags_incorrect,
+            ];
+        })->all();
+
+        $instructorRows = QuestionInstructorReview::query()
+            ->whereBetween('reviewed_at', [$from, $to])
+            ->select([
+                'instructor_id',
+                DB::raw('count(*) as reviews_total'),
+                DB::raw("sum(case when decision = 'approved' then 1 else 0 end) as reviews_approve"),
+                DB::raw("sum(case when decision = 'rejected' then 1 else 0 end) as reviews_reject"),
+                DB::raw("sum(case when outcome in ('miss', 'over_reject') then 1 else 0 end) as reviews_incorrect"),
+                DB::raw("sum(case when outcome in ('confirmed', 'miss', 'over_reject') then 1 else 0 end) as reviews_adjudicated"),
+            ])
+            ->groupBy('instructor_id')
+            ->orderByDesc('reviews_total')
+            ->limit(20)
+            ->get();
+
+        $instructorNames = User::query()
+            ->whereIn('id', $instructorRows->pluck('instructor_id')->filter()->all())
+            ->pluck('name', 'id');
+
+        $instructorTableRows = $instructorRows->map(function ($row) use ($instructorNames): array {
+            return [
+                'instructor' => $instructorNames[(int) $row->instructor_id] ?? ('#'.$row->instructor_id),
+                'reviews_total' => (int) $row->reviews_total,
+                'reviews_approve' => (int) $row->reviews_approve,
+                'reviews_reject' => (int) $row->reviews_reject,
+                'reviews_incorrect' => (int) $row->reviews_incorrect,
+            ];
+        })->all();
+
+        // Charts: top 10 by volume — đúng vs sai (hiệu suất chất lượng + sản lượng).
+        $reviewerChartRows = $reviewerRows->take(10);
+        $reviewerChartLabels = $reviewerChartRows->map(
+            fn ($row): string => $this->shortReportLabel($reviewerNames[(int) $row->reviewer_id] ?? ('#'.$row->reviewer_id)),
+        )->values()->all();
+        $reviewerCorrectSeries = $reviewerChartRows->map(function ($row): int {
+            $adjudicated = (int) $row->flags_adjudicated;
+            $incorrect = (int) $row->flags_incorrect;
+
+            return max(0, $adjudicated - $incorrect);
+        })->values()->all();
+        $reviewerIncorrectSeries = $reviewerChartRows->map(fn ($row): int => (int) $row->flags_incorrect)->values()->all();
+
+        $instructorChartRows = $instructorRows->take(10);
+        $instructorChartLabels = $instructorChartRows->map(
+            fn ($row): string => $this->shortReportLabel($instructorNames[(int) $row->instructor_id] ?? ('#'.$row->instructor_id)),
+        )->values()->all();
+        $instructorCorrectSeries = $instructorChartRows->map(function ($row): int {
+            $adjudicated = (int) $row->reviews_adjudicated;
+            $incorrect = (int) $row->reviews_incorrect;
+
+            return max(0, $adjudicated - $incorrect);
+        })->values()->all();
+        $instructorIncorrectSeries = $instructorChartRows->map(fn ($row): int => (int) $row->reviews_incorrect)->values()->all();
+
+        $reviewerColumns = [
+            ['key' => 'reviewer', 'label' => 'Reviewer'],
+            ['key' => 'flags_total', 'label' => 'Tổng cờ', 'align' => 'right'],
+            ['key' => 'flags_red', 'label' => 'Cờ đỏ', 'align' => 'right'],
+            ['key' => 'flags_green', 'label' => 'Cờ xanh', 'align' => 'right'],
+            ['key' => 'flags_incorrect', 'label' => 'Gắn sai', 'align' => 'right'],
+        ];
+
+        $instructorColumns = [
+            ['key' => 'instructor', 'label' => 'Giảng viên'],
+            ['key' => 'reviews_total', 'label' => 'Tổng duyệt', 'align' => 'right'],
+            ['key' => 'reviews_approve', 'label' => 'Approve', 'align' => 'right'],
+            ['key' => 'reviews_reject', 'label' => 'Reject', 'align' => 'right'],
+            ['key' => 'reviews_incorrect', 'label' => 'Duyệt sai', 'align' => 'right'],
+        ];
+
+        return [
+            'kpis' => [
+                $this->kpi('Tổng cờ reviewer', number_format($totalFlags), $greenFlags.' xanh · '.$redFlags.' đỏ', 'flag'),
+                $this->kpi('Cờ đỏ', number_format($redFlags), 'Trong kỳ đã chọn', 'flag'),
+                $this->kpi('Cờ xanh', number_format($greenFlags), 'Trong kỳ đã chọn', 'verified'),
+                $this->kpi(
+                    'Cờ gắn sai',
+                    number_format($flagIncorrect),
+                    'Đỏ oan hoặc xanh sai (đã adjudicate)',
+                    'wrong_location',
+                ),
+                $this->kpi('Tổng lần duyệt GV', number_format($totalReviews), $approveCount.' approve · '.$rejectCount.' reject', 'rate_review'),
+                $this->kpi('Approve', number_format($approveCount), 'Giảng viên chấp nhận', 'thumb_up'),
+                $this->kpi('Reject', number_format($rejectCount), 'Giảng viên từ chối', 'thumb_down'),
+                $this->kpi(
+                    'Duyệt sai',
+                    number_format($reviewIncorrect),
+                    'Approve hoặc reject không đúng',
+                    'person_alert',
+                ),
+            ],
+            'charts' => [
+                $this->chart(
+                    'report-review-qa-reviewers',
+                    'Hiệu suất reviewer',
+                    'Top gắn cờ trong kỳ · đúng vs gắn sai (đã đánh giá QA)',
+                    'bar',
+                    'number',
+                    $reviewerChartLabels,
+                    [
+                        ['label' => 'Gắn đúng', 'data' => $reviewerCorrectSeries, 'color' => '#059669'],
+                        ['label' => 'Gắn sai', 'data' => $reviewerIncorrectSeries, 'color' => '#e11d48'],
+                    ],
+                ),
+                $this->chart(
+                    'report-review-qa-instructors',
+                    'Hiệu suất giảng viên',
+                    'Top duyệt trong kỳ · đúng vs duyệt sai (đã đánh giá QA)',
+                    'bar',
+                    'number',
+                    $instructorChartLabels,
+                    [
+                        ['label' => 'Duyệt đúng', 'data' => $instructorCorrectSeries, 'color' => '#0f766e'],
+                        ['label' => 'Duyệt sai', 'data' => $instructorIncorrectSeries, 'color' => '#d97706'],
+                    ],
+                ),
+            ],
+            'columns' => $reviewerColumns,
+            'rows' => $reviewerTableRows,
+            'sections' => [
+                [
+                    'title' => 'Reviewer',
+                    'columns' => $reviewerColumns,
+                    'rows' => $reviewerTableRows,
+                    'empty_message' => $totalFlags === 0 ? 'Chưa có cờ reviewer trong kỳ đã chọn.' : null,
+                ],
+                [
+                    'title' => 'Giảng viên',
+                    'columns' => $instructorColumns,
+                    'rows' => $instructorTableRows,
+                    'empty_message' => $totalReviews === 0 ? 'Chưa có lần duyệt giảng viên trong kỳ đã chọn.' : null,
+                ],
+            ],
+            'empty_message' => ($totalFlags === 0 && $totalReviews === 0)
+                ? 'Chưa có hoạt động duyệt / gắn cờ trong kỳ đã chọn.'
+                : null,
+        ];
+    }
+
     /** @return array{kpis: list<ReportKpi>, charts: list<ReportChart>, columns: list<ReportColumn>, rows: list<ReportRow>} */
     private function contentCoverage(): array
     {
@@ -967,5 +1208,15 @@ final class GetAdminReportDataAction
             'datasets' => $datasets,
             'full_width' => $fullWidth,
         ];
+    }
+
+    private function shortReportLabel(string $name, int $max = 18): string
+    {
+        $name = trim($name);
+        if (mb_strlen($name) <= $max) {
+            return $name;
+        }
+
+        return rtrim(mb_substr($name, 0, $max - 1)).'…';
     }
 }

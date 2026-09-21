@@ -69,6 +69,15 @@ final class TeachQuestionReviewTest extends TestCase
             'instructor_decision' => 'approved',
         ])->save();
 
+        $published = $this->makeInReviewQuestion($instructor);
+        $published->forceFill([
+            'status' => QuestionStatus::Published,
+            'instructor_id' => $instructor->id,
+            'assigned_instructor_id' => $instructor->id,
+            'instructor_decision' => 'approved',
+            'stem' => 'Câu đã xuất bản không hiện tab duyệt',
+        ])->save();
+
         $rejected = $this->makeInReviewQuestion($instructor);
         $rejected->forceFill([
             'status' => QuestionStatus::Rejected,
@@ -83,7 +92,8 @@ final class TeachQuestionReviewTest extends TestCase
         $this->actingAsWithWebSession($instructor, 'web')
             ->get(route('teach.questions.reviews.index', ['tab' => 'approved']))
             ->assertOk()
-            ->assertSee(strip_tags((string) $approved->stem));
+            ->assertSee(strip_tags((string) $approved->stem))
+            ->assertDontSee('Câu đã xuất bản không hiện tab duyệt');
 
         $this->actingAsWithWebSession($instructor, 'web')
             ->get(route('teach.questions.reviews.index', ['tab' => 'rejected']))
@@ -180,8 +190,8 @@ final class TeachQuestionReviewTest extends TestCase
         $this->actingAsWithWebSession($instructor, 'web')
             ->get(route('teach.questions.reviews.show', $question))
             ->assertOk()
-            ->assertSee('So sánh với bản đang xuất bản', false)
-            ->assertSee('Bản đang xuất bản', false)
+            ->assertSee('So sánh với bản đang dùng', false)
+            ->assertSee('Bản đang dùng', false)
             ->assertSee('Bản cần duyệt', false)
             ->assertSee('Bệnh nhân sốt', false)
             ->assertSee('>cao<', false)
@@ -191,7 +201,7 @@ final class TeachQuestionReviewTest extends TestCase
             ->assertSee('Xóa', false)
             ->assertSee('Sửa', false)
             ->assertSee('Thêm', false)
-            ->assertDontSee('Chưa có phiên bản đang xuất bản để so sánh', false);
+            ->assertDontSee('Chưa có bản đang dùng để so sánh', false);
     }
 
     public function test_new_question_review_shows_empty_published_pane(): void
@@ -202,10 +212,10 @@ final class TeachQuestionReviewTest extends TestCase
         $this->actingAsWithWebSession($instructor, 'web')
             ->get(route('teach.questions.reviews.show', $question))
             ->assertOk()
-            ->assertSee('So sánh với bản đang xuất bản', false)
-            ->assertSee('Bản đang xuất bản', false)
+            ->assertSee('So sánh với bản đang dùng', false)
+            ->assertSee('Bản đang dùng', false)
             ->assertSee('Bản cần duyệt', false)
-            ->assertSee('Chưa có phiên bản đang xuất bản để so sánh', false)
+            ->assertSee('Chưa có bản đang dùng để so sánh', false)
             ->assertSee(strip_tags((string) $question->stem), false)
             ->assertDontSee('Giải thích chung', false)
             ->assertDontSee('Chưa nhập.', false)

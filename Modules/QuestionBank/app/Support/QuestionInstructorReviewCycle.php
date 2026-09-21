@@ -120,15 +120,11 @@ final class QuestionInstructorReviewCycle
 
     public function canPublish(Question $question): bool
     {
-        if (! $this->hasRequiredApprovals($question)) {
+        if ($this->flagCycle->hasRedFlag($question)) {
             return false;
         }
 
-        if ($this->flagCycle->hasRequiredFlags($question) && $this->flagCycle->hasRedFlag($question)) {
-            return false;
-        }
-
-        return true;
+        return $this->hasRequiredApprovals($question);
     }
 
     /**

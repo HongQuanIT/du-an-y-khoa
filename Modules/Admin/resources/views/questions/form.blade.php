@@ -120,8 +120,8 @@
                             <span>·</span>
                             <a href="{{ route('admin.questions.compare', $question) }}"
                                 class="inline-flex items-center gap-0.5 font-semibold text-primary hover:underline"
-                                title="Đối chiếu bản đang lưu với bản học viên đang làm">
-                                So sánh với bản xuất bản
+                                title="So sánh với bản đang dùng">
+                                So sánh
                                 <span class="material-symbols-outlined text-[15px]">difference</span>
                             </a>
                         @endif
@@ -160,7 +160,7 @@
                     <a href="{{ route('admin.questions.compare', $question) }}"
                         class="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-outline-variant px-3 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low">
                         <span class="material-symbols-outlined text-[16px]" aria-hidden="true">difference</span>
-                        So sánh với bản xuất bản
+                        So sánh
                     </a>
                 @endif
                 @if ($canDelete && ! $pendingReview)
@@ -208,6 +208,11 @@
             'question' => $question,
             'canEditContent' => $canEditContent,
         ])
+        @include('admin::questions.partials.review-timeline', [
+            'question' => $question,
+            'reviewTimeline' => $reviewTimeline ?? null,
+            'canAdjudicateQa' => $canAdjudicateQa ?? false,
+        ])
     @endif
 
     @if (! $isNew && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::InReview)
@@ -216,7 +221,7 @@
                 <p>
                     Giảng viên được gán đang duyệt chuyên môn. Một phiếu từ chối là fail ngay, chưa sang reviewer.
                     @if (! $isReviewer)
-                        Bạn vẫn được sửa; chọn <strong>Lưu và gửi duyệt lại</strong> để reset phiếu giảng viên.
+                        Bạn vẫn được sửa; chọn <strong>Lưu &amp; gửi duyệt lại</strong> để reset phiếu giảng viên.
                     @endif
                 </p>
             </div>
@@ -230,7 +235,7 @@
                 <p>
                     Giảng viên đã duyệt chuyên môn. Câu hỏi đang chờ reviewer gắn cờ.
                     @if (! $isReviewer)
-                        Bạn vẫn được sửa; chọn <strong>Lưu và gửi duyệt lại</strong> để reset phiếu GV và 2 cờ.
+                        Bạn vẫn được sửa; chọn <strong>Lưu &amp; gửi duyệt lại</strong> để reset phiếu GV và 2 cờ.
                     @endif
                 </p>
             </div>
@@ -473,7 +478,8 @@
             <div class="space-y-4">
                 {{-- Workflow trước (luôn bấm được); nội dung khóa nằm dưới --}}
                 @if (! $isNew && ($canPublish || $canReject) && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::PendingPublish)
-                    <div class="rounded-2xl border border-primary/30 bg-primary/5 p-4">
+                    <div class="rounded-2xl border border-primary/30 bg-primary/5 p-4"
+                        x-data="{ returnOpen: false, redOutcome: 'confirmed' }">
                         <h2 class="mb-2 font-label-md font-semibold text-on-surface">Xuất bản</h2>
                         <p class="mb-3 text-xs leading-5 text-on-surface-variant">
                             GV {{ $question->assignedInstructor?->name ?? $question->instructor?->name ?? '—' }} đã duyệt.
@@ -482,12 +488,12 @@
                                 @include('questionbank::partials.instructor-review-flags', ['question' => $question])
                             </span>
                             @if ($question->hasRedReviewerFlag())
-                                <span class="mt-2 block font-semibold text-rose-700">Có cờ đỏ — không xuất bản được, chỉ trả về biên tập.</span>
+                                <span class="mt-2 block font-semibold text-rose-700">Có ≥1 cờ đỏ — không xuất bản được. Admin phải trả về biên tập.</span>
                             @endif
                             @if ($question->published_version)
                                 <span class="mt-2 block">
                                     QBank đang phục vụ phiên bản {{ $question->published_version }}.
-                                    <a href="{{ route('admin.questions.compare', $question) }}" class="font-semibold text-primary hover:underline">So sánh thay đổi</a>
+                                    <a href="{{ route('admin.questions.compare', $question) }}" class="font-semibold text-primary hover:underline">So sánh</a>
                                 </span>
                             @endif
                         </p>
@@ -509,13 +515,53 @@
                             </button>
                             @endif
                             @if ($canReject)
-                            <button type="submit"
-                                form="question-reject-publish-form"
-                                onclick="const r = prompt('Lý do từ chối xuất bản:'); if (!r || !r.trim()) return false; document.getElementById('question-reject-publish-reason').value = r.trim();"
-                                class="flex w-full items-center justify-center gap-2 rounded-xl border border-rose-300 py-2.5 font-label-md font-semibold text-rose-700 hover:bg-rose-50">
+                            <button type="button"
+                                @click="returnOpen = !returnOpen"
+                                class="flex w-full items-center justify-center gap-2 rounded-xl border border-rose-300 py-2.5 font-label-md font-semibold text-rose-700 hover:bg-rose-50 {{ $question->hasRedReviewerFlag() ? 'bg-rose-600 text-white hover:bg-rose-700 border-rose-600' : '' }}">
                                 <span class="material-symbols-outlined text-[18px]">close</span>
-                                Trả về biên tập
+                                {{ $question->hasRedReviewerFlag() ? 'Trả về biên tập (bắt buộc)' : 'Trả về biên tập' }}
                             </button>
+
+                            <div x-show="returnOpen" x-cloak
+                                class="mt-1 space-y-3 rounded-xl border border-rose-200 bg-white p-3">
+                                <div>
+                                    <label for="reject-return-reason" class="mb-1 block text-xs font-semibold text-on-surface-variant">Lý do trả về</label>
+                                    <textarea id="reject-return-reason" x-ref="rejectReason" rows="3" required
+                                        class="w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm"
+                                        placeholder="{{ $question->hasRedReviewerFlag() ? 'Tóm tắt lỗi theo ghi chú cờ đỏ…' : 'Vấn đề vận hành / định dạng…' }}"></textarea>
+                                </div>
+                                @if ($question->hasRedReviewerFlag())
+                                    <fieldset class="space-y-2">
+                                        <legend class="text-xs font-semibold text-on-surface-variant">Đánh giá cờ đỏ (vòng này)</legend>
+                                        <label class="flex cursor-pointer items-start gap-2 rounded-lg border border-outline-variant px-3 py-2 has-[:checked]:border-rose-400 has-[:checked]:bg-rose-50">
+                                            <input type="radio" class="mt-1" name="red_flag_outcome_ui" value="confirmed" x-model="redOutcome">
+                                            <span class="text-sm">
+                                                <span class="font-semibold text-on-surface">Cờ đỏ đúng</span>
+                                                <span class="block text-xs text-on-surface-variant">Reviewer gắn đúng · GV approve cùng vòng → duyệt sai.</span>
+                                            </span>
+                                        </label>
+                                        <label class="flex cursor-pointer items-start gap-2 rounded-lg border border-outline-variant px-3 py-2 has-[:checked]:border-amber-400 has-[:checked]:bg-amber-50">
+                                            <input type="radio" class="mt-1" name="red_flag_outcome_ui" value="false_positive" x-model="redOutcome">
+                                            <span class="text-sm">
+                                                <span class="font-semibold text-on-surface">Cờ đỏ gắn sai</span>
+                                                <span class="block text-xs text-on-surface-variant">Reviewer gắn oan · không quy lỗi GV.</span>
+                                            </span>
+                                        </label>
+                                    </fieldset>
+                                @endif
+                                <button type="button"
+                                    class="w-full rounded-xl bg-rose-600 py-2.5 text-sm font-semibold text-white hover:bg-rose-700"
+                                    @click="
+                                        const reason = ($refs.rejectReason.value || '').trim();
+                                        if (!reason) { $refs.rejectReason.focus(); return; }
+                                        document.getElementById('question-reject-publish-reason').value = reason;
+                                        const outcomeInput = document.getElementById('question-reject-red-flag-outcome');
+                                        if (outcomeInput) outcomeInput.value = redOutcome;
+                                        document.getElementById('question-reject-publish-form').submit();
+                                    ">
+                                    Xác nhận trả về
+                                </button>
+                            </div>
                             @endif
                         </div>
                     </div>
@@ -577,7 +623,7 @@
                             @endif
                             @if ($question->published_version)
                                 Ngân hàng vẫn phục vụ phiên bản {{ $question->published_version }}.
-                                <a href="{{ route('admin.questions.compare', $question) }}" class="font-semibold text-primary hover:underline">So sánh thay đổi</a>
+                                <a href="{{ route('admin.questions.compare', $question) }}" class="font-semibold text-primary hover:underline">So sánh</a>
                             @endif
                         </p>
                     </div>
@@ -586,7 +632,7 @@
                         <p class="font-semibold">QBank đang phục vụ phiên bản {{ $question->published_version }}</p>
                         <p class="mt-1 text-xs leading-5">
                             Working copy: {{ $question->status->label() }}.
-                            <a href="{{ route('admin.questions.compare', $question) }}" class="font-semibold text-primary hover:underline">So sánh với bản xuất bản</a>
+                            <a href="{{ route('admin.questions.compare', $question) }}" class="font-semibold text-primary hover:underline">So sánh</a>
                         </p>
                     </div>
                 @endif
@@ -639,155 +685,15 @@
                     <p x-show="error" x-cloak class="mt-2 text-xs font-medium text-error" x-text="error"></p>
                 </div>
 
-                {{-- Hành động biên tập — không gồm xuất bản --}}
-                @if ($canEditContent)
-                    <div class="rounded-2xl border border-outline-variant bg-surface p-4">
-                        <h2 class="mb-3 font-label-md font-semibold text-on-surface-variant">Thao tác biên tập</h2>
-                        @php
-                            $isLiveWorkingCopy = ! $isNew && in_array($question->status, [
-                                \Modules\QuestionBank\Enums\QuestionStatus::Published,
-                                \Modules\QuestionBank\Enums\QuestionStatus::Private,
-                            ], true);
-
-                            $availableStatuses = $isNew
-                                ? [
-                                    \Modules\QuestionBank\Enums\QuestionStatus::Draft->value => 'Lưu nháp',
-                                    \Modules\QuestionBank\Enums\QuestionStatus::InReview->value => 'Gửi duyệt',
-                                ]
-                                : (
-                                    $isLiveWorkingCopy
-                                        ? [
-                                            \Modules\QuestionBank\Enums\QuestionStatus::Draft->value => 'Lưu bản làm việc',
-                                            \Modules\QuestionBank\Enums\QuestionStatus::InReview->value => 'Gửi duyệt giảng viên',
-                                        ]
-                                        : [
-                                            $question->status->value => $question->status->label(),
-                                            ...collect($workflowStatuses)->mapWithKeys(fn ($s) => [
-                                                $s->value => match ($s) {
-                                                    \Modules\QuestionBank\Enums\QuestionStatus::InReview => 'Gửi duyệt giảng viên',
-                                                    \Modules\QuestionBank\Enums\QuestionStatus::Draft => 'Chuyển về nháp',
-                                                    \Modules\QuestionBank\Enums\QuestionStatus::Rejected => 'Từ chối',
-                                                    \Modules\QuestionBank\Enums\QuestionStatus::Retired => 'Ngừng dùng',
-                                                    \Modules\QuestionBank\Enums\QuestionStatus::Private => 'Kho đề thi (private)',
-                                                    \Modules\QuestionBank\Enums\QuestionStatus::Published => 'Xuất bản',
-                                                    default => $s->label(),
-                                                }
-                                            ])->all(),
-                                        ]
-                                );
-
-                            if (! $isLiveWorkingCopy) {
-                                unset(
-                                    $availableStatuses[\Modules\QuestionBank\Enums\QuestionStatus::Published->value],
-                                    $availableStatuses[\Modules\QuestionBank\Enums\QuestionStatus::PendingPublish->value],
-                                    $availableStatuses[\Modules\QuestionBank\Enums\QuestionStatus::Private->value],
-                                    $availableStatuses[\Modules\QuestionBank\Enums\QuestionStatus::Retired->value],
-                                );
-                            }
-
-                            if (! $isNew && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::InReview) {
-                                $availableStatuses[\Modules\QuestionBank\Enums\QuestionStatus::InReview->value] = 'Lưu và gửi duyệt lại';
-                                $availableStatuses[\Modules\QuestionBank\Enums\QuestionStatus::Draft->value] = 'Chuyển về nháp';
-                            }
-                            if (! $isNew && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::Draft) {
-                                $availableStatuses[\Modules\QuestionBank\Enums\QuestionStatus::Draft->value] = 'Lưu nháp';
-                                $availableStatuses[\Modules\QuestionBank\Enums\QuestionStatus::InReview->value] = 'Gửi duyệt giảng viên';
-                            }
-                            $defaultSelected = $isNew
-                                ? 'draft'
-                                : ($isLiveWorkingCopy
-                                    ? \Modules\QuestionBank\Enums\QuestionStatus::Draft->value
-                                    : $question->status->value);
-                        @endphp
-
-                        @if ($isRejected)
-                            <p class="mb-3 text-xs leading-5 text-on-surface-variant">
-                                Chuyển về nháp để chỉnh sửa.
-                            </p>
-                            <button type="submit"
-                                form="editor-return-draft-form"
-                                class="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 font-label-md font-semibold text-on-primary hover:bg-primary/90">
-                                <span class="material-symbols-outlined text-[18px]">undo</span>
-                                Chuyển về nháp để chỉnh sửa
-                            </button>
-                        @else
-                        <div class="mb-3"
-                             x-data="{
-                                 selectedStatus: @js($defaultSelected),
-                                 currentStatus: @js($isNew ? '' : $question->status->value),
-                                 isNew: @js($isNew),
-                                 isReviewer: @js($isReviewer),
-                                 syncStatus() {
-                                     const input = document.getElementById('question_requested_status');
-                                     if (input) {
-                                         input.value = this.selectedStatus;
-                                     }
-                                 },
-                                 handleSubmit(e) {
-                                     this.syncStatus();
-
-                                     if (! this.isReviewer && ! this.isNew && this.currentStatus === 'in_review' && this.selectedStatus === 'draft') {
-                                         e.preventDefault();
-                                         document.getElementById('editor-return-draft-form')?.submit();
-                                         return;
-                                     }
-
-                                     if (this.isReviewer && ! this.isNew && this.selectedStatus === 'rejected') {
-                                         const reason = window.prompt('Nhập lý do từ chối câu hỏi:');
-                                         if (! reason || ! reason.trim()) {
-                                             e.preventDefault();
-                                             this.selectedStatus = this.currentStatus;
-                                             this.syncStatus();
-                                             return;
-                                         }
-                                         let reasonInput = document.getElementById('question_rejection_reason');
-                                         if (! reasonInput) {
-                                             reasonInput = document.createElement('input');
-                                             reasonInput.type = 'hidden';
-                                             reasonInput.name = 'rejection_reason';
-                                             reasonInput.id = 'question_rejection_reason';
-                                             document.getElementById('admin-question-editor-form').appendChild(reasonInput);
-                                         }
-                                         reasonInput.value = reason.trim();
-                                     }
-                                 }
-                             }"
-                             x-init="syncStatus()">
-                            <label class="mb-1.5 block text-xs font-semibold text-on-surface-variant" for="admin_sidebar_status_select">
-                                Trạng thái:
-                            </label>
-                            <select id="admin_sidebar_status_select"
-                                    x-model="selectedStatus"
-                                    @change="syncStatus()"
-                                    aria-label="Chọn trạng thái câu hỏi"
-                                    class="h-11 w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 text-sm font-semibold text-on-surface focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
-                                @foreach ($availableStatuses as $val => $label)
-                                    <option value="{{ $val }}">{{ $label }}</option>
-                                @endforeach
-                            </select>
-
-                            <button type="submit"
-                                    @click="handleSubmit($event)"
-                                    class="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 font-label-md font-semibold text-on-primary transition-colors hover:bg-primary/90">
-                                <span class="material-symbols-outlined text-[18px]">check_circle</span>
-                                <span>{{ $isNew ? 'Lưu lại' : 'Lưu thay đổi' }}</span>
-                            </button>
-                        </div>
-                        @endif
-
-                        <a href="{{ route('admin.questions.index') }}"
-                           class="mt-2 flex w-full items-center justify-center rounded-xl py-2 text-xs font-semibold text-on-surface-variant transition-colors hover:text-on-surface">
-                            Hủy bỏ
-                        </a>
-                    </div>
-                @endif
+                {{-- Gửi duyệt + chọn GV — CTA rõ ràng, không dùng dropdown trạng thái --}}
+                @include('admin::questions.partials.editor-submit-panel')
 
                 @if (! $isNew && $canEditContent && $question->published_version && $question->status !== \Modules\QuestionBank\Enums\QuestionStatus::Published)
                     <div class="rounded-2xl border border-sky-200 bg-sky-50/70 p-4 text-sm text-sky-950">
                         <p class="font-semibold">QBank đang phục vụ phiên bản {{ $question->published_version }}</p>
                         <p class="mt-1 text-xs leading-5">
                             Working copy: {{ $question->status->label() }}. Nội dung mới chỉ lên ngân hàng sau khi GV duyệt và admin xuất bản.
-                            <a href="{{ route('admin.questions.compare', $question) }}" class="mt-1 block font-semibold text-primary hover:underline">So sánh với bản xuất bản</a>
+                            <a href="{{ route('admin.questions.compare', $question) }}" class="mt-1 block font-semibold text-primary hover:underline">So sánh</a>
                         </p>
                     </div>
                 @endif
@@ -797,7 +703,6 @@
                     <h2 class="mb-3 font-label-md font-semibold text-on-surface-variant">Phân loại</h2>
                     <div class="space-y-3">
                         @include('admin::questions.partials.taxonomy-fields')
-                        @include('admin::questions.partials.instructor-picker')
 
                         <div>
                             <label class="mb-1 block text-xs font-semibold text-on-surface-variant" for="difficulty">Độ khó *</label>
@@ -831,29 +736,45 @@
                     <div class="rounded-2xl border border-outline-variant bg-surface p-4">
                         <h2 class="mb-3 font-label-md font-semibold text-on-surface-variant">Thông tin</h2>
                         <dl class="space-y-2 text-sm">
-                            <div class="flex justify-between">
+                            <div class="flex justify-between gap-3">
                                 <dt class="text-on-surface-variant">Người tạo</dt>
-                                <dd class="font-semibold text-on-surface">{{ $question->creator?->name ?? '—' }}</dd>
+                                <dd class="text-right font-semibold text-on-surface">{{ $question->creator?->name ?? '—' }}</dd>
                             </div>
-                            <div class="flex items-center justify-between gap-3">
-                                <dt class="text-on-surface-variant">Bản gửi duyệt</dt>
-                                <dd>@include('questionbank::partials.instructor-review-flags', ['question' => $question])</dd>
+                            <div class="flex justify-between gap-3">
+                                <dt class="text-on-surface-variant">Giảng viên được gán</dt>
+                                <dd class="text-right font-semibold text-on-surface">{{ $question->assignedInstructor?->name ?? '—' }}</dd>
                             </div>
-                            <div class="flex justify-between">
+                            <div class="flex justify-between gap-3">
                                 <dt class="text-on-surface-variant">Người xuất bản</dt>
-                                <dd class="font-semibold text-on-surface">{{ $question->publisher?->name ?? $question->reviewer?->name ?? '—' }}</dd>
+                                <dd class="text-right font-semibold text-on-surface">{{ $question->publisher?->name ?? $question->reviewer?->name ?? '—' }}</dd>
                             </div>
-                            <div class="flex justify-between">
-                                <dt class="text-on-surface-variant">Phiên bản</dt>
-                                <dd class="font-semibold text-on-surface">{{ $question->version > 0 ? $question->version : 'Chưa có' }}</dd>
+                            <div class="flex justify-between gap-3">
+                                <dt class="text-on-surface-variant">Phiên bản QBank</dt>
+                                <dd class="text-right font-semibold text-on-surface">
+                                    @if ((int) $question->published_version > 0)
+                                        v{{ $question->published_version }}
+                                    @else
+                                        Chưa xuất bản
+                                    @endif
+                                </dd>
                             </div>
-                            <div class="flex justify-between">
+                            <div class="flex justify-between gap-3">
+                                <dt class="text-on-surface-variant">Xuất bản lúc</dt>
+                                <dd class="text-right font-semibold text-on-surface">
+                                    @if (! empty($publishedVersionAt))
+                                        {{ \Illuminate\Support\Carbon::parse($publishedVersionAt)->timezone(config('app.timezone'))->format('d/m/Y H:i') }}
+                                    @else
+                                        —
+                                    @endif
+                                </dd>
+                            </div>
+                            <div class="flex justify-between gap-3">
                                 <dt class="text-on-surface-variant">Tạo lúc</dt>
-                                <dd class="font-semibold text-on-surface">{{ $question->created_at?->format('d/m/Y H:i') }}</dd>
+                                <dd class="text-right font-semibold text-on-surface">{{ $question->created_at?->format('d/m/Y H:i') }}</dd>
                             </div>
-                            <div class="flex justify-between">
+                            <div class="flex justify-between gap-3">
                                 <dt class="text-on-surface-variant">Cập nhật</dt>
-                                <dd class="font-semibold text-on-surface">{{ $question->updated_at?->diffForHumans() }}</dd>
+                                <dd class="text-right font-semibold text-on-surface">{{ $question->updated_at?->diffForHumans() }}</dd>
                             </div>
                         </dl>
                         @if ($isRejected && filled($rejectionReason))
@@ -912,6 +833,7 @@
             @csrf
             <input type="hidden" name="status" value="{{ \Modules\QuestionBank\Enums\QuestionStatus::Rejected->value }}">
             <input type="hidden" name="rejection_reason" id="question-reject-publish-reason" value="">
+            <input type="hidden" name="red_flag_outcome" id="question-reject-red-flag-outcome" value="confirmed">
         </form>
 @endif
         @endif

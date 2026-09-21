@@ -8,7 +8,6 @@
     if (is_string($ownFlag) && $ownFlag !== '') {
         $ownLabel = match ($ownFlag) {
             'green' => 'Bạn đã gắn cờ xanh',
-            'yellow' => 'Bạn đã gắn cờ vàng',
             'red' => 'Bạn đã gắn cờ đỏ',
             default => 'Bạn đã gắn cờ',
         };
@@ -29,7 +28,6 @@
         @php
             $colorClass = match ($flag['color']) {
                 'green' => 'text-emerald-600',
-                'yellow' => 'text-amber-500',
                 'red' => 'text-red-600',
                 default => 'text-slate-400',
             };

@@ -53,4 +53,19 @@ final class QuestionTextDiffTest extends TestCase
         $this->assertStringContainsString('<strong>sốt cao</strong>', $diff['proposed_html']);
         $this->assertStringContainsString('<li>Troponin tăng</li>', $diff['proposed_html']);
     }
+
+    public function test_highlights_plain_words_when_rich_html_content_changes(): void
+    {
+        $diff = (new QuestionTextDiff)->highlight(
+            '<p>Câu hỏi số 2 okla, vãi nè<strong> ok </strong></p>',
+            '<p>Câu hỏi số 2 okla, đã sửa vãi nè<strong> ok </strong></p>',
+        );
+
+        $this->assertTrue($diff['changed']);
+        $this->assertStringContainsString('<ins', $diff['proposed_html']);
+        $this->assertStringContainsString('đã', $diff['proposed_html']);
+        $this->assertStringContainsString('sửa', $diff['proposed_html']);
+        $this->assertStringContainsString('Câu hỏi số 2 okla', html_entity_decode(strip_tags($diff['published_html'])));
+        $this->assertStringContainsString('Câu hỏi số 2 okla', html_entity_decode(strip_tags($diff['proposed_html'])));
+    }
 }

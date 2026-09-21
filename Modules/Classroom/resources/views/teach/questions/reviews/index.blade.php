@@ -92,8 +92,10 @@
                 <p class="mx-auto mt-2 max-w-md text-sm leading-6 text-on-surface-variant">
                     @if ($tab === 'pending')
                         Khi Content Creator gửi câu hỏi, chúng sẽ xuất hiện tại đây.
+                    @elseif ($tab === 'approved')
+                        Chỉ hiện câu bạn đã duyệt và đang chờ reviewer / xuất bản. Câu đã xuất bản sẽ không còn ở đây.
                     @else
-                        Các quyết định duyệt của bạn sẽ được lưu tại tab này để xem lại.
+                        Các quyết định từ chối của bạn sẽ được lưu tại tab này để xem lại.
                     @endif
                 </p>
             </div>

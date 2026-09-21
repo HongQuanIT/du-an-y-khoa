@@ -1,18 +1,24 @@
 @php
     $assignedId = (int) old('assigned_instructor_id', $question->assigned_instructor_id);
     $assignedName = $question->assignedInstructor?->name;
+    $assignedSubjects = $question->assignedInstructor
+        ? $question->assignedInstructor->instructorSubjects->pluck('name')->filter()->values()->all()
+        : [];
 @endphp
-<div class="border-t border-outline-variant pt-3"
+<div
+    data-testid="assigned-instructor-picker"
     x-data="assignedInstructorPicker({
         selectedId: @js($assignedId ?: null),
         selectedName: @js($assignedName),
+        selectedSubjects: @js($assignedSubjects),
         url: @js(route('admin.questions.eligible-instructors')),
-    })">
+    })"
+>
     <label class="mb-1 block text-xs font-semibold text-on-surface-variant" for="assigned_instructor_id_ui">
         Giảng viên chuyên môn *
     </label>
     <p class="mb-2 text-[11px] leading-4 text-on-surface-variant">
-        Chỉ hiện giảng viên có môn học giao với bài học đã chọn. Chọn đúng chuyên môn — không gửi mọi giảng viên.
+        Chỉ hiện giảng viên có môn học giao với bài học đã chọn.
     </p>
     {{-- Hidden luôn submit: select bị disabled lúc reload (loading) nên browser bỏ name nếu gắn trên select. --}}
     <input type="hidden" name="assigned_instructor_id" :value="selectedId ?? ''">
@@ -33,29 +39,48 @@
         <p class="mt-1 text-xs text-error">{{ $message }}</p>
     @enderror
 </div>
+
 <script>
     document.addEventListener('alpine:init', () => {
+        if (window.__assignedInstructorPickerRegistered) return;
+        window.__assignedInstructorPickerRegistered = true;
+
         Alpine.data('assignedInstructorPicker', (config) => ({
             selectedId: config.selectedId,
             instructors: config.selectedId && config.selectedName
-                ? [{ id: config.selectedId, name: config.selectedName }]
+                ? [{
+                    id: config.selectedId,
+                    name: config.selectedName,
+                    email: '',
+                    subjects: config.selectedSubjects || [],
+                }]
                 : [],
             empty: false,
             loading: false,
             url: config.url,
+
             init() {
                 const form = this.$root.closest('form');
                 form?.addEventListener('question-lessons-changed', (event) => {
                     const ids = event.detail?.lessonIds;
                     this.reload(Array.isArray(ids) ? ids : null);
                 });
+                this.$watch('selectedId', (value) => {
+                    this.$dispatch('instructor-assignment-changed', {
+                        selectedId: value,
+                        lessonCount: this.lessonIdsFromForm().length,
+                        instructorCount: this.instructors.length,
+                    });
+                });
                 this.reload();
             },
+
             lessonIdsFromForm() {
                 return Array.from(this.$root.closest('form')?.querySelectorAll('input[name="lesson_ids[]"]') ?? [])
                     .map((el) => el.value)
                     .filter(Boolean);
             },
+
             async reload(lessonIds = null) {
                 const ids = lessonIds ?? this.lessonIdsFromForm();
                 const params = new URLSearchParams();
@@ -66,15 +91,20 @@
                         headers: { Accept: 'application/json' },
                         credentials: 'same-origin',
                     });
-                    if (!response.ok) {
+                    if (! response.ok) {
                         return;
                     }
                     const data = await response.json();
                     this.instructors = data.instructors || [];
                     this.empty = this.instructors.length === 0;
-                    if (this.selectedId && !this.instructors.some((row) => Number(row.id) === Number(this.selectedId))) {
+                    if (this.selectedId && ! this.instructors.some((row) => Number(row.id) === Number(this.selectedId))) {
                         this.selectedId = null;
                     }
+                    this.$dispatch('instructor-assignment-changed', {
+                        selectedId: this.selectedId,
+                        lessonCount: ids.length,
+                        instructorCount: this.instructors.length,
+                    });
                 } catch {
                     // keep current options
                 } finally {

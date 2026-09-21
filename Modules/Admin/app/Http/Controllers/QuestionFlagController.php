@@ -111,7 +111,14 @@ final class QuestionFlagController extends Controller
 
         $data = $request->validate([
             'flag' => ['required', 'string', Rule::in(ReviewerFlag::values())],
-            'note' => ['nullable', 'string', 'max:2000'],
+            'note' => [
+                Rule::requiredIf(fn (): bool => $request->input('flag') === ReviewerFlag::Red->value),
+                'nullable',
+                'string',
+                'max:2000',
+            ],
+        ], [
+            'note.required' => 'Cờ đỏ bắt buộc phải ghi chú lý do.',
         ]);
 
         $action->handle(

@@ -76,6 +76,7 @@ final class AdminReportCatalog
                 'reports' => [
                     ['slug' => 'accuracy', 'title' => 'Tỷ lệ đúng theo chủ đề', 'description' => 'Hiệu quả nội dung ngân hàng câu hỏi.'],
                     ['slug' => 'flags', 'title' => 'Báo lỗi câu hỏi', 'description' => 'Phản hồi học viên và chất lượng biên tập.'],
+                    ['slug' => 'review-qa', 'title' => 'QA duyệt câu hỏi', 'description' => 'Cờ reviewer (đỏ/xanh/gắn sai) và lần duyệt giảng viên (approve/reject/duyệt sai).'],
                     ['slug' => 'coverage', 'title' => 'Độ phủ taxonomy', 'description' => 'Phân bổ câu hỏi theo chuyên ngành.'],
                 ],
             ],

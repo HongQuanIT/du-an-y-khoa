@@ -18,7 +18,7 @@ use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Support\QuestionReviewerFlagCycle;
 
 /**
- * Layer 1b: two reviewers flag green/yellow/red. Second flag → pending_publish.
+ * Layer 1b: two reviewers flag green/red. Second green OR any red → pending_publish.
  */
 final class FlagQuestionReviewAction
 {
@@ -37,6 +37,12 @@ final class FlagQuestionReviewAction
         $note = trim(strip_tags((string) $note));
         $note = $note !== '' ? mb_substr($note, 0, 2000) : null;
 
+        if ($flag->requiresNote() && $note === null) {
+            throw ValidationException::withMessages([
+                'note' => 'Cờ đỏ bắt buộc phải ghi chú lý do.',
+            ]);
+        }
+
         return DB::transaction(function () use ($reviewer, $question, $flag, $note): Question {
             $question = Question::query()->lockForUpdate()->findOrFail($question->getKey());
 
@@ -52,7 +58,11 @@ final class FlagQuestionReviewAction
             $count = $this->flagCycle->recordFlag($question, $reviewer, $flag, $note);
             $question = $question->refresh();
 
-            if ($count >= QuestionReviewerFlagCycle::REQUIRED_FLAGS) {
+            // Fail-fast on red: Admin must return to editor. Two greens → ready to publish.
+            $escalate = $count >= QuestionReviewerFlagCycle::REQUIRED_FLAGS
+                || $this->flagCycle->hasRedFlag($question);
+
+            if ($escalate) {
                 $question->forceFill([
                     'status' => QuestionStatus::PendingPublish,
                     'updated_by' => $reviewer->getKey(),
@@ -83,6 +93,7 @@ final class FlagQuestionReviewAction
                     'flag' => $flag->value,
                     'review_note' => $note,
                     'flag_count' => $count,
+                    'has_red_flag' => $this->flagCycle->hasRedFlag($question),
                 ],
             );
 

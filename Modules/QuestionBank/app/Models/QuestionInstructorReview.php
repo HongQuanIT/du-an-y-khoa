@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Modules\QuestionBank\Enums\InstructorReviewDecision;
+use Modules\QuestionBank\Enums\InstructorReviewOutcome;
 
 class QuestionInstructorReview extends Model
 {
@@ -19,12 +20,19 @@ class QuestionInstructorReview extends Model
         'note',
         'content_fingerprint',
         'reviewed_at',
+        'outcome',
+        'outcome_source',
+        'outcome_by',
+        'outcome_at',
+        'outcome_note',
     ];
 
     protected $casts = [
         'decision' => InstructorReviewDecision::class,
+        'outcome' => InstructorReviewOutcome::class,
         'review_cycle' => 'integer',
         'reviewed_at' => 'datetime',
+        'outcome_at' => 'datetime',
     ];
 
     /** @return BelongsTo<Question, $this> */

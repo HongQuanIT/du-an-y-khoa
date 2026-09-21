@@ -5,15 +5,30 @@ declare(strict_types=1);
 namespace Modules\Admin\Support;
 
 use App\Models\User;
+use App\Support\Enums\Permission;
 use App\Support\Rbac\PermissionRegistry;
 
 final class ImpliedViewPermissions
 {
+    /**
+     * Standalone abilities that intentionally do not require resource.view
+     * (e.g. reviewer queue uses question.flag without question.view).
+     *
+     * @var list<string>
+     */
+    private const EXEMPT = [
+        Permission::QuestionFlag->value,
+    ];
+
     /** @var array<string, string|null>|null */
     private static ?array $cache = null;
 
     public static function missingFor(User $user, string $permission): ?string
     {
+        if (in_array($permission, self::EXEMPT, true)) {
+            return null;
+        }
+
         $view = self::viewPermissionFor($permission);
 
         if ($view === null || $permission === $view || ! $user->can($permission)) {

@@ -32,14 +32,8 @@ final class QuestionTextDiff
             ];
         }
 
-        if (SafeHtml::looksLikeHtml($leftRaw) || SafeHtml::looksLikeHtml($rightRaw)) {
-            return [
-                'changed' => true,
-                'published_html' => $left === '' ? '' : $this->display($leftRaw),
-                'proposed_html' => $right === '' ? '' : $this->display($rightRaw),
-            ];
-        }
-
+        // Rich HTML: keep markup only when text is identical (above). When plain
+        // text differs, highlight on normalized words so reviewers see the change.
         if ($left === '' || $right === '') {
             return [
                 'changed' => true,

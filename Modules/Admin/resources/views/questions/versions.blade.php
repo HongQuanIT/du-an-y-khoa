@@ -81,12 +81,51 @@
                             {{ $version->created_at?->timezone(config('app.timezone'))->format('d/m/Y H:i:s') }}
                             · {{ $version->creator?->name ?? 'Hệ thống' }}
                         </p>
+                        @php
+                            $pipeline = is_array($snapshot['review_pipeline'] ?? null) ? $snapshot['review_pipeline'] : null;
+                            $pipelineSummary = $versionPipelineSummaries[(int) $version->version] ?? null;
+                        @endphp
+                        @if ($pipeline || $pipelineSummary)
+                            <div class="mt-2 flex flex-wrap gap-1.5 text-xs" data-testid="version-review-pipeline">
+                                @if (is_array($pipelineSummary) && ($pipelineSummary['cycle_count'] ?? 0) > 0)
+                                    <span class="rounded-full bg-surface-container px-2 py-0.5 font-medium text-on-surface">
+                                        {{ $pipelineSummary['summary'] }}
+                                    </span>
+                                @elseif ((int) ($pipeline['review_cycle'] ?? 0) > 0)
+                                    <span class="rounded-full bg-surface-container px-2 py-0.5 text-on-surface-variant">
+                                        Kết thúc ở vòng {{ (int) $pipeline['review_cycle'] }}
+                                    </span>
+                                @endif
+                                @if (! empty($pipeline['instructor_name']))
+                                    <span class="rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-800">
+                                        GV: {{ $pipeline['instructor_name'] }}
+                                    </span>
+                                @endif
+                                @foreach ((array) ($pipeline['flags'] ?? []) as $flagRow)
+                                    @if (! empty($flagRow['flag']))
+                                        <span @class([
+                                            'rounded-full px-2 py-0.5 font-medium',
+                                            'bg-rose-50 text-rose-800' => ($flagRow['flag'] ?? '') === 'red',
+                                            'bg-emerald-50 text-emerald-800' => ($flagRow['flag'] ?? '') === 'green',
+                                        ])>
+                                            {{ $flagRow['reviewer_name'] ?? 'Reviewer' }}:
+                                            {{ ($flagRow['flag'] ?? '') === 'red' ? 'cờ đỏ' : 'cờ xanh' }}
+                                        </span>
+                                    @endif
+                                @endforeach
+                                @if (! empty($pipeline['publisher_name']))
+                                    <span class="rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary">
+                                        XB: {{ $pipeline['publisher_name'] }}
+                                    </span>
+                                @endif
+                            </div>
+                        @endif
                     </div>
 
-                    @if ($canRestore && ! $isCurrent)
+                    @if ($canRestore)
                         @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.versions.restore'))
 <form method="post" action="{{ route('admin.questions.versions.restore', [$question, $version]) }}"
-                            onsubmit="return confirm('Khôi phục phiên bản {{ $version->version }}? Nội dung khôi phục sẽ được lưu thành một phiên bản mới ở trạng thái Bản nháp.')">
+                            onsubmit="return confirm('Khôi phục phiên bản {{ $version->version }} vào bản làm việc? Nội dung sẽ về trạng thái Nháp; số phiên bản không tăng (chỉ tăng khi Admin xuất bản).')">
                             @csrf
                             <button type="submit"
                                 class="inline-flex items-center gap-1 rounded-xl border border-primary px-3 py-2 text-sm font-semibold text-primary hover:bg-primary/10">

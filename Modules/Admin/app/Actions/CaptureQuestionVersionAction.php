@@ -16,6 +16,7 @@ final class CaptureQuestionVersionAction
         ?User $actor = null,
         string $event = 'save',
         ?int $restoredFromVersion = null,
+        ?array $reviewPipeline = null,
     ): QuestionVersion {
         $question->loadMissing([
             'lessons:id',
@@ -29,7 +30,7 @@ final class CaptureQuestionVersionAction
                 'version' => (int) $question->version,
             ],
             [
-                'snapshot' => $this->snapshot($question),
+                'snapshot' => $this->snapshot($question, $reviewPipeline),
                 'created_by' => $actor?->getKey(),
                 'event' => $event,
                 'restored_from_version' => $restoredFromVersion,
@@ -38,10 +39,13 @@ final class CaptureQuestionVersionAction
         );
     }
 
-    /** @return array<string, mixed> */
-    public function snapshot(Question $question): array
+    /**
+     * @param  array<string, mixed>|null  $reviewPipeline
+     * @return array<string, mixed>
+     */
+    public function snapshot(Question $question, ?array $reviewPipeline = null): array
     {
-        return [
+        $payload = [
             'stem' => (string) $question->stem,
             'stem_image_path' => $question->stem_image_path,
             'explanation' => $question->explanation,
@@ -62,5 +66,11 @@ final class CaptureQuestionVersionAction
                 'order' => (int) $option->order,
             ])->values()->all(),
         ];
+
+        if ($reviewPipeline !== null) {
+            $payload['review_pipeline'] = $reviewPipeline;
+        }
+
+        return $payload;
     }
 }

@@ -10,15 +10,22 @@ use Illuminate\Validation\ValidationException;
 use Modules\Admin\Enums\AuditAction;
 use Modules\Admin\Support\Auditor;
 use Modules\Admin\Support\AuditSnapshot;
+use Modules\QuestionBank\Enums\QuestionReviewAction;
+use Modules\QuestionBank\Enums\QuestionReviewStatus;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionVersion;
+use Modules\QuestionBank\Support\QuestionInstructorReviewCycle;
 
+/**
+ * Apply a published snapshot onto the working copy as draft.
+ * Does NOT increment version — only Admin publish creates question_versions.
+ */
 final class RestoreQuestionVersionAction
 {
     public function __construct(
-        private readonly CaptureQuestionVersionAction $captureVersion,
+        private readonly QuestionInstructorReviewCycle $reviewCycle,
     ) {}
 
     public function handle(User $actor, Question $question, QuestionVersion $version): Question
@@ -28,12 +35,9 @@ final class RestoreQuestionVersionAction
         return DB::transaction(function () use ($actor, $question, $version): Question {
             $question = Question::query()->lockForUpdate()->findOrFail($question->getKey());
             $before = AuditSnapshot::question($question);
-
-            if ((int) $version->version === (int) $question->version) {
-                throw ValidationException::withMessages([
-                    'version' => 'Đây đang là phiên bản hiện tại.',
-                ]);
-            }
+            $fromStatus = $question->status instanceof QuestionStatus
+                ? $question->status
+                : QuestionStatus::tryFrom((string) $question->status);
 
             $snapshot = $version->snapshot;
             // Accept both the new key and the legacy key for old snapshots.
@@ -51,22 +55,33 @@ final class RestoreQuestionVersionAction
                 ]);
             }
 
-            $beforeVersion = (int) $question->version;
+            $keyInfo = array_values((array) ($snapshot['key_info'] ?? []));
+
             $question->forceFill([
                 'stem' => (string) ($snapshot['stem'] ?? ''),
                 'stem_image_path' => $snapshot['stem_image_path'] ?? null,
                 'explanation' => $snapshot['explanation'] ?? null,
-                'key_info' => array_values((array) ($snapshot['key_info'] ?? [])),
+                'key_info' => $keyInfo,
                 'attending_tip' => $snapshot['attending_tip'] ?? null,
                 'difficulty' => (string) ($snapshot['difficulty'] ?? 'medium'),
                 'status' => QuestionStatus::Draft,
                 'is_free' => (bool) ($snapshot['is_free'] ?? false),
-                'version' => $beforeVersion + 1,
+                'exam_flag' => (bool) ($snapshot['exam_flag'] ?? false),
+                'updated_by' => $actor->getKey(),
+                // Keep questions.version / published_version unchanged — bump only on publish.
             ])->save();
 
             $question->lessons()->sync($lessonIds);
-            $question->options()->delete();
 
+            $tagIds = collect((array) ($snapshot['tag_ids'] ?? []))
+                ->map(fn ($id): int => (int) $id)
+                ->filter(fn (int $id): bool => $id > 0)
+                ->unique()
+                ->values()
+                ->all();
+            $question->tags()->sync($tagIds);
+
+            $question->options()->delete();
             foreach (array_values((array) ($snapshot['options'] ?? [])) as $index => $option) {
                 if (! is_array($option)) {
                     continue;
@@ -81,29 +96,54 @@ final class RestoreQuestionVersionAction
                 ]);
             }
 
-            $question->load([
-                'lessons:id',
-                'options' => fn ($query) => $query->orderBy('order'),
-            ]);
-            $this->captureVersion->handle(
-                $question,
-                $actor,
-                'restore',
-                (int) $version->version,
-            );
+            $this->syncHintsFromKeyInfo($question, $keyInfo);
+
+            if (in_array($fromStatus, [
+                QuestionStatus::InReview,
+                QuestionStatus::InFlagReview,
+                QuestionStatus::PendingPublish,
+                QuestionStatus::Rejected,
+            ], true)) {
+                $question->reviewRequests()
+                    ->where('status', QuestionReviewStatus::Pending->value)
+                    ->where('action', QuestionReviewAction::Create->value)
+                    ->delete();
+                $this->reviewCycle->clearSlots($question);
+            }
 
             Auditor::record(
                 AuditAction::QuestionVersionRestored,
                 $actor,
                 $question,
                 $before,
-                AuditSnapshot::question($question),
+                AuditSnapshot::question($question->fresh(['options', 'lessons', 'tags'])),
                 metadata: [
                     'restored_from_version' => (int) $version->version,
+                    'working_copy_only' => true,
                 ],
             );
 
-            return $question;
+            return $question->refresh();
         });
+    }
+
+    /**
+     * @param  list<mixed>  $keyInfo
+     */
+    private function syncHintsFromKeyInfo(Question $question, array $keyInfo): void
+    {
+        $question->hints()->delete();
+
+        $sort = 0;
+        foreach ($keyInfo as $content) {
+            $text = trim(is_scalar($content) ? (string) $content : '');
+            if ($text === '') {
+                continue;
+            }
+            $question->hints()->create([
+                'content' => $text,
+                'sort_order' => $sort++,
+            ]);
+        }
     }
 }

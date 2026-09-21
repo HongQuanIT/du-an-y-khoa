@@ -99,11 +99,12 @@ final class AdminQuestionManagementTest extends TestCase
         $this->actingAsStaff($editor)
             ->get(route('admin.questions.create'))
             ->assertOk()
-            ->assertSee('Trạng thái:')
+            ->assertSee('data-testid="editor-submit-panel"', false)
             ->assertSee('Lưu nháp')
             ->assertSee('Gửi duyệt')
             ->assertDontSee('Xuất bản')
-            ->assertSee('id="admin_sidebar_status_select"', false);
+            ->assertSee('data-testid="assigned-instructor-picker"', false)
+            ->assertDontSee('id="admin_sidebar_status_select"', false);
 
         $this->actingAsStaff($editor)
             ->post(route('admin.questions.store'), array_merge($this->payload(), [
@@ -423,7 +424,7 @@ final class AdminQuestionManagementTest extends TestCase
             ->assertSee('Phiên bản 1')
             ->assertDontSee('Phiên bản 2');
 
-        // Publish working copy as v2, then restore v1 into a new draft working copy.
+        // Publish working copy as v2, then restore v1 onto the working copy (no version bump).
         $this->actingAsStaff($editor)
             ->post(route('admin.questions.transition', $question), [
                 'status' => QuestionStatus::InReview->value,
@@ -434,6 +435,7 @@ final class AdminQuestionManagementTest extends TestCase
 
         $question->refresh();
         $this->assertSame(2, (int) $question->version);
+        $this->assertSame(2, (int) $question->published_version);
 
         $oldVersion = QuestionVersion::query()
             ->where('question_id', $question->id)
@@ -445,18 +447,21 @@ final class AdminQuestionManagementTest extends TestCase
             ->assertRedirect(route('admin.questions.edit', $question));
 
         $restored = $question->fresh(['options', 'lessons']);
-        $this->assertSame(3, $restored->version);
+        $this->assertSame(2, (int) $restored->version);
+        $this->assertSame(2, (int) $restored->published_version);
         $this->assertSame(QuestionStatus::Draft, $restored->status);
         $this->assertSame(
             'Bệnh nhân 55 tuổi đau ngực. Chẩn đoán nào phù hợp nhất?',
             strip_tags($restored->stem),
         );
         $this->assertCount(4, $restored->options);
-        $this->assertDatabaseHas('question_versions', [
+        $this->assertDatabaseMissing('question_versions', [
             'question_id' => $question->id,
             'version' => 3,
+        ]);
+        $this->assertDatabaseMissing('question_versions', [
+            'question_id' => $question->id,
             'event' => 'restore',
-            'restored_from_version' => 1,
         ]);
         $this->assertDatabaseHas('audit_logs', [
             'action' => 'admin.question.version_restore',
@@ -570,7 +575,8 @@ final class AdminQuestionManagementTest extends TestCase
             ->assertSee('<h1', false)
             ->assertSee('aria-label="Thông tin câu hỏi"', false)
             ->assertSee('aria-label="Quay lại danh sách câu hỏi"', false)
-            ->assertDontSee('Gửi duyệt', false)
+            ->assertDontSee('data-testid="editor-submit-panel"', false)
+            ->assertDontSee('data-testid="editor-submit-for-review"', false)
             ->assertDontSee('Xuất bản', false)
             ->assertDontSee('Lưu thay đổi', false)
             ->assertDontSee('Lưu câu hỏi')
@@ -925,7 +931,8 @@ final class AdminQuestionManagementTest extends TestCase
             ->get(route('admin.questions.edit', $question))
             ->assertOk()
             ->assertSee('Giảng viên được gán đang duyệt chuyên môn', false)
-            ->assertSee('Lưu thay đổi', false);
+            ->assertSee('Lưu & gửi duyệt lại', false)
+            ->assertSee('Rút về nháp', false);
 
         $this->actingAsStaff($editor)
             ->put(route('admin.questions.update', $question), array_merge($this->payload(), [
