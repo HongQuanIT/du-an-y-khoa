@@ -2,6 +2,12 @@
 
 ## 2026-09-21
 
+### Feat — AJAX bộ lọc phản hồi câu hỏi Admin
+
+- Chuyển tìm kiếm, xoá bộ lọc và phân trang sang AJAX; không tải trang khi thay đổi điều kiện.
+- Chuẩn hóa UI với nút `Tìm kiếm`, `Xoá` và dropdown đa chọn trạng thái, vị trí, loại phản hồi.
+- Bổ sung cấu trúc bảng ngữ nghĩa cho screen reader với caption và phạm vi các cột.
+
 ### UX — List câu hỏi: nhãn Miễn phí thay Gói truy cập
 
 - Bộ lọc / cột / KPI list và trang thống kê: bỏ Free–Premium, dùng **Miễn phí** (Có/Không).

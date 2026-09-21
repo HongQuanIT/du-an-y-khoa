@@ -8,6 +8,7 @@
 @endphp
 
 <x-layouts.admin title="Phản hồi câu hỏi">
+    <div x-data="adminQuestionFeedbackFilter()" class="space-y-6">
     <x-admin.page-header title="Quản lý phản hồi câu hỏi"
         description="Xem, lọc và xử lý phản hồi của học viên về câu hỏi, kiến thức và đáp án." />
 
@@ -27,63 +28,58 @@
 
     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.question-feedback.index'))
 <form method="get" action="{{ route('admin.question-feedback.index') }}" role="search"
-        aria-label="Lọc phản hồi câu hỏi"
-        class="mb-6 grid grid-cols-1 items-end gap-4 rounded-xl border border-outline-variant bg-surface p-4 md:grid-cols-12">
-        <label class="md:col-span-4">
-            <span class="mb-1.5 block text-sm font-medium text-on-surface-variant">Tìm kiếm</span>
-            <input name="q" value="{{ $filters['q'] }}" type="search"
-                placeholder="Nội dung phản hồi, câu hỏi, người gửi"
-                class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 text-sm text-on-surface">
-        </label>
-        <label class="md:col-span-2">
-            <span class="mb-1.5 block text-sm font-medium text-on-surface-variant">Trạng thái</span>
-            <select name="status" class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 text-sm text-on-surface">
-                <option value="">Tất cả</option>
-                @foreach ($statuses as $value => $label)
-                    <option value="{{ $value }}" @selected($filters['status'] === $value)>{{ $label }}</option>
-                @endforeach
-            </select>
-        </label>
-        <label class="md:col-span-2">
-            <span class="mb-1.5 block text-sm font-medium text-on-surface-variant">Vị trí</span>
-            <select name="target" class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 text-sm text-on-surface">
-                <option value="">Tất cả</option>
-                @foreach ($targets as $value => $label)
-                    <option value="{{ $value }}" @selected($filters['target'] === $value)>{{ $label }}</option>
-                @endforeach
-            </select>
-        </label>
-        <label class="md:col-span-2">
-            <span class="mb-1.5 block text-sm font-medium text-on-surface-variant">Loại phản hồi</span>
-            <select name="category" class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 text-sm text-on-surface">
-                <option value="">Tất cả</option>
-                @foreach ($categories as $value => $label)
-                    <option value="{{ $value }}" @selected($filters['category'] === $value)>{{ $label }}</option>
-                @endforeach
-            </select>
-        </label>
-        <div class="grid grid-cols-2 gap-2 md:col-span-2">
-            <button type="submit" class="inline-flex h-11 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-on-primary hover:opacity-90">
-                Lọc
-            </button>
-            <a href="{{ route('admin.question-feedback.index') }}"
-                class="inline-flex h-11 items-center justify-center rounded-lg border border-outline-variant px-4 text-sm font-semibold text-on-surface-variant hover:bg-surface-container-low">
-                Xóa lọc
-            </a>
+        aria-labelledby="question-feedback-filter-heading" aria-describedby="question-feedback-filter-description"
+        @submit.prevent="applyFilters()"
+        class="mb-6 space-y-4 rounded-xl border border-outline-variant bg-surface p-4">
+        <div>
+            <h2 id="question-feedback-filter-heading" class="font-label-lg font-semibold text-on-surface">Tìm kiếm phản hồi câu hỏi</h2>
+            <p id="question-feedback-filter-description" class="mt-1 font-body-sm text-on-surface-variant">Tìm theo nội dung, câu hỏi hoặc người gửi; sau đó có thể thu hẹp theo trạng thái, vị trí và loại phản hồi.</p>
+        </div>
+        <div class="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 xl:grid-cols-[minmax(280px,1.5fr)_repeat(3,minmax(150px,1fr))_auto]">
+            <div class="sm:col-span-2 xl:col-auto">
+                <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant" for="feedback-q">Tìm kiếm</label>
+                <div class="relative">
+                    <span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[19px] text-on-surface-variant" aria-hidden="true">search</span>
+                    <input id="feedback-q" name="q" value="{{ $filters['q'] }}" type="search" placeholder="Nội dung, câu hỏi hoặc người gửi" autocomplete="off"
+                        class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low py-2 pl-10 pr-3 font-body-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                </div>
+            </div>
+            <div class="min-w-0">
+                <x-admin.multi-select-filter name="status" label="Trạng thái" :options="collect($statuses)->map(fn ($label, $value) => ['id' => $value, 'label' => $label])->values()->all()" :selected="$filters['status']" />
+            </div>
+            <div class="min-w-0">
+                <x-admin.multi-select-filter name="target" label="Vị trí" :options="collect($targets)->map(fn ($label, $value) => ['id' => $value, 'label' => $label])->values()->all()" :selected="$filters['target']" />
+            </div>
+            <div class="min-w-0">
+                <x-admin.multi-select-filter name="category" label="Loại phản hồi" :options="collect($categories)->map(fn ($label, $value) => ['id' => $value, 'label' => $label])->values()->all()" :selected="$filters['category']" />
+            </div>
+            <div class="flex self-end gap-2 sm:col-span-2 xl:col-auto">
+                <button type="submit" :disabled="loading" aria-label="Tìm kiếm phản hồi câu hỏi"
+                    class="inline-flex h-11 w-36 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 font-label-md font-medium text-on-primary transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50">
+                    <span class="material-symbols-outlined text-[18px]" aria-hidden="true" x-text="loading ? 'progress_activity' : 'search'">search</span>
+                    <span class="whitespace-nowrap" x-text="loading ? 'Đang tải' : 'Tìm kiếm'">Tìm kiếm</span>
+                </button>
+                <button type="button" @click="resetFilters(@js(route('admin.question-feedback.index')))" :disabled="loading" aria-label="Xoá bộ lọc phản hồi câu hỏi"
+                    class="inline-flex h-11 w-28 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-outline-variant bg-surface px-3 font-label-md font-medium text-on-surface-variant transition hover:bg-surface-container-low focus-visible:ring-2 focus-visible:ring-primary/20 disabled:opacity-50">
+                    <span class="material-symbols-outlined text-[18px]" aria-hidden="true">delete</span><span>Xoá</span>
+                </button>
+            </div>
         </div>
     </form>
 @endif
 
+    <div id="question-feedback-results-region">
     <div class="overflow-hidden rounded-xl border border-outline-variant bg-surface">
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-outline-variant text-sm">
+                <caption class="sr-only">Danh sách phản hồi câu hỏi của học viên</caption>
                 <thead class="bg-surface-container-low text-left text-xs uppercase tracking-wide text-on-surface-variant">
                     <tr>
-                        <th class="px-4 py-3">Phản hồi</th>
-                        <th class="px-4 py-3">Câu hỏi</th>
-                        <th class="px-4 py-3">Người gửi</th>
-                        <th class="px-4 py-3">Thời gian</th>
-                        <th class="px-4 py-3">Trạng thái</th>
+                        <th scope="col" class="px-4 py-3">Phản hồi</th>
+                        <th scope="col" class="px-4 py-3">Câu hỏi</th>
+                        <th scope="col" class="px-4 py-3">Người gửi</th>
+                        <th scope="col" class="px-4 py-3">Thời gian</th>
+                        <th scope="col" class="px-4 py-3">Trạng thái</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-outline-variant">
@@ -177,5 +173,59 @@
         </div>
     </div>
 
-    <div class="mt-5">{{ $feedbackItems->links() }}</div>
+    <div class="mt-5" id="question-feedback-pagination">{{ $feedbackItems->links() }}</div>
+    </div>
+
+    <script>
+        function adminQuestionFeedbackFilter() {
+            return {
+                loading: false,
+                filterForm() { return document.querySelector('form[role="search"]'); },
+                async applyFilters() {
+                    const form = this.filterForm();
+                    if (!form) return;
+                    const url = new URL(form.action, window.location.origin);
+                    const params = new URLSearchParams(new FormData(form));
+                    params.delete('page');
+                    url.search = params.toString();
+                    await this.fetchResults(url.toString());
+                },
+                async resetFilters(url) {
+                    const form = this.filterForm();
+                    form?.reset();
+                    const query = form?.querySelector('[name="q"]');
+                    if (query) query.value = '';
+                    window.dispatchEvent(new CustomEvent('question-feedback-filters-reset'));
+                    await this.fetchResults(url);
+                },
+                async fetchResults(url) {
+                    this.loading = true;
+                    try {
+                        const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } });
+                        if (!response.ok) throw new Error('Lỗi tải phản hồi câu hỏi');
+                        const parsed = new DOMParser().parseFromString(await response.text(), 'text/html');
+                        const next = parsed.getElementById('question-feedback-results-region');
+                        const current = document.getElementById('question-feedback-results-region');
+                        if (!next || !current) throw new Error('Không tìm thấy vùng kết quả phản hồi câu hỏi');
+                        current.replaceWith(next);
+                        window.history.pushState({}, '', url);
+                        this.bindPagination();
+                    } catch (error) {
+                        console.error(error);
+                        alert('Có lỗi xảy ra khi tải phản hồi câu hỏi. Vui lòng thử lại.');
+                    } finally { this.loading = false; }
+                },
+                bindPagination() {
+                    document.querySelectorAll('#question-feedback-pagination a').forEach((link) => {
+                        link.addEventListener('click', (event) => {
+                            event.preventDefault();
+                            if (link.href) this.fetchResults(link.href);
+                        });
+                    });
+                },
+                init() { this.bindPagination(); },
+            };
+        }
+    </script>
+    </div>
 </x-layouts.admin>

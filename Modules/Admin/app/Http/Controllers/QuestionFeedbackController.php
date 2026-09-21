@@ -25,9 +25,18 @@ final class QuestionFeedbackController extends Controller
 
         $filters = [
             'q' => trim((string) $request->query('q', '')),
-            'status' => (string) $request->query('status', ''),
-            'target' => (string) $request->query('target', ''),
-            'category' => (string) $request->query('category', ''),
+            'status' => array_values(array_intersect(
+                array_map('strval', (array) $request->query('status', [])),
+                array_keys(QuestionFeedback::statusLabels()),
+            )),
+            'target' => array_values(array_intersect(
+                array_map('strval', (array) $request->query('target', [])),
+                array_keys(QuestionFeedback::targetLabels()),
+            )),
+            'category' => array_values(array_intersect(
+                array_map('strval', (array) $request->query('category', [])),
+                array_keys(QuestionFeedback::categoryLabels()),
+            )),
             'question_id' => $request->query('question_id'),
         ];
 
@@ -40,27 +49,27 @@ final class QuestionFeedbackController extends Controller
         }
 
         if ($filters['q'] !== '') {
-            $keyword = $filters['q'];
+            $keyword = '%'.addcslashes($filters['q'], '\\%_').'%';
             $query->where(function ($builder) use ($keyword): void {
-                $builder->where('message', 'like', "%{$keyword}%")
-                    ->orWhereHas('question', fn ($question) => $question->where('stem', 'like', "%{$keyword}%"))
+                $builder->where('message', 'like', $keyword)
+                    ->orWhereHas('question', fn ($question) => $question->where('stem', 'like', $keyword))
                     ->orWhereHas('user', function ($user) use ($keyword): void {
-                        $user->where('name', 'like', "%{$keyword}%")
-                            ->orWhere('email', 'like', "%{$keyword}%");
+                        $user->where('name', 'like', $keyword)
+                            ->orWhere('email', 'like', $keyword);
                     });
             });
         }
 
-        if (array_key_exists($filters['status'], QuestionFeedback::statusLabels())) {
-            $query->where('status', $filters['status']);
+        if ($filters['status'] !== []) {
+            $query->whereIn('status', $filters['status']);
         }
 
-        if (array_key_exists($filters['target'], QuestionFeedback::targetLabels())) {
-            $query->where('target', $filters['target']);
+        if ($filters['target'] !== []) {
+            $query->whereIn('target', $filters['target']);
         }
 
-        if (array_key_exists($filters['category'], QuestionFeedback::categoryLabels())) {
-            $query->where('category', $filters['category']);
+        if ($filters['category'] !== []) {
+            $query->whereIn('category', $filters['category']);
         }
 
         return view('admin::question-feedback.index', [
