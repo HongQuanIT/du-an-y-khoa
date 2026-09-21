@@ -920,7 +920,7 @@ final class AdminQuestionManagementTest extends TestCase
         $this->assertSoftDeleted('questions', ['id' => $question->id]);
     }
 
-    public function test_editor_can_edit_and_save_question_while_in_review(): void
+    public function test_editor_cannot_edit_question_while_in_review(): void
     {
         $editor = $this->staffUser(Role::ContentEditor);
         $question = $this->makeDraftQuestion($editor);
@@ -931,19 +931,38 @@ final class AdminQuestionManagementTest extends TestCase
             ->get(route('admin.questions.edit', $question))
             ->assertOk()
             ->assertSee('Giảng viên được gán đang duyệt chuyên môn', false)
-            ->assertSee('Lưu & gửi duyệt lại', false)
-            ->assertSee('Rút về nháp', false);
+            ->assertSee('Không chỉnh sửa nội dung', false)
+            ->assertSee('Rút về nháp', false)
+            ->assertSee('id="editor-return-draft-form"', false)
+            ->assertSee(route('admin.questions.transition', $question), false)
+            ->assertDontSee('Lưu & gửi duyệt lại', false);
 
         $this->actingAsStaff($editor)
             ->put(route('admin.questions.update', $question), array_merge($this->payload(), [
-                'stem' => 'Thay đổi được phép lưu lại khi đang chờ duyệt.',
+                'stem' => 'Không được phép lưu khi đang chờ duyệt.',
             ]))
-            ->assertSessionHasNoErrors()
+            ->assertSessionHasErrors('status');
+
+        $this->assertSame('Stem draft test', strip_tags($question->fresh()->stem));
+        $this->assertSame(QuestionStatus::InReview, $question->fresh()->status);
+    }
+
+    public function test_editor_can_withdraw_in_review_to_draft_without_content_save(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+        $question = $this->makeDraftQuestion($editor);
+        $question->forceFill([
+            'status' => QuestionStatus::InReview,
+            'assigned_instructor_id' => $this->assignedInstructor->id,
+        ])->save();
+
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.transition', $question), [
+                'status' => QuestionStatus::Draft->value,
+            ])
             ->assertRedirect();
 
-        $this->assertSame('Thay đổi được phép lưu lại khi đang chờ duyệt.', strip_tags($question->fresh()->stem));
-        $this->assertSame(QuestionStatus::InReview, $question->fresh()->status);
-        $this->assertSame(0, $question->fresh()->version);
+        $this->assertSame(QuestionStatus::Draft, $question->fresh()->status);
     }
 
     public function test_save_without_assigned_instructor_field_keeps_existing_assignment(): void
@@ -951,7 +970,7 @@ final class AdminQuestionManagementTest extends TestCase
         $editor = $this->staffUser(Role::ContentEditor);
         $question = $this->makeDraftQuestion($editor);
         $question->forceFill([
-            'status' => QuestionStatus::InReview,
+            'status' => QuestionStatus::Draft,
             'assigned_instructor_id' => $this->assignedInstructor->id,
         ])->save();
 
@@ -962,13 +981,12 @@ final class AdminQuestionManagementTest extends TestCase
             ->from(route('admin.questions.edit', $question))
             ->put(route('admin.questions.update', $question), array_merge($payload, [
                 'stem' => 'Lưu khi select GV đang disabled / thiếu field.',
-                'requested_status' => QuestionStatus::InReview->value,
             ]))
             ->assertSessionHasNoErrors()
             ->assertRedirect();
 
         $fresh = $question->fresh();
-        $this->assertSame(QuestionStatus::InReview, $fresh->status);
+        $this->assertSame(QuestionStatus::Draft, $fresh->status);
         $this->assertSame($this->assignedInstructor->id, (int) $fresh->assigned_instructor_id);
         $this->assertSame('Lưu khi select GV đang disabled / thiếu field.', strip_tags((string) $fresh->stem));
     }
@@ -1000,7 +1018,7 @@ final class AdminQuestionManagementTest extends TestCase
         $this->assertSame('Stem trước khi gửi duyệt thất bại.', strip_tags((string) $fresh->stem));
     }
 
-    public function test_editor_resubmit_while_in_review_resets_instructor_flags(): void
+    public function test_editor_must_wait_after_instructor_approval_cannot_withdraw(): void
     {
         $editor = $this->staffUser(Role::ContentEditor);
         $question = $this->makeDraftQuestion($editor);
@@ -1013,26 +1031,27 @@ final class AdminQuestionManagementTest extends TestCase
         app(InstructorReviewQuestionAction::class)
             ->approve($this->assignedInstructor, $question->fresh());
 
-        $this->assertSame('approved', $question->fresh()->instructor_decision);
         $this->assertSame(QuestionStatus::InFlagReview, $question->fresh()->status);
 
         $this->actingAsStaff($editor)
-            ->put(route('admin.questions.update', $question), array_merge($this->payload(), [
-                'stem' => 'Nội dung gửi duyệt lại sau khi sửa.',
-                'requested_status' => QuestionStatus::InReview->value,
-            ]))
-            ->assertSessionHasNoErrors()
-            ->assertRedirect();
+            ->get(route('admin.questions.edit', $question))
+            ->assertOk()
+            ->assertSee('không rút về nháp', false)
+            ->assertDontSee('>Rút về nháp<', false);
 
-        $fresh = $question->fresh();
-        $this->assertSame(QuestionStatus::InReview, $fresh->status);
-        $this->assertNull($fresh->instructor_decision);
-        $this->assertNull($fresh->instructor_1_id);
-        $this->assertNull($fresh->instructor_1_decision);
-        $this->assertNull($fresh->reviewer_1_id);
-        $this->assertNull($fresh->reviewer_1_flag);
-        $this->assertSame(2, (int) $fresh->instructor_review_cycle);
-        $this->assertSame('Nội dung gửi duyệt lại sau khi sửa.', strip_tags((string) $fresh->stem));
+        $this->actingAsStaff($editor)
+            ->put(route('admin.questions.update', $question), array_merge($this->payload(), [
+                'stem' => 'Không sửa được khi đang chờ reviewer.',
+            ]))
+            ->assertSessionHasErrors('status');
+
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.transition', $question), [
+                'status' => QuestionStatus::Draft->value,
+            ])
+            ->assertSessionHasErrors('status');
+
+        $this->assertSame(QuestionStatus::InFlagReview, $question->fresh()->status);
     }
 
     public function test_editor_clone_queues_admin_review_before_publish(): void

@@ -162,7 +162,8 @@ Import: commit tạo hàng loạt `draft`.
 - List admin: cột **Trạng thái** = xuất bản (đã XB / riêng tư / ngừng dùng). Cột **Bản gửi duyệt** = editor đã gửi bản cập nhật chưa + 2 cờ reviewer (trắng chờ / xanh đạt / đỏ không đạt).
 - Reviewer chỉ **xanh / đỏ**; cờ đỏ **bắt buộc ghi chú**. ≥1 đỏ → fail-fast vào `pending_publish`, Admin **không publish**, phải trả editor.
 - Một phiếu reject GV = fail ngay. Admin không phá thế cờ y khoa (không publish khi có đỏ).
-- Từ `in_review`: Creator **được sửa** working copy; **gửi duyệt lại** (`in_review` → `in_review`) tăng `instructor_review_cycle` và reset cờ. Withdraw → `draft` cũng xóa slot hiện tại.
+- Từ `in_review` (GV chưa approve/reject): Creator **không sửa** nội dung nhưng **được withdraw** → `draft` rồi chỉnh và gửi lại. Withdraw xóa slot duyệt hiện tại.
+- Từ `in_flag_review` trở đi (đã qua GV): Creator **không sửa** và **không rút nháp** — chờ reviewer / Admin.
 - `/teach` ẩn phiếu của GV kia trước khi mình quyết định (tránh neo theo).
 - Từ `pending_publish`: **không** cho Creator sửa trực tiếp — Admin trả về (`rejected`) vì lý do vận hành hoặc vì cờ đỏ.
 - `retired` / `private`: chỉ Super Admin; không đi ngược về Creator trừ clone.

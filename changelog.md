@@ -2,6 +2,12 @@
 
 ## 2026-09-21
 
+### Fix — Khóa sửa khi chờ duyệt; rút nháp chỉ trước khi GV xử lý
+
+- `in_review` / `in_flag_review`: khóa chỉnh nội dung; editor chỉ rút về nháp khi còn `in_review` (GV chưa approve/reject).
+- Sửa nút «Rút về nháp» không bấm được do nằm trong `pointer-events-none`; form transition luôn render khi có quyền gửi duyệt.
+- Bỏ khối CCT suy ra từ ma trận trên form; cập nhật SRS 35 và test tương ứng.
+
 ### Feat — AJAX bộ lọc phản hồi câu hỏi Admin
 
 - Chuyển tìm kiếm, xoá bộ lọc và phân trang sang AJAX; không tải trang khi thay đổi điều kiện.

@@ -78,6 +78,15 @@ final class SaveAdminQuestionAction
                     ]);
                 }
 
+                if (in_array($question->status, [
+                    QuestionStatus::InReview,
+                    QuestionStatus::InFlagReview,
+                ], true)) {
+                    throw ValidationException::withMessages([
+                        'status' => 'Câu đang trong quá trình duyệt. Không chỉnh sửa — rút về nháp nếu cần sửa.',
+                    ]);
+                }
+
                 if ($question->status === QuestionStatus::Retired) {
                     throw ValidationException::withMessages([
                         'status' => 'Câu đã ngừng dùng. Nhân bản nếu cần soạn lại.',

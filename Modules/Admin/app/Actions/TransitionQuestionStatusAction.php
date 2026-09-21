@@ -288,12 +288,8 @@ final class TransitionQuestionStatusAction
             QuestionStatus::Draft->value => [QuestionStatus::InReview],
             QuestionStatus::InReview->value => [
                 QuestionStatus::Draft,
-                QuestionStatus::InReview,
             ],
-            QuestionStatus::InFlagReview->value => [
-                QuestionStatus::Draft,
-                QuestionStatus::InReview,
-            ],
+            QuestionStatus::InFlagReview->value => [],
             QuestionStatus::PendingPublish->value => [
                 QuestionStatus::Published,
                 QuestionStatus::Private,
@@ -378,11 +374,10 @@ final class TransitionQuestionStatusAction
             return;
         }
 
-        // Submit / withdraw / resubmit from flag queue
+        // Submit / withdraw (chỉ khi GV chưa duyệt)
         if (
             ($from === QuestionStatus::Draft && $to === QuestionStatus::InReview)
             || ($from === QuestionStatus::InReview && $to === QuestionStatus::Draft)
-            || ($from === QuestionStatus::InFlagReview && in_array($to, [QuestionStatus::Draft, QuestionStatus::InReview], true))
         ) {
             $this->assertCanSubmit($actor);
 
