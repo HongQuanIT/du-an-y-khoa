@@ -261,6 +261,29 @@ final class AdminAuditArchitectureTest extends TestCase
 
     }
 
+    public function test_audit_can_filter_multiple_actor_roles_with_ajax(): void
+    {
+        $admin = $this->staffUser(Role::Admin);
+        $instructor = $this->staffUser(Role::Instructor);
+        $editor = $this->staffUser(Role::ContentEditor);
+        $student = $this->staffUser(Role::Student);
+
+        Auditor::record(PlatformAuditAction::ClassroomLiveStarted, $instructor, $instructor);
+        Auditor::record(AuditAction::QuestionCreated, $editor, $editor);
+        Auditor::record(AuditAction::UserEmailVerified, $student, $student);
+
+        $this->actingAsStaff($admin)
+            ->get(route('admin.audit.index', [
+                'actor_role' => [Role::Instructor->value, Role::ContentEditor->value],
+            ]), ['X-Requested-With' => 'XMLHttpRequest'])
+            ->assertOk()
+            ->assertSee('id="audit-results-region"', false)
+            ->assertViewHas('logs', fn ($logs): bool => $logs->count() === 2
+                && $logs->contains(fn (AuditLog $log): bool => $log->actor_id === $instructor->id)
+                && $logs->contains(fn (AuditLog $log): bool => $log->actor_id === $editor->id)
+                && ! $logs->contains(fn (AuditLog $log): bool => $log->actor_id === $student->id));
+    }
+
     public function test_admin_can_view_instructor_and_student_activity_context(): void
     {
         $admin = $this->staffUser(Role::Admin);
