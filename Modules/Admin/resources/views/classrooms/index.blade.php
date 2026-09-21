@@ -1,4 +1,5 @@
 <x-layouts.admin title="Lớp học">
+    <div x-data="adminClassroomFilter()" class="space-y-6">
     <x-admin.page-header title="Lớp học (giám sát)"
         description="Duyệt lớp giảng viên, xem live đang dạy, force-end hoặc lưu trữ khi cần." />
 
@@ -31,44 +32,48 @@
     @endif
 
     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.classrooms.index'))
-<form method="get" action="{{ route('admin.classrooms.index') }}"
-        class="mb-6 rounded-xl border border-outline-variant bg-surface p-4 shadow-sm">
-        <div class="grid grid-cols-1 items-end gap-4 lg:grid-cols-[minmax(280px,2fr)_minmax(180px,1fr)_minmax(180px,1fr)_auto]">
-            <div>
-                <label class="mb-1.5 block font-label-sm text-label-sm font-medium text-on-surface-variant" for="q">Tìm kiếm</label>
-                <input id="q" name="q" value="{{ $filters['q'] }}" type="search" placeholder="Tiêu đề hoặc mã join"
-                    class="h-11 w-full rounded-lg border border-outline-variant bg-surface px-3 font-body-sm text-body-sm text-on-surface placeholder:text-on-surface-variant/70 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+<form method="get" action="{{ route('admin.classrooms.index') }}" role="search"
+        aria-labelledby="classroom-filter-heading" aria-describedby="classroom-filter-description"
+        @submit.prevent="applyFilters()"
+        class="mb-6 space-y-4 rounded-xl border border-outline-variant bg-surface p-4">
+        <div>
+            <h2 id="classroom-filter-heading" class="font-label-lg font-semibold text-on-surface">Tìm kiếm lớp học</h2>
+            <p id="classroom-filter-description" class="mt-1 font-body-sm text-on-surface-variant">Tìm theo tên lớp, mã tham gia, UUID hoặc tên giảng viên; sau đó có thể thu hẹp theo các bộ lọc.</p>
+        </div>
+        <div class="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 xl:grid-cols-[minmax(280px,1.5fr)_repeat(3,minmax(150px,1fr))_auto]">
+            <div class="sm:col-span-2 xl:col-auto">
+                <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant" for="q">Tìm kiếm</label>
+                <div class="relative">
+                    <span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[19px] text-on-surface-variant" aria-hidden="true">search</span>
+                    <input id="q" name="q" value="{{ $filters['q'] }}" type="search" placeholder="Tên lớp, mã tham gia hoặc giảng viên" autocomplete="off"
+                        class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low py-2 pl-10 pr-3 font-body-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                </div>
             </div>
-            <div>
-                <label class="mb-1.5 block font-label-sm text-label-sm font-medium text-on-surface-variant" for="status">Trạng thái</label>
-                <select id="status" name="status"
-                    class="h-11 w-full rounded-lg border border-outline-variant bg-surface px-3 font-body-sm text-body-sm text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
-                    <option value="">Tất cả</option>
-                    @foreach ($statuses as $status)
-                        <option value="{{ $status->value }}" @selected($filters['status'] === $status->value)>{{ $status->label() }}</option>
-                    @endforeach
-                </select>
+            <div class="min-w-0">
+                <x-admin.multi-select-filter name="status" label="Trạng thái" :options="collect($statuses)->map(fn ($item) => ['id' => $item->value, 'label' => $item->label()])->all()" :selected="$filters['status']" />
             </div>
-            <div>
-                <label class="mb-1.5 block font-label-sm text-label-sm font-medium text-on-surface-variant" for="purpose">Mục đích</label>
-                <select id="purpose" name="purpose"
-                    class="h-11 w-full rounded-lg border border-outline-variant bg-surface px-3 font-body-sm text-body-sm text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
-                    <option value="">Tất cả</option>
-                    @foreach ($purposes as $purpose)
-                        <option value="{{ $purpose->value }}" @selected($filters['purpose'] === $purpose->value)>{{ $purpose->label() }}</option>
-                    @endforeach
-                </select>
+            <div class="min-w-0">
+                <x-admin.multi-select-filter name="purpose" label="Mục đích" :options="collect($purposes)->map(fn ($item) => ['id' => $item->value, 'label' => $item->label()])->all()" :selected="$filters['purpose']" />
             </div>
-            <div class="flex gap-2">
-                <button type="submit"
-                    class="inline-flex h-11 items-center justify-center rounded-lg bg-primary px-4 font-label-md text-label-md font-semibold text-on-primary hover:opacity-90">Lọc</button>
-                <a href="{{ route('admin.classrooms.index') }}"
-                    class="inline-flex h-11 items-center justify-center rounded-lg border border-outline-variant px-4 font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-low">Xóa lọc</a>
+            <div class="min-w-0">
+                <x-admin.multi-select-filter name="host_id" label="Giảng viên" :options="$hosts->map(fn ($host) => ['id' => $host->id, 'label' => $host->name])->all()" :selected="$filters['host_id']" />
+            </div>
+            <div class="flex self-end gap-2 sm:col-span-2 xl:col-auto">
+                <button type="submit" :disabled="loading" aria-label="Tìm kiếm lớp học"
+                class="inline-flex h-11 w-36 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 font-label-md font-medium text-on-primary transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50">
+                    <span class="material-symbols-outlined text-[18px]" aria-hidden="true" x-text="loading ? 'progress_activity' : 'search'">search</span>
+                    <span class="whitespace-nowrap" x-text="loading ? 'Đang tải' : 'Tìm kiếm'">Tìm kiếm</span>
+                </button>
+                <button type="button" @click="resetFilters(@js(route('admin.classrooms.index')))" :disabled="loading" aria-label="Xoá bộ lọc lớp học"
+                class="inline-flex h-11 w-28 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-outline-variant bg-surface px-3 font-label-md font-medium text-on-surface-variant transition hover:bg-surface-container-low focus-visible:ring-2 focus-visible:ring-primary/20 disabled:opacity-50">
+                    <span class="material-symbols-outlined text-[18px]" aria-hidden="true">delete</span><span>Xoá</span>
+                </button>
             </div>
         </div>
     </form>
 @endif
 
+    <div id="classrooms-results-region">
     <div class="overflow-x-auto rounded-xl border border-outline-variant bg-surface">
         <table class="min-w-full text-left font-body-sm text-body-sm">
             <thead class="border-b border-outline-variant bg-surface-container-low font-label-md text-label-md text-on-surface-variant">
@@ -200,7 +205,61 @@
         </table>
     </div>
 
-    <div class="mt-4">
+    <div class="mt-4" id="classrooms-pagination">
         {{ $classrooms->links() }}
+    </div>
+    </div>
+
+    <script>
+        function adminClassroomFilter() {
+            return {
+                loading: false,
+                filterForm() { return document.querySelector('form[role="search"]'); },
+                async applyFilters() {
+                    const form = this.filterForm();
+                    if (!form) return;
+                    const url = new URL(form.action, window.location.origin);
+                    const params = new URLSearchParams(new FormData(form));
+                    params.delete('page');
+                    url.search = params.toString();
+                    await this.fetchResults(url.toString());
+                },
+                async resetFilters(url) {
+                    const form = this.filterForm();
+                    form?.reset();
+                    const query = form?.querySelector('[name="q"]');
+                    if (query) query.value = '';
+                    window.dispatchEvent(new CustomEvent('classroom-filters-reset'));
+                    await this.fetchResults(url);
+                },
+                async fetchResults(url) {
+                    this.loading = true;
+                    try {
+                        const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } });
+                        if (!response.ok) throw new Error('Lỗi tải danh sách lớp học');
+                        const parsed = new DOMParser().parseFromString(await response.text(), 'text/html');
+                        const next = parsed.getElementById('classrooms-results-region');
+                        const current = document.getElementById('classrooms-results-region');
+                        if (!next || !current) throw new Error('Không tìm thấy vùng kết quả lớp học');
+                        current.replaceWith(next);
+                        window.history.pushState({}, '', url);
+                        this.bindPagination();
+                    } catch (error) {
+                        console.error(error);
+                        alert('Có lỗi xảy ra khi tải danh sách lớp học. Vui lòng thử lại.');
+                    } finally { this.loading = false; }
+                },
+                bindPagination() {
+                    document.querySelectorAll('#classrooms-pagination a').forEach((link) => {
+                        link.addEventListener('click', (event) => {
+                            event.preventDefault();
+                            if (link.href) this.fetchResults(link.href);
+                        });
+                    });
+                },
+                init() { this.bindPagination(); },
+            };
+        }
+    </script>
     </div>
 </x-layouts.admin>

@@ -280,22 +280,42 @@ final class ClassroomOversightController extends Controller
             ->latest('id');
 
         if ($search = trim((string) $request->query('q', ''))) {
-            $query->where(function ($builder) use ($search): void {
-                $builder->where('title', 'like', "%{$search}%")
-                    ->orWhere('join_code', 'like', "%{$search}%");
+            $term = '%'.addcslashes($search, '\\%_').'%';
+
+            $query->where(function ($builder) use ($term): void {
+                $builder->where('title', 'like', $term)
+                    ->orWhere('join_code', 'like', $term)
+                    ->orWhere('uuid', 'like', $term)
+                    ->orWhereHas('host', fn ($host) => $host->where('name', 'like', $term));
             });
         }
 
-        if ($status = $request->query('status')) {
-            $query->where('status', (string) $status);
+        $availableStatuses = array_values(array_filter(
+            ClassroomStatus::values(),
+            static fn (string $status): bool => $status !== ClassroomStatus::Draft->value,
+        ));
+        $statuses = array_values(array_intersect(
+            array_map('strval', (array) $request->query('status', [])),
+            $availableStatuses,
+        ));
+        if ($statuses !== []) {
+            $query->whereIn('status', $statuses);
         }
 
-        if ($purpose = $request->query('purpose')) {
-            $query->where('purpose', (string) $purpose);
+        $purposes = array_values(array_intersect(
+            array_map('strval', (array) $request->query('purpose', [])),
+            ClassroomPurpose::values(),
+        ));
+        if ($purposes !== []) {
+            $query->whereIn('purpose', $purposes);
         }
 
-        if ($hostId = $request->query('host_id')) {
-            $query->where('host_user_id', (int) $hostId);
+        $hostIds = array_values(array_filter(array_map(
+            static fn (mixed $id): int => (int) $id,
+            (array) $request->query('host_id', []),
+        )));
+        if ($hostIds !== []) {
+            $query->whereIn('host_user_id', $hostIds);
         }
 
         $classrooms = $query->paginate(20)->withQueryString();
@@ -307,13 +327,20 @@ final class ClassroomOversightController extends Controller
         return view('admin::classrooms.index', [
             'classrooms' => $classrooms,
             'pendingCount' => $pendingCount,
-            'statuses' => ClassroomStatus::cases(),
+            'statuses' => array_values(array_filter(
+                ClassroomStatus::cases(),
+                static fn (ClassroomStatus $status): bool => $status !== ClassroomStatus::Draft,
+            )),
             'purposes' => ClassroomPurpose::cases(),
+            'hosts' => User::query()
+                ->whereIn('id', Classroom::query()->select('host_user_id')->whereNotNull('host_user_id'))
+                ->orderBy('name')
+                ->get(['id', 'name', 'email']),
             'filters' => [
                 'q' => $search,
-                'status' => $request->query('status'),
-                'purpose' => $request->query('purpose'),
-                'host_id' => $request->query('host_id'),
+                'status' => $statuses,
+                'purpose' => $purposes,
+                'host_id' => array_map('strval', $hostIds),
             ],
         ]);
     }

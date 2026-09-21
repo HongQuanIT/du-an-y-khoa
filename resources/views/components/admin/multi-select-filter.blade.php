@@ -61,6 +61,7 @@
     @keydown.escape.window="open = false"
     @question-filters-reset.window="selected = []"
     @user-filters-reset.window="selected = []"
+    @classroom-filters-reset.window="selected = []"
     @resize.window="open && positionMenu()"
     @scroll.window="open && positionMenu()"
 >

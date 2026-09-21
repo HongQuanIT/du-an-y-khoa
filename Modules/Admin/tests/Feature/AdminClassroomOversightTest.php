@@ -80,6 +80,73 @@ final class AdminClassroomOversightTest extends TestCase
         ]);
     }
 
+    public function test_admin_can_filter_classrooms_with_multiple_values(): void
+    {
+        $admin = $this->staffWith2fa(Role::Admin);
+        $firstHost = User::factory()->create();
+        $secondHost = User::factory()->create();
+        $firstHost->assignRole(Role::Instructor->value);
+        $secondHost->assignRole(Role::Instructor->value);
+
+        $pending = app(CreateClassroomAction::class)->handle($firstHost, [
+            'title' => 'Lớp chờ duyệt cần tìm',
+            'purpose' => ClassroomPurpose::FeedbackReview->value,
+        ]);
+
+        $active = app(CreateClassroomAction::class)->handle($secondHost, [
+            'title' => 'Lớp đang hoạt động',
+            'purpose' => ClassroomPurpose::ExamReview->value,
+        ]);
+        $active->update(['status' => ClassroomStatus::Active]);
+
+        $excluded = app(CreateClassroomAction::class)->handle($secondHost, [
+            'title' => 'Lớp không phù hợp',
+            'purpose' => ClassroomPurpose::CommunityReview->value,
+        ]);
+        $excluded->update(['status' => ClassroomStatus::Archived]);
+
+        $this->actingAs($admin)
+            ->withSession([TwoFactorSession::KEY => now()->timestamp])
+            ->withHeader('X-Requested-With', 'XMLHttpRequest')
+            ->get(route('admin.classrooms.index', [
+                'status' => [ClassroomStatus::PendingApproval->value, ClassroomStatus::Active->value],
+                'purpose' => [ClassroomPurpose::FeedbackReview->value, ClassroomPurpose::ExamReview->value],
+                'host_id' => [(string) $firstHost->id, (string) $secondHost->id],
+            ]))
+            ->assertOk()
+            ->assertSee('id="classrooms-results-region"', false)
+            ->assertSee('Lớp chờ duyệt cần tìm')
+            ->assertSee('Lớp đang hoạt động')
+            ->assertViewHas('classrooms', fn ($classrooms): bool => $classrooms->pluck('id')->sort()->values()->all() === collect([
+                $pending->id,
+                $active->id,
+            ])->sort()->values()->all());
+    }
+
+    public function test_admin_can_search_classrooms_by_host_name(): void
+    {
+        $admin = $this->staffWith2fa(Role::Admin);
+        $matchingHost = User::factory()->create(['name' => 'Giảng viên tìm kiếm']);
+        $otherHost = User::factory()->create(['name' => 'Giảng viên khác']);
+        $matchingHost->assignRole(Role::Instructor->value);
+        $otherHost->assignRole(Role::Instructor->value);
+
+        $matching = app(CreateClassroomAction::class)->handle($matchingHost, [
+            'title' => 'Lớp nội khoa',
+            'purpose' => ClassroomPurpose::FeedbackReview->value,
+        ]);
+        app(CreateClassroomAction::class)->handle($otherHost, [
+            'title' => 'Lớp ngoại khoa',
+            'purpose' => ClassroomPurpose::ExamReview->value,
+        ]);
+
+        $this->actingAs($admin)
+            ->withSession([TwoFactorSession::KEY => now()->timestamp])
+            ->get(route('admin.classrooms.index', ['q' => 'tìm kiếm']))
+            ->assertOk()
+            ->assertViewHas('classrooms', fn ($classrooms): bool => $classrooms->pluck('id')->all() === [$matching->id]);
+    }
+
     public function test_admin_can_force_end_live_session(): void
     {
         $admin = $this->staffWith2fa(Role::SuperAdmin);
