@@ -76,7 +76,7 @@ Chú thích: ✅ full · 🔓 giới hạn/preview · ➖ không có · 🔒 c�
 Định dạng: `{resource}.{action}` — ví dụ:
 
 ```
-question.view, question.create, question.update, question.delete, question.submit, question.review, question.publish, question.retire
+question.view, question.create, question.update, question.delete, question.submit, question.review, question.publish, question.adjudicate, question.retire
 session.start, session.submit, session.review
 library.view, library.edit, library.publish
 user.view, user.manage, user.impersonate

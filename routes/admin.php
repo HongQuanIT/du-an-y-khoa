@@ -321,7 +321,7 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
             ->name('questions.transition');
 
         Route::post('/questions/{question}/review-outcomes', [QuestionController::class, 'adjudicateReviewOutcome'])
-            ->middleware('permission:question.update|question.publish|question.reject')
+            ->middleware('permission:'.Permission::QuestionAdjudicate->value)
             ->name('questions.review-outcomes');
 
         Route::middleware('permission:question.reject|'.Permission::QuestionPublish->value)->group(function (): void {

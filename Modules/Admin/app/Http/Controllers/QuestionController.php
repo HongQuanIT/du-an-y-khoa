@@ -381,14 +381,7 @@ final class QuestionController extends Controller
         $this->authorizePermission(Permission::QuestionView);
         QuestionAccess::authorizeView($this->actor(), $question);
 
-        abort_unless(
-            $this->actor()->canAny([
-                Permission::QuestionUpdate->value,
-                Permission::QuestionPublish->value,
-                'question.reject',
-            ]),
-            403,
-        );
+        abort_unless($this->actor()->can(Permission::QuestionAdjudicate->value), 403);
 
         $data = $request->validate([
             'kind' => ['required', 'string', Rule::in(['instructor', 'flag'])],
@@ -533,11 +526,7 @@ final class QuestionController extends Controller
             'pendingReview' => $pendingReview,
             'latestRejectedReview' => $latestRejectedReview,
             'canViewAudit' => $this->actor()->can('audit_log.view'),
-            'canAdjudicateQa' => $this->actor()->canAny([
-                Permission::QuestionUpdate->value,
-                Permission::QuestionPublish->value,
-                'question.reject',
-            ]),
+            'canAdjudicateQa' => $this->actor()->can(Permission::QuestionAdjudicate->value),
             'reviewTimeline' => $question->exists
                 ? app(\Modules\QuestionBank\Support\QuestionReviewTimeline::class)->build($question)
                 : null,

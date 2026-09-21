@@ -31,7 +31,7 @@ return [
                 'permission' => ['view'],
             ],
             'question_bank' => [
-                'question' => ['view_any', 'view', 'create', 'clone', 'update', 'delete', 'submit', 'flag', 'publish', 'reject', 'import', 'export'],
+                'question' => ['view_any', 'view', 'create', 'clone', 'update', 'delete', 'submit', 'flag', 'publish', 'reject', 'adjudicate', 'import', 'export'],
                 'question_flag' => ['view'],
                 'question_version' => ['view', 'restore'],
                 'question_feedback' => ['view', 'update'],
@@ -158,6 +158,7 @@ return [
         'user.password_reset',
         'user.two_factor_manage',
         'question.publish',
+        'question.adjudicate',
         'question.restore',
         'classroom_oversight.force_end',
         'billing_gateway.update',
