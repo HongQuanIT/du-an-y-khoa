@@ -32,6 +32,7 @@ use Modules\QuestionBank\Models\QuestionFeedback;
 use Modules\QuestionBank\Models\QuestionImportBatch;
 use Modules\QuestionBank\Models\QuestionInstructorReview;
 use Modules\QuestionBank\Models\QuestionReviewerFlag;
+use Modules\QuestionBank\Models\QuestionVersion;
 use Modules\QuestionBank\Support\QuestionExportLimits;
 use Modules\QuestionBank\Support\QuestionReviewComparison;
 
@@ -59,6 +60,13 @@ final class QuestionController extends Controller
                     'pendingReviewRequest.requester:id,name',
                     'reviewRequests.reviewer:id,name',
                     'clonedFrom:id,code,stem',
+                ])
+                ->addSelect([
+                    'version_updated_at' => QuestionVersion::query()
+                        ->select('created_at')
+                        ->whereColumn('question_versions.question_id', 'questions.id')
+                        ->whereColumn('question_versions.version', 'questions.version')
+                        ->limit(1),
                 ])
                 ->withCount([
                     'feedback',

@@ -2,6 +2,12 @@
 
 ## 2026-09-21
 
+### Fix — List câu hỏi: nháp không hiện «Vòng N»
+
+- Cột bản gửi: trạng thái nháp hiện **Bản nháp** (thay «Không có bản gửi»).
+- Ẩn «Vòng N» khi câu đang nháp — số vòng lịch sử không còn là vòng đang duyệt.
+- List: «Cập nhật» cạnh phiên bản lấy thời điểm snapshot `question_versions`, không phải lúc sửa bản nháp.
+
 ### UX — Chuẩn hóa tab trạng thái và thao tác tìm kiếm Hộp thư liên hệ
 
 - Chuyển nhóm trạng thái thành thanh tab liền mạch, cân đều trên màn hình lớn và hỗ trợ hiển thị nhiều trạng thái đang chọn.

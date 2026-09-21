@@ -103,7 +103,7 @@ Import: commit tạo hàng loạt `draft`.
 - Nguồn: `question_instructor_reviews` + `question_reviewer_flags` + `question_workflow_events` (`submit` / `admin_reject` / `publish`).
 - UI form: partial «Lịch sử duyệt» nhóm theo `review_cycle` — ai duyệt, ai gắn cờ, ai trả về, ghi chú, thời gian.
 - Khi publish: ghi `snapshot.review_pipeline` (cycle, reject count, instructor, 2 cờ, publisher) vào `question_versions`.
-- List admin: nhãn `pipelineProgressLabel()` = «Vòng N · X lần trả về» **chỉ khi còn trong pipeline** (nháp/chờ duyệt/chờ XB/từ chối). Đã xuất bản / private / retire → không hiện (tránh hiểu nhầm còn đang vòng duyệt).
+- List admin: nhãn `pipelineProgressLabel()` = «Vòng N · X lần trả về» **chỉ khi đang trong pipeline** (chờ GV / chờ cờ / chờ XB / từ chối). Nháp, đã xuất bản, private, retire → không hiện «Vòng N». Cột bản gửi: nháp → «Bản nháp».
 - Timeline «Lịch sử duyệt»: nhóm theo **phiên bản** — «Bản hiện tại» (trạng thái working copy + các vòng sau XB gần nhất) và từng **Phiên bản N đã xuất bản** (các vòng duyệt dẫn tới XB đó). Mỗi segment mở/đóng; trong segment là các vòng + QA.
 
 ### 5.1c QA chất lượng duyệt (Admin)

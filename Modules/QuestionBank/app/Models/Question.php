@@ -439,7 +439,7 @@ class Question extends Model
 
     /**
      * Compact label for admin list while the question is still in the review pipeline.
-     * Hidden after publish/private/retire — «Vòng N» would look like an active round.
+     * Hidden for draft / published / private / retire — «Vòng N» would look like an active round.
      */
     public function pipelineProgressLabel(): string
     {
@@ -447,7 +447,9 @@ class Question extends Model
             ? $this->status
             : QuestionStatus::tryFrom((string) $this->status);
 
+        // Nháp không còn trong pipeline — «Vòng N» là số vòng lịch sử, dễ hiểu nhầm đang duyệt.
         if (in_array($status, [
+            QuestionStatus::Draft,
             QuestionStatus::Published,
             QuestionStatus::Private,
             QuestionStatus::Retired,
@@ -512,14 +514,15 @@ class Question extends Model
 
     /**
      * Whether the editor has a submitted (or rejected) working copy, and where it sits.
-     * Draft / unpublished copies are "Không có bản gửi" no matter how many times they were saved.
+     * Draft working copies are «Bản nháp» even if a published version is still live.
      */
     public function editorialSubmissionLabel(): string
     {
         $isUpdate = (int) $this->published_version > 0;
 
         return match ($this->status) {
-            QuestionStatus::InReview => $isUpdate ? 'Đang chờ giảng viên' : 'Đang chờ giảng viên',
+            QuestionStatus::Draft => 'Bản nháp',
+            QuestionStatus::InReview => 'Đang chờ giảng viên',
             QuestionStatus::InFlagReview => $isUpdate ? 'Đang gắn cờ cập nhật' : 'Đang chờ gắn cờ',
             QuestionStatus::PendingPublish => $isUpdate ? 'Cập nhật đủ phiếu' : 'Đủ phiếu · chờ xuất bản',
             QuestionStatus::Rejected => $this->isInstructorRejection()

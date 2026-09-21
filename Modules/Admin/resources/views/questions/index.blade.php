@@ -445,8 +445,15 @@
                                             {{ \Illuminate\Support\Str::limit(strip_tags($question->stem), 140) }}
                                         </p>
                                         <p class="mt-1 font-label-sm text-on-surface-variant">
+                                            @php
+                                                $versionAt = filled($question->version_updated_at ?? null)
+                                                    ? \Illuminate\Support\Carbon::parse($question->version_updated_at)
+                                                    : null;
+                                            @endphp
                                             {{ $question->version > 0 ? 'Phiên bản ' . $question->version : 'Chưa có phiên bản' }}
-                                            · Cập nhật {{ $question->updated_at?->diffForHumans() }}
+                                            @if ($versionAt)
+                                                · Cập nhật {{ $versionAt->diffForHumans() }}
+                                            @endif
                                         </p>
                                     </a>
 @endif
