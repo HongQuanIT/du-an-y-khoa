@@ -26,7 +26,7 @@ Route::middleware(['auth', 'learner', 'permission:classroom.view'])
     ->scopeBindings()
     ->group(function (): void {
         Route::get('/', ClassroomIndexController::class)
-            ->middleware('permission:classroom.view|classroom.join|classroom.leave')
+            ->middleware('permission:classroom.view')
             ->name('index');
 
         Route::get('/{classroom}', ClassroomShowController::class)->middleware('permission:classroom.view')->name('show');

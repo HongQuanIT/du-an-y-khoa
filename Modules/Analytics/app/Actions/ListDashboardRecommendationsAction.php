@@ -33,30 +33,42 @@ final class ListDashboardRecommendationsAction
                 ]),
             ]);
 
+        if (! $user->can('question.view')) {
+            $recommendations = collect();
+        }
+
         if ($recommendations->isEmpty()) {
-            $recommendations = collect([
-                [
+            $recommendations = collect();
+
+            if ($user->can('question.view')) {
+                $recommendations->push([
                     'eyebrow' => 'Bắt đầu từ đây',
                     'title' => 'Tạo phiên luyện tập đầu tiên',
                     'description' => 'Chọn chủ đề và số câu phù hợp với mục tiêu của bạn.',
                     'icon' => 'quiz',
                     'url' => route('qbank.create'),
-                ],
-                [
+                ]);
+            }
+
+            if ($user->can('study_plan.view')) {
+                $recommendations->push([
                     'eyebrow' => 'Học đều mỗi ngày',
                     'title' => 'Thiết lập kế hoạch học tập',
                     'description' => 'Chia mục tiêu lớn thành những nhiệm vụ nhỏ mỗi ngày.',
                     'icon' => 'event_note',
                     'url' => route('study-plan.index'),
-                ],
-                [
+                ]);
+            }
+
+            if ($user->can('classroom.view')) {
+                $recommendations->push([
                     'eyebrow' => 'Tham gia học tập',
                     'title' => 'Lớp học trực tuyến',
                     'description' => 'Tham gia các buổi học tương tác cùng giảng viên và bạn bè.',
                     'icon' => 'cast_for_education',
                     'url' => route('classroom.index'),
-                ],
-            ]);
+                ]);
+            }
         }
 
         return $recommendations->take($limit)->values()->all();

@@ -8,34 +8,15 @@
 - Route `POST /admin/questions/{id}/review-outcomes` chỉ chấp nhận `question.adjudicate` (mặc định `admin` + `super_admin`; không cấp Editor).
 - Nhãn ma trận RBAC: «Đánh dấu QA duyệt».
 
+### Fix — RBAC: Ẩn sidebar portal Học viên theo quyền xem từng chức năng
+
+- Yêu cầu nghiêm ngặt quyền `*.view` chính cho các mục điều hướng Sidebar của học viên: Tổng quan (`learner_dashboard.view`), Ngân hàng câu hỏi (`question.view`), Kế hoạch học tập (`study_plan.view`), Lớp học (`classroom.view`), Kỳ thi (`exam.view`).
+- Khi admin tắt quyền xem của chức năng nào, mục tương ứng trên Sidebar sẽ bị ẩn đi hoàn toàn, không phụ thuộc vào các quyền hành động con.
+- Lọc danh sách khuyến nghị trên Dashboard (`ListDashboardRecommendationsAction`) để chỉ hiển thị các đề xuất thuộc module mà học viên có quyền xem.
+- Chuẩn hóa middleware route `/classes`, `/qbank`, `/study-plan` yêu cầu trực tiếp quyền `*.view` tương ứng.
+- Bổ sung test tự động `LearnerSidebarPermissionsTest`.
+
 ## 2026-09-20
-
-### Fix — Khôi phục phiên bản không tăng version
-
-- Editor khôi phục snapshot chỉ áp vào **working copy** + về **nháp**; không tạo `question_versions`, không +version.
-- Version chỉ tăng khi Admin xuất bản (khớp SRS § versioning).
-
-### UX — Editor: gửi duyệt + chọn giảng viên
-
-- Bỏ dropdown «Trạng thái» lẫn Lưu/Gửi duyệt; panel **Gửi duyệt chuyên môn** với CTA rõ: «Gửi duyệt» / «Lưu nháp» (hoặc «Rút về nháp»).
-- Checklist bài học + GV trước khi submit; chặn gửi nếu thiếu.
-- Chọn GV dropdown (lọc theo bài học); đưa picker ra khỏi «Phân loại» vào panel gửi duyệt.
-- API `eligible-instructors` trả thêm `subjects`; form load `assignedInstructor.instructorSubjects`.
-- Panel **Thông tin**: bỏ «Bản gửi duyệt» + «Tiến độ duyệt» (vòng N dễ hiểu nhầm); thêm GV được gán, phiên bản QBank, thời gian xuất bản bản đang phục vụ.
-
-### Feat — Báo cáo QA duyệt: metric reviewer + giảng viên
-
-- `content.review-qa`: KPI/bảng **Reviewer** (tổng cờ, đỏ, xanh, gắn sai) và **Giảng viên** (tổng duyệt, approve, reject, duyệt sai = miss + over_reject).
-- Biểu đồ hiệu suất reviewer / giảng viên (đúng vs sai theo người), thay trend cờ theo ngày.
-- Gắn sai = `outcome=false_positive` (đỏ oan hoặc xanh sai); publish xác nhận cờ xanh không tranh chấp → `confirmed`.
-- Form trả về: nhãn «Cờ đỏ đúng / Cờ đỏ gắn sai» + cascade GV miss; SRS §5.1c mô tả đánh dấu theo vòng trên timeline.
-- **Đánh dấu QA trên lịch sử duyệt:** Ajax gọn (select + ghi chú + Lưu QA); sau khi lưu khóa input, hiện badge/ghi chú + **Mở QA**. Approve sai → `miss`, reject sai → `over_reject` (cùng nhãn Duyệt sai).
-- List câu hỏi: ẩn «Vòng N» khi đã xuất bản / private / retire (tránh hiểu nhầm còn đang duyệt).
-- Teach «Đã duyệt»: ẩn câu đã xuất bản / private / retire — chỉ còn câu đang chờ reviewer hoặc xuất bản.
-- So sánh phiên bản: highlight diff khi stem/HTML thay đổi; thêm style `question-diff-del` / `question-diff-ins`.
-- Timeline duyệt: nhóm theo **Bản hiện tại** + từng **Phiên bản N**; bản QBank gắn «Bản đang dùng», bản cũ «Không còn phục vụ»; số vòng đánh lại từ 1 trong mỗi phiên bản.
-
-## 2026-09-19
 
 ### Refactor — RBAC: Tinh gọn quyền kỳ thi trên portal Admin
 
