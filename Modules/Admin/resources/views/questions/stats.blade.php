@@ -27,7 +27,7 @@
                     <span class="mx-1">·</span>
                     {{ $question->status->label() }}
                     <span class="mx-1">·</span>
-                    {{ $question->is_free ? 'Free' : 'Premium' }}
+                    {{ $question->is_free ? 'Miễn phí' : 'Chỉ Premium' }}
                 </p>
             </div>
         </div>

@@ -2,6 +2,10 @@
 
 ## 2026-09-21
 
+### UX — List câu hỏi: nhãn Miễn phí thay Gói truy cập
+
+- Bộ lọc / cột / KPI list và trang thống kê: bỏ Free–Premium, dùng **Miễn phí** (Có/Không).
+
 ### Refactor — Câu ưu tiên & bài thi lấy từ ngân hàng đã xuất bản
 
 - Đổi `exam_flag` → `is_priority` (nhãn **Câu ưu tiên**): đánh dấu câu đề Bộ / kỳ thi gần đây cho livestream chữa đề.

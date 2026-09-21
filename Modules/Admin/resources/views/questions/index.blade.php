@@ -228,7 +228,7 @@
                             <span class="material-symbols-outlined text-[22px]" aria-hidden="true">stars</span>
                         </div>
                         <div class="min-w-0">
-                            <p class="truncate text-label-sm font-medium text-on-surface-variant">Free</p>
+                            <p class="truncate text-label-sm font-medium text-on-surface-variant">Miễn phí</p>
                             <p class="text-headline-sm font-bold text-on-surface">{{ number_format($stats['free']) }}
                             </p>
                         </div>
@@ -301,11 +301,11 @@
                 <div class="sm:col-span-2">
                     <x-admin.multi-select-filter
                         name="is_free"
-                        label="Gói truy cập"
+                        label="Miễn phí"
                         placeholder="Tất cả"
                         :options="[
-                            ['id' => '1', 'label' => 'Free'],
-                            ['id' => '0', 'label' => 'Premium'],
+                            ['id' => '1', 'label' => 'Có'],
+                            ['id' => '0', 'label' => 'Không'],
                         ]"
                         :selected="$filters['is_free'] ?? []"
                     />
@@ -420,7 +420,7 @@
                             <th scope="col" class="w-[160px] min-w-[140px] px-4 py-3.5" x-show="cols.origin" x-cloak>
                                 Nguồn gốc</th>
                             <th scope="col" class="w-[110px] min-w-[100px] px-4 py-3.5 text-center" x-show="cols.access"
-                                x-cloak>Truy cập</th>
+                                x-cloak>Miễn phí</th>
                             <th scope="col" class="w-[110px] min-w-[90px] px-4 py-3.5 text-end" x-show="cols.attempts"
                                 x-cloak>Lượt làm</th>
                             <th scope="col" class="w-[100px] min-w-[90px] px-4 py-3.5 text-end"
@@ -600,13 +600,13 @@
                                     x-show="cols.access" x-cloak>
                                     @if($question->is_free)
                                         <span
-                                            class="inline-flex items-center gap-1 rounded-full border border-outline-variant px-2.5 py-0.5 text-xs font-medium text-on-surface">
-                                            Free
+                                            class="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
+                                            Có
                                         </span>
                                     @else
                                         <span
-                                            class="inline-flex items-center gap-1 rounded-full border border-outline-variant px-2.5 py-0.5 text-xs font-medium text-on-surface">
-                                            Premium
+                                            class="inline-flex items-center gap-1 rounded-full border border-outline-variant px-2.5 py-0.5 text-xs font-medium text-on-surface-variant">
+                                            Không
                                         </span>
                                     @endif
                                 </td>
@@ -766,7 +766,7 @@
                 { key: 'status', label: 'Trạng thái' },
                 { key: 'review_status', label: 'Bản gửi duyệt' },
                 { key: 'origin', label: 'Nguồn gốc' },
-                { key: 'access', label: 'Truy cập' },
+                { key: 'access', label: 'Miễn phí' },
                 { key: 'attempts', label: 'Lượt làm' },
                 { key: 'correct_rate', label: '% đúng' },
                 { key: 'reports', label: 'Phản hồi' },
