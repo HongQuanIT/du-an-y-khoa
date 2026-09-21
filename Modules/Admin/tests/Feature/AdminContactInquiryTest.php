@@ -116,6 +116,78 @@ final class AdminContactInquiryTest extends TestCase
             ->assertSee('Liên hệ');
     }
 
+    public function test_admin_can_filter_contacts_with_ajax_and_multi_select(): void
+    {
+        $admin = $this->staffUser(Role::Admin);
+        $otherAdmin = $this->staffUser(Role::Admin);
+
+        $inquiry1 = ContactInquiry::query()->create([
+            'reference' => 'INQ-TEST-001',
+            'name' => 'Nguyen Van A',
+            'email' => 'a@example.com',
+            'phone' => '0912345671',
+            'subject' => ContactSubject::Payment,
+            'message' => 'Loi thanh toan',
+            'status' => ContactInquiryStatus::New,
+            'assigned_admin_id' => null,
+            'ip_address' => '127.0.0.1',
+            'user_agent' => 'PHPUnit',
+        ]);
+
+        $inquiry2 = ContactInquiry::query()->create([
+            'reference' => 'INQ-TEST-002',
+            'name' => 'Tran Van B',
+            'email' => 'b@example.com',
+            'phone' => '0912345672',
+            'subject' => ContactSubject::Account,
+            'message' => 'Loi he thong',
+            'status' => ContactInquiryStatus::InProgress,
+            'assigned_admin_id' => $admin->id,
+            'ip_address' => '127.0.0.1',
+            'user_agent' => 'PHPUnit',
+        ]);
+
+        $inquiry3 = ContactInquiry::query()->create([
+            'reference' => 'INQ-TEST-003',
+            'name' => 'Le Van C',
+            'email' => 'c@example.com',
+            'phone' => '0912345673',
+            'subject' => ContactSubject::Partnership,
+            'message' => 'Gop y noi dung',
+            'status' => ContactInquiryStatus::Resolved,
+            'assigned_admin_id' => $otherAdmin->id,
+            'ip_address' => '127.0.0.1',
+            'user_agent' => 'PHPUnit',
+        ]);
+
+        // 1. AJAX filter with multiple statuses (New, InProgress)
+        $response = $this->actingAsStaff($admin)
+            ->getJson(route('admin.contacts.index', [
+                'status' => [ContactInquiryStatus::New->value, ContactInquiryStatus::InProgress->value],
+            ]), ['X-Requested-With' => 'XMLHttpRequest']);
+
+        $response->assertOk()
+            ->assertJsonStructure(['table_html', 'statusCounts', 'openCount', 'newCount']);
+
+        $tableHtml = $response->json('table_html');
+        $this->assertStringContainsString('INQ-TEST-001', $tableHtml);
+        $this->assertStringContainsString('INQ-TEST-002', $tableHtml);
+        $this->assertStringNotContainsString('INQ-TEST-003', $tableHtml);
+
+        // 2. AJAX filter with multiple subjects and assigned (unassigned + me)
+        $response = $this->actingAsStaff($admin)
+            ->getJson(route('admin.contacts.index', [
+                'subject' => [ContactSubject::Payment->value],
+                'assigned' => ['unassigned'],
+            ]), ['X-Requested-With' => 'XMLHttpRequest']);
+
+        $response->assertOk();
+        $tableHtml = $response->json('table_html');
+        $this->assertStringContainsString('INQ-TEST-001', $tableHtml);
+        $this->assertStringNotContainsString('INQ-TEST-002', $tableHtml);
+        $this->assertStringNotContainsString('INQ-TEST-003', $tableHtml);
+    }
+
     private function makeInquiry(): ContactInquiry
     {
         return ContactInquiry::query()->create([

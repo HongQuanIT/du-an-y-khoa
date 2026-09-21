@@ -2,6 +2,14 @@
 
 ## 2026-09-21
 
+### Feat — Admin: Bộ lọc AJAX đa lựa chọn cho Hộp thư liên hệ
+
+- Chuyển đổi bộ lọc Trạng thái, Chủ đề và Phân công thành dropdown đa chọn (Alpine.js multi-select) hiển thị số lượng badge đã chọn.
+- Thao tác chọn trên frontend không reload trang; chỉ gọi AJAX khi bấm nút "Lọc" hoặc "Xóa lọc".
+- Controller hỗ trợ lọc mảng (`whereIn`) và trả về partial table kèm thống kê KPI khi có request AJAX.
+- Hỗ trợ phân trang bằng AJAX và đồng bộ URL với `history.pushState`.
+- Bổ sung test tự động kiểm thử tính năng lọc AJAX đa chọn trong `AdminContactInquiryTest`.
+
 ### Feat — Permission `question.adjudicate` (QA duyệt)
 
 - Quyền riêng để Admin đánh dấu GV duyệt đúng/sai và reviewer gắn cờ đúng/sai trên «Lịch sử duyệt».
