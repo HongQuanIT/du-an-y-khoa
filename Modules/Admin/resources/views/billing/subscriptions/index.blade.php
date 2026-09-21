@@ -1,4 +1,5 @@
 <x-layouts.admin title="Lịch sử Premium">
+    <div x-data="adminSubscriptionFilter()" class="space-y-6">
     <x-admin.page-header title="Lịch sử Premium"
         description="Các lần kích hoạt gói trả phí của học viên — theo SKU và nguồn.">
     </x-admin.page-header>
@@ -8,75 +9,74 @@
     <x-admin.flash />
 
     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.billing.subscriptions.index'))
-<form method="get" action="{{ route('admin.billing.subscriptions.index') }}"
-        class="mb-6 grid grid-cols-1 gap-3 rounded-xl border border-outline-variant bg-surface p-4 sm:grid-cols-2 lg:grid-cols-6">
-        <div class="lg:col-span-2">
-            <label class="mb-1 block font-label-sm text-on-surface-variant" for="q">Tìm kiếm học viên</label>
-            <input id="q" name="q" value="{{ $filters['q'] }}" type="search" placeholder="Tên hoặc email"
-                class="w-full rounded-lg border-none bg-surface-container-low px-3 py-2 font-body-sm focus:ring-2 focus:ring-primary">
-        </div>
+<form method="get" action="{{ route('admin.billing.subscriptions.index') }}" role="search"
+        aria-labelledby="subscription-filter-heading" aria-describedby="subscription-filter-description"
+        @submit.prevent="applyFilters()"
+        class="mb-6 space-y-4 rounded-xl border border-outline-variant bg-surface p-4">
         <div>
-            <label class="mb-1 block font-label-sm text-on-surface-variant" for="status">Trạng thái</label>
-            <select id="status" name="status"
-                class="w-full rounded-lg border-none bg-surface-container-low px-3 py-2 font-body-sm focus:ring-2 focus:ring-primary">
-                <option value="active" @selected($filters['status'] === 'active')>Đang hiệu lực</option>
-                <option value="expired" @selected($filters['status'] === 'expired')>Đã hết hạn</option>
-                <option value="all" @selected($filters['status'] === 'all')>Tất cả</option>
-            </select>
+            <h2 id="subscription-filter-heading" class="font-label-lg font-semibold text-on-surface">Tìm kiếm lịch sử Premium</h2>
+            <p id="subscription-filter-description" class="mt-1 font-body-sm text-on-surface-variant">Tìm theo tên hoặc email học viên, sau đó lọc theo trạng thái, gói, SKU và nguồn kích hoạt.</p>
         </div>
-        <div>
-            <label class="mb-1 block font-label-sm text-on-surface-variant" for="plan">Gói</label>
-            <select id="plan" name="plan"
-                class="w-full rounded-lg border-none bg-surface-container-low px-3 py-2 font-body-sm focus:ring-2 focus:ring-primary">
-                <option value="">Tất cả</option>
-                @foreach ($plans as $plan)
-                    <option value="{{ $plan->id }}" @selected((string) $filters['plan'] === (string) $plan->id)>{{ $plan->name }}</option>
-                @endforeach
-            </select>
+        <div class="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 xl:grid-cols-[minmax(280px,1.5fr)_repeat(4,minmax(145px,1fr))]">
+            <div class="sm:col-span-2 xl:col-auto">
+                <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant" for="q">Tìm kiếm học viên</label>
+                <div class="relative">
+                    <span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[19px] text-on-surface-variant" aria-hidden="true">search</span>
+                    <input id="q" name="q" value="{{ $filters['q'] }}" type="search" placeholder="Tên hoặc email" autocomplete="off"
+                        class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low py-2 pl-10 pr-3 font-body-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                </div>
+            </div>
+            <div class="min-w-0">
+                <x-admin.multi-select-filter name="status" label="Trạng thái" placeholder="Tất cả"
+                    :options="[
+                        ['id' => 'active', 'label' => 'Đang hiệu lực'],
+                        ['id' => 'expired', 'label' => 'Đã hết hạn'],
+                    ]"
+                    :selected="$filters['status']" />
+            </div>
+            <div class="min-w-0">
+                <x-admin.multi-select-filter name="plan" label="Gói" placeholder="Tất cả"
+                    :options="$plans->map(fn ($plan) => ['id' => $plan->id, 'label' => $plan->name])->all()"
+                    :selected="$filters['plan']" />
+            </div>
+            <div class="min-w-0">
+                <x-admin.multi-select-filter name="sku" label="SKU" placeholder="Tất cả"
+                    :options="collect([['id' => 'unassigned', 'label' => 'Chưa gắn SKU']])->merge($prices->map(fn ($price) => ['id' => $price->id, 'label' => $price->plan?->name.' — '.$price->label]))->all()"
+                    :selected="$filters['sku']" />
+            </div>
+            <div class="min-w-0">
+                <x-admin.multi-select-filter name="source" label="Nguồn" placeholder="Tất cả"
+                    :options="collect($sourceLabels)->map(fn ($label, $value) => ['id' => $value, 'label' => $label])->values()->all()"
+                    :selected="$filters['source']" />
+            </div>
         </div>
-        <div>
-            <label class="mb-1 block font-label-sm text-on-surface-variant" for="sku">SKU</label>
-            <select id="sku" name="sku"
-                class="w-full rounded-lg border-none bg-surface-container-low px-3 py-2 font-body-sm focus:ring-2 focus:ring-primary">
-                <option value="">Tất cả</option>
-                <option value="unassigned" @selected($filters['sku'] === 'unassigned')>Chưa gắn SKU</option>
-                @foreach ($prices as $price)
-                    <option value="{{ $price->id }}" @selected((string) $filters['sku'] === (string) $price->id)>
-                        {{ $price->plan?->name }} — {{ $price->label }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
-        <div>
-            <label class="mb-1 block font-label-sm text-on-surface-variant" for="source">Nguồn</label>
-            <select id="source" name="source"
-                class="w-full rounded-lg border-none bg-surface-container-low px-3 py-2 font-body-sm focus:ring-2 focus:ring-primary">
-                <option value="">Tất cả</option>
-                @foreach ($sourceLabels as $value => $label)
-                    <option value="{{ $value }}" @selected($filters['source'] === $value)>{{ $label }}</option>
-                @endforeach
-            </select>
-        </div>
-        <div class="flex items-end gap-2 sm:col-span-2 lg:col-span-6">
-            <button type="submit"
-                class="rounded-lg bg-primary px-4 py-2 font-label-md text-on-primary hover:opacity-90">Lọc</button>
-            <a href="{{ route('admin.billing.subscriptions.index') }}"
-                class="rounded-lg px-4 py-2 font-label-md text-on-surface-variant hover:bg-surface-container-low">Xóa lọc</a>
+        <div class="flex justify-end gap-2 border-t border-outline-variant pt-4">
+                <button type="submit" :disabled="loading" aria-label="Tìm kiếm lịch sử Premium"
+                    class="inline-flex h-11 w-36 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 font-label-md font-medium text-on-primary transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50">
+                    <span class="material-symbols-outlined text-[18px]" aria-hidden="true" x-text="loading ? 'progress_activity' : 'search'">search</span>
+                    <span class="whitespace-nowrap" x-text="loading ? 'Đang tải' : 'Tìm kiếm'">Tìm kiếm</span>
+                </button>
+                <button type="button" @click="resetFilters(@js(route('admin.billing.subscriptions.index')))" :disabled="loading" aria-label="Xoá bộ lọc lịch sử Premium"
+                    class="inline-flex h-11 w-28 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-outline-variant bg-surface px-3 font-label-md font-medium text-on-surface-variant transition hover:bg-surface-container-low focus-visible:ring-2 focus-visible:ring-primary/20 disabled:opacity-50">
+                    <span class="material-symbols-outlined text-[18px]" aria-hidden="true">delete</span><span>Xoá</span>
+                </button>
         </div>
     </form>
 @endif
 
+    <div id="subscriptions-results-region">
     <div class="overflow-x-auto rounded-xl border border-outline-variant bg-surface">
         <table class="min-w-full text-left font-body-sm">
+            <caption class="sr-only">Danh sách lịch sử kích hoạt Premium của học viên</caption>
             <thead class="border-b border-outline-variant bg-surface-container-low font-label-md text-on-surface-variant">
                 <tr>
-                    <th class="px-4 py-3">Học viên</th>
-                    <th class="px-4 py-3">Gói</th>
-                    <th class="px-4 py-3">SKU</th>
-                    <th class="px-4 py-3">Nguồn</th>
-                    <th class="px-4 py-3">Bắt đầu</th>
-                    <th class="px-4 py-3">Kết thúc</th>
-                    <th class="px-4 py-3">Trạng thái</th>
+                    <th scope="col" class="px-4 py-3">Học viên</th>
+                    <th scope="col" class="px-4 py-3">Gói</th>
+                    <th scope="col" class="px-4 py-3">SKU</th>
+                    <th scope="col" class="px-4 py-3">Nguồn</th>
+                    <th scope="col" class="px-4 py-3">Bắt đầu</th>
+                    <th scope="col" class="px-4 py-3">Kết thúc</th>
+                    <th scope="col" class="px-4 py-3">Trạng thái</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-outline-variant/60">
@@ -130,8 +130,62 @@
     </div>
 
     @if ($subscriptions->hasPages())
-        <div class="mt-4">
+        <div class="mt-4" id="subscriptions-pagination">
             {{ $subscriptions->links() }}
         </div>
     @endif
+    </div>
+
+    <script>
+        function adminSubscriptionFilter() {
+            return {
+                loading: false,
+                filterForm() { return document.querySelector('form[role="search"]'); },
+                async applyFilters() {
+                    const form = this.filterForm();
+                    if (!form) return;
+                    const url = new URL(form.action, window.location.origin);
+                    const params = new URLSearchParams(new FormData(form));
+                    params.delete('page');
+                    url.search = params.toString();
+                    await this.fetchResults(url.toString());
+                },
+                async resetFilters(url) {
+                    const form = this.filterForm();
+                    form?.reset();
+                    const query = form?.querySelector('[name="q"]');
+                    if (query) query.value = '';
+                    window.dispatchEvent(new CustomEvent('subscription-filters-reset'));
+                    await this.fetchResults(url);
+                },
+                async fetchResults(url) {
+                    this.loading = true;
+                    try {
+                        const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } });
+                        if (!response.ok) throw new Error('Lỗi tải lịch sử Premium');
+                        const parsed = new DOMParser().parseFromString(await response.text(), 'text/html');
+                        const next = parsed.getElementById('subscriptions-results-region');
+                        const current = document.getElementById('subscriptions-results-region');
+                        if (!next || !current) throw new Error('Không tìm thấy vùng kết quả lịch sử Premium');
+                        current.replaceWith(next);
+                        window.history.pushState({}, '', url);
+                        this.bindPagination();
+                    } catch (error) {
+                        console.error(error);
+                        alert('Có lỗi xảy ra khi tải lịch sử Premium. Vui lòng thử lại.');
+                    } finally { this.loading = false; }
+                },
+                bindPagination() {
+                    document.querySelectorAll('#subscriptions-pagination a').forEach((link) => {
+                        link.addEventListener('click', (event) => {
+                            event.preventDefault();
+                            if (link.href) this.fetchResults(link.href);
+                        });
+                    });
+                },
+                init() { this.bindPagination(); },
+            };
+        }
+    </script>
+    </div>
 </x-layouts.admin>

@@ -158,13 +158,15 @@ final class AdminBillingSubscriptionStatsTest extends TestCase
         ]);
 
         $this->actingAsStaff($admin)
+            ->withHeader('X-Requested-With', 'XMLHttpRequest')
             ->get(route('admin.billing.subscriptions.index', [
-                'plan' => $premium->id,
-                'sku' => $monthly->id,
-                'source' => 'purchase',
-                'status' => 'active',
+                'plan' => [$premium->id],
+                'sku' => [$monthly->id],
+                'source' => ['purchase'],
+                'status' => ['active'],
             ]))
             ->assertOk()
+            ->assertSee('id="subscriptions-results-region"', false)
             ->assertSee('Nguyen Van A')
             ->assertDontSee('Other User');
 
