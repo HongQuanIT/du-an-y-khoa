@@ -11,21 +11,16 @@
     <x-admin.flash />
 
     <div x-data="adminContactFilter()" x-init="init()" class="space-y-6">
-        <!-- KPI Stat Cards -->
-        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.contacts.index'))
-                <button type="button" @click="filterByStatusKpi('')"
-                    class="rounded-xl border p-4 text-left transition hover:border-primary hover:bg-primary/5"
-                    :class="statuses.length === 0 ? 'border-primary bg-primary/5 shadow-xs' : 'border-outline-variant bg-surface'">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">Đang mở</p>
-                    <p id="kpi-count-open" class="mt-2 text-2xl font-bold text-on-surface">{{ number_format($openCount) }}</p>
-                </button>
-            @endif
+        <!-- Status filters -->
+        <div class="grid overflow-hidden rounded-xl border border-outline-variant bg-surface sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5" role="group"
+            aria-label="Lọc liên hệ theo trạng thái">
             @foreach ($statuses as $status)
                 @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.contacts.index'))
                     <button type="button" @click="filterByStatusKpi('{{ $status->value }}')"
-                        class="rounded-xl border p-4 text-left transition hover:border-primary hover:bg-primary/5"
-                        :class="statuses.length === 1 && statuses.includes('{{ $status->value }}') ? 'border-primary bg-primary/5 shadow-xs' : 'border-outline-variant bg-surface'">
+                        :aria-pressed="statuses.includes('{{ $status->value }}')"
+                        title="Tìm kiếm liên hệ {{ strtolower($status->label()) }}"
+                        class="min-h-32 border-b border-outline-variant p-4 text-left transition hover:bg-primary/5 focus:z-10 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:border-r last:border-r-0 lg:border-b-0"
+                        :class="statuses.includes('{{ $status->value }}') ? 'bg-primary/5 text-primary' : 'text-on-surface'">
                         <p class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">{{ $status->label() }}</p>
                         <p id="kpi-count-{{ $status->value }}" class="mt-2 text-2xl font-bold text-on-surface">{{ number_format((int) ($statusCounts[$status->value] ?? 0)) }}</p>
                     </button>
@@ -35,7 +30,7 @@
 
         @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.contacts.index'))
             <!-- Filter Bar -->
-            <form @submit.prevent="applyFilter()" role="search" aria-label="Lọc liên hệ"
+            <form @submit.prevent="applyFilter()" role="search" aria-label="Tìm kiếm liên hệ"
                 class="grid grid-cols-1 items-end gap-4 rounded-xl border border-outline-variant bg-surface p-4 md:grid-cols-12">
                 
                 <!-- Search Keyword -->
@@ -166,26 +161,26 @@
                     </div>
                 </div>
 
-                <!-- Action Buttons: Lọc & Xóa lọc -->
+                <!-- Action Buttons: Tìm kiếm & Xóa lọc -->
                 <div class="flex items-center gap-2 md:col-span-3">
                     <button type="submit" id="btn-contacts-apply-filter" :disabled="loading"
-                        title="Áp dụng bộ lọc liên hệ"
-                        aria-label="Áp dụng bộ lọc"
+                        title="Tìm kiếm liên hệ"
+                        aria-label="Tìm kiếm liên hệ"
                         class="inline-flex h-11 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-3 text-sm font-semibold text-on-primary shadow-xs transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-50">
                         <template x-if="loading">
                             <span class="size-4 animate-spin rounded-full border-2 border-on-primary border-t-transparent" aria-hidden="true"></span>
                         </template>
                         <template x-if="!loading">
-                            <span class="material-symbols-outlined text-[18px] shrink-0" aria-hidden="true">filter_alt</span>
+                            <span class="material-symbols-outlined text-[18px] shrink-0" aria-hidden="true">search</span>
                         </template>
-                        <span class="whitespace-nowrap">Lọc</span>
+                        <span class="whitespace-nowrap">Tìm kiếm</span>
                     </button>
                     <button type="button" id="btn-contacts-reset-filter" @click="resetFilter()" :disabled="loading"
-                        title="Xóa bộ lọc về mặc định"
-                        aria-label="Xóa bộ lọc"
+                        title="Xoá"
+                        aria-label="Xoá"
                         class="inline-flex h-11 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-outline-variant bg-surface px-3 text-sm font-semibold text-on-surface-variant transition hover:bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50">
-                        <span class="material-symbols-outlined text-[18px] shrink-0" aria-hidden="true">restart_alt</span>
-                        <span class="whitespace-nowrap">Xóa lọc</span>
+                        <span class="material-symbols-outlined text-[18px] shrink-0" aria-hidden="true">delete</span>
+                        <span class="whitespace-nowrap">Xoá</span>
                     </button>
                 </div>
             </form>

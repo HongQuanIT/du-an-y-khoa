@@ -2,6 +2,13 @@
 
 ## 2026-09-21
 
+### UX — Chuẩn hóa tab trạng thái và thao tác tìm kiếm Hộp thư liên hệ
+
+- Chuyển nhóm trạng thái thành thanh tab liền mạch, cân đều trên màn hình lớn và hỗ trợ hiển thị nhiều trạng thái đang chọn.
+- Bổ sung trạng thái active, `aria-pressed`, nhãn trợ năng và focus state cho các tab trạng thái.
+- Đổi nút «Lọc» thành «Tìm kiếm» với icon tìm kiếm; đổi «Xóa lọc» thành «Xoá» với icon xóa.
+- Loại bỏ thẻ thống kê «Đang mở» khỏi giao diện.
+
 ### Fix — Admin: Chuẩn hóa SEO và UI nút bộ lọc Hộp thư liên hệ
 
 - Sửa lỗi xuống dòng chữ «Xóa lọc» trên các màn hình vừa và nhỏ: cân đối lại tỉ lệ cột grid và thêm `whitespace-nowrap`.
