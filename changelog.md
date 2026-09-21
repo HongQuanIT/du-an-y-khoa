@@ -8,6 +8,12 @@
 - Sửa nút «Rút về nháp» không bấm được do nằm trong `pointer-events-none`; form transition luôn render khi có quyền gửi duyệt.
 - Bỏ khối CCT suy ra từ ma trận trên form; cập nhật SRS 35 và test tương ứng.
 
+### Feat — AJAX bộ lọc Thanh toán Admin
+
+- Chuyển tìm kiếm, xoá bộ lọc và phân trang sang AJAX.
+- Hỗ trợ chọn nhiều trạng thái và cổng thanh toán; chỉ tải dữ liệu sau khi bấm nút.
+- Chuẩn hóa UI nút thao tác và semantic bảng thanh toán.
+
 ### Feat — AJAX bộ lọc Lịch sử Premium Admin
 
 - Chuyển tìm kiếm, xoá bộ lọc và phân trang sang AJAX; vẫn giữ GET fallback cho URL có thể chia sẻ.

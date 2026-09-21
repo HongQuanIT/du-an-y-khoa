@@ -64,6 +64,7 @@
     @classroom-filters-reset.window="selected = []"
     @question-feedback-filters-reset.window="selected = []"
     @subscription-filters-reset.window="selected = []"
+    @payment-filters-reset.window="selected = []"
     @resize.window="open && positionMenu()"
     @scroll.window="open && positionMenu()"
 >

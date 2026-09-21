@@ -134,8 +134,10 @@ final class AdminBillingPaymentsTest extends TestCase
         ]);
 
         $this->actingAsStaff($admin)
-            ->get(route('admin.billing.payments.index', ['status' => 'pending']))
+            ->withHeader('X-Requested-With', 'XMLHttpRequest')
+            ->get(route('admin.billing.payments.index', ['status' => ['pending'], 'provider' => ['fake']]))
             ->assertOk()
+            ->assertSee('id="payments-results-region"', false)
             ->assertSee('Chờ thanh toán', false)
             ->assertSee('pending-only@example.com', false)
             ->assertDontSee('xong ', false);
