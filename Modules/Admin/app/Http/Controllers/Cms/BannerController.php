@@ -14,6 +14,7 @@ use Modules\Admin\Actions\Cms\SaveBannerAction;
 use Modules\Admin\Actions\Cms\ToggleBannerAction;
 use Modules\Admin\Http\Requests\Cms\SaveBannerRequest;
 use Modules\Admin\Models\Banner;
+use Modules\Admin\Support\AdminQuestionListQuery;
 use Modules\Admin\Support\Enums\BannerAudience;
 use Modules\Admin\Support\Enums\BannerPlacement;
 use Modules\Admin\Support\Enums\BannerVariant;
@@ -33,13 +34,23 @@ final class BannerController extends Controller
             });
         }
 
-        if ($placement = $request->query('placement')) {
-            $query->where('placement', (string) $placement);
+        $placements = array_values(array_intersect(
+            AdminQuestionListQuery::stringValues($request->query('placement')),
+            BannerPlacement::values(),
+        ));
+        if ($placements !== []) {
+            $query->whereIn('placement', $placements);
         }
 
-        if ($request->query('status') === 'enabled') {
+        $statuses = array_values(array_intersect(
+            AdminQuestionListQuery::stringValues($request->query('status')),
+            ['enabled', 'disabled'],
+        ));
+        $filterEnabled = in_array('enabled', $statuses, true);
+        $filterDisabled = in_array('disabled', $statuses, true);
+        if ($filterEnabled && ! $filterDisabled) {
             $query->where('is_enabled', true);
-        } elseif ($request->query('status') === 'disabled') {
+        } elseif ($filterDisabled && ! $filterEnabled) {
             $query->where('is_enabled', false);
         }
 
@@ -57,8 +68,8 @@ final class BannerController extends Controller
             'placements' => BannerPlacement::cases(),
             'filters' => [
                 'q' => $search,
-                'placement' => $request->query('placement'),
-                'status' => $request->query('status'),
+                'placement' => $placements,
+                'status' => $statuses,
             ],
         ]);
     }

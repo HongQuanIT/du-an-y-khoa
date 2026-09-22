@@ -69,6 +69,8 @@
     @partner-filters-reset.window="selected = []"
     @audit-filters-reset.window="selected = []"
     @learner-catalog-filters-reset.window="selected = []"
+    @faq-filters-reset.window="selected = []"
+    @banner-filters-reset.window="selected = []"
     @resize.window="open && positionMenu()"
     @scroll.window="open && positionMenu()"
 >
