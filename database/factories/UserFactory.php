@@ -42,7 +42,6 @@ class UserFactory extends Factory
             'study_objective' => null,
             'avatar_path' => null,
             'notification_prefs' => [],
-            'account_notes' => null,
         ];
     }
 

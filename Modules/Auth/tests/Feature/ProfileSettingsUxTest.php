@@ -200,8 +200,7 @@ final class ProfileSettingsUxTest extends TestCase
         $this->assertStringNotContainsString('Gói &amp; giấy phép', $nav);
         $this->assertStringNotContainsString('Hóa đơn', $nav);
         $this->assertStringNotContainsString('Đổi mã', $nav);
-        $this->assertStringNotContainsString('Giấy phép tổ chức', $nav);
-        $this->assertStringNotContainsString('Ghi chú cá nhân', $nav);
+        $this->assertStringNotContainsString('Reset thống kê', $nav);
     }
 
     public function test_student_profile_keeps_billing_notification_and_extra_tabs(): void
@@ -218,8 +217,9 @@ final class ProfileSettingsUxTest extends TestCase
         $this->assertStringNotContainsString('Liên hệ', $nav);
         $this->assertStringContainsString('Hóa đơn', $nav);
         $this->assertStringContainsString('Đổi mã', $nav);
-        $this->assertStringContainsString('Giấy phép tổ chức', $nav);
-        $this->assertStringContainsString('Ghi chú cá nhân', $nav);
+        $this->assertStringContainsString('Reset thống kê', $nav);
+        $this->assertStringNotContainsString('Giấy phép tổ chức', $nav);
+        $this->assertStringNotContainsString('Ghi chú cá nhân', $nav);
     }
 
     public function test_student_profile_uses_learner_layout_not_admin_badge(): void

@@ -93,6 +93,8 @@ final class AdminAuditArchitectureTest extends TestCase
                 'options' => [
                     ['content' => '<p>Đáp án đúng</p>', 'is_correct' => '1', 'explanation' => '<p>Vì sao đúng</p>'],
                     ['content' => '<p>Đáp án sai</p>', 'is_correct' => '0'],
+                    ['content' => '<p>Đáp án C</p>', 'is_correct' => '0'],
+                    ['content' => '<p>Đáp án D</p>', 'is_correct' => '0'],
                 ],
             ])
             ->assertRedirect();
@@ -108,7 +110,7 @@ final class AdminAuditArchitectureTest extends TestCase
         $this->assertSame([$topic->id], $log->after['lesson_ids']);
         $this->assertSame('Dấu hiệu gợi ý', strip_tags($log->after['hints'][0]['content']));
         $this->assertTrue($log->after['is_priority']);
-        $this->assertCount(2, $log->after['options']);
+        $this->assertCount(4, $log->after['options']);
         $this->assertTrue($log->after['options'][0]['is_correct']);
         $this->assertNull($log->metadata);
         $this->assertTrue($question->auditLogs()->whereKey($log->id)->exists());

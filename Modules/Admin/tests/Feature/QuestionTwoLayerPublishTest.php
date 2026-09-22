@@ -96,6 +96,8 @@ final class QuestionTwoLayerPublishTest extends TestCase
                 'options' => [
                     ['content' => 'A', 'is_correct' => '1'],
                     ['content' => 'B', 'is_correct' => '0'],
+                    ['content' => 'C', 'is_correct' => '0'],
+                    ['content' => 'D', 'is_correct' => '0'],
                 ],
             ])
             ->assertForbidden();

@@ -29,8 +29,11 @@ docker compose up -d --build
 ```
 
 Sau khi chạy:
+
 - Service `app` (PHP-FPM) sẽ cài `composer install` lần đầu nếu chưa có `vendor/`, tạo `APP_KEY` nếu cần.
 - Service `vite` (node:20-alpine) sẽ tự chạy `npm install` rồi `npm run dev -- --host --port ${VITE_PORT:-5173}`.
+
+
 
 ## 4) Laravel setup: migrate + seed
 
@@ -57,6 +60,8 @@ Tạo link storage (idempotent):
 docker compose exec app php artisan storage:link
 ```
 
+
+
 ## 5) (Tuỳ chọn) Re-seed / seed lại
 
 - Chỉ seed lại mà không migrate:
@@ -70,6 +75,16 @@ docker compose exec app php artisan db:seed
 ```bash
 docker compose exec app php artisan db:seed
 ```
+
+- Seed ~300 câu hỏi published từ Excel demo (test QBank/học viên). Cần đã có user (`UserSeeder`) và taxonomy (`SubjectLessonSeeder`):
+
+```bash
+docker compose exec app php artisan question-bank:seed-from-excel
+```
+
+Tuỳ chọn: `--dry-run` (chỉ validate), `--skip-publish` (giữ draft), hoặc truyền path file `.xlsx` khác.
+
+
 
 ## 6) (Tuỳ chọn) Chạy lại `npm install` thủ công
 
@@ -85,6 +100,8 @@ Sau đó để chắc chắn HMR/dev server chạy đúng, restart service:
 docker compose restart vite
 ```
 
+
+
 ## 7) URL tham chiếu (local)
 
 - App (Nginx): `http://localhost` (hoặc `http://localhost:${APP_PORT}` nếu đổi port)
@@ -94,6 +111,8 @@ docker compose restart vite
 - Meilisearch: `http://localhost:7700`
 - Mailpit UI: `http://localhost:8025`
 - Adminer (MySQL UI): `http://localhost:8081`
+
+
 
 ## 8) LiveKit (Classroom livestream)
 

@@ -256,9 +256,9 @@ final class SaveAdminQuestionAction
      */
     private function assertOptionsValid(array $options): void
     {
-        if (count($options) < 2) {
+        if (count($options) !== 4) {
             throw ValidationException::withMessages([
-                'options' => 'Cần ít nhất 2 đáp án.',
+                'options' => 'Mỗi câu hỏi phải có đúng 4 đáp án.',
             ]);
         }
 
@@ -277,7 +277,7 @@ final class SaveAdminQuestionAction
     private function syncOptions(Question $question, array $options): void
     {
         $keepIds = [];
-        $labels = range('A', 'Z');
+        $labels = ['A', 'B', 'C', 'D'];
 
         foreach (array_values($options) as $index => $row) {
             $payload = [

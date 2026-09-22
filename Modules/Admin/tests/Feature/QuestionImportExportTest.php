@@ -177,6 +177,42 @@ final class QuestionImportExportTest extends TestCase
         $this->assertSame(1, (int) $batch->fresh()->stats['created']);
     }
 
+    public function test_import_preview_shows_error_rows_beyond_first_eighty(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+        $rows = [QuestionImportSchema::headers()];
+        for ($i = 1; $i <= 80; $i++) {
+            $rows[] = $this->validRow("Câu hợp lệ số {$i}.");
+        }
+        $invalid = $this->validRow('Câu lỗi sau dòng 80.');
+        $invalid[array_search('correct', QuestionImportSchema::headers(), true)] = '';
+        $rows[] = $invalid;
+
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.import.upload'), ['file' => $this->csvUpload($rows)])
+            ->assertRedirect();
+
+        $batch = QuestionImportBatch::query()->firstOrFail();
+        $this->actingAsStaff($editor)
+            ->post(route('admin.questions.import.map', $batch), [
+                'column_map' => QuestionImportSchema::autoMap(QuestionImportSchema::headers()),
+            ])
+            ->assertRedirect();
+
+        $this->actingAsStaff($editor)
+            ->get(route('admin.questions.import.show', $batch))
+            ->assertOk()
+            ->assertSee('>82<', false)
+            ->assertSee('Câu lỗi sau dòng 80.', false)
+            ->assertSee('Đáp án đúng phải là một chữ', false)
+            ->assertSee('Chỉ lỗi (1)', false)
+            ->assertSee('Tải 1 dòng lỗi', false);
+
+        $this->assertSame(80, (int) $batch->fresh()->stats['valid']);
+        $this->assertSame(1, (int) $batch->fresh()->stats['invalid']);
+        $this->assertNotNull($batch->fresh()->error_report_path);
+    }
+
     public function test_import_with_existing_code_updates_question(): void
     {
         $editor = $this->staffUser(Role::ContentEditor);
@@ -189,6 +225,8 @@ final class QuestionImportExportTest extends TestCase
                 'options' => [
                     ['content' => 'Đúng', 'is_correct' => '1', 'explanation' => 'OK'],
                     ['content' => 'Sai', 'is_correct' => '0'],
+                    ['content' => 'Nhiễu C', 'is_correct' => '0'],
+                    ['content' => 'Nhiễu D', 'is_correct' => '0'],
                 ],
             ])
             ->assertRedirect();
@@ -242,6 +280,8 @@ final class QuestionImportExportTest extends TestCase
                 'options' => [
                     ['content' => 'Đúng', 'is_correct' => '1', 'explanation' => 'OK'],
                     ['content' => 'Sai', 'is_correct' => '0'],
+                    ['content' => 'Nhiễu C', 'is_correct' => '0'],
+                    ['content' => 'Nhiễu D', 'is_correct' => '0'],
                 ],
             ])
             ->assertRedirect();
@@ -328,6 +368,8 @@ final class QuestionImportExportTest extends TestCase
                 'options' => [
                     ['content' => 'Đúng', 'is_correct' => '1', 'explanation' => 'OK'],
                     ['content' => 'Sai', 'is_correct' => '0'],
+                    ['content' => 'Nhiễu C', 'is_correct' => '0'],
+                    ['content' => 'Nhiễu D', 'is_correct' => '0'],
                 ],
             ])
             ->assertRedirect();
@@ -363,6 +405,8 @@ final class QuestionImportExportTest extends TestCase
                 'options' => [
                     ['content' => '<p>Đáp án <em>nghiêng</em></p>', 'is_correct' => '1', 'explanation' => '<p>Vì <u>đúng</u>.</p>'],
                     ['content' => 'Sai', 'is_correct' => '0'],
+                    ['content' => 'Nhiễu C', 'is_correct' => '0'],
+                    ['content' => 'Nhiễu D', 'is_correct' => '0'],
                 ],
             ])
             ->assertRedirect();
@@ -400,6 +444,8 @@ final class QuestionImportExportTest extends TestCase
                 'options' => [
                     ['content' => 'Đúng', 'is_correct' => '1', 'explanation' => 'OK'],
                     ['content' => 'Sai', 'is_correct' => '0'],
+                    ['content' => 'Nhiễu C', 'is_correct' => '0'],
+                    ['content' => 'Nhiễu D', 'is_correct' => '0'],
                 ],
             ])
             ->assertRedirect();
@@ -412,6 +458,8 @@ final class QuestionImportExportTest extends TestCase
                 'options' => [
                     ['content' => 'Đúng', 'is_correct' => '1', 'explanation' => 'OK'],
                     ['content' => 'Sai', 'is_correct' => '0'],
+                    ['content' => 'Nhiễu C', 'is_correct' => '0'],
+                    ['content' => 'Nhiễu D', 'is_correct' => '0'],
                 ],
             ])
             ->assertRedirect();

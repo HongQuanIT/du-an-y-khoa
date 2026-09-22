@@ -278,6 +278,8 @@ final class TaxonomyArchitectureTest extends TestCase
             'options' => [
                 ['content' => 'A', 'is_correct' => true, 'explanation' => 'ok'],
                 ['content' => 'B', 'is_correct' => false],
+                ['content' => 'C', 'is_correct' => false],
+                ['content' => 'D', 'is_correct' => false],
             ],
         ]);
     }
@@ -297,6 +299,8 @@ final class TaxonomyArchitectureTest extends TestCase
             'options' => [
                 ['content' => 'A', 'is_correct' => true, 'explanation' => 'ok'],
                 ['content' => 'B', 'is_correct' => false],
+                ['content' => 'C', 'is_correct' => false],
+                ['content' => 'D', 'is_correct' => false],
             ],
         ]);
 

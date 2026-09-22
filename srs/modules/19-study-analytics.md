@@ -64,6 +64,7 @@ Premium: xem percentile so cohort → điều chỉnh Study Plan.
 
 ## 10. Edge Cases
 - Chưa đủ dữ liệu → empty "học thêm để thấy phân tích"; cohort quá nhỏ → ẩn peer; range custom lớn → giới hạn/aggregate; export lỗi → thông báo.
+- **Reset tiến trình** (Settings Danger, Module 31): xóa rollup + nguồn attempt/session của user → KPI về 0 như học viên mới; không đụng billing/classroom.
 
 ## 11. Tracking
 `analytics_open`, `analytics_range_change`, `analytics_tab_change`, `peer_compare_view`, `analytics_export`.

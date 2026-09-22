@@ -1235,7 +1235,7 @@ final class QuestionBankFlowTest extends TestCase
             $question->lessons->contains(fn ($lesson): bool => $lesson->slug === 'urology')
             || $question->lessons->isNotEmpty(),
         );
-        $this->assertSame(['A', 'B', 'C', 'D', 'E', 'F', 'G'], $options->pluck('label')->all());
+        $this->assertSame(['A', 'B', 'C', 'D'], $options->pluck('label')->all());
         $this->assertSame('Goodpasture syndrome', $options->first()?->content);
         $this->assertTrue((bool) $options->first()?->is_correct);
         $this->assertTrue($options->slice(1)->every(fn (QuestionOption $option): bool => ! $option->is_correct));

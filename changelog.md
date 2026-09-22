@@ -25,6 +25,39 @@
 - Tách `VietnamGeographySeeder`: quốc gia VN, 34 tỉnh/thành (sau sáp nhập 2025), trường y/dược toàn quốc.
 - `LearnerProfileCatalogSeeder` gọi seeder địa lý rồi seed chức danh + năm học; thêm test idempotent.
 
+### Docs — Thêm seed Excel QBank vào `deploy-dev.md`
+
+- Ghi lệnh `question-bank:seed-from-excel` ở mục re-seed tuỳ chọn (cần UserSeeder + SubjectLessonSeeder).
+
+### Feat — Seed 300 câu published từ Excel (`question-bank:seed-from-excel`)
+
+- Command tái dùng stack import admin (validate format/lesson, `created_by` = editor) rồi force-publish + snapshot version cho test QBank/học viên.
+- File mẫu: `Modules/QuestionBank/database/seeders/data/qbank-demo.xlsx`; tự tạo slug bài học thiếu; seeder `QbankDemoExcelSeeder`.
+- Làm sạch `qbank-demo.xlsx`: bỏ cột `option_e` / `option_e_explanation` / `status` (schema chỉ A–D).
+
+### Change — Bỏ tab Giấy phép tổ chức & Ghi chú cá nhân trên `/profile`
+
+- Gỡ `?tab=org-license` và `?tab=notes` khỏi nav, routes và UI hub học viên.
+- Drop cột `users.account_notes`.
+- Đổi mã / gói vẫn dùng tab Redeem & Membership.
+
+### Fix — Preview import câu hỏi: hiện đủ dòng lỗi
+
+- Bỏ cắt cứng 80 dòng đầu (`array_slice`); bảng kiểm tra hiện toàn bộ (tối đa 500).
+- Ưu tiên dòng lỗi trước; mặc định lọc «Chỉ lỗi» khi có lỗi; nút tải Excel lỗi nổi bật hơn.
+
+### Feat — Reset thống kê học viên (`/profile?tab=reset-alt`)
+
+- Học viên có thể wipe tiến trình học (sessions/attempts/status, rollup, study plan, bookmark, AI) để học lại như tài khoản mới.
+- Giữ account, billing, classroom membership & live; detach `question_feedback`; recompute `questions.stats_cache`.
+- Xác nhận mật khẩu + gõ `RESET`; ghi `learning_progress_reset_at` (reset bất cứ lúc nào).
+
+### Change — Câu hỏi cố định đúng 4 đáp án (A–D)
+
+- Form admin bỏ nút Thêm/Xóa đáp án; luôn hiển thị đúng 4 ô A–D.
+- Validation store/update, publish/submit, và import Excel yêu cầu đúng 4 đáp án; `correct` ∈ {A,B,C,D}.
+- Template/export Excel bỏ cột `option_e`; seed demo (STEMI, Goodpasture) chuẩn hóa về 4 đáp án.
+
 ### Feat — Đồng bộ UI bộ lọc Admin theo trang Liên hệ
 
 - Chuẩn hóa layout `grid items-end`, label/input `text-sm`, focus ring, nút `filter-action-buttons` + spacer.

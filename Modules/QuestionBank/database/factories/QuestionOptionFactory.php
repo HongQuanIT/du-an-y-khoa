@@ -22,11 +22,11 @@ class QuestionOptionFactory extends Factory
     {
         return [
             'question_id' => Question::factory(),
-            'label' => $this->faker->randomElement(['A', 'B', 'C', 'D', 'E']),
+            'label' => $this->faker->randomElement(['A', 'B', 'C', 'D']),
             'content' => $this->faker->sentence(6),
             'is_correct' => false,
             'explanation' => $this->faker->boolean(40) ? $this->faker->sentence() : null,
-            'order' => $this->faker->numberBetween(0, 4),
+            'order' => $this->faker->numberBetween(0, 3),
         ];
     }
 

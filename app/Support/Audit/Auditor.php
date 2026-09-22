@@ -133,7 +133,7 @@ final class Auditor
 
         $sensitiveKeys = [
             'authorization', 'cookie', 'email', 'password', 'password_confirmation',
-            'remember_token', 'recovery_codes', 'account_notes', 'address',
+            'remember_token', 'recovery_codes', 'address',
             'date_of_birth', 'phone', 'secret', 'token', 'two_factor_secret',
         ];
 

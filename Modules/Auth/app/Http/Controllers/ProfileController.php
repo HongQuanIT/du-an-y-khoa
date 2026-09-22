@@ -27,14 +27,12 @@ use Modules\Auth\Models\EducationStage;
 use Modules\Auth\Models\Institution;
 use Modules\Auth\Models\LearnerProfile;
 use Modules\Auth\Models\Profession;
-use Modules\Billing\Actions\ActivateInstitutionLicenseAction;
 use Modules\Billing\Actions\RedeemCodeAction;
-use Modules\Billing\Actions\RenewInstitutionLicenseAction;
-use Modules\Billing\Models\InstitutionMember;
 use Modules\Billing\Models\Invoice;
 use Modules\Billing\Support\CurrentSubscription;
 use Modules\Billing\Support\MembershipSummary;
 use Modules\Notification\Support\NotificationCatalog;
+use Modules\Analytics\Actions\ResetLearnerProgressAction;
 
 /** Unified account hub at `/profile` (profile + settings tabs). */
 final class ProfileController extends Controller
@@ -42,7 +40,7 @@ final class ProfileController extends Controller
     /** @var list<string> */
     private const TABS = [
         'career', 'contact', 'security', 'notifications',
-        'membership', 'invoices', 'redeem', 'notes', 'org-license',
+        'membership', 'invoices', 'redeem', 'reset-alt',
     ];
 
     public function show(Request $request): View
@@ -68,13 +66,6 @@ final class ProfileController extends Controller
             $this->notificationPreferences($user),
         );
 
-        $orgMembers = InstitutionMember::query()
-            ->with('institution')
-            ->where('user_id', $user->getKey())
-            ->where('status', 'verified')
-            ->get()
-            ->filter(fn (InstitutionMember $member): bool => $member->institution?->isValid() ?? false);
-
         return view('auth::profile', [
             'tab' => $tab,
             'user' => $user,
@@ -85,7 +76,6 @@ final class ProfileController extends Controller
                 ->where('user_id', $user->getKey())
                 ->orderByDesc('issued_at')
                 ->get(),
-            'orgMembers' => $orgMembers,
             'countries' => Country::query()->where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(),
             'administrativeUnits' => AdministrativeUnit::query()->where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(),
             'institutions' => Institution::query()->active()->orderBy('sort_order')->orderBy('name')->get(),
@@ -395,62 +385,25 @@ final class ProfileController extends Controller
             ->with('status', "Đã kích hoạt gói {$planName} thành công.");
     }
 
-    public function activateOrgLicense(Request $request, ActivateInstitutionLicenseAction $activate): RedirectResponse
+    public function resetProgress(Request $request, ResetLearnerProgressAction $action): RedirectResponse
     {
         $request->validate([
-            'institution_email' => ['required', 'email', 'max:190'],
-        ], [], [
-            'institution_email' => 'email tổ chức',
+            'current_password' => ['required', 'current_password'],
+            'confirmation' => ['required', 'string', 'in:RESET'],
+        ], [
+            'confirmation.in' => 'Hãy gõ đúng chữ RESET để xác nhận.',
+        ], [
+            'current_password' => 'mật khẩu hiện tại',
+            'confirmation' => 'xác nhận',
         ]);
 
-        try {
-            $activate->handle($request->user(), (string) $request->input('institution_email'));
-        } catch (ValidationException $exception) {
-            return redirect()
-                ->route('profile.show', $this->tabRouteParams('org-license'))
-                ->withErrors($exception->errors())
-                ->withInput();
-        }
+        $result = $action->handle($request->user());
 
         return redirect()
-            ->route('profile.show', $this->tabRouteParams('org-license'))
-            ->with('status', 'Đã kích hoạt giấy phép tổ chức.');
-    }
-
-    public function renewOrgLicense(Request $request, RenewInstitutionLicenseAction $renew): RedirectResponse
-    {
-        $request->validate([
-            'member_id' => ['required', 'integer'],
-        ]);
-
-        try {
-            $renew->handle($request->user(), (int) $request->input('member_id'));
-        } catch (ValidationException $exception) {
-            return redirect()
-                ->route('profile.show', $this->tabRouteParams('org-license'))
-                ->withErrors($exception->errors());
-        }
-
-        return redirect()
-            ->route('profile.show', $this->tabRouteParams('org-license'))
-            ->with('status', 'Đã gia hạn giấy phép tổ chức.');
-    }
-
-    public function updateNotes(Request $request): RedirectResponse
-    {
-        $validated = $request->validate([
-            'account_notes' => ['nullable', 'string', 'max:5000'],
-        ], [], [
-            'account_notes' => 'ghi chú',
-        ]);
-
-        $request->user()->forceFill([
-            'account_notes' => $validated['account_notes'] ?? null,
-        ])->save();
-
-        return redirect()
-            ->route('profile.show', $this->tabRouteParams('notes'))
-            ->with('status', 'Đã lưu ghi chú.');
+            ->route('profile.show', $this->tabRouteParams('reset-alt'))
+            ->with('status', $result['queued']
+                ? 'Đang reset tiến trình học ở nền. Dashboard sẽ về 0 trong vài phút.'
+                : 'Đã reset tiến trình học. Bạn có thể bắt đầu lại như học viên mới.');
     }
 
     private function normalizeTab(string $tab, ?User $user = null): string
@@ -458,6 +411,7 @@ final class ProfileController extends Controller
         $tab = match ($tab) {
             '', 'career' => 'career',
             'billing' => 'membership',
+            'danger' => 'reset-alt',
             default => $tab,
         };
 

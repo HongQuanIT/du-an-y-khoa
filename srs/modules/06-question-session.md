@@ -22,7 +22,7 @@ Giao diện làm bài: hiển thị từng câu hỏi, nhận đáp án, chấm 
 | **Session header** | Tiến trình (câu 5/40), timer (exam), nút thoát/tạm dừng | Luôn | Timer ẩn ở study | Exam có timer | Mobile: gọn |
 | **Progress bar** | % hoàn thành / bản đồ câu | Luôn | — | — | Map → drawer mobile |
 | **Question stem** | Đề bài (vignette), lab values, media | Luôn | — | — | Ảnh zoom |
-| **Answer options** | Radio/checkbox A–E | Luôn | — | Single/multi theo type | Nút lớn mobile |
+| **Answer options** | Radio A–D (đúng 4 đáp án) | Luôn | — | Single best answer | Nút lớn mobile |
 | **Submit/Next button** | Nộp đáp án / câu tiếp | Luôn | — | Study: submit từng câu; Exam: next | Sticky đáy |
 | **Explanation panel** | Giải thích + vì sao đúng/sai | Study: sau submit | Exam: ẩn tới khi nộp cả bài | — | Accordion mobile |
 | **Toolbar câu** | Bookmark, Flag, Note, Highlight, Report, **Hỏi AI Tutor** (1-tap), Add flashcard | Study/Review: luôn. Exam đang làm: **ẩn AI Tutor** | — | AI Tutor: Premium/quota. Flashcard/note ở toolbar câu, không trong drawer AI Tutor | Icon bar / overflow; mobile: FAB AI Tutor |

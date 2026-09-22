@@ -29,8 +29,20 @@
             'explanation' => $o->explanation,
         ])->values()->all();
     }
+
+    // Always exactly 4 options (A–D); pad or truncate for display.
+    $optionRows = array_slice($optionRows, 0, 4);
+    while (count($optionRows) < 4) {
+        $optionRows[] = ['id' => null, 'content' => '', 'is_correct' => false, 'explanation' => ''];
+    }
     $correctIndex = collect($optionRows)->search(fn ($row) => $row['is_correct'] === true);
-    if ($correctIndex === false) { $correctIndex = 0; }
+    if ($correctIndex === false) {
+        $correctIndex = 0;
+        $optionRows[0]['is_correct'] = true;
+    }
+    foreach ($optionRows as $i => $row) {
+        $optionRows[$i]['is_correct'] = ((int) $correctIndex === $i);
+    }
 
     $existingHints = $question->relationLoaded('hints') ? $question->hints : collect();
     $oldHints = old('hints');
@@ -248,12 +260,6 @@
               options: @json($optionRows),
               hints: @json($hintRows),
               correct: {{ (int) $correctIndex }},
-              add() { this.options.push({ id: null, content: "", is_correct: false, explanation: "" }); },
-              remove(i) {
-                  if (this.options.length <= 2) return;
-                  this.options.splice(i, 1);
-                  if (this.correct >= this.options.length) this.correct = 0;
-              },
               addHint() { this.hints.push({ id: null, content: "" }); },
               removeHint(i) {
                   if (this.hints.length <= 1) {
@@ -283,18 +289,12 @@
 
                 {{-- Đáp án --}}
                 <div class="rounded-2xl border border-outline-variant bg-surface p-5">
-                    <div class="mb-4 flex items-center justify-between gap-3">
-                        <div>
-                            <h2 class="font-label-lg font-semibold text-on-surface">Đáp án</h2>
-                            <p class="mt-1 text-xs text-on-surface-variant">
-                                Chữ A/B/C chỉ là thứ tự trên form. Khi học viên làm bài, thứ tự đáp án sẽ được đảo;
-                                hệ thống chấm theo nội dung (id), không theo chữ cái. Không viết “đáp án A” trong stem/giải thích — mô tả theo nội dung lựa chọn.
-                            </p>
-                        </div>
-                        <button type="button" @click="add()"
-                                class="inline-flex shrink-0 items-center gap-1 rounded-lg border border-outline-variant px-3 py-1.5 text-sm font-semibold text-on-surface hover:bg-surface-container-low">
-                            <span class="material-symbols-outlined text-[16px]">add</span>Thêm
-                        </button>
+                    <div class="mb-4">
+                        <h2 class="font-label-lg font-semibold text-on-surface">Đáp án</h2>
+                        <p class="mt-1 text-xs text-on-surface-variant">
+                            Mỗi câu hỏi có đúng 4 đáp án (A–D). Chữ A/B/C/D chỉ là thứ tự trên form; khi học viên làm bài thứ tự sẽ được đảo,
+                            hệ thống chấm theo nội dung (id), không theo chữ cái. Không viết “đáp án A” trong stem/giải thích — mô tả theo nội dung lựa chọn.
+                        </p>
                     </div>
 
                     <div class="space-y-3">
@@ -314,10 +314,6 @@
                                         <span x-show="correct === index" class="text-primary">Đáp án đúng</span>
                                         <span x-show="correct !== index" class="text-on-surface-variant">Đánh dấu đúng</span>
                                     </label>
-                                    <button type="button" @click="remove(index)" x-show="options.length > 2"
-                                            class="text-sm font-medium text-error opacity-0 transition-opacity group-hover:opacity-100 hover:underline">
-                                        Xóa
-                                    </button>
                                 </div>
 
                                 <input type="hidden" :name="'options['+index+'][id]'" :value="opt.id || ''">

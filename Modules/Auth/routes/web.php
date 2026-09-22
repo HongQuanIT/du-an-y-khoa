@@ -85,9 +85,9 @@ Route::middleware('auth')->group(function (): void {
         Route::put('/settings/appearance', [ProfileController::class, 'updateAppearance'])->name('settings.appearance');
         Route::put('/settings/notifications', [ProfileController::class, 'updateNotifications'])->name('settings.notifications');
         Route::post('/settings/redeem', [ProfileController::class, 'redeemCode'])->name('settings.redeem');
-        Route::post('/settings/org-license', [ProfileController::class, 'activateOrgLicense'])->name('settings.org-license');
-        Route::post('/settings/org-license/renew', [ProfileController::class, 'renewOrgLicense'])->name('settings.org-license.renew');
-        Route::put('/settings/notes', [ProfileController::class, 'updateNotes'])->name('settings.notes');
+        Route::post('/settings/reset-progress', [ProfileController::class, 'resetProgress'])
+            ->middleware('throttle:6,1')
+            ->name('profile.reset-progress');
     });
 
     Route::middleware('permission:profile.avatar_update')->group(function (): void {

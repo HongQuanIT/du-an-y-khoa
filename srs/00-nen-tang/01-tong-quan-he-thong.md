@@ -90,7 +90,7 @@ Chi tiết ma trận quyền: xem `03-phan-quyen-rbac.md`.
 
 ## 7. Các khái niệm miền (Domain concepts) trọng tâm
 
-- **Question**: đơn vị câu hỏi (thường dạng vignette lâm sàng + 4–5 đáp án + giải thích theo đáp án).
+- **Question**: đơn vị câu hỏi (thường dạng vignette lâm sàng + 4 đáp án + giải thích theo đáp án).
 - **Session**: một phiên làm nhiều câu, có chế độ **Study** (xem giải thích ngay) hoặc **Exam** (giới hạn thời gian, xem kết quả sau nộp).
 - **Attempt**: một lần trả lời một câu trong session.
 - **Mastery / Weak Topic**: mức thành thạo theo chủ đề, tính từ lịch sử attempt.

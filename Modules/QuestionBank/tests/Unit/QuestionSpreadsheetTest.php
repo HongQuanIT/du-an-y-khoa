@@ -91,7 +91,7 @@ final class QuestionSpreadsheetTest extends TestCase
         $spreadsheet->writeXlsx(
             $path,
             ['stem', 'errors'],
-            [['Thiếu đáp án', 'Cần ít nhất 2 đáp án.']],
+            [['Thiếu đáp án', 'Mỗi câu hỏi phải có đúng 4 đáp án (A–D).']],
             options: ['highlight_errors' => true],
         );
 
