@@ -32,7 +32,7 @@ final class AdminLearnerDataTest extends TestCase
         $admin->assignRole(Role::Admin->value);
 
         $country = Country::query()->where('code', 'VN')->firstOrFail();
-        $existing = Institution::query()->firstOrFail();
+        $existing = Institution::query()->orderBy('name')->firstOrFail();
 
         $this->actingAs($admin)
             ->get(route('admin.institutions.index'))

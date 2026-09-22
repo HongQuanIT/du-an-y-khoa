@@ -2,6 +2,11 @@
 
 ## 2026-09-22
 
+### Feat — Seed catalog hồ sơ học viên
+
+- `LearnerProfileCatalogSeeder` seed Việt Nam, 34 tỉnh/thành, chức danh, năm học và 34 trường y (idempotent, gắn local/staging/production).
+- Thêm chức danh Bác sĩ thực tập / Bác sĩ nội trú; test seeder và sửa list trường admin theo thứ tự tên.
+
 ### Refactor — Bỏ giải thích chung cấp câu hỏi
 
 - Xóa `questions.explanation`; chỉ còn giải thích theo từng đáp án (`question_options.explanation`).
