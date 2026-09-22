@@ -38,6 +38,28 @@ enum ContactInquiryStatus: string
         };
     }
 
+    public function icon(): string
+    {
+        return match ($this) {
+            self::New => 'mark_email_unread',
+            self::InProgress => 'hourglass_empty',
+            self::Resolved => 'check_circle',
+            self::Spam => 'flag',
+            self::Archived => 'inventory_2',
+        };
+    }
+
+    public function iconSurface(): string
+    {
+        return match ($this) {
+            self::New => 'bg-amber-50 text-amber-700',
+            self::InProgress => 'bg-sky-50 text-sky-700',
+            self::Resolved => 'bg-emerald-50 text-emerald-700',
+            self::Spam => 'bg-rose-50 text-rose-700',
+            self::Archived => 'bg-surface-container-low text-on-surface-variant',
+        };
+    }
+
     public function isOpen(): bool
     {
         return in_array($this, [self::New, self::InProgress], true);

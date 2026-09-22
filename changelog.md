@@ -2,6 +2,12 @@
 
 ## 2026-09-22
 
+### Feat — Đồng bộ badge lọc/list câu hỏi + KPI liên hệ
+
+- Thêm `Difficulty::tone()`; badge Độ khó / Miễn phí trong bộ lọc và cột list khớp màu.
+- List trạng thái câu hỏi dùng chung `QuestionStatus::tone()` với dropdown lọc.
+- KPI hộp thư liên hệ: card icon riêng như tổng quan câu hỏi; thêm `icon()` / `iconSurface()`; click lại để bỏ lọc.
+
 ### Feat — Multi-select bộ lọc câu hỏi Admin
 
 - Thêm `QuestionStatus::tone()` và hiện badge màu trạng thái trong dropdown lọc.
