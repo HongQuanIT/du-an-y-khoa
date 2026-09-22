@@ -242,27 +242,22 @@
         </section>
 
         {{-- Section 2: Bộ lọc tìm kiếm câu hỏi --}}
-        <section aria-labelledby="heading-filters" class="rounded-xl border border-outline-variant bg-surface p-5">
-            <div class="mb-5 flex flex-wrap items-baseline justify-between gap-2">
-                <div>
-                    <h2 id="heading-filters" class="font-label-lg font-semibold text-on-surface">Bộ lọc câu hỏi</h2>
-                    <p class="mt-1 font-body-sm text-on-surface-variant">Tìm theo nội dung hoặc thu hẹp danh sách theo
-                        các tiêu chí bên dưới.</p>
-                </div>
-            </div>
+        <section aria-labelledby="heading-filters">
+            <h2 id="heading-filters" class="sr-only">Tìm kiếm câu hỏi</h2>
             @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.index'))
-            <div class="px-1 pb-1">
+            <div>
 <form method="get" action="{{ route('admin.questions.index') }}" id="question-filter-form" role="search"
                 aria-label="Tìm kiếm và lọc câu hỏi"
                 @submit.prevent="applyQuestionFilters()"
-                class="grid grid-cols-1 items-end gap-4 sm:grid-cols-12">
+                class="space-y-4 rounded-xl border border-outline-variant bg-surface p-4">
                 @if (filled($filters['import_batch_id'] ?? null))
                     <input type="hidden" name="import_batch_id" value="{{ $filters['import_batch_id'] }}">
                 @endif
-                <div class="sm:col-span-4">
-                    <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant"
+                <div class="grid grid-cols-1 items-end gap-4 sm:grid-cols-2 xl:grid-cols-[minmax(280px,1.5fr)_repeat(4,minmax(160px,1fr))]">
+                <div class="sm:col-span-2 xl:col-auto">
+                    <label class="mb-1.5 block text-sm font-medium text-on-surface-variant"
                         for="question-search-input">
-                        Tìm kiếm từ khóa
+                        Tìm kiếm
                     </label>
                     <div class="relative">
                         <span
@@ -270,21 +265,21 @@
                             aria-hidden="true">search</span>
                         <input id="question-search-input" name="q" value="{{ $filters['q'] }}" type="search"
                             autocomplete="off" placeholder="Mã, từ khóa hoặc nội dung câu hỏi..."
-                            class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 pl-9 font-body-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                            class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 pl-9 text-sm text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary">
                     </div>
                 </div>
 
-                <div class="sm:col-span-2">
+                <div class="min-w-0 xl:col-auto">
                     <x-admin.multi-select-filter
                         name="status"
                         label="Trạng thái"
                         placeholder="Tất cả"
-                        :options="collect($statuses)->map(fn ($status) => ['id' => $status->value, 'label' => $status->label()])->all()"
+                        :options="collect($statuses)->map(fn ($status) => ['id' => $status->value, 'label' => $status->label(), 'tone' => $status->tone()])->all()"
                         :selected="$filters['status'] ?? []"
                     />
                 </div>
 
-                <div class="sm:col-span-2">
+                <div class="min-w-0 xl:col-auto">
                     <x-admin.multi-select-filter
                         name="difficulty"
                         label="Độ khó"
@@ -294,7 +289,7 @@
                     />
                 </div>
 
-                <div class="sm:col-span-2">
+                <div class="min-w-0 xl:col-auto">
                     <x-admin.multi-select-filter
                         name="is_free"
                         label="Miễn phí"
@@ -308,7 +303,7 @@
                 </div>
 
                 @if ($canViewAny)
-                    <div class="sm:col-span-2">
+                    <div class="min-w-0 xl:col-auto">
                         <x-admin.multi-select-filter
                             name="created_by"
                             label="Người tạo"
@@ -318,8 +313,9 @@
                         />
                     </div>
                 @endif
+                </div>
 
-                <x-admin.filter-action-buttons class="justify-end sm:col-span-12" loading-expression="ajaxLoading"
+                <x-admin.filter-action-buttons class="justify-end border-t border-outline-variant pt-4" loading-expression="ajaxLoading"
                     reset-method="resetQuestionFilters" :reset-url="route('admin.questions.index')"
                     search-aria-label="Tìm kiếm câu hỏi" reset-aria-label="Xoá bộ lọc câu hỏi" />
             </form>

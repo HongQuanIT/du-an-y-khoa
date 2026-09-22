@@ -2,6 +2,16 @@
 
 ## 2026-09-22
 
+### Feat — Multi-select bộ lọc câu hỏi Admin
+
+- Thêm `QuestionStatus::tone()` và hiện badge màu trạng thái trong dropdown lọc.
+- Multi-select: badge số đã chọn, nút Bỏ chọn, layout bộ lọc câu hỏi gọn hơn.
+
+### Feat — Seed catalog hồ sơ học viên
+
+- `LearnerProfileCatalogSeeder` seed Việt Nam, 34 tỉnh/thành, chức danh, năm học và 34 trường y (idempotent, gắn local/staging/production).
+- Thêm chức danh Bác sĩ thực tập / Bác sĩ nội trú; test seeder và sửa list trường admin theo thứ tự tên.
+
 ### Refactor — Bỏ giải thích chung cấp câu hỏi
 
 - Xóa `questions.explanation`; chỉ còn giải thích theo từng đáp án (`question_options.explanation`).
