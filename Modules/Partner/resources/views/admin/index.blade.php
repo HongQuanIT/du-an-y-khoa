@@ -27,6 +27,25 @@
 
     <x-admin.flash />
 
+    <div id="partner-kpi-region" class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div class="rounded-xl border border-outline-variant bg-surface p-4">
+            <p class="font-label-sm text-on-surface-variant">CTV (lọc)</p>
+            <p class="mt-1 font-headline-sm text-headline-sm">{{ number_format($totals['partners']) }}</p>
+        </div>
+        <div class="rounded-xl border border-outline-variant bg-surface p-4">
+            <p class="font-label-sm text-on-surface-variant">Đăng ký trong kỳ</p>
+            <p class="mt-1 font-headline-sm text-headline-sm">{{ number_format($totals['referrals']) }}</p>
+        </div>
+        <div class="rounded-xl border border-outline-variant bg-surface p-4">
+            <p class="font-label-sm text-on-surface-variant">Doanh số kỳ</p>
+            <p class="mt-1 font-headline-sm text-headline-sm">{{ MoneyFormatter::vnd((int) $totals['gross_cents']) }}</p>
+        </div>
+        <div class="rounded-xl border border-outline-variant bg-surface p-4">
+            <p class="font-label-sm text-on-surface-variant">Hoa hồng kỳ</p>
+            <p class="mt-1 font-headline-sm text-headline-sm">{{ MoneyFormatter::vnd((int) $totals['commission_cents']) }}</p>
+        </div>
+    </div>
+
     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.partners.index'))
 <form id="partner-filter-form" method="get" action="{{ route('admin.partners.index') }}"
         role="search" aria-label="Tìm kiếm cộng tác viên"
@@ -112,26 +131,7 @@
     </form>
 @endif
 
-    <div id="partner-results-region">
-    <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <div class="rounded-xl border border-outline-variant bg-surface p-4">
-            <p class="font-label-sm text-on-surface-variant">CTV (lọc)</p>
-            <p class="mt-1 font-headline-sm text-headline-sm">{{ number_format($totals['partners']) }}</p>
-        </div>
-        <div class="rounded-xl border border-outline-variant bg-surface p-4">
-            <p class="font-label-sm text-on-surface-variant">Đăng ký trong kỳ</p>
-            <p class="mt-1 font-headline-sm text-headline-sm">{{ number_format($totals['referrals']) }}</p>
-        </div>
-        <div class="rounded-xl border border-outline-variant bg-surface p-4">
-            <p class="font-label-sm text-on-surface-variant">Doanh số kỳ</p>
-            <p class="mt-1 font-headline-sm text-headline-sm">{{ MoneyFormatter::vnd((int) $totals['gross_cents']) }}</p>
-        </div>
-        <div class="rounded-xl border border-outline-variant bg-surface p-4">
-            <p class="font-label-sm text-on-surface-variant">Hoa hồng kỳ</p>
-            <p class="mt-1 font-headline-sm text-headline-sm">{{ MoneyFormatter::vnd((int) $totals['commission_cents']) }}</p>
-        </div>
-    </div>
-
+    <div id="partner-results-region" class="space-y-6">
     <div class="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
     <div class="overflow-x-auto">
         <table class="min-w-full text-left font-body-sm text-body-sm">
@@ -253,10 +253,13 @@
                         const parsed = new DOMParser().parseFromString(await response.text(), 'text/html');
                         const next = parsed.getElementById('partner-results-region');
                         const current = document.getElementById('partner-results-region');
+                        const nextKpi = parsed.getElementById('partner-kpi-region');
+                        const currentKpi = document.getElementById('partner-kpi-region');
                         const nextPeriod = parsed.getElementById('partner-period-description');
                         const currentPeriod = document.getElementById('partner-period-description');
                         if (!next || !current) throw new Error('Không tìm thấy vùng kết quả cộng tác viên');
                         current.replaceWith(next);
+                        if (nextKpi && currentKpi) currentKpi.replaceWith(nextKpi);
                         if (nextPeriod && currentPeriod) currentPeriod.replaceWith(nextPeriod);
                         window.history.pushState({}, '', url);
                         this.bindPagination();
