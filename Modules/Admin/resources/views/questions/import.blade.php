@@ -161,7 +161,14 @@
         @endif
 
         @if ($step === 'preview' && $batch && $preview)
-            <section class="space-y-4">
+            @php
+                $previewInvalidRows = collect($preview['rows'])->where('ok', false)->values();
+                $previewValidRows = collect($preview['rows'])->where('ok', true)->values();
+                // Lỗi trước, rồi hợp lệ theo số dòng — luôn hiện đủ dòng lỗi (không cắt 80 dòng đầu).
+                $previewDisplayRows = $previewInvalidRows->concat($previewValidRows);
+            @endphp
+            <section class="space-y-4"
+                x-data="{ filter: {{ $preview['invalid'] > 0 ? "'errors'" : "'all'" }} }">
                 <div class="rounded-xl border border-outline-variant bg-surface p-6">
                     <h2 class="font-label-lg font-semibold text-on-surface">Kiểm tra</h2>
                     <p class="mt-2 font-body-sm text-on-surface">
@@ -179,20 +186,48 @@
                             <strong>{{ implode(', ', $preview['invalid_codes']) }}</strong>
                         </p>
                     @endif
-                    @if ($batch->error_report_path)
-                        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.import.errors'))
-<a href="{{ route('admin.questions.import.errors', $batch) }}"
-                            class="mt-3 inline-flex font-label-sm font-semibold text-primary hover:underline">
-                            Tải file lỗi Excel
-                        </a>
-@endif
+                    @if ($preview['invalid'] > 0)
+                        <div class="mt-3 flex flex-wrap items-center gap-3">
+                            @if ($batch->error_report_path)
+                                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.import.errors'))
+                                    <a href="{{ route('admin.questions.import.errors', $batch) }}"
+                                        class="inline-flex items-center gap-1.5 rounded-lg border border-error/30 bg-error/5 px-3 py-2 font-label-sm font-semibold text-error hover:bg-error/10">
+                                        <span class="material-symbols-outlined text-[18px]" aria-hidden="true">download</span>
+                                        Tải {{ number_format($preview['invalid']) }} dòng lỗi (Excel)
+                                    </a>
+                                @endif
+                            @endif
+                            <p class="font-body-sm text-on-surface-variant">
+                                Bảng bên dưới mặc định hiện dòng lỗi trước; dùng bộ lọc để xem toàn bộ.
+                            </p>
+                        </div>
                     @endif
                 </div>
 
                 <div class="overflow-hidden rounded-xl border border-outline-variant bg-surface">
-                    <div class="overflow-x-auto">
+                    <div class="flex flex-wrap items-center gap-2 border-b border-outline-variant bg-surface-container-low px-3 py-2">
+                        <span class="font-label-sm text-on-surface-variant">Hiện:</span>
+                        <button type="button" @click="filter = 'all'"
+                            :class="filter === 'all' ? 'bg-primary text-on-primary' : 'bg-surface text-on-surface hover:bg-surface-container-high'"
+                            class="rounded-lg px-3 py-1.5 font-label-sm font-semibold">
+                            Tất cả ({{ number_format($preview['total']) }})
+                        </button>
+                        <button type="button" @click="filter = 'errors'"
+                            :class="filter === 'errors' ? 'bg-error text-on-error' : 'bg-surface text-on-surface hover:bg-surface-container-high'"
+                            class="rounded-lg px-3 py-1.5 font-label-sm font-semibold"
+                            @if ($preview['invalid'] === 0) disabled @endif>
+                            Chỉ lỗi ({{ number_format($preview['invalid']) }})
+                        </button>
+                        <button type="button" @click="filter = 'valid'"
+                            :class="filter === 'valid' ? 'bg-emerald-700 text-white' : 'bg-surface text-on-surface hover:bg-surface-container-high'"
+                            class="rounded-lg px-3 py-1.5 font-label-sm font-semibold"
+                            @if ($preview['valid'] === 0) disabled @endif>
+                            Chỉ hợp lệ ({{ number_format($preview['valid']) }})
+                        </button>
+                    </div>
+                    <div class="max-h-[70vh] overflow-auto">
                         <table class="min-w-full text-left font-body-sm">
-                            <thead>
+                            <thead class="sticky top-0 z-10">
                                 <tr class="border-b border-outline-variant bg-surface-container-low text-on-surface-variant">
                                     <th class="px-3 py-2">Dòng</th>
                                     <th class="px-3 py-2">Mã</th>
@@ -201,8 +236,9 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach (array_slice($preview['rows'], 0, 80) as $row)
-                                    <tr class="border-b border-outline-variant/60">
+                                @forelse ($previewDisplayRows as $row)
+                                    <tr class="border-b border-outline-variant/60 {{ $row['ok'] ? '' : 'bg-error/5' }}"
+                                        x-show="filter === 'all' || (filter === 'errors' && {{ $row['ok'] ? 'false' : 'true' }}) || (filter === 'valid' && {{ $row['ok'] ? 'true' : 'false' }})">
                                         <td class="px-3 py-2 tabular-nums">{{ $row['line'] }}</td>
                                         <td class="px-3 py-2 font-mono text-xs text-on-surface">
                                             {{ $row['values']['code'] !== '' ? $row['values']['code'] : '—' }}
@@ -220,7 +256,13 @@
                                             @endif
                                         </td>
                                     </tr>
-                                @endforeach
+                                @empty
+                                    <tr>
+                                        <td colspan="4" class="px-3 py-6 text-center text-on-surface-variant">
+                                            Không có dòng nào để hiển thị.
+                                        </td>
+                                    </tr>
+                                @endforelse
                             </tbody>
                         </table>
                     </div>
