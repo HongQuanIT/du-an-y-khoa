@@ -2,6 +2,11 @@
 
 ## 2026-09-22
 
+### Fix — Chặn scroll ngang cả trang Admin (audit)
+
+- Layout admin: `overflow-x-hidden`, `min-w-0`, khóa `max-w` theo viewport trừ sidebar.
+- Trang audit: siết overflow bảng trong card; cột thiết bị `truncate` thay `min-w-52`.
+
 ### Fix — Nút Cột hiển thị bị đè header Admin
 
 - Bỏ `z-[70]` trên wrapper nút chọn cột trang ngân hàng câu hỏi để không lòi lên trên top bar cố định khi scroll.
