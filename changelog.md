@@ -25,6 +25,10 @@
 - Tách `VietnamGeographySeeder`: quốc gia VN, 34 tỉnh/thành (sau sáp nhập 2025), trường y/dược toàn quốc.
 - `LearnerProfileCatalogSeeder` gọi seeder địa lý rồi seed chức danh + năm học; thêm test idempotent.
 
+### Docs — Thêm seed Excel QBank vào `deploy-dev.md`
+
+- Ghi lệnh `question-bank:seed-from-excel` ở mục re-seed tuỳ chọn (cần UserSeeder + SubjectLessonSeeder).
+
 ### Feat — Seed 300 câu published từ Excel (`question-bank:seed-from-excel`)
 
 - Command tái dùng stack import admin (validate format/lesson, `created_by` = editor) rồi force-publish + snapshot version cho test QBank/học viên.
