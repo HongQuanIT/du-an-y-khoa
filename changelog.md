@@ -2,6 +2,11 @@
 
 ## 2026-09-22
 
+### Feat — Seeder địa lý Việt Nam
+
+- Tách `VietnamGeographySeeder`: quốc gia VN, 34 tỉnh/thành (sau sáp nhập 2025), trường y/dược toàn quốc.
+- `LearnerProfileCatalogSeeder` gọi seeder địa lý rồi seed chức danh + năm học; thêm test idempotent.
+
 ### Feat — Đồng bộ UI bộ lọc Admin theo trang Liên hệ
 
 - Chuẩn hóa layout `grid items-end`, label/input `text-sm`, focus ring, nút `filter-action-buttons` + spacer.
