@@ -58,7 +58,7 @@ use Spatie\Permission\Traits\HasRoles;
     'avatar_path',
     'notification_prefs',
     'active_web_session_id',
-])]]
+])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements CanResetPasswordContract
 {
