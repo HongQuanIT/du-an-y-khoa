@@ -88,7 +88,7 @@
 @endif
                 @endif
 
-                <div class="relative z-[70]" @keydown.escape.window="open = false">
+                <div class="relative" @keydown.escape.window="open = false">
                     <button type="button" id="btn-toggle-columns" x-ref="columnTrigger" @click="open = !open"
                         class="inline-flex items-center gap-2 rounded-xl border border-outline-variant bg-surface px-4 py-2.5 font-label-md font-semibold text-on-surface shadow-sm transition-colors hover:bg-surface-container-low"
                         :aria-expanded="open" aria-haspopup="dialog" aria-label="Tùy chọn cột hiển thị trong bảng">
