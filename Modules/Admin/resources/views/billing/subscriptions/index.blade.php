@@ -9,57 +9,72 @@
     <x-admin.flash />
 
     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.billing.subscriptions.index'))
-<form method="get" action="{{ route('admin.billing.subscriptions.index') }}" role="search"
-        aria-labelledby="subscription-filter-heading" aria-describedby="subscription-filter-description"
+<form id="subscription-filter-form" method="get" action="{{ route('admin.billing.subscriptions.index') }}"
+        role="search" aria-label="Tìm kiếm lịch sử Premium"
         @submit.prevent="applyFilters()"
-        class="mb-6 space-y-4 rounded-xl border border-outline-variant bg-surface p-4">
-        <div>
-            <h2 id="subscription-filter-heading" class="font-label-lg font-semibold text-on-surface">Tìm kiếm lịch sử Premium</h2>
-            <p id="subscription-filter-description" class="mt-1 font-body-sm text-on-surface-variant">Tìm theo tên hoặc email học viên, sau đó lọc theo trạng thái, gói, SKU và nguồn kích hoạt.</p>
-        </div>
-        <div class="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 xl:grid-cols-[minmax(280px,1.5fr)_repeat(4,minmax(145px,1fr))]">
-            <div class="sm:col-span-2 xl:col-auto">
-                <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant" for="q">Tìm kiếm học viên</label>
-                <div class="relative">
-                    <span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[19px] text-on-surface-variant" aria-hidden="true">search</span>
-                    <input id="q" name="q" value="{{ $filters['q'] }}" type="search" placeholder="Tên hoặc email" autocomplete="off"
-                        class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low py-2 pl-10 pr-3 font-body-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
-                </div>
-            </div>
-            <div class="min-w-0">
-                <x-admin.multi-select-filter name="status" label="Trạng thái" placeholder="Tất cả"
-                    :options="[
-                        ['id' => 'active', 'label' => 'Đang hiệu lực'],
-                        ['id' => 'expired', 'label' => 'Đã hết hạn'],
-                    ]"
-                    :selected="$filters['status']" />
-            </div>
-            <div class="min-w-0">
-                <x-admin.multi-select-filter name="plan" label="Gói" placeholder="Tất cả"
-                    :options="$plans->map(fn ($plan) => ['id' => $plan->id, 'label' => $plan->name])->all()"
-                    :selected="$filters['plan']" />
-            </div>
-            <div class="min-w-0">
-                <x-admin.multi-select-filter name="sku" label="SKU" placeholder="Tất cả"
-                    :options="collect([['id' => 'unassigned', 'label' => 'Chưa gắn SKU']])->merge($prices->map(fn ($price) => ['id' => $price->id, 'label' => $price->plan?->name.' — '.$price->label]))->all()"
-                    :selected="$filters['sku']" />
-            </div>
-            <div class="min-w-0">
-                <x-admin.multi-select-filter name="source" label="Nguồn" placeholder="Tất cả"
-                    :options="collect($sourceLabels)->map(fn ($label, $value) => ['id' => $value, 'label' => $label])->values()->all()"
-                    :selected="$filters['source']" />
+        class="mb-6 grid grid-cols-1 items-end gap-4 rounded-xl border border-outline-variant bg-surface p-4 md:grid-cols-12">
+        <div class="md:col-span-3">
+            <label for="q" class="mb-1.5 block text-sm font-medium text-on-surface-variant">Tìm kiếm</label>
+            <div class="relative">
+                <input id="q" name="q" value="{{ $filters['q'] }}" type="search"
+                    placeholder="Tên hoặc email" autocomplete="off"
+                    class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 pl-9 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
+                <span class="material-symbols-outlined pointer-events-none absolute top-2.5 left-2.5 text-[20px] text-on-surface-variant/70" aria-hidden="true">search</span>
             </div>
         </div>
-        <div class="flex justify-end gap-2 border-t border-outline-variant pt-4">
-                <button type="submit" :disabled="loading" aria-label="Tìm kiếm lịch sử Premium"
-                    class="inline-flex h-11 w-36 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 font-label-md font-medium text-on-primary transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50">
-                    <span class="material-symbols-outlined text-[18px]" aria-hidden="true" x-text="loading ? 'progress_activity' : 'search'">search</span>
-                    <span class="whitespace-nowrap" x-text="loading ? 'Đang tải' : 'Tìm kiếm'">Tìm kiếm</span>
-                </button>
-                <button type="button" @click="resetFilters(@js(route('admin.billing.subscriptions.index')))" :disabled="loading" aria-label="Xoá bộ lọc lịch sử Premium"
-                    class="inline-flex h-11 w-28 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-outline-variant bg-surface px-3 font-label-md font-medium text-on-surface-variant transition hover:bg-surface-container-low focus-visible:ring-2 focus-visible:ring-primary/20 disabled:opacity-50">
-                    <span class="material-symbols-outlined text-[18px]" aria-hidden="true">delete</span><span>Xoá</span>
-                </button>
+
+        <div class="min-w-0 md:col-span-2">
+            <x-admin.multi-select-filter
+                name="status"
+                label="Trạng thái"
+                placeholder="Tất cả"
+                :options="[
+                    ['id' => 'active', 'label' => 'Đang hiệu lực', 'tone' => 'bg-emerald-50 text-emerald-800 border-emerald-200'],
+                    ['id' => 'expired', 'label' => 'Đã hết hạn', 'tone' => 'bg-surface-container-high text-on-surface-variant border-outline-variant'],
+                ]"
+                :selected="$filters['status']"
+            />
+        </div>
+
+        <div class="min-w-0 md:col-span-2">
+            <x-admin.multi-select-filter
+                name="plan"
+                label="Gói"
+                placeholder="Tất cả"
+                :options="$plans->map(fn ($plan) => ['id' => $plan->id, 'label' => $plan->name])->all()"
+                :selected="$filters['plan']"
+            />
+        </div>
+
+        <div class="min-w-0 md:col-span-2">
+            <x-admin.multi-select-filter
+                name="sku"
+                label="SKU"
+                placeholder="Tất cả"
+                :options="collect([['id' => 'unassigned', 'label' => 'Chưa gắn SKU']])->merge($prices->map(fn ($price) => ['id' => $price->id, 'label' => $price->plan?->name.' — '.$price->label]))->all()"
+                :selected="$filters['sku']"
+            />
+        </div>
+
+        <div class="min-w-0 md:col-span-3">
+            <x-admin.multi-select-filter
+                name="source"
+                label="Nguồn"
+                placeholder="Tất cả"
+                :options="collect($sourceLabels)->map(fn ($label, $value) => ['id' => $value, 'label' => $label])->values()->all()"
+                :selected="$filters['source']"
+            />
+        </div>
+
+        <div class="md:col-span-12 flex justify-end border-t border-outline-variant pt-4">
+            <div class="w-full max-w-xs">
+                <x-admin.filter-action-buttons
+                    fill
+                    :reset-url="route('admin.billing.subscriptions.index')"
+                    search-aria-label="Tìm kiếm lịch sử Premium"
+                    reset-aria-label="Xoá bộ lọc lịch sử Premium"
+                />
+            </div>
         </div>
     </form>
 @endif
@@ -114,9 +129,9 @@
                         </td>
                         <td class="px-4 py-3">
                             @if ($subscription->isActive())
-                                <span class="rounded-full bg-primary/10 px-2 py-0.5 font-label-sm text-primary">Hiệu lực</span>
+                                <span class="inline-flex rounded-full border px-2 py-0.5 text-xs font-medium bg-emerald-50 text-emerald-800 border-emerald-200">Hiệu lực</span>
                             @else
-                                <span class="rounded-full bg-surface-container-high px-2 py-0.5 font-label-sm text-on-surface-variant">Hết hạn</span>
+                                <span class="inline-flex rounded-full border px-2 py-0.5 text-xs font-medium bg-surface-container-high text-on-surface-variant border-outline-variant">Hết hạn</span>
                             @endif
                         </td>
                     </tr>
@@ -140,7 +155,7 @@
         function adminSubscriptionFilter() {
             return {
                 loading: false,
-                filterForm() { return document.querySelector('form[role="search"]'); },
+                filterForm() { return document.getElementById('subscription-filter-form'); },
                 async applyFilters() {
                     const form = this.filterForm();
                     if (!form) return;

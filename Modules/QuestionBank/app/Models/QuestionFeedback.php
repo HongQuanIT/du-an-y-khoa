@@ -67,6 +67,39 @@ final class QuestionFeedback extends Model
     }
 
     /** @return array<string, string> */
+    public static function statusTones(): array
+    {
+        return [
+            self::STATUS_PENDING => 'bg-amber-50 text-amber-800 border-amber-200',
+            self::STATUS_REVIEWING => 'bg-sky-50 text-sky-800 border-sky-200',
+            self::STATUS_RESOLVED => 'bg-emerald-50 text-emerald-800 border-emerald-200',
+            self::STATUS_DISMISSED => 'bg-surface-container-high text-on-surface-variant border-outline-variant',
+        ];
+    }
+
+    /** @return array<string, string> */
+    public static function statusIcons(): array
+    {
+        return [
+            self::STATUS_PENDING => 'hourglass_empty',
+            self::STATUS_REVIEWING => 'rate_review',
+            self::STATUS_RESOLVED => 'check_circle',
+            self::STATUS_DISMISSED => 'block',
+        ];
+    }
+
+    /** @return array<string, string> */
+    public static function statusIconSurfaces(): array
+    {
+        return [
+            self::STATUS_PENDING => 'bg-amber-50 text-amber-700',
+            self::STATUS_REVIEWING => 'bg-sky-50 text-sky-700',
+            self::STATUS_RESOLVED => 'bg-emerald-50 text-emerald-700',
+            self::STATUS_DISMISSED => 'bg-surface-container-low text-on-surface-variant',
+        ];
+    }
+
+    /** @return array<string, string> */
     public static function categoryLabels(): array
     {
         return [

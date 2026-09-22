@@ -28,81 +28,84 @@
     <x-admin.flash />
 
     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.partners.index'))
-<form method="get" action="{{ route('admin.partners.index') }}" role="search"
-        aria-labelledby="partner-filter-heading" aria-describedby="partner-filter-description"
+<form id="partner-filter-form" method="get" action="{{ route('admin.partners.index') }}"
+        role="search" aria-label="Tìm kiếm cộng tác viên"
         @submit.prevent="applyFilters()"
-        class="space-y-5 rounded-xl border border-outline-variant bg-surface p-4">
-        <div>
-            <h2 id="partner-filter-heading" class="font-label-lg font-semibold text-on-surface">Tìm kiếm cộng tác viên</h2>
-            <p id="partner-filter-description" class="mt-1 font-body-sm text-on-surface-variant">Chọn kỳ báo cáo, trạng thái hoặc tìm theo tên và email cộng tác viên.</p>
-        </div>
-        <div class="flex flex-wrap gap-2">
+        class="space-y-4 rounded-xl border border-outline-variant bg-surface p-4">
+        <div class="flex flex-wrap gap-2" role="group" aria-label="Kỳ báo cáo">
             @foreach ($presets as $preset)
                 @if ($preset !== PartnerPeriodFilter::PRESET_CUSTOM)
                     <button type="button" @click="preset = @js($preset)"
-                        class="rounded-lg px-3 py-2 font-label-md text-label-md transition-colors focus-visible:ring-2 focus-visible:ring-primary/40"
+                        class="rounded-lg px-3 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                         :class="preset === @js($preset) ? 'bg-primary text-on-primary' : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'">
                         {{ PartnerPeriodFilter::presetLabel($preset) }}
                     </button>
                 @endif
             @endforeach
             <button type="button" @click="preset = 'custom'"
-                class="rounded-lg px-3 py-2 font-label-md text-label-md"
+                class="rounded-lg px-3 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                 :class="preset === 'custom' ? 'bg-primary text-on-primary' : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'">
                 Tuỳ chọn
             </button>
         </div>
 
         <input type="hidden" name="preset" :value="preset">
+        <input type="hidden" name="sort" value="{{ $filters['sort'] }}">
+        <input type="hidden" name="dir" value="{{ $filters['dir'] }}">
 
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2" x-show="preset === 'custom'" x-cloak>
             <div>
-                <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant" for="from">Từ ngày</label>
+                <label class="mb-1.5 block text-sm font-medium text-on-surface-variant" for="from">Từ ngày</label>
                 <input id="from" name="from" type="date"
                     value="{{ $period['preset'] === 'custom' ? $period['from']->toDateString() : '' }}"
-                    class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-body-sm text-on-surface outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
+                    class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
             </div>
             <div>
-                <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant" for="to">Đến ngày</label>
+                <label class="mb-1.5 block text-sm font-medium text-on-surface-variant" for="to">Đến ngày</label>
                 <input id="to" name="to" type="date"
                     value="{{ $period['preset'] === 'custom' ? $period['to']->toDateString() : now()->toDateString() }}"
-                    class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-body-sm text-on-surface outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
+                    class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
             </div>
         </div>
 
-        <div class="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 xl:grid-cols-[minmax(220px,300px)_minmax(280px,1fr)_auto]">
-            <div class="min-w-0">
-                <x-admin.multi-select-filter name="status" label="Trạng thái" placeholder="Tất cả"
+        <div class="grid grid-cols-1 items-end gap-4 md:grid-cols-12">
+            <div class="min-w-0 md:col-span-3">
+                <x-admin.multi-select-filter
+                    name="status"
+                    label="Trạng thái"
+                    placeholder="Tất cả"
                     :options="[
-                        ['id' => 'active', 'label' => 'Hoạt động'],
-                        ['id' => 'suspended', 'label' => 'Tạm dừng'],
+                        ['id' => 'active', 'label' => 'Hoạt động', 'tone' => 'bg-emerald-50 text-emerald-800 border-emerald-200'],
+                        ['id' => 'suspended', 'label' => 'Tạm dừng', 'tone' => 'bg-amber-50 text-amber-800 border-amber-200'],
                     ]"
-                    :selected="$filters['status']" />
+                    :selected="$filters['status']"
+                />
             </div>
-            <div class="min-w-0">
-                <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant" for="q">Tìm cộng tác viên</label>
-                <input id="q" name="q" type="search" value="{{ $filters['q'] }}"
-                    placeholder="Tên hiển thị, tên hoặc email"
-                    class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-body-sm text-on-surface outline-none placeholder:text-on-surface-variant focus-visible:ring-2 focus-visible:ring-primary/40">
+
+            <div class="md:col-span-6">
+                <label for="q" class="mb-1.5 block text-sm font-medium text-on-surface-variant">Tìm kiếm</label>
+                <div class="relative">
+                    <input id="q" name="q" type="search" value="{{ $filters['q'] }}"
+                        placeholder="Tên hiển thị, tên hoặc email" autocomplete="off"
+                        class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 pl-9 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
+                    <span class="material-symbols-outlined pointer-events-none absolute top-2.5 left-2.5 text-[20px] text-on-surface-variant/70" aria-hidden="true">search</span>
+                </div>
             </div>
-            <div class="flex self-end gap-2 sm:col-span-2 xl:col-auto">
-                <input type="hidden" name="sort" value="{{ $filters['sort'] }}">
-                <input type="hidden" name="dir" value="{{ $filters['dir'] }}">
-                <button type="submit" :disabled="loading" aria-label="Tìm kiếm cộng tác viên"
-                    class="inline-flex h-11 w-36 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 font-label-md font-medium text-on-primary transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50">
-                    <span class="material-symbols-outlined text-[18px]" aria-hidden="true" x-text="loading ? 'progress_activity' : 'search'">search</span>
-                    <span class="whitespace-nowrap" x-text="loading ? 'Đang tải' : 'Tìm kiếm'">Tìm kiếm</span>
-                </button>
-                <button type="button" @click="resetFilters(@js(route('admin.partners.index')))" :disabled="loading" aria-label="Xoá bộ lọc cộng tác viên"
-                    class="inline-flex h-11 w-28 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-outline-variant bg-surface px-3 font-label-md font-medium text-on-surface-variant transition hover:bg-surface-container-low focus-visible:ring-2 focus-visible:ring-primary/20 disabled:opacity-50">
-                    <span class="material-symbols-outlined text-[18px]" aria-hidden="true">delete</span><span>Xoá</span>
-                </button>
+
+            <div class="md:col-span-3">
+                <span class="mb-1.5 block text-sm font-medium text-transparent select-none" aria-hidden="true">&nbsp;</span>
+                <x-admin.filter-action-buttons
+                    fill
+                    :reset-url="route('admin.partners.index')"
+                    search-aria-label="Tìm kiếm cộng tác viên"
+                    reset-aria-label="Xoá bộ lọc cộng tác viên"
+                />
             </div>
         </div>
 
-        <p id="partner-period-description" class="font-label-md text-on-surface">
+        <p id="partner-period-description" class="text-sm text-on-surface">
             Đang xem: <span class="font-semibold">{{ $period['label'] }}</span>
-            <span class="font-label-sm text-on-surface-variant">
+            <span class="text-sm text-on-surface-variant">
                 — Đăng ký / doanh số / hoa hồng theo kỳ · Mã còn hiệu lực = hiện tại
             </span>
         </p>
@@ -183,7 +186,11 @@
                         <td class="px-4 py-3">{{ number_format($referrals) }}</td>
                         <td class="px-4 py-3">{{ MoneyFormatter::vnd($gross) }}</td>
                         <td class="px-4 py-3 font-label-md">{{ MoneyFormatter::vnd($commission) }}</td>
-                        <td class="px-4 py-3">{{ $partner->status->label() }}</td>
+                        <td class="px-4 py-3">
+                            <span class="inline-flex rounded-full border px-2 py-0.5 text-xs font-medium {{ $partner->status->tone() }}">
+                                {{ $partner->status->label() }}
+                            </span>
+                        </td>
                         <td class="px-4 py-3">
                             @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.partners.show'))
 <a href="{{ route('admin.partners.show', $partner) }}" class="text-primary hover:underline">Chi tiết</a>
@@ -221,7 +228,7 @@
             return {
                 loading: false,
                 preset: initialPreset,
-                filterForm() { return document.querySelector('form[role="search"]'); },
+                filterForm() { return document.getElementById('partner-filter-form'); },
                 async applyFilters() {
                     const form = this.filterForm();
                     if (!form) return;

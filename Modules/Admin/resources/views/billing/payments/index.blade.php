@@ -5,23 +5,19 @@
     $statusMeta = [
         'pending' => [
             'label' => 'Chờ thanh toán',
-            'dot' => 'bg-on-surface-variant',
-            'class' => 'border-outline-variant text-on-surface',
+            'tone' => 'bg-amber-50 text-amber-800 border-amber-200',
         ],
         'completed' => [
             'label' => 'Thành công',
-            'dot' => 'bg-on-surface-variant',
-            'class' => 'border-outline-variant text-on-surface',
+            'tone' => 'bg-emerald-50 text-emerald-800 border-emerald-200',
         ],
         'failed' => [
             'label' => 'Thất bại',
-            'dot' => 'bg-on-surface-variant',
-            'class' => 'border-outline-variant text-on-surface',
+            'tone' => 'bg-rose-50 text-rose-800 border-rose-200',
         ],
         'expired' => [
             'label' => 'Hết hạn',
-            'dot' => 'bg-on-surface-variant',
-            'class' => 'border-outline-variant text-on-surface-variant',
+            'tone' => 'bg-surface-container-high text-on-surface-variant border-outline-variant',
         ],
     ];
 @endphp
@@ -37,36 +33,42 @@
     <x-admin.flash />
 
     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.billing.payments.index'))
-<form method="get" action="{{ route('admin.billing.payments.index') }}"
-        role="search" aria-labelledby="payment-filter-heading" aria-describedby="payment-filter-description"
+<form id="payment-filter-form" method="get" action="{{ route('admin.billing.payments.index') }}"
+        role="search" aria-label="Tìm kiếm thanh toán"
         @submit.prevent="applyFilters()"
-        class="mb-6 space-y-4 rounded-xl border border-outline-variant bg-surface p-4">
-        <div>
-            <h2 id="payment-filter-heading" class="font-label-lg font-semibold text-on-surface">Tìm kiếm thanh toán</h2>
-            <p id="payment-filter-description" class="mt-1 font-body-sm text-on-surface-variant">Thu hẹp phiên thanh toán theo trạng thái và cổng thanh toán.</p>
+        class="mb-6 grid grid-cols-1 items-end gap-4 rounded-xl border border-outline-variant bg-surface p-4 md:grid-cols-12">
+        <div class="min-w-0 md:col-span-3">
+            <x-admin.multi-select-filter
+                name="status"
+                label="Trạng thái"
+                placeholder="Tất cả"
+                :options="collect($statusLabels)->map(fn ($label, $value) => [
+                    'id' => $value,
+                    'label' => $label,
+                    'tone' => $statusMeta[$value]['tone'] ?? null,
+                ])->values()->all()"
+                :selected="$filters['status']"
+            />
         </div>
-        <div class="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 xl:grid-cols-[minmax(220px,320px)_minmax(220px,320px)_auto]">
-            <div class="min-w-0">
-                <x-admin.multi-select-filter name="status" label="Trạng thái" placeholder="Tất cả"
-                :options="collect($statusLabels)->map(fn ($label, $value) => ['id' => $value, 'label' => $label])->values()->all()"
-                :selected="$filters['status']" />
-            </div>
-            <div class="min-w-0">
-                <x-admin.multi-select-filter name="provider" label="Cổng thanh toán" placeholder="Tất cả"
+
+        <div class="min-w-0 md:col-span-3">
+            <x-admin.multi-select-filter
+                name="provider"
+                label="Cổng thanh toán"
+                placeholder="Tất cả"
                 :options="collect(['fake', 'vnpay', 'momo', 'zalopay'])->map(fn ($value) => ['id' => $value, 'label' => strtoupper($value)])->all()"
-                :selected="$filters['provider']" />
-            </div>
-            <div class="flex self-end gap-2 sm:col-span-2 xl:col-auto">
-                <button type="submit" :disabled="loading" aria-label="Tìm kiếm thanh toán"
-                class="inline-flex h-11 w-36 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 font-label-md font-medium text-on-primary transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50">
-                    <span class="material-symbols-outlined text-[18px]" aria-hidden="true" x-text="loading ? 'progress_activity' : 'search'">search</span>
-                    <span class="whitespace-nowrap" x-text="loading ? 'Đang tải' : 'Tìm kiếm'">Tìm kiếm</span>
-                </button>
-                <button type="button" @click="resetFilters(@js(route('admin.billing.payments.index')))" :disabled="loading" aria-label="Xoá bộ lọc thanh toán"
-                class="inline-flex h-11 w-28 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-outline-variant bg-surface px-3 font-label-md font-medium text-on-surface-variant transition hover:bg-surface-container-low focus-visible:ring-2 focus-visible:ring-primary/20 disabled:opacity-50">
-                    <span class="material-symbols-outlined text-[18px]" aria-hidden="true">delete</span><span>Xoá</span>
-                </button>
-            </div>
+                :selected="$filters['provider']"
+            />
+        </div>
+
+        <div class="md:col-span-3">
+            <span class="mb-1.5 block text-sm font-medium text-transparent select-none" aria-hidden="true">&nbsp;</span>
+            <x-admin.filter-action-buttons
+                fill
+                :reset-url="route('admin.billing.payments.index')"
+                search-aria-label="Tìm kiếm thanh toán"
+                reset-aria-label="Xoá bộ lọc thanh toán"
+            />
         </div>
     </form>
 @endif
@@ -93,8 +95,7 @@
                             $payment = $session->payments->first();
                             $meta = $statusMeta[$session->status] ?? [
                                 'label' => $session->status,
-                                'dot' => 'bg-on-surface-variant',
-                                'class' => 'border-outline-variant text-on-surface-variant',
+                                'tone' => 'bg-surface-container-high text-on-surface-variant border-outline-variant',
                             ];
                         @endphp
                         <tr class="transition-colors hover:bg-surface-container-low">
@@ -123,8 +124,7 @@
                                 </span>
                             </td>
                             <td class="px-4 py-3.5 align-middle">
-                                <span class="inline-flex max-w-full items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 font-label-sm font-medium {{ $meta['class'] }}">
-                                    <span class="size-1.5 shrink-0 rounded-full {{ $meta['dot'] }}"></span>
+                                <span class="inline-flex max-w-full items-center whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-medium {{ $meta['tone'] }}">
                                     {{ $meta['label'] }}
                                 </span>
                                 @if ($payment?->provider_payment_id)
@@ -178,7 +178,7 @@
         function adminPaymentFilter() {
             return {
                 loading: false,
-                filterForm() { return document.querySelector('form[role="search"]'); },
+                filterForm() { return document.getElementById('payment-filter-form'); },
                 async applyFilters() {
                     const form = this.filterForm();
                     if (!form) return;

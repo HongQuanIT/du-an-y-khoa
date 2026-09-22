@@ -1,10 +1,7 @@
 @php
-    $statusTone = [
-        'pending' => 'border-outline-variant text-on-surface',
-        'reviewing' => 'border-outline-variant text-on-surface',
-        'resolved' => 'border-outline-variant text-on-surface',
-        'dismissed' => 'border-outline-variant text-on-surface-variant',
-    ];
+    $statusTone = \Modules\QuestionBank\Models\QuestionFeedback::statusTones();
+    $statusIcons = \Modules\QuestionBank\Models\QuestionFeedback::statusIcons();
+    $statusIconSurfaces = \Modules\QuestionBank\Models\QuestionFeedback::statusIconSurfaces();
 @endphp
 
 <x-layouts.admin title="Phản hồi câu hỏi">
@@ -14,46 +11,94 @@
 
     <x-admin.flash />
 
-    <div class="mb-6 grid gap-3 sm:grid-cols-4">
-        @foreach ($statuses as $value => $label)
-            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.question-feedback.index'))
-<a href="{{ route('admin.question-feedback.index', ['status' => $value]) }}"
-                class="rounded-xl border border-outline-variant bg-surface p-4 transition hover:bg-surface-container-low">
-                <p class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">{{ $label }}</p>
-                <p class="mt-2 text-2xl font-bold text-on-surface">{{ number_format((int) ($statusCounts[$value] ?? 0)) }}</p>
-            </a>
-@endif
-        @endforeach
-    </div>
+    <section id="question-feedback-stats" aria-labelledby="heading-feedback-stats">
+        <div class="mb-3 flex items-center justify-between gap-3">
+            <h2 id="heading-feedback-stats" class="font-label-lg font-semibold text-on-surface">Tổng quan</h2>
+            <p class="font-body-sm text-on-surface-variant">Tình trạng phản hồi câu hỏi</p>
+        </div>
+        <div class="grid grid-cols-2 gap-4 sm:grid-cols-4" role="group" aria-label="Lọc phản hồi theo trạng thái">
+            @foreach ($statuses as $value => $label)
+                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.question-feedback.index'))
+                    @php
+                        $isActive = $filters['status'] === [$value];
+                        $count = (int) ($statusCounts[$value] ?? 0);
+                    @endphp
+                    <a href="{{ route('admin.question-feedback.index', ['status' => [$value]]) }}"
+                        id="stats-{{ $value }}-link"
+                        class="rounded-xl border border-outline-variant bg-surface p-4 transition-colors hover:bg-surface-container-low {{ $isActive ? 'ring-2 ring-primary' : '' }}"
+                        aria-current="{{ $isActive ? 'page' : 'false' }}"
+                        aria-label="Xem phản hồi {{ strtolower($label) }}: {{ number_format($count) }}">
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="flex size-10 shrink-0 items-center justify-center rounded-lg {{ $statusIconSurfaces[$value] ?? 'bg-surface-container-low text-on-surface-variant' }}">
+                                <span class="material-symbols-outlined text-[22px]" aria-hidden="true">
+                                    {{ $statusIcons[$value] ?? 'help_center' }}
+                                </span>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="truncate text-label-sm font-medium text-on-surface-variant">{{ $label }}</p>
+                                <p class="text-headline-sm font-bold text-on-surface">{{ number_format($count) }}</p>
+                            </div>
+                        </div>
+                    </a>
+                @endif
+            @endforeach
+        </div>
+    </section>
 
     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.question-feedback.index'))
-<form method="get" action="{{ route('admin.question-feedback.index') }}" role="search"
-        aria-labelledby="question-feedback-filter-heading" aria-describedby="question-feedback-filter-description"
+<form id="question-feedback-filter-form" method="get" action="{{ route('admin.question-feedback.index') }}"
+        role="search" aria-label="Tìm kiếm phản hồi câu hỏi"
         @submit.prevent="applyFilters()"
-        class="mb-6 space-y-4 rounded-xl border border-outline-variant bg-surface p-4">
-        <div>
-            <h2 id="question-feedback-filter-heading" class="font-label-lg font-semibold text-on-surface">Tìm kiếm phản hồi câu hỏi</h2>
-            <p id="question-feedback-filter-description" class="mt-1 font-body-sm text-on-surface-variant">Tìm theo nội dung, câu hỏi hoặc người gửi; sau đó có thể thu hẹp theo trạng thái, vị trí và loại phản hồi.</p>
+        class="mb-6 grid grid-cols-1 items-end gap-4 rounded-xl border border-outline-variant bg-surface p-4 md:grid-cols-12">
+        <div class="md:col-span-3">
+            <label for="feedback-q" class="mb-1.5 block text-sm font-medium text-on-surface-variant">Tìm kiếm</label>
+            <div class="relative">
+                <input id="feedback-q" name="q" value="{{ $filters['q'] }}" type="search"
+                    placeholder="Nội dung, câu hỏi hoặc người gửi" autocomplete="off"
+                    class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 pl-9 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
+                <span class="material-symbols-outlined pointer-events-none absolute top-2.5 left-2.5 text-[20px] text-on-surface-variant/70" aria-hidden="true">search</span>
+            </div>
         </div>
-        <div class="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 xl:grid-cols-[minmax(280px,1.5fr)_repeat(3,minmax(150px,1fr))_auto]">
-            <div class="sm:col-span-2 xl:col-auto">
-                <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant" for="feedback-q">Tìm kiếm</label>
-                <div class="relative">
-                    <span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[19px] text-on-surface-variant" aria-hidden="true">search</span>
-                    <input id="feedback-q" name="q" value="{{ $filters['q'] }}" type="search" placeholder="Nội dung, câu hỏi hoặc người gửi" autocomplete="off"
-                        class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low py-2 pl-10 pr-3 font-body-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
-                </div>
-            </div>
-            <div class="min-w-0">
-                <x-admin.multi-select-filter name="status" label="Trạng thái" :options="collect($statuses)->map(fn ($label, $value) => ['id' => $value, 'label' => $label])->values()->all()" :selected="$filters['status']" />
-            </div>
-            <div class="min-w-0">
-                <x-admin.multi-select-filter name="target" label="Vị trí" :options="collect($targets)->map(fn ($label, $value) => ['id' => $value, 'label' => $label])->values()->all()" :selected="$filters['target']" />
-            </div>
-            <div class="min-w-0">
-                <x-admin.multi-select-filter name="category" label="Loại phản hồi" :options="collect($categories)->map(fn ($label, $value) => ['id' => $value, 'label' => $label])->values()->all()" :selected="$filters['category']" />
-            </div>
-            <x-admin.filter-action-buttons class="self-end sm:col-span-2 xl:col-auto" :reset-url="route('admin.question-feedback.index')" search-aria-label="Tìm kiếm phản hồi câu hỏi" reset-aria-label="Xoá bộ lọc phản hồi câu hỏi" />
+
+        <div class="min-w-0 md:col-span-2">
+            <x-admin.multi-select-filter
+                name="status"
+                label="Trạng thái"
+                placeholder="Tất cả"
+                :options="collect($statuses)->map(fn ($label, $value) => ['id' => $value, 'label' => $label, 'tone' => $statusTone[$value] ?? null])->values()->all()"
+                :selected="$filters['status']"
+            />
+        </div>
+
+        <div class="min-w-0 md:col-span-2">
+            <x-admin.multi-select-filter
+                name="target"
+                label="Vị trí"
+                placeholder="Tất cả"
+                :options="collect($targets)->map(fn ($label, $value) => ['id' => $value, 'label' => $label])->values()->all()"
+                :selected="$filters['target']"
+            />
+        </div>
+
+        <div class="min-w-0 md:col-span-2">
+            <x-admin.multi-select-filter
+                name="category"
+                label="Loại phản hồi"
+                placeholder="Tất cả"
+                :options="collect($categories)->map(fn ($label, $value) => ['id' => $value, 'label' => $label])->values()->all()"
+                :selected="$filters['category']"
+            />
+        </div>
+
+        <div class="md:col-span-3">
+            <span class="mb-1.5 block text-sm font-medium text-transparent select-none" aria-hidden="true">&nbsp;</span>
+            <x-admin.filter-action-buttons
+                fill
+                :reset-url="route('admin.question-feedback.index')"
+                search-aria-label="Tìm kiếm phản hồi câu hỏi"
+                reset-aria-label="Xoá bộ lọc phản hồi câu hỏi"
+            />
         </div>
     </form>
 @endif
@@ -170,7 +215,7 @@
         function adminQuestionFeedbackFilter() {
             return {
                 loading: false,
-                filterForm() { return document.querySelector('form[role="search"]'); },
+                filterForm() { return document.getElementById('question-feedback-filter-form'); },
                 async applyFilters() {
                     const form = this.filterForm();
                     if (!form) return;

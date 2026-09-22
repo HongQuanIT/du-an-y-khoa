@@ -14,38 +14,54 @@
 
     <div>
         <section>
-            <form id="learner-catalog-filter-form" method="get" action="{{ route($config['route'].'.index') }}" role="search" x-data="adminLearnerCatalogFilter()" @submit.prevent="applyFilters()"
-                class="mb-4 space-y-4 rounded-xl border border-outline-variant bg-surface p-4" aria-labelledby="learner-catalog-filter-heading">
-                <div>
-                    <h2 id="learner-catalog-filter-heading" class="font-label-lg font-semibold text-on-surface">Tìm kiếm {{ strtolower($config['title']) }}</h2>
-                    <p class="mt-1 font-body-sm text-on-surface-variant">Tìm theo tên hoặc mã, sau đó thu hẹp danh sách theo các tiêu chí bên dưới.</p>
+            <form id="learner-catalog-filter-form" method="get" action="{{ route($config['route'].'.index') }}"
+                role="search" aria-label="Tìm kiếm {{ strtolower($config['title']) }}"
+                x-data="adminLearnerCatalogFilter()" @submit.prevent="applyFilters()"
+                class="mb-4 grid grid-cols-1 items-end gap-4 rounded-xl border border-outline-variant bg-surface p-4 md:grid-cols-12">
+                <div class="{{ $catalog === 'administrative-units' ? 'md:col-span-3' : 'md:col-span-5' }}">
+                    <label for="catalog-search-q" class="mb-1.5 block text-sm font-medium text-on-surface-variant">Tìm kiếm</label>
+                    <div class="relative">
+                        <input id="catalog-search-q" name="q" value="{{ $filters['q'] }}" type="search"
+                            placeholder="Tên hoặc mã danh mục" autocomplete="off"
+                            class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 pl-9 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
+                        <span class="material-symbols-outlined pointer-events-none absolute top-2.5 left-2.5 text-[20px] text-on-surface-variant/70" aria-hidden="true">search</span>
+                    </div>
                 </div>
-                <div class="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                    <div class="sm:col-span-2 xl:col-auto">
-                        <label for="catalog-search-q" class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant">Tìm kiếm</label>
-                        <div class="relative">
-                            <span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[19px] text-on-surface-variant" aria-hidden="true">search</span>
-                            <input id="catalog-search-q" name="q" value="{{ $filters['q'] }}" type="search" placeholder="Tên hoặc mã danh mục" autocomplete="off" class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low py-2 pl-10 pr-3 font-body-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
-                        </div>
+
+                @if ($catalog === 'administrative-units')
+                    <div class="min-w-0 md:col-span-3">
+                        <x-admin.multi-select-filter
+                            name="country_id"
+                            label="Quốc gia"
+                            placeholder="Tất cả"
+                            :options="$countries->map(fn ($country) => ['id' => $country->id, 'label' => $country->name])->all()"
+                            :selected="$filters['country_id']"
+                        />
                     </div>
-                    @if ($catalog === 'administrative-units')
-                        <div class="min-w-0">
-                            <x-admin.multi-select-filter name="country_id" label="Quốc gia" placeholder="Tất cả"
-                                :options="$countries->map(fn ($country) => ['id' => $country->id, 'label' => $country->name])->all()" :selected="$filters['country_id']" />
-                        </div>
-                    @endif
-                    <div class="min-w-0">
-                        <x-admin.multi-select-filter name="status" label="Trạng thái" placeholder="Tất cả"
-                            :options="[['id' => 'active', 'label' => 'Đang hiển thị'], ['id' => 'inactive', 'label' => 'Đã ẩn']]" :selected="$filters['status']" />
-                    </div>
-                    <div class="flex self-end gap-2 sm:col-span-2 xl:col-auto">
-                        <button type="submit" :disabled="loading" class="inline-flex h-11 w-36 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 font-label-md font-medium text-on-primary transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50" aria-label="Tìm kiếm {{ strtolower($config['title']) }}">
-                            <span class="material-symbols-outlined text-[18px]" aria-hidden="true" x-text="loading ? 'progress_activity' : 'search'">search</span><span x-text="loading ? 'Đang tải' : 'Tìm kiếm'">Tìm kiếm</span>
-                        </button>
-                        <button type="button" @click="resetFilters(@js(route($config['route'].'.index')))" :disabled="loading" class="inline-flex h-11 w-28 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-outline-variant bg-surface px-3 font-label-md font-medium text-on-surface-variant transition hover:bg-surface-container-low focus-visible:ring-2 focus-visible:ring-primary/20 disabled:opacity-50" aria-label="Xoá bộ lọc {{ strtolower($config['title']) }}">
-                            <span class="material-symbols-outlined text-[18px]" aria-hidden="true">delete</span><span>Xoá</span>
-                        </button>
-                    </div>
+                @endif
+
+                <div class="min-w-0 md:col-span-2">
+                    <x-admin.multi-select-filter
+                        name="status"
+                        label="Trạng thái"
+                        placeholder="Tất cả"
+                        :options="[
+                            ['id' => 'active', 'label' => 'Đang hiển thị', 'tone' => 'bg-emerald-50 text-emerald-800 border-emerald-200'],
+                            ['id' => 'inactive', 'label' => 'Đã ẩn', 'tone' => 'bg-surface-container-high text-on-surface-variant border-outline-variant'],
+                        ]"
+                        :selected="$filters['status']"
+                    />
+                </div>
+
+                <div class="md:col-span-3">
+                    <span class="mb-1.5 block text-sm font-medium text-transparent select-none" aria-hidden="true">&nbsp;</span>
+                    <x-admin.filter-action-buttons
+                        reset-method="resetFilters"
+                        :reset-url="route($config['route'].'.index')"
+                        fill
+                        :search-aria-label="'Tìm kiếm '.strtolower($config['title'])"
+                        :reset-aria-label="'Xoá bộ lọc '.strtolower($config['title'])"
+                    />
                 </div>
             </form>
 
