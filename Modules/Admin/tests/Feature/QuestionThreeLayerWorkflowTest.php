@@ -642,7 +642,6 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
 
         $question = Question::factory()->create(array_merge([
             'stem' => 'Stem workflow 3 lớp',
-            'explanation' => null,
             'difficulty' => Difficulty::Medium,
             'status' => $status,
             'created_by' => $creator->id,

@@ -28,6 +28,7 @@ class SearchDatabaseSeeder extends Seeder
 
         Question::query()
             ->where('status', QuestionStatus::Published)
+            ->with('options')
             ->orderBy('created_at')
             ->get()
             ->each(function (Question $question) use ($now): void {
@@ -39,8 +40,13 @@ class SearchDatabaseSeeder extends Seeder
                     'scope' => 'qbank',
                     'type' => 'question',
                     'title' => $stem,
-                    'summary' => SearchText::plain((string) ($question->explanation ?? '')),
-                    'body' => SearchText::plain((string) $question->stem.' '.(string) $question->explanation),
+                    'summary' => SearchText::plain(
+                        (string) ($question->options->firstWhere('is_correct', true)?->explanation ?? ''),
+                    ),
+                    'body' => SearchText::plain(
+                        (string) $question->stem.' '
+                        .(string) ($question->options->pluck('explanation')->filter()->implode(' ')),
+                    ),
                     'url' => route('qbank.index', ['q' => $stem]),
                     'is_free' => (bool) $question->is_free,
                     'is_published' => true,

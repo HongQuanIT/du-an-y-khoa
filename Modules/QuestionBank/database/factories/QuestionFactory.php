@@ -24,7 +24,6 @@ class QuestionFactory extends Factory
     {
         return [
             'stem' => $this->faker->sentence(12).'?',
-            'explanation' => $this->faker->paragraph(),
             'key_info' => [],
             'attending_tip' => null,
             'difficulty' => $this->faker->randomElement(Difficulty::cases()),

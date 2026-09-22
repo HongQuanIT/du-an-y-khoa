@@ -30,7 +30,6 @@ final class BuildQuestionExportRowsAction
 
             $row['code'] = (string) $question->code;
             $row['stem'] = $this->richField($question->stem);
-            $row['explanation'] = $this->richField($question->explanation);
             $row['difficulty'] = $question->difficulty->value;
             $row['lesson_slugs'] = $question->lessons
                 ->map(fn ($lesson): string => (string) $lesson->slug)

@@ -176,12 +176,6 @@
                                 </div>
                             </div>
                         @endif
-                        @if (filled($snapshot['explanation'] ?? null))
-                            <div>
-                                <p class="mb-1 text-xs font-semibold uppercase text-on-surface-variant">Giải thích</p>
-                                <div class="prose prose-sm max-w-none text-on-surface">{!! SafeHtml::forDisplay((string) $snapshot['explanation']) !!}</div>
-                            </div>
-                        @endif
                         @if (filled($snapshot['attending_tip'] ?? null))
                             <div>
                                 <p class="mb-1 text-xs font-semibold uppercase text-on-surface-variant">Kiến thức / Gợi ý</p>

@@ -305,34 +305,6 @@ final class AdminQuestionManagementTest extends TestCase
             ->assertSee('Explanation typed B');
     }
 
-    public function test_admin_can_approve_legacy_question_using_correct_option_explanation(): void
-    {
-        $editor = $this->staffUser(Role::ContentEditor);
-        $payload = $this->payload();
-        unset($payload['explanation']);
-
-        $this->actingAsStaff($editor)
-            ->post(route('admin.questions.store'), array_merge($payload, [
-                'requested_status' => QuestionStatus::InReview->value,
-            ]))
-            ->assertRedirect();
-
-        $question = Question::query()->firstOrFail();
-        $this->assertSame('Đúng', strip_tags((string) $question->explanation));
-
-        // Simulate a request created before the general-explanation field existed.
-        $question->forceFill(['explanation' => null])->save();
-        $correctExplanation = strip_tags((string) $question->options()->where('is_correct', true)->value('explanation'));
-        $question->forceFill(['explanation' => $correctExplanation])->save();
-
-        $this->approveByInstructor($question);
-        $this->publishByAdmin($question);
-
-        $question->refresh();
-        $this->assertSame(QuestionStatus::Published, $question->status);
-        $this->assertSame('Đúng', strip_tags((string) $question->explanation));
-    }
-
     public function test_editor_version_history_shows_full_content_without_admin_approval_version(): void
     {
         $editor = $this->staffUser(Role::ContentEditor);
@@ -537,7 +509,6 @@ final class AdminQuestionManagementTest extends TestCase
 
         $question->refresh();
         $this->assertSame(QuestionStatus::InReview, $question->status);
-        $this->assertTrue(\App\Support\Html\SafeHtml::isBlank($question->explanation));
     }
 
     public function test_editor_can_submit_for_review_but_cannot_publish(): void
@@ -618,7 +589,6 @@ final class AdminQuestionManagementTest extends TestCase
     {
         $editor = $this->staffUser(Role::ContentEditor);
         $question = $this->makeDraftQuestion($editor);
-        $question->forceFill(['explanation' => null])->save();
 
         $this->actingAsStaff($editor)
             ->put(route('admin.questions.update', $question), array_merge($this->payload(), [
@@ -631,7 +601,6 @@ final class AdminQuestionManagementTest extends TestCase
         $question->refresh();
         $this->assertSame(QuestionStatus::InReview, $question->status);
         $this->assertSame('Nội dung vừa sửa trước khi xuất bản', strip_tags($question->stem));
-        $this->assertSame('Đúng', strip_tags((string) $question->explanation));
 
         $this->approveByInstructor($question);
         $this->publishByAdmin($question);
@@ -1266,7 +1235,6 @@ final class AdminQuestionManagementTest extends TestCase
         $this->assertSame(QuestionStatus::Published, $published->status);
         $this->assertSame('Bệnh nhân 55 tuổi đau ngực. Chẩn đoán nào phù hợp nhất?', strip_tags($published->stem));
         $this->assertSame(['đau ngực', 'Chẩn đoán nào phù hợp nhất?'], array_values(array_map('strip_tags', $published->key_info ?? [])));
-        $this->assertSame('Đúng', strip_tags($published->explanation));
         $this->assertSame('Nhớ ECG sớm.', strip_tags($published->attending_tip));
         $this->assertSame(Difficulty::Medium, $published->difficulty);
         $this->assertSame([$this->topic->id], $published->lessons->pluck('id')->all());
@@ -1451,7 +1419,6 @@ final class AdminQuestionManagementTest extends TestCase
         return [
             'stem' => 'Bệnh nhân 55 tuổi đau ngực. Chẩn đoán nào phù hợp nhất?',
             'key_info' => "đau ngực\nChẩn đoán nào phù hợp nhất?",
-            'explanation' => 'Giải thích lâm sàng đầy đủ.',
             'attending_tip' => 'Nhớ ECG sớm.',
             'difficulty' => Difficulty::Medium->value,
             'lesson_ids' => [$this->topic->id],
@@ -1470,7 +1437,6 @@ final class AdminQuestionManagementTest extends TestCase
     {
         $question = Question::factory()->draft()->create([
             'stem' => 'Stem draft test',
-            'explanation' => 'Explanation draft',
             'difficulty' => Difficulty::Easy,
             'created_by' => $createdBy?->id,
             'assigned_instructor_id' => $this->assignedInstructor->id,
@@ -1517,7 +1483,6 @@ final class AdminQuestionManagementTest extends TestCase
         $question = Question::factory()->create([
             'stem' => $stem,
             'key_info' => ['đau ngực', 'Chẩn đoán nào phù hợp nhất?'],
-            'explanation' => 'Giải thích lâm sàng đầy đủ.',
             'attending_tip' => 'Nhớ ECG sớm.',
             'difficulty' => Difficulty::Medium,
             'status' => QuestionStatus::Published,

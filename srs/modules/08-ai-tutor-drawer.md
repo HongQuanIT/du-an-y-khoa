@@ -64,6 +64,8 @@ user_selected_labels[], is_correct_attempt
 library_hits[]   // RAG: id, title, slug, excerpt
 ```
 
+`official_explanation` = ghép từ `explanation` của (các) đáp án đúng — không còn trường giải thích chung trên `questions`.
+
 `options[].label` / `user_selected_labels` = **display letters của session snapshot** (sau khi đảo), không phải chữ cái author trên DB. Identity đáp án vẫn là `options[].id`.
 
 **Chưa nộp (Study)**

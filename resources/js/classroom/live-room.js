@@ -339,7 +339,6 @@ export function mountLiveRoom(root) {
             const knowledge = questionPanel.querySelector('[data-q-knowledge]');
             const knowledgeContent = questionPanel.querySelector('[data-q-knowledge-content]');
             const options = questionPanel.querySelector('[data-q-options]');
-            const explanation = questionPanel.querySelector('[data-q-explanation]');
             const label = questionPanel.querySelector('[data-q-index-label]');
             const map = questionPanel.querySelector('[data-q-map]');
 
@@ -452,24 +451,6 @@ export function mountLiveRoom(root) {
 
                     options.appendChild(li);
                 });
-            }
-
-            if (explanation) {
-                if (panel.question.explanation) {
-                    explanation.innerHTML = panel.question.explanation;
-                    explanation.dataset.qMarkTarget = 'explanation';
-                    delete explanation.dataset.qMarkOptionId;
-                    explanation.classList.add('select-text');
-                    explanation.classList.remove('hidden');
-                    if (questionId) {
-                        applyMarksToElement(
-                            explanation,
-                            marksForTarget(textMarks, questionId, 'explanation'),
-                        );
-                    }
-                } else {
-                    explanation.classList.add('hidden');
-                }
             }
 
             if (map && panel.map) {

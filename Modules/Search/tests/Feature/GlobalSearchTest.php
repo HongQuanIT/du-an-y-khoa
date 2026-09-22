@@ -52,7 +52,6 @@ final class GlobalSearchTest extends TestCase
 
         Question::query()->create([
             'stem' => 'Viêm phổi cộng đồng cần điều trị thế nào?',
-            'explanation' => 'Dùng kháng sinh theo mức độ nặng.',
                         'difficulty' => 'easy',
             'status' => QuestionStatus::Published,
             'is_free' => true,

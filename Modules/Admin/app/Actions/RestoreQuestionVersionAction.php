@@ -60,7 +60,6 @@ final class RestoreQuestionVersionAction
             $question->forceFill([
                 'stem' => (string) ($snapshot['stem'] ?? ''),
                 'stem_image_path' => $snapshot['stem_image_path'] ?? null,
-                'explanation' => $snapshot['explanation'] ?? null,
                 'key_info' => $keyInfo,
                 'attending_tip' => $snapshot['attending_tip'] ?? null,
                 'difficulty' => (string) ($snapshot['difficulty'] ?? 'medium'),

@@ -625,7 +625,6 @@ final class StudyPlanFlowTest extends TestCase
         for ($i = 0; $i < $count; $i++) {
             $question = Question::create([
                 'stem' => "Câu hỏi kiểm thử #{$i}?",
-                'explanation' => 'Giải thích.',
                 'key_info' => ["kiểm thử #{$i}"],
                 'attending_tip' => "Kiến thức kiểm thử #{$i}.",
                 'difficulty' => 'medium',
@@ -639,6 +638,7 @@ final class StudyPlanFlowTest extends TestCase
                     'label' => $label,
                     'content' => "Phương án {$label}",
                     'is_correct' => $index === 0,
+                    'explanation' => $index === 0 ? 'Giải thích.' : null,
                     'order' => $index,
                 ]);
             }

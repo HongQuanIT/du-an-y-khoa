@@ -111,7 +111,6 @@ class VolumeLearningSeeder extends Seeder
             $questionRows[] = [
                 'id' => $id,
                 'stem' => "[vol] Câu hỏi hiệu năng #{$i} — ".Str::random(24).'?',
-                'explanation' => 'Giải thích tự sinh cho câu hỏi hiệu năng.',
                 'difficulty' => $difficulties[$i % count($difficulties)],
                 'status' => QuestionStatus::Published->value,
                 'is_free' => $i % 4 === 0,
@@ -133,7 +132,7 @@ class VolumeLearningSeeder extends Seeder
                     'label' => $label,
                     'content' => "Phương án {$label}",
                     'is_correct' => $j === $correct,
-                    'explanation' => null,
+                    'explanation' => $j === $correct ? 'Giải thích tự sinh cho câu hỏi hiệu năng.' : null,
                     'order' => $j,
                     'created_at' => $now,
                     'updated_at' => $now,

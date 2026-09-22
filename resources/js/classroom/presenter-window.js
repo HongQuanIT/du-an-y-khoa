@@ -73,7 +73,6 @@ if (root instanceof HTMLElement) {
         const knowledge = root.querySelector('[data-q-knowledge]');
         const knowledgeContent = root.querySelector('[data-q-knowledge-content]');
         const options = root.querySelector('[data-q-options]');
-        const explanation = root.querySelector('[data-q-explanation]');
         const label = root.querySelector('[data-q-index-label]');
 
         if (label) {
@@ -185,23 +184,6 @@ if (root instanceof HTMLElement) {
 
                 options.appendChild(li);
             });
-        }
-        if (explanation) {
-            if (panel.question.explanation) {
-                explanation.innerHTML = panel.question.explanation;
-                explanation.dataset.qMarkTarget = 'explanation';
-                delete explanation.dataset.qMarkOptionId;
-                explanation.style.userSelect = 'text';
-                explanation.style.display = 'block';
-                if (questionId) {
-                    applyMarksToElement(
-                        explanation,
-                        marksForTarget(textMarks, questionId, 'explanation'),
-                    );
-                }
-            } else {
-                explanation.style.display = 'none';
-            }
         }
     };
 

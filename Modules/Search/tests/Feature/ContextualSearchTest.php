@@ -170,7 +170,6 @@ final class ContextualSearchTest extends TestCase
     ): Question {
         return tap(Question::factory()->create([
             'stem' => $stem,
-            'explanation' => 'Giải thích bí mật',
             'difficulty' => $difficulty,
             'status' => $status,
             'is_free' => $free,

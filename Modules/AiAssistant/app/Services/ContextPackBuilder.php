@@ -82,7 +82,13 @@ final class ContextPackBuilder
         ];
 
         if ($allowSpoiler) {
-            $pack['official_explanation'] = strip_tags((string) ($question->explanation ?? ''));
+            $official = $question->options
+                ->filter(fn (QuestionOption $o): bool => (bool) $o->is_correct && ! empty($o->explanation))
+                ->map(fn (QuestionOption $o): string => strip_tags((string) $o->explanation))
+                ->filter()
+                ->values()
+                ->all();
+            $pack['official_explanation'] = implode("\n\n", $official);
             $pack['key_info'] = array_values((array) ($question->key_info ?? []));
             if (! empty($question->attending_tip)) {
                 $pack['attending_tip'] = strip_tags((string) $question->attending_tip);

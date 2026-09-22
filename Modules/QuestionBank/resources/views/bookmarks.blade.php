@@ -1,7 +1,7 @@
 @php
     /** @var \Illuminate\Database\Eloquent\Collection<int, \Modules\Personalization\Models\BookmarkFolder> $folders */
     /** @var \Modules\Personalization\Models\BookmarkFolder|null $activeFolder */
-    /** @var \Illuminate\Pagination\LengthAwarePaginator<int, array{id: string, preview: string, stem_html: string, explanation: string, options: list<array{label: string, content: string, correct: bool, explanation: string}>, topic: ?string, difficulty: ?string, saved_at: string, available: bool}> $bookmarks */
+    /** @var \Illuminate\Pagination\LengthAwarePaginator<int, array{id: string, preview: string, stem_html: string, options: list<array{label: string, content: string, correct: bool, explanation: string}>, topic: ?string, difficulty: ?string, saved_at: string, available: bool}> $bookmarks */
     /** @var int $totalCount */
     $currentFolderId = $activeFolder?->id;
 @endphp

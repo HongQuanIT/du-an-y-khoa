@@ -58,7 +58,6 @@ final class QuestionReviewComparisonTest extends TestCase
 
         $question = Question::factory()->create([
             'stem' => 'Bệnh nhân sốt cao 3 ngày. Chẩn đoán phù hợp?',
-            'explanation' => 'Giải thích bản xuất bản.',
             'key_info' => ['Sốt', 'Nhiễm khuẩn'],
             'attending_tip' => 'Nhớ cấy máu.',
             'difficulty' => Difficulty::Medium,
@@ -95,7 +94,6 @@ final class QuestionReviewComparisonTest extends TestCase
         ]);
         $question->forceFill([
             'stem' => 'Bệnh nhân sốt nhẹ 5 ngày. Chẩn đoán phù hợp?',
-            'explanation' => 'Giải thích bản gửi duyệt.',
             'key_info' => ['Sốt', 'Cúm'],
             'attending_tip' => 'Nhớ PCR.',
             'difficulty' => Difficulty::Hard,

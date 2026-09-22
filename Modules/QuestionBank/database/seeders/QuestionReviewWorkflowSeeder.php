@@ -73,7 +73,6 @@ final class QuestionReviewWorkflowSeeder extends Seeder
             [
                 'code' => 'QBANK-REV-PENDING-001',
                 'stem' => '<p>Bệnh nhân nam 45 tuổi, nhập viện vì sốt cao liên tục 5 ngày, đau đầu dữ dội sau hốc mắt, đau mỏi cơ khớp toàn thân. Xét nghiệm công thức máu: Bạch cầu 2.8 G/L, Tiểu cầu 85 G/L, Hematocrit 44%. Dấu hiệu lacet (+). Xét nghiệm chẩn đoán nhanh phù hợp nhất ở thời điểm này là gì?</p>',
-                'explanation' => '<p>Bệnh nhân có triệu chứng gợi ý sốt xuất huyết Dengue ngày thứ 5 với hạ bạch cầu, tiểu cầu giảm và cô đặc máu nhẹ. NS1Ag có giá trị chẩn đoán cao trong 5 ngày đầu của bệnh. Kháng thể IgM thường xuất hiện từ ngày thứ 5 trở đi.</p>',
                 'attending_tip' => '<p>Lưu ý theo dõi sát dấu hiệu cảnh báo vào giai đoạn nguy hiểm (ngày 3–7 của sốt Dengue).</p>',
                 'difficulty' => Difficulty::Medium,
                 'options' => [
@@ -87,7 +86,6 @@ final class QuestionReviewWorkflowSeeder extends Seeder
             [
                 'code' => 'QBANK-REV-PENDING-002',
                 'stem' => '<p>Một phụ nữ 28 tuổi đến khám vì hồi hộp, sụt 4 kg trong 1 tháng dù ăn ngon miệng, run tay và sợ nóng. Khám thấy tuyến giáp to lan tỏa độ II, không đau, mạch 110 lần/phút, huyết áp 140/80 mmHg. Xét nghiệm TSH 0.01 µIU/mL, FT4 tăng cao. Chỉ số nào sau đây có giá trị đặc hiệu nhất để xác định nguyên nhân bệnh Basedow?</p>',
-                'explanation' => '<p>Bệnh Basedow (Graves) là nguyên nhân phổ biến nhất gây cường giáp tự miễn. Kháng thể kháng thụ thể TSH (TRAb) có độ nhạy và độ đặc hiệu cao nhất (>95%) để xác định căn nguyên Basedow so với các nguyên nhân cường giáp khác.</p>',
                 'attending_tip' => '<p>TRAb là tiêu chuẩn vàng tự miễn, cũng giúp tiên lượng nguy cơ tái phát sau ngừng thuốc kháng giáp.</p>',
                 'difficulty' => Difficulty::Easy,
                 'options' => [
@@ -104,7 +102,6 @@ final class QuestionReviewWorkflowSeeder extends Seeder
             $lesson = $lessons[$idx % $lessons->count()];
             $question = $this->upsertQuestionBase($sample['code'], [
                 'stem' => $sample['stem'],
-                'explanation' => $sample['explanation'],
                 'attending_tip' => $sample['attending_tip'],
                 'difficulty' => $sample['difficulty'],
                 'status' => QuestionStatus::InReview,
@@ -138,7 +135,6 @@ final class QuestionReviewWorkflowSeeder extends Seeder
 
         $question = $this->upsertQuestionBase($code, [
             'stem' => '<p>Bệnh nhân nữ 60 tuổi vào viện vì khó thở khi nằm và phù hai chi dưới. Tiền sử đái tháo đường type 2 và tăng huyết áp 10 năm. Siêu âm tim cho thấy phân suất tống máu thất trái (LVEF) là 35%. Thuốc nào sau đây KHÔNG NÊN khởi đầu ngay trong giai đoạn suy tim mất bù cấp đang ứ dịch nặng?</p>',
-            'explanation' => '<p>Trong suy tim mất bù cấp đang còn ứ trệ tuần hoàn và khó thở nặng, thuốc chẹn beta giao cảm không nên khởi đầu hoặc tăng liều vì nguy cơ ức chế co bóp cơ tim làm nặng thêm tình trạng suy tim. Cần ưu tiên lợi tiểu và giãn mạch trước khi đạt tình trạng thể tích ổn định.</p>',
             'attending_tip' => '<p>Nguyên tắc vàng: Chỉ bắt đầu chẹn beta khi bệnh nhân suy tim đã đạt trạng thái "khô" (euvolemic).</p>',
             'difficulty' => Difficulty::Hard,
             'status' => QuestionStatus::InReview,
@@ -190,7 +186,6 @@ final class QuestionReviewWorkflowSeeder extends Seeder
 
         $question = $this->upsertQuestionBase($code, [
             'stem' => '<p>Một người đàn ông 55 tuổi nghiện rượu nặng nhiều năm được đưa vào cấp cứu trong tình trạng lơ mơ, mất điều hòa động tác và liệt vận nhãn ngoài (liệt dây thần kinh số VI hai bên). Chẩn đoán hội chứng Wernicke được đặt ra. Biện pháp xử trí cấp cứu ĐẦU TIÊN và quan trọng nhất trước khi truyền dịch glucose là gì?</p>',
-            'explanation' => '<p>Hội chứng não Wernicke do thiếu hụt vitamin B1 (Thiamine), thường gặp ở người nghiện rượu hoặc suy dinh dưỡng nặng. Việc truyền glucose trước khi bổ sung thiamine có thể làm cạn kiệt nhanh chóng lượng thiamine dự trữ ít ỏi còn lại, dẫn đến tổn thương não không hồi phục hoặc tử vong. Do đó, bắt buộc tiêm thiamine liều cao đường tĩnh mạch trước.</p>',
             'attending_tip' => '<p>Quy tắc sống còn trong cấp cứu: Luôn tiêm Thiamine TRƯỚC KHI truyền Glucose ở bệnh nhân nghi ngờ Wernicke!</p>',
             'difficulty' => Difficulty::Medium,
             'status' => QuestionStatus::PendingPublish,
@@ -247,7 +242,6 @@ final class QuestionReviewWorkflowSeeder extends Seeder
 
         $question = $this->upsertQuestionBase($code, [
             'stem' => '<p>Bệnh nhân nam 70 tuổi có tiền sử suy thận mạn giai đoạn 3b kèm gout cấp tái phát. Lựa chọn điều trị cắt cơn gout cấp an toàn và được ưu tiên nhất là gì?</p>',
-            'explanation' => '<p>Colchicine và NSAIDs đều cần thận trọng hoặc chống chỉ định khi eGFR < 30-45. Corticosteroid đường uống hoặc tiêm tại chỗ là lựa chọn an toàn hàng đầu.</p>',
             'attending_tip' => '<p>Cần chú ý chức năng thận khi kê đơn thuốc kháng viêm trong cơn gout cấp.</p>',
             'difficulty' => Difficulty::Medium,
             'status' => QuestionStatus::Rejected,
@@ -295,7 +289,6 @@ final class QuestionReviewWorkflowSeeder extends Seeder
 
         $question = $this->upsertQuestionBase($code, [
             'stem' => '<p>[Bản nháp] Bé gái 18 tháng tuổi sốt phát ban dạng sởi ngày thứ 4. Cần bổ sung vi chất nào để giảm tỷ lệ biến chứng và tử vong?</p>',
-            'explanation' => '<p>Vitamin A liều cao theo phác đồ WHO giúp bảo vệ biểu mô và giảm biến chứng viêm phổi/viêm giác mạc do sởi.</p>',
             'attending_tip' => '<p>Uống Vitamin A ngày 1 và ngày 2 ngay khi chẩn đoán sởi.</p>',
             'difficulty' => Difficulty::Easy,
             'status' => QuestionStatus::Draft,
@@ -331,7 +324,6 @@ final class QuestionReviewWorkflowSeeder extends Seeder
 
         $question = $this->upsertQuestionBase($code, [
             'stem' => '<p>Bệnh nhân nam 30 tuổi, vào viện vì chấn thương ngực kín. Khám thấy tam chứng Beck điển hình. Tam chứng Beck bao gồm những triệu chứng nào sau đây?</p>',
-            'explanation' => '<p>Tam chứng Beck là dấu hiệu điển hình của tràn dịch màng ngoài tim cấp gây chèn ép tim cấp (cardiac tamponade), gồm: Tụt huyết áp, tĩnh mạch cổ nổi và tiếng tim mờ xa xăm.</p>',
             'attending_tip' => '<p>Chèn ép tim cấp là cấp cứu ngoại khoa khẩn cấp, cần chọc giải áp màng ngoài tim.</p>',
             'difficulty' => Difficulty::Easy,
             'status' => QuestionStatus::Published,

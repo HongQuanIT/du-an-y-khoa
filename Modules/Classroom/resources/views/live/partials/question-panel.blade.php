@@ -35,7 +35,6 @@
         </div>
     </div>
     <ul data-q-options class="mt-4 space-y-2"></ul>
-    <div data-q-explanation class="mt-4 hidden rounded-lg bg-primary/10 p-3 text-sm text-primary"></div>
 </div>
 
 @if ($canModerate)

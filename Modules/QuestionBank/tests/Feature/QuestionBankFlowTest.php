@@ -609,7 +609,6 @@ final class QuestionBankFlowTest extends TestCase
 
         $question->forceFill([
             'stem' => 'Nội dung đã bị sửa sau khi tạo phiên',
-            'explanation' => 'Giải thích đã bị sửa',
         ])->save();
         $correctOption->forceFill(['content' => 'Đáp án đã bị sửa', 'is_correct' => false])->save();
         $question->forceDelete();
@@ -1307,7 +1306,6 @@ final class QuestionBankFlowTest extends TestCase
         $question = Question::create([
             'stem' => $stem,
             'stem_image_path' => $stemImagePath,
-            'explanation' => 'Giải thích cho '.$stem,
             'difficulty' => $difficulty,
             'status' => PublicationStatus::Published,
             'is_free' => $isFree,
@@ -1318,6 +1316,7 @@ final class QuestionBankFlowTest extends TestCase
             'label' => 'A',
             'content' => 'Đáp án đúng '.$stem,
             'is_correct' => true,
+            'explanation' => 'Giải thích cho '.$stem,
             'order' => 0,
         ]);
         QuestionOption::create([

@@ -128,11 +128,8 @@ export function marksForTarget(marks, questionId, target, optionId = null) {
         if (String(m.question_id) !== String(questionId) || m.target !== target) {
             return false;
         }
-        if (target === 'option' || (target === 'explanation' && optionId != null)) {
-            return Number(m.option_id) === Number(optionId);
-        }
-        if (target === 'explanation') {
-            return m.option_id == null || m.option_id === '';
+        if (target === 'option' || target === 'explanation') {
+            return optionId != null && Number(m.option_id) === Number(optionId);
         }
 
         return true;

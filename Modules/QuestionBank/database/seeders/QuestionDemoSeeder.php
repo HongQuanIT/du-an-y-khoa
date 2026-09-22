@@ -37,7 +37,6 @@ final class QuestionDemoSeeder extends Seeder
 
         $payload = [
             'stem' => '<p>Nam 62 tuổi, có tiền sử hút thuốc lá và tăng huyết áp, xuất hiện đau ngực sau xương ức dữ dội kéo dài 60 phút, lan ra tay trái, kèm khó thở và vã mồ hôi. ECG cho thấy ST chênh lên ở các chuyển đạo V1–V4. Troponin I tăng cao. Chẩn đoán phù hợp nhất là gì?</p>',
-            'explanation' => '<p>Triệu chứng đau ngực kéo dài, ST chênh lên ở V1–V4 và troponin I tăng cao phù hợp với nhồi máu cơ tim cấp có ST chênh lên (STEMI), nhiều khả năng vùng trước. Đây là tình trạng cần tái tưới máu khẩn cấp.</p>',
             'key_info' => [
                 'Hãy xác định vị trí tổn thương dựa trên các chuyển đạo ECG.',
                 'ST chênh lên ở V1–V4 gợi ý vùng nào của cơ tim bị tổn thương?',
@@ -85,7 +84,7 @@ final class QuestionDemoSeeder extends Seeder
                     'content' => $row['content'],
                     'is_correct' => $row['is_correct'],
                     'explanation' => $row['is_correct']
-                        ? 'STEMI: đau ngực kéo dài + ST chênh lên + troponin tăng.'
+                        ? '<p>Triệu chứng đau ngực kéo dài, ST chênh lên ở V1–V4 và troponin I tăng cao phù hợp với nhồi máu cơ tim cấp có ST chênh lên (STEMI), nhiều khả năng vùng trước. Đây là tình trạng cần tái tưới máu khẩn cấp.</p>'
                         : null,
                     'order' => $row['order'],
                 ],

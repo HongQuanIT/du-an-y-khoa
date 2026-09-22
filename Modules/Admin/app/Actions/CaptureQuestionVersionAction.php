@@ -48,7 +48,6 @@ final class CaptureQuestionVersionAction
         $payload = [
             'stem' => (string) $question->stem,
             'stem_image_path' => $question->stem_image_path,
-            'explanation' => $question->explanation,
             'key_info' => array_values((array) $question->key_info),
             'attending_tip' => $question->attending_tip,
             'difficulty' => $question->difficulty->value,

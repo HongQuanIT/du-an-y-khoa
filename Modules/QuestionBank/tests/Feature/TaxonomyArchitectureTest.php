@@ -272,7 +272,6 @@ final class TaxonomyArchitectureTest extends TestCase
 
         app(\Modules\Admin\Actions\SaveAdminQuestionAction::class)->handle($admin, null, [
             'stem' => '<p>Test stem</p>',
-            'explanation' => '<p>Explanation</p>',
             'difficulty' => Difficulty::Medium->value,
             'lesson_ids' => [],
             'is_free' => false,
@@ -292,7 +291,6 @@ final class TaxonomyArchitectureTest extends TestCase
 
         $question = app(\Modules\Admin\Actions\SaveAdminQuestionAction::class)->handle($admin, null, [
             'stem' => '<p>Test stem</p>',
-            'explanation' => '<p>Explanation</p>',
             'difficulty' => Difficulty::Medium->value,
             'lesson_ids' => [$lesson->id],
             'is_free' => false,

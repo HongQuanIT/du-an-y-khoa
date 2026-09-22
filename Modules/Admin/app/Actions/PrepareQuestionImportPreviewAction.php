@@ -209,13 +209,6 @@ final class PrepareQuestionImportPreviewAction
             foreach ($options as $index => $option) {
                 $options[$index]['is_correct'] = $labels[$index] === $correct;
             }
-            if ($values['explanation'] !== '') {
-                foreach ($options as $index => $option) {
-                    if ($option['is_correct'] && blank($option['explanation'])) {
-                        $options[$index]['explanation'] = $values['explanation'];
-                    }
-                }
-            }
         }
 
         $difficulty = QuestionImportSchema::parseDifficulty($values['difficulty']);

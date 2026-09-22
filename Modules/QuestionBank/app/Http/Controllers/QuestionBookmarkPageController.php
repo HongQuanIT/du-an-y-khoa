@@ -116,9 +116,6 @@ final class QuestionBookmarkPageController extends Controller
                 'stem_html' => $question instanceof Question
                     ? SafeHtml::forDisplay((string) $question->stem)
                     : '',
-                'explanation' => $question instanceof Question
-                    ? SafeHtml::forDisplay((string) ($question->explanation ?? ''))
-                    : '',
                 'options' => $options,
                 'topic' => $question?->lessons->pluck('name')->join(', ') ?: null,
                 'topics' => $question?->lessons->pluck('name')->values()->all() ?? [],

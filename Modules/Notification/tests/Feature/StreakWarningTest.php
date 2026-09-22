@@ -49,11 +49,10 @@ final class StreakWarningTest extends TestCase
 
         $this->question = Question::query()->create([
             'stem' => 'Câu streak?',
-            'explanation' => 'Giải thích',
             'key_info' => [],
             'difficulty' => Difficulty::Easy,
             'status' => QuestionStatus::Published,
-                        'is_free' => true,
+            'is_free' => true,
         ]);
     }
 

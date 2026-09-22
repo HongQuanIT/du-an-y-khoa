@@ -221,7 +221,6 @@ final class QuestionTwoLayerPublishTest extends TestCase
 
         $question = Question::factory()->create(array_merge([
             'stem' => 'Stem workflow publish test',
-            'explanation' => null,
             'difficulty' => Difficulty::Medium,
             'status' => $status,
             'created_by' => $creator->id,

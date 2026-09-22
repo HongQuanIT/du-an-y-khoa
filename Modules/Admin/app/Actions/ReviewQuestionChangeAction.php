@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Modules\Admin\Actions;
 
 use App\Models\User;
-use App\Support\Html\SafeHtml;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Modules\Admin\Enums\AuditAction;
@@ -117,29 +116,9 @@ final class ReviewQuestionChangeAction
 
     private function approveCreation(User $reviewer, Question $question): void
     {
-        $this->fillLegacyGeneralExplanation($question);
-
         if ($question->status !== QuestionStatus::Published) {
             $this->transitionStatus->handle($reviewer, $question, QuestionStatus::Published);
         }
-    }
-
-    private function fillLegacyGeneralExplanation(Question $question): void
-    {
-        if (! SafeHtml::isBlank($question->explanation)) {
-            return;
-        }
-
-        $question->loadMissing('options');
-        $correctOption = $question->options->firstWhere('is_correct', true);
-
-        if ($correctOption === null || SafeHtml::isBlank($correctOption->explanation)) {
-            return;
-        }
-
-        $question->forceFill([
-            'explanation' => SafeHtml::fromEditor($correctOption->explanation),
-        ])->save();
     }
 
     private function approveUpdate(User $reviewer, Question $question, QuestionReviewRequest $reviewRequest): void

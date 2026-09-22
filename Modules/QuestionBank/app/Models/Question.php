@@ -38,7 +38,6 @@ use Modules\QuestionBank\Support\ServePublishedQuestion;
  * @property string $code
  * @property string $stem
  * @property string|null $stem_image_path
- * @property string|null $explanation
  * @property array<int, string>|null $key_info
  * @property string|null $attending_tip
  * @property Difficulty $difficulty
@@ -103,7 +102,6 @@ class Question extends Model
     protected $fillable = [
         'stem',
         'stem_image_path',
-        'explanation',
         'key_info',
         'attending_tip',
         'difficulty',

@@ -116,7 +116,6 @@ final class SaveAdminQuestionAction
             $question->fill([
                 'stem' => SafeHtml::fromEditor($data['stem']),
                 'stem_image_path' => $this->sanitizeStemImagePath($data['stem_image_path'] ?? null),
-                'explanation' => SafeHtml::fromEditor($this->correctOptionExplanation($options)) ?: null,
                 'key_info' => $keyInfo,
                 'attending_tip' => SafeHtml::fromEditor($data['attending_tip'] ?? null) ?: null,
                 'difficulty' => Difficulty::from($data['difficulty']),
@@ -221,20 +220,6 @@ final class SaveAdminQuestionAction
         }
 
         return $parsed !== '' ? $parsed : null;
-    }
-
-    /**
-     * @param  list<array{id?: int|null, content: string, is_correct: bool, explanation?: ?string}>  $options
-     */
-    private function correctOptionExplanation(array $options): ?string
-    {
-        foreach ($options as $option) {
-            if (($option['is_correct'] ?? false) && ! SafeHtml::isBlank($option['explanation'] ?? null)) {
-                return $option['explanation'];
-            }
-        }
-
-        return null;
     }
 
     /**

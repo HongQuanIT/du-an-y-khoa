@@ -146,7 +146,6 @@ erDiagram
         string difficulty
         string status "draft/in_review/pending_publish/published/rejected/private/retired"
         bool is_free
-        longtext explanation
         json references
         json lab_values
         json media_ids
@@ -788,7 +787,7 @@ Các bảng dùng cột `{name}_type` + `{name}_id` để trỏ tới nhiều lo
 |------|-------------|-------------------|
 | NOTE | notable_type/id | Question, Article, Drug, Media, Video |
 | BOOKMARK | bookmarkable_type/id | Question, Article, Drug, Procedure, Media, Video |
-| HIGHLIGHT | highlightable_type/id | Article, Question (explanation) |
+| HIGHLIGHT | highlightable_type/id | Article, QuestionOption (explanation) |
 | FLASHCARD | source_type/id | Question, Article |
 | MEDIA_USAGE | usable_type/id | Question, Article, Procedure |
 | CONTENT_LINK | source & target _type/id | Article, Drug, Media, Question, Procedure |

@@ -40,11 +40,6 @@ final class QuestionImportSchema
                 'required' => true,
                 'aliases' => ['stem', 'de bai', 'đề bài', 'question', 'vignette', 'noi dung'],
             ],
-            'explanation' => [
-                'label' => 'Giải thích đáp án đúng',
-                'required' => false,
-                'aliases' => ['explanation', 'giai thich', 'giải thích', 'giai thich dung'],
-            ],
             'correct' => [
                 'label' => 'Đáp án đúng (A–E)',
                 'required' => true,
@@ -261,7 +256,6 @@ final class QuestionImportSchema
         $row['option_a_explanation'] = 'Đau ngực + yếu tố nguy cơ gợi ý ACS.';
         $row['option_b_explanation'] = 'Thường nóng rát sau xương ức, liên quan bữa ăn.';
         $row['correct'] = 'A';
-        $row['explanation'] = 'Đau ngực + yếu tố nguy cơ gợi ý ACS.';
         $row['difficulty'] = 'medium';
         $row['lesson_slugs'] = $lessonSlug ?: 'tim-mach-admin-test';
         $row['is_free'] = '0';
@@ -298,7 +292,7 @@ final class QuestionImportSchema
             ['correct', 'Có', 'Một chữ: A, B, C, D hoặc E. Single best answer.'],
             ['difficulty', 'Có', 'very_easy | easy | medium | hard | very_hard'],
             ['lesson_slugs', 'Có', 'Copy slug thật từ sheet Bai_hoc. Nhiều bài: cách nhau ;'],
-            ['explanation', 'Khuyến nghị', 'Bắt buộc trước khi gửi duyệt. Import vẫn tạo nháp nếu thiếu.'],
+            ['option_*_explanation', 'Khuyến nghị', 'Giải thích theo từng đáp án. Import vẫn tạo nháp nếu thiếu.'],
             ['status / publisher_id / version / id', 'Cấm', 'Hệ thống bỏ qua. Không dùng id — khóa là mã câu hỏi.'],
             ['code', 'Không', 'Để trống = tạo mới (hệ thống cấp Q00001…). Điền mã đã có = cập nhật. Mã không tồn tại = lỗi, không import dòng đó.'],
             ['Định dạng (stem, đáp án, giải thích)', '—', 'Excel hiện đậm/nghiêng/gạch chân/xuống dòng. CSV giữ thẻ HTML. Import đọc lại định dạng.'],
@@ -316,7 +310,6 @@ final class QuestionImportSchema
         $widths = [
             'code' => 12.0,
             'stem' => 58.0,
-            'explanation' => 44.0,
             'correct' => 10.0,
             'difficulty' => 14.0,
             'lesson_slugs' => 30.0,

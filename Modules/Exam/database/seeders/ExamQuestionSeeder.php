@@ -98,10 +98,9 @@ final class ExamQuestionSeeder extends Seeder
                 $question = Question::query()->updateOrCreate(
                     ['stem' => $data['stem']],
                     [
-                        'explanation' => $data['explanation'],
                         'difficulty' => $data['difficulty'],
                         'status' => QuestionStatus::Published,
-                                                'is_free' => true,
+                        'is_free' => true,
                     ],
                 );
 
