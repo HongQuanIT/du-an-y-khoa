@@ -15,20 +15,17 @@
         'Tài khoản' => [
             'security' => ['label' => 'Bảo mật', 'icon' => 'lock', 'href' => $profileRoute('security')],
             'notifications' => ['label' => 'Thông báo', 'icon' => 'notifications', 'href' => $profileRoute('notifications')],
+            'reset-alt' => ['label' => 'Reset thống kê', 'icon' => 'restart_alt', 'href' => $profileRoute('reset-alt')],
         ],
         'Thanh toán' => [
             'membership' => ['label' => 'Gói & giấy phép', 'icon' => 'workspace_premium', 'href' => $profileRoute('membership')],
             'invoices' => ['label' => 'Hóa đơn', 'icon' => 'receipt_long', 'href' => $profileRoute('invoices')],
             'redeem' => ['label' => 'Đổi mã', 'icon' => 'confirmation_number', 'href' => $profileRoute('redeem')],
         ],
-        'Khác' => [
-            'org-license' => ['label' => 'Giấy phép tổ chức', 'icon' => 'account_balance', 'href' => $profileRoute('org-license')],
-            'notes' => ['label' => 'Ghi chú cá nhân', 'icon' => 'sticky_note_2', 'href' => $profileRoute('notes')],
-        ],
     ];
 
     if ($isAdminAccount) {
-        unset($groups['Tài khoản']['notifications'], $groups['Thanh toán'], $groups['Khác']);
+        unset($groups['Tài khoản']['notifications'], $groups['Tài khoản']['reset-alt'], $groups['Thanh toán']);
     }
 
     $allItems = collect($groups)->flatMap(fn (array $items): array => $items);

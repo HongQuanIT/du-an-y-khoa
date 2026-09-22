@@ -10,7 +10,6 @@ use App\Support\Enums\Role;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Billing\Database\Seeders\BillingDatabaseSeeder;
-use Modules\Billing\Models\InstitutionMember;
 use Modules\Billing\Models\Invoice;
 use Modules\Billing\Models\Subscription;
 use Tests\TestCase;
@@ -77,41 +76,5 @@ final class ProfileBillingTest extends TestCase
             ->post(route('settings.redeem'), ['code' => 'INVALID'])
             ->assertRedirect(route('profile.show', ['tab' => 'redeem']))
             ->assertSessionHasErrors('code');
-    }
-
-    public function test_user_can_activate_institution_license_by_email_domain(): void
-    {
-        $user = User::factory()->create(['email' => 'student@medlearn.local']);
-        $user->assignRole(Role::Student->value);
-
-        $this->actingAs($user)
-            ->post(route('settings.org-license'), [
-                'institution_email' => 'student@medlearn.local',
-            ])
-            ->assertRedirect(route('profile.show', ['tab' => 'org-license']))
-            ->assertSessionHas('status');
-
-        $this->assertTrue(
-            InstitutionMember::query()->where('user_id', $user->getKey())->where('status', 'verified')->exists()
-        );
-        $this->assertTrue(
-            Subscription::query()->where('user_id', $user->getKey())->where('source', 'institution')->exists()
-        );
-        $this->assertTrue($user->fresh()->hasEntitlement(Entitlement::QbankFull->value));
-    }
-
-    public function test_user_can_save_account_notes(): void
-    {
-        $user = User::factory()->create();
-        $user->assignRole(Role::Student->value);
-
-        $this->actingAs($user)
-            ->put(route('settings.notes'), [
-                'account_notes' => 'Nhắc ôn tim mạch tuần này.',
-            ])
-            ->assertRedirect(route('profile.show', ['tab' => 'notes']))
-            ->assertSessionHas('status');
-
-        $this->assertSame('Nhắc ôn tim mạch tuần này.', $user->fresh()->account_notes);
     }
 }

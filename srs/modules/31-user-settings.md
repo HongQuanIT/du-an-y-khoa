@@ -13,7 +13,7 @@ Cài đặt tài khoản: bảo mật (mật khẩu, 2FA, phiên/thiết bị), 
 | `/settings/appearance` | Theme/ngôn ngữ/font |
 | `/settings/privacy` | Quyền riêng tư, dữ liệu |
 | `/settings/learning` | Tùy chọn học (mode mặc định, timer, shuffle) |
-| `/settings/danger` | Xóa/tạm ngưng tài khoản |
+| `/settings/danger` → `/profile?tab=reset-alt` | Reset tiến trình học; xóa/tạm ngưng tài khoản |
 
 ## 1. Tổng quan
 - **Mục đích:** Kiểm soát trải nghiệm & bảo mật cá nhân.
@@ -32,7 +32,7 @@ Cài đặt tài khoản: bảo mật (mật khẩu, 2FA, phiên/thiết bị), 
 | **Appearance** | Theme (light/dark/system), locale, font size | Tab appearance | — |
 | **Privacy** | Hồ sơ public, analytics opt-out, tải/xóa dữ liệu | Tab privacy | — |
 | **Learning prefs** | Mode mặc định, timer, shuffle, hint | Tab learning | — |
-| **Danger zone** | Tạm ngưng/xóa tài khoản (xác nhận) | Tab danger | Modal xác nhận |
+| **Danger zone** | Reset tiến trình học; tạm ngưng/xóa tài khoản (xác nhận) | Tab `reset-alt` | Confirm typing + mật khẩu |
 | **Toast/Loading/Error** | Lưu thành công/lỗi | Theo trạng thái | — |
 
 ## 3. Phân tích Component
@@ -52,10 +52,11 @@ Settings → Privacy → yêu cầu tải dữ liệu (job) / xóa tài khoản 
 - **Notification prefs** ghi `notification_preferences`.
 - **Theme/locale/font** lưu `users.meta`/`locale`; áp dụng ngay (client) + server.
 - **Learning prefs** ảnh hưởng Qbank/Session mặc định.
+- **Reset tiến trình học (học lại như học viên mới):** wipe sessions/attempts/`question_status`, rollup (`daily_learning_stats`, `topic_mastery`), study plan + tasks, bookmarks/folders, AI threads/messages/`ai_usage`, reminder/streak logs; clear dashboard cache; recompute `questions.stats_cache` cho câu bị ảnh hưởng. **Giữ:** account, `learner_profiles`, `study_objective`, billing/subscription/partner, classroom membership + live transcript, `question_feedback` (detach session), exams định nghĩa do user tạo. Yêu cầu mật khẩu hiện tại + gõ `RESET`; ghi `users.learning_progress_reset_at` (không giới hạn tần suất).
 - **Xóa tài khoản:** soft delete + grace period → ẩn danh hóa dữ liệu (giữ attempt ẩn danh cho thống kê).
 
 ## 6. Database
-- `users` (meta, locale, timezone), `notification_preferences`, `two_factor_secrets`, `devices/sessions`, `data_export_requests(user_id,status,file_media_id)`, `account_deletion_requests(user_id,scheduled_at)`.
+- `users` (meta, locale, timezone, `learning_progress_reset_at`), `notification_preferences`, `two_factor_secrets`, `devices/sessions`, `data_export_requests(user_id,status,file_media_id)`, `account_deletion_requests(user_id,scheduled_at)`.
 
 ## 7. API
 | Method | URL | Payload | Response | Quyền |
@@ -69,6 +70,7 @@ Settings → Privacy → yêu cầu tải dữ liệu (job) / xóa tài khoản 
 | PUT | `/api/v1/settings/learning` | prefs | ok | Owner |
 | POST | `/api/v1/settings/data-export` | — | job | Owner |
 | POST | `/api/v1/settings/delete-account` | `{confirm}` | scheduled | Owner |
+| POST | `/settings/reset-progress` (web) | `{current_password, confirmation=RESET}` | redirect | Owner |
 
 ## 8. State Management
 - Optimistic toggle; theme áp dụng ngay (localStorage + server); session list realtime tùy chọn; export/delete async.
@@ -77,10 +79,10 @@ Settings → Privacy → yêu cầu tải dữ liệu (job) / xóa tài khoản 
 - Owner. Admin có thể reset (module 34) nhưng không xem mật khẩu; org_admin/admin bắt buộc 2FA.
 
 ## 10. Edge Cases
-- Đổi email trùng → 409; sai mật khẩu cũ → 422; tắt 2FA cần xác thực lại; thu hồi phiên hiện tại → đăng xuất; hủy xóa tài khoản trong grace → khôi phục.
+- Đổi email trùng → 409; sai mật khẩu cũ → 422; tắt 2FA cần xác thực lại; thu hồi phiên hiện tại → đăng xuất; hủy xóa tài khoản trong grace → khôi phục; reset tiến trình sai confirm/mật khẩu → 422.
 
 ## 11. Tracking
-`settings_open`, `password_change`, `2fa_enabled`, `2fa_disabled`, `session_revoke`, `preference_change`, `theme_change`, `data_export_request`, `account_delete_request`.
+`settings_open`, `password_change`, `2fa_enabled`, `2fa_disabled`, `session_revoke`, `preference_change`, `theme_change`, `data_export_request`, `account_delete_request`, `learning_progress_reset`.
 
 ## 12. Responsive
 - Desktop: nav trái + nội dung. Mobile: danh sách nhóm → mỗi nhóm 1 trang; toggle lớn.

@@ -51,6 +51,7 @@ enum AuditAction: string
     case LearningBookmarkChanged = 'learning.bookmark.changed';
     case LearningBookmarkFolderCreated = 'learning.bookmark_folder.created';
     case LearningBookmarkFolderDeleted = 'learning.bookmark_folder.deleted';
+    case LearningProgressReset = 'learning.progress.reset';
 
     case ExamStarted = 'exam.started';
     case ExamCompleted = 'exam.completed';
@@ -120,6 +121,7 @@ enum AuditAction: string
             self::LearningBookmarkChanged => 'Thay đổi bookmark',
             self::LearningBookmarkFolderCreated => 'Tạo thư mục bookmark',
             self::LearningBookmarkFolderDeleted => 'Xóa thư mục bookmark',
+            self::LearningProgressReset => 'Reset tiến trình học',
             self::ExamStarted => 'Bắt đầu kỳ thi',
             self::ExamCompleted => 'Hoàn thành kỳ thi',
             self::BillingCodeRedeemed => 'Sử dụng mã quyền lợi',

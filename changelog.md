@@ -25,6 +25,23 @@
 - Tách `VietnamGeographySeeder`: quốc gia VN, 34 tỉnh/thành (sau sáp nhập 2025), trường y/dược toàn quốc.
 - `LearnerProfileCatalogSeeder` gọi seeder địa lý rồi seed chức danh + năm học; thêm test idempotent.
 
+### Change — Bỏ tab Giấy phép tổ chức & Ghi chú cá nhân trên `/profile`
+
+- Gỡ `?tab=org-license` và `?tab=notes` khỏi nav, routes và UI hub học viên.
+- Drop cột `users.account_notes`.
+- Đổi mã / gói vẫn dùng tab Redeem & Membership.
+
+### Fix — Preview import câu hỏi: hiện đủ dòng lỗi
+
+- Bỏ cắt cứng 80 dòng đầu (`array_slice`); bảng kiểm tra hiện toàn bộ (tối đa 500).
+- Ưu tiên dòng lỗi trước; mặc định lọc «Chỉ lỗi» khi có lỗi; nút tải Excel lỗi nổi bật hơn.
+
+### Feat — Reset thống kê học viên (`/profile?tab=reset-alt`)
+
+- Học viên có thể wipe tiến trình học (sessions/attempts/status, rollup, study plan, bookmark, AI) để học lại như tài khoản mới.
+- Giữ account, billing, classroom membership & live; detach `question_feedback`; recompute `questions.stats_cache`.
+- Xác nhận mật khẩu + gõ `RESET`; ghi `learning_progress_reset_at` (reset bất cứ lúc nào).
+
 ### Change — Câu hỏi cố định đúng 4 đáp án (A–D)
 
 - Form admin bỏ nút Thêm/Xóa đáp án; luôn hiển thị đúng 4 ô A–D.

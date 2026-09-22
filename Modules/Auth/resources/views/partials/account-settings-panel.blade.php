@@ -1,7 +1,6 @@
 @php
     $membership = $membership ?? ['plan_name' => 'Free', 'description' => 'Quyền truy cập cơ bản', 'ends_at' => null, 'source' => null];
     $invoices = $invoices ?? collect();
-    $orgMembers = $orgMembers ?? collect();
 
     $inputClass = 'h-10 w-full rounded-lg border border-outline-variant bg-surface px-3 font-body-md text-body-md text-on-surface transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20';
     $labelClass = 'font-label-sm text-label-sm font-medium text-on-surface-variant';
@@ -357,88 +356,6 @@
         </div>
     </section>
 
-@elseif ($tab === 'org-license')
-    <section class="{{ $cardClass }}">
-        <div class="{{ $cardHeaderClass }}">
-            <h2 class="font-title-md text-title-md text-on-surface">Giấy phép tổ chức</h2>
-            <p class="mt-0.5 font-body-sm text-body-sm text-on-surface-variant">
-                Kích hoạt bằng email thuộc miền được cấp phép (trường, bệnh viện).
-            </p>
-        </div>
-
-        <div class="divide-y divide-outline-variant/60">
-            @forelse ($orgMembers as $member)
-                @php
-                    $institution = $member->institution;
-                    $validUntil = $institution?->valid_until?->locale('vi')->isoFormat('D [tháng] M YYYY');
-                @endphp
-                <div class="flex flex-col gap-4 px-5 py-5 md:flex-row md:items-center md:gap-6 md:px-6">
-                    <div class="flex min-w-0 flex-1 items-start gap-3 md:items-center">
-                        <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                            <span class="material-symbols-outlined text-[22px]">account_balance</span>
-                        </div>
-                        <div class="min-w-0">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <p class="truncate font-body-md text-body-md font-medium text-on-surface" title="{{ $institution?->name }}">
-                                    {{ $institution?->name }}
-                                </p>
-                                @if ($member->isVerified())
-                                    <span class="inline-flex shrink-0 items-center rounded-full bg-primary/10 px-2.5 py-0.5 font-label-sm text-label-sm font-medium text-primary">
-                                        Đã xác minh
-                                    </span>
-                                @endif
-                            </div>
-                            <p class="mt-0.5 font-body-sm text-body-sm text-on-surface-variant">{{ $member->email }}</p>
-                            @if ($validUntil)
-                                <p class="mt-1 font-body-sm text-body-sm text-on-surface-variant">
-                                    Có hiệu lực đến {{ $validUntil }}
-                                </p>
-                            @endif
-                        </div>
-                    </div>
-
-                    <form method="post" action="{{ route('settings.org-license.renew') }}" class="shrink-0 self-start md:self-center">
-                        @csrf
-                        <input type="hidden" name="member_id" value="{{ $member->id }}">
-                        <button type="submit"
-                            class="rounded-lg border border-outline-variant px-4 py-2 font-label-md text-label-md text-on-surface transition-colors hover:bg-surface-container-low">
-                            Kiểm tra gia hạn
-                        </button>
-                    </form>
-                </div>
-            @empty
-                <div class="px-5 py-8 text-center md:px-6">
-                    <div class="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-surface-container-high text-on-surface-variant">
-                        <span class="material-symbols-outlined text-[28px]">account_balance</span>
-                    </div>
-                    <p class="font-body-md text-body-md text-on-surface-variant">Chưa có giấy phép tổ chức nào.</p>
-                </div>
-            @endforelse
-
-            <div class="px-5 py-5 md:px-6">
-                <p class="mb-4 font-body-md text-body-md text-on-surface">
-                    Thêm giấy phép mới bằng email tổ chức của bạn.
-                </p>
-                <form method="post" action="{{ route('settings.org-license') }}" class="flex max-w-lg flex-col gap-3 sm:flex-row sm:items-start">
-                    @csrf
-                    <div class="flex-1">
-                        <input type="email" name="institution_email" required
-                            value="{{ old('institution_email', $user->email) }}"
-                            placeholder="email@truong.edu.vn"
-                            class="{{ $inputClass }} @error('institution_email') border-error @enderror">
-                        @error('institution_email')
-                            <p class="mt-1 font-body-sm text-body-sm text-error">{{ $message }}</p>
-                        @enderror
-                    </div>
-                    <button type="submit"
-                        class="shrink-0 rounded-lg bg-primary px-5 py-2.5 font-label-md text-label-md font-semibold text-on-primary hover:opacity-90">
-                        Kích hoạt
-                    </button>
-                </form>
-            </div>
-        </div>
-    </section>
-
 @elseif ($tab === 'invoices')
     <section class="{{ $cardClass }}">
         <div class="{{ $cardHeaderClass }}">
@@ -521,27 +438,76 @@
         </div>
     </section>
 
-@elseif ($tab === 'notes')
-    <section class="{{ $cardClass }}">
-        <div class="{{ $cardHeaderClass }}">
-            <h2 class="font-title-md text-title-md text-on-surface">Ghi chú cá nhân</h2>
+@elseif ($tab === 'reset-alt')
+    @can('profile.update')
+    @php
+        $lastReset = $user->learning_progress_reset_at;
+    @endphp
+
+    <section class="{{ $cardClass }} border-error/30">
+        <div class="{{ $cardHeaderClass }} border-error/20 bg-error/5">
+            <h2 class="font-title-md text-title-md text-error">Reset thống kê / tiến trình học</h2>
             <p class="mt-0.5 font-body-sm text-body-sm text-on-surface-variant">
-                Lưu nhắc nhở học tập — chỉ bạn mới thấy nội dung này.
+                Xóa toàn bộ lịch sử làm bài để học lại như học viên mới. Thao tác này
+                <span class="font-semibold text-on-surface">không thể hoàn tác</span>.
             </p>
         </div>
 
-        <form method="post" action="{{ route('settings.notes') }}" class="{{ $cardBodyClass }} space-y-5">
-            @csrf
-            @method('PUT')
-            <textarea name="account_notes" rows="8" maxlength="5000"
-                placeholder="Ghi chú học tập, mục tiêu, nhắc nhở..."
-                class="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2 font-body-md text-body-md text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">{{ old('account_notes', $user->account_notes) }}</textarea>
-            <div class="flex justify-end border-t border-outline-variant pt-4">
-                <button type="submit"
-                    class="rounded-lg bg-primary px-5 py-2.5 font-label-md text-label-md font-semibold text-on-primary hover:opacity-90">
-                    Lưu ghi chú
-                </button>
+        <div class="{{ $cardBodyClass }} space-y-5">
+            <div class="rounded-xl border border-outline-variant bg-surface-container-lowest/60 p-4">
+                <p class="font-label-sm text-label-sm font-medium text-on-surface">Sẽ bị xóa</p>
+                <ul class="mt-2 list-disc space-y-1 pl-5 font-body-sm text-body-sm text-on-surface-variant">
+                    <li>Phiên luyện / thi, đáp án, trạng thái từng câu hỏi</li>
+                    <li>Thống kê dashboard, mastery chủ đề, streak</li>
+                    <li>Kế hoạch học và nhiệm vụ</li>
+                    <li>Bookmark / thư mục bookmark</li>
+                    <li>Lịch sử AI Tutor và quota AI theo ngày</li>
+                </ul>
+                <p class="mt-3 font-label-sm text-label-sm font-medium text-on-surface">Được giữ nguyên</p>
+                <ul class="mt-2 list-disc space-y-1 pl-5 font-body-sm text-body-sm text-on-surface-variant">
+                    <li>Tài khoản, hồ sơ, mục tiêu học</li>
+                    <li>Gói Premium, hóa đơn, mã giới thiệu</li>
+                    <li>Lớp học đã tham gia và lịch sử buổi live</li>
+                    <li>Phản hồi câu hỏi đã gửi cho đội ngũ nội dung</li>
+                </ul>
             </div>
-        </form>
+
+            @if ($lastReset)
+                <p class="font-body-sm text-body-sm text-on-surface-variant">
+                    Lần reset gần nhất:
+                    <span class="font-medium text-on-surface">{{ $lastReset->timezone(config('app.timezone'))->format('d/m/Y H:i') }}</span>
+                </p>
+            @endif
+
+            <form method="post" action="{{ route('profile.reset-progress') }}" class="max-w-md space-y-4"
+                onsubmit="return confirm('Bạn chắc chắn muốn xóa toàn bộ tiến trình học? Thao tác không thể hoàn tác.');">
+                @csrf
+                <div class="flex flex-col gap-1.5">
+                    <label for="reset_current_password" class="{{ $labelClass }}">Mật khẩu hiện tại</label>
+                    <input id="reset_current_password" name="current_password" type="password" required
+                        autocomplete="current-password"
+                        class="{{ $inputClass }} @error('current_password') border-error @enderror">
+                    @error('current_password')
+                        <p class="font-body-sm text-body-sm text-error">{{ $message }}</p>
+                    @enderror
+                </div>
+                <div class="flex flex-col gap-1.5">
+                    <label for="reset_confirmation" class="{{ $labelClass }}">
+                        Gõ <span class="font-mono font-semibold text-on-surface">RESET</span> để xác nhận
+                    </label>
+                    <input id="reset_confirmation" name="confirmation" type="text" required
+                        autocomplete="off" placeholder="RESET"
+                        class="{{ $inputClass }} @error('confirmation') border-error @enderror">
+                    @error('confirmation')
+                        <p class="font-body-sm text-body-sm text-error">{{ $message }}</p>
+                    @enderror
+                </div>
+                <button type="submit"
+                    class="rounded-lg bg-error px-5 py-2.5 font-label-md text-label-md font-semibold text-white hover:opacity-90">
+                    Reset tiến trình học
+                </button>
+            </form>
+        </div>
     </section>
+    @endcan
 @endif

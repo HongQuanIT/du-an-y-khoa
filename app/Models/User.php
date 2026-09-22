@@ -57,9 +57,8 @@ use Spatie\Permission\Traits\HasRoles;
     'study_objective',
     'avatar_path',
     'notification_prefs',
-    'account_notes',
     'active_web_session_id',
-])]
+])]]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements CanResetPasswordContract
 {
@@ -95,6 +94,7 @@ class User extends Authenticatable implements CanResetPasswordContract
             'graduation_year' => 'integer',
             'last_login_method' => AuthenticationMethod::class,
             'last_login_at' => 'datetime',
+            'learning_progress_reset_at' => 'datetime',
         ];
     }
 
