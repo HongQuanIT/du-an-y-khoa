@@ -1,5 +1,5 @@
 <x-layouts.admin title="Nhật ký hoạt động">
-    <div x-data="adminAuditFilter()" class="space-y-6">
+    <div x-data="adminAuditFilter()" class="min-w-0 max-w-full space-y-6">
     <x-admin.page-header title="Nhật ký hoạt động"
         description="Nhật ký bất biến các thao tác nhạy cảm (chỉ đọc)." />
 
@@ -9,7 +9,7 @@
 <form id="audit-filter-form" method="get" action="{{ route('admin.audit.index') }}" role="search"
         aria-label="Tìm kiếm nhật ký hoạt động"
         @submit.prevent="applyFilters()"
-        class="grid grid-cols-1 items-end gap-4 rounded-xl border border-outline-variant bg-surface p-4 md:grid-cols-12">
+        class="grid min-w-0 grid-cols-1 items-end gap-4 rounded-xl border border-outline-variant bg-surface p-4 md:grid-cols-12">
         <div class="relative min-w-0 md:col-span-3"
             x-data='{
                 open: false,
@@ -79,7 +79,7 @@
                 class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
         </div>
 
-        <div class="md:col-span-3">
+        <div class="min-w-0 md:col-span-3">
             <span class="mb-1.5 block text-sm font-medium text-transparent select-none" aria-hidden="true">&nbsp;</span>
             <x-admin.filter-action-buttons
                 fill
@@ -91,10 +91,10 @@
     </form>
 @endif
 
-    <div id="audit-results-region" aria-live="polite">
-    <div class="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
-    <div class="overflow-x-auto">
-        <table class="min-w-full text-left font-body-sm text-body-sm">
+    <div id="audit-results-region" class="min-w-0 max-w-full" aria-live="polite">
+    <div class="min-w-0 max-w-full overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm">
+    <div class="w-full min-w-0 overflow-x-auto">
+        <table class="w-full min-w-[64rem] text-left font-body-sm text-body-sm">
             <caption class="sr-only">Danh sách nhật ký hoạt động quản trị</caption>
             <thead class="border-b border-outline-variant bg-surface-container-low font-label-md text-label-md text-on-surface-variant">
                 <tr>
@@ -148,10 +148,10 @@
                             @endif
                         </td>
                         <td class="px-4 py-3 text-on-surface-variant">{{ $log->ip ?? '—' }}</td>
-                        <td class="min-w-52 px-4 py-3">
-                            <div class="font-label-md text-on-surface">{{ $log->device_name ?? $log->deviceTypeLabel() }}</div>
-                            <div class="text-xs text-on-surface-variant">{{ $log->operating_system ?? 'Không rõ hệ điều hành' }}</div>
-                            <div class="text-xs text-on-surface-variant">{{ $log->browser ?? 'Không rõ trình duyệt' }}</div>
+                        <td class="max-w-56 px-4 py-3">
+                            <div class="truncate font-label-md text-on-surface" title="{{ $log->device_name ?? $log->deviceTypeLabel() }}">{{ $log->device_name ?? $log->deviceTypeLabel() }}</div>
+                            <div class="truncate text-xs text-on-surface-variant" title="{{ $log->operating_system ?? 'Không rõ hệ điều hành' }}">{{ $log->operating_system ?? 'Không rõ hệ điều hành' }}</div>
+                            <div class="truncate text-xs text-on-surface-variant" title="{{ $log->browser ?? 'Không rõ trình duyệt' }}">{{ $log->browser ?? 'Không rõ trình duyệt' }}</div>
                         </td>
                         <td class="px-4 py-3 text-end">
                             @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.audit.show'))

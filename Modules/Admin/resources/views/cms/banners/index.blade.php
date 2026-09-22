@@ -1,4 +1,5 @@
 <x-layouts.admin title="CMS — Banner">
+    <div x-data="adminBannerFilter()" class="space-y-6">
     @include('admin::cms._sub-nav')
 
     <x-admin.page-header title="Banner / Thông báo"
@@ -15,58 +16,74 @@
 
     <x-admin.flash />
 
-    <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <x-admin.kpi-card label="Tổng banner" :value="number_format($stats['total'])" hint="Tất cả bản ghi" icon="campaign" />
         <x-admin.kpi-card label="Đang bật" :value="number_format($stats['enabled'])" hint="Có thể hiển thị" icon="visibility" />
         <x-admin.kpi-card label="Đang tắt" :value="number_format($stats['disabled'])" hint="Ẩn khỏi web" icon="visibility_off" />
     </div>
 
     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.banners.index'))
-<form method="get" action="{{ route('admin.cms.banners.index') }}"
-        class="mb-6 grid grid-cols-1 gap-3 rounded-xl border border-outline-variant bg-surface p-4 sm:grid-cols-4">
-        <div class="sm:col-span-2">
-            <label class="mb-1 block font-label-sm text-label-sm text-on-surface-variant" for="q">Tìm kiếm</label>
-            <input id="q" name="q" value="{{ $filters['q'] }}" type="search" placeholder="Tiêu đề hoặc nội dung"
-                class="w-full rounded-lg border-none bg-surface-container-low px-3 py-2 font-body-sm text-body-sm focus:ring-2 focus:ring-primary">
+<form id="banner-filter-form" method="get" action="{{ route('admin.cms.banners.index') }}"
+        role="search" aria-label="Tìm kiếm banner"
+        @submit.prevent="applyFilters()"
+        class="grid grid-cols-1 items-end gap-4 rounded-xl border border-outline-variant bg-surface p-4 md:grid-cols-12">
+        <div class="md:col-span-4">
+            <label for="q" class="mb-1.5 block text-sm font-medium text-on-surface-variant">Tìm kiếm</label>
+            <div class="relative">
+                <input id="q" name="q" value="{{ $filters['q'] }}" type="search"
+                    placeholder="Tiêu đề hoặc nội dung" autocomplete="off"
+                    class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 pl-9 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
+                <span class="material-symbols-outlined pointer-events-none absolute top-2.5 left-2.5 text-[20px] text-on-surface-variant/70" aria-hidden="true">search</span>
+            </div>
         </div>
-        <div>
-            <label class="mb-1 block font-label-sm text-label-sm text-on-surface-variant" for="placement">Vị trí</label>
-            <select id="placement" name="placement"
-                class="w-full rounded-lg border-none bg-surface-container-low px-3 py-2 font-body-sm text-body-sm focus:ring-2 focus:ring-primary">
-                <option value="">Tất cả</option>
-                @foreach ($placements as $placement)
-                    <option value="{{ $placement->value }}" @selected($filters['placement'] === $placement->value)>{{ $placement->label() }}</option>
-                @endforeach
-            </select>
+
+        <div class="min-w-0 md:col-span-3">
+            <x-admin.multi-select-filter
+                name="placement"
+                label="Vị trí"
+                placeholder="Tất cả"
+                :options="collect($placements)->map(fn ($placement) => ['id' => $placement->value, 'label' => $placement->label()])->all()"
+                :selected="$filters['placement']"
+            />
         </div>
-        <div>
-            <label class="mb-1 block font-label-sm text-label-sm text-on-surface-variant" for="status">Trạng thái</label>
-            <select id="status" name="status"
-                class="w-full rounded-lg border-none bg-surface-container-low px-3 py-2 font-body-sm text-body-sm focus:ring-2 focus:ring-primary">
-                <option value="">Tất cả</option>
-                <option value="enabled" @selected($filters['status'] === 'enabled')>Đang bật</option>
-                <option value="disabled" @selected($filters['status'] === 'disabled')>Đang tắt</option>
-            </select>
+
+        <div class="min-w-0 md:col-span-2">
+            <x-admin.multi-select-filter
+                name="status"
+                label="Trạng thái"
+                placeholder="Tất cả"
+                :options="[
+                    ['id' => 'enabled', 'label' => 'Đang bật', 'tone' => 'bg-emerald-50 text-emerald-800 border-emerald-200'],
+                    ['id' => 'disabled', 'label' => 'Đang tắt', 'tone' => 'bg-surface-container-high text-on-surface-variant border-outline-variant'],
+                ]"
+                :selected="$filters['status']"
+            />
         </div>
-        <div class="sm:col-span-4 flex gap-2">
-            <button type="submit"
-                class="rounded-lg bg-primary px-4 py-2 font-label-md text-label-md text-on-primary hover:opacity-90">Lọc</button>
-            <a href="{{ route('admin.cms.banners.index') }}"
-                class="rounded-lg px-4 py-2 font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-low">Xóa lọc</a>
+
+        <div class="md:col-span-3">
+            <span class="mb-1.5 block text-sm font-medium text-transparent select-none" aria-hidden="true">&nbsp;</span>
+            <x-admin.filter-action-buttons
+                fill
+                :reset-url="route('admin.cms.banners.index')"
+                search-aria-label="Tìm kiếm banner"
+                reset-aria-label="Xoá bộ lọc banner"
+            />
         </div>
     </form>
 @endif
 
+    <div id="banner-results-region" class="space-y-4">
     <div class="overflow-x-auto rounded-xl border border-outline-variant bg-surface">
         <table class="min-w-full text-left font-body-sm text-body-sm">
+            <caption class="sr-only">Danh sách banner thông báo</caption>
             <thead class="border-b border-outline-variant bg-surface-container-low font-label-md text-label-md text-on-surface-variant">
                 <tr>
-                    <th class="px-4 py-3">Banner</th>
-                    <th class="px-4 py-3">Vị trí</th>
-                    <th class="px-4 py-3">Đối tượng</th>
-                    <th class="px-4 py-3">Lịch</th>
-                    <th class="px-4 py-3">Trạng thái</th>
-                    <th class="px-4 py-3"></th>
+                    <th scope="col" class="px-4 py-3">Banner</th>
+                    <th scope="col" class="px-4 py-3">Vị trí</th>
+                    <th scope="col" class="px-4 py-3">Đối tượng</th>
+                    <th scope="col" class="px-4 py-3">Lịch</th>
+                    <th scope="col" class="px-4 py-3">Trạng thái</th>
+                    <th scope="col" class="px-4 py-3"></th>
                 </tr>
             </thead>
             <tbody>
@@ -90,9 +107,9 @@
                         </td>
                         <td class="px-4 py-3">
                             @if ($banner->is_enabled)
-                                <span class="rounded-full bg-primary/10 px-2 py-0.5 font-label-sm text-primary">Bật</span>
+                                <span class="inline-flex rounded-full border px-2 py-0.5 text-xs font-medium bg-emerald-50 text-emerald-800 border-emerald-200">Bật</span>
                             @else
-                                <span class="rounded-full bg-surface-container-high px-2 py-0.5 font-label-sm text-on-surface-variant">Tắt</span>
+                                <span class="inline-flex rounded-full border px-2 py-0.5 text-xs font-medium bg-surface-container-high text-on-surface-variant border-outline-variant">Tắt</span>
                             @endif
                         </td>
                         <td class="px-4 py-3 text-right whitespace-nowrap">
@@ -124,5 +141,63 @@
         </table>
     </div>
 
-    <div class="mt-4">{{ $banners->links() }}</div>
+    @if ($banners->hasPages())
+        <div id="banner-pagination">
+            {{ $banners->links() }}
+        </div>
+    @endif
+    </div>
+
+    <script>
+        function adminBannerFilter() {
+            return {
+                loading: false,
+                filterForm() { return document.getElementById('banner-filter-form'); },
+                async applyFilters() {
+                    const form = this.filterForm();
+                    if (!form) return;
+                    const url = new URL(form.action, window.location.origin);
+                    const params = new URLSearchParams(new FormData(form));
+                    params.delete('page');
+                    url.search = params.toString();
+                    await this.fetchResults(url.toString());
+                },
+                async resetFilters(url) {
+                    const form = this.filterForm();
+                    form?.reset();
+                    const query = form?.querySelector('[name="q"]');
+                    if (query) query.value = '';
+                    window.dispatchEvent(new CustomEvent('banner-filters-reset'));
+                    await this.fetchResults(url);
+                },
+                async fetchResults(url) {
+                    this.loading = true;
+                    try {
+                        const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } });
+                        if (!response.ok) throw new Error('Lỗi tải danh sách banner');
+                        const parsed = new DOMParser().parseFromString(await response.text(), 'text/html');
+                        const next = parsed.getElementById('banner-results-region');
+                        const current = document.getElementById('banner-results-region');
+                        if (!next || !current) throw new Error('Không tìm thấy vùng kết quả banner');
+                        current.replaceWith(next);
+                        window.history.pushState({}, '', url);
+                        this.bindPagination();
+                    } catch (error) {
+                        console.error(error);
+                        alert('Có lỗi xảy ra khi tải danh sách banner. Vui lòng thử lại.');
+                    } finally { this.loading = false; }
+                },
+                bindPagination() {
+                    document.querySelectorAll('#banner-pagination a').forEach((link) => {
+                        link.addEventListener('click', (event) => {
+                            event.preventDefault();
+                            if (link.href) this.fetchResults(link.href);
+                        });
+                    });
+                },
+                init() { this.bindPagination(); },
+            };
+        }
+    </script>
+    </div>
 </x-layouts.admin>

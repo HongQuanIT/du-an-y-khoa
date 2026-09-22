@@ -1,4 +1,5 @@
 <x-layouts.admin title="CMS — FAQ">
+    <div x-data="adminFaqFilter()" class="space-y-6">
     @include('admin::cms._sub-nav')
 
     <x-admin.page-header title="FAQ"
@@ -19,58 +20,74 @@
 
     <x-admin.flash />
 
-    <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <x-admin.kpi-card label="Tổng FAQ" :value="number_format($stats['total'])" hint="Tất cả bản ghi" icon="help" />
         <x-admin.kpi-card label="Đã xuất bản" :value="number_format($stats['published'])" hint="Hiển thị trên web" icon="visibility" />
         <x-admin.kpi-card label="Nháp" :value="number_format($stats['draft'])" hint="Chưa hiển thị công khai" icon="draft" />
     </div>
 
     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.faq.index'))
-<form method="get" action="{{ route('admin.cms.faq.index') }}"
-        class="mb-6 grid grid-cols-1 gap-3 rounded-xl border border-outline-variant bg-surface p-4 sm:grid-cols-4">
-        <div class="sm:col-span-2">
-            <label class="mb-1 block font-label-sm text-label-sm text-on-surface-variant" for="q">Tìm kiếm</label>
-            <input id="q" name="q" value="{{ $filters['q'] }}" type="search" placeholder="Câu hỏi hoặc nội dung trả lời"
-                class="w-full rounded-lg border-none bg-surface-container-low px-3 py-2 font-body-sm text-body-sm focus:ring-2 focus:ring-primary">
+<form id="faq-filter-form" method="get" action="{{ route('admin.cms.faq.index') }}"
+        role="search" aria-label="Tìm kiếm FAQ"
+        @submit.prevent="applyFilters()"
+        class="grid grid-cols-1 items-end gap-4 rounded-xl border border-outline-variant bg-surface p-4 md:grid-cols-12">
+        <div class="md:col-span-4">
+            <label for="q" class="mb-1.5 block text-sm font-medium text-on-surface-variant">Tìm kiếm</label>
+            <div class="relative">
+                <input id="q" name="q" value="{{ $filters['q'] }}" type="search"
+                    placeholder="Câu hỏi hoặc nội dung trả lời" autocomplete="off"
+                    class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 pl-9 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
+                <span class="material-symbols-outlined pointer-events-none absolute top-2.5 left-2.5 text-[20px] text-on-surface-variant/70" aria-hidden="true">search</span>
+            </div>
         </div>
-        <div>
-            <label class="mb-1 block font-label-sm text-label-sm text-on-surface-variant" for="category">Danh mục</label>
-            <select id="category" name="category"
-                class="w-full rounded-lg border-none bg-surface-container-low px-3 py-2 font-body-sm text-body-sm focus:ring-2 focus:ring-primary">
-                <option value="">Tất cả</option>
-                @foreach ($categories as $cat)
-                    <option value="{{ $cat->value }}" @selected($filters['category'] === $cat->value)>{{ $cat->label() }}</option>
-                @endforeach
-            </select>
+
+        <div class="min-w-0 md:col-span-3">
+            <x-admin.multi-select-filter
+                name="category"
+                label="Danh mục"
+                placeholder="Tất cả"
+                :options="collect($categories)->map(fn ($cat) => ['id' => $cat->value, 'label' => $cat->label()])->all()"
+                :selected="$filters['category']"
+            />
         </div>
-        <div>
-            <label class="mb-1 block font-label-sm text-label-sm text-on-surface-variant" for="status">Trạng thái</label>
-            <select id="status" name="status"
-                class="w-full rounded-lg border-none bg-surface-container-low px-3 py-2 font-body-sm text-body-sm focus:ring-2 focus:ring-primary">
-                <option value="">Tất cả</option>
-                <option value="published" @selected($filters['status'] === 'published')>Đã xuất bản</option>
-                <option value="draft" @selected($filters['status'] === 'draft')>Nháp</option>
-            </select>
+
+        <div class="min-w-0 md:col-span-2">
+            <x-admin.multi-select-filter
+                name="status"
+                label="Trạng thái"
+                placeholder="Tất cả"
+                :options="[
+                    ['id' => 'published', 'label' => 'Đã xuất bản', 'tone' => 'bg-emerald-50 text-emerald-800 border-emerald-200'],
+                    ['id' => 'draft', 'label' => 'Nháp', 'tone' => 'bg-surface-container-high text-on-surface-variant border-outline-variant'],
+                ]"
+                :selected="$filters['status']"
+            />
         </div>
-        <div class="sm:col-span-4 flex gap-2">
-            <button type="submit"
-                class="rounded-lg bg-primary px-4 py-2 font-label-md text-label-md text-on-primary hover:opacity-90">Lọc</button>
-            <a href="{{ route('admin.cms.faq.index') }}"
-                class="rounded-lg px-4 py-2 font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-low">Xóa lọc</a>
+
+        <div class="md:col-span-3">
+            <span class="mb-1.5 block text-sm font-medium text-transparent select-none" aria-hidden="true">&nbsp;</span>
+            <x-admin.filter-action-buttons
+                fill
+                :reset-url="route('admin.cms.faq.index')"
+                search-aria-label="Tìm kiếm FAQ"
+                reset-aria-label="Xoá bộ lọc FAQ"
+            />
         </div>
     </form>
 @endif
 
+    <div id="faq-results-region" class="space-y-4">
     <div class="overflow-x-auto rounded-xl border border-outline-variant bg-surface">
         <table class="min-w-full text-left font-body-sm text-body-sm">
+            <caption class="sr-only">Danh sách câu hỏi thường gặp</caption>
             <thead class="border-b border-outline-variant bg-surface-container-low font-label-md text-label-md text-on-surface-variant">
                 <tr>
-                    <th class="px-4 py-3 w-16">TT</th>
-                    <th class="px-4 py-3">Câu hỏi</th>
-                    <th class="px-4 py-3">Danh mục</th>
-                    <th class="px-4 py-3">Trạng thái</th>
-                    <th class="px-4 py-3">Cập nhật</th>
-                    <th class="px-4 py-3"></th>
+                    <th scope="col" class="px-4 py-3 w-16">TT</th>
+                    <th scope="col" class="px-4 py-3">Câu hỏi</th>
+                    <th scope="col" class="px-4 py-3">Danh mục</th>
+                    <th scope="col" class="px-4 py-3">Trạng thái</th>
+                    <th scope="col" class="px-4 py-3">Cập nhật</th>
+                    <th scope="col" class="px-4 py-3"></th>
                 </tr>
             </thead>
             <tbody>
@@ -106,9 +123,9 @@
                         <td class="px-4 py-3 text-on-surface-variant">{{ $faq->category->label() }}</td>
                         <td class="px-4 py-3">
                             @if ($faq->is_published)
-                                <span class="rounded-full bg-primary/10 px-2 py-0.5 font-label-sm text-primary">Đã xuất bản</span>
+                                <span class="inline-flex rounded-full border px-2 py-0.5 text-xs font-medium bg-emerald-50 text-emerald-800 border-emerald-200">Đã xuất bản</span>
                             @else
-                                <span class="rounded-full bg-surface-container-high px-2 py-0.5 font-label-sm text-on-surface-variant">Nháp</span>
+                                <span class="inline-flex rounded-full border px-2 py-0.5 text-xs font-medium bg-surface-container-high text-on-surface-variant border-outline-variant">Nháp</span>
                             @endif
                         </td>
                         <td class="px-4 py-3 text-on-surface-variant whitespace-nowrap">
@@ -136,8 +153,62 @@
     </div>
 
     @if ($faqs->hasPages())
-        <div class="mt-4">
+        <div id="faq-pagination">
             {{ $faqs->links() }}
         </div>
     @endif
+    </div>
+
+    <script>
+        function adminFaqFilter() {
+            return {
+                loading: false,
+                filterForm() { return document.getElementById('faq-filter-form'); },
+                async applyFilters() {
+                    const form = this.filterForm();
+                    if (!form) return;
+                    const url = new URL(form.action, window.location.origin);
+                    const params = new URLSearchParams(new FormData(form));
+                    params.delete('page');
+                    url.search = params.toString();
+                    await this.fetchResults(url.toString());
+                },
+                async resetFilters(url) {
+                    const form = this.filterForm();
+                    form?.reset();
+                    const query = form?.querySelector('[name="q"]');
+                    if (query) query.value = '';
+                    window.dispatchEvent(new CustomEvent('faq-filters-reset'));
+                    await this.fetchResults(url);
+                },
+                async fetchResults(url) {
+                    this.loading = true;
+                    try {
+                        const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } });
+                        if (!response.ok) throw new Error('Lỗi tải danh sách FAQ');
+                        const parsed = new DOMParser().parseFromString(await response.text(), 'text/html');
+                        const next = parsed.getElementById('faq-results-region');
+                        const current = document.getElementById('faq-results-region');
+                        if (!next || !current) throw new Error('Không tìm thấy vùng kết quả FAQ');
+                        current.replaceWith(next);
+                        window.history.pushState({}, '', url);
+                        this.bindPagination();
+                    } catch (error) {
+                        console.error(error);
+                        alert('Có lỗi xảy ra khi tải danh sách FAQ. Vui lòng thử lại.');
+                    } finally { this.loading = false; }
+                },
+                bindPagination() {
+                    document.querySelectorAll('#faq-pagination a').forEach((link) => {
+                        link.addEventListener('click', (event) => {
+                            event.preventDefault();
+                            if (link.href) this.fetchResults(link.href);
+                        });
+                    });
+                },
+                init() { this.bindPagination(); },
+            };
+        }
+    </script>
+    </div>
 </x-layouts.admin>

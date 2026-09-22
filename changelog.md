@@ -2,6 +2,20 @@
 
 ## 2026-09-22
 
+### Feat — Đồng bộ bộ lọc FAQ & Banner theo Liên hệ
+
+- Form `md:grid-cols-12`, multi-select, nút Tìm kiếm/Xoá, AJAX lọc giống Liên hệ.
+- Backend FAQ/Banner nhận mảng `category|placement[]` và `status[]`; badge list khớp tone.
+
+### Fix — KPI Cộng tác viên nằm trên bộ lọc
+
+- Đưa card tổng quan CTV lên trên form lọc; AJAX cập nhật riêng vùng KPI.
+
+### Fix — Chặn scroll ngang cả trang Admin (audit)
+
+- Layout admin: `overflow-x-hidden`, `min-w-0`, khóa `max-w` theo viewport trừ sidebar.
+- Trang audit: siết overflow bảng trong card; cột thiết bị `truncate` thay `min-w-52`.
+
 ### Fix — Nút Cột hiển thị bị đè header Admin
 
 - Bỏ `z-[70]` trên wrapper nút chọn cột trang ngân hàng câu hỏi để không lòi lên trên top bar cố định khi scroll.

@@ -14,6 +14,7 @@ use Modules\Admin\Actions\Cms\ReorderFaqAction;
 use Modules\Admin\Actions\Cms\SaveFaqAction;
 use Modules\Admin\Http\Requests\Cms\SaveFaqRequest;
 use Modules\Admin\Models\Faq;
+use Modules\Admin\Support\AdminQuestionListQuery;
 use Modules\Admin\Support\Enums\FaqCategory;
 
 final class FaqController extends Controller
@@ -31,13 +32,23 @@ final class FaqController extends Controller
             });
         }
 
-        if ($category = $request->query('category')) {
-            $query->where('category', (string) $category);
+        $categories = array_values(array_intersect(
+            AdminQuestionListQuery::stringValues($request->query('category')),
+            FaqCategory::values(),
+        ));
+        if ($categories !== []) {
+            $query->whereIn('category', $categories);
         }
 
-        if ($request->query('status') === 'published') {
+        $statuses = array_values(array_intersect(
+            AdminQuestionListQuery::stringValues($request->query('status')),
+            ['published', 'draft'],
+        ));
+        $filterPublished = in_array('published', $statuses, true);
+        $filterDraft = in_array('draft', $statuses, true);
+        if ($filterPublished && ! $filterDraft) {
             $query->where('is_published', true);
-        } elseif ($request->query('status') === 'draft') {
+        } elseif ($filterDraft && ! $filterPublished) {
             $query->where('is_published', false);
         }
 
@@ -55,8 +66,8 @@ final class FaqController extends Controller
             'stats' => $stats,
             'filters' => [
                 'q' => $search,
-                'category' => $request->query('category'),
-                'status' => $request->query('status'),
+                'category' => $categories,
+                'status' => $statuses,
             ],
         ]);
     }

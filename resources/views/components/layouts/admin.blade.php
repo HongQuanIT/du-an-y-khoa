@@ -44,7 +44,7 @@
     @livewireStyles
 </head>
 
-<body class="bg-surface-container-lowest font-body-md text-on-surface"
+<body class="overflow-x-hidden bg-surface-container-lowest font-body-md text-on-surface"
     @if ($canSupportInbox)
         data-support-inbox="1"
         data-support-pending-ids="{{ implode(',', $supportPendingIds) }}"
@@ -250,8 +250,8 @@
         </div>
     </header>
 
-    <main class="min-h-screen bg-surface-container-lowest pt-header-height md:ml-sidebar-width">
-        <div class="p-margin-mobile md:p-margin-desktop">
+    <main class="min-h-screen min-w-0 overflow-x-hidden bg-surface-container-lowest pt-header-height md:ml-sidebar-width md:max-w-[calc(100vw-var(--spacing-sidebar-width))]">
+        <div class="min-w-0 max-w-full p-margin-mobile md:p-margin-desktop">
             {{ $slot }}
         </div>
     </main>
