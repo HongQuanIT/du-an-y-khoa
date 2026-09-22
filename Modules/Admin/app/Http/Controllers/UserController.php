@@ -80,10 +80,13 @@ final class UserController extends Controller
             $query->whereIn('status', $statuses);
         }
 
-        $twoFactorFilter = $request->query('two_factor');
-        if ($twoFactorFilter === 'enabled') {
+        $twoFactorFilters = array_values(array_intersect(
+            AdminQuestionListQuery::stringValues($request->query('two_factor')),
+            ['enabled', 'disabled'],
+        ));
+        if ($twoFactorFilters === ['enabled']) {
             $query->whereHas('twoFactorSecret', fn ($q) => $q->whereNotNull('confirmed_at'));
-        } elseif ($twoFactorFilter === 'disabled') {
+        } elseif ($twoFactorFilters === ['disabled']) {
             $query->where(function ($q): void {
                 $q->whereDoesntHave('twoFactorSecret')
                     ->orWhereHas('twoFactorSecret', fn ($sq) => $sq->whereNull('confirmed_at'));
@@ -125,7 +128,7 @@ final class UserController extends Controller
                 'portal' => $portals,
                 'role' => $roles,
                 'status' => $statuses,
-                'two_factor' => $twoFactorFilter,
+                'two_factor' => $twoFactorFilters,
                 'country_id' => AdminQuestionListQuery::integerIds($request->query('country_id')),
                 'institution_id' => AdminQuestionListQuery::integerIds($request->query('institution_id')),
                 'administrative_unit_id' => AdminQuestionListQuery::integerIds($request->query('administrative_unit_id')),

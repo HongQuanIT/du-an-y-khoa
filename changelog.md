@@ -2,6 +2,12 @@
 
 ## 2026-09-22
 
+### Feat — Đồng bộ UI bộ lọc Admin theo trang Liên hệ
+
+- Chuẩn hóa layout `grid items-end`, label/input `text-sm`, focus ring, nút `filter-action-buttons` + spacer.
+- Áp dụng cho: dữ liệu học viên, người dùng (2FA multi-select), phản hồi câu hỏi (+ KPI card icon), lớp học, Premium, thanh toán, CTV, audit.
+- Thêm tone badge trạng thái (`UserStatus`, `ClassroomStatus`, `PartnerStatus`, feedback/payment) khớp dropdown và list.
+
 ### Feat — Đồng bộ badge lọc/list câu hỏi + KPI liên hệ
 
 - Thêm `Difficulty::tone()`; badge Độ khó / Miễn phí trong bộ lọc và cột list khớp màu.

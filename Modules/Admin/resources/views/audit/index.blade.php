@@ -7,15 +7,10 @@
 
     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.audit.index'))
 <form id="audit-filter-form" method="get" action="{{ route('admin.audit.index') }}" role="search"
-        aria-labelledby="audit-filter-heading" aria-describedby="audit-filter-description"
+        aria-label="Tìm kiếm nhật ký hoạt động"
         @submit.prevent="applyFilters()"
-        class="space-y-4 rounded-xl border border-outline-variant bg-surface p-4">
-        <div>
-            <h2 id="audit-filter-heading" class="font-label-lg font-semibold text-on-surface">Tìm kiếm nhật ký hoạt động</h2>
-            <p id="audit-filter-description" class="mt-1 font-body-sm text-on-surface-variant">Tìm theo hành động, người thực hiện, vai trò và địa chỉ IP.</p>
-        </div>
-        <div class="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 xl:grid-cols-[minmax(240px,1.2fr)_minmax(200px,1fr)_minmax(200px,0.9fr)_minmax(180px,0.8fr)_auto]">
-        <div class="relative min-w-0"
+        class="grid grid-cols-1 items-end gap-4 rounded-xl border border-outline-variant bg-surface p-4 md:grid-cols-12">
+        <div class="relative min-w-0 md:col-span-3"
             x-data='{
                 open: false,
                 query: @json((string) ($filters["action"] ?? "")),
@@ -34,23 +29,23 @@
             }'
             @click.outside="open = false"
             @audit-filters-reset.window="query = ''">
-            <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant" for="action">Hành động</label>
+            <label class="mb-1.5 block text-sm font-medium text-on-surface-variant" for="action">Hành động</label>
             <div class="relative">
-                <span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant" aria-hidden="true">search</span>
                 <input id="action" name="action" x-model="query" type="search"
                     @focus="open = true" @input="open = true" @keydown.escape="open = false"
                     placeholder="Nhập mã hoặc tên hành động" autocomplete="new-password" autocapitalize="none"
                     spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true"
-                    class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low py-2 pl-9 pr-3 font-body-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20">
+                    class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 pl-9 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
+                <span class="material-symbols-outlined pointer-events-none absolute top-2.5 left-2.5 text-[20px] text-on-surface-variant/70" aria-hidden="true">search</span>
             </div>
 
             <div x-show="open && matches().length > 0" x-cloak
-                class="absolute inset-x-0 z-40 mt-1 max-h-72 overflow-y-auto rounded-xl border border-outline-variant bg-surface p-1.5 shadow-xl">
+                class="absolute inset-x-0 z-40 mt-1.5 max-h-72 overflow-y-auto rounded-xl border border-outline-variant bg-surface p-2 shadow-xl">
                 <template x-for="item in matches()" :key="item.value">
                     <button type="button"
                         @click="query = item.value; open = false"
-                        class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-surface-container-low">
-                        <span class="material-symbols-outlined text-[18px] text-primary">bolt</span>
+                        class="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-sm hover:bg-surface-container-low">
+                        <span class="material-symbols-outlined text-[16px] text-primary" aria-hidden="true">bolt</span>
                         <span class="min-w-0 flex-1">
                             <span class="block truncate text-sm text-on-surface" x-text="item.label"></span>
                             <span class="block truncate font-mono text-[11px] text-on-surface-variant" x-text="item.value"></span>
@@ -59,24 +54,39 @@
                 </template>
             </div>
         </div>
-        <div class="min-w-0">
-            <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant" for="actor">Người thực hiện</label>
+
+        <div class="min-w-0 md:col-span-2">
+            <label class="mb-1.5 block text-sm font-medium text-on-surface-variant" for="actor">Người thực hiện</label>
             <input id="actor" name="actor" value="{{ $filters['actor'] }}" type="search"
                 placeholder="Nhập tên hoặc ID" autocomplete="off"
-                class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-body-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20">
+                class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
         </div>
-        <div class="min-w-0">
-            <x-admin.multi-select-filter name="actor_role" label="Vai trò" placeholder="Tất cả"
+
+        <div class="min-w-0 md:col-span-2">
+            <x-admin.multi-select-filter
+                name="actor_role"
+                label="Vai trò"
+                placeholder="Tất cả"
                 :options="collect($roles)->map(fn ($role) => ['id' => $role->value, 'label' => $role->label()])->values()->all()"
-                :selected="$filters['actor_role']" />
+                :selected="$filters['actor_role']"
+            />
         </div>
-        <div class="min-w-0">
-            <label class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant" for="ip">Địa chỉ IP</label>
+
+        <div class="min-w-0 md:col-span-2">
+            <label class="mb-1.5 block text-sm font-medium text-on-surface-variant" for="ip">Địa chỉ IP</label>
             <input id="ip" name="ip" value="{{ $filters['ip'] }}" type="search"
                 placeholder="Ví dụ: 192.168.1.1" autocomplete="off" spellcheck="false"
-                class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 font-body-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20">
+                class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
         </div>
-        <x-admin.filter-action-buttons class="self-end sm:col-span-2 xl:col-auto" :reset-url="route('admin.audit.index')" search-aria-label="Tìm kiếm nhật ký hoạt động" reset-aria-label="Xoá bộ lọc nhật ký hoạt động" />
+
+        <div class="md:col-span-3">
+            <span class="mb-1.5 block text-sm font-medium text-transparent select-none" aria-hidden="true">&nbsp;</span>
+            <x-admin.filter-action-buttons
+                fill
+                :reset-url="route('admin.audit.index')"
+                search-aria-label="Tìm kiếm nhật ký hoạt động"
+                reset-aria-label="Xoá bộ lọc nhật ký hoạt động"
+            />
         </div>
     </form>
 @endif

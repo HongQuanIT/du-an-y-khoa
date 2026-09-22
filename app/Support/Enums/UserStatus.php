@@ -28,6 +28,16 @@ enum UserStatus: string
         };
     }
 
+    public function tone(): string
+    {
+        return match ($this) {
+            self::Active => 'bg-emerald-50 text-emerald-800 border-emerald-200',
+            self::Pending => 'bg-amber-50 text-amber-800 border-amber-200',
+            self::Suspended => 'bg-slate-50 text-slate-700 border-slate-200',
+            self::Banned => 'bg-rose-50 text-rose-800 border-rose-200',
+        };
+    }
+
     public function canAuthenticate(): bool
     {
         return $this === self::Active || $this === self::Pending;

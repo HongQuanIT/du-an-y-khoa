@@ -16,15 +16,63 @@
 
     <x-admin.flash />
 
-    <form id="institution-filter-form" method="get" action="{{ route('admin.institutions.index') }}" role="search" x-data="adminInstitutionFilter()" @submit.prevent="applyFilters()" class="mb-6 space-y-4 rounded-xl border border-outline-variant bg-surface p-4" aria-labelledby="institution-filter-heading">
-        <div><h2 id="institution-filter-heading" class="font-label-lg font-semibold text-on-surface">Tìm kiếm trường học</h2><p class="mt-1 font-body-sm text-on-surface-variant">Tìm theo tên hoặc tên viết tắt, sau đó thu hẹp theo quốc gia, tỉnh/thành phố và trạng thái.</p></div>
-        <div class="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 xl:grid-cols-5">
-            <div class="sm:col-span-2 xl:col-span-2"><label for="institution-search-q" class="mb-1.5 block font-label-sm font-semibold text-on-surface-variant">Tìm kiếm</label><div class="relative"><span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[19px] text-on-surface-variant" aria-hidden="true">search</span><input id="institution-search-q" name="q" value="{{ $filters['q'] }}" type="search" autocomplete="off" class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low py-2 pl-10 pr-3 font-body-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" placeholder="Tên hoặc tên viết tắt"></div></div>
-            <div class="min-w-0"><x-admin.multi-select-filter name="country_id" label="Quốc gia" placeholder="Tất cả" :options="$countries->map(fn ($country) => ['id' => $country->id, 'label' => $country->name])->all()" :selected="$filters['country_id']" /></div>
-            <div class="min-w-0"><x-admin.multi-select-filter name="administrative_unit_id" label="Tỉnh/Thành phố" placeholder="Tất cả" :options="$units->map(fn ($unit) => ['id' => $unit->id, 'label' => $unit->name])->all()" :selected="$filters['administrative_unit_id']" /></div>
-            <div class="min-w-0"><x-admin.multi-select-filter name="status" label="Trạng thái" placeholder="Tất cả" :options="[['id' => 'active', 'label' => 'Đang hiển thị'], ['id' => 'inactive', 'label' => 'Đã ẩn']]" :selected="$filters['status']" /></div>
+    <form id="institution-filter-form" method="get" action="{{ route('admin.institutions.index') }}"
+        role="search" aria-label="Tìm kiếm trường học"
+        x-data="adminInstitutionFilter()" @submit.prevent="applyFilters()"
+        class="mb-6 grid grid-cols-1 items-end gap-4 rounded-xl border border-outline-variant bg-surface p-4 md:grid-cols-12">
+        <div class="md:col-span-3">
+            <label for="institution-search-q" class="mb-1.5 block text-sm font-medium text-on-surface-variant">Tìm kiếm</label>
+            <div class="relative">
+                <input id="institution-search-q" name="q" value="{{ $filters['q'] }}" type="search"
+                    autocomplete="off" placeholder="Tên hoặc tên viết tắt"
+                    class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 pl-9 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
+                <span class="material-symbols-outlined pointer-events-none absolute top-2.5 left-2.5 text-[20px] text-on-surface-variant/70" aria-hidden="true">search</span>
+            </div>
         </div>
-        <div class="flex justify-end gap-2 border-t border-outline-variant pt-4"><button type="submit" :disabled="loading" class="inline-flex h-11 w-36 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 font-label-md font-medium text-on-primary transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50" aria-label="Tìm kiếm trường học"><span class="material-symbols-outlined text-[18px]" aria-hidden="true" x-text="loading ? 'progress_activity' : 'search'">search</span><span x-text="loading ? 'Đang tải' : 'Tìm kiếm'">Tìm kiếm</span></button><button type="button" @click="resetFilters(@js(route('admin.institutions.index')))" :disabled="loading" class="inline-flex h-11 w-28 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-outline-variant bg-surface px-3 font-label-md font-medium text-on-surface-variant transition hover:bg-surface-container-low focus-visible:ring-2 focus-visible:ring-primary/20 disabled:opacity-50" aria-label="Xoá bộ lọc trường học"><span class="material-symbols-outlined text-[18px]" aria-hidden="true">delete</span><span>Xoá</span></button></div>
+
+        <div class="min-w-0 md:col-span-2">
+            <x-admin.multi-select-filter
+                name="country_id"
+                label="Quốc gia"
+                placeholder="Tất cả"
+                :options="$countries->map(fn ($country) => ['id' => $country->id, 'label' => $country->name])->all()"
+                :selected="$filters['country_id']"
+            />
+        </div>
+
+        <div class="min-w-0 md:col-span-2">
+            <x-admin.multi-select-filter
+                name="administrative_unit_id"
+                label="Tỉnh/Thành phố"
+                placeholder="Tất cả"
+                :options="$units->map(fn ($unit) => ['id' => $unit->id, 'label' => $unit->name])->all()"
+                :selected="$filters['administrative_unit_id']"
+            />
+        </div>
+
+        <div class="min-w-0 md:col-span-2">
+            <x-admin.multi-select-filter
+                name="status"
+                label="Trạng thái"
+                placeholder="Tất cả"
+                :options="[
+                    ['id' => 'active', 'label' => 'Đang hiển thị', 'tone' => 'bg-emerald-50 text-emerald-800 border-emerald-200'],
+                    ['id' => 'inactive', 'label' => 'Đã ẩn', 'tone' => 'bg-surface-container-high text-on-surface-variant border-outline-variant'],
+                ]"
+                :selected="$filters['status']"
+            />
+        </div>
+
+        <div class="md:col-span-3">
+            <span class="mb-1.5 block text-sm font-medium text-transparent select-none" aria-hidden="true">&nbsp;</span>
+            <x-admin.filter-action-buttons
+                reset-method="resetFilters"
+                :reset-url="route('admin.institutions.index')"
+                fill
+                search-aria-label="Tìm kiếm trường học"
+                reset-aria-label="Xoá bộ lọc trường học"
+            />
+        </div>
     </form>
 
     <div id="institution-results-region" aria-live="polite">

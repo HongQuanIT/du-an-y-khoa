@@ -182,8 +182,11 @@
                 </div>
 
                 <!-- Action Buttons: Tìm kiếm & Xóa lọc -->
-                <x-admin.filter-action-buttons class="md:col-span-3" reset-method="resetFilter" fill
-                    search-aria-label="Tìm kiếm liên hệ" reset-aria-label="Xoá bộ lọc liên hệ" />
+                <div class="md:col-span-3">
+                    <span class="mb-1.5 block text-sm font-medium text-transparent select-none" aria-hidden="true">&nbsp;</span>
+                    <x-admin.filter-action-buttons reset-method="resetFilter" fill
+                        search-aria-label="Tìm kiếm liên hệ" reset-aria-label="Xoá bộ lọc liên hệ" />
+                </div>
             </form>
         @endif
 
