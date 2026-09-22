@@ -44,12 +44,13 @@ class QuestionFactory extends Factory
     }
 
     /**
-     * Attach a full set of answer options (default 4, exactly one correct).
+     * Attach a full set of answer options (default 4 = A–D, exactly one correct).
      */
     public function withOptions(int $count = 4): self
     {
         return $this->afterCreating(function (Question $question) use ($count): void {
-            $labels = ['A', 'B', 'C', 'D', 'E'];
+            $count = max(1, min(4, $count));
+            $labels = ['A', 'B', 'C', 'D'];
             $correctIndex = random_int(0, $count - 1);
 
             for ($i = 0; $i < $count; $i++) {

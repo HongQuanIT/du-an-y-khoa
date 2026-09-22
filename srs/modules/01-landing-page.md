@@ -71,7 +71,7 @@ Không bao gồm: nội dung học thật (thuộc module core), thanh toán (mo
 - **Events:** `onSelect`, `onSubmit`, `onNext`, `onPaywallHit`.
 - **Validation:** Phải chọn đáp án trước khi submit.
 - **Permission:** Guest giới hạn N câu; hết → `PaywallOverlay`.
-- **Accessibility:** Radio group ARIA, keyboard chọn A–E.
+- **Accessibility:** Radio group ARIA, keyboard chọn A–D.
 - **Animation:** Reveal giải thích, tô màu đúng/sai.
 - **Loading:** Skeleton câu hỏi. **Error:** thử lại. **Empty:** N/A. **Disabled:** nút Submit khi chưa chọn.
 

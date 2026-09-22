@@ -25,6 +25,12 @@
 - Tách `VietnamGeographySeeder`: quốc gia VN, 34 tỉnh/thành (sau sáp nhập 2025), trường y/dược toàn quốc.
 - `LearnerProfileCatalogSeeder` gọi seeder địa lý rồi seed chức danh + năm học; thêm test idempotent.
 
+### Change — Câu hỏi cố định đúng 4 đáp án (A–D)
+
+- Form admin bỏ nút Thêm/Xóa đáp án; luôn hiển thị đúng 4 ô A–D.
+- Validation store/update, publish/submit, và import Excel yêu cầu đúng 4 đáp án; `correct` ∈ {A,B,C,D}.
+- Template/export Excel bỏ cột `option_e`; seed demo (STEMI, Goodpasture) chuẩn hóa về 4 đáp án.
+
 ### Feat — Đồng bộ UI bộ lọc Admin theo trang Liên hệ
 
 - Chuẩn hóa layout `grid items-end`, label/input `text-sm`, focus ring, nút `filter-action-buttons` + spacer.

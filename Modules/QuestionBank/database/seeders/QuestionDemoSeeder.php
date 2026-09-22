@@ -72,7 +72,6 @@ final class QuestionDemoSeeder extends Seeder
             ['label' => 'B', 'content' => 'Nhồi máu cơ tim cấp có ST chênh lên (STEMI)', 'is_correct' => true, 'order' => 2],
             ['label' => 'C', 'content' => 'Thuyên tắc phổi', 'is_correct' => false, 'order' => 3],
             ['label' => 'D', 'content' => 'Bóc tách động mạch chủ', 'is_correct' => false, 'order' => 4],
-            ['label' => 'E', 'content' => 'Đau thắt ngực ổn định', 'is_correct' => false, 'order' => 5],
         ];
 
         $keepIds = [];

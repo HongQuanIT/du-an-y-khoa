@@ -183,6 +183,8 @@ final class PrepareQuestionImportPreviewAction
             $key = 'option_'.strtolower($letter);
             $content = $values[$key];
             if ($content === '') {
+                $errors[] = 'Thiếu đáp án '.$letter.'.';
+
                 continue;
             }
             $labels[] = $letter;
@@ -195,14 +197,14 @@ final class PrepareQuestionImportPreviewAction
             ];
         }
 
-        if (count($options) < 2) {
-            $errors[] = 'Cần ít nhất 2 đáp án.';
+        if (count($options) !== QuestionImportSchema::MAX_OPTIONS) {
+            $errors[] = 'Mỗi câu hỏi phải có đúng 4 đáp án (A–D).';
         }
 
         $correct = strtoupper(trim($values['correct']));
-        $correct = preg_replace('/[^A-E]/', '', $correct) ?? '';
+        $correct = preg_replace('/[^A-D]/', '', $correct) ?? '';
         if (strlen($correct) !== 1) {
-            $errors[] = 'Đáp án đúng phải là một chữ A–E.';
+            $errors[] = 'Đáp án đúng phải là một chữ A–D.';
         } elseif (! in_array($correct, $labels, true)) {
             $errors[] = 'Đáp án đúng không khớp đáp án đã nhập.';
         } else {

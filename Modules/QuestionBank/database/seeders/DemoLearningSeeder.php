@@ -249,7 +249,7 @@ class DemoLearningSeeder extends Seeder
      */
     private function seedOptions(Question $question, array $options): void
     {
-        $labels = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+        $labels = ['A', 'B', 'C', 'D'];
 
         foreach ($options as $index => $option) {
             QuestionOption::create([
@@ -295,10 +295,7 @@ TEXT;
                 'explanation' => 'Goodpasture syndrome (anti-GBM disease) presents with pulmonary hemorrhage and rapidly progressive glomerulonephritis. Linear IgG along the glomerular basement membrane is the classic biopsy finding.',
             ],
             ['content' => 'Eosinophilic granulomatosis with polyangiitis', 'is_correct' => false],
-            ['content' => 'IgA nephropathy', 'is_correct' => false],
             ['content' => 'Granulomatosis with polyangiitis', 'is_correct' => false],
-            ['content' => 'Reactivated tuberculosis', 'is_correct' => false],
-            ['content' => 'Microscopic polyangiitis', 'is_correct' => false],
             ['content' => 'Lupus nephritis', 'is_correct' => false],
         ];
         $question = Question::query()->where('stem', $stem)->first();

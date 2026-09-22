@@ -456,9 +456,9 @@ final class TransitionQuestionStatusAction
             ]);
         }
 
-        if ($question->options->count() < 2 || $question->options->where('is_correct', true)->count() !== 1) {
+        if ($question->options->count() !== 4 || $question->options->where('is_correct', true)->count() !== 1) {
             throw ValidationException::withMessages([
-                'status' => 'Cần ≥2 đáp án và đúng 1 đáp án đúng.',
+                'status' => 'Cần đúng 4 đáp án và đúng 1 đáp án đúng.',
             ]);
         }
     }

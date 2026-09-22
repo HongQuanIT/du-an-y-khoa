@@ -11,7 +11,7 @@ use Modules\QuestionBank\Enums\Difficulty;
  */
 final class QuestionImportSchema
 {
-    public const MAX_OPTIONS = 5;
+    public const MAX_OPTIONS = 4;
 
     public const FORBIDDEN_FIELDS = [
         'id',
@@ -41,7 +41,7 @@ final class QuestionImportSchema
                 'aliases' => ['stem', 'de bai', 'đề bài', 'question', 'vignette', 'noi dung'],
             ],
             'correct' => [
-                'label' => 'Đáp án đúng (A–E)',
+                'label' => 'Đáp án đúng (A–D)',
                 'required' => true,
                 'aliases' => ['correct', 'dap an dung', 'đáp án đúng', 'answer', 'key'],
             ],
@@ -90,7 +90,7 @@ final class QuestionImportSchema
             $lower = strtolower($letter);
             $fields['option_'.$lower] = [
                 'label' => 'Đáp án '.$letter,
-                'required' => $index < 2,
+                'required' => true,
                 'aliases' => [
                     'option_'.$lower,
                     'dap an '.$lower,
@@ -288,8 +288,8 @@ final class QuestionImportSchema
         return [
             ['Trường', 'Bắt buộc', 'Ghi chú'],
             ['stem', 'Có', 'Đề bài. Không nhúng đáp án A/B cứng.'],
-            ['option_a … option_e', '≥2 đáp án', 'Để trống cột nếu không dùng.'],
-            ['correct', 'Có', 'Một chữ: A, B, C, D hoặc E. Single best answer.'],
+            ['option_a … option_d', 'Có (đúng 4)', 'Bắt buộc đủ A–D. Không thêm cột đáp án khác.'],
+            ['correct', 'Có', 'Một chữ: A, B, C hoặc D. Single best answer.'],
             ['difficulty', 'Có', 'very_easy | easy | medium | hard | very_hard'],
             ['lesson_slugs', 'Có', 'Copy slug thật từ sheet Bai_hoc. Nhiều bài: cách nhau ;'],
             ['option_*_explanation', 'Khuyến nghị', 'Giải thích theo từng đáp án. Import vẫn tạo nháp nếu thiếu.'],
@@ -368,7 +368,7 @@ final class QuestionImportSchema
     public static function excelListValidations(): array
     {
         return [
-            'correct' => 'A,B,C,D,E',
+            'correct' => 'A,B,C,D',
             'difficulty' => 'very_easy,easy,medium,hard,very_hard',
             'is_free' => '0,1',
             'is_priority' => '0,1',

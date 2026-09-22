@@ -286,6 +286,7 @@ final class AdminQuestionManagementTest extends TestCase
                 ['content' => 'Option typed A', 'is_correct' => '0', 'explanation' => 'Explanation typed A'],
                 ['content' => 'Option typed B', 'is_correct' => '1', 'explanation' => 'Explanation typed B'],
                 ['content' => 'Option typed C', 'is_correct' => '0'],
+                ['content' => 'Option typed D', 'is_correct' => '0'],
             ],
         ]);
 
@@ -301,6 +302,7 @@ final class AdminQuestionManagementTest extends TestCase
             ->assertSee('Option typed A')
             ->assertSee('Option typed B')
             ->assertSee('Option typed C')
+            ->assertSee('Option typed D')
             ->assertSee('Explanation typed A')
             ->assertSee('Explanation typed B');
     }
@@ -381,6 +383,8 @@ final class AdminQuestionManagementTest extends TestCase
                 'options' => [
                     ['content' => 'Đáp án mới đúng', 'is_correct' => '1'],
                     ['content' => 'Đáp án mới sai', 'is_correct' => '0'],
+                    ['content' => 'Đáp án nhiễu C', 'is_correct' => '0'],
+                    ['content' => 'Đáp án nhiễu D', 'is_correct' => '0'],
                 ],
             ]))
             ->assertRedirect();

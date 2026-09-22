@@ -61,7 +61,7 @@ Cột trái - form nhiều section:
 - Thanh trạng thái workflow trên cùng: Nháp → Chờ duyệt → Đã xuất bản → Đã gỡ, nút "Lưu nháp", "Gửi duyệt", "Xuất bản".
 - Section "Đề bài (stem)": trình soạn rich text với vignette mẫu tiếng Việt.
 - Section "Câu hỏi dẫn (lead-in)": "Chẩn đoán phù hợp nhất là gì?".
-- Section "Đáp án": danh sách A–E, mỗi đáp án có ô nội dung, radio đánh dấu đáp án đúng (A), và ô "Giải thích vì sao đúng/sai".
+- Section "Đáp án": danh sách đúng 4 đáp án A–D, mỗi đáp án có ô nội dung, radio đánh dấu đáp án đúng, và ô "Giải thích vì sao đúng/sai". Không thêm/bớt đáp án.
 - Section "Giải thích chung", "Nguồn tham khảo", "Chỉ số xét nghiệm (lab values)".
 - Section "Phân loại": chọn chuyên ngành/chủ đề (chip), tag (High-yield), độ khó.
 - Section "Media": nút chèn ảnh/ECG từ thư viện media.

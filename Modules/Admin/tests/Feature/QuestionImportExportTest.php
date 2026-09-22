@@ -189,6 +189,8 @@ final class QuestionImportExportTest extends TestCase
                 'options' => [
                     ['content' => 'Đúng', 'is_correct' => '1', 'explanation' => 'OK'],
                     ['content' => 'Sai', 'is_correct' => '0'],
+                    ['content' => 'Nhiễu C', 'is_correct' => '0'],
+                    ['content' => 'Nhiễu D', 'is_correct' => '0'],
                 ],
             ])
             ->assertRedirect();
@@ -242,6 +244,8 @@ final class QuestionImportExportTest extends TestCase
                 'options' => [
                     ['content' => 'Đúng', 'is_correct' => '1', 'explanation' => 'OK'],
                     ['content' => 'Sai', 'is_correct' => '0'],
+                    ['content' => 'Nhiễu C', 'is_correct' => '0'],
+                    ['content' => 'Nhiễu D', 'is_correct' => '0'],
                 ],
             ])
             ->assertRedirect();
@@ -328,6 +332,8 @@ final class QuestionImportExportTest extends TestCase
                 'options' => [
                     ['content' => 'Đúng', 'is_correct' => '1', 'explanation' => 'OK'],
                     ['content' => 'Sai', 'is_correct' => '0'],
+                    ['content' => 'Nhiễu C', 'is_correct' => '0'],
+                    ['content' => 'Nhiễu D', 'is_correct' => '0'],
                 ],
             ])
             ->assertRedirect();
@@ -363,6 +369,8 @@ final class QuestionImportExportTest extends TestCase
                 'options' => [
                     ['content' => '<p>Đáp án <em>nghiêng</em></p>', 'is_correct' => '1', 'explanation' => '<p>Vì <u>đúng</u>.</p>'],
                     ['content' => 'Sai', 'is_correct' => '0'],
+                    ['content' => 'Nhiễu C', 'is_correct' => '0'],
+                    ['content' => 'Nhiễu D', 'is_correct' => '0'],
                 ],
             ])
             ->assertRedirect();
@@ -400,6 +408,8 @@ final class QuestionImportExportTest extends TestCase
                 'options' => [
                     ['content' => 'Đúng', 'is_correct' => '1', 'explanation' => 'OK'],
                     ['content' => 'Sai', 'is_correct' => '0'],
+                    ['content' => 'Nhiễu C', 'is_correct' => '0'],
+                    ['content' => 'Nhiễu D', 'is_correct' => '0'],
                 ],
             ])
             ->assertRedirect();
@@ -412,6 +422,8 @@ final class QuestionImportExportTest extends TestCase
                 'options' => [
                     ['content' => 'Đúng', 'is_correct' => '1', 'explanation' => 'OK'],
                     ['content' => 'Sai', 'is_correct' => '0'],
+                    ['content' => 'Nhiễu C', 'is_correct' => '0'],
+                    ['content' => 'Nhiễu D', 'is_correct' => '0'],
                 ],
             ])
             ->assertRedirect();

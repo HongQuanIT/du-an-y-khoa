@@ -722,7 +722,7 @@ final class QuestionController extends Controller
             'is_free' => ['sometimes', 'boolean'],
             'is_priority' => ['sometimes', 'boolean'],
             'exam_flag' => ['sometimes', 'boolean'], // legacy alias — mapped to is_priority
-            'options' => ['required', 'array', 'min:2'],
+            'options' => ['required', 'array', 'size:4'],
             'options.*.id' => ['nullable', 'integer'],
             'options.*.content' => ['required', 'string'],
             'options.*.is_correct' => ['sometimes', 'boolean'],
@@ -733,7 +733,7 @@ final class QuestionController extends Controller
             'lesson_ids.required' => 'Vui lòng chọn ít nhất một bài học.',
             'lesson_ids.min' => 'Vui lòng chọn ít nhất một bài học.',
             'options.required' => 'Vui lòng thêm đáp án.',
-            'options.min' => 'Cần ít nhất 2 đáp án.',
+            'options.size' => 'Mỗi câu hỏi phải có đúng 4 đáp án.',
             'options.*.content.required' => 'Nội dung đáp án không được để trống.',
         ]);
 
