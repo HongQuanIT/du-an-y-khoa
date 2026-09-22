@@ -25,6 +25,12 @@
 - Tách `VietnamGeographySeeder`: quốc gia VN, 34 tỉnh/thành (sau sáp nhập 2025), trường y/dược toàn quốc.
 - `LearnerProfileCatalogSeeder` gọi seeder địa lý rồi seed chức danh + năm học; thêm test idempotent.
 
+### Feat — Seed 300 câu published từ Excel (`question-bank:seed-from-excel`)
+
+- Command tái dùng stack import admin (validate format/lesson, `created_by` = editor) rồi force-publish + snapshot version cho test QBank/học viên.
+- File mẫu: `Modules/QuestionBank/database/seeders/data/qbank-demo.xlsx`; tự tạo slug bài học thiếu; seeder `QbankDemoExcelSeeder`.
+- Làm sạch `qbank-demo.xlsx`: bỏ cột `option_e` / `option_e_explanation` / `status` (schema chỉ A–D).
+
 ### Change — Bỏ tab Giấy phép tổ chức & Ghi chú cá nhân trên `/profile`
 
 - Gỡ `?tab=org-license` và `?tab=notes` khỏi nav, routes và UI hub học viên.

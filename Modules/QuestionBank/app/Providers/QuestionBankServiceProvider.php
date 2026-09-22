@@ -37,6 +37,7 @@ class QuestionBankServiceProvider extends ModuleServiceProvider
     protected array $commands = [
         \Modules\QuestionBank\Console\SyncQuestionStatsCommand::class,
         \Modules\QuestionBank\Console\ScanQuestionDuplicatesCommand::class,
+        \Modules\QuestionBank\Console\SeedQuestionsFromExcelCommand::class,
     ];
 
     /**
