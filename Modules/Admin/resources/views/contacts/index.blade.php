@@ -11,22 +11,42 @@
     <x-admin.flash />
 
     <div x-data="adminContactFilter()" x-init="init()" class="space-y-6">
-        <!-- Status filters -->
-        <div class="grid overflow-hidden rounded-xl border border-outline-variant bg-surface sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5" role="group"
-            aria-label="Lọc liên hệ theo trạng thái">
-            @foreach ($statuses as $status)
-                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.contacts.index'))
-                    <button type="button" @click="filterByStatusKpi('{{ $status->value }}')"
-                        :aria-pressed="statuses.includes('{{ $status->value }}')"
-                        title="Tìm kiếm liên hệ {{ strtolower($status->label()) }}"
-                        class="min-h-32 border-b border-outline-variant p-4 text-left transition hover:bg-primary/5 focus:z-10 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:border-r last:border-r-0 lg:border-b-0"
-                        :class="statuses.includes('{{ $status->value }}') ? 'bg-primary/5 text-primary' : 'text-on-surface'">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-on-surface-variant">{{ $status->label() }}</p>
-                        <p id="kpi-count-{{ $status->value }}" class="mt-2 text-2xl font-bold text-on-surface">{{ number_format((int) ($statusCounts[$status->value] ?? 0)) }}</p>
-                    </button>
-                @endif
-            @endforeach
-        </div>
+        {{-- Section KPI: cùng markup/CSS với tổng quan trang câu hỏi --}}
+        <section id="contact-stats" aria-labelledby="heading-contact-stats">
+            <div class="mb-3 flex items-center justify-between gap-3">
+                <h2 id="heading-contact-stats" class="font-label-lg font-semibold text-on-surface">Tổng quan</h2>
+                <p class="font-body-sm text-on-surface-variant">Tình trạng hộp thư liên hệ</p>
+            </div>
+            <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5" role="group"
+                aria-label="Lọc liên hệ theo trạng thái">
+                @foreach ($statuses as $status)
+                    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.contacts.index'))
+                        <button type="button" @click="filterByStatusKpi('{{ $status->value }}')"
+                            :aria-pressed="statuses.length === 1 && statuses[0] === '{{ $status->value }}'"
+                            title="Tìm kiếm liên hệ {{ strtolower($status->label()) }}"
+                            id="stats-{{ $status->value }}-link"
+                            class="rounded-xl border border-outline-variant bg-surface p-4 text-left transition-colors hover:bg-surface-container-low focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                            :class="statuses.length === 1 && statuses[0] === '{{ $status->value }}' ? 'ring-2 ring-primary' : ''"
+                            aria-label="Xem liên hệ {{ strtolower($status->label()) }}: {{ number_format((int) ($statusCounts[$status->value] ?? 0)) }}">
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="flex size-10 shrink-0 items-center justify-center rounded-lg {{ $status->iconSurface() }}">
+                                    <span class="material-symbols-outlined text-[22px]"
+                                        aria-hidden="true">{{ $status->icon() }}</span>
+                                </div>
+                                <div class="min-w-0">
+                                    <p class="truncate text-label-sm font-medium text-on-surface-variant">{{ $status->label() }}</p>
+                                    <p id="kpi-count-{{ $status->value }}"
+                                        class="text-headline-sm font-bold text-on-surface">
+                                        {{ number_format((int) ($statusCounts[$status->value] ?? 0)) }}
+                                    </p>
+                                </div>
+                            </div>
+                        </button>
+                    @endif
+                @endforeach
+            </div>
+        </section>
 
         @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.contacts.index'))
             <!-- Filter Bar -->
@@ -296,7 +316,7 @@
                 },
 
                 filterByStatusKpi(statusVal) {
-                    if (statusVal === '') {
+                    if (statusVal === '' || (this.statuses.length === 1 && this.statuses[0] === statusVal)) {
                         this.statuses = [];
                     } else {
                         this.statuses = [statusVal];

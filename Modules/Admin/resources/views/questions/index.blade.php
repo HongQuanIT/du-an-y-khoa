@@ -284,7 +284,7 @@
                         name="difficulty"
                         label="Độ khó"
                         placeholder="Tất cả"
-                        :options="collect($difficulties)->map(fn ($difficulty) => ['id' => $difficulty->value, 'label' => $difficulty->label()])->all()"
+                        :options="collect($difficulties)->map(fn ($difficulty) => ['id' => $difficulty->value, 'label' => $difficulty->label(), 'tone' => $difficulty->tone()])->all()"
                         :selected="$filters['difficulty'] ?? []"
                     />
                 </div>
@@ -295,8 +295,8 @@
                         label="Miễn phí"
                         placeholder="Tất cả"
                         :options="[
-                            ['id' => '1', 'label' => 'Có'],
-                            ['id' => '0', 'label' => 'Không'],
+                            ['id' => '1', 'label' => 'Có', 'tone' => 'bg-emerald-50 text-emerald-800 border-emerald-200'],
+                            ['id' => '0', 'label' => 'Không', 'tone' => 'bg-surface-container-high text-on-surface-variant border-outline-variant'],
                         ]"
                         :selected="$filters['is_free'] ?? []"
                     />
@@ -478,7 +478,7 @@
                                 <td class="w-[110px] min-w-[100px] px-4 py-4 text-center align-top whitespace-nowrap"
                                     x-show="cols.difficulty" x-cloak>
                                     <span
-                                        class="inline-block rounded-md bg-surface-container-high px-2 py-0.5 text-xs font-semibold text-on-surface-variant">
+                                        class="inline-flex rounded-full border px-2 py-0.5 text-xs font-medium {{ $question->difficulty->tone() }}">
                                         {{ $question->difficulty->label() }}
                                     </span>
                                 </td>
@@ -494,23 +494,12 @@
                                     x-show="cols.status" x-cloak>
                                     @php
                                         $statusLabel = $question->status->label();
-                                        $statusBadgeClass = match ($question->status) {
-                                            \Modules\QuestionBank\Enums\QuestionStatus::Draft => 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
-                                            \Modules\QuestionBank\Enums\QuestionStatus::InReview => 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300',
-                                            \Modules\QuestionBank\Enums\QuestionStatus::InFlagReview => 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300',
-                                            \Modules\QuestionBank\Enums\QuestionStatus::PendingPublish => 'bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300',
-                                            \Modules\QuestionBank\Enums\QuestionStatus::Published => 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300',
-                                            \Modules\QuestionBank\Enums\QuestionStatus::Rejected => 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300',
-                                            \Modules\QuestionBank\Enums\QuestionStatus::Private => 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300',
-                                            \Modules\QuestionBank\Enums\QuestionStatus::Retired => 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-                                            default => 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
-                                        };
                                         if ((int) $question->published_version > 0 && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::Published) {
                                             $statusLabel .= ' · v'.$question->published_version;
                                         }
                                     @endphp
                                     <span
-                                        class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold {{ $statusBadgeClass }}">
+                                        class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold {{ $question->status->tone() }}">
                                         {{ $statusLabel }}
                                     </span>
                                 </td>
@@ -584,12 +573,12 @@
                                     x-show="cols.access" x-cloak>
                                     @if($question->is_free)
                                         <span
-                                            class="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
+                                            class="inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium bg-emerald-50 text-emerald-800 border-emerald-200">
                                             Có
                                         </span>
                                     @else
                                         <span
-                                            class="inline-flex items-center gap-1 rounded-full border border-outline-variant px-2.5 py-0.5 text-xs font-medium text-on-surface-variant">
+                                            class="inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium bg-surface-container-high text-on-surface-variant border-outline-variant">
                                             Không
                                         </span>
                                     @endif
