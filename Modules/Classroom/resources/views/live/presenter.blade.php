@@ -40,7 +40,6 @@
         <div data-q-knowledge-content style="font-size:0.875rem;line-height:1.5;font-style:italic;"></div>
     </div>
     <ul data-q-options style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:0.5rem;"></ul>
-    <div data-q-explanation style="display:none;margin-top:1rem;padding:0.75rem;background:#eff6ff;border-radius:0.5rem;font-size:0.875rem;"></div>
     @if ($canModerate)
         <footer style="margin-top:1.5rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
             <button type="button" data-q-prev style="padding:0.5rem 1rem;border:1px solid #d1d5db;border-radius:0.5rem;background:#fff;cursor:pointer;">← Trước</button>

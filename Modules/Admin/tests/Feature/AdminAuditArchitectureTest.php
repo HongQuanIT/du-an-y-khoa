@@ -82,7 +82,6 @@ final class AdminAuditArchitectureTest extends TestCase
         $this->actingAsStaff($editor)
             ->post(route('admin.questions.store'), [
                 'stem' => '<p>Ca lâm sàng audit</p>',
-                'explanation' => '<p>Giải thích audit</p><img src="/storage/questions/audit.png" alt="ECG">',
                 'attending_tip' => '<p>Gợi ý audit</p>',
                 'difficulty' => 'medium',
                 'lesson_ids' => [$topic->id],
@@ -105,7 +104,7 @@ final class AdminAuditArchitectureTest extends TestCase
 
         $this->assertNull($log->before);
         $this->assertSame('Ca lâm sàng audit', strip_tags($log->after['stem']));
-        $this->assertSame('Vì sao đúng', strip_tags($log->after['explanation']));
+        $this->assertSame('Vì sao đúng', strip_tags((string) ($log->after['options'][0]['explanation'] ?? '')));
         $this->assertSame([$topic->id], $log->after['lesson_ids']);
         $this->assertSame('Dấu hiệu gợi ý', strip_tags($log->after['hints'][0]['content']));
         $this->assertTrue($log->after['is_priority']);

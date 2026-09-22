@@ -55,10 +55,10 @@ Giao diện làm bài: hiển thị từng câu hỏi, nhận đáp án, chấm 
 - **A11y:** trạng thái qua text + màu (không chỉ màu).
 
 ### `ExplanationPanel`
-- **Props:** `explanation`, `optionExplanations`, `references`, `crossLinks`.
+- **Props:** `optionExplanations`, `references`, `crossLinks`.
 - **State:** expanded sections.
 - **Events:** `onCrosslinkClick` (mở Library drawer).
-- **Loading/Empty:** nếu thiếu giải thích → thông báo.
+- **Loading/Empty:** nếu thiếu giải thích theo đáp án → thông báo.
 
 ### `QuestionToolbar`
 - **Props:** `question`, `states(bookmarked, flagged, hasNote)`.
@@ -71,7 +71,7 @@ Giao diện làm bài: hiển thị từng câu hỏi, nhận đáp án, chấm 
 ## 4. Luồng người dùng
 ```
 STUDY MODE:
- mở câu → chọn đáp án → Submit → chấm + hiện explanation → (tương tác: note/highlight/Hỏi AI Tutor 1-tap)
+ mở câu → chọn đáp án → Submit → chấm + hiện giải thích theo đáp án → (tương tác: note/highlight/Hỏi AI Tutor 1-tap)
    → Next → ... → câu cuối → Summary/Review
 
 EXAM MODE:
@@ -109,7 +109,7 @@ Ngoại lệ:
 |--------|-----|---------|----------|-------|
 | GET | `/api/v1/sessions/{id}` | — | session state + câu hiện tại (không đáp án đúng) | Owner |
 | GET | `/api/v1/sessions/{id}/questions/{qid}` | — | nội dung câu (options không lộ correct) | Owner |
-| POST | `/api/v1/sessions/{id}/answers` | `{question_id, option_ids[], used_hint, time_spent, confidence}` + Idempotency-Key | study: `{is_correct, explanation}`; exam: `{saved:true}` | Owner |
+| POST | `/api/v1/sessions/{id}/answers` | `{question_id, option_ids[], used_hint, time_spent, confidence}` + Idempotency-Key | study: `{is_correct, option_explanations}` (giải thích theo đáp án); exam: `{saved:true}` | Owner |
 | POST | `/api/v1/sessions/{id}/flag` | `{question_id, flagged}` | ok | Owner |
 | POST | `/api/v1/sessions/{id}/pause` | `{paused_state}` | ok | Owner |
 | POST | `/api/v1/sessions/{id}/finish` | — | summary | Owner |

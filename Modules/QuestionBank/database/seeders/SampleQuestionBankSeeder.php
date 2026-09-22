@@ -37,7 +37,6 @@ final class SampleQuestionBankSeeder extends Seeder
                 $question = Question::withTrashed()->where('code', $code)->first();
                 $payload = [
                     'stem' => $row['stem'],
-                    'explanation' => $row['explanation'],
                     'difficulty' => $row['difficulty'],
                     'status' => QuestionStatus::Published,
                     'is_free' => $index % 3 === 0,
@@ -58,7 +57,7 @@ final class SampleQuestionBankSeeder extends Seeder
                     $question->save();
                 }
 
-                $this->syncOptions($question, $row['options'], $row['correct']);
+                $this->syncOptions($question, $row['options'], $row['correct'], $row['explanation']);
                 $question->lessons()->sync([(int) $lesson->getKey()]);
             }
         });
@@ -67,7 +66,7 @@ final class SampleQuestionBankSeeder extends Seeder
     /**
      * @param  list<string>  $options
      */
-    private function syncOptions(Question $question, array $options, int $correct): void
+    private function syncOptions(Question $question, array $options, int $correct, string $correctExplanation): void
     {
         QuestionOption::query()->where('question_id', $question->getKey())->delete();
 
@@ -77,7 +76,7 @@ final class SampleQuestionBankSeeder extends Seeder
                 'label' => chr(ord('A') + $i),
                 'content' => $content,
                 'is_correct' => $i === $correct,
-                'explanation' => $i === $correct ? $question->explanation : null,
+                'explanation' => $i === $correct ? $correctExplanation : null,
                 'order' => $i + 1,
             ]);
         }

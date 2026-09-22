@@ -25,7 +25,7 @@ CRUD & **workflow duyệt 2 lớp** câu hỏi: Content Creator soạn/sửa →
 | Thành phần | Chức năng | Hiển thị/Ẩn | Responsive |
 |-----------|-----------|-------------|-----------|
 | **Question table** | Filter (status/hệ cơ quan-môn học-bài học/difficulty/report), search, sort | List | Table |
-| **Question editor** | Rich editor stem, options, giải thích, references, lab values, media, bài học (≥1) + tags | Create/edit | Form nhiều section |
+| **Question editor** | Rich editor stem, options + giải thích theo đáp án, references, lab values, media, bài học (≥1) + tags | Create/edit | Form nhiều section |
 | **Preview pane** | Xem như học viên (study/exam) | Editor | Split |
 | **Workflow bar** | Draft → Chờ GV → Chờ publish → Published / Rejected / Private | Editor | — |
 | **Metadata panel** | Creator, Instructor reviewer, Publisher, Created/Updated | Editor/Detail | Sidebar |
@@ -40,7 +40,7 @@ CRUD & **workflow duyệt 2 lớp** câu hỏi: Content Creator soạn/sửa →
 | **Empty/Loading/Error** | Chuẩn | Theo trạng thái | — |
 
 ## 3. Phân tích Component
-- `QuestionEditor`(validate: đúng ≥1 đáp án, đủ giải thích), `OptionEditor`, `LessonPicker`(chọn ≥1 bài học; lọc tuỳ chọn theo hệ/môn), `TagPicker`, `WorkflowStatusBar`, `VersionHistory`(read-only snapshots), `CloneQuestionAction`, `ImportWizard`(map/validate), `InstructorReviewQueue`, `PublishQueue`, `ReportQueue`, `QuestionPreview`, `DuplicateCheckPanel`(lexical fingerprint + % similarity trên form edit).
+- `QuestionEditor`(validate: đúng ≥1 đáp án, giải thích theo từng đáp án), `OptionEditor`, `LessonPicker`(chọn ≥1 bài học; lọc tuỳ chọn theo hệ/môn), `TagPicker`, `WorkflowStatusBar`, `VersionHistory`(read-only snapshots), `CloneQuestionAction`, `ImportWizard`(map/validate), `InstructorReviewQueue`, `PublishQueue`, `ReportQueue`, `QuestionPreview`, `DuplicateCheckPanel`(lexical fingerprint + % similarity trên form edit).
 
 ## 4. Luồng người dùng
 
@@ -227,7 +227,7 @@ Tránh N+1: eager load creator / instructor / publisher trên list; **không** j
 - Version snapshot (`question_versions.snapshot.options[]`) **bắt buộc** có `id` để overlay published vẫn chấm được.
 
 ### 5.8 Khác
-- **Validation nội dung:** đúng ≥1 (single: đúng 1), giải thích bắt buộc, Bài học ≥1 — bắt buộc trước `submit` và trước `publish`.
+- **Validation nội dung:** đúng ≥1 (single: đúng 1), giải thích theo từng đáp án (khuyến nghị đáp án đúng; không còn giải thích chung cấp câu hỏi), Bài học ≥1 — bắt buộc trước `submit` và trước `publish`.
 - **Import:** map cột, validate, dedup, preview trước commit; rollback batch; sau import vẫn `draft` → Creator submit từng câu / hàng loạt vào lớp 1.
 - **Report handling:** open→reviewing→resolved/rejected; ảnh hưởng hiển thị (ẩn tạm nếu nghiêm trọng).
 - **Retire** thay vì xóa cứng (giữ lịch sử attempt) — chỉ Super Admin.

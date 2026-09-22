@@ -100,7 +100,6 @@ class DemoLearningSeeder extends Seeder
                     $question = Question::firstOrCreate(
                         ['stem' => $row['question']],
                         [
-                            'explanation' => null,
                             'difficulty' => $difficulty,
                             'status' => QuestionStatus::Published,
                             'is_free' => $idx % 3 === 0,
@@ -293,7 +292,7 @@ TEXT;
             [
                 'content' => 'Goodpasture syndrome',
                 'is_correct' => true,
-                'explanation' => 'Anti-GBM disease causes pulmonary hemorrhage and rapidly progressive glomerulonephritis with linear IgG deposition.',
+                'explanation' => 'Goodpasture syndrome (anti-GBM disease) presents with pulmonary hemorrhage and rapidly progressive glomerulonephritis. Linear IgG along the glomerular basement membrane is the classic biopsy finding.',
             ],
             ['content' => 'Eosinophilic granulomatosis with polyangiitis', 'is_correct' => false],
             ['content' => 'IgA nephropathy', 'is_correct' => false],
@@ -314,7 +313,6 @@ TEXT;
 
         $question->forceFill([
             'stem' => $stem,
-            'explanation' => 'Goodpasture syndrome (anti-GBM disease) presents with pulmonary hemorrhage and rapidly progressive glomerulonephritis. Linear IgG along the glomerular basement membrane is the classic biopsy finding.',
             'key_info' => [
                 'blood-tinged sputum',
                 'three episodes of blood in his urine',

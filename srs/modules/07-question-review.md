@@ -25,7 +25,7 @@ Xem lại kết quả sau session/exam: tổng kết điểm, xem từng câu (�
 | **Topic breakdown** | Bảng correct rate theo chủ đề + CTA ôn | Summary | Table → card |
 | **Filter review** | Lọc câu: all/correct/incorrect/omitted/flagged | Review list | Chips |
 | **Question review list** | Danh sách câu + trạng thái + đáp án đã chọn vs đúng | Review | List |
-| **Review detail** | Stem + đáp án (tô đúng/sai) + explanation + toolbar | Detail | Full |
+| **Review detail** | Stem + đáp án (tô đúng/sai) + giải thích theo từng đáp án + toolbar | Detail | Full |
 | **Action bar** | "Ôn lại câu sai", "Tạo flashcard từ câu sai", "Thêm vào weak practice" | Summary/Review | Sticky |
 | **Peer comparison** | So sánh với cộng đồng (Premium) | Nếu Premium | Bar |
 | **Empty/Loading/Error** | Chưa nộp → về session; skeleton; retry | Theo trạng thái | — |
@@ -44,9 +44,9 @@ Xem lại kết quả sau session/exam: tổng kết điểm, xem từng câu (�
 - **Business:** highlight chủ đề < ngưỡng (đỏ).
 
 ### `ReviewQuestionRow` / `ReviewDetail`
-- **Props:** `attempt`, `question`, `options(with correctness)`, `explanation`.
+- **Props:** `attempt`, `question`, `options(with correctness + per-option explanation)`.
 - **Events:** `onNext/onPrev`, `onCrosslink`, `onAddFlashcard`, `onAiTutor`.
-- **Permission:** giải thích đầy đủ (trong review luôn hiện, kể cả exam đã nộp).
+- **Permission:** giải thích theo đáp án đầy đủ (trong review luôn hiện, kể cả exam đã nộp).
 - **`onAiTutor`:** drawer 1-tap, auto-prompt theo đúng/sai (`08-ai-tutor-drawer.md`). Flashcard vẫn từ toolbar câu (Module 18), không từ tin AI Tutor.
 - **A11y:** trạng thái qua icon+text.
 
@@ -83,7 +83,7 @@ Ngoại lệ:
 | Method | URL | Response | Quyền |
 |--------|-----|----------|-------|
 | GET | `/api/v1/sessions/{id}/summary` | tổng kết + topic breakdown + percentile | Owner |
-| GET | `/api/v1/sessions/{id}/review?filter=incorrect` | list attempt + đáp án đúng + explanation | Owner |
+| GET | `/api/v1/sessions/{id}/review?filter=incorrect` | list attempt + đáp án đúng + giải thích theo từng đáp án | Owner |
 | GET | `/api/v1/sessions/{id}/review/{qid}` | chi tiết câu | Owner |
 | POST | `/api/v1/sessions/{id}/retake-incorrect` | session mới | Owner |
 | POST | `/api/v1/flashcards/from-question` | `{question_id}` → flashcard | Owner |

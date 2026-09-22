@@ -150,7 +150,6 @@ final class QuestionBookmarkTest extends TestCase
     {
         $saved = Question::factory()->free()->create([
             'stem' => 'Câu hỏi bookmark để xem đáp án?',
-            'explanation' => 'Giải thích dành cho câu đã lưu.',
         ]);
         \Modules\QuestionBank\Models\QuestionOption::factory()->create([
             'question_id' => $saved->id,

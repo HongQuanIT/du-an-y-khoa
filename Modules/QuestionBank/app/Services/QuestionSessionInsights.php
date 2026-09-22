@@ -190,7 +190,6 @@ final class QuestionSessionInsights
                 'note_html' => (string) ($annotation['note_html'] ?? nl2br(e((string) ($annotation['note'] ?? '')))),
                 'flagged' => (bool) ($annotation['flagged']
                     ?? ($attempt instanceof QuestionAttempt && $attempt->flagged)),
-                'explanation' => (string) ($question->explanation ?? ''),
                 'options' => $options->map(function ($option) use ($selectedIds): array {
                     $selected = in_array((int) $option->id, $selectedIds, true);
                     $correct = (bool) $option->is_correct;

@@ -130,7 +130,6 @@ final class ServePublishedQuestion
         $question->forceFill([
             'stem' => (string) ($snapshot['stem'] ?? $question->stem),
             'stem_image_path' => $snapshot['stem_image_path'] ?? $question->stem_image_path,
-            'explanation' => $snapshot['explanation'] ?? $question->explanation,
             'key_info' => array_values((array) ($snapshot['key_info'] ?? $question->key_info ?? [])),
             'attending_tip' => $snapshot['attending_tip'] ?? $question->attending_tip,
             'difficulty' => Difficulty::tryFrom((string) ($snapshot['difficulty'] ?? '')) ?? $question->difficulty,

@@ -71,7 +71,6 @@ Chuẩn RBAC: `roles(id,name,slug)`, `permissions(id,name,slug)`, `permission_ro
 | status | VARCHAR | draft / in_review / pending_publish / published / rejected / private / retired |
 | is_priority | BOOL default false | `true` = Câu ưu tiên (đề Bộ / kỳ thi gần đây → livestream chữa đề) |
 | is_free | BOOL | dùng cho preview free tier |
-| explanation | LONGTEXT | giải thích tổng |
 | references | JSON | nguồn (guideline, sách) |
 | lab_values | JSON | chỉ số tham chiếu kèm câu |
 | media_ids | JSON | ảnh/video đính kèm |

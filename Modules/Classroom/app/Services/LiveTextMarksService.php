@@ -141,7 +141,7 @@ final class LiveTextMarksService
         if ($target === 'option' && ($optionId === null || $optionId <= 0)) {
             return null;
         }
-        if ($target === 'explanation' && $optionId !== null && $optionId <= 0) {
+        if ($target === 'explanation' && ($optionId === null || $optionId <= 0)) {
             return null;
         }
         if ($target === 'stem') {

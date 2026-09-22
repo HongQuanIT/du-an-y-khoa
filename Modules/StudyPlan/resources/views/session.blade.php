@@ -571,7 +571,6 @@
                         elapsed: @js($isAnswered ? (int) ($attempt?->time_spent_seconds ?? 0) : 0),
                         running: @js(! $isAnswered),
                         _timer: null,
-                        questionExplanation: @js(\App\Support\Html\SafeHtml::forDisplay((string) ($question->explanation ?? ''))),
                         saveUrl: @js($playerConfig['answer_url']),
                         csrf: @js(csrf_token()),
                         questionId: @js($question->id),

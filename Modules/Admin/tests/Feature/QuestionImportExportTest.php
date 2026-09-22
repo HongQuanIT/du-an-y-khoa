@@ -466,7 +466,6 @@ final class QuestionImportExportTest extends TestCase
         $row['option_d'] = 'Viêm phổi';
         $row['option_a_explanation'] = 'Đúng';
         $row['correct'] = 'A';
-        $row['explanation'] = 'Đúng';
         $row['difficulty'] = 'medium';
         $row['lesson_slugs'] = $this->lesson->slug;
         $row['is_free'] = '0';

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-09-22
+
+### Refactor — Bỏ giải thích chung cấp câu hỏi
+
+- Xóa `questions.explanation`; chỉ còn giải thích theo từng đáp án (`question_options.explanation`).
+- Cập nhật SRS, import/export, AI context pack, classroom live, snapshot/version.
+
 ## 2026-09-21
 
 ### Feat — QA Editor + Gate ≥2 vòng + XB hàng loạt

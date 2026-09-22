@@ -279,7 +279,6 @@ final class TeachQuestionReviewTest extends TestCase
     {
         $question = Question::factory()->draft()->create([
             'stem' => 'Stem nháp không hiện trong hàng đợi',
-            'explanation' => 'Explanation draft',
             'difficulty' => Difficulty::Easy,
         ]);
         $question->lessons()->sync([$this->topic->id]);
@@ -294,7 +293,6 @@ final class TeachQuestionReviewTest extends TestCase
 
         $question = Question::factory()->create([
             'stem' => 'Bệnh nhân sốt cao 3 ngày. Chẩn đoán phù hợp?',
-            'explanation' => 'Giải thích lâm sàng đầy đủ cho hàng đợi giảng viên.',
             'difficulty' => Difficulty::Medium,
             'status' => QuestionStatus::InReview,
             'created_by' => $creator->id,
@@ -330,7 +328,6 @@ final class TeachQuestionReviewTest extends TestCase
 
         $question = Question::factory()->create([
             'stem' => 'Bệnh nhân sốt cao 3 ngày. Chẩn đoán phù hợp?',
-            'explanation' => 'Giải thích bản xuất bản.',
             'difficulty' => Difficulty::Medium,
             'status' => QuestionStatus::Published,
             'created_by' => $creator->id,
@@ -354,7 +351,6 @@ final class TeachQuestionReviewTest extends TestCase
 
         $question->forceFill([
             'stem' => 'Bệnh nhân sốt nhẹ 5 ngày. Chẩn đoán phù hợp?',
-            'explanation' => 'Giải thích bản gửi duyệt.',
             'status' => QuestionStatus::InReview,
             'assigned_instructor_id' => $assigned?->id,
         ])->save();
