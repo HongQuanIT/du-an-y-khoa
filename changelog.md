@@ -2,6 +2,10 @@
 
 ## 2026-09-22
 
+### Fix — Nút Cột hiển thị bị đè header Admin
+
+- Bỏ `z-[70]` trên wrapper nút chọn cột trang ngân hàng câu hỏi để không lòi lên trên top bar cố định khi scroll.
+
 ### Feat — Seeder địa lý Việt Nam
 
 - Tách `VietnamGeographySeeder`: quốc gia VN, 34 tỉnh/thành (sau sáp nhập 2025), trường y/dược toàn quốc.
