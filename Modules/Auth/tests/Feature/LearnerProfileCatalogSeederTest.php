@@ -32,7 +32,7 @@ final class LearnerProfileCatalogSeederTest extends TestCase
 
         $this->assertDatabaseHas('institutions', ['short_name' => 'HMU', 'name' => 'Trường Đại học Y Hà Nội']);
         $this->assertDatabaseHas('institutions', ['short_name' => 'UMP']);
-        $this->assertGreaterThanOrEqual(30, DB::table('institutions')->count());
+        $this->assertGreaterThanOrEqual(34, DB::table('institutions')->count());
     }
 
     public function test_seeder_is_idempotent(): void
