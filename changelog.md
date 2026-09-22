@@ -2,6 +2,11 @@
 
 ## 2026-09-22
 
+### Feat — Multi-select bộ lọc câu hỏi Admin
+
+- Thêm `QuestionStatus::tone()` và hiện badge màu trạng thái trong dropdown lọc.
+- Multi-select: badge số đã chọn, nút Bỏ chọn, layout bộ lọc câu hỏi gọn hơn.
+
 ### Feat — Seed catalog hồ sơ học viên
 
 - `LearnerProfileCatalogSeeder` seed Việt Nam, 34 tỉnh/thành, chức danh, năm học và 34 trường y (idempotent, gắn local/staging/production).

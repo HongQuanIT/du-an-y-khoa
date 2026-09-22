@@ -32,4 +32,18 @@ enum QuestionStatus: string
             self::Retired => 'Ngừng dùng',
         };
     }
+
+    public function tone(): string
+    {
+        return match ($this) {
+            self::Draft => 'bg-slate-50 text-slate-700 border-slate-200',
+            self::InReview => 'bg-amber-50 text-amber-800 border-amber-200',
+            self::InFlagReview => 'bg-sky-50 text-sky-800 border-sky-200',
+            self::PendingPublish => 'bg-violet-50 text-violet-800 border-violet-200',
+            self::Published => 'bg-emerald-50 text-emerald-800 border-emerald-200',
+            self::Rejected => 'bg-rose-50 text-rose-800 border-rose-200',
+            self::Private => 'bg-indigo-50 text-indigo-800 border-indigo-200',
+            self::Retired => 'bg-surface-container-high text-on-surface-variant border-outline-variant',
+        };
+    }
 }
