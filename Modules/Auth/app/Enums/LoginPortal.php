@@ -13,5 +13,6 @@ enum LoginPortal: string
     case Student = 'student';
     case Instructor = 'instructor';
     case Partner = 'partner';
+    case Editor = 'editor';
     case Admin = 'admin';
 }

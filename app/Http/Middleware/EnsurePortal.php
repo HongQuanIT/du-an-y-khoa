@@ -28,6 +28,23 @@ final class EnsurePortal
             return $next($request);
         }
 
+        // Legacy content links inside shared admin views may still point to
+        // /admin. Keep editor navigation inside its own portal while those
+        // screens are being migrated to editor route names.
+        if ($expected === PortalGroup::Admin
+            && PortalAccess::allows($request->user(), PortalGroup::Editor)
+            && $this->isEditorContentPath($request)) {
+            if ($request->isMethodSafe()) {
+                $editorPath = '/editor/'.ltrim(substr($request->path(), strlen('admin/')), '/');
+                $query = $request->getQueryString();
+
+                return redirect()->to($query ? $editorPath.'?'.$query : $editorPath);
+            }
+
+            // Transitional writes still use the existing content controllers.
+            return $next($request);
+        }
+
         if ($request->expectsJson()) {
             return ApiResponse::error(
                 code: 'PORTAL_ACCESS_DENIED',
@@ -39,5 +56,20 @@ final class EnsurePortal
         abort(403, PortalAccess::primaryPortal($request->user()) === null
             ? 'Tài khoản chưa được gán vai trò truy cập.'
             : 'Tài khoản không có quyền truy cập cổng này.');
+    }
+
+    private function isEditorContentPath(Request $request): bool
+    {
+        $path = trim($request->path(), '/');
+
+        return str_starts_with($path, 'admin/questions')
+            || str_starts_with($path, 'admin/taxonomy')
+            || str_starts_with($path, 'admin/blueprints')
+            || str_starts_with($path, 'admin/blueprint-sections')
+            || str_starts_with($path, 'admin/core-clinical-topics')
+            || str_starts_with($path, 'admin/categories')
+            || str_starts_with($path, 'admin/tags')
+            || str_starts_with($path, 'admin/cms')
+            || str_starts_with($path, 'admin/media');
     }
 }

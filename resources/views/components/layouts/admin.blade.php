@@ -3,17 +3,29 @@
 ])
 
 @php
-    $navItems = \Modules\Admin\Support\AdminMenu::for(auth()->user());
+    $isEditorPortal = request()->routeIs('editor.*')
+        || (\App\Support\Auth\PortalAccess::allows(auth()->user(), \App\Support\Enums\PortalGroup::Editor)
+            && request()->is('admin/questions*', 'admin/taxonomy*', 'admin/blueprints*', 'admin/blueprint-sections*', 'admin/core-clinical-topics*', 'admin/categories*', 'admin/tags*', 'admin/cms/pages*', 'admin/media*'));
+    $navItems = $isEditorPortal
+        ? [
+            ['label' => 'Tổng quan', 'icon' => 'dashboard', 'route' => 'editor.dashboard', 'match' => 'editor.dashboard'],
+            ['label' => 'Câu hỏi của tôi', 'icon' => 'quiz', 'route' => 'editor.questions.index', 'match' => 'editor.questions.*'],
+            ['label' => 'Phân loại', 'icon' => 'category', 'route' => 'editor.taxonomy.index', 'match' => 'editor.taxonomy.*', 'permission' => 'taxonomy.view'],
+            ['label' => 'CMS', 'icon' => 'article', 'route' => 'editor.cms.pages.index', 'match' => 'editor.cms.*', 'permission' => 'cms.view'],
+            ['label' => 'Media', 'icon' => 'perm_media', 'route' => 'editor.media.index', 'match' => 'editor.media.*', 'permission' => 'media.view'],
+        ]
+        : \Modules\Admin\Support\AdminMenu::for(auth()->user());
     $canSupportInbox = auth()->user()?->can('support_conversation.view')
         && \Illuminate\Support\Facades\Route::has('admin.support.index');
     $supportBadgeCount = $canSupportInbox
         ? \App\Models\SupportConversation::pendingAdminAttentionCountFor(auth()->user())
         : 0;
+    $navItems = array_values(array_filter($navItems, static fn (array $item): bool => ! isset($item['permission']) || auth()->user()?->can($item['permission']) === true));
     $supportPendingIds = $canSupportInbox
         ? \App\Models\SupportConversation::pendingAdminAttentionIdsFor(auth()->user())
         : [];
     $supportActive = request()->routeIs('admin.support.*');
-    $staffRoleLabel = auth()->user()?->getRoleNames()
+    $staffRoleLabel = $isEditorPortal ? 'Biên tập viên' : auth()->user()?->getRoleNames()
         ->map(fn (string $name): ?\App\Support\Enums\Role => \App\Support\Enums\Role::tryFromName($name))
         ->filter()
         ->sortByDesc(fn (\App\Support\Enums\Role $role): int => $role->rank())
@@ -37,7 +49,7 @@
         <meta name="media-from-url" content="{{ route('admin.media.from-url') }}">
         <meta name="media-show-url-template" content="{{ url('/admin/media') }}/__ID__">
     @endif
-    <title>{{ $title ? $title . ' — Quản trị' : 'Quản trị — ' . config('app.name') }}</title>
+    <title>{{ $title ? $title . ($isEditorPortal ? ' — Biên tập' : ' — Quản trị') : ($isEditorPortal ? 'Biên tập' : 'Quản trị').' — '.config('app.name') }}</title>
 
     @fonts
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -69,9 +81,9 @@
     <aside
         class="fixed top-0 left-0 z-50 hidden h-screen w-sidebar-width flex-col border-r border-outline-variant bg-surface p-4 md:flex">
         <div class="mb-6 px-2">
-            <a href="{{ route('admin.dashboard') }}" class="block">
+            <a href="{{ route($isEditorPortal ? 'editor.dashboard' : 'admin.dashboard') }}" class="block">
                 <span class="font-headline-sm text-headline-sm font-extrabold text-primary tracking-tight">{{ config('app.name') }}</span>
-                <span class="mt-0.5 block font-label-sm text-label-sm text-on-surface-variant">Quản trị hệ thống</span>
+                <span class="mt-0.5 block font-label-sm text-label-sm text-on-surface-variant">{{ $isEditorPortal ? 'Cổng biên tập nội dung' : 'Quản trị hệ thống' }}</span>
             </a>
         </div>
         <nav class="flex flex-1 flex-col gap-1 overflow-y-auto" aria-label="Menu quản trị">
@@ -111,7 +123,7 @@
                 @endif
             @endforeach
         </nav>
-        <form method="post" action="{{ route('admin.logout') }}" class="mt-4 border-t border-outline-variant pt-4">
+        <form method="post" action="{{ route($isEditorPortal ? 'editor.logout' : 'admin.logout') }}" class="mt-4 border-t border-outline-variant pt-4">
             @csrf
             <button type="submit"
                 class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 font-label-md text-label-md text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface">
@@ -129,7 +141,7 @@
         class="fixed top-0 bottom-0 left-0 z-[60] flex w-sidebar-width flex-col border-r border-outline-variant bg-surface p-4 md:hidden"
         @click.stop>
         <div class="mb-4 flex items-center justify-between px-2">
-            <span class="font-label-md text-label-md font-semibold text-on-surface-variant">Quản trị</span>
+            <span class="font-label-md text-label-md font-semibold text-on-surface-variant">{{ $isEditorPortal ? 'Biên tập' : 'Quản trị' }}</span>
             <button type="button" @click="menu = false"
                 class="inline-flex size-10 items-center justify-center rounded-lg text-on-surface transition-colors hover:bg-surface-container-low"
                 aria-label="Đóng menu">
@@ -238,7 +250,7 @@
                         </fieldset>
                     </div>
 
-                    <form action="{{ route('admin.logout') }}" method="post" class="border-t border-outline-variant p-3">
+                    <form action="{{ route($isEditorPortal ? 'editor.logout' : 'admin.logout') }}" method="post" class="border-t border-outline-variant p-3">
                         @csrf
                         <button type="submit"
                             class="w-full rounded-lg px-4 py-2.5 font-label-md text-label-md font-bold tracking-wide text-on-surface-variant uppercase transition-colors hover:bg-surface-container-low">

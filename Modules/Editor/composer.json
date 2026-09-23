@@ -1,0 +1,14 @@
+{
+    "name": "medlearn/editor",
+    "description": "Dedicated content editor portal",
+    "autoload": {
+        "psr-4": {
+            "Modules\\Editor\\": "app/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Editor\\Tests\\": "tests/"
+        }
+    }
+}

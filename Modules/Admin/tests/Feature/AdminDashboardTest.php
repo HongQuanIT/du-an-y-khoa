@@ -108,21 +108,20 @@ final class AdminDashboardTest extends TestCase
             ->assertSee('Cập nhật');
     }
 
-    public function test_content_editor_without_billing_permission_does_not_see_billing_kpis(): void
+    public function test_content_editor_is_redirected_to_dedicated_dashboard_scope(): void
     {
         $editor = $this->staffUser(Role::ContentEditor);
 
         $this->assertFalse($editor->can('billing_payment.view'));
         $this->assertTrue($editor->can(Permission::QuestionView->value));
 
+        $this->actingAsStaff($editor)->get(route('admin.dashboard'))->assertForbidden();
         $this->actingAsStaff($editor)
-            ->get(route('admin.dashboard'))
+            ->get(route('editor.dashboard'))
             ->assertOk()
-            ->assertSee('Câu hỏi published')
+            ->assertSee('Bảng điều khiển biên tập')
             ->assertDontSee('Học viên Premium')
-            ->assertDontSee('Premium sắp hết hạn')
-            ->assertDontSee('MRR (ước tính)')
-            ->assertDontSee('Tăng trưởng người dùng');
+            ->assertDontSee('MRR (ước tính)');
     }
 
     public function test_dashboard_shows_alert_when_feedback_backlog_exists(): void
@@ -152,15 +151,12 @@ final class AdminDashboardTest extends TestCase
             ->assertSee('ổn định');
     }
 
-    public function test_dashboard_audit_feed_requires_audit_permission(): void
+    public function test_content_editor_cannot_open_admin_dashboard_audit_feed(): void
     {
         $editor = $this->staffUser(Role::ContentEditor);
         $this->assertFalse($editor->can('audit_log.view'));
 
-        $this->actingAsStaff($editor)
-            ->get(route('admin.dashboard'))
-            ->assertOk()
-            ->assertDontSee('Hoạt động quản trị gần đây');
+        $this->actingAsStaff($editor)->get(route('admin.dashboard'))->assertForbidden();
     }
 
     public function test_dashboard_audit_feed_shows_recent_log_for_auditor(): void

@@ -18,6 +18,7 @@ enum PortalGroup: string
     case Instructor = 'instructor';
     case Admin = 'admin';
     case Partner = 'partner';
+    case Editor = 'editor';
 
     public function label(): string
     {
@@ -26,6 +27,7 @@ enum PortalGroup: string
             self::Instructor => 'Giảng viên',
             self::Admin => 'Quản trị',
             self::Partner => 'Cộng tác viên',
+            self::Editor => 'Biên tập viên',
         };
     }
 
@@ -36,6 +38,7 @@ enum PortalGroup: string
             self::Instructor => 'Cổng giảng dạy (/teach): tổ chức và vận hành lớp chữa đề.',
             self::Admin => 'Cổng quản trị (/admin): quản lý nội dung, người dùng, phân quyền và giám sát.',
             self::Partner => 'Cổng cộng tác viên (/partner): mã mời, giới thiệu và hoa hồng.',
+            self::Editor => 'Cổng biên tập (/editor): soạn, theo dõi và hoàn thiện nội dung.',
         };
     }
 
@@ -46,6 +49,7 @@ enum PortalGroup: string
             self::Instructor => '/teach/login',
             self::Admin => '/admin/login',
             self::Partner => '/partner/login',
+            self::Editor => '/editor/login',
         };
     }
 }

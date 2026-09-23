@@ -15,5 +15,6 @@
     "Admin": true,
     "Landing": true,
     "Classroom": true,
-    "Partner": true
+    "Partner": true,
+    "Editor": true
 }

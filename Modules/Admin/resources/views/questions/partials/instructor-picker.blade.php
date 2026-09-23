@@ -11,7 +11,7 @@
         selectedId: @js($assignedId ?: null),
         selectedName: @js($assignedName),
         selectedSubjects: @js($assignedSubjects),
-        url: @js(route('admin.questions.eligible-instructors')),
+        url: @js(route(request()->routeIs('editor.*') ? 'editor.questions.eligible-instructors' : 'admin.questions.eligible-instructors')),
     })"
 >
     <label class="mb-1 block text-xs font-semibold text-on-surface-variant" for="assigned_instructor_id_ui">

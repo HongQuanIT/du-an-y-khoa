@@ -36,6 +36,16 @@ final class PortalTwoFactorChallengeController extends Controller
         return $this->show($request, LoginPortal::Partner, route('partner.dashboard', absolute: false));
     }
 
+    public function showEditor(Request $request): View|RedirectResponse
+    {
+        return $this->show($request, LoginPortal::Editor, route('editor.dashboard', absolute: false));
+    }
+
+    public function verifyEditor(Request $request, VerifyTwoFactorCodeAction $verify): RedirectResponse
+    {
+        return $this->verify($request, $verify, LoginPortal::Editor, route('editor.dashboard', absolute: false));
+    }
+
     public function verifyPartner(Request $request, VerifyTwoFactorCodeAction $verify): RedirectResponse
     {
         return $this->verify($request, $verify, LoginPortal::Partner, route('partner.dashboard', absolute: false));
@@ -60,11 +70,13 @@ final class PortalTwoFactorChallengeController extends Controller
             'verifyUrl' => match ($portal) {
                 LoginPortal::Instructor => route('teach.2fa.challenge.verify'),
                 LoginPortal::Partner => route('partner.2fa.challenge.verify'),
+                LoginPortal::Editor => route('editor.2fa.challenge.verify'),
                 default => route('student.2fa.challenge.verify'),
             },
             'logoutUrl' => match ($portal) {
                 LoginPortal::Instructor => route('teach.logout'),
                 LoginPortal::Partner => route('partner.logout'),
+                LoginPortal::Editor => route('editor.logout'),
                 default => route('logout'),
             },
         ]);

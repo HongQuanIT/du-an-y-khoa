@@ -57,6 +57,11 @@ return Application::configure(basePath: dirname(__DIR__))
                 ->prefix('partner')
                 ->name('partner.')
                 ->group(base_path('routes/partner.php'));
+
+            Route::middleware('web')
+                ->prefix('editor')
+                ->name('editor.')
+                ->group(base_path('routes/editor.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
@@ -92,6 +97,10 @@ return Application::configure(basePath: dirname(__DIR__))
 
             if ($request->is('partner') || $request->is('partner/*')) {
                 return route('partner.login');
+            }
+
+            if ($request->is('editor') || $request->is('editor/*')) {
+                return route('editor.login');
             }
 
             return route('login');
