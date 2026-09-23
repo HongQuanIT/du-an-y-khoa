@@ -3,7 +3,9 @@
 ])
 
 @php
-    $isEditorPortal = request()->routeIs('editor.*');
+    $isEditorPortal = request()->routeIs('editor.*')
+        || (\App\Support\Auth\PortalAccess::allows(auth()->user(), \App\Support\Enums\PortalGroup::Editor)
+            && request()->is('admin/questions*', 'admin/taxonomy*', 'admin/blueprints*', 'admin/blueprint-sections*', 'admin/core-clinical-topics*', 'admin/categories*', 'admin/tags*', 'admin/cms/pages*', 'admin/media*'));
     $navItems = $isEditorPortal
         ? [
             ['label' => 'Tổng quan', 'icon' => 'dashboard', 'route' => 'editor.dashboard', 'match' => 'editor.dashboard'],

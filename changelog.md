@@ -2,6 +2,12 @@
 
 ## 2026-09-23
 
+### Feat — Hoàn thiện dashboard và luồng nội dung Editor
+
+- Bổ sung thao tác nhanh tạo, import, export câu hỏi và mở phân loại trên dashboard Editor.
+- Thêm route Editor cho CMS, import/export câu hỏi, Media và taxonomy; đồng bộ quyền Content Editor.
+- Giữ trạng thái tab CMS đang chọn và chuyển các link nội dung legacy từ Admin sang Editor.
+
 ### Fix — Hoàn thiện luồng nội dung trong portal biên tập
 
 - Thêm lookup AJAX riêng cho taxonomy và giảng viên chuyên môn khi tạo câu hỏi ở `/editor`.

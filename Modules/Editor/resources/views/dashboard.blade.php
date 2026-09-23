@@ -14,6 +14,27 @@
         @endforeach
     </div>
 
+    <section class="mb-8 rounded-xl border border-outline-variant bg-surface p-5" aria-labelledby="editor-quick-actions-heading">
+        <header class="mb-4">
+            <h2 id="editor-quick-actions-heading" class="font-headline-sm text-headline-sm text-on-surface">Thao tác nhanh</h2>
+            <p class="mt-0.5 font-body-sm text-body-sm text-on-surface-variant">Mở nhanh các công việc biên tập thường dùng.</p>
+        </header>
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            @can('question.create')
+                <a href="{{ route('editor.questions.create') }}" class="inline-flex items-center gap-3 rounded-lg border border-outline-variant px-4 py-3 font-label-md text-label-md text-on-surface transition hover:border-primary hover:text-primary"><span class="material-symbols-outlined text-primary">add_circle</span>Tạo câu hỏi mới</a>
+            @endcan
+            @can('question.import')
+                <a href="{{ route('editor.questions.import') }}" class="inline-flex items-center gap-3 rounded-lg border border-outline-variant px-4 py-3 font-label-md text-label-md text-on-surface transition hover:border-primary hover:text-primary"><span class="material-symbols-outlined text-primary">upload_file</span>Import câu hỏi</a>
+            @endcan
+            @can('question.export')
+                <a href="{{ route('editor.questions.export') }}" class="inline-flex items-center gap-3 rounded-lg border border-outline-variant px-4 py-3 font-label-md text-label-md text-on-surface transition hover:border-primary hover:text-primary"><span class="material-symbols-outlined text-primary">download</span>Export câu hỏi</a>
+            @endcan
+            @can('taxonomy.view')
+                <a href="{{ route('editor.taxonomy.index') }}" class="inline-flex items-center gap-3 rounded-lg border border-outline-variant px-4 py-3 font-label-md text-label-md text-on-surface transition hover:border-primary hover:text-primary"><span class="material-symbols-outlined text-primary">account_tree</span>Phân loại kiến thức</a>
+            @endcan
+        </div>
+    </section>
+
     <div class="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2" data-admin-dashboard-charts data-charts='@json($charts)'>
         @foreach ($charts as $chart)
             <x-admin.trend-chart :id="$chart['id']" :title="$chart['title']" :subtitle="$chart['subtitle']" />

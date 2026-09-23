@@ -34,7 +34,15 @@ final class EnsurePortal
         if ($expected === PortalGroup::Admin
             && PortalAccess::allows($request->user(), PortalGroup::Editor)
             && $this->isEditorContentPath($request)) {
-            return redirect()->to('/editor/'.ltrim(substr($request->path(), strlen('admin/')), '/'));
+            if ($request->isMethodSafe()) {
+                $editorPath = '/editor/'.ltrim(substr($request->path(), strlen('admin/')), '/');
+                $query = $request->getQueryString();
+
+                return redirect()->to($query ? $editorPath.'?'.$query : $editorPath);
+            }
+
+            // Transitional writes still use the existing content controllers.
+            return $next($request);
         }
 
         if ($request->expectsJson()) {
@@ -56,7 +64,12 @@ final class EnsurePortal
 
         return str_starts_with($path, 'admin/questions')
             || str_starts_with($path, 'admin/taxonomy')
-            || str_starts_with($path, 'admin/cms/pages')
+            || str_starts_with($path, 'admin/blueprints')
+            || str_starts_with($path, 'admin/blueprint-sections')
+            || str_starts_with($path, 'admin/core-clinical-topics')
+            || str_starts_with($path, 'admin/categories')
+            || str_starts_with($path, 'admin/tags')
+            || str_starts_with($path, 'admin/cms')
             || str_starts_with($path, 'admin/media');
     }
 }

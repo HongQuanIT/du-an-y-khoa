@@ -2,14 +2,16 @@
     $editingLanding = isset($page) && ($page->key?->isLandingBlock() ?? false);
     $requestGroup = request()->query('group');
     $cmsGroup = $editingLanding ? 'landing' : ($requestGroup === 'landing' ? 'landing' : 'static');
+    $editorCms = request()->routeIs('editor.*');
+    $routePrefix = $editorCms ? 'editor.cms.' : 'admin.cms.';
 
     $tabs = [
-        ['label' => 'FAQ', 'route' => 'admin.cms.faq.index', 'match' => 'admin.cms.faq.*', 'params' => []],
-        ['label' => 'Trang tĩnh', 'route' => 'admin.cms.pages.index', 'match' => 'admin.cms.pages.*', 'params' => [], 'active_when' => 'static'],
-        ['label' => 'Banner', 'route' => 'admin.cms.banners.index', 'match' => 'admin.cms.banners.*', 'params' => []],
-        ['label' => 'Landing', 'route' => 'admin.cms.pages.index', 'match' => 'admin.cms.pages.*', 'params' => ['group' => 'landing'], 'active_when' => 'landing'],
-        ['label' => 'Blog', 'route' => null, 'match' => 'admin.cms.blog.*', 'params' => []],
-        ['label' => 'Menu', 'route' => 'admin.cms.menus.index', 'match' => 'admin.cms.menus.*', 'params' => []],
+        ['label' => 'FAQ', 'route' => $routePrefix.'faq.index', 'match' => $routePrefix.'faq.*', 'params' => []],
+        ['label' => 'Trang tĩnh', 'route' => $routePrefix.'pages.index', 'match' => $routePrefix.'pages.*', 'params' => [], 'active_when' => 'static'],
+        ['label' => 'Banner', 'route' => $routePrefix.'banners.index', 'match' => $routePrefix.'banners.*', 'params' => []],
+        ['label' => 'Landing', 'route' => $routePrefix.'pages.index', 'match' => $routePrefix.'pages.*', 'params' => ['group' => 'landing'], 'active_when' => 'landing'],
+        ['label' => 'Blog', 'route' => null, 'match' => $routePrefix.'blog.*', 'params' => []],
+        ['label' => 'Menu', 'route' => $routePrefix.'menus.index', 'match' => $routePrefix.'menus.*', 'params' => []],
     ];
 @endphp
 

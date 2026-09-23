@@ -51,6 +51,19 @@ final class EditorDashboardTest extends TestCase
             ->assertOk()
             ->assertJsonStructure(['instructors']);
 
+        $this->actingAsEditor($editor)->get(route('editor.blueprints.index'))->assertOk();
+        $this->actingAsEditor($editor)->get(route('editor.curriculum.index'))->assertOk();
+        $this->actingAsEditor($editor)->get(route('editor.tags.index'))->assertOk();
+        $this->actingAsEditor($editor)->get('/admin/categories?tab=subjects')
+            ->assertRedirect('/editor/categories?tab=subjects');
+        $this->actingAsEditor($editor)->get('/admin/cms/pages')->assertRedirect('/editor/cms/pages');
+        $this->actingAsEditor($editor)->get('/admin/media/items')->assertRedirect('/editor/media/items');
+        $this->actingAsEditor($editor)->get('/admin/cms/faq')->assertRedirect('/editor/cms/faq');
+        $this->actingAsEditor($editor)->get('/admin/cms/banners')->assertRedirect('/editor/cms/banners');
+        $this->actingAsEditor($editor)->get('/admin/cms/menus')->assertRedirect('/editor/cms/menus');
+        $this->assertTrue($editor->can('media.update'));
+        $this->assertTrue($editor->can('media.upload'));
+
         $this->actingAsEditor($editor)->get(route('admin.dashboard'))->assertForbidden();
         $this->actingAsEditor($editor)->get(route('admin.questions.create'))
             ->assertRedirect(route('editor.questions.create'));
