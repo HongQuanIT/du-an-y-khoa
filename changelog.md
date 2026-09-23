@@ -12,6 +12,12 @@
 - Phiên theo bài: pool rỗng hiện `0 / 0` (không còn `1 / 0`); còn câu vẫn đề xuất hết pool.
 - Cả hai mode: `count = 0` hoặc không có câu khớp → disable Bắt đầu.
 
+### Feat — Dashboard giảng viên thật (theo Admin)
+
+- `TeachDashboardController` + `GetTeachDashboardDataAction`: KPI lớp/live/duyệt, alerts, danh sách sắp live & câu chờ duyệt, quick actions.
+- Thêm biểu đồ Chart.js (hoạt động lớp 30 ngày + duyệt câu hỏi), tái dùng `dashboard-charts.js` / `trend-chart`.
+- Thay stub `Route::view`; cache 3 phút theo user; tái dùng `kpi-card` / `alerts-panel` / `quick-actions`.
+
 ## 2026-09-22
 
 ### Feat — Đồng bộ bộ lọc FAQ & Banner theo Liên hệ

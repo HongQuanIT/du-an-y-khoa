@@ -253,6 +253,7 @@
     </main>
 
     @livewireScriptConfig
+    @stack('scripts')
 </body>
 
 </html>
