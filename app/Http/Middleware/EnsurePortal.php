@@ -28,6 +28,15 @@ final class EnsurePortal
             return $next($request);
         }
 
+        // Legacy content links inside shared admin views may still point to
+        // /admin. Keep editor navigation inside its own portal while those
+        // screens are being migrated to editor route names.
+        if ($expected === PortalGroup::Admin
+            && PortalAccess::allows($request->user(), PortalGroup::Editor)
+            && $this->isEditorContentPath($request)) {
+            return redirect()->to('/editor/'.ltrim(substr($request->path(), strlen('admin/')), '/'));
+        }
+
         if ($request->expectsJson()) {
             return ApiResponse::error(
                 code: 'PORTAL_ACCESS_DENIED',
@@ -39,5 +48,15 @@ final class EnsurePortal
         abort(403, PortalAccess::primaryPortal($request->user()) === null
             ? 'Tài khoản chưa được gán vai trò truy cập.'
             : 'Tài khoản không có quyền truy cập cổng này.');
+    }
+
+    private function isEditorContentPath(Request $request): bool
+    {
+        $path = trim($request->path(), '/');
+
+        return str_starts_with($path, 'admin/questions')
+            || str_starts_with($path, 'admin/taxonomy')
+            || str_starts_with($path, 'admin/cms/pages')
+            || str_starts_with($path, 'admin/media');
     }
 }

@@ -100,6 +100,8 @@ class RolePermissionSeeder extends Seeder
                 PermissionEnum::QuestionUpdate->value,
                 PermissionEnum::QuestionSubmit->value,
                 PermissionEnum::QuestionDelete->value,
+                'taxonomy.view',
+                'cms.view',
                 'profile.view',
                 'profile.update',
                 'profile.password_update',

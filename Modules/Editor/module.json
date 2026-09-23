@@ -1,0 +1,11 @@
+{
+    "name": "Editor",
+    "alias": "editor",
+    "description": "Dedicated portal for content editors",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Editor\\Providers\\EditorServiceProvider"
+    ],
+    "files": []
+}

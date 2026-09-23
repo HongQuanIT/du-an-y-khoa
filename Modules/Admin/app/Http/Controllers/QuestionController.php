@@ -191,7 +191,7 @@ final class QuestionController extends Controller
         });
 
         return redirect()
-            ->route('admin.questions.edit', $question)
+            ->route($this->questionRoute('edit'), $question)
             ->with('status', QuestionAccess::canPublish($this->actor()) && ! QuestionAccess::canEdit($this->actor())
                 ? 'Đã tạo câu hỏi với trạng thái: '.$requestedStatus->label().'.'
                 : ($requestedStatus === QuestionStatus::InReview
@@ -649,6 +649,11 @@ final class QuestionController extends Controller
                     ->value('created_at')
                 : null,
         ];
+    }
+
+    private function questionRoute(string $action): string
+    {
+        return request()->routeIs('editor.*') ? 'editor.questions.'.$action : 'admin.questions.'.$action;
     }
 
     /**

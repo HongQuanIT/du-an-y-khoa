@@ -87,6 +87,7 @@ final class Auditor
         return match (true) {
             str_starts_with($routeName, 'admin.'), str_starts_with($path, 'admin') => AuditPortal::Admin,
             str_starts_with($routeName, 'teach.'), str_starts_with($path, 'teach') => AuditPortal::Teach,
+            str_starts_with($routeName, 'editor.'), str_starts_with($path, 'editor') => AuditPortal::Editor,
             str_starts_with($path, 'api/') => AuditPortal::Api,
             app()->runningInConsole() && $request->route() === null => AuditPortal::System,
             default => AuditPortal::Student,

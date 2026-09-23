@@ -36,10 +36,10 @@
          selectedTags: @js(collect($selectedTags)->keyBy('id')->all()),
          selectedTagIds: @js($selectedTagIds),
          urls: {
-             organSystems: @js(route('admin.taxonomy.lookups.organ-systems')),
-             subjects: @js(route('admin.taxonomy.lookups.subjects')),
-             lessons: @js(route('admin.taxonomy.lookups.lessons')),
-             tags: @js(route('admin.taxonomy.lookups.tags')),
+             organSystems: @js(route(request()->routeIs('editor.*') ? 'editor.taxonomy.lookups.organ-systems' : 'admin.taxonomy.lookups.organ-systems')),
+             subjects: @js(route(request()->routeIs('editor.*') ? 'editor.taxonomy.lookups.subjects' : 'admin.taxonomy.lookups.subjects')),
+             lessons: @js(route(request()->routeIs('editor.*') ? 'editor.taxonomy.lookups.lessons' : 'admin.taxonomy.lookups.lessons')),
+             tags: @js(route(request()->routeIs('editor.*') ? 'editor.taxonomy.lookups.tags' : 'admin.taxonomy.lookups.tags')),
          },
      })">
     <p class="text-[11px] leading-4 text-on-surface-variant">

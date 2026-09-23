@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use App\Support\Auth\Staff;
+use App\Support\Auth\PortalAccess;
+use App\Support\Enums\PortalGroup;
 use App\Support\Auth\TwoFactorGate;
 use Closure;
 use Illuminate\Http\Request;
@@ -19,7 +21,7 @@ final class EnsureStaffTwoFactor
     {
         $user = $request->user();
 
-        if ($user === null || ! Staff::isStaff($user) || ! $user->hasTwoFactorEnabled()) {
+        if ($user === null || (! Staff::isStaff($user) && ! PortalAccess::allows($user, PortalGroup::Editor)) || ! $user->hasTwoFactorEnabled()) {
             return $next($request);
         }
 
@@ -29,6 +31,8 @@ final class EnsureStaffTwoFactor
             return $next($request);
         }
 
-        return redirect()->route('admin.2fa.challenge');
+        return redirect()->route($request->is('editor') || $request->is('editor/*')
+            ? 'editor.2fa.challenge'
+            : 'admin.2fa.challenge');
     }
 }

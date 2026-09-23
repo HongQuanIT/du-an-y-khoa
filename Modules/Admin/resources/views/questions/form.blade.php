@@ -1,4 +1,5 @@
 @php
+    $isEditorPortal = request()->routeIs('editor.*');
     $isNew = ! $question->exists;
     $existingOptions = $question->relationLoaded('options')
         ? $question->options
@@ -254,7 +255,7 @@
 
     {{-- ── MAIN FORM ── --}}
     <form id="admin-question-editor-form" method="post"
-          action="{{ $isNew ? route('admin.questions.store') : route('admin.questions.update', $question) }}"
+          action="{{ $isNew ? route($isEditorPortal ? 'editor.questions.store' : 'admin.questions.store') : route($isEditorPortal ? 'editor.questions.update' : 'admin.questions.update', $question) }}"
           class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_300px] lg:items-start"
           x-data='{
               options: @json($optionRows),
