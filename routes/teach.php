@@ -13,6 +13,7 @@ use Modules\Classroom\Http\Controllers\LiveQuestionController;
 use Modules\Classroom\Http\Controllers\LiveRoomApiController;
 use Modules\Classroom\Http\Controllers\LiveTextMarksController;
 use Modules\Classroom\Http\Controllers\TeachClassroomController;
+use Modules\Classroom\Http\Controllers\TeachDashboardController;
 use Modules\Classroom\Http\Controllers\TeachProfileController;
 use Modules\Classroom\Http\Controllers\TeachQuestionReviewController;
 use Modules\Notification\Http\Controllers\NotificationController;
@@ -43,7 +44,7 @@ Route::middleware('auth')->group(function (): void {
 });
 
 Route::middleware(['auth', 'instructor', 'instructor.2fa'])->group(function (): void {
-    Route::view('/', 'classroom::teach.dashboard')
+    Route::get('/', TeachDashboardController::class)
         ->middleware('permission:teaching_dashboard.view|'.Permission::ClassroomManage->value.'|'.Permission::QuestionReview->value)
         ->name('dashboard');
 

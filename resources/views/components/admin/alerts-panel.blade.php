@@ -1,6 +1,8 @@
 @props([
     'alerts' => [],
     'viewAllHref' => null,
+    'title' => 'Sức khỏe hệ thống',
+    'description' => null,
 ])
 
 @php
@@ -17,14 +19,15 @@
         }
     }
     $attention = $counts['critical'] + $counts['warning'] + $counts['info'];
+    $description = $description ?? 'Kiểm tra theo hạng mục';
 @endphp
 
 <section {{ $attributes->class(['rounded-xl border border-outline-variant bg-surface p-5']) }}>
     <div class="mb-4 flex items-start justify-between gap-3">
         <div>
-            <h3 class="font-headline-sm text-headline-sm text-on-surface">Sức khỏe hệ thống</h3>
+            <h3 class="font-headline-sm text-headline-sm text-on-surface">{{ $title }}</h3>
             <p class="mt-0.5 font-body-sm text-body-sm text-on-surface-variant">
-                Kiểm tra theo hạng mục ·
+                {{ $description }} ·
                 @if ($counts['critical'] > 0)
                     <span class="text-red-700">{{ $counts['critical'] }} lỗi</span> ·
                 @endif
