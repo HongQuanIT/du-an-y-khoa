@@ -2,6 +2,11 @@
 
 ## 2026-09-23
 
+### Feat — Ưu tiên công việc trên dashboard biên tập
+
+- Thêm KPI câu hỏi bị trả về và liên kết danh sách việc cần xử lý theo trạng thái.
+- Ưu tiên câu cần biên tập lại trước các nội dung cập nhật gần đây.
+
 ### Feat — Hoàn thiện dashboard và luồng nội dung Editor
 
 - Bổ sung thao tác nhanh tạo, import, export câu hỏi và mở phân loại trên dashboard Editor.

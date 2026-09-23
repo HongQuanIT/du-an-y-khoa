@@ -39,6 +39,8 @@ final class EditorDashboardTest extends TestCase
             ->assertSee('EDITOR-OWN')
             ->assertDontSee('EDITOR-OTHER')
             ->assertSee('Nhịp độ biên tập')
+            ->assertSee('Cần tiếp tục biên tập')
+            ->assertSee('Cần chỉnh sửa')
             ->assertSee('dashboard-charts.js');
 
         $this->actingAsEditor($editor)
