@@ -46,23 +46,26 @@
             <header class="mb-4"><h2 id="editor-todos-heading" class="font-headline-sm text-headline-sm text-on-surface">Việc cần xử lý</h2><p class="mt-0.5 font-body-sm text-body-sm text-on-surface-variant">Ưu tiên hoàn thiện các nội dung đang chờ bạn.</p></header>
             <ul class="space-y-3">
                 @foreach ($todos as $todo)
-                    <li class="flex gap-3 rounded-lg border border-outline-variant p-4">
+                    <li class="rounded-lg border border-outline-variant transition hover:border-primary/40 hover:bg-surface-container-low">
+                        <a @if ($todo['href']) href="{{ $todo['href'] }}" @endif class="flex gap-3 p-4 {{ $todo['href'] ? '' : 'cursor-default' }}">
                         <span @class(['flex size-10 shrink-0 items-center justify-center rounded-full text-on-primary', 'bg-error' => $todo['severity'] === 'critical', 'bg-amber-600' => $todo['severity'] === 'warning', 'bg-primary' => $todo['severity'] === 'info', 'bg-success' => $todo['severity'] === 'ok'])><span class="material-symbols-outlined text-[21px]">{{ $todo['icon'] }}</span></span>
-                        <span><span class="block font-label-md text-label-md text-on-surface">{{ $todo['title'] }}</span><span class="mt-1 block font-body-sm text-body-sm text-on-surface-variant">{{ $todo['description'] }}</span></span>
+                        <span class="min-w-0 flex-1"><span class="block font-label-md text-label-md text-on-surface">{{ $todo['title'] }}</span><span class="mt-1 block font-body-sm text-body-sm text-on-surface-variant">{{ $todo['description'] }}</span></span>
+                        @if ($todo['href'])<span class="material-symbols-outlined self-center text-[20px] text-on-surface-variant">chevron_right</span>@endif
+                        </a>
                     </li>
                 @endforeach
             </ul>
         </section>
 
         <section class="rounded-xl border border-outline-variant bg-surface p-5" aria-labelledby="editor-recent-heading">
-            <header class="mb-4"><h2 id="editor-recent-heading" class="font-headline-sm text-headline-sm text-on-surface">Nội dung cập nhật gần đây</h2><p class="mt-0.5 font-body-sm text-body-sm text-on-surface-variant">6 câu hỏi mới được bạn thay đổi.</p></header>
-            @if (count($recent_questions) === 0)
+            <header class="mb-4"><h2 id="editor-recent-heading" class="font-headline-sm text-headline-sm text-on-surface">Cần tiếp tục biên tập</h2><p class="mt-0.5 font-body-sm text-body-sm text-on-surface-variant">Ưu tiên câu bị trả về, bản nháp và nội dung đang xử lý.</p></header>
+            @if (count($priority_questions) === 0)
                 <p class="font-body-sm text-body-sm text-on-surface-variant">Chưa có câu hỏi nào để hiển thị.</p>
             @else
                 <ol class="divide-y divide-outline-variant">
-                    @foreach ($recent_questions as $question)
+                    @foreach ($priority_questions as $question)
                         @php($updatedAt = \Illuminate\Support\Carbon::parse($question['updated_at']))
-                        <li class="py-3 first:pt-0 last:pb-0"><article class="flex items-start gap-3"><span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-on-primary"><span class="material-symbols-outlined text-[19px]">quiz</span></span><div class="min-w-0"><p class="font-label-sm text-label-sm text-primary">{{ $question['code'] }}</p><h3 class="mt-0.5 line-clamp-2 font-label-md text-label-md text-on-surface">{{ $question['title'] ?: 'Câu hỏi chưa có nội dung' }}</h3><p class="mt-1 font-label-sm text-label-sm text-on-surface-variant">{{ $question['status']->label() }} · <time datetime="{{ $updatedAt->toIso8601String() }}">{{ $updatedAt->diffForHumans() }}</time></p></div></article></li>
+                        <li class="first:pt-0 last:pb-0"><a href="{{ $question['href'] }}" class="flex items-start gap-3 py-3 transition hover:bg-surface-container-low"><span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-on-primary"><span class="material-symbols-outlined text-[19px]">quiz</span></span><div class="min-w-0 flex-1"><p class="font-label-sm text-label-sm text-primary">{{ $question['code'] }}</p><h3 class="mt-0.5 line-clamp-2 font-label-md text-label-md text-on-surface">{{ $question['title'] ?: 'Câu hỏi chưa có nội dung' }}</h3><p class="mt-1 font-label-sm text-label-sm text-on-surface-variant">{{ $question['status']->label() }} · <time datetime="{{ $updatedAt->toIso8601String() }}">{{ $updatedAt->diffForHumans() }}</time></p></div><span class="material-symbols-outlined mt-2 text-[18px] text-on-surface-variant">chevron_right</span></a></li>
                     @endforeach
                 </ol>
             @endif

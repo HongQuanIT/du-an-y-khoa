@@ -38,31 +38,35 @@ final class GetEditorDashboardDataAction
         $returned = (int) ($statusCounts[QuestionStatus::Rejected->value] ?? 0);
         $inReview = (int) ($statusCounts[QuestionStatus::InReview->value] ?? 0);
         $pendingPublish = (int) ($statusCounts[QuestionStatus::PendingPublish->value] ?? 0);
-        $publishedThisMonth = (clone $questions)
-            ->where('status', QuestionStatus::Published->value)
-            ->where('updated_at', '>=', $today->copy()->startOfMonth())
-            ->count();
-
         return [
             'refreshed_at' => now()->toIso8601String(),
             'kpis' => [
                 $this->kpi('Câu hỏi của tôi', (clone $questions)->count(), 'Tất cả bản nháp và đã xuất bản', 'quiz'),
                 $this->kpi('Bản nháp', $drafts, 'Cần hoàn thiện trước khi gửi duyệt', 'edit_note', $drafts > 0 ? 'warning' : null),
+                $this->kpi('Cần chỉnh sửa', $returned, 'Câu hỏi bị trả về cần xử lý lại', 'assignment_return', $returned > 0 ? 'critical' : null),
                 $this->kpi('Đang chờ duyệt', $inReview + $pendingPublish, $inReview.' chờ giảng viên · '.$pendingPublish.' chờ xuất bản', 'hourglass_top'),
-                $this->kpi('Đã xuất bản tháng này', $publishedThisMonth, 'Tính từ đầu tháng', 'published_with_changes'),
             ],
             'todos' => $this->todos($drafts, $returned, $inReview, $pendingPublish),
             'charts' => $this->charts($questions, $start, $statusCounts),
-            'recent_questions' => (clone $questions)
+            'priority_questions' => (clone $questions)
                 ->select(['id', 'code', 'stem', 'status', 'updated_at'])
                 ->latest('updated_at')
-                ->limit(6)
+                ->limit(12)
                 ->get()
+                ->sortBy(fn (Question $question): int => match ($question->status) {
+                    QuestionStatus::Rejected => 1,
+                    QuestionStatus::Draft => 2,
+                    QuestionStatus::InReview, QuestionStatus::PendingPublish => 3,
+                    default => 4,
+                })
+                ->take(6)
                 ->map(fn (Question $question): array => [
+                    'id' => (int) $question->getKey(),
                     'code' => $question->code,
                     'title' => str($question->stem)->stripTags()->squish()->limit(110)->toString(),
                     'status' => $question->status,
                     'updated_at' => $question->updated_at?->toIso8601String(),
+                    'href' => route('editor.questions.edit', $question),
                 ])
                 ->all(),
         ];
@@ -119,21 +123,21 @@ final class GetEditorDashboardDataAction
         ];
     }
 
-    /** @return list<array{title: string, description: string, icon: string, severity: string}> */
+    /** @return list<array{title: string, description: string, icon: string, severity: string, href: string|null}> */
     private function todos(int $drafts, int $returned, int $inReview, int $pendingPublish): array
     {
         $items = [];
         if ($returned > 0) {
-            $items[] = ['title' => $returned.' câu hỏi cần chỉnh sửa', 'description' => 'Các câu hỏi đã bị trả về cần được cập nhật trước khi gửi lại.', 'icon' => 'assignment_return', 'severity' => 'critical'];
+            $items[] = ['title' => $returned.' câu hỏi cần chỉnh sửa', 'description' => 'Các câu hỏi đã bị trả về cần được cập nhật trước khi gửi lại.', 'icon' => 'assignment_return', 'severity' => 'critical', 'href' => route('editor.questions.index', ['status' => QuestionStatus::Rejected->value])];
         }
         if ($drafts > 0) {
-            $items[] = ['title' => $drafts.' bản nháp chưa hoàn thiện', 'description' => 'Bổ sung đáp án, giải thích và phân loại trước khi gửi duyệt.', 'icon' => 'edit_note', 'severity' => 'warning'];
+            $items[] = ['title' => $drafts.' bản nháp chưa hoàn thiện', 'description' => 'Bổ sung đáp án, giải thích và phân loại trước khi gửi duyệt.', 'icon' => 'edit_note', 'severity' => 'warning', 'href' => route('editor.questions.index', ['status' => QuestionStatus::Draft->value])];
         }
         if ($inReview > 0 || $pendingPublish > 0) {
-            $items[] = ['title' => ($inReview + $pendingPublish).' câu hỏi đang trong quy trình', 'description' => $inReview.' chờ giảng viên · '.$pendingPublish.' chờ xuất bản.', 'icon' => 'hourglass_top', 'severity' => 'info'];
+            $items[] = ['title' => ($inReview + $pendingPublish).' câu hỏi đang trong quy trình', 'description' => $inReview.' chờ giảng viên · '.$pendingPublish.' chờ xuất bản.', 'icon' => 'hourglass_top', 'severity' => 'info', 'href' => route('editor.questions.index', ['status' => [QuestionStatus::InReview->value, QuestionStatus::PendingPublish->value]])];
         }
         if ($items === []) {
-            $items[] = ['title' => 'Không có việc cần xử lý ngay', 'description' => 'Các nội dung của bạn đang ở trạng thái ổn định.', 'icon' => 'task_alt', 'severity' => 'ok'];
+            $items[] = ['title' => 'Không có việc cần xử lý ngay', 'description' => 'Các nội dung của bạn đang ở trạng thái ổn định.', 'icon' => 'task_alt', 'severity' => 'ok', 'href' => route('editor.questions.index')];
         }
 
         return $items;
