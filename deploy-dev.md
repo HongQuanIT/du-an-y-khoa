@@ -79,12 +79,10 @@ docker compose exec app php artisan db:seed
 - Seed ~300 câu hỏi published từ Excel demo (test QBank/học viên). Cần đã có user (`UserSeeder`) và taxonomy (`SubjectLessonSeeder`):
 
 ```bash
-docker compose exec app php artisan question-bank:seed-from-excel
+docker compose exec app php artisan question-bank:seed-from-excel --no-ensure-lessons
 ```
 
 Tuỳ chọn: `--dry-run` (chỉ validate), `--skip-publish` (giữ draft), hoặc truyền path file `.xlsx` khác.
-
-
 
 ## 6) (Tuỳ chọn) Chạy lại `npm install` thủ công
 

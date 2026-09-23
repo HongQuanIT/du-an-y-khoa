@@ -2,6 +2,10 @@
 
 ## 2026-09-23
 
+### Docs — Seed Excel QBank dùng `--no-ensure-lessons`
+
+- Cập nhật lệnh mẫu trong `deploy-dev.md` để seed không tự tạo bài học thiếu.
+
 ### Fix — Số câu mặc định khi tạo phiên QBank
 
 - Phiên thích ứng: mặc định `0` câu, không auto-điền hết pool; nút Bắt đầu disable tới khi chọn số ≥ 1.
