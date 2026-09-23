@@ -8,9 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Modules\Partner\Actions\EnsurePartnerProfileAction;
-use Modules\Partner\Enums\CommissionStatus;
 use Modules\Partner\Models\Partner;
-use Modules\Partner\Models\PartnerCommission;
 
 abstract class PartnerPortalController extends Controller
 {
@@ -21,32 +19,5 @@ abstract class PartnerPortalController extends Controller
 
         return Partner::forUser($user)
             ?? app(EnsurePartnerProfileAction::class)->handle($user);
-    }
-
-    protected function dashboardStats(Partner $partner): array
-    {
-        $referralCount = $partner->attributions()->count();
-
-        $pendingCents = (int) PartnerCommission::query()
-            ->where('partner_id', $partner->getKey())
-            ->where('status', CommissionStatus::Pending)
-            ->sum('commission_cents');
-
-        $paidCents = (int) PartnerCommission::query()
-            ->where('partner_id', $partner->getKey())
-            ->where('status', CommissionStatus::Paid)
-            ->sum('commission_cents');
-
-        $approvedCents = (int) PartnerCommission::query()
-            ->where('partner_id', $partner->getKey())
-            ->where('status', CommissionStatus::Approved)
-            ->sum('commission_cents');
-
-        return [
-            'referral_count' => $referralCount,
-            'pending_cents' => $pendingCents,
-            'approved_cents' => $approvedCents,
-            'paid_cents' => $paidCents,
-        ];
     }
 }

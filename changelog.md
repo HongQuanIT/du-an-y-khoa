@@ -2,6 +2,12 @@
 
 ## 2026-09-23
 
+### Feat — Dashboard cộng tác viên thật
+
+- Thêm action tổng hợp KPI, biểu đồ 30 ngày, cảnh báo, mã mời, hoạt động gần đây và quick actions theo quyền.
+- Sửa layout partner để load script biểu đồ; làm lại UI hoạt động gần đây theo semantic HTML, icon nền primary chữ trắng.
+- Bổ sung test dashboard chỉ hiển thị dữ liệu đúng cộng tác viên.
+
 ### Docs — Seed Excel QBank dùng `--no-ensure-lessons`
 
 - Cập nhật lệnh mẫu trong `deploy-dev.md` để seed không tự tạo bài học thiếu.
