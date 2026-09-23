@@ -119,7 +119,7 @@ final class QuestionBankFlowTest extends TestCase
             ->assertSee('name="difficulties[]"', false)
             ->assertSee('1 phút 30 giây mỗi câu')
             ->assertSee(':disabled="matching === 0"', false)
-            ->assertSee(':max="Math.max(1, questionLimit())"', false)
+            ->assertSee(':max="Math.max(0, questionLimit())"', false)
             ->assertSee('@input="countTouched = true; clampQuestionCount()"', false)
             ->assertDontSee('name="time_limit_minutes"', false)
             ->assertDontSeeText('const difficulty = form.querySelector');

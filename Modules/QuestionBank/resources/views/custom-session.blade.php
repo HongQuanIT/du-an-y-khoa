@@ -13,7 +13,10 @@
     if (! in_array($initialAdaptiveFocus, ['weak_focus', 'balanced', 'retention'], true)) {
         $initialAdaptiveFocus = 'balanced';
     }
-    $initialCount = max(1, (int) old('count', 1));
+    $initialCountDefault = 0;
+    $initialCount = old('count') !== null
+        ? max(0, (int) old('count'))
+        : $initialCountDefault;
     $initialDifficultyInput = old(
         'difficulties',
         request('difficulties', old('difficulty', request('difficulty', []))),
@@ -94,6 +97,7 @@
                     this.savedOnly = false;
                     this.folderId = null;
                     this.folderName = '';
+                    if (!this.countTouched) this.count = 0;
                 }
                 if (this.blueprintId) this.pruneFiltersToBlueprint();
                 this.$nextTick(() => this.refreshCount());
@@ -129,6 +133,8 @@
                     this.folderId = null;
                     this.folderName = '';
                     if (!this.adaptiveFocus) this.adaptiveFocus = 'balanced';
+                    // Adaptive: user must choose size — default 0 disables start.
+                    this.count = 0;
                 }
                 this.countTouched = false;
                 this.$nextTick(() => this.refreshCount());
@@ -163,9 +169,8 @@
                 this.counting = true;
                 try {
                     const body = new FormData(this.$refs.builderForm);
-                    if (!body.has('count')) {
-                        body.set('count', String(Math.max(1, Number(this.count) || 1)));
-                    }
+                    // Count endpoint validates min:1; UI may show 0 — send a placeholder.
+                    body.set('count', String(Math.max(1, Number(this.count) || 1)));
                     body.set('source', this.source);
                     body.set('saved_only', this.savedOnly ? '1' : '0');
                     body.set('folder_id', this.folderId ? String(this.folderId) : '');
@@ -245,8 +250,13 @@
             },
             syncQuestionCount() {
                 const limit = this.questionLimit();
-                if (!this.countTouched && limit >= 1) {
-                    this.count = limit;
+                // Adaptive: keep default 0 until user edits; custom: suggest full pool.
+                if (!this.countTouched) {
+                    if (this.isAdaptive()) {
+                        this.count = 0;
+                        return;
+                    }
+                    this.count = limit >= 1 ? limit : 0;
                     return;
                 }
                 this.clampQuestionCount();
@@ -254,14 +264,15 @@
             clampQuestionCount() {
                 const limit = this.questionLimit();
                 if (limit < 1) {
-                    this.count = 1;
+                    this.count = 0;
                     return;
                 }
                 const next = Number(this.count);
-                if (!Number.isFinite(next) || next < 1) {
-                    this.count = 1;
+                if (!Number.isFinite(next) || next < 0) {
+                    this.count = 0;
                     return;
                 }
+                // 0 is allowed (disables start); otherwise clamp to pool size.
                 this.count = Math.min(limit, Math.floor(next));
             },
             examDurationLabel() {
@@ -354,7 +365,7 @@
                 this.source = 'custom';
                 this.adaptiveFocus = 'balanced';
                 this.countTouched = false;
-                this.count = 1;
+                this.count = 0;
                 this.difficulties = [];
                 this.statuses = [];
                 this.organSystemIds = [];
@@ -698,8 +709,8 @@
                                     Số lượng câu hỏi
                                 </label>
                                 <div class="flex items-center gap-3">
-                                    <input id="question-count" type="number" name="count" min="1" step="1"
-                                        :max="Math.max(1, questionLimit())" x-model.number="count"
+                                    <input id="question-count" type="number" name="count" min="0" step="1"
+                                        :max="Math.max(0, questionLimit())" x-model.number="count"
                                         :disabled="matching === 0"
                                         @input="countTouched = true; clampQuestionCount()"
                                         @change="countTouched = true; clampQuestionCount()"
