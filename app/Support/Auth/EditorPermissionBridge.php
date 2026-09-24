@@ -10,9 +10,9 @@ use App\Support\Enums\Role;
 /**
  * Compatibility bridge while content use-cases move out of Admin controllers.
  *
- * The role stores only editor-owned permissions. Legacy checks inside shared
- * domain/UI code are resolved to their Editor equivalent without granting the
- * corresponding Admin permission in the database.
+ * The role stores editor-owned permissions (plus shared cms.*). Legacy checks
+ * inside shared domain/UI code are resolved to their Editor equivalent without
+ * granting the corresponding Admin-only permission in the database.
  */
 final class EditorPermissionBridge
 {
@@ -55,32 +55,8 @@ final class EditorPermissionBridge
             return null;
         }
 
-        $editorAbility = self::cmsAbility($ability) ?? self::MAP[$ability] ?? null;
+        $editorAbility = self::MAP[$ability] ?? null;
 
         return $editorAbility === null ? null : $user->hasPermissionTo($editorAbility);
-    }
-
-    private static function cmsAbility(string $ability): ?string
-    {
-        $action = match ($ability) {
-            'cms.view' => 'view',
-            'cms.create' => 'create',
-            'cms.update' => 'update',
-            'cms.delete' => 'delete',
-            default => null,
-        };
-
-        if ($action === null || ! request()->routeIs('editor.cms.*')) {
-            return null;
-        }
-
-        $resource = match (true) {
-            request()->routeIs('editor.cms.faq.*') => ['editor_faq', ['view', 'create', 'update', 'delete']],
-            request()->routeIs('editor.cms.banners.*') => ['editor_banner', ['view', 'create', 'update', 'delete']],
-            request()->routeIs('editor.cms.menus.*') => ['editor_menu', ['view', 'update']],
-            default => ['editor_page', ['view', 'update']],
-        };
-
-        return in_array($action, $resource[1], true) ? $resource[0].'.'.$action : null;
     }
 }

@@ -166,11 +166,7 @@ return [
                 'editor_tag' => ['view', 'create', 'update', 'delete'],
             ],
             'cms' => [
-                'editor_page' => ['view', 'update'],
-                'editor_faq' => ['view', 'create', 'update', 'delete'],
-                'editor_banner' => ['view', 'create', 'update', 'delete'],
-                'editor_landing' => ['view', 'create', 'update', 'delete'],
-                'editor_menu' => ['view', 'update'],
+                'cms' => ['view', 'create', 'update', 'delete'],
             ],
             'media' => [
                 'editor_media' => ['view', 'upload', 'update', 'delete'],

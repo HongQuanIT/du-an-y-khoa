@@ -75,10 +75,9 @@ final class EditorRoleMigrationTest extends TestCase
 
         $this->assertTrue($role->hasPermissionTo('editor_question.create'));
         $this->assertTrue($role->hasPermissionTo('editor_question.submit'));
-        $this->assertTrue($role->hasPermissionTo('editor_page.update'));
+        $this->assertTrue($role->hasPermissionTo('cms.update'));
         $this->assertTrue($role->hasPermissionTo('editor_media.upload'));
         $this->assertFalse($role->hasPermissionTo('question.create'));
-        $this->assertFalse($role->hasPermissionTo('cms.update'));
         $this->assertFalse($role->hasPermissionTo('media.upload'));
         $this->assertFalse($role->hasPermissionTo('question.publish'));
         $this->assertFalse($role->hasPermissionTo('question.review'));

@@ -255,7 +255,7 @@ final class AdminPhase1ManagementTest extends TestCase
     {
         $super = $this->staffUser(Role::SuperAdmin);
         $role = \Spatie\Permission\Models\Role::findByName(Role::ContentEditor->value, 'web');
-        $permission = Permission::findByName('editor_page.update', 'web');
+        $permission = Permission::findByName('cms.update', 'web');
 
         $this->actingAsStaff($super)
             ->put(route('admin.roles.permissions', $role), [
@@ -263,7 +263,7 @@ final class AdminPhase1ManagementTest extends TestCase
             ])
             ->assertRedirect();
 
-        $this->assertTrue($role->fresh()->hasPermissionTo('editor_page.update'));
+        $this->assertTrue($role->fresh()->hasPermissionTo('cms.update'));
         $this->assertDatabaseHas('audit_logs', [
             'action' => 'admin.role.permission_change',
         ]);

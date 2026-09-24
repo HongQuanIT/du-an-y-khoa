@@ -94,47 +94,47 @@ Route::middleware(['auth', 'portal:editor'])->group(function (): void {
         Route::get('/taxonomy', [TaxonomyController::class, 'index'])
             ->middleware('permission:editor_taxonomy.view')->name('taxonomy.index');
         Route::get('/cms/pages', [PageController::class, 'index'])
-            ->middleware('permission:editor_page.view')->name('cms.pages.index');
+            ->middleware('permission:cms.view')->name('cms.pages.index');
         Route::get('/cms/pages/{cmsPage}/edit', [PageController::class, 'edit'])
-            ->middleware('permission:editor_page.update')->name('cms.pages.edit');
+            ->middleware('permission:cms.update')->name('cms.pages.edit');
         Route::put('/cms/pages/{cmsPage}', [PageController::class, 'update'])
-            ->middleware('permission:editor_page.update')->name('cms.pages.update');
+            ->middleware('permission:cms.update')->name('cms.pages.update');
         Route::get('/cms/faq', [FaqController::class, 'index'])
-            ->middleware('permission:editor_faq.view')->name('cms.faq.index');
+            ->middleware('permission:cms.view')->name('cms.faq.index');
         Route::get('/cms/faq/create', [FaqController::class, 'create'])
-            ->middleware('permission:editor_faq.create')->name('cms.faq.create');
+            ->middleware('permission:cms.create')->name('cms.faq.create');
         Route::post('/cms/faq', [FaqController::class, 'store'])
-            ->middleware('permission:editor_faq.create')->name('cms.faq.store');
+            ->middleware('permission:cms.create')->name('cms.faq.store');
         Route::get('/cms/faq/{faq}/edit', [FaqController::class, 'edit'])
-            ->middleware('permission:editor_faq.update')->name('cms.faq.edit');
+            ->middleware('permission:cms.update')->name('cms.faq.edit');
         Route::put('/cms/faq/{faq}', [FaqController::class, 'update'])
-            ->middleware('permission:editor_faq.update')->name('cms.faq.update');
+            ->middleware('permission:cms.update')->name('cms.faq.update');
         Route::delete('/cms/faq/{faq}', [FaqController::class, 'destroy'])
-            ->middleware('permission:editor_faq.delete')->name('cms.faq.destroy');
+            ->middleware('permission:cms.delete')->name('cms.faq.destroy');
         Route::post('/cms/faq/{faq}/move-up', [FaqController::class, 'moveUp'])
-            ->middleware('permission:editor_faq.update')->name('cms.faq.move-up');
+            ->middleware('permission:cms.update')->name('cms.faq.move-up');
         Route::post('/cms/faq/{faq}/move-down', [FaqController::class, 'moveDown'])
-            ->middleware('permission:editor_faq.update')->name('cms.faq.move-down');
+            ->middleware('permission:cms.update')->name('cms.faq.move-down');
         Route::get('/cms/banners', [BannerController::class, 'index'])
-            ->middleware('permission:editor_banner.view')->name('cms.banners.index');
+            ->middleware('permission:cms.view')->name('cms.banners.index');
         Route::get('/cms/banners/create', [BannerController::class, 'create'])
-            ->middleware('permission:editor_banner.create')->name('cms.banners.create');
+            ->middleware('permission:cms.create')->name('cms.banners.create');
         Route::post('/cms/banners', [BannerController::class, 'store'])
-            ->middleware('permission:editor_banner.create')->name('cms.banners.store');
+            ->middleware('permission:cms.create')->name('cms.banners.store');
         Route::get('/cms/banners/{banner}/edit', [BannerController::class, 'edit'])
-            ->middleware('permission:editor_banner.update')->name('cms.banners.edit');
+            ->middleware('permission:cms.update')->name('cms.banners.edit');
         Route::put('/cms/banners/{banner}', [BannerController::class, 'update'])
-            ->middleware('permission:editor_banner.update')->name('cms.banners.update');
+            ->middleware('permission:cms.update')->name('cms.banners.update');
         Route::delete('/cms/banners/{banner}', [BannerController::class, 'destroy'])
-            ->middleware('permission:editor_banner.delete')->name('cms.banners.destroy');
+            ->middleware('permission:cms.delete')->name('cms.banners.destroy');
         Route::post('/cms/banners/{banner}/toggle', [BannerController::class, 'toggle'])
-            ->middleware('permission:editor_banner.update')->name('cms.banners.toggle');
+            ->middleware('permission:cms.update')->name('cms.banners.toggle');
         Route::get('/cms/menus', [MenuController::class, 'index'])
-            ->middleware('permission:editor_menu.view')->name('cms.menus.index');
+            ->middleware('permission:cms.view')->name('cms.menus.index');
         Route::get('/cms/menus/{menu}/edit', [MenuController::class, 'edit'])
-            ->middleware('permission:editor_menu.update')->name('cms.menus.edit');
+            ->middleware('permission:cms.update')->name('cms.menus.edit');
         Route::put('/cms/menus/{menu}', [MenuController::class, 'update'])
-            ->middleware('permission:editor_menu.update')->name('cms.menus.update');
+            ->middleware('permission:cms.update')->name('cms.menus.update');
         Route::get('/media', [MediaController::class, 'index'])
             ->middleware('permission:editor_media.view')->name('media.index');
         Route::get('/media/items', [MediaController::class, 'items'])

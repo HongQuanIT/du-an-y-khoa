@@ -2,6 +2,16 @@
 
 ## 2026-09-24
 
+### Refactor — Gộp quyền CMS Editor thành `cms.*` như Admin
+
+- Catalog Editor dùng chung `cms.view|create|update|delete`; migration remap và xóa `editor_page/faq/banner/landing/menu`.
+- Route, menu, bridge và test cập nhật theo bộ quyền CMS dùng chung.
+
+### Feat — Đồng bộ UI Media Editor với Superadmin
+
+- Editor Media tái dùng view Admin (header, KPI, lọc, lưới, picker tải lên / URL·CDN, trang chi tiết).
+- Giữ route/permission `editor.media.*` / `editor_media.*`; cập nhật test sang portal Editor.
+
 ### Fix — Chuẩn hóa portal role và quyền cập nhật câu hỏi
 
 - Resolve portal từ Role enum khi lọc/gán user Admin và picker portal–role, tránh lệch metadata Spatie.

@@ -172,19 +172,22 @@ final class EditorDashboardTest extends TestCase
             ->assertDontSee('>Media<', false);
     }
 
-    public function test_editor_cms_menu_uses_the_first_available_view_permission(): void
+    public function test_editor_cms_routes_require_cms_view(): void
     {
-        $editor = $this->editor('Biên tập viên FAQ');
+        $editor = $this->editor('Biên tập viên không xem CMS');
         $role = $editor->roles()->firstOrFail();
-        $role->revokePermissionTo('editor_page.view');
+        $role->revokePermissionTo('cms.view');
 
         $this->actingAsEditor($editor)
             ->get(route('editor.cms.pages.index'))
             ->assertForbidden();
         $this->actingAsEditor($editor)
             ->get(route('editor.cms.faq.index'))
+            ->assertForbidden();
+        $this->actingAsEditor($editor)
+            ->get(route('editor.dashboard'))
             ->assertOk()
-            ->assertSee(route('editor.cms.faq.index'), false);
+            ->assertDontSee('>CMS<', false);
     }
 
     public function test_editor_media_uses_its_own_controller_views_and_permissions(): void
@@ -199,8 +202,11 @@ final class EditorDashboardTest extends TestCase
         $this->actingAsEditor($editor)
             ->get(route('editor.media.index'))
             ->assertOk()
-            ->assertSee('Quản lý ảnh, video và tài nguyên nội dung của Editor.')
-            ->assertDontSee('media::admin', false);
+            ->assertSee('Media')
+            ->assertSee('Ảnh hoặc video lưu trên máy chủ hay qua đường dẫn CDN')
+            ->assertSee('Tải lên')
+            ->assertSee('URL / CDN')
+            ->assertDontSee('Quản lý ảnh, video và tài nguyên nội dung của Editor.');
 
         $this->actingAsEditor($editor)
             ->postJson(route('editor.media.store'), [
@@ -227,10 +233,9 @@ final class EditorDashboardTest extends TestCase
         $editor = $this->editor('Biên tập viên độc lập');
 
         $this->assertTrue($editor->hasPermissionTo('editor_question.view'));
-        $this->assertTrue($editor->hasPermissionTo('editor_page.update'));
+        $this->assertTrue($editor->hasPermissionTo('cms.update'));
         $this->assertTrue($editor->hasPermissionTo('editor_media.upload'));
         $this->assertFalse($editor->hasPermissionTo('question.view'));
-        $this->assertFalse($editor->hasPermissionTo('cms.update'));
         $this->assertFalse($editor->hasPermissionTo('media.upload'));
     }
 
