@@ -89,6 +89,43 @@ final class ContentEditorAccessTest extends TestCase
         $this->actingAsStaff($editor)->get(route('editor.dashboard'))->assertOk();
     }
 
+    public function test_custom_editor_portal_role_uses_the_permission_bridge(): void
+    {
+        $role = \Spatie\Permission\Models\Role::create([
+            'name' => 'bien_tap_custom',
+            'guard_name' => 'web',
+            'display_name' => 'Biên tập tùy chỉnh',
+            'portal' => \App\Support\Enums\PortalGroup::Editor->value,
+        ]);
+        $role->syncPermissions(
+            collect(app(\App\Support\Rbac\PermissionRegistry::class)->all())
+                ->filter(fn ($definition): bool => in_array(\App\Support\Enums\PortalGroup::Editor, $definition->portals, true))
+                ->keys()
+                ->all(),
+        );
+
+        $editor = User::factory()->create(['name' => 'Editor custom']);
+        $editor->syncRoles([$role]);
+        TwoFactorSecret::query()->create([
+            'user_id' => $editor->id,
+            'secret' => (new TotpService)->generateSecret(),
+            'recovery_codes' => [Hash::make('ABCD1234')],
+            'confirmed_at' => now(),
+        ]);
+
+        $this->assertFalse($editor->hasRole(Role::ContentEditor->value));
+        $this->assertTrue($editor->can(Permission::QuestionView->value));
+        $this->assertTrue($editor->can(Permission::QuestionCreate->value));
+        $this->assertTrue($editor->can('taxonomy.view'));
+        $this->assertTrue($editor->can('profile.view'));
+
+        $this->actingAsStaff($editor)->get(route('editor.dashboard'))->assertOk();
+        $this->actingAsStaff($editor)->get(route('editor.questions.index'))->assertOk();
+        $this->actingAsStaff($editor)->get(route('editor.taxonomy.index'))->assertOk();
+        $this->actingAsStaff($editor)->get(route('editor.profile.show'))->assertOk();
+        $this->actingAsStaff($editor)->get(route('admin.dashboard'))->assertForbidden();
+    }
+
     private function staffUser(Role $role): User
     {
         $user = User::factory()->create();

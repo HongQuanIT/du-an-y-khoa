@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace App\Support\Auth;
 
 use App\Models\User;
-use App\Support\Enums\Role;
+use App\Support\Enums\PortalGroup;
 
 /**
  * Compatibility bridge while content use-cases move out of Admin controllers.
  *
- * The role stores editor-owned permissions (plus shared cms.*). Legacy checks
- * inside shared domain/UI code are resolved to their Editor equivalent without
- * granting the corresponding Admin-only permission in the database.
+ * Editor-portal roles store editor-owned permissions (plus shared cms.*).
+ * Legacy checks inside shared domain/UI code resolve to their Editor
+ * equivalent without granting Admin-only permissions in the database.
  */
 final class EditorPermissionBridge
 {
@@ -51,7 +51,7 @@ final class EditorPermissionBridge
 
     public static function resolve(User $user, string $ability): ?bool
     {
-        if (! $user->hasRole(Role::ContentEditor->value)) {
+        if (! PortalAccess::allows($user, PortalGroup::Editor)) {
             return null;
         }
 
