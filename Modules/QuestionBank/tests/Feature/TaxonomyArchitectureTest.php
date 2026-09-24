@@ -33,6 +33,62 @@ final class TaxonomyArchitectureTest extends TestCase
         $this->seed(RolePermissionSeeder::class);
     }
 
+    public function test_content_filters_intersect_across_organ_system_and_subject(): void
+    {
+        $cardio = $this->makeOrganSystem(['name' => 'Hệ tim mạch', 'slug' => 'he-tim-intersect']);
+        $resp = $this->makeOrganSystem(['name' => 'Hệ hô hấp', 'slug' => 'he-ho-hap-intersect']);
+        $anatomy = $this->makeSubject(['name' => 'Giải phẫu', 'slug' => 'giai-phau-intersect']);
+        $pathology = $this->makeSubject(['name' => 'Bệnh học', 'slug' => 'benh-hoc-intersect']);
+
+        $both = $this->makeLesson([
+            'name' => 'Tim ∩ Giải phẫu',
+            'slug' => 'tim-giai-phau-intersect',
+            'organSystems' => [$cardio],
+            'subjects' => [$anatomy],
+        ]);
+        $cardioOnly = $this->makeLesson([
+            'name' => 'Tim ∩ Bệnh học',
+            'slug' => 'tim-benh-hoc-intersect',
+            'organSystems' => [$cardio],
+            'subjects' => [$pathology],
+        ]);
+        $anatomyOnly = $this->makeLesson([
+            'name' => 'Hô hấp ∩ Giải phẫu',
+            'slug' => 'ho-hap-giai-phau-intersect',
+            'organSystems' => [$resp],
+            'subjects' => [$anatomy],
+        ]);
+
+        $filters = app(\Modules\QuestionBank\Support\QuestionFilterBuilder::class);
+
+        $this->assertEqualsCanonicalizing(
+            [$both->id, $cardioOnly->id],
+            $filters->resolveContentLessonIds([$cardio->id], [], []),
+        );
+        $this->assertEqualsCanonicalizing(
+            [$both->id, $anatomyOnly->id],
+            $filters->resolveContentLessonIds([], [$anatomy->id], []),
+        );
+        $this->assertSame(
+            [$both->id],
+            $filters->resolveContentLessonIds([$cardio->id], [$anatomy->id], []),
+        );
+        $this->assertSame(
+            [],
+            $filters->resolveContentLessonIds([$cardio->id], [$anatomy->id], [$anatomyOnly->id]),
+        );
+        $this->assertTrue(
+            $filters->hasContentFilter([$cardio->id], [$anatomy->id], [$anatomyOnly->id]),
+        );
+        $this->assertFalse(
+            $filters->hasContentFilter([], [], []),
+        );
+        $this->assertSame(
+            [$both->id],
+            $filters->resolveContentLessonIds([$cardio->id], [$anatomy->id], [$both->id]),
+        );
+    }
+
     public function test_blueprint_section_and_core_topic_can_be_created(): void
     {
         $blueprint = Blueprint::query()->create([

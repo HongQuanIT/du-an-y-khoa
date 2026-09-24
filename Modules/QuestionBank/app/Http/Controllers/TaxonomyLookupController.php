@@ -7,7 +7,6 @@ namespace Modules\QuestionBank\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
 use Modules\QuestionBank\Models\Blueprint;
 use Modules\QuestionBank\Models\BlueprintSection;
@@ -16,6 +15,7 @@ use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\OrganSystem;
 use Modules\QuestionBank\Models\Subject;
 use Modules\QuestionBank\Models\Tag;
+use Modules\QuestionBank\Support\QuestionFilterBuilder;
 
 /**
  * Lazy JSON lookups for blueprint / taxonomy / tag pickers (admin + learner).
@@ -164,22 +164,19 @@ final class TaxonomyLookupController extends Controller
                 $builder->where('name', 'like', $term);
             });
 
-        if ($request->filled('subject_id')) {
-            $subjectId = (int) $request->query('subject_id');
-            $lessonIds = DB::table('lesson_subject')
-                ->where('subject_id', $subjectId)
-                ->pluck('lesson_id')
-                ->all();
-            $query->whereIn('id', $lessonIds);
-        }
+        $subjectIds = $this->queryIdList($request, 'subject_ids', 'subject_id');
+        $organSystemIds = $this->queryIdList($request, 'organ_system_ids', 'organ_system_id');
 
-        if ($request->filled('organ_system_id')) {
-            $organSystemId = (int) $request->query('organ_system_id');
-            $lessonIds = DB::table('lesson_organ_system')
-                ->where('organ_system_id', $organSystemId)
-                ->pluck('lesson_id')
-                ->all();
-            $query->whereIn('id', $lessonIds);
+        // AND across axes (same semantics as QuestionFilterBuilder::resolveContentLessonIds).
+        if ($subjectIds !== [] || $organSystemIds !== []) {
+            $scoped = app(QuestionFilterBuilder::class)
+                ->resolveContentLessonIds($organSystemIds, $subjectIds, []);
+
+            if ($scoped === []) {
+                return response()->json(['data' => []]);
+            }
+
+            $query->whereIn('id', $scoped);
         }
 
         $limit = $request->filled('q') ? 50 : 300;
@@ -202,6 +199,21 @@ final class TaxonomyLookupController extends Controller
             ]);
 
         return response()->json(['data' => $items]);
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function queryIdList(Request $request, string $pluralKey, string $singularKey): array
+    {
+        $raw = $request->query($pluralKey, $request->query($singularKey));
+
+        return collect(is_array($raw) ? $raw : ($raw !== null && $raw !== '' ? [$raw] : []))
+            ->map(fn ($id): int => (int) $id)
+            ->filter(fn (int $id): bool => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
     }
 
     public function tags(Request $request): JsonResponse

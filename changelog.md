@@ -73,6 +73,12 @@
 - Tách menu, Media controller/support và middleware kiểm quyền view cho portal Editor; layout Editor dùng route profile riêng.
 - Chuẩn hóa helper quyền route dùng chung để UI Admin/Editor ẩn hiện theo permission đúng hơn.
 
+### Fix — Bộ lọc QBank AND giữa trục + chặn ∩ rỗng
+
+- Hệ/Môn/Bài: trong một trục OR, giữa các trục AND (thay UNION); lookup bài học cascade theo Hệ/Môn.
+- Giao cắt rỗng không còn đếm/tạo phiên từ cả ngân hàng (custom + adaptive).
+- Lưu tên phiên từ builder; empty state modal bài học rõ khi lệch Hệ/Môn.
+
 ### Refactor — Tách quyền và route nội dung cho Editor
 
 - Tách bộ permission `editor_*` khỏi permission Admin, đồng bộ role Content Editor và migrate người dùng từ role `nguoi_nhap_lieu`.

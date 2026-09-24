@@ -60,6 +60,19 @@ final class SessionQuestionSelector
             $data->subjectIds,
             $data->lessonIds,
         );
+
+        // Content filters present but empty intersection ⇒ empty pool, not full bank.
+        if (
+            $lessonIds === []
+            && $this->filters->hasContentFilter(
+                $data->organSystemIds,
+                $data->subjectIds,
+                $data->lessonIds,
+            )
+        ) {
+            return [];
+        }
+
         $eligible = $this->eligibleForData($userId, $data, $canUsePremium);
 
         $difficulties = $this->parseDifficulties($data->difficulties);
@@ -94,6 +107,10 @@ final class SessionQuestionSelector
 
             $lessonIds = $this->adaptiveLessonIds($userId, $data);
 
+            if ($lessonIds === []) {
+                return 0;
+            }
+
             return $this->questionQuery(
                 $lessonIds,
                 [],
@@ -109,8 +126,25 @@ final class SessionQuestionSelector
             return DB::table('exam_question')->where('exam_id', $data->examId)->count();
         }
 
+        $lessonIds = $this->filters->resolveContentLessonIds(
+            $data->organSystemIds,
+            $data->subjectIds,
+            $data->lessonIds,
+        );
+
+        if (
+            $lessonIds === []
+            && $this->filters->hasContentFilter(
+                $data->organSystemIds,
+                $data->subjectIds,
+                $data->lessonIds,
+            )
+        ) {
+            return 0;
+        }
+
         return $this->questionQuery(
-            $this->filters->resolveContentLessonIds($data->organSystemIds, $data->subjectIds, $data->lessonIds),
+            $lessonIds,
             [],
             $this->eligibleForData($userId, $data, $canUsePremium),
             $this->parseDifficulties($data->difficulties),
@@ -174,6 +208,10 @@ final class SessionQuestionSelector
     ): array {
         $selectedLessonIds = $data->lessonIds;
         $lessonIds = $this->adaptiveLessonIds($userId, $data);
+
+        if ($lessonIds === []) {
+            return [];
+        }
 
         $accessibleQuestions = ServePublishedQuestion::scopeAvailable(
             Question::query()->select('id'),
@@ -266,6 +304,18 @@ final class SessionQuestionSelector
             $data->subjectIds,
             $data->lessonIds,
         );
+
+        // Hệ/Môn/Bài present but ∩ empty ⇒ no lessons (do not fall through to matrix).
+        if (
+            $scopedLessonIds === []
+            && $this->filters->hasContentFilter(
+                $data->organSystemIds,
+                $data->subjectIds,
+                $data->lessonIds,
+            )
+        ) {
+            return [];
+        }
 
         if ($scopedLessonIds !== []) {
             if ($matrixLessonIds === []) {
@@ -424,12 +474,27 @@ final class SessionQuestionSelector
             return $query;
         }
 
+        // When $topicIds is already the resolved lesson set, do not re-apply
+        // organ/subject/lesson from $data (avoids widening past matrix ∩ scope).
+        // When $topicIds is empty, pass original axes so apply() can force 0=1
+        // for an empty intersection instead of treating it as "no filter".
+        $organSystemIds = [];
+        $subjectIds = [];
+        $lessonIds = [];
+        if ($topicIds === []) {
+            $organSystemIds = $data->organSystemIds;
+            $subjectIds = $data->subjectIds;
+            $lessonIds = $data->lessonIds;
+        }
+
         $this->filters->apply(
             $query,
             blueprintId: $data->blueprintId,
             blueprintSectionId: $data->blueprintSectionId,
             coreClinicalTopicIds: $data->coreClinicalTopicIds,
-            lessonIds: $topicIds,
+            organSystemIds: $organSystemIds,
+            subjectIds: $subjectIds,
+            lessonIds: $lessonIds,
             tagIds: $data->tagIds,
         );
 
