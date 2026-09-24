@@ -20,11 +20,11 @@ use Modules\Admin\Actions\SendUserPasswordResetAction;
 use Modules\Admin\Actions\UpdateUserRoleAction;
 use Modules\Admin\Actions\UpdateUserStatusAction;
 use Modules\Admin\Enums\AuditAction;
+use Modules\Admin\Support\AdminQuestionListQuery;
+use Modules\Admin\Support\AssignableRoles;
 use Modules\Admin\Support\Auditor;
 use Modules\Admin\Support\AuditSnapshot;
 use Modules\Admin\Support\StaffGuard;
-use Modules\Admin\Support\AdminQuestionListQuery;
-use Modules\Admin\Support\AssignableRoles;
 use Modules\Auth\Models\AdministrativeUnit;
 use Modules\Auth\Models\Country;
 use Modules\Auth\Models\EducationStage;
@@ -67,6 +67,13 @@ final class UserController extends Controller
                 ->whereIn('portal', $portals)
                 ->pluck('name')
                 ->all();
+            $portalRoles = array_values(array_unique(array_merge(
+                $portalRoles,
+                collect(Role::cases())
+                    ->filter(fn (Role $role): bool => in_array($role->portal()->value, $portals, true))
+                    ->map(fn (Role $role): string => $role->value)
+                    ->all(),
+            )));
             if ($portalRoles !== []) {
                 $query->role(array_values(array_unique($portalRoles)));
             }
@@ -166,7 +173,9 @@ final class UserController extends Controller
         /** @var RoleModel $role */
         $role = $assignableRoles->firstWhere('name', $data['role']);
 
-        if ($role->portal !== $data['portal']) {
+        $rolePortal = $this->rolePortal($role);
+
+        if ($rolePortal->value !== $data['portal']) {
             return back()
                 ->withInput()
                 ->withErrors(['role' => 'Vai trò không thuộc portal đã chọn.']);
@@ -174,7 +183,7 @@ final class UserController extends Controller
 
         $user = $action->handle($this->actor(), $data, $role);
 
-        if ($role->portal === PortalGroup::Partner->value) {
+        if ($rolePortal === PortalGroup::Partner) {
             $partner = Partner::query()->where('user_id', $user->getKey())->firstOrFail();
 
             return redirect()
@@ -303,7 +312,7 @@ final class UserController extends Controller
         /** @var RoleModel $role */
         $role = $assignableRoles->firstWhere('name', $data['role']);
 
-        if ($role->portal !== $data['portal']) {
+        if ($this->rolePortal($role)->value !== $data['portal']) {
             return back()->withErrors(['role' => 'Vai trò không thuộc portal đã chọn.']);
         }
 
@@ -344,6 +353,13 @@ final class UserController extends Controller
     private function authorizeAnyPermission(array $permissions): void
     {
         abort_unless($this->actor()->canAny($permissions), 403);
+    }
+
+    private function rolePortal(RoleModel $role): PortalGroup
+    {
+        return Role::tryFrom($role->name)?->portal()
+            ?? PortalGroup::tryFrom((string) $role->portal)
+            ?? PortalGroup::Admin;
     }
 
     private function actor(): User

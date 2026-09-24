@@ -128,6 +128,14 @@ final class AdminPhase1ManagementTest extends TestCase
             ->assertSee('active-student@example.com')
             ->assertSee('suspended-student@example.com')
             ->assertDontSee('editor-user@example.com');
+
+        $this->actingAsStaff($admin)
+            ->get(route('admin.users.index', [
+                'portal' => [PortalGroup::Editor->value],
+            ]))
+            ->assertOk()
+            ->assertSee('editor-user@example.com')
+            ->assertDontSee('active-student@example.com');
     }
 
     public function test_admin_can_filter_users_by_multiple_profile_countries_with_ajax(): void
@@ -169,7 +177,7 @@ final class AdminPhase1ManagementTest extends TestCase
 
         $this->actingAsStaff($admin)
             ->patch(route('admin.users.role', $student), [
-                'portal' => PortalGroup::Admin->value,
+                'portal' => PortalGroup::Editor->value,
                 'role' => Role::ContentEditor->value,
             ])
             ->assertRedirect();
@@ -189,6 +197,17 @@ final class AdminPhase1ManagementTest extends TestCase
             'action' => 'admin.user.status_change',
             'auditable_id' => $student->id,
         ]);
+    }
+
+    public function test_super_admin_can_select_editor_portal_when_creating_user(): void
+    {
+        $super = $this->staffUser(Role::SuperAdmin);
+
+        $this->actingAsStaff($super)
+            ->get(route('admin.users.create'))
+            ->assertOk()
+            ->assertSee('Biên tập viên')
+            ->assertSee('Biên tập viên nội dung');
     }
 
     public function test_admin_can_soft_delete_a_manageable_user(): void
@@ -353,7 +372,7 @@ final class AdminPhase1ManagementTest extends TestCase
     {
         $admin = $this->staffUser(Role::Admin);
         $role = \Spatie\Permission\Models\Role::findByName(Role::ContentEditor->value, 'web');
-        $permission = Permission::findByName('question.view_any', 'web');
+        $permission = Permission::findByName('editor_question.update', 'web');
 
         $this->actingAsStaff($admin)
             ->put(route('admin.roles.permissions', $role), [
@@ -361,7 +380,7 @@ final class AdminPhase1ManagementTest extends TestCase
             ])
             ->assertRedirect();
 
-        $this->assertTrue($role->fresh()->hasPermissionTo('question.view_any'));
+        $this->assertTrue($role->fresh()->hasPermissionTo('editor_question.update'));
     }
 
     public function test_admin_cannot_sync_super_admin_or_admin_role_permissions(): void

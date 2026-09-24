@@ -1,6 +1,7 @@
 @php
     $isEditorPortal = request()->routeIs('editor.*');
     $isNew = ! $question->exists;
+    $hideEditorUpdateUi = $isEditorPortal && ! $isNew && ! ($canUpdate ?? false);
     $existingOptions = $question->relationLoaded('options')
         ? $question->options
         : collect();
@@ -253,6 +254,63 @@
         </div>
     @endif
 
+    @if ($hideEditorUpdateUi)
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_300px] lg:items-start">
+            <div class="space-y-5">
+                <section class="rounded-2xl border border-outline-variant bg-surface p-5">
+                    <h2 class="mb-4 font-label-lg font-semibold text-on-surface">Nội dung câu hỏi</h2>
+                    <div class="prose max-w-none text-on-surface">{!! $question->stem !!}</div>
+                </section>
+
+                <section class="rounded-2xl border border-outline-variant bg-surface p-5">
+                    <h2 class="mb-4 font-label-lg font-semibold text-on-surface">Đáp án</h2>
+                    <div class="space-y-3">
+                        @foreach ($optionRows as $index => $option)
+                            <div @class([
+                                'rounded-xl border p-4',
+                                'border-primary/40 bg-primary/5' => $option['is_correct'],
+                                'border-outline-variant bg-surface-container-lowest' => ! $option['is_correct'],
+                            ])>
+                                <p class="font-semibold text-on-surface">
+                                    {{ chr(65 + $index) }}. {{ $option['content'] }}
+                                    @if ($option['is_correct'])
+                                        <span class="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">Đáp án đúng</span>
+                                    @endif
+                                </p>
+                                @if (filled($option['explanation'] ?? null))
+                                    <div class="mt-2 text-sm text-on-surface-variant">{!! $option['explanation'] !!}</div>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                </section>
+
+                @if (! empty($question->key_info))
+                    <section class="rounded-2xl border border-outline-variant bg-surface p-5">
+                        <h2 class="mb-4 font-label-lg font-semibold text-on-surface">Gợi ý / Key info</h2>
+                        <ul class="list-disc space-y-2 pl-5 text-on-surface">
+                            @foreach ((array) $question->key_info as $hint)
+                                <li>{{ $hint }}</li>
+                            @endforeach
+                        </ul>
+                    </section>
+                @endif
+            </div>
+
+            <aside class="space-y-4">
+                <section class="rounded-2xl border border-outline-variant bg-surface p-4">
+                    <h2 class="mb-3 font-label-md font-semibold text-on-surface-variant">Thông tin</h2>
+                    <dl class="space-y-2 text-sm">
+                        <div class="flex justify-between gap-3"><dt class="text-on-surface-variant">Trạng thái</dt><dd class="font-semibold text-on-surface">{{ $question->status->label() }}</dd></div>
+                        <div class="flex justify-between gap-3"><dt class="text-on-surface-variant">Độ khó</dt><dd class="font-semibold text-on-surface">{{ $question->difficulty?->label() ?? '—' }}</dd></div>
+                        <div class="flex justify-between gap-3"><dt class="text-on-surface-variant">Người tạo</dt><dd class="text-right font-semibold text-on-surface">{{ $question->creator?->name ?? '—' }}</dd></div>
+                        <div class="flex justify-between gap-3"><dt class="text-on-surface-variant">Giảng viên được gán</dt><dd class="text-right font-semibold text-on-surface">{{ $question->assignedInstructor?->name ?? '—' }}</dd></div>
+                        <div class="flex justify-between gap-3"><dt class="text-on-surface-variant">Cập nhật</dt><dd class="text-right font-semibold text-on-surface">{{ $question->updated_at?->diffForHumans() }}</dd></div>
+                    </dl>
+                </section>
+            </aside>
+        </div>
+    @else
     {{-- ── MAIN FORM ── --}}
     <form id="admin-question-editor-form" method="post"
           action="{{ $isNew ? route($isEditorPortal ? 'editor.questions.store' : 'admin.questions.store') : route($isEditorPortal ? 'editor.questions.update' : 'admin.questions.update', $question) }}"
@@ -835,6 +893,7 @@
                 </div>{{-- /locked content --}}
             </div>{{-- /sidebar --}}
     </form>
+    @endif
 
     @if (! $isNew && $canSubmit && in_array($question->status, [
         \Modules\QuestionBank\Enums\QuestionStatus::InReview,

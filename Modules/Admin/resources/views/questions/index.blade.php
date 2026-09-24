@@ -412,7 +412,10 @@
                     </thead>
                     <tbody class="divide-y divide-outline-variant/60">
                         @forelse ($questions as $question)
-                            @php $listStats = $question->listStats(); @endphp
+                            @php
+                                $listStats = $question->listStats();
+                                $canUpdateQuestion = \Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.update');
+                            @endphp
                             <tr class="transition-colors hover:bg-surface-container-low"
                                 :class="isSelected(@js($question->getKey())) && 'bg-primary/5'">
                                 <td class="w-11 min-w-11 px-3 py-4 align-top">
@@ -425,7 +428,7 @@
                                 <td class="w-[380px] min-w-[320px] px-5 py-4 align-top">
                                     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.edit'))
 <a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.edit'), $question) }}" class="group block"
-                                        aria-label="Chỉnh sửa câu hỏi {{ $question->code ?: $question->id }}">
+                                        aria-label="{{ $canUpdateQuestion ? 'Chỉnh sửa' : 'Xem chi tiết' }} câu hỏi {{ $question->code ?: $question->id }}">
                                         @if (filled($question->code))
                                             <p
                                                 class="mb-0.5 font-mono text-xs font-semibold text-on-surface-variant group-hover:underline"
@@ -632,7 +635,7 @@
                                             Thống kê
                                         </a>
 @endif
-                                        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.edit'))
+                                        @if ($canUpdateQuestion)
 <a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.edit'), $question) }}"
                                             class="inline-flex items-center gap-1 rounded-md border border-outline-variant px-2 py-1 text-xs font-medium text-on-surface hover:bg-surface-container-low"
                                             title="Sửa nội dung câu hỏi">
