@@ -2,6 +2,11 @@
 
 ## 2026-09-24
 
+### Fix — Bridge quyền Editor cho mọi role portal Editor
+
+- `EditorPermissionBridge` nhận user theo portal Editor, không còn cứng role `content_editor`.
+- Role custom đã gán đủ `editor_*` dùng được câu hỏi / phân loại / profile như role hệ thống.
+
 ### Fix — Nhãn quyền Editor và tab Phân loại theo portal
 
 - Thêm nhãn tiếng Việt cho resource `editor_*` (câu hỏi, ma trận, danh mục, tag, media…).
