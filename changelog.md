@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-09-24
+
+### Refactor — Tách quyền và route nội dung cho Editor
+
+- Tách bộ permission `editor_*` khỏi permission Admin, đồng bộ role Content Editor và migrate người dùng từ role `nguoi_nhap_lieu`.
+- Bổ sung route thao tác đầy đủ cho portal `/editor`, cập nhật controller/view dùng đúng portal và chặn Editor truy cập `/admin`.
+- Thêm cầu nối tương thích cho các kiểm tra quyền dùng chung và test migration, phân quyền, dashboard, import/export.
+
 ## 2026-09-23
 
 ### Feat — Ưu tiên công việc trên dashboard biên tập

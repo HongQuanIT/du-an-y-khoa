@@ -6,7 +6,7 @@ namespace Modules\Admin\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Support\Enums\Permission;
+use App\Support\Auth\PortalRoute;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -569,8 +569,8 @@ final class CurriculumTaxonomyController extends Controller
     private function presentCatalogNode(OrganSystem|Subject $item, string $tab): array
     {
         [$updateRoute, $destroyRoute] = $tab === 'subjects'
-            ? ['admin.curriculum.subjects.update', 'admin.curriculum.subjects.destroy']
-            : ['admin.curriculum.organ-systems.update', 'admin.curriculum.organ-systems.destroy'];
+            ? [PortalRoute::content('curriculum.subjects.update'), PortalRoute::content('curriculum.subjects.destroy')]
+            : [PortalRoute::content('curriculum.organ-systems.update'), PortalRoute::content('curriculum.organ-systems.destroy')];
 
         $payload = [
             'id' => $item->id,
@@ -585,8 +585,8 @@ final class CurriculumTaxonomyController extends Controller
 
         if ($tab === 'subjects' && $item instanceof Subject) {
             $payload['lessons'] = $this->presentSubjectLessons($item);
-            $payload['attach_lessons_url'] = route('admin.curriculum.subjects.lessons.attach', $item);
-            $payload['create_lesson_url'] = route('admin.curriculum.index', [
+            $payload['attach_lessons_url'] = route(PortalRoute::content('curriculum.subjects.lessons.attach'), $item);
+            $payload['create_lesson_url'] = route(PortalRoute::content('curriculum.index'), [
                 'tab' => 'lessons',
                 'panel' => 'create',
                 'subject_ids' => [$item->id],
@@ -612,7 +612,7 @@ final class CurriculumTaxonomyController extends Controller
                 'name' => $lesson->name,
                 'slug' => $lesson->slug,
                 'status' => $lesson->status->value,
-                'detach_url' => route('admin.curriculum.subjects.lessons.detach', [$subject, $lesson]),
+                'detach_url' => route(PortalRoute::content('curriculum.subjects.lessons.detach'), [$subject, $lesson]),
             ])
             ->values()
             ->all();
@@ -636,8 +636,8 @@ final class CurriculumTaxonomyController extends Controller
             'subjects_count' => (int) $lesson->subjects_count,
             'organ_systems_count' => (int) $lesson->organ_systems_count,
             'questions_count' => (int) $lesson->questions_count,
-            'update_url' => route('admin.curriculum.lessons.update', $lesson),
-            'destroy_url' => route('admin.curriculum.lessons.destroy', $lesson),
+            'update_url' => route(PortalRoute::content('curriculum.lessons.update'), $lesson),
+            'destroy_url' => route(PortalRoute::content('curriculum.lessons.destroy'), $lesson),
         ];
     }
 
@@ -730,7 +730,7 @@ final class CurriculumTaxonomyController extends Controller
             }
         }
 
-        return redirect()->route('admin.curriculum.index', array_filter([
+        return redirect()->route(PortalRoute::content('curriculum.index'), array_filter([
             'tab' => $tab,
             'focus' => $focus,
             'page' => $page,

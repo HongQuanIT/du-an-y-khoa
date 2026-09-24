@@ -8,8 +8,8 @@
     $publicPath = $page->key?->slug() ?? '';
     $publicUrl = $page->key ? route($page->key->routeName()) : null;
     $listUrl = $isLanding
-        ? route('admin.cms.pages.index', ['group' => 'landing'])
-        : route('admin.cms.pages.index');
+        ? route(\App\Support\Auth\PortalRoute::content('cms.pages.index'), ['group' => 'landing'])
+        : route(\App\Support\Auth\PortalRoute::content('cms.pages.index'));
     $formView = match ($page->key) {
         CmsPageKey::Home => 'admin::cms.pages.forms.home',
         CmsPageKey::Features => 'admin::cms.pages.forms.features',
@@ -43,7 +43,7 @@
     <x-admin.flash />
 
     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.pages.update'))
-<form method="post" action="{{ route('admin.cms.pages.update', $page) }}" class="w-full max-w-4xl space-y-6">
+<form method="post" action="{{ route(\App\Support\Auth\PortalRoute::content('cms.pages.update'), $page) }}" class="w-full max-w-4xl space-y-6">
         @csrf
         @method('PUT')
 

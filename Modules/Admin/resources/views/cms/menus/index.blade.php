@@ -39,7 +39,7 @@
                         <td class="px-4 py-3 text-right whitespace-nowrap">
                             @if ($menu)
                                 @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.menus.edit'))
-<a href="{{ route('admin.cms.menus.edit', $menu) }}"
+<a href="{{ route(\App\Support\Auth\PortalRoute::content('cms.menus.edit'), $menu) }}"
                                     class="font-label-md text-primary hover:underline">Sửa</a>
 @endif
                             @endif

@@ -21,7 +21,7 @@
 
     <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
         @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.blueprints.index'))
-<a href="{{ route('admin.blueprints.index') }}"
+<a href="{{ route(\App\Support\Auth\PortalRoute::content('blueprints.index')) }}"
             class="group rounded-xl border border-outline-variant bg-surface p-5 transition-colors hover:border-primary/40 hover:bg-primary/5">
             <div class="flex items-start gap-4">
                 <span class="flex size-12 items-center justify-center rounded-xl bg-primary-container text-on-primary-container">
@@ -39,7 +39,7 @@
 @endif
 
         @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.curriculum.index'))
-<a href="{{ route('admin.curriculum.index') }}"
+<a href="{{ route(\App\Support\Auth\PortalRoute::content('curriculum.index')) }}"
             class="group rounded-xl border border-outline-variant bg-surface p-5 transition-colors hover:border-primary/40 hover:bg-primary/5">
             <div class="flex items-start gap-4">
                 <span class="flex size-12 items-center justify-center rounded-xl bg-secondary-container text-on-secondary-container">
@@ -57,7 +57,7 @@
 @endif
 
         @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.tags.index'))
-<a href="{{ route('admin.tags.index') }}"
+<a href="{{ route(\App\Support\Auth\PortalRoute::content('tags.index')) }}"
             class="group rounded-xl border border-outline-variant bg-surface p-5 transition-colors hover:border-primary/40 hover:bg-primary/5">
             <div class="flex items-start gap-4">
                 <span class="flex size-12 items-center justify-center rounded-xl bg-tertiary-container text-on-tertiary-container">

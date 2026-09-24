@@ -23,7 +23,7 @@
         :description="$key?->description() ?? 'Chỉnh liên kết điều hướng công khai.'">
         <x-slot:actions>
             @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.menus.index'))
-<a href="{{ route('admin.cms.menus.index') }}"
+<a href="{{ route(\App\Support\Auth\PortalRoute::content('cms.menus.index')) }}"
                 class="inline-flex items-center rounded-lg px-3 py-2 font-label-md text-on-surface-variant hover:bg-surface-container-low">← Danh sách</a>
 @endif
             <a href="{{ route('landing.home') }}" target="_blank" rel="noopener noreferrer"
@@ -37,7 +37,7 @@
     <x-admin.flash />
 
     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.menus.update'))
-<form method="post" action="{{ route('admin.cms.menus.update', $menu) }}" class="w-full max-w-4xl space-y-6"
+<form method="post" action="{{ route(\App\Support\Auth\PortalRoute::content('cms.menus.update'), $menu) }}" class="w-full max-w-4xl space-y-6"
         x-data="menuBuilder(@js($initial), @js($blankLink))">
         @csrf
         @method('PUT')

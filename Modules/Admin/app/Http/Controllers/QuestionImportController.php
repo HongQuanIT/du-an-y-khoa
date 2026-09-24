@@ -6,6 +6,7 @@ namespace Modules\Admin\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\Auth\PortalRoute;
 use App\Support\Enums\Permission;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -35,8 +36,8 @@ final class QuestionImportController extends Controller
             'batch' => null,
             'fields' => QuestionImportSchema::fields(),
             'preview' => null,
-            'templateCsvUrl' => route('admin.questions.import.template', ['format' => 'csv']),
-            'templateXlsxUrl' => route('admin.questions.import.template', ['format' => 'xlsx']),
+            'templateCsvUrl' => route(PortalRoute::content('questions.import.template'), ['format' => 'csv']),
+            'templateXlsxUrl' => route(PortalRoute::content('questions.import.template'), ['format' => 'xlsx']),
         ]);
     }
 
@@ -141,7 +142,7 @@ final class QuestionImportController extends Controller
             'column_map' => QuestionImportSchema::autoMap($parsed['headers']),
         ])->save();
 
-        return redirect()->route('admin.questions.import.show', $batch);
+        return redirect()->route(PortalRoute::content('questions.import.show'), $batch);
     }
 
     public function show(
@@ -177,8 +178,8 @@ final class QuestionImportController extends Controller
             'batch' => $batch->fresh(),
             'fields' => QuestionImportSchema::fields(),
             'preview' => $preview,
-            'templateCsvUrl' => route('admin.questions.import.template', ['format' => 'csv']),
-            'templateXlsxUrl' => route('admin.questions.import.template', ['format' => 'xlsx']),
+            'templateCsvUrl' => route(PortalRoute::content('questions.import.template'), ['format' => 'csv']),
+            'templateXlsxUrl' => route(PortalRoute::content('questions.import.template'), ['format' => 'xlsx']),
         ]);
     }
 
@@ -212,7 +213,7 @@ final class QuestionImportController extends Controller
 
         $previewAction->handle($batch, $map);
 
-        return redirect()->route('admin.questions.import.show', $batch);
+        return redirect()->route(PortalRoute::content('questions.import.show'), $batch);
     }
 
     public function commit(
@@ -237,7 +238,7 @@ final class QuestionImportController extends Controller
         $filename = $batch->original_filename ?: 'tệp đã tải';
 
         return redirect()
-            ->route('admin.questions.import.show', $batch)
+            ->route(PortalRoute::content('questions.import.show'), $batch)
             ->with(
                 'status',
                 sprintf(

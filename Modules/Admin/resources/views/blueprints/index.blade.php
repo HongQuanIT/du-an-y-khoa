@@ -3,7 +3,7 @@
         <x-slot:actions>
             @if ($canCreate)
                 @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.blueprints.create'))
-<a href="{{ route('admin.blueprints.create') }}" class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 font-label-md font-semibold text-on-primary">
+<a href="{{ route(\App\Support\Auth\PortalRoute::content('blueprints.create')) }}" class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 font-label-md font-semibold text-on-primary">
                     <span class="material-symbols-outlined text-[18px]">add</span>
                     Tạo ma trận
                 </a>
@@ -47,7 +47,7 @@
                         </td>
                         <td class="px-4 py-3 text-right">
                             @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.blueprints.edit'))
-<a href="{{ route('admin.blueprints.edit', $blueprint) }}" class="font-semibold text-primary hover:underline">Quản lý</a>
+<a href="{{ route(\App\Support\Auth\PortalRoute::content('blueprints.edit'), $blueprint) }}" class="font-semibold text-primary hover:underline">Quản lý</a>
 @endif
                         </td>
                     </tr>
@@ -57,7 +57,7 @@
                             Chưa có ma trận đề thi.
                             @if ($canCreate)
                                 @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.blueprints.create'))
-<a href="{{ route('admin.blueprints.create') }}" class="ml-1 font-semibold text-primary hover:underline">Tạo ma trận đầu tiên</a>
+<a href="{{ route(\App\Support\Auth\PortalRoute::content('blueprints.create')) }}" class="ml-1 font-semibold text-primary hover:underline">Tạo ma trận đầu tiên</a>
 @endif
                             @endif
                         </td>

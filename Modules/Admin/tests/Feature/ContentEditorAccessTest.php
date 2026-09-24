@@ -10,9 +10,9 @@ use App\Support\Enums\Permission;
 use App\Support\Enums\Role;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Modules\Auth\Models\TwoFactorSecret;
 use Modules\Auth\Services\TotpService;
-use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 final class ContentEditorAccessTest extends TestCase
@@ -59,7 +59,7 @@ final class ContentEditorAccessTest extends TestCase
 
         $this->actingAsStaff($editor)->get(route('editor.dashboard'))->assertOk();
         $this->actingAsStaff($editor)->get(route('admin.dashboard'))->assertForbidden();
-        $this->actingAsStaff($editor)->get(route('admin.questions.index'))->assertRedirect(route('editor.questions.index'));
+        $this->actingAsStaff($editor)->get(route('admin.questions.index'))->assertForbidden();
     }
 
     public function test_content_editor_is_forbidden_on_admin_only_modules(): void
@@ -68,7 +68,7 @@ final class ContentEditorAccessTest extends TestCase
 
         $this->actingAsStaff($editor)->get(route('admin.users.index'))->assertForbidden();
         $this->actingAsStaff($editor)->get(route('admin.settings.index'))->assertForbidden();
-        $this->actingAsStaff($editor)->get(route('admin.taxonomy.index'))->assertRedirect(route('editor.taxonomy.index'));
+        $this->actingAsStaff($editor)->get(route('admin.taxonomy.index'))->assertForbidden();
         $this->actingAsStaff($editor)->get(route('editor.taxonomy.index'))->assertOk();
         $this->actingAsStaff($editor)->get(route('editor.cms.pages.index'))->assertOk();
         $this->actingAsStaff($editor)->get(route('editor.media.index'))->assertOk();

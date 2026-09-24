@@ -6,6 +6,7 @@ namespace Modules\Admin\Http\Controllers\Cms;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\Auth\PortalRoute;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -90,7 +91,7 @@ final class PageController extends Controller
         };
 
         return redirect()
-            ->route('admin.cms.pages.edit', $cmsPage)
+            ->route(PortalRoute::content('cms.pages.edit'), $cmsPage)
             ->with('status', $message);
     }
 

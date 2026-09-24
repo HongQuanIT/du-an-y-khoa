@@ -3,7 +3,7 @@
         <x-slot:actions>
             @if ($canCreate)
                 @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.tags.create'))
-<a href="{{ route('admin.tags.create') }}" class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 font-label-md font-semibold text-on-primary">
+<a href="{{ route(\App\Support\Auth\PortalRoute::content('tags.create')) }}" class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 font-label-md font-semibold text-on-primary">
                     <span class="material-symbols-outlined text-[18px]">add</span>
                     Tạo thẻ
                 </a>
@@ -25,7 +25,7 @@
         </div>
         <button class="inline-flex h-11 items-center justify-center rounded-lg bg-primary px-4 font-label-md font-medium text-on-primary hover:opacity-90">Lọc</button>
         @if ($filters['q'])
-            <a href="{{ route('admin.tags.index') }}" class="inline-flex h-11 items-center justify-center rounded-lg border border-outline-variant px-4 font-label-md text-on-surface-variant hover:bg-surface-container-low">Xóa lọc</a>
+            <a href="{{ route(\App\Support\Auth\PortalRoute::content('tags.index')) }}" class="inline-flex h-11 items-center justify-center rounded-lg border border-outline-variant px-4 font-label-md text-on-surface-variant hover:bg-surface-container-low">Xóa lọc</a>
         @endif
     </form>
 
@@ -56,7 +56,7 @@
                         </td>
                         <td class="px-4 py-3 text-right">
                             @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.tags.edit'))
-<a href="{{ route('admin.tags.edit', $tag) }}" class="inline-flex h-9 items-center rounded-lg border border-outline-variant px-3 font-label-sm font-medium text-on-surface hover:bg-surface-container-low">Sửa</a>
+<a href="{{ route(\App\Support\Auth\PortalRoute::content('tags.edit'), $tag) }}" class="inline-flex h-9 items-center rounded-lg border border-outline-variant px-3 font-label-sm font-medium text-on-surface hover:bg-surface-container-low">Sửa</a>
 @endif
                         </td>
                     </tr>
@@ -66,7 +66,7 @@
                             Chưa có thẻ.
                             @if ($canCreate)
                                 @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.tags.create'))
-<a href="{{ route('admin.tags.create') }}" class="ml-1 font-semibold text-primary hover:underline">Tạo thẻ đầu tiên</a>
+<a href="{{ route(\App\Support\Auth\PortalRoute::content('tags.create')) }}" class="ml-1 font-semibold text-primary hover:underline">Tạo thẻ đầu tiên</a>
 @endif
                             @endif
                         </td>

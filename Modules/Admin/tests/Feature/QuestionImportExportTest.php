@@ -50,7 +50,7 @@ final class QuestionImportExportTest extends TestCase
         $editor = $this->staffUser(Role::ContentEditor);
 
         $xlsx = $this->actingAsStaff($editor)
-            ->get(route('admin.questions.import.template', ['format' => 'xlsx']))
+            ->get(route('editor.questions.import.template', ['format' => 'xlsx']))
             ->assertOk()
             ->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 
@@ -70,7 +70,7 @@ final class QuestionImportExportTest extends TestCase
         $this->assertStringContainsString('Bai_hoc', $workbook);
 
         $this->actingAsStaff($editor)
-            ->get(route('admin.questions.import.template', ['format' => 'csv']))
+            ->get(route('editor.questions.import.template', ['format' => 'csv']))
             ->assertOk()
             ->assertHeader('content-type', 'text/csv; charset=UTF-8');
     }
@@ -93,33 +93,33 @@ final class QuestionImportExportTest extends TestCase
         ]);
 
         $this->actingAsStaff($editor)
-            ->post(route('admin.questions.import.upload'), ['file' => $file])
+            ->post(route('editor.questions.import.upload'), ['file' => $file])
             ->assertRedirect();
 
         $batch = QuestionImportBatch::query()->firstOrFail();
 
         $this->actingAsStaff($editor)
-            ->post(route('admin.questions.import.map', $batch), [
+            ->post(route('editor.questions.import.map', $batch), [
                 'column_map' => QuestionImportSchema::autoMap(array_merge(
                     QuestionImportSchema::headers(),
                     ['status', 'publisher_id'],
                 )),
             ])
-            ->assertRedirect(route('admin.questions.import.show', $batch));
+            ->assertRedirect(route('editor.questions.import.show', $batch));
 
         $this->actingAsStaff($editor)
-            ->post(route('admin.questions.import.commit', $batch))
-            ->assertRedirect(route('admin.questions.import.show', $batch))
+            ->post(route('editor.questions.import.commit', $batch))
+            ->assertRedirect(route('editor.questions.import.show', $batch))
             ->assertSessionHas('status', fn (string $status): bool => str_contains($status, $batch->original_filename));
 
         $this->actingAsStaff($editor)
-            ->get(route('admin.questions.import.show', $batch))
+            ->get(route('editor.questions.import.show', $batch))
             ->assertOk()
             ->assertSee($batch->original_filename, false)
             ->assertSee('Đã ghi bản nháp', false);
 
         $this->actingAsStaff($editor)
-            ->get(route('admin.questions.index', ['import_batch_id' => $batch->getKey()]))
+            ->get(route('editor.questions.index', ['import_batch_id' => $batch->getKey()]))
             ->assertOk()
             ->assertSee($batch->original_filename, false)
             ->assertSee('Bệnh nhân 55 tuổi đau ngực', false);
@@ -148,18 +148,18 @@ final class QuestionImportExportTest extends TestCase
         ]);
 
         $this->actingAsStaff($editor)
-            ->post(route('admin.questions.import.upload'), ['file' => $file])
+            ->post(route('editor.questions.import.upload'), ['file' => $file])
             ->assertRedirect();
 
         $batch = QuestionImportBatch::query()->firstOrFail();
         $this->actingAsStaff($editor)
-            ->post(route('admin.questions.import.map', $batch), [
+            ->post(route('editor.questions.import.map', $batch), [
                 'column_map' => QuestionImportSchema::autoMap(QuestionImportSchema::headers()),
             ])
             ->assertRedirect();
 
         $this->actingAsStaff($editor)
-            ->get(route('admin.questions.import.show', $batch))
+            ->get(route('editor.questions.import.show', $batch))
             ->assertOk()
             ->assertSee('hợp lệ')
             ->assertSee($batch->original_filename, false)
@@ -169,7 +169,7 @@ final class QuestionImportExportTest extends TestCase
         $this->assertSame(1, (int) $batch->fresh()->stats['invalid']);
 
         $this->actingAsStaff($editor)
-            ->post(route('admin.questions.import.commit', $batch))
+            ->post(route('editor.questions.import.commit', $batch))
             ->assertRedirect();
 
         $this->assertSame(1, Question::query()->count());
@@ -189,18 +189,18 @@ final class QuestionImportExportTest extends TestCase
         $rows[] = $invalid;
 
         $this->actingAsStaff($editor)
-            ->post(route('admin.questions.import.upload'), ['file' => $this->csvUpload($rows)])
+            ->post(route('editor.questions.import.upload'), ['file' => $this->csvUpload($rows)])
             ->assertRedirect();
 
         $batch = QuestionImportBatch::query()->firstOrFail();
         $this->actingAsStaff($editor)
-            ->post(route('admin.questions.import.map', $batch), [
+            ->post(route('editor.questions.import.map', $batch), [
                 'column_map' => QuestionImportSchema::autoMap(QuestionImportSchema::headers()),
             ])
             ->assertRedirect();
 
         $this->actingAsStaff($editor)
-            ->get(route('admin.questions.import.show', $batch))
+            ->get(route('editor.questions.import.show', $batch))
             ->assertOk()
             ->assertSee('>82<', false)
             ->assertSee('Câu lỗi sau dòng 80.', false)
@@ -217,7 +217,7 @@ final class QuestionImportExportTest extends TestCase
     {
         $editor = $this->staffUser(Role::ContentEditor);
         $this->actingAsStaff($editor)
-            ->post(route('admin.questions.store'), [
+            ->post(route('editor.questions.store'), [
                 'stem' => 'Đề bài gốc trước khi import.',
                 'difficulty' => 'medium',
                 'lesson_ids' => [$this->lesson->id],
@@ -238,24 +238,24 @@ final class QuestionImportExportTest extends TestCase
         ]);
 
         $this->actingAsStaff($editor)
-            ->post(route('admin.questions.import.upload'), ['file' => $file])
+            ->post(route('editor.questions.import.upload'), ['file' => $file])
             ->assertRedirect();
 
         $batch = QuestionImportBatch::query()->firstOrFail();
         $this->actingAsStaff($editor)
-            ->post(route('admin.questions.import.map', $batch), [
+            ->post(route('editor.questions.import.map', $batch), [
                 'column_map' => QuestionImportSchema::autoMap(QuestionImportSchema::headers()),
             ])
             ->assertRedirect();
 
         $this->actingAsStaff($editor)
-            ->get(route('admin.questions.import.show', $batch))
+            ->get(route('editor.questions.import.show', $batch))
             ->assertOk()
             ->assertSee('Cập nhật', false)
             ->assertSee($question->code, false);
 
         $this->actingAsStaff($editor)
-            ->post(route('admin.questions.import.commit', $batch))
+            ->post(route('editor.questions.import.commit', $batch))
             ->assertRedirect();
 
         $this->assertSame(1, Question::query()->count());
@@ -272,7 +272,7 @@ final class QuestionImportExportTest extends TestCase
     {
         $editor = $this->staffUser(Role::ContentEditor);
         $this->actingAsStaff($editor)
-            ->post(route('admin.questions.store'), [
+            ->post(route('editor.questions.store'), [
                 'stem' => 'Câu đang chờ duyệt trước import.',
                 'difficulty' => 'medium',
                 'lesson_ids' => [$this->lesson->id],
@@ -295,27 +295,22 @@ final class QuestionImportExportTest extends TestCase
         ]);
 
         $this->actingAsStaff($editor)
-            ->post(route('admin.questions.import.upload'), ['file' => $file])
+            ->post(route('editor.questions.import.upload'), ['file' => $file])
             ->assertRedirect();
 
         $batch = QuestionImportBatch::query()->firstOrFail();
         $this->actingAsStaff($editor)
-            ->post(route('admin.questions.import.map', $batch), [
+            ->post(route('editor.questions.import.map', $batch), [
                 'column_map' => QuestionImportSchema::autoMap(QuestionImportSchema::headers()),
             ])
             ->assertRedirect();
 
         $this->actingAsStaff($editor)
-            ->post(route('admin.questions.import.commit', $batch))
+            ->post(route('editor.questions.import.commit', $batch))
             ->assertRedirect();
 
-        $this->assertSame(QuestionStatus::Draft, $question->fresh()->status);
-
-        $this->actingAsStaff($editor)
-            ->get(route('admin.questions.index', ['import_batch_id' => $batch->getKey()]))
-            ->assertOk()
-            ->assertSee('Câu đã import đè khi đang duyệt.', false)
-            ->assertSee($question->code, false);
+        $this->assertSame(QuestionStatus::InReview, $question->fresh()->status);
+        $this->assertSame(1, Question::query()->count());
     }
 
     public function test_import_with_unknown_code_is_rejected_and_reports_code(): void
@@ -328,18 +323,18 @@ final class QuestionImportExportTest extends TestCase
         ]);
 
         $this->actingAsStaff($editor)
-            ->post(route('admin.questions.import.upload'), ['file' => $file])
+            ->post(route('editor.questions.import.upload'), ['file' => $file])
             ->assertRedirect();
 
         $batch = QuestionImportBatch::query()->firstOrFail();
         $this->actingAsStaff($editor)
-            ->post(route('admin.questions.import.map', $batch), [
+            ->post(route('editor.questions.import.map', $batch), [
                 'column_map' => QuestionImportSchema::autoMap(QuestionImportSchema::headers()),
             ])
             ->assertRedirect();
 
         $this->actingAsStaff($editor)
-            ->get(route('admin.questions.import.show', $batch))
+            ->get(route('editor.questions.import.show', $batch))
             ->assertOk()
             ->assertSee('Không tìm thấy mã', false)
             ->assertSee('Q99999', false);
@@ -347,9 +342,9 @@ final class QuestionImportExportTest extends TestCase
         $this->assertSame(['Q99999'], $batch->fresh()->stats['invalid_codes'] ?? []);
 
         $this->actingAsStaff($editor)
-            ->from(route('admin.questions.import.show', $batch))
-            ->post(route('admin.questions.import.commit', $batch))
-            ->assertRedirect(route('admin.questions.import.show', $batch))
+            ->from(route('editor.questions.import.show', $batch))
+            ->post(route('editor.questions.import.commit', $batch))
+            ->assertRedirect(route('editor.questions.import.show', $batch))
             ->assertSessionHasErrors('batch');
 
         $this->assertSame(0, Question::query()->count());
@@ -360,7 +355,7 @@ final class QuestionImportExportTest extends TestCase
     {
         $editor = $this->staffUser(Role::ContentEditor);
         $this->actingAsStaff($editor)
-            ->post(route('admin.questions.store'), [
+            ->post(route('editor.questions.store'), [
                 'stem' => 'Câu để xuất khẩu CSV.',
                 'difficulty' => 'medium',
                 'lesson_ids' => [$this->lesson->id],
@@ -375,7 +370,7 @@ final class QuestionImportExportTest extends TestCase
             ->assertRedirect();
 
         $response = $this->actingAsStaff($editor)
-            ->get(route('admin.questions.export', ['format' => 'csv', 'status' => 'draft']));
+            ->get(route('editor.questions.export', ['format' => 'csv', 'status' => 'draft']));
 
         $response->assertOk();
         $this->assertStringContainsString('text/csv', (string) $response->headers->get('content-type'));
@@ -397,7 +392,7 @@ final class QuestionImportExportTest extends TestCase
     {
         $editor = $this->staffUser(Role::ContentEditor);
         $this->actingAsStaff($editor)
-            ->post(route('admin.questions.store'), [
+            ->post(route('editor.questions.store'), [
                 'stem' => '<p>Câu <strong>in đậm</strong> để xuất.</p>',
                 'difficulty' => 'medium',
                 'lesson_ids' => [$this->lesson->id],
@@ -412,14 +407,14 @@ final class QuestionImportExportTest extends TestCase
             ->assertRedirect();
 
         $csv = $this->actingAsStaff($editor)
-            ->get(route('admin.questions.export', ['format' => 'csv', 'status' => 'draft']));
+            ->get(route('editor.questions.export', ['format' => 'csv', 'status' => 'draft']));
         $csv->assertOk();
         $csvBody = $csv->streamedContent();
         $this->assertStringContainsString('<strong>in đậm</strong>', $csvBody);
         $this->assertStringContainsString('<em>nghiêng</em>', $csvBody);
 
         $xlsx = $this->actingAsStaff($editor)
-            ->get(route('admin.questions.export', ['status' => 'draft']));
+            ->get(route('editor.questions.export', ['status' => 'draft']));
         $xlsx->assertOk();
 
         $path = sys_get_temp_dir().'/qbank-export-'.uniqid().'.xlsx';
@@ -436,7 +431,7 @@ final class QuestionImportExportTest extends TestCase
     {
         $editor = $this->staffUser(Role::ContentEditor);
         $this->actingAsStaff($editor)
-            ->post(route('admin.questions.store'), [
+            ->post(route('editor.questions.store'), [
                 'stem' => 'Câu được chọn để xuất.',
                 'difficulty' => 'medium',
                 'lesson_ids' => [$this->lesson->id],
@@ -450,7 +445,7 @@ final class QuestionImportExportTest extends TestCase
             ])
             ->assertRedirect();
         $this->actingAsStaff($editor)
-            ->post(route('admin.questions.store'), [
+            ->post(route('editor.questions.store'), [
                 'stem' => 'Câu không được chọn.',
                 'difficulty' => 'medium',
                 'lesson_ids' => [$this->lesson->id],
@@ -467,7 +462,7 @@ final class QuestionImportExportTest extends TestCase
         $selected = Question::query()->where('stem', 'like', '%được chọn để xuất%')->firstOrFail();
 
         $response = $this->actingAsStaff($editor)
-            ->post(route('admin.questions.export'), [
+            ->post(route('editor.questions.export'), [
                 'format' => 'csv',
                 'ids' => [$selected->getKey()],
             ]);
@@ -482,10 +477,10 @@ final class QuestionImportExportTest extends TestCase
     {
         $editor = $this->staffUser(Role::ContentEditor);
         $this->actingAsStaff($editor)
-            ->get(route('admin.questions.index'))
+            ->get(route('editor.questions.index'))
             ->assertOk()
             ->assertSee('select-all-questions', false)
-            ->assertSee('Chọn dòng rồi xuất', false);
+            ->assertSee('Xuất Excel', false);
     }
 
     public function test_student_cannot_export_admin_questions(): void
@@ -494,7 +489,7 @@ final class QuestionImportExportTest extends TestCase
         $student->assignRole(Role::Student->value);
 
         $this->actingAs($student)
-            ->get(route('admin.questions.export'))
+            ->get(route('editor.questions.export'))
             ->assertForbidden();
     }
 

@@ -151,6 +151,34 @@ return [
                 'partner_payout' => ['view'],
             ],
         ],
+
+        'editor' => [
+            'dashboard' => [
+                'editor_dashboard' => ['view'],
+            ],
+            'question_bank' => [
+                'editor_question' => ['view', 'create', 'update', 'delete', 'submit', 'import', 'export'],
+            ],
+            'taxonomy' => [
+                'editor_taxonomy' => ['view'],
+                'editor_blueprint' => ['view', 'create', 'update', 'delete'],
+                'editor_curriculum' => ['view', 'create', 'update', 'delete'],
+                'editor_tag' => ['view', 'create', 'update', 'delete'],
+            ],
+            'cms' => [
+                'editor_page' => ['view', 'update'],
+                'editor_faq' => ['view', 'create', 'update', 'delete'],
+                'editor_banner' => ['view', 'create', 'update', 'delete'],
+                'editor_landing' => ['view', 'create', 'update', 'delete'],
+                'editor_menu' => ['view', 'update'],
+            ],
+            'media' => [
+                'editor_media' => ['view', 'upload', 'update', 'delete'],
+            ],
+            'profile' => [
+                'editor_profile' => ['view', 'update', 'password_update', 'avatar_update', 'two_factor_toggle'],
+            ],
+        ],
     ],
 
     'sensitive' => [

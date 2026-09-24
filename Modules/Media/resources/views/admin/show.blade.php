@@ -11,7 +11,7 @@
         description="Thông tin mô tả, các biến thể trên máy chủ và nơi đang sử dụng.">
         <x-slot:actions>
             @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.media.index'))
-<a href="{{ route('admin.media.index') }}"
+<a href="{{ route(\App\Support\Auth\PortalRoute::content('media.index')) }}"
                 class="inline-flex items-center rounded-lg px-3 py-2 font-label-md text-on-surface-variant hover:bg-surface-container-low">← Thư viện</a>
 @endif
         </x-slot:actions>
@@ -80,7 +80,7 @@
 
             @if ($canManage)
                 @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.media.update'))
-<form method="post" action="{{ route('admin.media.update', $media) }}" class="overflow-hidden rounded-xl border border-outline-variant bg-surface">
+<form method="post" action="{{ route(\App\Support\Auth\PortalRoute::content('media.update'), $media) }}" class="overflow-hidden rounded-xl border border-outline-variant bg-surface">
                     @csrf
                     @method('PUT')
                     <div class="border-b border-outline-variant px-5 py-4">
@@ -141,7 +141,7 @@
 
                     @if ($canManage)
                         @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.media.destroy'))
-<form method="post" action="{{ route('admin.media.destroy', $media) }}" class="mt-4"
+<form method="post" action="{{ route(\App\Support\Auth\PortalRoute::content('media.destroy'), $media) }}" class="mt-4"
                             onsubmit="return confirm('Xóa tệp nội dung này? Tệp trên máy chủ sẽ bị gỡ.')">
                             @csrf
                             @method('DELETE')

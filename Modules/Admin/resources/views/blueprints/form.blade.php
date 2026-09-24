@@ -4,7 +4,7 @@
         :description="$isNew ? 'Tạo ma trận mới, sau đó thêm các phần, chủ đề lâm sàng và map sang bài học.' : 'Chỉnh metadata, phần, chủ đề lâm sàng. Map CCT ↔ bài học để câu hỏi (đã gắn bài học) tự khớp ma trận — không gắn câu hỏi trực tiếp.'">
         <x-slot:actions>
             @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.blueprints.index'))
-<a href="{{ route('admin.blueprints.index') }}" class="rounded-lg border border-outline-variant px-4 py-2 text-sm font-semibold text-on-surface-variant hover:bg-surface-container-low">← Danh sách</a>
+<a href="{{ route(\App\Support\Auth\PortalRoute::content('blueprints.index')) }}" class="rounded-lg border border-outline-variant px-4 py-2 text-sm font-semibold text-on-surface-variant hover:bg-surface-container-low">← Danh sách</a>
 @endif
         </x-slot:actions>
     </x-admin.page-header>
@@ -15,7 +15,7 @@
 
     <x-admin.flash />
 
-    <form method="post" action="{{ $isNew ? route('admin.blueprints.store') : route('admin.blueprints.update', $blueprint) }}" class="w-full">
+    <form method="post" action="{{ $isNew ? route(\App\Support\Auth\PortalRoute::content('blueprints.store')) : route(\App\Support\Auth\PortalRoute::content('blueprints.update'), $blueprint) }}" class="w-full">
         @csrf @unless($isNew) @method('PUT') @endunless
         <section class="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm" aria-labelledby="blueprint-information-heading">
             <div class="flex items-start gap-3 border-b border-outline-variant px-5 py-4">
@@ -102,7 +102,7 @@
             class="mt-8 overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm"
             aria-labelledby="blueprint-weights-heading"
             x-data="blueprintWeightMatrix({
-                saveUrl: @js(route('admin.blueprints.weights.update', $blueprint)),
+                saveUrl: @js(route(\App\Support\Auth\PortalRoute::content('blueprints.weights.update'), $blueprint)),
                 csrfToken: @js(csrf_token()),
                 canUpdate: @js((bool) $canUpdate),
                 totalQuestions: @js($blueprint->total_questions),
@@ -397,7 +397,7 @@
                                     @click="openConfirm({
                                         title: 'Xóa phần này?',
                                         message: @js('Phần «'.$section->name.'» và '.$section->coreClinicalTopics->count().' chủ đề lâm sàng bên trong sẽ bị xóa vĩnh viễn. Liên kết bài học và tag cũng bị gỡ.'),
-                                        action: @js(route('admin.blueprint-sections.destroy', $section)),
+                                        action: @js(route(\App\Support\Auth\PortalRoute::content('blueprint-sections.destroy'), $section)),
                                         label: 'Xóa phần',
                                     })"
                                 >
@@ -424,9 +424,9 @@
                             <li
                                 class="rounded-lg border border-outline-variant/60 p-3"
                                 x-data="blueprintTopicLinkMapper({
-                                    lessonLookupUrl: @js(route('admin.taxonomy.lookups.lessons')),
-                                    tagLookupUrl: @js(route('admin.taxonomy.lookups.tags')),
-                                    syncUrl: @js(route('admin.core-clinical-topics.medical-nodes.sync', $topic)),
+                                    lessonLookupUrl: @js(route(\App\Support\Auth\PortalRoute::content('taxonomy.lookups.lessons'))),
+                                    tagLookupUrl: @js(route(\App\Support\Auth\PortalRoute::content('taxonomy.lookups.tags'))),
+                                    syncUrl: @js(route(\App\Support\Auth\PortalRoute::content('core-clinical-topics.medical-nodes.sync'), $topic)),
                                     csrfToken: @js(csrf_token()),
                                     canUpdate: @js((bool) $canUpdate),
                                     initialLessons: @js(collect($topicLessons)->keyBy('id')->all()),
@@ -458,7 +458,7 @@
                                                 @click="$dispatch('blueprint-confirm', {
                                                     title: 'Xóa chủ đề lâm sàng?',
                                                     message: @js('Chủ đề «'.$topic->name.'» sẽ bị xóa vĩnh viễn. Liên kết bài học và tag của chủ đề này cũng bị gỡ.'),
-                                                    action: @js(route('admin.core-clinical-topics.destroy', $topic)),
+                                                    action: @js(route(\App\Support\Auth\PortalRoute::content('core-clinical-topics.destroy'), $topic)),
                                                     label: 'Xóa chủ đề',
                                                 })"
                                             >
@@ -650,7 +650,7 @@
 
                     @if ($canUpdate)
                         @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.blueprint-sections.core-topics.store'))
-<form method="post" action="{{ route('admin.blueprint-sections.core-topics.store', $section) }}" class="flex flex-wrap gap-2">
+<form method="post" action="{{ route(\App\Support\Auth\PortalRoute::content('blueprint-sections.core-topics.store'), $section) }}" class="flex flex-wrap gap-2">
                             @csrf
                             <input name="name" placeholder="Tên chủ đề lâm sàng" required class="min-w-[200px] flex-1 rounded-lg bg-surface-container-low px-3 py-2 text-sm">
                             <input type="number" name="sort_order" min="0" value="0" class="w-20 rounded-lg bg-surface-container-low px-2 py-2 text-sm" title="Thứ tự">
@@ -663,7 +663,7 @@
 
             @if ($canUpdate)
                 @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.blueprints.sections.store'))
-<form method="post" action="{{ route('admin.blueprints.sections.store', $blueprint) }}" class="flex flex-wrap gap-2 rounded-xl border border-dashed border-outline-variant p-4">
+<form method="post" action="{{ route(\App\Support\Auth\PortalRoute::content('blueprints.sections.store'), $blueprint) }}" class="flex flex-wrap gap-2 rounded-xl border border-dashed border-outline-variant p-4">
                     @csrf
                     <input name="name" placeholder="Tên phần mới" required class="min-w-[200px] flex-1 rounded-lg bg-surface-container-low px-3 py-2">
                     <input type="number" name="sort_order" min="0" value="0" class="w-20 rounded-lg bg-surface-container-low px-2 py-2" title="Thứ tự">

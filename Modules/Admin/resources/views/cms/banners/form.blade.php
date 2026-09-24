@@ -10,7 +10,7 @@
         :description="$isNew ? 'Tạo thông báo / khuyến mãi hiển thị trên landing hoặc dashboard.' : 'Cập nhật banner #'.$banner->id">
         <x-slot:actions>
             @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.banners.index'))
-<a href="{{ route('admin.cms.banners.index') }}"
+<a href="{{ route(\App\Support\Auth\PortalRoute::content('cms.banners.index')) }}"
                 class="rounded-lg px-3 py-2 font-label-md text-on-surface-variant hover:bg-surface-container-low">← Danh sách</a>
 @endif
         </x-slot:actions>
@@ -19,7 +19,7 @@
     <x-admin.flash />
 
     <form method="post"
-        action="{{ $isNew ? route('admin.cms.banners.store') : route('admin.cms.banners.update', $banner) }}"
+        action="{{ $isNew ? route(\App\Support\Auth\PortalRoute::content('cms.banners.store')) : route(\App\Support\Auth\PortalRoute::content('cms.banners.update'), $banner) }}"
         class="max-w-3xl space-y-6">
         @csrf
         @unless ($isNew)
@@ -162,7 +162,7 @@
 
     @unless ($isNew)
         @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.banners.destroy'))
-<form method="post" action="{{ route('admin.cms.banners.destroy', $banner) }}" class="mt-4 max-w-3xl"
+<form method="post" action="{{ route(\App\Support\Auth\PortalRoute::content('cms.banners.destroy'), $banner) }}" class="mt-4 max-w-3xl"
             onsubmit="return confirm('Xóa banner này?')">
             @csrf
             @method('DELETE')

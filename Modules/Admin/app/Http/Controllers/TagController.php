@@ -6,6 +6,7 @@ namespace Modules\Admin\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\Auth\PortalRoute;
 use App\Support\Enums\Permission;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -51,7 +52,7 @@ final class TagController extends Controller
         $this->authorizePermission('tag.create');
         $tag = Tag::query()->create($this->validated($request));
 
-        return redirect()->route('admin.tags.edit', $tag)->with('status', 'Đã tạo tag.');
+        return redirect()->route(PortalRoute::content('tags.edit'), $tag)->with('status', 'Đã tạo tag.');
     }
 
     public function edit(Tag $tag): View
@@ -81,7 +82,7 @@ final class TagController extends Controller
 
         $tag->delete();
 
-        return redirect()->route('admin.tags.index')->with('status', 'Đã xóa tag.');
+        return redirect()->route(PortalRoute::content('tags.index'))->with('status', 'Đã xóa tag.');
     }
 
     /** @return array<string, mixed> */
