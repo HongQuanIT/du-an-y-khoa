@@ -40,14 +40,15 @@ final class AdminMediaLibraryTest extends TestCase
         $editor = $this->staffUser(Role::ContentEditor);
 
         $this->actingAsStaff($editor)
-            ->get(route('admin.media.index'))
+            ->get(route('editor.media.index'))
             ->assertOk()
-            ->assertSee('Media');
+            ->assertSee('Media')
+            ->assertSee('Ảnh hoặc video lưu trên máy chủ hay qua đường dẫn CDN');
 
         $file = UploadedFile::fake()->image('hero.jpg', 640, 480);
 
         $this->actingAsStaff($editor)
-            ->postJson(route('admin.media.store'), [
+            ->postJson(route('editor.media.store'), [
                 'file' => $file,
                 'alt' => 'Hero landing',
             ])
@@ -62,7 +63,7 @@ final class AdminMediaLibraryTest extends TestCase
         Storage::disk('public')->assertExists($media->path);
 
         $this->actingAsStaff($editor)
-            ->get(route('admin.media.items'))
+            ->get(route('editor.media.items'))
             ->assertOk()
             ->assertJsonPath('data.0.id', $media->id);
     }
@@ -79,7 +80,7 @@ final class AdminMediaLibraryTest extends TestCase
         $content['hero']['image_url'] = $media->publicUrl() ?? $content['hero']['image_url'];
 
         $this->actingAsStaff($editor)
-            ->put(route('admin.cms.pages.update', $page), [
+            ->put(route('editor.cms.pages.update', $page), [
                 'title' => $page->title,
                 'content' => $content,
                 'action' => 'save',
@@ -92,8 +93,8 @@ final class AdminMediaLibraryTest extends TestCase
         ]);
 
         $this->actingAsStaff($editor)
-            ->delete(route('admin.media.destroy', $media))
-            ->assertRedirect(route('admin.media.show', $media));
+            ->delete(route('editor.media.destroy', $media))
+            ->assertRedirect(route('editor.media.show', $media));
 
         $this->assertDatabaseHas('media', ['id' => $media->id, 'deleted_at' => null]);
     }
@@ -106,6 +107,10 @@ final class AdminMediaLibraryTest extends TestCase
         $this->actingAs($student)
             ->get(route('admin.media.index'))
             ->assertForbidden();
+
+        $this->actingAs($student)
+            ->get(route('editor.media.index'))
+            ->assertForbidden();
     }
 
     public function test_update_metadata_requires_alt(): void
@@ -114,19 +119,19 @@ final class AdminMediaLibraryTest extends TestCase
         $media = Media::factory()->create(['alt' => 'Cũ']);
 
         $this->actingAsStaff($editor)
-            ->put(route('admin.media.update', $media), [
+            ->put(route('editor.media.update', $media), [
                 'alt' => '',
                 'caption' => 'Chú thích',
             ])
             ->assertSessionHasErrors('alt');
 
         $this->actingAsStaff($editor)
-            ->put(route('admin.media.update', $media), [
+            ->put(route('editor.media.update', $media), [
                 'alt' => 'Ảnh hero trang chủ',
                 'caption' => 'Landing',
                 'credit' => 'Nội bộ',
             ])
-            ->assertRedirect(route('admin.media.show', $media));
+            ->assertRedirect(route('editor.media.show', $media));
 
         $this->assertDatabaseHas('media', [
             'id' => $media->id,
@@ -141,7 +146,7 @@ final class AdminMediaLibraryTest extends TestCase
         $url = 'https://cdn.example.com/landing/hero.webp';
 
         $this->actingAsStaff($editor)
-            ->postJson(route('admin.media.from-url'), [
+            ->postJson(route('editor.media.from-url'), [
                 'url' => $url,
                 'alt' => 'Hero CDN',
             ])
@@ -157,7 +162,7 @@ final class AdminMediaLibraryTest extends TestCase
         ]);
 
         $this->actingAsStaff($editor)
-            ->postJson(route('admin.media.from-url'), [
+            ->postJson(route('editor.media.from-url'), [
                 'url' => $url,
                 'alt' => 'Hero CDN lần 2',
             ])
@@ -171,7 +176,7 @@ final class AdminMediaLibraryTest extends TestCase
         $editor = $this->staffUser(Role::ContentEditor);
 
         $this->actingAsStaff($editor)
-            ->postJson(route('admin.media.from-url'), [
+            ->postJson(route('editor.media.from-url'), [
                 'url' => 'http://127.0.0.1/secret.png',
                 'import' => true,
             ])
@@ -191,7 +196,7 @@ final class AdminMediaLibraryTest extends TestCase
         ]);
 
         $this->actingAsStaff($editor)
-            ->postJson(route('admin.media.from-url'), [
+            ->postJson(route('editor.media.from-url'), [
                 'url' => $url,
                 'alt' => 'Ảnh import',
                 'import' => true,

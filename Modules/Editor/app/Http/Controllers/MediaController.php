@@ -6,6 +6,7 @@ namespace Modules\Editor\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\Auth\PortalRoute;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -46,7 +47,7 @@ final class MediaController extends Controller
             $query->where('status', (string) $status);
         }
 
-        return view('editor::media.index', [
+        return view('media::admin.index', [
             'items' => $query->paginate(36)->withQueryString(),
             'stats' => [
                 'total' => Media::query()->count(),
@@ -55,7 +56,12 @@ final class MediaController extends Controller
             ],
             'types' => MediaType::cases(),
             'statuses' => MediaStatus::cases(),
-            'filters' => ['q' => $search, 'type' => $request->query('type'), 'status' => $request->query('status')],
+            'filters' => [
+                'q' => $search,
+                'type' => $request->query('type'),
+                'status' => $request->query('status'),
+            ],
+            'canManage' => $this->actor()->canAny(['media.upload', 'media.update', 'media.delete']),
         ]);
     }
 
@@ -82,7 +88,11 @@ final class MediaController extends Controller
 
         return response()->json([
             'data' => $items->getCollection()->map(fn (Media $media): array => $media->toPickerArray())->values(),
-            'meta' => ['current_page' => $items->currentPage(), 'last_page' => $items->lastPage(), 'total' => $items->total()],
+            'meta' => [
+                'current_page' => $items->currentPage(),
+                'last_page' => $items->lastPage(),
+                'total' => $items->total(),
+            ],
         ]);
     }
 
@@ -94,7 +104,7 @@ final class MediaController extends Controller
 
         return $request->expectsJson()
             ? response()->json(['data' => $media->toPickerArray()], 201)
-            : redirect()->route('editor.media.show', $media)->with('status', 'Đã tải lên media.');
+            : redirect()->route(PortalRoute::content('media.show'), $media)->with('status', 'Đã tải lên media.');
     }
 
     public function storeFromUrl(RegisterExternalMediaRequest $request, RegisterExternalMediaAction $register): JsonResponse|RedirectResponse
@@ -114,7 +124,7 @@ final class MediaController extends Controller
 
         return $request->expectsJson()
             ? response()->json(['data' => $media->toPickerArray()], 201)
-            : redirect()->route('editor.media.show', $media)->with('status', $request->boolean('import')
+            : redirect()->route(PortalRoute::content('media.show'), $media)->with('status', $request->boolean('import')
                 ? 'Đã tải ảnh từ URL về máy chủ.'
                 : 'Đã thêm ảnh CDN / URL ngoài vào thư viện.');
     }
@@ -123,14 +133,19 @@ final class MediaController extends Controller
     {
         $media->load(['usages.usable', 'jobs', 'uploader']);
 
-        return view('editor::media.show', ['media' => $media]);
+        return view('media::admin.show', [
+            'media' => $media,
+            'canManage' => $this->actor()->canAny(['media.update', 'media.delete']),
+        ]);
     }
 
     public function update(UpdateMediaRequest $request, Media $media, UpdateMediaMetadataAction $update): RedirectResponse
     {
         $update->handle($this->actor(), $media, $request->validated());
 
-        return redirect()->route('editor.media.show', $media)->with('status', 'Đã cập nhật metadata.');
+        return redirect()
+            ->route(PortalRoute::content('media.show'), $media)
+            ->with('status', 'Đã cập nhật metadata.');
     }
 
     public function destroy(Media $media, DeleteMediaAction $delete): RedirectResponse
@@ -138,10 +153,14 @@ final class MediaController extends Controller
         try {
             $delete->handle($this->actor(), $media);
         } catch (RuntimeException $exception) {
-            return redirect()->route('editor.media.show', $media)->with('status', $exception->getMessage());
+            return redirect()
+                ->route(PortalRoute::content('media.show'), $media)
+                ->with('status', $exception->getMessage());
         }
 
-        return redirect()->route('editor.media.index')->with('status', 'Đã xóa media.');
+        return redirect()
+            ->route(PortalRoute::content('media.index'))
+            ->with('status', 'Đã xóa media.');
     }
 
     private function actor(): User
