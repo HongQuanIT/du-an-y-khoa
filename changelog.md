@@ -2,6 +2,11 @@
 
 ## 2026-09-24
 
+### Fix — Nhãn quyền Editor và tab Phân loại theo portal
+
+- Thêm nhãn tiếng Việt cho resource `editor_*` (câu hỏi, ma trận, danh mục, tag, media…).
+- Tab Phân loại dùng `PortalRoute::content` để không nhảy sang `/admin` khi đang ở Editor.
+
 ### Refactor — Gộp quyền CMS Editor thành `cms.*` như Admin
 
 - Catalog Editor dùng chung `cms.view|create|update|delete`; migration remap và xóa `editor_page/faq/banner/landing/menu`.
