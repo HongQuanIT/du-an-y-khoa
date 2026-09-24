@@ -1,18 +1,20 @@
 <x-layouts.editor title="Tổng quan">
     <x-admin.page-header title="Bảng điều khiển biên tập" description="Theo dõi tiến độ soạn, duyệt và xuất bản câu hỏi của bạn.">
         <x-slot:actions>
-            @can('editor_question.create')
+            @if (\App\Support\Auth\PortalRouteAccess::allows(auth()->user(), 'admin.questions.create'))
                 <a href="{{ route('editor.questions.create') }}" class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 font-label-md text-label-md text-on-primary transition hover:opacity-90"><span class="material-symbols-outlined text-[18px]">add</span>Tạo câu hỏi mới</a>
-            @endcan
+            @endif
             <span class="inline-flex items-center gap-1.5 rounded-full border border-outline-variant bg-surface px-3 py-1.5 font-label-sm text-label-sm text-on-surface-variant"><span class="material-symbols-outlined text-[16px]">update</span>Cập nhật {{ $refreshed_at->format('H:i d/m/Y') }}</span>
         </x-slot:actions>
     </x-admin.page-header>
 
+    @can('editor_question.view')
     <div class="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         @foreach ($kpis as $kpi)
             <x-admin.kpi-card :label="$kpi['label']" :value="number_format($kpi['value'])" :hint="$kpi['hint']" :icon="$kpi['icon']" :severity="$kpi['severity']" />
         @endforeach
     </div>
+    @endcan
 
     <section class="mb-8 rounded-xl border border-outline-variant bg-surface p-5" aria-labelledby="editor-quick-actions-heading">
         <header class="mb-4">
@@ -20,21 +22,22 @@
             <p class="mt-0.5 font-body-sm text-body-sm text-on-surface-variant">Mở nhanh các công việc biên tập thường dùng.</p>
         </header>
         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            @can('editor_question.create')
+            @if (\App\Support\Auth\PortalRouteAccess::allows(auth()->user(), 'admin.questions.create'))
                 <a href="{{ route('editor.questions.create') }}" class="inline-flex items-center gap-3 rounded-lg border border-outline-variant px-4 py-3 font-label-md text-label-md text-on-surface transition hover:border-primary hover:text-primary"><span class="material-symbols-outlined text-primary">add_circle</span>Tạo câu hỏi mới</a>
-            @endcan
-            @can('editor_question.import')
+            @endif
+            @if (\App\Support\Auth\PortalRouteAccess::allows(auth()->user(), 'admin.questions.import'))
                 <a href="{{ route('editor.questions.import') }}" class="inline-flex items-center gap-3 rounded-lg border border-outline-variant px-4 py-3 font-label-md text-label-md text-on-surface transition hover:border-primary hover:text-primary"><span class="material-symbols-outlined text-primary">upload_file</span>Import câu hỏi</a>
-            @endcan
-            @can('editor_question.export')
+            @endif
+            @if (\App\Support\Auth\PortalRouteAccess::allows(auth()->user(), 'admin.questions.export'))
                 <a href="{{ route('editor.questions.export') }}" class="inline-flex items-center gap-3 rounded-lg border border-outline-variant px-4 py-3 font-label-md text-label-md text-on-surface transition hover:border-primary hover:text-primary"><span class="material-symbols-outlined text-primary">download</span>Export câu hỏi</a>
-            @endcan
+            @endif
             @can('editor_taxonomy.view')
                 <a href="{{ route('editor.taxonomy.index') }}" class="inline-flex items-center gap-3 rounded-lg border border-outline-variant px-4 py-3 font-label-md text-label-md text-on-surface transition hover:border-primary hover:text-primary"><span class="material-symbols-outlined text-primary">account_tree</span>Phân loại kiến thức</a>
             @endcan
         </div>
     </section>
 
+    @can('editor_question.view')
     <div class="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2" data-admin-dashboard-charts data-charts='@json($charts)'>
         @foreach ($charts as $chart)
             <x-admin.trend-chart :id="$chart['id']" :title="$chart['title']" :subtitle="$chart['subtitle']" />
@@ -71,6 +74,7 @@
             @endif
         </section>
     </div>
+    @endcan
 
     @push('scripts')
         @vite('resources/js/admin/dashboard-charts.js')

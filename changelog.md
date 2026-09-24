@@ -2,6 +2,12 @@
 
 ## 2026-09-24
 
+### Feat — Hoàn thiện profile và phân quyền portal Editor
+
+- Thêm profile riêng cho Editor với hồ sơ, avatar, giao diện, đổi mật khẩu và 2FA trong `/editor`.
+- Tách menu, Media controller/support và middleware kiểm quyền view cho portal Editor; layout Editor dùng route profile riêng.
+- Chuẩn hóa helper quyền route dùng chung để UI Admin/Editor ẩn hiện theo permission đúng hơn.
+
 ### Refactor — Tách quyền và route nội dung cho Editor
 
 - Tách bộ permission `editor_*` khỏi permission Admin, đồng bộ role Content Editor và migrate người dùng từ role `nguoi_nhap_lieu`.

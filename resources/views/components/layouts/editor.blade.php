@@ -1,21 +1,14 @@
 @props(['title' => null])
 
 @php
-    $navItems = [
-        ['label' => 'Tổng quan', 'icon' => 'dashboard', 'route' => 'editor.dashboard', 'match' => 'editor.dashboard', 'permission' => 'editor_dashboard.view'],
-        ['label' => 'Câu hỏi của tôi', 'icon' => 'quiz', 'route' => 'editor.questions.index', 'match' => 'editor.questions.*', 'permission' => 'editor_question.view'],
-        ['label' => 'Phân loại', 'icon' => 'category', 'route' => 'editor.taxonomy.index', 'match' => 'editor.taxonomy.*', 'permission' => 'editor_taxonomy.view'],
-        ['label' => 'CMS', 'icon' => 'article', 'route' => 'editor.cms.pages.index', 'match' => 'editor.cms.*', 'permission' => 'editor_page.view'],
-        ['label' => 'Media', 'icon' => 'perm_media', 'route' => 'editor.media.index', 'match' => 'editor.media.*', 'permission' => 'editor_media.view'],
-    ];
-    $navItems = array_values(array_filter($navItems, static fn (array $item): bool => ! isset($item['permission']) || auth()->user()?->can($item['permission'] ?? '') === true));
+    $navItems = \Modules\Editor\Support\EditorMenu::for(auth()->user());
 @endphp
 
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="light antialiased">
 <head>
     <meta charset="utf-8">
-    <x-theme-init />
+    <x-theme-init :save-url="route('editor.profile.appearance')" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="robots" content="noindex, nofollow">
@@ -62,11 +55,12 @@
         <div class="relative ml-2" @click.outside="accountMenu = false">
             <button type="button" @click="accountMenu = !accountMenu" class="flex items-center gap-3 rounded-xl p-1.5 text-left hover:bg-surface-container-low" :aria-expanded="accountMenu" aria-haspopup="dialog" aria-label="Mở menu tài khoản">
                 <span class="hidden text-right sm:block"><span class="block font-label-md text-label-md text-on-surface">{{ auth()->user()->name }}</span><span class="block font-label-sm text-label-sm text-on-surface-variant">Biên tập viên</span></span>
-                <span class="flex size-10 items-center justify-center overflow-hidden rounded-full border border-outline-variant bg-primary-container font-bold text-body-md text-on-primary-container">{{ auth()->user()->avatarInitial() }}</span>
+                <span class="flex size-10 items-center justify-center overflow-hidden rounded-full border border-outline-variant bg-primary-container font-bold text-body-md text-on-primary-container">@if (auth()->user()->avatarUrl())<img src="{{ auth()->user()->avatarUrl() }}" alt="{{ auth()->user()->name }}" class="size-full object-cover">@else{{ auth()->user()->avatarInitial() }}@endif</span>
             </button>
-            <section x-show="accountMenu" x-cloak class="absolute top-[calc(100%+0.5rem)] right-0 z-50 w-[min(100vw-2rem,280px)] overflow-hidden rounded-[10px] border border-outline-variant bg-surface shadow-xl" role="dialog" aria-label="Tùy chọn tài khoản">
-                @can('profile.view')<a href="{{ route('profile.show') }}" class="block px-4 py-3 font-label-md text-label-md text-on-surface hover:bg-surface-container-low">Quản lý tài khoản</a>@endcan
-                <form action="{{ route('editor.logout') }}" method="post" class="border-t border-outline-variant p-3">@csrf<button type="submit" class="w-full rounded-lg px-4 py-2.5 font-label-md text-label-md font-bold text-on-surface-variant uppercase hover:bg-surface-container-low">Đăng xuất</button></form>
+            <section x-show="accountMenu" x-cloak x-transition:enter="transition ease-out duration-150" x-transition:enter-start="translate-y-1 opacity-0" x-transition:enter-end="translate-y-0 opacity-100" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="translate-y-0 opacity-100" x-transition:leave-end="translate-y-1 opacity-0" class="fixed top-header-height right-0 z-50 max-h-[calc(100vh-var(--header-height))] w-full overflow-y-auto border-l border-b border-outline-variant bg-surface shadow-xl sm:absolute sm:top-[calc(100%+0.5rem)] sm:w-[320px] sm:rounded-[10px] sm:border" role="dialog" aria-label="Tùy chọn tài khoản">
+                <div class="space-y-3 bg-primary-container/40 p-4"><div><p class="font-title-md text-title-md font-bold text-on-surface">{{ auth()->user()->name }}</p><p class="font-body-md text-body-md text-on-surface-variant">Biên tập viên</p></div>@can('editor_profile.view')<a href="{{ route('editor.profile.show') }}" @click="accountMenu = false" class="block w-full rounded-lg bg-primary px-4 py-2.5 text-center font-label-md text-label-md font-bold text-on-primary transition-opacity hover:opacity-90">Quản lý tài khoản</a>@endcan</div>
+                <div class="p-4"><fieldset><legend class="font-label-md text-label-md font-bold tracking-wide text-on-surface-variant uppercase">Giao diện</legend><div class="mt-2 grid grid-cols-3 overflow-hidden rounded-lg border border-outline-variant"><template x-for="option in [{ value: 'light', label: 'Sáng' }, { value: 'dark', label: 'Tối' }, { value: 'system', label: 'Hệ thống' }]" :key="option.value"><button type="button" @click="setTheme(option.value)" x-text="option.label" class="border-r border-outline-variant px-2 py-2.5 font-label-md text-label-md font-bold last:border-r-0" :class="theme === option.value ? 'bg-primary-container text-on-primary-container' : 'bg-surface text-on-surface-variant'"></button></template></div></fieldset></div>
+                <form action="{{ route('editor.logout') }}" method="post" class="border-t border-outline-variant p-3">@csrf<button type="submit" class="w-full rounded-lg px-4 py-2.5 font-label-md text-label-md font-bold tracking-wide text-on-surface-variant uppercase transition-colors hover:bg-surface-container-low">Đăng xuất</button></form>
             </section>
         </div>
     </header>

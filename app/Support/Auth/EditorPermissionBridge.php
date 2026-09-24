@@ -38,10 +38,6 @@ final class EditorPermissionBridge
         'tag.create' => 'editor_tag.create',
         'tag.update' => 'editor_tag.update',
         'tag.delete' => 'editor_tag.delete',
-        'cms.view' => 'editor_page.view',
-        'cms.create' => 'editor_faq.create',
-        'cms.update' => 'editor_page.update',
-        'cms.delete' => 'editor_faq.delete',
         'media.view' => 'editor_media.view',
         'media.upload' => 'editor_media.upload',
         'media.update' => 'editor_media.update',
@@ -59,8 +55,32 @@ final class EditorPermissionBridge
             return null;
         }
 
-        $editorAbility = self::MAP[$ability] ?? null;
+        $editorAbility = self::cmsAbility($ability) ?? self::MAP[$ability] ?? null;
 
         return $editorAbility === null ? null : $user->hasPermissionTo($editorAbility);
+    }
+
+    private static function cmsAbility(string $ability): ?string
+    {
+        $action = match ($ability) {
+            'cms.view' => 'view',
+            'cms.create' => 'create',
+            'cms.update' => 'update',
+            'cms.delete' => 'delete',
+            default => null,
+        };
+
+        if ($action === null || ! request()->routeIs('editor.cms.*')) {
+            return null;
+        }
+
+        $resource = match (true) {
+            request()->routeIs('editor.cms.faq.*') => ['editor_faq', ['view', 'create', 'update', 'delete']],
+            request()->routeIs('editor.cms.banners.*') => ['editor_banner', ['view', 'create', 'update', 'delete']],
+            request()->routeIs('editor.cms.menus.*') => ['editor_menu', ['view', 'update']],
+            default => ['editor_page', ['view', 'update']],
+        };
+
+        return in_array($action, $resource[1], true) ? $resource[0].'.'.$action : null;
     }
 }

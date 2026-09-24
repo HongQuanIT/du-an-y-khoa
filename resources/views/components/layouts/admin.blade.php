@@ -7,20 +7,13 @@
         || (\App\Support\Auth\PortalAccess::allows(auth()->user(), \App\Support\Enums\PortalGroup::Editor)
             && request()->is('admin/questions*', 'admin/taxonomy*', 'admin/blueprints*', 'admin/blueprint-sections*', 'admin/core-clinical-topics*', 'admin/categories*', 'admin/tags*', 'admin/cms/pages*', 'admin/media*'));
     $navItems = $isEditorPortal
-        ? [
-            ['label' => 'Tổng quan', 'icon' => 'dashboard', 'route' => 'editor.dashboard', 'match' => 'editor.dashboard'],
-            ['label' => 'Câu hỏi của tôi', 'icon' => 'quiz', 'route' => 'editor.questions.index', 'match' => 'editor.questions.*'],
-            ['label' => 'Phân loại', 'icon' => 'category', 'route' => 'editor.taxonomy.index', 'match' => 'editor.taxonomy.*', 'permission' => 'taxonomy.view'],
-            ['label' => 'CMS', 'icon' => 'article', 'route' => 'editor.cms.pages.index', 'match' => 'editor.cms.*', 'permission' => 'cms.view'],
-            ['label' => 'Media', 'icon' => 'perm_media', 'route' => 'editor.media.index', 'match' => 'editor.media.*', 'permission' => 'media.view'],
-        ]
+        ? \Modules\Editor\Support\EditorMenu::for(auth()->user())
         : \Modules\Admin\Support\AdminMenu::for(auth()->user());
     $canSupportInbox = auth()->user()?->can('support_conversation.view')
         && \Illuminate\Support\Facades\Route::has('admin.support.index');
     $supportBadgeCount = $canSupportInbox
         ? \App\Models\SupportConversation::pendingAdminAttentionCountFor(auth()->user())
         : 0;
-    $navItems = array_values(array_filter($navItems, static fn (array $item): bool => ! isset($item['permission']) || auth()->user()?->can($item['permission']) === true));
     $supportPendingIds = $canSupportInbox
         ? \App\Models\SupportConversation::pendingAdminAttentionIdsFor(auth()->user())
         : [];
