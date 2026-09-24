@@ -2,6 +2,12 @@
 
 ## 2026-09-24
 
+### Fix — Chuẩn hóa portal role và quyền cập nhật câu hỏi
+
+- Resolve portal từ Role enum khi lọc/gán user Admin và picker portal–role, tránh lệch metadata Spatie.
+- Editor thiếu `editor_question.update` chỉ xem chi tiết câu hỏi (ẩn form/nút Sửa); chặn PUT update.
+- Load profile Editor qua query kèm quan hệ; bổ sung test lọc portal Editor và UI quyền update.
+
 ### Feat — Hoàn thiện profile và phân quyền portal Editor
 
 - Thêm profile riêng cho Editor với hồ sơ, avatar, giao diện, đổi mật khẩu và 2FA trong `/editor`.

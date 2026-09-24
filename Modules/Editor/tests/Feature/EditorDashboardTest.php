@@ -126,6 +126,36 @@ final class EditorDashboardTest extends TestCase
             ->assertOk();
     }
 
+    public function test_editor_update_permission_hides_edit_ui_and_blocks_update(): void
+    {
+        $editor = $this->editor('Biên tập viên chỉ xem');
+        $role = $editor->roles()->firstOrFail();
+        $role->revokePermissionTo('editor_question.update');
+        $editor->forgetCachedPermissions();
+        $question = Question::factory()
+            ->for($editor, 'creator')
+            ->create(['code' => 'NO-EDIT-01', 'status' => QuestionStatus::Draft]);
+
+        $this->actingAsEditor($editor)
+            ->get(route('editor.questions.index'))
+            ->assertOk()
+            ->assertSee('NO-EDIT-01')
+            ->assertDontSee('title="Sửa nội dung câu hỏi"', false);
+
+        $this->actingAsEditor($editor)
+            ->get(route('editor.questions.edit', $question))
+            ->assertOk()
+            ->assertSee('Chi tiết câu hỏi')
+            ->assertSee('Nội dung câu hỏi')
+            ->assertDontSee('id="admin-question-editor-form"', false)
+            ->assertDontSee('name="requested_status"', false)
+            ->assertDontSee('Nội dung câu hỏi *');
+
+        $this->actingAsEditor($editor)
+            ->put(route('editor.questions.update', $question), [])
+            ->assertForbidden();
+    }
+
     public function test_editor_action_requires_its_resource_view_permission(): void
     {
         $editor = $this->editor('Biên tập viên không xem media');

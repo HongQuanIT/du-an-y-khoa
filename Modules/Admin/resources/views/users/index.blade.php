@@ -164,7 +164,7 @@
                             $roleModel = $user->roles->first();
                             $roleEnum = \App\Support\Enums\Role::tryFromName($user->primaryRoleName());
                             $rolePortal = $roleModel
-                                ? (\App\Support\Enums\PortalGroup::tryFrom((string) $roleModel->portal) ?? $roleEnum?->portal())
+                                ? ($roleEnum?->portal() ?? \App\Support\Enums\PortalGroup::tryFrom((string) $roleModel->portal))
                                 : null;
                             $roleLabel = $roleModel
                                 ? \Modules\Admin\Support\PermissionCatalog::roleLabel($roleModel)

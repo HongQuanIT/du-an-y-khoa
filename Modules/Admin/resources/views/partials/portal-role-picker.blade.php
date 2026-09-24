@@ -7,6 +7,7 @@
 --}}
 @php
     use App\Support\Enums\PortalGroup;
+    use App\Support\Enums\Role as SystemRole;
     use Modules\Admin\Support\PermissionCatalog;
 
     $assignableRoles = $assignableRoles ?? [];
@@ -17,7 +18,7 @@
     foreach (PortalGroup::cases() as $portal) {
         $roles = array_values(array_filter(
             $assignableRoles,
-            static fn ($role): bool => $role->portal === $portal->value,
+            static fn ($role): bool => (SystemRole::tryFrom($role->name)?->portal()?->value ?? $role->portal) === $portal->value,
         ));
         if ($roles !== []) {
             $portalsWithRoles[] = [
@@ -30,7 +31,10 @@
     $initialPortal = null;
     $initialRole = is_string($selectedRole) ? $selectedRole : '';
     if ($initialRole !== '') {
-        $initialPortal = collect($assignableRoles)->firstWhere('name', $initialRole)?->portal;
+        $initialRoleModel = collect($assignableRoles)->firstWhere('name', $initialRole);
+        $initialPortal = $initialRoleModel === null
+            ? null
+            : (SystemRole::tryFrom($initialRoleModel->name)?->portal()?->value ?? $initialRoleModel->portal);
     }
     if ($initialPortal === null && count($portalsWithRoles) === 1) {
         $initialPortal = $portalsWithRoles[0]['portal']->value;

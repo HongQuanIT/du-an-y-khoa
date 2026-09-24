@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Editor\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Support\Audit\Auditor;
 use App\Support\Audit\Enums\AuditAction;
 use App\Support\Auth\TwoFactorSession;
@@ -29,7 +30,9 @@ final class EditorProfileController extends Controller
     public function show(Request $request): View
     {
         $tab = (string) $request->query('tab', 'profile');
-        $user = $request->user()->loadMissing(['socialAccounts', 'twoFactorSecret']);
+        $user = User::query()
+            ->with(['socialAccounts', 'twoFactorSecret'])
+            ->findOrFail($request->user()->getKey());
 
         return view('editor::profile.show', [
             'tab' => in_array($tab, self::TABS, true) ? $tab : 'profile',
