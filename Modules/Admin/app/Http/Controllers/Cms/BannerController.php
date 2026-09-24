@@ -6,6 +6,7 @@ namespace Modules\Admin\Http\Controllers\Cms;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\Auth\PortalRoute;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -100,7 +101,7 @@ final class BannerController extends Controller
         $banner = $save->handle($this->actor(), $request);
 
         return redirect()
-            ->route('admin.cms.banners.edit', $banner)
+            ->route(PortalRoute::content('cms.banners.edit'), $banner)
             ->with('status', $banner->is_enabled
                 ? 'Banner đã được bật.'
                 : 'Banner đã được lưu (đang tắt).');
@@ -125,7 +126,7 @@ final class BannerController extends Controller
         $save->handle($this->actor(), $request, $banner);
 
         return redirect()
-            ->route('admin.cms.banners.edit', $banner)
+            ->route(PortalRoute::content('cms.banners.edit'), $banner)
             ->with('status', $request->boolean('is_enabled')
                 ? 'Banner đã được cập nhật và bật.'
                 : 'Banner đã được cập nhật (đang tắt).');
@@ -138,7 +139,7 @@ final class BannerController extends Controller
         $delete->handle($this->actor(), $banner);
 
         return redirect()
-            ->route('admin.cms.banners.index')
+            ->route(PortalRoute::content('cms.banners.index'))
             ->with('status', 'Banner đã được xóa.');
     }
 

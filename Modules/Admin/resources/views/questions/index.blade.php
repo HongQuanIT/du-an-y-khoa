@@ -31,7 +31,7 @@
             filteredTotal: {{ (int) $questions->total() }},
             exportLimit: {{ (int) $exportLimit }},
             bulkLimit: {{ (int) ($bulkLimit ?? 20) }},
-            exportUrl: @js(route('admin.questions.export')),
+            exportUrl: @js(route(\App\Support\Auth\PortalRoute::content('questions.export'))),
             bulkUrl: @js(route('admin.questions.bulk-transition')),
             csrf: @js(csrf_token()),
             exportQuery: @js(request()->except(['page'])),
@@ -58,7 +58,7 @@
                 @endif
                 @if ($canCreate)
                     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.import'))
-<a href="{{ route('admin.questions.import') }}" id="btn-import-questions"
+<a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.import')) }}" id="btn-import-questions"
                         class="inline-flex items-center gap-2 rounded-xl border border-outline-variant bg-surface px-4 py-2.5 font-label-md font-semibold text-on-surface shadow-sm transition-colors hover:bg-surface-container-low">
                         <span class="material-symbols-outlined text-[20px]" aria-hidden="true">upload</span>
                         Import
@@ -80,7 +80,7 @@
 @endif
                 @if ($canCreate)
                     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.create'))
-<a href="{{ route('admin.questions.create') }}" id="btn-create-question"
+<a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.create')) }}" id="btn-create-question"
                         class="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 font-label-md font-semibold text-on-primary shadow-sm transition-all hover:bg-primary/90 hover:shadow">
                         <span class="material-symbols-outlined text-[20px]" aria-hidden="true">add</span>
                         Tạo câu hỏi mới
@@ -192,7 +192,7 @@
                 </div>
 
                 @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.index'))
-<a href="{{ route('admin.questions.index', ['status' => ['in_review', 'in_flag_review']]) }}" id="stats-pending-review-link"
+<a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.index'), ['status' => ['in_review', 'in_flag_review']]) }}" id="stats-pending-review-link"
                     class="rounded-xl border border-outline-variant bg-surface p-4 transition-colors hover:bg-surface-container-low"
                     aria-label="Xem các câu hỏi chờ duyệt: {{ number_format($stats['pending']) }} câu">
                     <div class="flex items-center gap-3">
@@ -246,7 +246,7 @@
             <h2 id="heading-filters" class="sr-only">Tìm kiếm câu hỏi</h2>
             @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.index'))
             <div>
-<form method="get" action="{{ route('admin.questions.index') }}" id="question-filter-form" role="search"
+<form method="get" action="{{ route(\App\Support\Auth\PortalRoute::content('questions.index')) }}" id="question-filter-form" role="search"
                 aria-label="Tìm kiếm và lọc câu hỏi"
                 @submit.prevent="applyQuestionFilters()"
                 class="space-y-4 rounded-xl border border-outline-variant bg-surface p-4">
@@ -316,7 +316,7 @@
                 </div>
 
                 <x-admin.filter-action-buttons class="justify-end border-t border-outline-variant pt-4" loading-expression="ajaxLoading"
-                    reset-method="resetQuestionFilters" :reset-url="route('admin.questions.index')"
+                    reset-method="resetQuestionFilters" :reset-url="route(\App\Support\Auth\PortalRoute::content('questions.index'))"
                     search-aria-label="Tìm kiếm câu hỏi" reset-aria-label="Xoá bộ lọc câu hỏi" />
             </form>
             </div>
@@ -424,7 +424,7 @@
                                 </td>
                                 <td class="w-[380px] min-w-[320px] px-5 py-4 align-top">
                                     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.edit'))
-<a href="{{ route('admin.questions.edit', $question) }}" class="group block"
+<a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.edit'), $question) }}" class="group block"
                                         aria-label="Chỉnh sửa câu hỏi {{ $question->code ?: $question->id }}">
                                         @if (filled($question->code))
                                             <p
@@ -523,7 +523,7 @@
                                         @endif
                                         @if ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::PendingPublish && $isReviewer)
                                             @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.edit'))
-<a href="{{ route('admin.questions.edit', $question) }}"
+<a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.edit'), $question) }}"
                                                 class="inline-flex items-center gap-0.5 text-xs font-semibold text-primary hover:underline">
                                                 Duyệt xuất bản
                                             </a>
@@ -554,7 +554,7 @@
                                             </span>
                                             @if ($origin)
                                                 @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.edit'))
-<a href="{{ route('admin.questions.edit', $origin) }}"
+<a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.edit'), $origin) }}"
                                                     class="mt-0.5 text-[11px] font-medium text-primary hover:underline truncate max-w-[140px] block"
                                                     title="Xem câu hỏi gốc: {{ strip_tags($origin->stem) }}"
                                                     aria-label="Xem câu hỏi gốc {{ $originLabel }}">
@@ -624,7 +624,7 @@
                                 <td class="w-[280px] min-w-[280px] px-5 py-4 text-end align-top whitespace-nowrap">
                                     <div class="inline-flex items-center justify-end gap-2.5">
                                         @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.stats'))
-<a href="{{ route('admin.questions.stats', $question) }}"
+<a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.stats'), $question) }}"
                                             class="inline-flex items-center gap-1 text-xs font-medium text-on-surface-variant hover:text-on-surface hover:underline"
                                             title="Xem thống kê làm bài câu hỏi">
                                             <span class="material-symbols-outlined text-[15px]"
@@ -633,7 +633,7 @@
                                         </a>
 @endif
                                         @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.edit'))
-<a href="{{ route('admin.questions.edit', $question) }}"
+<a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.edit'), $question) }}"
                                             class="inline-flex items-center gap-1 rounded-md border border-outline-variant px-2 py-1 text-xs font-medium text-on-surface hover:bg-surface-container-low"
                                             title="Sửa nội dung câu hỏi">
                                             <span class="material-symbols-outlined text-[15px]"
@@ -641,6 +641,7 @@
                                             Sửa
                                         </a>
 @endif
+                                        @if (! request()->routeIs('editor.*'))
                                         @can(\App\Support\Enums\Permission::QuestionCreate->value)
                                             @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.clone'))
 <form method="post" action="{{ route('admin.questions.clone', $question) }}"
@@ -657,6 +658,7 @@
                                             </form>
 @endif
                                         @endcan
+                                        @endif
                                     </div>
                                 </td>
                             </tr>
@@ -688,7 +690,7 @@
         @endif
         </div>
 
-        <form x-ref="exportForm" method="post" action="{{ route('admin.questions.export') }}" class="hidden">
+        <form x-ref="exportForm" method="post" action="{{ route(\App\Support\Auth\PortalRoute::content('questions.export')) }}" class="hidden">
             @csrf
             <input type="hidden" name="format" :value="exportFormat">
             @foreach (request()->except(['page', 'ids', 'format']) as $key => $value)

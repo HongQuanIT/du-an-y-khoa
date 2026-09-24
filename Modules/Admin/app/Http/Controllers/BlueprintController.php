@@ -6,6 +6,7 @@ namespace Modules\Admin\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\Auth\PortalRoute;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -60,7 +61,7 @@ final class BlueprintController extends Controller
         $data = $this->validatedBlueprint($request);
         $blueprint = Blueprint::query()->create($data);
 
-        return redirect()->route('admin.blueprints.edit', $blueprint)->with('status', 'Đã tạo ma trận đề thi.');
+        return redirect()->route(PortalRoute::content('blueprints.edit'), $blueprint)->with('status', 'Đã tạo ma trận đề thi.');
     }
 
     public function edit(Blueprint $blueprint): View
@@ -173,7 +174,7 @@ final class BlueprintController extends Controller
         $this->authorizePermission('blueprint.delete');
         $blueprint->update(['status' => TaxonomyStatus::Inactive]);
 
-        return redirect()->route('admin.blueprints.index')->with('status', 'Đã vô hiệu hóa ma trận đề thi.');
+        return redirect()->route(PortalRoute::content('blueprints.index'))->with('status', 'Đã vô hiệu hóa ma trận đề thi.');
     }
 
     public function storeSection(Request $request, Blueprint $blueprint): RedirectResponse

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Models\User;
 use App\Services\SettingService;
+use App\Support\Auth\EditorPermissionBridge;
 use App\Support\Enums\Permission;
 use App\Support\Enums\Role;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -105,6 +107,12 @@ class AppServiceProvider extends ServiceProvider
      */
     private function configureAuthorization(): void
     {
+        Gate::before(function ($user, string $ability): ?bool {
+            return $user instanceof User
+                ? EditorPermissionBridge::resolve($user, $ability)
+                : null;
+        });
+
         Gate::before(function ($user, string $ability): ?bool {
             if ($user === null || ! method_exists($user, 'hasRole') || ! $user->hasRole(Role::SuperAdmin->value)) {
                 return null;

@@ -2,11 +2,11 @@
 
 @php
     $navItems = [
-        ['label' => 'Tổng quan', 'icon' => 'dashboard', 'route' => 'editor.dashboard', 'match' => 'editor.dashboard'],
-        ['label' => 'Câu hỏi của tôi', 'icon' => 'quiz', 'route' => 'editor.questions.index', 'match' => 'editor.questions.*'],
-        ['label' => 'Phân loại', 'icon' => 'category', 'route' => 'editor.taxonomy.index', 'match' => 'editor.taxonomy.*', 'permission' => 'taxonomy.view'],
-        ['label' => 'CMS', 'icon' => 'article', 'route' => 'editor.cms.pages.index', 'match' => 'editor.cms.*', 'permission' => 'cms.view'],
-        ['label' => 'Media', 'icon' => 'perm_media', 'route' => 'editor.media.index', 'match' => 'editor.media.*', 'permission' => 'media.view'],
+        ['label' => 'Tổng quan', 'icon' => 'dashboard', 'route' => 'editor.dashboard', 'match' => 'editor.dashboard', 'permission' => 'editor_dashboard.view'],
+        ['label' => 'Câu hỏi của tôi', 'icon' => 'quiz', 'route' => 'editor.questions.index', 'match' => 'editor.questions.*', 'permission' => 'editor_question.view'],
+        ['label' => 'Phân loại', 'icon' => 'category', 'route' => 'editor.taxonomy.index', 'match' => 'editor.taxonomy.*', 'permission' => 'editor_taxonomy.view'],
+        ['label' => 'CMS', 'icon' => 'article', 'route' => 'editor.cms.pages.index', 'match' => 'editor.cms.*', 'permission' => 'editor_page.view'],
+        ['label' => 'Media', 'icon' => 'perm_media', 'route' => 'editor.media.index', 'match' => 'editor.media.*', 'permission' => 'editor_media.view'],
     ];
     $navItems = array_values(array_filter($navItems, static fn (array $item): bool => ! isset($item['permission']) || auth()->user()?->can($item['permission'] ?? '') === true));
 @endphp

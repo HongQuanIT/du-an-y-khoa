@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use App\Support\Enums\Permission as PermissionEnum;
+use App\Support\Enums\PortalGroup;
 use App\Support\Enums\Role as RoleEnum;
 use App\Support\Rbac\PermissionRegistry;
 use App\Support\Rbac\PermissionSynchronizer;
@@ -31,8 +32,15 @@ class RolePermissionSeeder extends Seeder
             foreach (RoleEnum::cases() as $role) {
                 $roleModel = Role::findOrCreate($role->value, 'web');
                 $roleModel->forceFill(['portal' => $role->portal()->value])->save();
-                // Additive baseline: never remove permissions configured in Admin UI.
-                $roleModel->givePermissionTo($this->permissionsFor($role));
+                if ($role === RoleEnum::ContentEditor) {
+                    // Editor is code-owned and isolated from Admin permissions. A
+                    // sync also revokes legacy grants removed from this catalog.
+                    $roleModel->syncPermissions($this->permissionsFor($role));
+                } else {
+                    // Other roles keep their additive baseline so custom grants
+                    // configured by administrators are not silently removed.
+                    $roleModel->givePermissionTo($this->permissionsFor($role));
+                }
             }
         });
 
@@ -91,57 +99,11 @@ class RolePermissionSeeder extends Seeder
                 static fn (string $permission): bool => ! in_array($permission, self::staffDeniedPermissions(), true),
             )),
 
-            RoleEnum::ContentEditor => array_values(array_unique(array_merge([
-
-                PermissionEnum::MediaView->value,
-                'media.upload',
-                'media.update',
-                'media.delete',
-
-                PermissionEnum::QuestionView->value,
-                PermissionEnum::QuestionCreate->value,
-                PermissionEnum::QuestionUpdate->value,
-                PermissionEnum::QuestionSubmit->value,
-                PermissionEnum::QuestionDelete->value,
-                'question.import',
-                'question.export',
-                'taxonomy.view',
-                'cms.view',
-                'cms.create',
-                'cms.update',
-                'cms.delete',
-                'blueprint.view',
-                'blueprint.create',
-                'blueprint.update',
-                'blueprint.delete',
-                'curriculum.view',
-                'curriculum.create',
-                'curriculum.update',
-                'curriculum.delete',
-                'tag.view',
-                'tag.create',
-                'tag.update',
-                'tag.delete',
-                'profile.view',
-                'profile.update',
-                'profile.password_update',
-                'profile.avatar_update',
-            ], collect($registry->all())
-                ->filter(fn ($definition): bool => in_array($definition->module, ['cms', 'media', 'content', 'question_bank'], true))
-                ->reject(fn ($definition): bool => str_starts_with($definition->name, 'contact.'))
-                ->reject(fn ($definition): bool => in_array($definition->name, [
-                    'question.view_any',
-                    PermissionEnum::QuestionReview->value,
-                    PermissionEnum::QuestionFlag->value,
-                    'question_flag.view',
-                    PermissionEnum::QuestionPublish->value,
-                    PermissionEnum::QuestionAdjudicate->value,
-                    'question.reject',
-                    'question.restore',
-                    'question_feedback.view',
-                ], true))
+            RoleEnum::ContentEditor => collect($registry->all())
+                ->filter(fn ($definition): bool => in_array(PortalGroup::Editor, $definition->portals, true))
                 ->keys()
-                ->all()))),
+                ->values()
+                ->all(),
 
             RoleEnum::Reviewer => [
                 'question_flag.view',

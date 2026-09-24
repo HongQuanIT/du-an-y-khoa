@@ -6,6 +6,7 @@ namespace Modules\Media\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\Auth\PortalRoute;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -122,7 +123,7 @@ final class MediaController extends Controller
         }
 
         return redirect()
-            ->route('admin.media.show', $media)
+            ->route(PortalRoute::content('media.show'), $media)
             ->with('status', 'Đã tải lên media.');
     }
 
@@ -152,7 +153,7 @@ final class MediaController extends Controller
         }
 
         return redirect()
-            ->route('admin.media.show', $media)
+            ->route(PortalRoute::content('media.show'), $media)
             ->with('status', $request->boolean('import')
                 ? 'Đã tải ảnh từ URL về máy chủ.'
                 : 'Đã thêm ảnh CDN / URL ngoài vào thư viện.');
@@ -177,7 +178,7 @@ final class MediaController extends Controller
         $update->handle($this->actor(), $media, $request->validated());
 
         return redirect()
-            ->route('admin.media.show', $media)
+            ->route(PortalRoute::content('media.show'), $media)
             ->with('status', 'Đã cập nhật metadata.');
     }
 
@@ -189,12 +190,12 @@ final class MediaController extends Controller
             $delete->handle($this->actor(), $media);
         } catch (RuntimeException $e) {
             return redirect()
-                ->route('admin.media.show', $media)
+                ->route(PortalRoute::content('media.show'), $media)
                 ->with('status', $e->getMessage());
         }
 
         return redirect()
-            ->route('admin.media.index')
+            ->route(PortalRoute::content('media.index'))
             ->with('status', 'Đã xóa media.');
     }
 

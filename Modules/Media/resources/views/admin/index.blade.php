@@ -32,7 +32,7 @@
     </div>
 
     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.media.index'))
-<form method="get" action="{{ route('admin.media.index') }}" class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end">
+<form method="get" action="{{ route(\App\Support\Auth\PortalRoute::content('media.index')) }}" class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end">
         <div class="min-w-0 flex-1">
             <label class="mb-1.5 block font-label-sm text-on-surface-variant" for="q">Tìm kiếm</label>
             <input id="q" name="q" type="search" value="{{ $filters['q'] }}"
@@ -74,7 +74,7 @@
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
             @foreach ($items as $item)
                 @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.media.show'))
-<a href="{{ route('admin.media.show', $item) }}"
+<a href="{{ route(\App\Support\Auth\PortalRoute::content('media.show'), $item) }}"
                     class="group overflow-hidden rounded-xl border border-outline-variant bg-surface hover:border-primary">
                     <div class="relative aspect-square bg-surface-container-low">
                         @if ($item->type === \Modules\Media\Support\Enums\MediaType::Image && $item->thumbUrl())

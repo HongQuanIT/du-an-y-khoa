@@ -13,7 +13,7 @@
         <header class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.index'))
-<a href="{{ route('admin.questions.index') }}"
+<a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.index')) }}"
                     class="mb-2 inline-flex items-center gap-1 font-label-sm text-on-surface-variant hover:text-on-surface">
                     <span class="material-symbols-outlined text-[18px]" aria-hidden="true">arrow_back</span>
                     Ngân hàng câu hỏi
@@ -68,7 +68,7 @@
                     Cột <code>status</code> / người xuất bản nếu có sẽ bị bỏ qua.
                 </p>
                 @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.import.upload'))
-<form method="post" action="{{ route('admin.questions.import.upload') }}" enctype="multipart/form-data"
+<form method="post" action="{{ route(\App\Support\Auth\PortalRoute::content('questions.import.upload')) }}" enctype="multipart/form-data"
                     class="mt-5 space-y-4">
                     @csrf
                     <label
@@ -109,7 +109,7 @@
                     <p class="mt-3 font-body-sm text-error">{{ $message }}</p>
                 @enderror
                 @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.import.map'))
-<form method="post" action="{{ route('admin.questions.import.map', $batch) }}" class="mt-5 space-y-3">
+<form method="post" action="{{ route(\App\Support\Auth\PortalRoute::content('questions.import.map'), $batch) }}" class="mt-5 space-y-3">
                     @csrf
                     <div class="overflow-x-auto">
                         <table class="min-w-full text-left font-body-sm">
@@ -146,7 +146,7 @@
                         </table>
                     </div>
                     <div class="flex flex-wrap gap-2 pt-2">
-                        <a href="{{ route('admin.questions.import') }}"
+                        <a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.import')) }}"
                             class="inline-flex items-center rounded-xl border border-outline-variant px-4 py-2.5 font-label-md font-semibold text-on-surface hover:bg-surface-container-low">
                             Tải tệp khác
                         </a>
@@ -190,7 +190,7 @@
                         <div class="mt-3 flex flex-wrap items-center gap-3">
                             @if ($batch->error_report_path)
                                 @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.import.errors'))
-                                    <a href="{{ route('admin.questions.import.errors', $batch) }}"
+                                    <a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.import.errors'), $batch) }}"
                                         class="inline-flex items-center gap-1.5 rounded-lg border border-error/30 bg-error/5 px-3 py-2 font-label-sm font-semibold text-error hover:bg-error/10">
                                         <span class="material-symbols-outlined text-[18px]" aria-hidden="true">download</span>
                                         Tải {{ number_format($preview['invalid']) }} dòng lỗi (Excel)
@@ -270,13 +270,13 @@
 
                 <div class="flex flex-wrap gap-2">
                     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.import.show'))
-<a href="{{ route('admin.questions.import.show', $batch) }}?remap=1"
+<a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.import.show'), $batch) }}?remap=1"
                         class="inline-flex items-center rounded-xl border border-outline-variant px-4 py-2.5 font-label-md font-semibold text-on-surface hover:bg-surface-container-low">
                         Sửa ánh xạ
                     </a>
 @endif
                     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.import.commit'))
-<form method="post" action="{{ route('admin.questions.import.commit', $batch) }}">
+<form method="post" action="{{ route(\App\Support\Auth\PortalRoute::content('questions.import.commit'), $batch) }}">
                         @csrf
                         <button type="submit" @if ($preview['valid'] === 0 || ($preview['invalid_codes'] ?? []) !== []) disabled @endif
                             class="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 font-label-md font-semibold text-on-primary hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50">
@@ -302,13 +302,13 @@
                 </p>
                 <div class="mt-4 flex flex-wrap gap-2">
                     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.index'))
-<a href="{{ route('admin.questions.index', ['import_batch_id' => $batch->getKey()]) }}"
+<a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.index'), ['import_batch_id' => $batch->getKey()]) }}"
                         class="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 font-label-md font-semibold text-on-primary hover:bg-primary/90">
                         Xem câu vừa import
                     </a>
 @endif
                     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.import'))
-<a href="{{ route('admin.questions.import') }}"
+<a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.import')) }}"
                         class="inline-flex items-center rounded-xl border border-outline-variant px-4 py-2.5 font-label-md font-semibold text-on-surface hover:bg-surface-container-low">
                         Import tệp khác
                     </a>

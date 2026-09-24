@@ -14,7 +14,7 @@
         ? ($editingId > 0 ? 'edit' : 'create')
         : null;
     $reopenUpdateUrl = $editingId > 0
-        ? route('admin.curriculum.lessons.update', $editingId)
+        ? route(\App\Support\Auth\PortalRoute::content('curriculum.lessons.update'), $editingId)
         : '';
     $openCreatePanel = $reopenPanel === null && request('panel') === 'create';
 @endphp
@@ -23,7 +23,7 @@
      x-data="taxonomyCatalog({
         key: 'lessons',
         kind: 'lesson',
-        indexUrl: @js(route('admin.curriculum.index')),
+        indexUrl: @js(route(\App\Support\Auth\PortalRoute::content('curriculum.index'))),
         items: @js($catalogItems),
         meta: @js($catalogMeta),
         query: @js($filters['q'] ?? ''),
@@ -32,7 +32,7 @@
         subjectIds: @js($filters['subject_ids'] ?? []),
         organSystemIds: @js($filters['organ_system_ids'] ?? []),
         focusId: @js($focusId),
-        storeUrl: @js(route('admin.curriculum.lessons.store')),
+        storeUrl: @js(route(\App\Support\Auth\PortalRoute::content('curriculum.lessons.store'))),
         canCreate: @js($canCreate),
         canUpdate: @js($canUpdate),
         canDelete: @js($canDelete),

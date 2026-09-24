@@ -9,7 +9,7 @@
         :description="$isNew ? 'Tạo câu hỏi thường gặp mới.' : 'Cập nhật nội dung FAQ #'.$faq->id">
         <x-slot:actions>
             @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.faq.index'))
-<a href="{{ route('admin.cms.faq.index') }}"
+<a href="{{ route(\App\Support\Auth\PortalRoute::content('cms.faq.index')) }}"
                 class="rounded-lg px-3 py-2 font-label-md text-on-surface-variant hover:bg-surface-container-low">← Danh sách</a>
 @endif
             @if (! $isNew && $faq->is_published)
@@ -24,7 +24,7 @@
     <x-admin.flash />
 
     <form method="post"
-        action="{{ $isNew ? route('admin.cms.faq.store') : route('admin.cms.faq.update', $faq) }}"
+        action="{{ $isNew ? route(\App\Support\Auth\PortalRoute::content('cms.faq.store')) : route(\App\Support\Auth\PortalRoute::content('cms.faq.update'), $faq) }}"
         class="max-w-3xl space-y-6">
         @csrf
         @unless ($isNew)
@@ -96,7 +96,7 @@
 
     @unless ($isNew)
         @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.faq.destroy'))
-<form method="post" action="{{ route('admin.cms.faq.destroy', $faq) }}" class="mt-4 max-w-3xl"
+<form method="post" action="{{ route(\App\Support\Auth\PortalRoute::content('cms.faq.destroy'), $faq) }}" class="mt-4 max-w-3xl"
             onsubmit="return confirm('Xóa FAQ này?')">
             @csrf
             @method('DELETE')

@@ -44,10 +44,10 @@
     <meta name="robots" content="noindex, nofollow">
     <x-activity-heartbeat />
     @if (Route::has('admin.media.items'))
-        <meta name="media-items-url" content="{{ route('admin.media.items') }}">
-        <meta name="media-upload-url" content="{{ route('admin.media.store') }}">
-        <meta name="media-from-url" content="{{ route('admin.media.from-url') }}">
-        <meta name="media-show-url-template" content="{{ url('/admin/media') }}/__ID__">
+        <meta name="media-items-url" content="{{ route(\App\Support\Auth\PortalRoute::content('media.items')) }}">
+        <meta name="media-upload-url" content="{{ route(\App\Support\Auth\PortalRoute::content('media.store')) }}">
+        <meta name="media-from-url" content="{{ route(\App\Support\Auth\PortalRoute::content('media.from-url')) }}">
+        <meta name="media-show-url-template" content="{{ url(request()->routeIs('editor.*') ? '/editor/media' : '/admin/media') }}/__ID__">
     @endif
     <title>{{ $title ? $title . ($isEditorPortal ? ' — Biên tập' : ' — Quản trị') : ($isEditorPortal ? 'Biên tập' : 'Quản trị').' — '.config('app.name') }}</title>
 

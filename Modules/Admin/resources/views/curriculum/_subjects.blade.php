@@ -12,7 +12,7 @@
     'catalogLabel' => 'Môn học',
     'catalogSingular' => 'môn học',
     'items' => $subjects,
-    'storeRoute' => route('admin.curriculum.subjects.store'),
+    'storeRoute' => route(\App\Support\Auth\PortalRoute::content('curriculum.subjects.store')),
     'updateRoute' => 'admin.curriculum.subjects.update',
     'destroyRoute' => 'admin.curriculum.subjects.destroy',
     'namePlaceholder' => 'Ví dụ: Nội khoa, Dược lý…',

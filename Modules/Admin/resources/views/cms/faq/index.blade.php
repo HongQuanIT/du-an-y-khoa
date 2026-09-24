@@ -10,7 +10,7 @@
                 Xem trang FAQ ↗
             </a>
             @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.faq.create'))
-<a href="{{ route('admin.cms.faq.create') }}"
+<a href="{{ route(\App\Support\Auth\PortalRoute::content('cms.faq.create')) }}"
                 class="rounded-lg bg-primary px-4 py-2 font-label-md text-on-primary hover:opacity-90">
                 + Thêm FAQ
             </a>
@@ -27,7 +27,7 @@
     </div>
 
     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.faq.index'))
-<form id="faq-filter-form" method="get" action="{{ route('admin.cms.faq.index') }}"
+<form id="faq-filter-form" method="get" action="{{ route(\App\Support\Auth\PortalRoute::content('cms.faq.index')) }}"
         role="search" aria-label="Tìm kiếm FAQ"
         @submit.prevent="applyFilters()"
         class="grid grid-cols-1 items-end gap-4 rounded-xl border border-outline-variant bg-surface p-4 md:grid-cols-12">
@@ -68,7 +68,7 @@
             <span class="mb-1.5 block text-sm font-medium text-transparent select-none" aria-hidden="true">&nbsp;</span>
             <x-admin.filter-action-buttons
                 fill
-                :reset-url="route('admin.cms.faq.index')"
+                :reset-url="route(\App\Support\Auth\PortalRoute::content('cms.faq.index'))"
                 search-aria-label="Tìm kiếm FAQ"
                 reset-aria-label="Xoá bộ lọc FAQ"
             />
@@ -98,7 +98,7 @@
                                 <span class="font-mono text-xs">{{ $faq->sort_order }}</span>
                                 <div class="flex gap-0.5">
                                     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.faq.move-up'))
-<form method="post" action="{{ route('admin.cms.faq.move-up', $faq) }}">
+<form method="post" action="{{ route(\App\Support\Auth\PortalRoute::content('cms.faq.move-up'), $faq) }}">
                                         @csrf
                                         <button type="submit" class="rounded p-0.5 text-on-surface-variant hover:bg-surface-container-low" title="Lên">
                                             <span class="material-symbols-outlined text-[18px]">arrow_upward</span>
@@ -106,7 +106,7 @@
                                     </form>
 @endif
                                     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.faq.move-down'))
-<form method="post" action="{{ route('admin.cms.faq.move-down', $faq) }}">
+<form method="post" action="{{ route(\App\Support\Auth\PortalRoute::content('cms.faq.move-down'), $faq) }}">
                                         @csrf
                                         <button type="submit" class="rounded p-0.5 text-on-surface-variant hover:bg-surface-container-low" title="Xuống">
                                             <span class="material-symbols-outlined text-[18px]">arrow_downward</span>
@@ -133,7 +133,7 @@
                         </td>
                         <td class="px-4 py-3 text-right whitespace-nowrap">
                             @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.faq.edit'))
-<a href="{{ route('admin.cms.faq.edit', $faq) }}"
+<a href="{{ route(\App\Support\Auth\PortalRoute::content('cms.faq.edit'), $faq) }}"
                                 class="font-label-md text-primary hover:underline">Sửa</a>
 @endif
                         </td>
@@ -143,7 +143,7 @@
                         <td colspan="6" class="px-4 py-12 text-center text-on-surface-variant">
                             Chưa có FAQ nào.
                             @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.faq.create'))
-<a href="{{ route('admin.cms.faq.create') }}" class="text-primary hover:underline">Thêm FAQ đầu tiên</a>
+<a href="{{ route(\App\Support\Auth\PortalRoute::content('cms.faq.create')) }}" class="text-primary hover:underline">Thêm FAQ đầu tiên</a>
 @endif
                         </td>
                     </tr>

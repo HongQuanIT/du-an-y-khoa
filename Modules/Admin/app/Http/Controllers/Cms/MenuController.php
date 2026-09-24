@@ -6,6 +6,7 @@ namespace Modules\Admin\Http\Controllers\Cms;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\Auth\PortalRoute;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 use Modules\Admin\Actions\Cms\SaveMenuAction;
@@ -56,7 +57,7 @@ final class MenuController extends Controller
         $save->handle($this->actor(), $request, $menu);
 
         return redirect()
-            ->route('admin.cms.menus.edit', $menu)
+            ->route(PortalRoute::content('cms.menus.edit'), $menu)
             ->with('status', 'Menu đã được cập nhật.');
     }
 

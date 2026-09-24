@@ -95,7 +95,7 @@
     <header class="mb-6 flex flex-col gap-4 border-b border-outline-variant pb-5 lg:flex-row lg:items-start lg:justify-between">
         <div class="flex min-w-0 items-start gap-3">
             @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.index'))
-<a href="{{ route('admin.questions.index') }}"
+<a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.index')) }}"
                aria-label="Quay lại danh sách câu hỏi"
                class="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container-low">
                 <span class="material-symbols-outlined text-[20px]" aria-hidden="true">arrow_back</span>
@@ -131,7 +131,7 @@
                         @endif
                         @if ($question->published_version)
                             <span>·</span>
-                            <a href="{{ route('admin.questions.compare', $question) }}"
+                            <a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.compare'), $question) }}"
                                 class="inline-flex items-center gap-0.5 font-semibold text-primary hover:underline"
                                 title="So sánh với bản đang dùng">
                                 So sánh
@@ -151,7 +151,7 @@
                         @endif
                         <span>·</span>
                         @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.stats'))
-<a href="{{ route('admin.questions.stats', $question) }}"
+<a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.stats'), $question) }}"
                             class="inline-flex items-center gap-0.5 font-semibold text-primary hover:underline"
                             title="Thống kê chi tiết">
                             Thống kê
@@ -170,7 +170,7 @@
         @if (! $isNew && ($question->published_version || ($canDelete && ! $pendingReview)))
             <div class="flex shrink-0 flex-wrap items-center gap-2 lg:justify-end lg:pt-0.5">
                 @if ($question->published_version)
-                    <a href="{{ route('admin.questions.compare', $question) }}"
+                    <a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.compare'), $question) }}"
                         class="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-outline-variant px-3 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low">
                         <span class="material-symbols-outlined text-[16px]" aria-hidden="true">difference</span>
                         So sánh
@@ -178,7 +178,7 @@
                 @endif
                 @if ($canDelete && ! $pendingReview)
                 @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.destroy'))
-<form method="post" action="{{ route('admin.questions.destroy', $question) }}" aria-label="Xóa câu hỏi">
+<form method="post" action="{{ route(\App\Support\Auth\PortalRoute::content('questions.destroy'), $question) }}" aria-label="Xóa câu hỏi">
                     @csrf @method('DELETE')
                     <button type="submit" onclick="return confirm('{{ $isReviewer ? 'Xóa câu hỏi này?' : 'Gửi yêu cầu xóa câu hỏi này để admin duyệt?' }}')"
                         class="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-rose-300 px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50">
@@ -327,7 +327,7 @@
                                      x-init="
                                          (function(currentOpt) {
                                              const container = $el.querySelector('[data-mini-editor]');
-                                             const uploadUrl = '{{ route('admin.editor.images') }}';
+                                             const uploadUrl = '{{ route(request()->routeIs('editor.*') ? 'editor.media.store' : 'admin.editor.images') }}';
                                              const q = new window.Quill(container, {
                                                  theme: 'snow',
                                                  modules: { toolbar: [['bold', 'italic'], ['link', 'image'], ['clean']] },
@@ -411,7 +411,7 @@
                                              x-init="
                                                  (function(currentHint) {
                                                      const container = $el.querySelector('[data-mini-hint-editor]');
-                                                     const uploadUrl = '{{ route('admin.editor.images') }}';
+                                                     const uploadUrl = '{{ route(request()->routeIs('editor.*') ? 'editor.media.store' : 'admin.editor.images') }}';
                                                      const q = new window.Quill(container, {
                                                          theme: 'snow',
                                                          modules: { toolbar: [['bold', 'italic'], ['link', 'image'], ['clean']] },
@@ -495,7 +495,7 @@
                             @if ($question->published_version)
                                 <span class="mt-2 block">
                                     QBank đang phục vụ phiên bản {{ $question->published_version }}.
-                                    <a href="{{ route('admin.questions.compare', $question) }}" class="font-semibold text-primary hover:underline">So sánh</a>
+                                    <a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.compare'), $question) }}" class="font-semibold text-primary hover:underline">So sánh</a>
                                 </span>
                             @endif
                         </p>
@@ -631,7 +631,7 @@
                             @endif
                             @if ($question->published_version)
                                 Ngân hàng vẫn phục vụ phiên bản {{ $question->published_version }}.
-                                <a href="{{ route('admin.questions.compare', $question) }}" class="font-semibold text-primary hover:underline">So sánh</a>
+                                <a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.compare'), $question) }}" class="font-semibold text-primary hover:underline">So sánh</a>
                             @endif
                         </p>
                     </div>
@@ -640,7 +640,7 @@
                         <p class="font-semibold">QBank đang phục vụ phiên bản {{ $question->published_version }}</p>
                         <p class="mt-1 text-xs leading-5">
                             Working copy: {{ $question->status->label() }}.
-                            <a href="{{ route('admin.questions.compare', $question) }}" class="font-semibold text-primary hover:underline">So sánh</a>
+                            <a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.compare'), $question) }}" class="font-semibold text-primary hover:underline">So sánh</a>
                         </p>
                     </div>
                 @endif
@@ -654,7 +654,7 @@
                     'pointer-events-none select-none opacity-70' => ! $canEditContent,
                 ])>
                 <div class="rounded-2xl border border-outline-variant bg-surface p-4"
-                    x-data="questionImageUploader(@js($stemImagePath), @js($stemImageUrl), @js(route('admin.editor.images')), @js(csrf_token()))">
+                    x-data="questionImageUploader(@js($stemImagePath), @js($stemImageUrl), @js(route(request()->routeIs('editor.*') ? 'editor.media.store' : 'admin.editor.images')), @js(csrf_token()))">
                     <h2 class="mb-3 font-label-md font-semibold text-on-surface-variant">Ảnh câu hỏi</h2>
                     <input type="hidden" name="stem_image_path" x-ref="pathInput" :value="imagePath">
                     <input type="file" x-ref="fileInput" class="hidden" accept="image/png,image/jpeg,image/gif,image/webp" @change="upload($event)">
@@ -725,7 +725,7 @@
                         <p class="font-semibold">QBank đang phục vụ phiên bản {{ $question->published_version }}</p>
                         <p class="mt-1 text-xs leading-5">
                             Working copy: {{ $question->status->label() }}. Nội dung mới chỉ lên ngân hàng sau khi GV duyệt và admin xuất bản.
-                            <a href="{{ route('admin.questions.compare', $question) }}" class="mt-1 block font-semibold text-primary hover:underline">So sánh</a>
+                            <a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.compare'), $question) }}" class="mt-1 block font-semibold text-primary hover:underline">So sánh</a>
                         </p>
                     </div>
                 @endif
@@ -840,7 +840,7 @@
         \Modules\QuestionBank\Enums\QuestionStatus::InReview,
         \Modules\QuestionBank\Enums\QuestionStatus::Rejected,
     ], true))
-        <form id="editor-return-draft-form" method="post" action="{{ route('admin.questions.transition', $question) }}" class="hidden">
+        <form id="editor-return-draft-form" method="post" action="{{ route(\App\Support\Auth\PortalRoute::content('questions.transition'), $question) }}" class="hidden">
             @csrf
             <input type="hidden" name="status" value="{{ \Modules\QuestionBank\Enums\QuestionStatus::Draft->value }}">
         </form>

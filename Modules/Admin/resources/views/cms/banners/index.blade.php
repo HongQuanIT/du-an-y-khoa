@@ -6,7 +6,7 @@
         description="Quản lý banner hiển thị trên landing và dashboard học viên (lịch, đối tượng, bật/tắt).">
         <x-slot:actions>
             @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.banners.create'))
-<a href="{{ route('admin.cms.banners.create') }}"
+<a href="{{ route(\App\Support\Auth\PortalRoute::content('cms.banners.create')) }}"
                 class="rounded-lg bg-primary px-4 py-2 font-label-md text-on-primary hover:opacity-90">
                 + Thêm banner
             </a>
@@ -23,7 +23,7 @@
     </div>
 
     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.banners.index'))
-<form id="banner-filter-form" method="get" action="{{ route('admin.cms.banners.index') }}"
+<form id="banner-filter-form" method="get" action="{{ route(\App\Support\Auth\PortalRoute::content('cms.banners.index')) }}"
         role="search" aria-label="Tìm kiếm banner"
         @submit.prevent="applyFilters()"
         class="grid grid-cols-1 items-end gap-4 rounded-xl border border-outline-variant bg-surface p-4 md:grid-cols-12">
@@ -64,7 +64,7 @@
             <span class="mb-1.5 block text-sm font-medium text-transparent select-none" aria-hidden="true">&nbsp;</span>
             <x-admin.filter-action-buttons
                 fill
-                :reset-url="route('admin.cms.banners.index')"
+                :reset-url="route(\App\Support\Auth\PortalRoute::content('cms.banners.index'))"
                 search-aria-label="Tìm kiếm banner"
                 reset-aria-label="Xoá bộ lọc banner"
             />
@@ -114,7 +114,7 @@
                         </td>
                         <td class="px-4 py-3 text-right whitespace-nowrap">
                             @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.banners.toggle'))
-<form method="post" action="{{ route('admin.cms.banners.toggle', $banner) }}" class="inline">
+<form method="post" action="{{ route(\App\Support\Auth\PortalRoute::content('cms.banners.toggle'), $banner) }}" class="inline">
                                 @csrf
                                 <button type="submit" class="font-label-md text-on-surface-variant hover:underline">
                                     {{ $banner->is_enabled ? 'Tắt' : 'Bật' }}
@@ -123,7 +123,7 @@
 @endif
                             <span class="mx-1 text-outline-variant">·</span>
                             @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.banners.edit'))
-<a href="{{ route('admin.cms.banners.edit', $banner) }}"
+<a href="{{ route(\App\Support\Auth\PortalRoute::content('cms.banners.edit'), $banner) }}"
                                 class="font-label-md text-primary hover:underline">Sửa</a>
 @endif
                         </td>
@@ -132,7 +132,7 @@
                     <tr>
                         <td colspan="6" class="px-4 py-10 text-center text-on-surface-variant">
                             Chưa có banner. @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.cms.banners.create'))
-<a href="{{ route('admin.cms.banners.create') }}" class="text-primary hover:underline">Tạo banner đầu tiên</a>
+<a href="{{ route(\App\Support\Auth\PortalRoute::content('cms.banners.create')) }}" class="text-primary hover:underline">Tạo banner đầu tiên</a>
 @endif
                         </td>
                     </tr>

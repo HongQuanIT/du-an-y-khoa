@@ -6,6 +6,7 @@ namespace Modules\Admin\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\Auth\PortalRoute;
 use App\Support\Enums\Permission;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -37,9 +38,11 @@ use Modules\QuestionBank\Models\QuestionInstructorReview;
 use Modules\QuestionBank\Models\QuestionReviewerFlag;
 use Modules\QuestionBank\Models\QuestionVersion;
 use Modules\QuestionBank\Models\QuestionWorkflowEvent;
+use Modules\QuestionBank\Support\AssignedInstructorMatcher;
 use Modules\QuestionBank\Support\QuestionExportLimits;
 use Modules\QuestionBank\Support\QuestionQaCompleteness;
 use Modules\QuestionBank\Support\QuestionReviewComparison;
+use Modules\QuestionBank\Support\QuestionReviewTimeline;
 
 final class QuestionController extends Controller
 {
@@ -367,7 +370,7 @@ final class QuestionController extends Controller
         $reviewer = QuestionAccess::isReviewer($this->actor());
         $action->handle($this->actor(), $question);
 
-        return redirect()->route('admin.questions.index')->with(
+        return redirect()->route(PortalRoute::content('questions.index'))->with(
             'status',
             $reviewer ? 'Đã xóa câu hỏi.' : 'Đã gửi yêu cầu xóa để admin duyệt.',
         );
@@ -569,7 +572,7 @@ final class QuestionController extends Controller
         $clone = $action->handle($this->actor(), $question, $fromVersion);
 
         return redirect()
-            ->route('admin.questions.edit', $clone)
+            ->route(PortalRoute::content('questions.edit'), $clone)
             ->with('status', QuestionAccess::isReviewer($this->actor())
                 ? 'Đã nhân bản câu hỏi thành bản nháp mới.'
                 : 'Đã nhân bản câu hỏi. Bản nháp mới đang chờ admin duyệt trước khi xuất bản.');
@@ -641,7 +644,7 @@ final class QuestionController extends Controller
             'canViewAudit' => $this->actor()->can('audit_log.view'),
             'canAdjudicateQa' => $this->actor()->can(Permission::QuestionAdjudicate->value),
             'reviewTimeline' => $question->exists
-                ? app(\Modules\QuestionBank\Support\QuestionReviewTimeline::class)->build($question)
+                ? app(QuestionReviewTimeline::class)->build($question)
                 : null,
             'publishedVersionAt' => $question->exists && (int) $question->published_version > 0
                 ? $question->versions()
@@ -894,7 +897,7 @@ final class QuestionController extends Controller
             'lesson_ids.*' => ['integer', 'exists:lessons,id'],
         ]);
 
-        $instructors = app(\Modules\QuestionBank\Support\AssignedInstructorMatcher::class)
+        $instructors = app(AssignedInstructorMatcher::class)
             ->eligibleInstructors(array_map('intval', $data['lesson_ids'] ?? []));
 
         return response()->json([

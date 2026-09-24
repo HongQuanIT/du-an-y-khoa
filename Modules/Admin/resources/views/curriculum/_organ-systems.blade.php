@@ -3,7 +3,7 @@
     'catalogLabel' => 'Hệ cơ quan',
     'catalogSingular' => 'hệ cơ quan',
     'items' => $organSystems,
-    'storeRoute' => route('admin.curriculum.organ-systems.store'),
+    'storeRoute' => route(\App\Support\Auth\PortalRoute::content('curriculum.organ-systems.store')),
     'updateRoute' => 'admin.curriculum.organ-systems.update',
     'destroyRoute' => 'admin.curriculum.organ-systems.destroy',
     'namePlaceholder' => 'Ví dụ: Hệ tim mạch',

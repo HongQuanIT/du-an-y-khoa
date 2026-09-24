@@ -20,7 +20,7 @@
 <div class="space-y-4"
      x-data="taxonomyCatalog({
         key: @js($catalogKey),
-        indexUrl: @js(route('admin.curriculum.index')),
+        indexUrl: @js(route(\App\Support\Auth\PortalRoute::content('curriculum.index'))),
         items: @js($catalogItems),
         meta: @js($catalogMeta),
         query: @js($filters['q'] ?? ''),

@@ -56,19 +56,18 @@ final class EditorDashboardTest extends TestCase
         $this->actingAsEditor($editor)->get(route('editor.blueprints.index'))->assertOk();
         $this->actingAsEditor($editor)->get(route('editor.curriculum.index'))->assertOk();
         $this->actingAsEditor($editor)->get(route('editor.tags.index'))->assertOk();
-        $this->actingAsEditor($editor)->get('/admin/categories?tab=subjects')
-            ->assertRedirect('/editor/categories?tab=subjects');
-        $this->actingAsEditor($editor)->get('/admin/cms/pages')->assertRedirect('/editor/cms/pages');
-        $this->actingAsEditor($editor)->get('/admin/media/items')->assertRedirect('/editor/media/items');
-        $this->actingAsEditor($editor)->get('/admin/cms/faq')->assertRedirect('/editor/cms/faq');
-        $this->actingAsEditor($editor)->get('/admin/cms/banners')->assertRedirect('/editor/cms/banners');
-        $this->actingAsEditor($editor)->get('/admin/cms/menus')->assertRedirect('/editor/cms/menus');
-        $this->assertTrue($editor->can('media.update'));
-        $this->assertTrue($editor->can('media.upload'));
+        $this->actingAsEditor($editor)->get('/admin/categories?tab=subjects')->assertForbidden();
+        $this->actingAsEditor($editor)->get('/admin/cms/pages')->assertForbidden();
+        $this->actingAsEditor($editor)->get('/admin/media/items')->assertForbidden();
+        $this->actingAsEditor($editor)->get('/admin/cms/faq')->assertForbidden();
+        $this->actingAsEditor($editor)->get('/admin/cms/banners')->assertForbidden();
+        $this->actingAsEditor($editor)->get('/admin/cms/menus')->assertForbidden();
+        $this->assertTrue($editor->can('editor_media.update'));
+        $this->assertTrue($editor->can('editor_media.upload'));
+        $this->assertFalse($editor->hasDirectPermission('media.update'));
 
         $this->actingAsEditor($editor)->get(route('admin.dashboard'))->assertForbidden();
-        $this->actingAsEditor($editor)->get(route('admin.questions.create'))
-            ->assertRedirect(route('editor.questions.create'));
+        $this->actingAsEditor($editor)->get(route('admin.questions.create'))->assertForbidden();
     }
 
     public function test_non_editor_cannot_access_editor_portal(): void
@@ -77,6 +76,33 @@ final class EditorDashboardTest extends TestCase
         $admin->assignRole(Role::Admin->value);
 
         $this->actingAs($admin)->get(route('editor.dashboard'))->assertForbidden();
+    }
+
+    public function test_editor_routes_are_controlled_by_editor_permissions(): void
+    {
+        $editor = $this->editor('Biên tập viên giới hạn');
+        $role = $editor->roles()->firstOrFail();
+        $role->revokePermissionTo('editor_question.view');
+
+        $this->actingAsEditor($editor)
+            ->get(route('editor.questions.index'))
+            ->assertForbidden();
+
+        $this->actingAsEditor($editor)
+            ->get(route('editor.dashboard'))
+            ->assertOk();
+    }
+
+    public function test_editor_role_does_not_store_admin_content_permissions(): void
+    {
+        $editor = $this->editor('Biên tập viên độc lập');
+
+        $this->assertTrue($editor->hasPermissionTo('editor_question.view'));
+        $this->assertTrue($editor->hasPermissionTo('editor_page.update'));
+        $this->assertTrue($editor->hasPermissionTo('editor_media.upload'));
+        $this->assertFalse($editor->hasPermissionTo('question.view'));
+        $this->assertFalse($editor->hasPermissionTo('cms.update'));
+        $this->assertFalse($editor->hasPermissionTo('media.upload'));
     }
 
     private function editor(string $name): User

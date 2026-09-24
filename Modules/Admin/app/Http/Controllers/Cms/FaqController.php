@@ -6,6 +6,7 @@ namespace Modules\Admin\Http\Controllers\Cms;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\Auth\PortalRoute;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -92,7 +93,7 @@ final class FaqController extends Controller
         $faq = $save->handle($this->actor(), $request);
 
         return redirect()
-            ->route('admin.cms.faq.edit', $faq)
+            ->route(PortalRoute::content('cms.faq.edit'), $faq)
             ->with('status', $request->boolean('is_published')
                 ? 'FAQ đã được xuất bản.'
                 : 'FAQ đã được lưu nháp.');
@@ -115,7 +116,7 @@ final class FaqController extends Controller
         $save->handle($this->actor(), $request, $faq);
 
         return redirect()
-            ->route('admin.cms.faq.edit', $faq)
+            ->route(PortalRoute::content('cms.faq.edit'), $faq)
             ->with('status', $request->boolean('is_published')
                 ? 'FAQ đã được cập nhật và xuất bản.'
                 : 'FAQ đã được lưu nháp.');
@@ -128,7 +129,7 @@ final class FaqController extends Controller
         $delete->handle($this->actor(), $faq);
 
         return redirect()
-            ->route('admin.cms.faq.index')
+            ->route(PortalRoute::content('cms.faq.index'))
             ->with('status', 'FAQ đã được xóa.');
     }
 

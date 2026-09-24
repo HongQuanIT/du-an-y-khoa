@@ -29,7 +29,7 @@
     <div>
         <div class="mb-5 inline-flex rounded-xl border border-outline-variant bg-surface p-1">
             @foreach ($tabs as $tab)
-                <a href="{{ route('admin.curriculum.index', ['tab' => $tab['key']]) }}"
+                <a href="{{ route(\App\Support\Auth\PortalRoute::content('curriculum.index'), ['tab' => $tab['key']]) }}"
                     class="inline-flex items-center gap-2 rounded-lg px-3 py-2 font-label-sm transition-colors {{ $activeTab === $tab['key']
                         ? 'bg-primary-container text-on-primary-container font-semibold'
                         : 'text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface' }}">
