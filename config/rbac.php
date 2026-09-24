@@ -174,6 +174,9 @@ return [
             'profile' => [
                 'editor_profile' => ['view', 'update', 'password_update', 'avatar_update', 'two_factor_toggle'],
             ],
+            'notification' => [
+                'editor_notification' => ['view'],
+            ],
         ],
     ],
 

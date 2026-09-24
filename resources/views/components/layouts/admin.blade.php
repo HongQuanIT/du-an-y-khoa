@@ -188,7 +188,11 @@
                         class="absolute top-1 right-1 min-w-4 items-center justify-center rounded-full bg-error px-1 text-[10px] font-bold leading-4 text-white {{ $supportBadgeCount > 0 ? 'inline-flex' : 'hidden' }}">@if ($supportBadgeCount > 0){{ $supportBadgeCount > 99 ? '99+' : $supportBadgeCount }}@endif</span>
                 </a>
             @endif
-            @include('notification::partials.bell', ['indexRoute' => 'admin.notifications.index'])
+            @include('notification::partials.bell', [
+                'indexRoute' => request()->routeIs('editor.*')
+                    ? 'editor.notifications.index'
+                    : 'admin.notifications.index',
+            ])
             <div class="relative" @click.outside="accountMenu = false">
                 <button type="button" @click="accountMenu = !accountMenu; notificationsOpen = false"
                     class="flex items-center gap-3 rounded-xl p-1.5 text-left transition-colors hover:bg-surface-container-low focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"

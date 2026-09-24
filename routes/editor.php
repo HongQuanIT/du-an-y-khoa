@@ -20,6 +20,7 @@ use Modules\Editor\Http\Controllers\EditorDashboardController;
 use Modules\Editor\Http\Controllers\EditorProfileController;
 use Modules\Editor\Http\Controllers\MediaController;
 use Modules\Editor\Http\Middleware\EnsureEditorViewPermission;
+use Modules\Notification\Http\Controllers\NotificationController;
 use Modules\QuestionBank\Http\Controllers\TaxonomyLookupController;
 
 /*
@@ -47,6 +48,9 @@ Route::middleware(['auth', 'portal:editor'])->group(function (): void {
         Route::get('/', EditorDashboardController::class)
             ->middleware('permission:editor_dashboard.view')
             ->name('dashboard');
+        Route::get('/notifications', [NotificationController::class, 'index'])
+            ->middleware('permission:editor_notification.view')
+            ->name('notifications.index');
         Route::get('/profile', [EditorProfileController::class, 'show'])->middleware('permission:editor_profile.view')->name('profile.show');
         Route::put('/profile', [EditorProfileController::class, 'update'])->middleware('permission:editor_profile.update')->name('profile.update');
         Route::put('/profile/password', [EditorProfileController::class, 'updatePassword'])->middleware('permission:editor_profile.password_update')->name('profile.password');

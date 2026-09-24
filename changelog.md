@@ -2,6 +2,15 @@
 
 ## 2026-09-24
 
+### Feat — Tích hợp hệ thống thông báo cho Editor (Biên tập viên)
+
+- **Header & Menu**: Tích hợp chuông thông báo (Bell dropdown + Flyout cảnh báo) trên Header layout Editor ([`editor.blade.php`](file:///Users/khoale/IT/amboss/du-an-y-khoa/resources/views/components/layouts/editor.blade.php)); không thêm mục Thông báo vào Sidebar.
+- **Phân quyền & RBAC**: Thêm quyền `editor_notification.view` vào catalog RBAC ([`config/rbac.php`](file:///Users/khoale/IT/amboss/du-an-y-khoa/config/rbac.php)), ánh xạ qua `EditorPermissionBridge` và tự động gán cho role `content_editor` qua migration.
+- **Route & Controller**: Hỗ trợ route `/editor/notifications` (`editor.notifications.index`), cập nhật [`NotificationController`](file:///Users/khoale/IT/amboss/du-an-y-khoa/Modules/Notification/app/Http/Controllers/NotificationController.php) nhận diện layout Editor và mở rộng middleware phân quyền.
+- **Catalog & Broadcast**: Bổ sung các loại thông báo nghiệp vụ biên tập (`question.approved`, `question.rejected`, `question.feedback`, `editor.assigned`) vào [`config.php`](file:///Users/khoale/IT/amboss/du-an-y-khoa/Modules/Notification/config/config.php) và hỗ trợ Admin broadcast nhắm đối tượng Biên tập viên (`editors`).
+- **Tests**: Thêm Feature test [`EditorNotificationTest.php`](file:///Users/khoale/IT/amboss/du-an-y-khoa/Modules/Editor/tests/Feature/EditorNotificationTest.php) kiểm tra đầy đủ việc hiển thị, đánh dấu đọc và nhận broadcast.
+- **Portal URL**: Chuẩn hóa liên kết thông báo cũ từ `/admin/notifications` sang `/editor/notifications` khi Editor xem thông báo.
+
 ### Fix — Bridge quyền Editor cho mọi role portal Editor
 
 - `EditorPermissionBridge` nhận user theo portal Editor, không còn cứng role `content_editor`.

@@ -56,15 +56,27 @@ final class NotificationController extends Controller
         if ($request->wantsJson()) {
             return response()->json([
                 'success' => true,
-                'action_url' => $notification->action_url,
+                'action_url' => $this->portalActionUrl($request, $notification->action_url),
             ]);
         }
 
-        if ($notification->action_url) {
-            return redirect()->to($notification->action_url);
+        $actionUrl = $this->portalActionUrl($request, $notification->action_url);
+        if ($actionUrl) {
+            return redirect()->to($actionUrl);
         }
 
         return back();
+    }
+
+    private function portalActionUrl(Request $request, ?string $actionUrl): ?string
+    {
+        if ($actionUrl !== null
+            && $request->routeIs('editor.*')
+            && parse_url($actionUrl, PHP_URL_PATH) === '/admin/notifications') {
+            return route('editor.notifications.index');
+        }
+
+        return $actionUrl;
     }
 
     public function markAllRead(Request $request): RedirectResponse|\Illuminate\Http\JsonResponse
@@ -100,6 +112,10 @@ final class NotificationController extends Controller
             return 'layouts.teach';
         }
 
+        if ($request->routeIs('editor.*')) {
+            return 'layouts.editor';
+        }
+
         return 'layouts.app';
     }
 
@@ -111,6 +127,10 @@ final class NotificationController extends Controller
 
         if ($request->routeIs('teach.*')) {
             return 'teach.notifications.index';
+        }
+
+        if ($request->routeIs('editor.*')) {
+            return 'editor.notifications.index';
         }
 
         return 'notifications.index';

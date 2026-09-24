@@ -2,6 +2,13 @@
     /** @var \Modules\Notification\Models\UserNotification $notification */
     $compact = $compact ?? false;
     $unread = $notification->read_at === null;
+    $actionUrl = $notification->action_url;
+
+    // Older/system broadcasts may contain the Admin notification-center URL.
+    // Resolve that generic destination in the portal where the notification is shown.
+    if (request()->routeIs('editor.*') && $actionUrl !== null && parse_url($actionUrl, PHP_URL_PATH) === '/admin/notifications') {
+        $actionUrl = route('editor.notifications.index');
+    }
 @endphp
 
 <div data-notification-id="{{ $notification->id }}"
@@ -32,11 +39,11 @@
                         <form method="post" action="{{ route('notifications.read', $notification) }}">
                             @csrf
                             <button type="submit" class="font-label-sm text-label-sm text-primary hover:underline">
-                                {{ $notification->action_url ? 'Mở' : 'Đã đọc' }}
+                                {{ $actionUrl ? 'Mở' : 'Đã đọc' }}
                             </button>
                         </form>
-                    @elseif ($notification->action_url)
-                        <a href="{{ $notification->action_url }}" class="font-label-sm text-label-sm text-primary hover:underline">Mở</a>
+                    @elseif ($actionUrl)
+                        <a href="{{ $actionUrl }}" class="font-label-sm text-label-sm text-primary hover:underline">Mở</a>
                     @endif
                     @unless ($compact)
                         <form method="post" action="{{ route('notifications.destroy', $notification) }}">

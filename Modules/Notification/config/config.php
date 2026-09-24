@@ -216,6 +216,35 @@ return [
             'bypass_prefs' => true,
             'icon' => 'security',
         ],
+        'question.approved' => [
+            'category' => 'result',
+            'audience' => 'editor',
+            'label' => 'Câu hỏi đã được duyệt',
+            'preference_key' => 'push_reminders',
+            'icon' => 'verified',
+        ],
+        'question.rejected' => [
+            'category' => 'result',
+            'audience' => 'editor',
+            'label' => 'Câu hỏi cần chỉnh sửa',
+            'preference_key' => 'push_reminders',
+            'icon' => 'rule',
+        ],
+        'question.feedback' => [
+            'category' => 'support',
+            'audience' => 'editor',
+            'label' => 'Góp ý câu hỏi',
+            'preference_key' => 'push_support',
+            'icon' => 'chat',
+        ],
+        'editor.assigned' => [
+            'category' => 'system',
+            'audience' => 'editor',
+            'label' => 'Phân công biên tập',
+            'preference_key' => null,
+            'bypass_prefs' => true,
+            'icon' => 'assignment_ind',
+        ],
     ],
 
     'default_prefs' => [

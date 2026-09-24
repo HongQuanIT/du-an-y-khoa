@@ -73,6 +73,7 @@ final class BroadcastSystemNotificationAction
             'learners' => $query->role(PortalAccess::roleNames(PortalGroup::Learner))->pluck('id'),
             'instructors' => $query->role(PortalAccess::roleNames(PortalGroup::Instructor))->pluck('id'),
             'staff' => $query->role(PortalAccess::roleNames(PortalGroup::Admin))->pluck('id'),
+            'editors' => $query->role(PortalAccess::roleNames(PortalGroup::Editor))->pluck('id'),
             default => $query->pluck('id'),
         };
     }

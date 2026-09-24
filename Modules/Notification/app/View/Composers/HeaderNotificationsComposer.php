@@ -27,6 +27,10 @@ final class HeaderNotificationsComposer
         'classroom.pending_approval',
         'classroom.approved',
         'classroom.rejected',
+        'question.approved',
+        'question.rejected',
+        'question.feedback',
+        'editor.assigned',
     ];
 
     public function compose(View $view): void
@@ -115,7 +119,19 @@ final class HeaderNotificationsComposer
                     'badgeLabel' => 'Hỗ trợ giải đáp',
                     'cta' => 'Xem tin nhắn',
                 ],
-                str_contains($type, 'system') => [
+                str_contains($type, 'question.approved') => [
+                    'badgeClass' => 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800',
+                    'icon' => 'verified',
+                    'badgeLabel' => 'Duyệt câu hỏi',
+                    'cta' => 'Xem câu hỏi',
+                ],
+                str_contains($type, 'question.rejected') => [
+                    'badgeClass' => 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 border border-rose-200 dark:border-rose-800',
+                    'icon' => 'rule',
+                    'badgeLabel' => 'Cần chỉnh sửa',
+                    'cta' => 'Sửa ngay',
+                ],
+                str_contains($type, 'system') || str_contains($type, 'editor.assigned') => [
                     'badgeClass' => 'bg-purple-50 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 border border-purple-200 dark:border-purple-800',
                     'icon' => 'campaign',
                     'badgeLabel' => 'Thông báo hệ thống',
@@ -133,7 +149,11 @@ final class HeaderNotificationsComposer
                 'id' => $importantUnread->id,
                 'title' => $importantUnread->title,
                 'body' => $importantUnread->body,
-                'action_url' => $importantUnread->action_url,
+                'action_url' => request()->routeIs('editor.*')
+                    && $importantUnread->action_url !== null
+                    && parse_url($importantUnread->action_url, PHP_URL_PATH) === '/admin/notifications'
+                    ? route('editor.notifications.index')
+                    : $importantUnread->action_url,
                 'read_url' => route('notifications.read', $importantUnread),
                 'created_at_human' => $importantUnread->created_at?->diffForHumans() ?? 'Vừa xong',
             ], $style);

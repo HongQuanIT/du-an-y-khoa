@@ -28,7 +28,7 @@ final class AdminBroadcastController extends Controller
         $data = $request->validate([
             'title' => ['required', 'string', 'max:160'],
             'body' => ['required', 'string', 'max:2000'],
-            'audience' => ['required', 'in:all,learners,instructors,staff'],
+            'audience' => ['required', 'in:all,learners,instructors,staff,editors'],
             'action_url' => ['nullable', 'string', 'max:500'],
             'type' => ['nullable', 'in:system.broadcast,system.maintenance'],
         ]);

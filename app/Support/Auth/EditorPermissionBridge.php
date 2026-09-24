@@ -47,6 +47,7 @@ final class EditorPermissionBridge
         'profile.password_update' => 'editor_profile.password_update',
         'profile.avatar_update' => 'editor_profile.avatar_update',
         'profile.two_factor_toggle' => 'editor_profile.two_factor_toggle',
+        'notification.view' => 'editor_notification.view',
     ];
 
     public static function resolve(User $user, string $ability): ?bool
