@@ -2,6 +2,11 @@
 
 ## 2026-09-24
 
+### Fix — Giữ liên kết profile trong portal Editor
+
+- Menu tài khoản trong layout dùng chung trỏ `Quản lý tài khoản` về `/editor/profile` khi đang ở portal Editor.
+- Dùng quyền `editor_profile.view` cho Editor, giữ nguyên quyền/profile mặc định cho Admin.
+
 ### Feat — Tích hợp hệ thống thông báo cho Editor (Biên tập viên)
 
 - **Header & Menu**: Tích hợp chuông thông báo (Bell dropdown + Flyout cảnh báo) trên Header layout Editor ([`editor.blade.php`](file:///Users/khoale/IT/amboss/du-an-y-khoa/resources/views/components/layouts/editor.blade.php)); không thêm mục Thông báo vào Sidebar.
