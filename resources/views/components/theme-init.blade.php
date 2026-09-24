@@ -1,5 +1,6 @@
 @props([
     'force' => null, // 'light' | 'dark' | null (theo user/system)
+    'saveUrl' => null,
 ])
 
 @php
@@ -47,6 +48,6 @@
 @if (auth()->check() && $force === null)
     <script>
         window.__userThemePreference = @json(auth()->user()->theme ?? 'system');
-        window.__userThemeSaveUrl = @json(route('settings.appearance'));
+        window.__userThemeSaveUrl = @json($saveUrl ?? route('settings.appearance'));
     </script>
 @endif

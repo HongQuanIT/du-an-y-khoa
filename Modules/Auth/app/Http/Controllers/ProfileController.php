@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
+use Modules\Analytics\Actions\ResetLearnerProgressAction;
 use Modules\Auth\Http\Requests\CompleteOnboardingRequest;
 use Modules\Auth\Models\AdministrativeUnit;
 use Modules\Auth\Models\Country;
@@ -32,7 +33,6 @@ use Modules\Billing\Models\Invoice;
 use Modules\Billing\Support\CurrentSubscription;
 use Modules\Billing\Support\MembershipSummary;
 use Modules\Notification\Support\NotificationCatalog;
-use Modules\Analytics\Actions\ResetLearnerProgressAction;
 
 /** Unified account hub at `/profile` (profile + settings tabs). */
 final class ProfileController extends Controller
@@ -43,8 +43,12 @@ final class ProfileController extends Controller
         'membership', 'invoices', 'redeem', 'reset-alt',
     ];
 
-    public function show(Request $request): View
+    public function show(Request $request): View|RedirectResponse
     {
+        if ($request->user()->hasRole('content_editor')) {
+            return redirect()->route('editor.profile.show');
+        }
+
         $user = User::query()
             ->with([
                 'socialAccounts',

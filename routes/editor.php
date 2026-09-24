@@ -17,7 +17,9 @@ use Modules\Admin\Http\Controllers\TaxonomyController;
 use Modules\Auth\Http\Controllers\AuthenticatedSessionController;
 use Modules\Auth\Http\Controllers\PortalTwoFactorChallengeController;
 use Modules\Editor\Http\Controllers\EditorDashboardController;
-use Modules\Media\Http\Controllers\MediaController;
+use Modules\Editor\Http\Controllers\EditorProfileController;
+use Modules\Editor\Http\Controllers\MediaController;
+use Modules\Editor\Http\Middleware\EnsureEditorViewPermission;
 use Modules\QuestionBank\Http\Controllers\TaxonomyLookupController;
 
 /*
@@ -41,10 +43,23 @@ Route::middleware(['auth', 'portal:editor'])->group(function (): void {
     Route::get('/2fa/challenge', [PortalTwoFactorChallengeController::class, 'showEditor'])->name('2fa.challenge');
     Route::post('/2fa/challenge', [PortalTwoFactorChallengeController::class, 'verifyEditor'])->name('2fa.challenge.verify');
 
-    Route::middleware('staff.2fa')->group(function (): void {
+    Route::middleware(['staff.2fa', EnsureEditorViewPermission::class])->group(function (): void {
         Route::get('/', EditorDashboardController::class)
             ->middleware('permission:editor_dashboard.view')
             ->name('dashboard');
+        Route::get('/profile', [EditorProfileController::class, 'show'])->middleware('permission:editor_profile.view')->name('profile.show');
+        Route::put('/profile', [EditorProfileController::class, 'update'])->middleware('permission:editor_profile.update')->name('profile.update');
+        Route::put('/profile/password', [EditorProfileController::class, 'updatePassword'])->middleware('permission:editor_profile.password_update')->name('profile.password');
+        Route::put('/profile/appearance', [EditorProfileController::class, 'updateAppearance'])->middleware('permission:editor_profile.update')->name('profile.appearance');
+        Route::put('/profile/avatar', [EditorProfileController::class, 'updateAvatar'])->middleware('permission:editor_profile.avatar_update')->name('profile.avatar');
+        Route::delete('/profile/avatar', [EditorProfileController::class, 'destroyAvatar'])->middleware('permission:editor_profile.avatar_update')->name('profile.avatar.destroy');
+        Route::middleware('permission:editor_profile.two_factor_toggle')->group(function (): void {
+            Route::get('/profile/2fa/setup', [EditorProfileController::class, 'showTwoFactorSetup'])->name('profile.2fa.setup');
+            Route::post('/profile/2fa/confirm', [EditorProfileController::class, 'confirmTwoFactorSetup'])->middleware('throttle:auth')->name('profile.2fa.confirm');
+            Route::get('/profile/2fa/recovery', [EditorProfileController::class, 'showTwoFactorRecovery'])->name('profile.2fa.recovery');
+            Route::post('/profile/2fa/recovery', [EditorProfileController::class, 'finishTwoFactorRecovery'])->name('profile.2fa.recovery.finish');
+            Route::delete('/profile/2fa', [EditorProfileController::class, 'disableTwoFactor'])->middleware('throttle:auth')->name('profile.2fa.disable');
+        });
 
         Route::middleware('permission:editor_question.view')->group(function (): void {
             Route::get('/questions', [QuestionController::class, 'index'])->name('questions.index');
