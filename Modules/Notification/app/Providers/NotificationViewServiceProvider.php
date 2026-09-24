@@ -16,6 +16,7 @@ final class NotificationViewServiceProvider extends ServiceProvider
             'components.layouts.app',
             'components.layouts.admin',
             'components.layouts.teach',
+            'components.layouts.editor',
             'notification::partials.bell',
         ], HeaderNotificationsComposer::class);
     }

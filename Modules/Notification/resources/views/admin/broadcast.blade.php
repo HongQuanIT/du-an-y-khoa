@@ -38,6 +38,7 @@
                             'all' => 'Tất cả người dùng',
                             'learners' => 'Học viên',
                             'instructors' => 'Giảng viên',
+                            'editors' => 'Biên tập viên',
                             'staff' => 'Nhân sự / Admin',
                         ] as $value => $label)
                             <option value="{{ $value }}" @selected(old('audience', 'learners') === $value)>{{ $label }}</option>
