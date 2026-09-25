@@ -2,6 +2,12 @@
 
 ## 2026-09-25
 
+### Feat — Bổ sung KPI đánh giá chất lượng Reviewer
+
+- Hiển thị tổng số lượt gắn cờ và số lượt bị Admin đánh dấu sai trên dashboard Reviewer.
+- Tính KPI sai theo kết quả `false_positive`.
+- Bổ sung test kiểm tra KPI đánh dấu sai.
+
 ### Fix — Đồng bộ format và luồng rời trang duyệt Teach/Reviewer
 
 - Đồng bộ rich text, bullet, đánh số và thụt lề theo Editor trên màn hình Teach và Reviewer.

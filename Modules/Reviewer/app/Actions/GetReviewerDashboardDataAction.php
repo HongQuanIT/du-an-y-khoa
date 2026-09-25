@@ -26,6 +26,7 @@ final class GetReviewerDashboardDataAction
         $green = (int) ($counts[ReviewerFlag::Green->value] ?? 0);
         $red = (int) ($counts[ReviewerFlag::Red->value] ?? 0);
         $total = $green + $red;
+        $incorrectCount = (clone $history)->where('outcome', ReviewFlagOutcome::FalsePositive->value)->count();
         $canViewQuestions = $reviewer->can('question_flag.view');
         $pendingCount = $canViewQuestions ? (clone $pending)->count() : 0;
         $staleCount = $canViewQuestions ? (clone $pending)->where('updated_at', '<', $now->copy()->subDay())->count() : 0;
@@ -54,6 +55,7 @@ final class GetReviewerDashboardDataAction
             'kpis' => [
                 ['label' => 'Chờ gắn cờ', 'value' => $pendingCount, 'hint' => 'Câu hỏi đang chờ bạn review', 'icon' => 'flag', 'severity' => $pendingCount ? 'warning' : null],
                 ['label' => 'Đã gắn cờ', 'value' => $total, 'hint' => 'Tổng lượt review của bạn', 'icon' => 'task_alt', 'severity' => null],
+                ['label' => 'Bị đánh dấu sai', 'value' => $incorrectCount, 'hint' => 'Admin đánh giá cờ của bạn là sai', 'icon' => 'rule', 'severity' => $incorrectCount ? 'critical' : null],
                 ['label' => 'Gắn cờ hôm nay', 'value' => $todayCount, 'hint' => 'Lượt review trong ngày', 'icon' => 'today', 'severity' => null],
                 ['label' => 'Tỷ lệ cờ xanh', 'value' => $total ? round($green / $total * 100).'%' : '—', 'hint' => $green.' xanh · '.$red.' đỏ', 'icon' => 'verified', 'severity' => null],
             ],
