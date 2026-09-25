@@ -5,7 +5,7 @@
         <x-auth.errors />
         <form class="space-y-5" action="{{ route('reviewer.login.store') }}" method="post">
             @csrf
-            <x-auth.input name="email" label="Email" type="email" required autofocus autocomplete="username" />
+            <x-auth.input name="email" label="Email" type="email" placeholder="reviewer@example.com" required autofocus autocomplete="username" />
             <x-auth.password-input name="password" label="Mật khẩu" required autocomplete="current-password" />
             <x-auth.submit>Đăng nhập</x-auth.submit>
         </form>
