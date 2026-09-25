@@ -76,16 +76,21 @@ final class ReviewerPortalTest extends TestCase
             ->assertOk()
             ->assertSee('Hồ sơ reviewer')
             ->assertSee('Thông tin tài khoản')
-            ->assertSee('Ảnh đại diện');
+            ->assertSee('Ảnh đại diện')
+            ->assertDontSee(route('reviewer.profile.show', ['tab' => 'appearance']), false)
+            ->assertDontSee('Chế độ giao diện');
 
         $this->get(route('reviewer.profile.show', ['tab' => 'security']))
             ->assertOk()
             ->assertSee('Đổi mật khẩu')
-            ->assertSee('Xác thực hai bước');
+            ->assertSee('Xác thực hai bước')
+            ->assertDontSee(route('reviewer.profile.show', ['tab' => 'appearance']), false)
+            ->assertDontSee('Chế độ giao diện');
 
         $this->get(route('reviewer.profile.show', ['tab' => 'appearance']))
             ->assertOk()
-            ->assertSee('Chế độ giao diện');
+            ->assertSee('Thông tin tài khoản')
+            ->assertDontSee('Chế độ giao diện');
     }
 
     public function test_reviewer_dashboard_and_notification_permissions_control_shell(): void
