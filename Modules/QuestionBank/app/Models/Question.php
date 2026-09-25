@@ -23,6 +23,7 @@ use Laravel\Scout\Searchable;
 use Modules\QuestionBank\Database\Factories\QuestionFactory;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\InstructorReviewDecision;
+use Modules\QuestionBank\Enums\QuestionRejectReasonCode;
 use Modules\QuestionBank\Enums\QuestionReviewStatus;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Enums\QuestionWorkflowEventType;
@@ -128,10 +129,13 @@ class Question extends Model
         'reviewer_2_id',
         'reviewer_2_flag',
         'reviewer_2_note',
+        'sticky_reviewer_1_id',
+        'sticky_reviewer_2_id',
         'publisher_id',
         'published_version',
         'rejection_reason',
         'rejected_by_role',
+        'reject_reason_code',
         'cloned_from_id',
         'cloned_from_version',
         'import_batch_id',
@@ -430,6 +434,12 @@ class Question extends Model
         return $this->hasMany(QuestionReviewerFlag::class);
     }
 
+    /** @return HasMany<QuestionFlagChangeEvent, $this> */
+    public function flagChangeEvents(): HasMany
+    {
+        return $this->hasMany(QuestionFlagChangeEvent::class);
+    }
+
     /** @return HasMany<QuestionWorkflowEvent, $this> */
     public function workflowEvents(): HasMany
     {
@@ -579,10 +589,13 @@ class Question extends Model
             QuestionStatus::Draft => 'Bản nháp',
             QuestionStatus::InReview => 'Đang chờ giảng viên',
             QuestionStatus::InFlagReview => $isUpdate ? 'Đang gắn cờ cập nhật' : 'Đang chờ gắn cờ',
+            QuestionStatus::FlagConflict => 'Cảnh báo · 2 cờ khác nhau',
             QuestionStatus::PendingPublish => $isUpdate ? 'Cập nhật đủ phiếu' : 'Đủ phiếu · chờ xuất bản',
-            QuestionStatus::Rejected => $this->isInstructorRejection()
-                ? 'Giảng viên từ chối'
-                : ($this->isPublisherRejection() ? 'Admin trả về biên tập' : 'Bản gửi bị từ chối'),
+            QuestionStatus::Rejected => $this->isDualRedRejection()
+                ? 'Hai reviewer trả về (cờ đỏ)'
+                : ($this->isInstructorRejection()
+                    ? 'Giảng viên từ chối'
+                    : ($this->isPublisherRejection() ? 'Admin trả về biên tập' : 'Bản gửi bị từ chối')),
             default => 'Không có bản gửi',
         };
     }
@@ -592,6 +605,11 @@ class Question extends Model
     {
         if ($this->status !== QuestionStatus::Rejected) {
             return false;
+        }
+
+        if ($this->reject_reason_code === QuestionRejectReasonCode::Instructor->value
+            || $this->reject_reason_code === QuestionRejectReasonCode::Instructor) {
+            return true;
         }
 
         if ($this->instructor_decision === InstructorReviewDecision::Rejected->value
@@ -611,11 +629,38 @@ class Question extends Model
             ->contains(fn (array $flag): bool => ($flag['decision'] ?? null) === InstructorReviewDecision::Rejected->value);
     }
 
+    /** Auto-return when both reviewers flagged red (or draft still carrying dual_red code). */
+    public function isDualRedRejection(): bool
+    {
+        return $this->reject_reason_code === QuestionRejectReasonCode::DualRed->value
+            || $this->reject_reason_code === QuestionRejectReasonCode::DualRed
+            || ($this->status === QuestionStatus::Rejected && $this->rejected_by_role === 'system');
+    }
+
+    public function hasStickyReviewers(): bool
+    {
+        return $this->sticky_reviewer_1_id !== null && $this->sticky_reviewer_2_id !== null;
+    }
+
+    public function isStickyResubmitEligible(): bool
+    {
+        return $this->hasStickyReviewers()
+            && ($this->reject_reason_code === QuestionRejectReasonCode::DualRed->value
+                || $this->reject_reason_code === QuestionRejectReasonCode::DualRed);
+    }
+
     /** Layer 2: admin trả về vì lý do vận hành sau khi đủ 2 phiếu GV. */
     public function isPublisherRejection(): bool
     {
-        if ($this->status !== QuestionStatus::Rejected || $this->isInstructorRejection()) {
+        if ($this->status !== QuestionStatus::Rejected
+            || $this->isInstructorRejection()
+            || $this->isDualRedRejection()) {
             return false;
+        }
+
+        if ($this->reject_reason_code === QuestionRejectReasonCode::Admin->value
+            || $this->reject_reason_code === QuestionRejectReasonCode::Admin) {
+            return true;
         }
 
         return in_array(Role::tryFrom((string) $this->rejected_by_role), [Role::Admin, Role::SuperAdmin], true);

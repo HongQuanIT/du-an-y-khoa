@@ -14,6 +14,7 @@ use Illuminate\Validation\ValidationException;
 use Modules\Admin\Enums\AuditAction;
 use Modules\Admin\Support\Auditor;
 use Modules\Admin\Support\AuditSnapshot;
+use Modules\QuestionBank\Enums\QuestionRejectReasonCode;
 use Modules\QuestionBank\Enums\QuestionReviewAction;
 use Modules\QuestionBank\Enums\QuestionReviewStatus;
 use Modules\QuestionBank\Enums\QuestionStatus;
@@ -120,6 +121,9 @@ final class InstructorReviewQuestionAction
                 'status' => QuestionStatus::Rejected,
                 'rejection_reason' => mb_substr($reason, 0, 2000),
                 'rejected_by_role' => Role::Instructor->value,
+                'reject_reason_code' => QuestionRejectReasonCode::Instructor->value,
+                'sticky_reviewer_1_id' => null,
+                'sticky_reviewer_2_id' => null,
                 'updated_by' => $instructor->getKey(),
             ])->save();
 

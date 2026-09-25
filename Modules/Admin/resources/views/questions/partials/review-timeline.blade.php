@@ -175,13 +175,13 @@
                                                     >
                                                         <div class="flex flex-wrap items-center gap-2" x-show="locked" x-cloak>
                                                             <span
-                                                                class="rounded-full px-2 py-0.5 text-xs font-semibold"
-                                                                :class="badgeClass"
-                                                                x-text="outcomeLabel || 'Chưa đánh giá'"
+                                                                class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900"
+                                                                x-show="isIncorrect"
+                                                                x-text="outcomeLabel || 'Sai'"
                                                             ></span>
                                                             <span
                                                                 class="max-w-md truncate text-xs text-on-surface-variant"
-                                                                x-show="note"
+                                                                x-show="isIncorrect && note"
                                                                 x-text="note"
                                                                 :title="note"
                                                             ></span>
@@ -189,7 +189,7 @@
                                                                 class="h-7 rounded-md border border-outline-variant px-2 text-xs font-semibold text-on-surface hover:bg-surface-container-low"
                                                                 @click="openEdit()"
                                                                 :disabled="saving">
-                                                                Mở QA
+                                                                Đánh dấu
                                                             </button>
                                                         </div>
 
@@ -208,20 +208,26 @@
                                                                 x-model="note"
                                                                 maxlength="500"
                                                                 :disabled="saving"
-                                                                placeholder="Ghi chú QA…"
+                                                                placeholder="Ghi chú (vd. họp giao ban)…"
                                                                 class="h-7 min-w-[8rem] flex-1 rounded-md border border-outline-variant bg-surface px-2 text-xs text-on-surface outline-none focus:border-primary disabled:opacity-60"
                                                             >
                                                             <button type="button"
                                                                 class="h-7 rounded-md bg-on-surface px-2.5 text-xs font-semibold text-surface hover:opacity-90 disabled:opacity-60"
                                                                 @click="save()"
                                                                 :disabled="saving">
-                                                                <span x-text="saving ? 'Đang lưu…' : 'Lưu QA'"></span>
+                                                                <span x-text="saving ? 'Đang lưu…' : 'Lưu'"></span>
+                                                            </button>
+                                                            <button type="button"
+                                                                class="h-7 rounded-md border border-outline-variant px-2 text-xs font-semibold text-on-surface-variant hover:bg-surface-container-low disabled:opacity-60"
+                                                                @click="cancelEdit()"
+                                                                :disabled="saving">
+                                                                Hủy
                                                             </button>
                                                             <span class="text-xs text-rose-700" x-show="error" x-text="error"></span>
                                                         </div>
                                                     </div>
-                                                @elseif (filled($entry['outcome_label'] ?? null))
-                                                    <span class="mt-1 inline-flex rounded-full bg-surface-container px-2 py-0.5 text-xs text-on-surface-variant">
+                                                @elseif (($entry['outcome_visible'] ?? false) && filled($entry['outcome_label'] ?? null))
+                                                    <span class="mt-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900">
                                                         {{ $entry['outcome_label'] }}
                                                     </span>
                                                 @endif
@@ -248,26 +254,39 @@
                 kind: config.kind,
                 id: config.id,
                 options: config.options || [],
-                outcome: config.outcome || 'pending',
+                outcome: config.outcome || 'confirmed',
                 outcomeLabel: config.outcomeLabel || null,
                 note: config.note || '',
                 locked: Boolean(config.locked),
                 saving: false,
                 error: '',
+                _snapshot: null,
 
-                get badgeClass() {
-                    if (['miss', 'over_reject', 'false_positive'].includes(this.outcome)) {
-                        return 'bg-amber-100 text-amber-900';
-                    }
-                    if (this.outcome === 'confirmed') {
-                        return 'bg-emerald-100 text-emerald-800';
-                    }
-                    return 'bg-surface-container text-on-surface-variant';
+                get isIncorrect() {
+                    return ['false_positive', 'needs_rework', 'miss', 'over_reject'].includes(this.outcome);
                 },
 
                 openEdit() {
                     this.error = '';
+                    this._snapshot = {
+                        outcome: this.outcome,
+                        outcomeLabel: this.outcomeLabel,
+                        note: this.note,
+                    };
+                    if (this.outcome === 'pending') {
+                        this.outcome = 'confirmed';
+                    }
                     this.locked = false;
+                },
+
+                cancelEdit() {
+                    if (this._snapshot) {
+                        this.outcome = this._snapshot.outcome;
+                        this.outcomeLabel = this._snapshot.outcomeLabel;
+                        this.note = this._snapshot.note;
+                    }
+                    this.error = '';
+                    this.locked = true;
                 },
 
                 async save() {
@@ -298,15 +317,16 @@
                             const firstError = payload?.errors
                                 ? Object.values(payload.errors).flat()[0]
                                 : null;
-                            throw new Error(firstError || payload?.message || 'Không lưu được QA.');
+                            throw new Error(firstError || payload?.message || 'Không lưu được đánh dấu.');
                         }
 
                         this.outcome = payload.outcome || this.outcome;
                         this.outcomeLabel = payload.outcome_label || null;
                         this.note = payload.outcome_note || '';
-                        this.locked = payload.locked !== false && this.outcome !== 'pending';
+                        this.locked = true;
+                        this._snapshot = null;
                     } catch (e) {
-                        this.error = e?.message || 'Không lưu được QA.';
+                        this.error = e?.message || 'Không lưu được đánh dấu.';
                     } finally {
                         this.saving = false;
                     }

@@ -75,9 +75,11 @@
     $statusBadge = ! $isNew ? match (true) {
         $isInstructorRejection => ['label' => 'Giảng viên từ chối', 'class' => 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'],
         $isPublisherRejection => ['label' => 'Admin trả về', 'class' => 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'],
+        $question->isDualRedRejection() => ['label' => 'Hai cờ đỏ · trả về', 'class' => 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'],
         $question->status === \Modules\QuestionBank\Enums\QuestionStatus::Published => ['label' => 'Đã xuất bản', 'class' => 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'],
         $question->status === \Modules\QuestionBank\Enums\QuestionStatus::InReview => ['label' => 'Chờ giảng viên', 'class' => 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'],
         $question->status === \Modules\QuestionBank\Enums\QuestionStatus::InFlagReview => ['label' => 'Chờ reviewer', 'class' => 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300'],
+        $question->status === \Modules\QuestionBank\Enums\QuestionStatus::FlagConflict => ['label' => 'Cảnh báo cờ', 'class' => 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300'],
         $question->status === \Modules\QuestionBank\Enums\QuestionStatus::PendingPublish => ['label' => 'Chờ xuất bản', 'class' => 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300'],
         $question->status === \Modules\QuestionBank\Enums\QuestionStatus::Rejected => ['label' => 'Từ chối', 'class' => 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'],
         $question->status === \Modules\QuestionBank\Enums\QuestionStatus::Private => ['label' => 'Riêng tư', 'class' => 'bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300'],
@@ -254,6 +256,17 @@
         </div>
     @endif
 
+    @if (! $isNew && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::FlagConflict)
+        <div class="mb-5 rounded-2xl border border-amber-200 bg-amber-50/70 px-4 py-3 text-sm text-amber-950">
+            <p>
+                Hai reviewer gắn cờ khác nhau — câu đang ở cảnh báo.
+                @if (! $isReviewer)
+                    <strong>Không chỉnh sửa</strong> và <strong>không rút về nháp</strong> — chờ hai reviewer thống nhất.
+                @endif
+            </p>
+        </div>
+    @endif
+
     @if ($hideEditorUpdateUi)
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_300px] lg:items-start">
             <div class="space-y-5">
@@ -385,7 +398,7 @@
                                      x-init="
                                          (function(currentOpt) {
                                              const container = $el.querySelector('[data-mini-editor]');
-                                             const uploadUrl = '{{ route(request()->routeIs('editor.*') ? 'editor.media.store' : 'admin.editor.images') }}';
+                                             const uploadUrl = '{{ route(request()->routeIs('editor.*') ? 'editor.rich-editor.images' : 'admin.editor.images') }}';
                                              const q = new window.Quill(container, {
                                                  theme: 'snow',
                                                  modules: { toolbar: [['bold', 'italic'], ['link', 'image'], ['clean']] },
@@ -469,7 +482,7 @@
                                              x-init="
                                                  (function(currentHint) {
                                                      const container = $el.querySelector('[data-mini-hint-editor]');
-                                                     const uploadUrl = '{{ route(request()->routeIs('editor.*') ? 'editor.media.store' : 'admin.editor.images') }}';
+                                                     const uploadUrl = '{{ route(request()->routeIs('editor.*') ? 'editor.rich-editor.images' : 'admin.editor.images') }}';
                                                      const q = new window.Quill(container, {
                                                          theme: 'snow',
                                                          modules: { toolbar: [['bold', 'italic'], ['link', 'image'], ['clean']] },
@@ -536,20 +549,10 @@
                         <h2 class="mb-2 font-label-md font-semibold text-on-surface">Xuất bản</h2>
                         <p class="mb-3 text-xs leading-5 text-on-surface-variant">
                             GV {{ $question->assignedInstructor?->name ?? $question->instructor?->name ?? '—' }} đã duyệt.
-                            Xuất bản chỉ tăng phiên bản — không sửa nội dung.
+                            Hai cờ xanh đủ điều kiện xuất bản — chỉ tăng phiên bản, không sửa nội dung.
                             <span class="mt-2 block">
                                 @include('questionbank::partials.instructor-review-flags', ['question' => $question])
                             </span>
-                            @if ($question->hasRedReviewerFlag())
-                                <span class="mt-2 block font-semibold text-rose-700">Có ≥1 cờ đỏ — không xuất bản được. Admin phải trả về biên tập.</span>
-                            @elseif (! empty($qaBlocksPublish))
-                                <span class="mt-2 block font-semibold text-amber-800">
-                                    Pipeline {{ (int) ($qaAssessment['pipeline_cycles'] ?? 0) }} vòng — phải đánh giá QA trên «Lịch sử duyệt» trước khi xuất bản.
-                                    @if (! empty($qaAssessment['summary']))
-                                        <span class="mt-1 block font-medium">{{ $qaAssessment['summary'] }}</span>
-                                    @endif
-                                </span>
-                            @endif
                             @if ($question->published_version)
                                 <span class="mt-2 block">
                                     QBank đang phục vụ phiên bản {{ $question->published_version }}.
@@ -558,7 +561,7 @@
                             @endif
                         </p>
                         <div class="flex flex-col gap-2">
-                            @if ($canPublish && ! $question->hasRedReviewerFlag() && empty($qaBlocksPublish))
+                            @if ($canPublish)
                             <button type="submit"
                                 form="question-publish-form"
                                 onclick="return confirm('Xuất bản câu hỏi này lên ngân hàng? Phiên bản sẽ tăng.')"
@@ -573,19 +576,13 @@
                                 <span class="material-symbols-outlined text-[18px]">lock</span>
                                 Ẩn khỏi ngân hàng (private)
                             </button>
-                            @elseif ($canPublish && ! $question->hasRedReviewerFlag() && ! empty($qaBlocksPublish))
-                            <button type="button" disabled
-                                class="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-primary/40 py-2.5 font-label-md font-semibold text-on-primary">
-                                <span class="material-symbols-outlined text-[18px]">publish</span>
-                                Duyệt &amp; xuất bản (thiếu QA)
-                            </button>
                             @endif
                             @if ($canReject)
                             <button type="button"
                                 @click="returnOpen = !returnOpen"
-                                class="flex w-full items-center justify-center gap-2 rounded-xl border border-rose-300 py-2.5 font-label-md font-semibold text-rose-700 hover:bg-rose-50 {{ $question->hasRedReviewerFlag() ? 'bg-rose-600 text-white hover:bg-rose-700 border-rose-600' : '' }}">
+                                class="flex w-full items-center justify-center gap-2 rounded-xl border border-rose-300 py-2.5 font-label-md font-semibold text-rose-700 hover:bg-rose-50">
                                 <span class="material-symbols-outlined text-[18px]">close</span>
-                                {{ $question->hasRedReviewerFlag() ? 'Trả về biên tập (bắt buộc)' : 'Trả về biên tập' }}
+                                Trả về biên tập
                             </button>
 
                             <div x-show="returnOpen" x-cloak
@@ -594,27 +591,8 @@
                                     <label for="reject-return-reason" class="mb-1 block text-xs font-semibold text-on-surface-variant">Lý do trả về</label>
                                     <textarea id="reject-return-reason" x-ref="rejectReason" rows="3" required
                                         class="w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm"
-                                        placeholder="{{ $question->hasRedReviewerFlag() ? 'Tóm tắt lỗi theo ghi chú cờ đỏ…' : 'Vấn đề vận hành / định dạng…' }}"></textarea>
+                                        placeholder="Vấn đề vận hành / định dạng…"></textarea>
                                 </div>
-                                @if ($question->hasRedReviewerFlag())
-                                    <fieldset class="space-y-2">
-                                        <legend class="text-xs font-semibold text-on-surface-variant">Đánh giá cờ đỏ (vòng này)</legend>
-                                        <label class="flex cursor-pointer items-start gap-2 rounded-lg border border-outline-variant px-3 py-2 has-[:checked]:border-rose-400 has-[:checked]:bg-rose-50">
-                                            <input type="radio" class="mt-1" name="red_flag_outcome_ui" value="confirmed" x-model="redOutcome">
-                                            <span class="text-sm">
-                                                <span class="font-semibold text-on-surface">Cờ đỏ đúng</span>
-                                                <span class="block text-xs text-on-surface-variant">Reviewer gắn đúng · GV approve cùng vòng → duyệt sai.</span>
-                                            </span>
-                                        </label>
-                                        <label class="flex cursor-pointer items-start gap-2 rounded-lg border border-outline-variant px-3 py-2 has-[:checked]:border-amber-400 has-[:checked]:bg-amber-50">
-                                            <input type="radio" class="mt-1" name="red_flag_outcome_ui" value="false_positive" x-model="redOutcome">
-                                            <span class="text-sm">
-                                                <span class="font-semibold text-on-surface">Cờ đỏ gắn sai</span>
-                                                <span class="block text-xs text-on-surface-variant">Reviewer gắn oan · không quy lỗi GV.</span>
-                                            </span>
-                                        </label>
-                                    </fieldset>
-                                @endif
                                 <button type="button"
                                     class="w-full rounded-xl bg-rose-600 py-2.5 text-sm font-semibold text-white hover:bg-rose-700"
                                     @click="
@@ -682,6 +660,8 @@
                                 Đang chờ giảng viên duyệt chuyên môn — không xuất bản trước bước này.
                             @elseif ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::InFlagReview)
                                 Đang chờ reviewer gắn cờ — không xuất bản trước bước này.
+                            @elseif ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::FlagConflict)
+                                Hai cờ đang lệch — chờ reviewer thống nhất, chưa xuất bản.
                             @elseif ($isRejected)
                                 Câu hỏi đã bị từ chối. Đang chờ biên tập viên xử lý.
                             @elseif ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::Draft)
@@ -712,7 +692,7 @@
                     'pointer-events-none select-none opacity-70' => ! $canEditContent,
                 ])>
                 <div class="rounded-2xl border border-outline-variant bg-surface p-4"
-                    x-data="questionImageUploader(@js($stemImagePath), @js($stemImageUrl), @js(route(request()->routeIs('editor.*') ? 'editor.media.store' : 'admin.editor.images')), @js(csrf_token()))">
+                    x-data="questionImageUploader(@js($stemImagePath), @js($stemImageUrl), @js(route(request()->routeIs('editor.*') ? 'editor.rich-editor.images' : 'admin.editor.images')), @js(csrf_token()))">
                     <h2 class="mb-3 font-label-md font-semibold text-on-surface-variant">Ảnh câu hỏi</h2>
                     <input type="hidden" name="stem_image_path" x-ref="pathInput" :value="imagePath">
                     <input type="file" x-ref="fileInput" class="hidden" accept="image/png,image/jpeg,image/gif,image/webp" @change="upload($event)">
@@ -769,11 +749,20 @@
                             Rút về nháp
                         </button>
                     </div>
-                @elseif (! $isNew && ! $canEditContent && ! $isReviewer && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::InFlagReview)
+                @elseif (! $isNew && ! $canEditContent && ! $isReviewer && in_array($question->status, [
+                    \Modules\QuestionBank\Enums\QuestionStatus::InFlagReview,
+                    \Modules\QuestionBank\Enums\QuestionStatus::FlagConflict,
+                ], true))
                     <div class="rounded-2xl border border-outline-variant bg-surface p-4">
-                        <h2 class="font-label-md font-semibold text-on-surface">Đã qua duyệt giảng viên</h2>
+                        <h2 class="font-label-md font-semibold text-on-surface">
+                            {{ $question->status === \Modules\QuestionBank\Enums\QuestionStatus::FlagConflict ? 'Cảnh báo cờ' : 'Đã qua duyệt giảng viên' }}
+                        </h2>
                         <p class="mt-1 text-[11px] leading-4 text-on-surface-variant">
-                            Không thể chỉnh sửa. Chờ reviewer gắn cờ / Admin xử lý tiếp.
+                            @if ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::FlagConflict)
+                                Không thể chỉnh sửa. Chờ hai reviewer thống nhất cờ.
+                            @else
+                                Không thể chỉnh sửa. Chờ reviewer gắn cờ / Admin xử lý tiếp.
+                            @endif
                         </p>
                     </div>
                 @endif

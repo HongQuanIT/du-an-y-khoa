@@ -16,23 +16,28 @@ use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Enums\QuestionWorkflowEventType;
 use Modules\QuestionBank\Enums\ReviewerFlag;
 use Modules\QuestionBank\Models\Question;
+use Modules\QuestionBank\Models\QuestionFlagChangeEvent;
 use Modules\QuestionBank\Support\QuestionReviewerFlagCycle;
 use Modules\QuestionBank\Support\QuestionWorkflowRecorder;
 
 /**
- * Layer 1b: two reviewers flag green/red independently.
- * After both flags: 2 green → pending_publish; 2 red → auto rejected (sticky);
- * conflict → flag_conflict.
+ * Conflict tab: reaffirm or change own flag (with responsibility ack).
+ * Status only changes when the pair becomes 2 green or 2 red.
  */
-final class FlagQuestionReviewAction
+final class ChangeReviewerFlagInConflictAction
 {
     public function __construct(
         private readonly QuestionReviewerFlagCycle $flagCycle,
         private readonly QuestionWorkflowRecorder $workflowRecorder,
     ) {}
 
-    public function handle(User $reviewer, Question $question, ReviewerFlag $flag, ?string $note = null): Question
-    {
+    public function handle(
+        User $reviewer,
+        Question $question,
+        ReviewerFlag $flag,
+        ?string $note = null,
+        bool $responsibilityAcked = false,
+    ): Question {
         abort_unless(
             $reviewer->can(Permission::QuestionFlag->value),
             403,
@@ -42,41 +47,40 @@ final class FlagQuestionReviewAction
         $note = trim(strip_tags((string) $note));
         $note = $note !== '' ? mb_substr($note, 0, 2000) : null;
 
-        if ($flag->requiresNote() && $note === null) {
-            throw ValidationException::withMessages([
-                'note' => 'Cờ đỏ bắt buộc phải ghi chú lý do.',
-            ]);
-        }
-
-        return DB::transaction(function () use ($reviewer, $question, $flag, $note): Question {
+        return DB::transaction(function () use ($reviewer, $question, $flag, $note, $responsibilityAcked): Question {
             $question = Question::query()->lockForUpdate()->findOrFail($question->getKey());
 
-            if ($question->status !== QuestionStatus::InFlagReview) {
+            if ($question->status !== QuestionStatus::FlagConflict) {
                 throw ValidationException::withMessages([
-                    'flag' => 'Chỉ gắn cờ được câu đang chờ reviewer.',
+                    'flag' => 'Chỉ đổi cờ được khi câu đang ở tab Cảnh báo.',
+                ]);
+            }
+
+            if (! $this->flagCycle->actorHasFlagged($question, $reviewer)) {
+                throw ValidationException::withMessages([
+                    'flag' => 'Bạn không phải reviewer của câu này.',
                 ]);
             }
 
             $before = AuditSnapshot::question($question);
+            $fromFlag = $this->flagCycle->actorFlag($question, $reviewer);
             $versionBefore = (int) $question->version;
-            $fromStatus = $question->status;
 
-            $count = $this->flagCycle->recordFlag($question, $reviewer, $flag, $note);
+            $this->flagCycle->changeFlagInConflict(
+                $question,
+                $reviewer,
+                $flag,
+                $note,
+                $responsibilityAcked,
+            );
+
             $question = $question->refresh();
-
-            if ($count >= QuestionReviewerFlagCycle::REQUIRED_FLAGS) {
-                $this->applyPairOutcome($question, $reviewer);
-                $question = $question->refresh();
-            } else {
-                $question->forceFill([
-                    'updated_by' => $reviewer->getKey(),
-                ])->save();
-                $question = $question->refresh();
-            }
+            $this->applyPairOutcome($question, $reviewer);
+            $question = $question->refresh();
 
             if ((int) $question->version !== $versionBefore) {
                 throw ValidationException::withMessages([
-                    'version' => 'Gắn cờ reviewer không được tăng version.',
+                    'version' => 'Đổi cờ reviewer không được tăng version.',
                 ]);
             }
 
@@ -87,11 +91,12 @@ final class FlagQuestionReviewAction
                 $before,
                 AuditSnapshot::question($question),
                 metadata: [
-                    'from_status' => $fromStatus->value,
+                    'from_status' => QuestionStatus::FlagConflict->value,
                     'to_status' => $question->status->value,
-                    'flag' => $flag->value,
-                    'review_note' => $note,
-                    'flag_count' => $count,
+                    'from_flag' => $fromFlag?->value,
+                    'to_flag' => $flag->value,
+                    'reaffirmed' => $fromFlag === $flag,
+                    'ack_text_version' => QuestionFlagChangeEvent::ACK_TEXT_VERSION,
                     'both_green' => $this->flagCycle->bothGreen($question),
                     'both_red' => $this->flagCycle->bothRed($question),
                     'conflict' => $this->flagCycle->isConflictPair($question),
@@ -152,8 +157,8 @@ final class FlagQuestionReviewAction
             return;
         }
 
+        // Still conflict (reaffirm or cross-swap) — status unchanged.
         $question->forceFill([
-            'status' => QuestionStatus::FlagConflict,
             'updated_by' => $actor->getKey(),
         ])->save();
     }

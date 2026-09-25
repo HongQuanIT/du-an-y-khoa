@@ -209,15 +209,15 @@
                     </div>
                 </a>
                 <a href="{{ route('admin.questions.index', ['review' => 'must_reject']) }}" id="stats-must-reject-link"
-                    class="rounded-xl border border-outline-variant bg-surface p-4 transition-colors hover:bg-surface-container-low {{ ($filters['review'] ?? null) === 'must_reject' ? 'ring-2 ring-rose-400' : '' }}"
-                    aria-label="Câu có cờ đỏ — bắt buộc trả về: {{ number_format($stats['must_reject'] ?? 0) }} câu">
+                    class="rounded-xl border border-outline-variant bg-surface p-4 transition-colors hover:bg-surface-container-low {{ ($filters['review'] ?? null) === 'must_reject' ? 'ring-2 ring-amber-400' : '' }}"
+                    aria-label="Câu đang cảnh báo cờ: {{ number_format($stats['must_reject'] ?? 0) }} câu">
                     <div class="flex items-center gap-3">
                         <div
-                            class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-rose-50 text-rose-700">
-                            <span class="material-symbols-outlined text-[22px]" aria-hidden="true">flag</span>
+                            class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-800">
+                            <span class="material-symbols-outlined text-[22px]" aria-hidden="true">warning</span>
                         </div>
                         <div class="min-w-0">
-                            <p class="truncate text-label-sm font-medium text-on-surface-variant">Cờ đỏ · trả về</p>
+                            <p class="truncate text-label-sm font-medium text-on-surface-variant">Cảnh báo cờ</p>
                             <p class="text-headline-sm font-bold text-on-surface">{{ number_format($stats['must_reject'] ?? 0) }}
                             </p>
                         </div>
@@ -516,10 +516,6 @@
                                         </p>
                                         @if ($label = $question->pipelineProgressLabel())
                                             <p class="text-[10px] font-semibold leading-4 text-on-surface">{{ $label }}</p>
-                                        @endif
-                                        @if ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::PendingPublish
-                                            && (int) $question->currentPipelineReviewCycle() >= 2)
-                                            <span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-900">Cần QA trước XB</span>
                                         @endif
                                         @if ($question->hasEditorialSubmission())
                                             @include('questionbank::partials.instructor-review-flags', ['question' => $question])

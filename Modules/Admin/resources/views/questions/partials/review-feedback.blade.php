@@ -39,6 +39,7 @@
 
     $isRejected = $question->status === \Modules\QuestionBank\Enums\QuestionStatus::Rejected;
     $isPublisherRejection = $isRejected && $question->isPublisherRejection();
+    $isDualRed = $question->isDualRedRejection() || $question->isStickyResubmitEligible();
     $publisherReason = $isPublisherRejection && filled($question->rejection_reason)
         ? trim((string) $question->rejection_reason)
         : null;
@@ -49,28 +50,41 @@
         \Modules\QuestionBank\Enums\QuestionStatus::Private,
     ], true);
     $hasFeedback = ! $isLivePublished
-        && ($hasInstructorFeedback || $reviewerRows !== [] || filled($publisherReason));
+        && ($hasInstructorFeedback || $reviewerRows !== [] || filled($publisherReason) || $isDualRed);
 @endphp
 
 @if ($hasFeedback)
     @php
         $panelClass = match (true) {
-            $isRejected => 'border-red-300 bg-red-50 text-red-950',
+            $isDualRed, $isRejected => 'border-red-300 bg-red-50 text-red-950',
             $question->hasRedReviewerFlag() => 'border-rose-300 bg-rose-50 text-rose-950',
             default => 'border-outline-variant bg-surface text-on-surface',
         };
     @endphp
     <section aria-labelledby="review-feedback-title"
         class="mb-5 rounded-2xl border px-4 py-4 {{ $panelClass }}"
-        data-testid="question-review-feedback">
+        data-testid="question-review-feedback"
+        @if ($isDualRed) data-dual-red="1" @endif>
         <div class="flex items-start gap-3">
-            <span class="material-symbols-outlined mt-0.5 shrink-0" aria-hidden="true">rate_review</span>
+            <span class="material-symbols-outlined mt-0.5 shrink-0" aria-hidden="true">
+                {{ $isDualRed ? 'flag' : 'rate_review' }}
+            </span>
             <div class="min-w-0 flex-1 space-y-4">
                 <div>
-                    <h2 id="review-feedback-title" class="font-semibold">Phản hồi duyệt</h2>
-                    <p class="mt-0.5 text-sm opacity-80">
-                        Ghi chú reviewer và lý do giảng viên — dùng khi sửa hoặc quyết định xuất bản.
-                    </p>
+                    @if ($isDualRed)
+                        <h2 id="review-feedback-title" class="font-semibold">
+                            Hai reviewer đánh Không đạt — đã trả về biên tập
+                        </h2>
+                        <p class="mt-0.5 text-sm opacity-80">
+                            Sửa theo hai ghi chú đỏ bên dưới. Vòng sau chỉ gửi lại đúng hai reviewer đã gắn cờ —
+                            giảng viên không duyệt lại.
+                        </p>
+                    @else
+                        <h2 id="review-feedback-title" class="font-semibold">Phản hồi duyệt</h2>
+                        <p class="mt-0.5 text-sm opacity-80">
+                            Ghi chú reviewer và lý do giảng viên — dùng khi sửa hoặc quyết định xuất bản.
+                        </p>
+                    @endif
                 </div>
 
                 @if ($hasInstructorFeedback)
@@ -163,7 +177,13 @@
                 @endif
 
                 @if ($isRejected && ($canEditContent ?? false))
-                    <p class="text-sm">Chuyển về nháp để chỉnh sửa.</p>
+                    @if ($isDualRed)
+                        <p class="text-sm">
+                            Chuyển về nháp để chỉnh sửa. Cặp reviewer sticky được giữ — gửi lại không qua giảng viên.
+                        </p>
+                    @else
+                        <p class="text-sm">Chuyển về nháp để chỉnh sửa.</p>
+                    @endif
                 @endif
             </div>
         </div>

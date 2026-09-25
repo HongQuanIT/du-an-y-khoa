@@ -8,12 +8,12 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Modules\QuestionBank\Enums\EditorSubmitOutcome;
 use Modules\QuestionBank\Enums\InstructorReviewDecision;
-use Modules\QuestionBank\Enums\InstructorReviewOutcome;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Enums\QuestionWorkflowEventType;
 use Modules\QuestionBank\Enums\ReviewerFlag;
 use Modules\QuestionBank\Enums\ReviewFlagOutcome;
 use Modules\QuestionBank\Models\Question;
+use Modules\QuestionBank\Models\QuestionFlagChangeEvent;
 use Modules\QuestionBank\Models\QuestionInstructorReview;
 use Modules\QuestionBank\Models\QuestionReviewerFlag;
 use Modules\QuestionBank\Models\QuestionVersion;
@@ -32,7 +32,7 @@ use Modules\QuestionBank\Models\QuestionWorkflowEvent;
  *   outcome_label: string|null,
  *   occurred_at: Carbon|null,
  *   qa: array{
- *     kind: 'instructor'|'flag'|'submit',
+ *     kind: 'flag'|'submit',
  *     id: int,
  *     current: string|null,
  *     current_label: string|null,
@@ -81,6 +81,7 @@ final class QuestionReviewTimeline
         $question->loadMissing([
             'instructorReviews.instructor:id,name',
             'reviewerFlags.reviewer:id,name',
+            'flagChangeEvents.reviewer:id,name',
             'workflowEvents.actor:id,name',
             'versions' => fn ($q) => $q->orderByDesc('version'),
             'publisher:id,name',
@@ -93,8 +94,21 @@ final class QuestionReviewTimeline
             $flat->push($this->fromInstructorReview($review));
         }
 
+        /** @var Collection<int, QuestionFlagChangeEvent> $flagChanges */
+        $flagChanges = $question->flagChangeEvents
+            ->sortBy(fn (QuestionFlagChangeEvent $e): int => $e->created_at?->getTimestamp() ?? 0)
+            ->values();
+
         foreach ($question->reviewerFlags as $flag) {
-            $flat->push($this->fromReviewerFlag($flag));
+            $flat->push($this->fromReviewerFlag($flag, $flagChanges));
+        }
+
+        foreach ($flagChanges as $change) {
+            // Reaffirm (giữ nguyên) không hiện trên lịch sử — chỉ hiện khi thực sự đổi cờ.
+            if ($change->reaffirmed) {
+                continue;
+            }
+            $flat->push($this->fromFlagChangeEvent($change));
         }
 
         foreach ($question->workflowEvents as $event) {
@@ -429,6 +443,7 @@ final class QuestionReviewTimeline
             QuestionStatus::Published, QuestionStatus::Private => 'green',
             QuestionStatus::Rejected, QuestionStatus::Retired => 'red',
             QuestionStatus::PendingPublish => 'amber',
+            QuestionStatus::FlagConflict => 'amber',
             QuestionStatus::InFlagReview => 'sky',
             QuestionStatus::InReview => 'violet',
             default => 'neutral',
@@ -442,22 +457,6 @@ final class QuestionReviewTimeline
     {
         $rejected = $review->decision === InstructorReviewDecision::Rejected;
 
-        $outcome = $review->outcome instanceof InstructorReviewOutcome
-            ? $review->outcome
-            : InstructorReviewOutcome::tryFrom((string) $review->outcome);
-
-        $qaOptions = $rejected
-            ? [
-                ['value' => InstructorReviewOutcome::Confirmed->value, 'label' => 'Duyệt đúng'],
-                ['value' => InstructorReviewOutcome::OverReject->value, 'label' => 'Duyệt sai'],
-                ['value' => InstructorReviewOutcome::Pending->value, 'label' => 'Chưa đánh giá'],
-            ]
-            : [
-                ['value' => InstructorReviewOutcome::Confirmed->value, 'label' => 'Duyệt đúng'],
-                ['value' => InstructorReviewOutcome::Miss->value, 'label' => 'Duyệt sai'],
-                ['value' => InstructorReviewOutcome::Pending->value, 'label' => 'Chưa đánh giá'],
-            ];
-
         return [
             'type' => $rejected ? 'instructor_reject' : 'instructor_accept',
             'label' => $rejected ? 'Giảng viên từ chối' : 'Giảng viên duyệt chuyên môn',
@@ -465,67 +464,82 @@ final class QuestionReviewTimeline
             'actor_role' => 'instructor',
             'note' => filled($review->note) ? (string) $review->note : null,
             'tone' => $rejected ? 'red' : 'green',
-            'outcome_label' => $outcome && $outcome !== InstructorReviewOutcome::Pending
-                ? $outcome->label()
-                : null,
+            // Không QA giảng viên (không đánh giá duyệt đúng/sai trên timeline).
+            'outcome_label' => null,
             'occurred_at' => $review->reviewed_at ?? $review->created_at,
-            'qa' => [
-                'kind' => 'instructor',
-                'id' => (int) $review->getKey(),
-                'current' => $outcome?->value ?? InstructorReviewOutcome::Pending->value,
-                'current_label' => $outcome && $outcome !== InstructorReviewOutcome::Pending
-                    ? $outcome->label()
-                    : null,
-                'note' => filled($review->outcome_note) ? (string) $review->outcome_note : null,
-                'locked' => $outcome !== null && $outcome !== InstructorReviewOutcome::Pending,
-                'options' => $qaOptions,
-            ],
+            'qa' => null,
             'meta' => [
                 'review_cycle' => (int) $review->review_cycle,
                 'decision' => $review->decision instanceof InstructorReviewDecision
                     ? $review->decision->value
                     : (string) $review->decision,
-                'outcome' => $outcome?->value,
                 'record_id' => (int) $review->getKey(),
             ],
         ];
     }
 
     /**
+     * @param  Collection<int, QuestionFlagChangeEvent>  $flagChanges
      * @return TimelineEntry
      */
-    private function fromReviewerFlag(QuestionReviewerFlag $flag): array
+    private function fromReviewerFlag(QuestionReviewerFlag $flag, Collection $flagChanges): array
     {
         $value = $flag->flag instanceof ReviewerFlag ? $flag->flag : ReviewerFlag::tryFrom((string) $flag->flag);
-        $isRed = $value === ReviewerFlag::Red;
         $outcome = $flag->outcome instanceof ReviewFlagOutcome
             ? $flag->outcome
             : ReviewFlagOutcome::tryFrom((string) $flag->outcome);
+
+        // After conflict changes, the flag row holds the *latest* value / reviewed_at.
+        // Reconstruct the first gắn cờ from the earliest change event so history stays accurate.
+        $changesForActor = $flagChanges->filter(
+            fn (QuestionFlagChangeEvent $e): bool => (int) $e->reviewer_id === (int) $flag->reviewer_id
+                && (int) $e->review_cycle === (int) $flag->review_cycle
+                && ! $e->reaffirmed,
+        );
+        $occurredAt = $flag->reviewed_at ?? $flag->created_at;
+        $initialNote = filled($flag->note) ? (string) $flag->note : null;
+
+        if ($changesForActor->isNotEmpty()) {
+            $firstChange = $changesForActor->first();
+            $from = $firstChange->from_flag instanceof ReviewerFlag
+                ? $firstChange->from_flag
+                : ReviewerFlag::tryFrom((string) $firstChange->from_flag);
+            if ($from !== null) {
+                $value = $from;
+            }
+            $occurredAt = $flag->created_at ?? $occurredAt;
+            // Note on the flag row is the latest; omit on the initial entry when it changed.
+            $initialNote = null;
+        }
+
+        $isRed = $value === ReviewerFlag::Red;
+        $resolvedOutcome = $outcome ?? ReviewFlagOutcome::Pending;
+        $showMark = $resolvedOutcome->isIncorrect();
 
         return [
             'type' => $isRed ? 'flag_red' : 'flag_green',
             'label' => $isRed ? 'Reviewer gắn cờ đỏ' : 'Reviewer gắn cờ xanh',
             'actor_name' => $flag->reviewer?->name,
             'actor_role' => 'reviewer',
-            'note' => filled($flag->note) ? (string) $flag->note : null,
+            'note' => $initialNote,
             'tone' => $isRed ? 'red' : 'green',
-            'outcome_label' => $outcome && $outcome !== ReviewFlagOutcome::Pending
-                ? $outcome->label()
-                : null,
-            'occurred_at' => $flag->reviewed_at ?? $flag->created_at,
+            'outcome_label' => $showMark ? $resolvedOutcome->label() : null,
+            'outcome_visible' => $showMark,
+            'occurred_at' => $occurredAt,
             'qa' => [
                 'kind' => 'flag',
                 'id' => (int) $flag->getKey(),
-                'current' => $outcome?->value ?? ReviewFlagOutcome::Pending->value,
-                'current_label' => $outcome && $outcome !== ReviewFlagOutcome::Pending
-                    ? $outcome->label()
-                    : null,
+                'current' => ($outcome === null || $outcome === ReviewFlagOutcome::Pending)
+                    ? ReviewFlagOutcome::Confirmed->value
+                    : $outcome->value,
+                'current_label' => $showMark ? $resolvedOutcome->label() : null,
                 'note' => filled($flag->outcome_note) ? (string) $flag->outcome_note : null,
-                'locked' => $outcome !== null && $outcome !== ReviewFlagOutcome::Pending,
+                // Pending defaults to Đúng — closed until Admin opens «Đánh dấu».
+                'locked' => true,
+                'stored' => $outcome?->value ?? ReviewFlagOutcome::Pending->value,
                 'options' => [
-                    ['value' => ReviewFlagOutcome::Confirmed->value, 'label' => 'Gắn đúng'],
-                    ['value' => ReviewFlagOutcome::FalsePositive->value, 'label' => 'Gắn sai'],
-                    ['value' => ReviewFlagOutcome::Pending->value, 'label' => 'Chưa đánh giá'],
+                    ['value' => ReviewFlagOutcome::Confirmed->value, 'label' => 'Đúng'],
+                    ['value' => ReviewFlagOutcome::FalsePositive->value, 'label' => 'Sai'],
                 ],
             ],
             'meta' => [
@@ -540,6 +554,42 @@ final class QuestionReviewTimeline
     /**
      * @return TimelineEntry
      */
+    private function fromFlagChangeEvent(QuestionFlagChangeEvent $change): array
+    {
+        $from = $change->from_flag instanceof ReviewerFlag
+            ? $change->from_flag
+            : ReviewerFlag::tryFrom((string) $change->from_flag);
+        $to = $change->to_flag instanceof ReviewerFlag
+            ? $change->to_flag
+            : ReviewerFlag::tryFrom((string) $change->to_flag);
+
+        $fromLabel = $from?->shortLabel() ?? (string) $change->from_flag;
+        $toLabel = $to?->shortLabel() ?? (string) $change->to_flag;
+        $isRed = $to === ReviewerFlag::Red;
+
+        return [
+            'type' => 'flag_change',
+            'label' => 'Reviewer đổi cờ ('.$fromLabel.' → '.$toLabel.')',
+            'actor_name' => $change->reviewer?->name,
+            'actor_role' => 'reviewer',
+            'note' => filled($change->note) ? (string) $change->note : null,
+            'tone' => $isRed ? 'red' : 'green',
+            'outcome_label' => $change->responsibility_acked ? 'Đã xác nhận trách nhiệm' : null,
+            'occurred_at' => $change->created_at,
+            'qa' => null,
+            'meta' => [
+                'review_cycle' => (int) $change->review_cycle,
+                'from_flag' => $from?->value ?? (string) $change->from_flag,
+                'to_flag' => $to?->value ?? (string) $change->to_flag,
+                'record_id' => (int) $change->getKey(),
+                'responsibility_acked' => (bool) $change->responsibility_acked,
+            ],
+        ];
+    }
+
+    /**
+     * @return TimelineEntry
+     */
     private function fromWorkflowEvent(QuestionWorkflowEvent $event): array
     {
         $type = $event->event_type instanceof QuestionWorkflowEventType
@@ -547,7 +597,8 @@ final class QuestionReviewTimeline
             : QuestionWorkflowEventType::tryFrom((string) $event->event_type);
 
         $tone = match ($type) {
-            QuestionWorkflowEventType::AdminReject => 'red',
+            QuestionWorkflowEventType::AdminReject,
+            QuestionWorkflowEventType::DualRedReject => 'red',
             QuestionWorkflowEventType::Publish => 'primary',
             default => 'neutral',
         };
@@ -563,21 +614,24 @@ final class QuestionReviewTimeline
 
         $qa = null;
         $outcomeLabel = null;
+        $showMark = false;
         if ($type === QuestionWorkflowEventType::Submit) {
-            $outcomeLabel = $outcome && $outcome !== EditorSubmitOutcome::Pending
-                ? $outcome->label()
-                : null;
+            $resolved = $outcome ?? EditorSubmitOutcome::Pending;
+            $showMark = $resolved->isIncorrect();
+            $outcomeLabel = $showMark ? $resolved->label() : null;
             $qa = [
                 'kind' => 'submit',
                 'id' => (int) $event->getKey(),
-                'current' => $outcome?->value ?? EditorSubmitOutcome::Pending->value,
+                'current' => ($outcome === null || $outcome === EditorSubmitOutcome::Pending)
+                    ? EditorSubmitOutcome::Confirmed->value
+                    : $outcome->value,
                 'current_label' => $outcomeLabel,
                 'note' => filled($event->outcome_note) ? (string) $event->outcome_note : null,
-                'locked' => $outcome !== null && $outcome !== EditorSubmitOutcome::Pending,
+                'locked' => true,
+                'stored' => $outcome?->value ?? EditorSubmitOutcome::Pending->value,
                 'options' => [
-                    ['value' => EditorSubmitOutcome::Confirmed->value, 'label' => 'Soạn đạt'],
-                    ['value' => EditorSubmitOutcome::NeedsRework->value, 'label' => 'Soạn lỗi'],
-                    ['value' => EditorSubmitOutcome::Pending->value, 'label' => 'Chưa đánh giá'],
+                    ['value' => EditorSubmitOutcome::Confirmed->value, 'label' => 'Đúng'],
+                    ['value' => EditorSubmitOutcome::NeedsRework->value, 'label' => 'Sai'],
                 ],
             ];
         }
@@ -590,6 +644,7 @@ final class QuestionReviewTimeline
             'note' => filled($event->note) ? (string) $event->note : null,
             'tone' => $tone,
             'outcome_label' => $outcomeLabel,
+            'outcome_visible' => $showMark,
             'occurred_at' => $event->occurred_at ?? $event->created_at,
             'qa' => $qa,
             'meta' => array_merge((array) $event->meta, [

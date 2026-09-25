@@ -51,7 +51,7 @@ final class QuestionQaGateAndBulkTransitionTest extends TestCase
         ]);
     }
 
-    public function test_publish_blocked_when_pipeline_has_two_cycles_and_qa_pending(): void
+    public function test_publish_allowed_when_pipeline_has_two_cycles_even_if_marks_pending(): void
     {
         $admin = $this->staffUser(Role::Admin);
         $question = $this->pendingPublishReady(cycle: 2, withPendingQa: true);
@@ -61,9 +61,9 @@ final class QuestionQaGateAndBulkTransitionTest extends TestCase
             ->post(route('admin.questions.transition', $question), [
                 'status' => QuestionStatus::Published->value,
             ])
-            ->assertSessionHasErrors('status');
+            ->assertRedirect();
 
-        $this->assertSame(QuestionStatus::PendingPublish, $question->fresh()->status);
+        $this->assertSame(QuestionStatus::Published, $question->fresh()->status);
     }
 
     public function test_publish_allowed_when_pipeline_has_two_cycles_and_qa_complete(): void
@@ -164,10 +164,10 @@ final class QuestionQaGateAndBulkTransitionTest extends TestCase
             'content_fingerprint' => 'fp-gate-'.$cycle,
         ]);
         $question->lessons()->sync([$this->lesson->id]);
-        foreach (['A', 'B'] as $i => $label) {
+        foreach (['A', 'B', 'C', 'D'] as $i => $label) {
             $question->options()->create([
                 'label' => $label,
-                'content' => $label === 'A' ? 'Correct' : 'Wrong',
+                'content' => $label === 'A' ? 'Correct' : 'Wrong '.$label,
                 'is_correct' => $label === 'A',
                 'order' => $i + 1,
             ]);
