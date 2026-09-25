@@ -2,6 +2,10 @@
 
 ## 2026-09-25
 
+### Fix — Gợi ý email đăng nhập Reviewer
+
+- Thêm placeholder email mờ cho form đăng nhập Reviewer để đồng bộ với các portal khác.
+
 ### Fix — Chuẩn hóa profile Reviewer theo Admin
 
 - Profile Reviewer dùng cấu trúc page header, sidebar con và card giống Admin.
