@@ -31,7 +31,7 @@ final class ReviewerProfileController extends Controller
             ->findOrFail($request->user()->getKey());
 
         return view('reviewer::profile.show', [
-            'tab' => in_array($tab, ['profile', 'security', 'appearance'], true) ? $tab : 'profile',
+            'tab' => in_array($tab, ['profile', 'security'], true) ? $tab : 'profile',
             'user' => $user,
         ]);
     }

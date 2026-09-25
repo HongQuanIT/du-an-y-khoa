@@ -2,6 +2,12 @@
 
 ## 2026-09-25
 
+### Fix — Chuẩn hóa profile Reviewer theo Admin
+
+- Profile Reviewer dùng cấu trúc page header, sidebar con và card giống Admin.
+- Bỏ tab/panel `Giao diện`; URL cũ `?tab=appearance` quay về hồ sơ.
+- Cập nhật test kiểm tra profile chỉ còn Hồ sơ reviewer và Bảo mật.
+
 ### Feat — Đồng bộ UI và phân quyền portal Reviewer
 
 - Reviewer dùng shell Admin cho header/sidebar/profile, giữ UI review câu hỏi cũ và bỏ Hồ sơ khỏi sidebar.
