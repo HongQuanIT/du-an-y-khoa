@@ -19,6 +19,7 @@ enum PortalGroup: string
     case Admin = 'admin';
     case Partner = 'partner';
     case Editor = 'editor';
+    case Reviewer = 'reviewer';
 
     public function label(): string
     {
@@ -28,6 +29,7 @@ enum PortalGroup: string
             self::Admin => 'Quản trị',
             self::Partner => 'Cộng tác viên',
             self::Editor => 'Biên tập viên',
+            self::Reviewer => 'Reviewer',
         };
     }
 
@@ -39,6 +41,7 @@ enum PortalGroup: string
             self::Admin => 'Cổng quản trị (/admin): quản lý nội dung, người dùng, phân quyền và giám sát.',
             self::Partner => 'Cổng cộng tác viên (/partner): mã mời, giới thiệu và hoa hồng.',
             self::Editor => 'Cổng biên tập (/editor): soạn, theo dõi và hoàn thiện nội dung.',
+            self::Reviewer => 'Cổng reviewer (/reviewer): xem và gắn cờ câu hỏi.',
         };
     }
 
@@ -50,6 +53,7 @@ enum PortalGroup: string
             self::Admin => '/admin/login',
             self::Partner => '/partner/login',
             self::Editor => '/editor/login',
+            self::Reviewer => '/reviewer/login',
         };
     }
 }

@@ -16,11 +16,18 @@ use Modules\Auth\Services\TotpService;
 use Modules\QuestionBank\Actions\FlagQuestionReviewAction;
 use Modules\QuestionBank\Actions\InstructorReviewQuestionAction;
 use Modules\QuestionBank\Enums\Difficulty;
+use Modules\QuestionBank\Enums\InstructorReviewDecision;
+use Modules\QuestionBank\Enums\InstructorReviewOutcome;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Enums\ReviewerFlag;
 use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
+use Modules\QuestionBank\Models\QuestionInstructorReview;
+use Modules\QuestionBank\Models\QuestionReviewerFlag;
+use Modules\QuestionBank\Models\QuestionVersion;
+use Modules\QuestionBank\Models\QuestionWorkflowEvent;
 use Modules\QuestionBank\Models\Subject;
+use Modules\QuestionBank\Support\QuestionReviewTimeline;
 use Tests\Support\CreatesMedicalTaxonomy;
 use Tests\TestCase;
 
@@ -150,7 +157,7 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
         $this->assertSame(QuestionStatus::InFlagReview, $question->fresh()->status);
 
         $this->actingAsStaff($reviewerA)
-            ->get(route('admin.questions.flags.index'))
+            ->get(route('reviewer.questions.flags.index'))
             ->assertOk()
             ->assertSee($question->code);
 
@@ -254,15 +261,15 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
             'instructor_review_cycle' => 1,
         ]);
 
-        $review = \Modules\QuestionBank\Models\QuestionInstructorReview::query()->create([
+        $review = QuestionInstructorReview::query()->create([
             'question_id' => $question->id,
             'review_cycle' => 1,
             'instructor_id' => $instructor->id,
-            'decision' => \Modules\QuestionBank\Enums\InstructorReviewDecision::Approved,
+            'decision' => InstructorReviewDecision::Approved,
             'note' => null,
             'content_fingerprint' => 'fp-qa',
             'reviewed_at' => now(),
-            'outcome' => \Modules\QuestionBank\Enums\InstructorReviewOutcome::Pending,
+            'outcome' => InstructorReviewOutcome::Pending,
         ]);
 
         $this->actingAsStaff($editor)
@@ -290,7 +297,7 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
             ->assertJsonPath('ok', true);
 
         $review->refresh();
-        $this->assertSame(\Modules\QuestionBank\Enums\InstructorReviewOutcome::Miss, $review->outcome);
+        $this->assertSame(InstructorReviewOutcome::Miss, $review->outcome);
         $this->assertSame($admin->id, (int) $review->outcome_by);
     }
 
@@ -356,7 +363,7 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
         $this->assertSame(QuestionStatus::Published, $question->status);
         $this->assertSame(0, (int) $question->pipeline_reject_count);
 
-        $timeline = app(\Modules\QuestionBank\Support\QuestionReviewTimeline::class)->build($question);
+        $timeline = app(QuestionReviewTimeline::class)->build($question);
         $this->assertSame(2, $timeline['current_cycle']);
         $this->assertGreaterThanOrEqual(2, count($timeline['cycles']));
         $this->assertSame(1, $timeline['total_rejects']);
@@ -367,7 +374,7 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
         $this->assertSame(2, $publishedSegment['cycle_count']);
         $this->assertStringContainsString('vòng duyệt', $publishedSegment['summary']);
 
-        $version = \Modules\QuestionBank\Models\QuestionVersion::query()
+        $version = QuestionVersion::query()
             ->where('question_id', $question->id)
             ->where('version', 1)
             ->first();
@@ -402,8 +409,8 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
         app(InstructorReviewQuestionAction::class)->approve($instructor, $question);
 
         $this->actingAsStaff($reviewer)
-            ->from(route('admin.questions.flags.show', $question->fresh()))
-            ->post(route('admin.questions.flags.store', $question->fresh()), [
+            ->from(route('reviewer.questions.flags.show', $question->fresh()))
+            ->post(route('reviewer.questions.flags.store', $question->fresh()), [
                 'flag' => ReviewerFlag::Red->value,
                 'note' => '',
             ])
@@ -452,7 +459,7 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
         $question = $this->makeQuestion(QuestionStatus::InReview);
 
         $this->actingAsStaff($reviewer)
-            ->get(route('admin.questions.flags.index'))
+            ->get(route('reviewer.questions.flags.index'))
             ->assertOk()
             ->assertDontSee($question->code);
 
@@ -482,7 +489,7 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
             ->assertForbidden();
 
         $this->actingAsStaff($reviewer)
-            ->get(route('admin.questions.flags.index'))
+            ->get(route('reviewer.questions.flags.index'))
             ->assertOk()
             ->assertSee('Review câu hỏi', false)
             ->assertSee('Bài học', false)
@@ -505,24 +512,24 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
         app(InstructorReviewQuestionAction::class)->approve($instructor, $question);
 
         $this->actingAsStaff($reviewerA)
-            ->post(route('admin.questions.flags.store', $question->fresh()), [
+            ->post(route('reviewer.questions.flags.store', $question->fresh()), [
                 'flag' => ReviewerFlag::Green->value,
             ])
-            ->assertRedirect(route('admin.questions.flags.index', ['tab' => 'done']))
+            ->assertRedirect(route('reviewer.questions.flags.index', ['tab' => 'done']))
             ->assertSessionHas('status', 'Đã ghi nhận cờ của bạn.');
 
         $this->actingAsStaff($reviewerB)
-            ->get(route('admin.questions.flags.show', $question->fresh()))
+            ->get(route('reviewer.questions.flags.show', $question->fresh()))
             ->assertOk()
             ->assertDontSee('Reviewer 1', false)
             ->assertDontSee($reviewerA->name, false);
 
         $this->actingAsStaff($reviewerB)
-            ->post(route('admin.questions.flags.store', $question->fresh()), [
+            ->post(route('reviewer.questions.flags.store', $question->fresh()), [
                 'flag' => ReviewerFlag::Green->value,
                 'note' => 'Đạt',
             ])
-            ->assertRedirect(route('admin.questions.flags.index', ['tab' => 'done']))
+            ->assertRedirect(route('reviewer.questions.flags.index', ['tab' => 'done']))
             ->assertSessionHas('status', 'Đã ghi nhận cờ của bạn.');
     }
 
@@ -552,7 +559,7 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
         app(InstructorReviewQuestionAction::class)->approve($instructor, $question);
 
         $this->actingAsStaff($reviewer)
-            ->get(route('admin.questions.flags.show', $question->fresh()))
+            ->get(route('reviewer.questions.flags.show', $question->fresh()))
             ->assertOk()
             ->assertSee('reviewer-question-preview', false)
             ->assertSee('Gợi ý', false)
@@ -594,7 +601,7 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
     {
         $minCycle = $question->lastPublishedReviewCycle() + 1;
 
-        \Modules\QuestionBank\Models\QuestionWorkflowEvent::query()
+        QuestionWorkflowEvent::query()
             ->where('question_id', $question->getKey())
             ->where('event_type', 'submit')
             ->where('review_cycle', '>=', $minCycle)
@@ -604,7 +611,7 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
                 'outcome_at' => now(),
             ]);
 
-        \Modules\QuestionBank\Models\QuestionInstructorReview::query()
+        QuestionInstructorReview::query()
             ->where('question_id', $question->getKey())
             ->where('review_cycle', '>=', $minCycle)
             ->update([
@@ -613,7 +620,7 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
                 'outcome_at' => now(),
             ]);
 
-        \Modules\QuestionBank\Models\QuestionReviewerFlag::query()
+        QuestionReviewerFlag::query()
             ->where('question_id', $question->getKey())
             ->where('review_cycle', '>=', $minCycle)
             ->update([

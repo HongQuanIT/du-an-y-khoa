@@ -98,6 +98,7 @@ final class AttemptLoginAction
             LoginPortal::Instructor => $this->assertInstructorPortal($user, $key),
             LoginPortal::Partner => $this->assertPartnerPortal($user, $key),
             LoginPortal::Editor => $this->assertEditorPortal($user, $key),
+            LoginPortal::Reviewer => $this->assertReviewerPortal($user, $key),
             LoginPortal::Student => $this->assertStudentPortal($user, $key),
         };
 
@@ -154,6 +155,14 @@ final class AttemptLoginAction
     {
         if (! PortalAccess::allows($user, PortalGroup::Editor)) {
             $this->rejectPortalMismatch($key, $user, LoginPortal::Editor);
+        }
+    }
+
+    /** @throws ValidationException */
+    private function assertReviewerPortal(User $user, string $key): void
+    {
+        if (! PortalAccess::allows($user, PortalGroup::Reviewer)) {
+            $this->rejectPortalMismatch($key, $user, LoginPortal::Reviewer);
         }
     }
 
@@ -239,6 +248,7 @@ final class AttemptLoginAction
             LoginPortal::Instructor => AuditPortal::Teach,
             LoginPortal::Partner => AuditPortal::Partner,
             LoginPortal::Editor => AuditPortal::Editor,
+            LoginPortal::Reviewer => AuditPortal::Reviewer,
             LoginPortal::Student => AuditPortal::Student,
         };
     }

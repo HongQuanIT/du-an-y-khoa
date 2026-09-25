@@ -5,11 +5,10 @@ declare(strict_types=1);
 namespace Modules\Auth\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Support\Auth\HomePath;
 use App\Support\Auth\PortalRedirect;
 use App\Support\Auth\TwoFactorGate;
-use App\Support\Auth\TwoFactorTrustedDevice;
 use App\Support\Auth\TwoFactorSession;
+use App\Support\Auth\TwoFactorTrustedDevice;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -46,6 +45,16 @@ final class PortalTwoFactorChallengeController extends Controller
         return $this->verify($request, $verify, LoginPortal::Editor, route('editor.dashboard', absolute: false));
     }
 
+    public function showReviewer(Request $request): View|RedirectResponse
+    {
+        return $this->show($request, LoginPortal::Reviewer, route('reviewer.dashboard', absolute: false));
+    }
+
+    public function verifyReviewer(Request $request, VerifyTwoFactorCodeAction $verify): RedirectResponse
+    {
+        return $this->verify($request, $verify, LoginPortal::Reviewer, route('reviewer.dashboard', absolute: false));
+    }
+
     public function verifyPartner(Request $request, VerifyTwoFactorCodeAction $verify): RedirectResponse
     {
         return $this->verify($request, $verify, LoginPortal::Partner, route('partner.dashboard', absolute: false));
@@ -71,12 +80,14 @@ final class PortalTwoFactorChallengeController extends Controller
                 LoginPortal::Instructor => route('teach.2fa.challenge.verify'),
                 LoginPortal::Partner => route('partner.2fa.challenge.verify'),
                 LoginPortal::Editor => route('editor.2fa.challenge.verify'),
+                LoginPortal::Reviewer => route('reviewer.2fa.challenge.verify'),
                 default => route('student.2fa.challenge.verify'),
             },
             'logoutUrl' => match ($portal) {
                 LoginPortal::Instructor => route('teach.logout'),
                 LoginPortal::Partner => route('partner.logout'),
                 LoginPortal::Editor => route('editor.logout'),
+                LoginPortal::Reviewer => route('reviewer.logout'),
                 default => route('logout'),
             },
         ]);

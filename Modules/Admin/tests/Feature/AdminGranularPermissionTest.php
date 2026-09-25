@@ -127,7 +127,7 @@ final class AdminGranularPermissionTest extends TestCase
         $this->assertNotContains('admin.questions.flags.index', array_column(AdminMenu::for($user), 'route'));
 
         $this->actingAsWithWebSession($user)
-            ->get(route('admin.questions.flags.index'))
+            ->get(route('reviewer.questions.flags.index'))
             ->assertForbidden();
     }
 

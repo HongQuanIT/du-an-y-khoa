@@ -6,7 +6,9 @@ namespace App\Http\Middleware;
 
 use App\Support\Auth\Instructor;
 use App\Support\Auth\Partner;
+use App\Support\Auth\PortalAccess;
 use App\Support\Auth\Staff;
+use App\Support\Enums\PortalGroup;
 use App\Support\Http\Responses\ApiResponse;
 use Closure;
 use Illuminate\Http\Request;
@@ -23,7 +25,8 @@ final class EnsureLearnerOnboarding
 
         $user = $request->user();
 
-        if ($user === null || Staff::isStaff($user) || Instructor::is($user) || Partner::is($user)) {
+        if ($user === null || Staff::isStaff($user) || Instructor::is($user) || Partner::is($user)
+            || PortalAccess::allows($user, PortalGroup::Editor) || PortalAccess::allows($user, PortalGroup::Reviewer)) {
             return $next($request);
         }
 

@@ -1,0 +1,6 @@
+{
+    "name": "medlearn/reviewer",
+    "description": "Dedicated reviewer portal",
+    "autoload": {"psr-4": {"Modules\\Reviewer\\": "app/"}},
+    "autoload-dev": {"psr-4": {"Modules\\Reviewer\\Tests\\": "tests/"}}
+}

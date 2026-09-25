@@ -45,6 +45,10 @@ final class PortalRedirect
             return LoginPortal::Editor;
         }
 
+        if ($path === '/reviewer' || str_starts_with($path, '/reviewer/')) {
+            return LoginPortal::Reviewer;
+        }
+
         return LoginPortal::Student;
     }
 }

@@ -112,6 +112,7 @@ class RolePermissionSeeder extends Seeder
                 'profile.update',
                 'profile.password_update',
                 'profile.avatar_update',
+                'profile.two_factor_toggle',
             ],
 
             RoleEnum::Instructor => array_values(array_unique(array_merge($portalPermissions, [

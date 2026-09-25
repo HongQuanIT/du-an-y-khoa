@@ -1,0 +1,9 @@
+{
+    "name": "Reviewer",
+    "alias": "reviewer",
+    "description": "Dedicated question reviewer portal",
+    "keywords": [],
+    "priority": 0,
+    "providers": ["Modules\\Reviewer\\Providers\\ReviewerServiceProvider"],
+    "files": []
+}

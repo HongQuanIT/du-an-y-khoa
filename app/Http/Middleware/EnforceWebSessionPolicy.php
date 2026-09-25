@@ -34,6 +34,9 @@ final class EnforceWebSessionPolicy
         'partner.login*',
         'partner.logout',
         'partner.2fa.*',
+        'reviewer.login*',
+        'reviewer.logout',
+        'reviewer.2fa.*',
         'logout',
     ];
 
@@ -105,6 +108,10 @@ final class EnforceWebSessionPolicy
 
         if ($request->is('partner') || $request->is('partner/*')) {
             return redirect()->route('partner.login');
+        }
+
+        if ($request->is('reviewer') || $request->is('reviewer/*')) {
+            return redirect()->route('reviewer.login');
         }
 
         return redirect()->route('login');

@@ -62,6 +62,11 @@ return Application::configure(basePath: dirname(__DIR__))
                 ->prefix('editor')
                 ->name('editor.')
                 ->group(base_path('routes/editor.php'));
+
+            Route::middleware('web')
+                ->prefix('reviewer')
+                ->name('reviewer.')
+                ->group(base_path('routes/reviewer.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
@@ -101,6 +106,10 @@ return Application::configure(basePath: dirname(__DIR__))
 
             if ($request->is('editor') || $request->is('editor/*')) {
                 return route('editor.login');
+            }
+
+            if ($request->is('reviewer') || $request->is('reviewer/*')) {
+                return route('reviewer.login');
             }
 
             return route('login');

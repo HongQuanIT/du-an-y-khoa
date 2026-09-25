@@ -42,7 +42,8 @@ enum Role: string
             self::Instructor => PortalGroup::Instructor,
             self::Partner => PortalGroup::Partner,
             self::ContentEditor => PortalGroup::Editor,
-            self::Reviewer, self::Admin, self::SuperAdmin => PortalGroup::Admin,
+            self::Reviewer => PortalGroup::Reviewer,
+            self::Admin, self::SuperAdmin => PortalGroup::Admin,
         };
     }
 

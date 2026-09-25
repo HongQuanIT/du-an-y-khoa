@@ -17,6 +17,15 @@ return [
     'guard' => 'web',
 
     'catalog' => [
+        'reviewer' => [
+            'account' => [
+                'profile' => ['view', 'update', 'password_update', 'avatar_update', 'two_factor_toggle'],
+            ],
+            'question_bank' => [
+                'question_flag' => ['view'],
+                'question' => ['flag'],
+            ],
+        ],
         'admin' => [
             'account' => [
                 'profile' => ['view', 'update', 'password_update', 'avatar_update', 'two_factor_toggle'],
