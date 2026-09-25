@@ -2,6 +2,10 @@
 
 ## 2026-09-25
 
+### Docs — Bộ test case thủ công quy trình tạo câu hỏi
+
+- Thêm `docs/testcase-quy-trinh-tao-cau-hoi.xlsx`: 31 kịch bản cho luồng nạp đề, từ tạo nháp, import, gửi duyệt, rút nháp, yêu cầu xóa đến duyệt giảng viên và gắn cờ.
+
 ### Fix — Giữ Reviewer ở trang chi tiết sau khi gắn cờ
 
 - Sau khi gắn cờ hoặc đổi cờ, Reviewer được giữ lại tại trang chi tiết câu hỏi.
