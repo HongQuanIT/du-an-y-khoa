@@ -156,7 +156,10 @@ final class ReviewerPortalTest extends TestCase
         $this->post(route('reviewer.questions.flags.store', $pending), ['flag' => ReviewerFlag::Red->value])
             ->assertSessionHasErrors('note');
         $this->post(route('reviewer.questions.flags.store', $pending), ['flag' => ReviewerFlag::Green->value])
-            ->assertRedirect(route('reviewer.questions.flags.index', ['tab' => 'done']));
+            ->assertRedirect(route('reviewer.questions.flags.show', $pending));
+        $this->get(route('reviewer.questions.flags.show', $pending->fresh()))
+            ->assertOk()
+            ->assertSee('Bạn đã chọn');
         $this->get(route('reviewer.questions.flags.index', ['tab' => 'done']))
             ->assertOk()->assertSee($pending->code);
     }

@@ -2,6 +2,12 @@
 
 ## 2026-09-25
 
+### Fix — Giữ Reviewer ở trang chi tiết sau khi gắn cờ
+
+- Sau khi gắn cờ hoặc đổi cờ, Reviewer được giữ lại tại trang chi tiết câu hỏi.
+- Vẫn chuyển về danh sách khi tải lại câu hỏi đã được xuất bản.
+- Bổ sung test cho redirect sau khi gắn cờ.
+
 ### Feat — Bổ sung KPI đánh giá chất lượng Reviewer
 
 - Hiển thị tổng số lượt gắn cờ và số lượt bị Admin đánh dấu sai trên dashboard Reviewer.
