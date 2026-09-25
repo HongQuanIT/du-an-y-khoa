@@ -14,6 +14,7 @@ use Modules\Auth\Models\TwoFactorSecret;
 use Modules\Auth\Services\TotpService;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Enums\ReviewerFlag;
+use Modules\QuestionBank\Enums\ReviewFlagOutcome;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionReviewerFlag;
 use PragmaRX\Google2FA\Google2FA;
@@ -190,7 +191,7 @@ final class ReviewerPortalTest extends TestCase
 
         QuestionReviewerFlag::query()->create([
             'question_id' => $reviewed->getKey(), 'review_cycle' => 1, 'reviewer_id' => $reviewer->getKey(),
-            'flag' => ReviewerFlag::Green, 'reviewed_at' => now(),
+            'flag' => ReviewerFlag::Green, 'reviewed_at' => now(), 'outcome' => ReviewFlagOutcome::FalsePositive,
         ]);
         QuestionReviewerFlag::query()->create([
             'question_id' => $otherReviewed->getKey(), 'review_cycle' => 1, 'reviewer_id' => $other->getKey(),
@@ -203,6 +204,7 @@ final class ReviewerPortalTest extends TestCase
             ->assertSee('Phân bố cờ')
             ->assertSee('Tỷ lệ cờ xanh')
             ->assertSee('1 xanh · 0 đỏ')
+            ->assertSee('Bị đánh dấu sai')
             ->assertSee($pending->code)
             ->assertSee($reviewed->code)
             ->assertDontSee($own->code)
