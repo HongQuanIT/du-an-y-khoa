@@ -64,6 +64,7 @@ final class HeaderNotificationsComposer
                 $session = $sessionId ? LiveSession::query()->find($sessionId) : null;
                 if ($session === null || $session->status !== LiveSessionStatus::Live) {
                     $candidate->markRead();
+
                     continue;
                 }
             } elseif ($type === 'live.upcoming') {
@@ -71,6 +72,7 @@ final class HeaderNotificationsComposer
                 $session = $sessionId ? LiveSession::query()->find($sessionId) : null;
                 if ($session === null || $session->status !== LiveSessionStatus::Scheduled) {
                     $candidate->markRead();
+
                     continue;
                 }
             }
@@ -153,7 +155,11 @@ final class HeaderNotificationsComposer
                     && $importantUnread->action_url !== null
                     && parse_url($importantUnread->action_url, PHP_URL_PATH) === '/admin/notifications'
                     ? route('editor.notifications.index')
-                    : $importantUnread->action_url,
+                    : (request()->routeIs('reviewer.*')
+                        && $importantUnread->action_url !== null
+                        && parse_url($importantUnread->action_url, PHP_URL_PATH) === '/admin/notifications'
+                            ? route('reviewer.notifications.index')
+                            : $importantUnread->action_url),
                 'read_url' => route('notifications.read', $importantUnread),
                 'created_at_human' => $importantUnread->created_at?->diffForHumans() ?? 'Vừa xong',
             ], $style);

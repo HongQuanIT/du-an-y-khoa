@@ -5,13 +5,16 @@ declare(strict_types=1);
 namespace Modules\Reviewer\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Support\Audit\Auditor;
 use App\Support\Audit\Enums\AuditAction;
 use App\Support\Auth\TwoFactorSession;
 use App\Support\Auth\TwoFactorTrustedDevice;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
 use Modules\Auth\Actions\BeginTwoFactorSetupAction;
@@ -22,7 +25,15 @@ final class ReviewerProfileController extends Controller
 {
     public function show(Request $request): View
     {
-        return view('reviewer::profile.show', ['user' => $request->user()]);
+        $tab = (string) $request->query('tab', 'profile');
+        $user = User::query()
+            ->with(['socialAccounts', 'twoFactorSecret'])
+            ->findOrFail($request->user()->getKey());
+
+        return view('reviewer::profile.show', [
+            'tab' => in_array($tab, ['profile', 'security', 'appearance'], true) ? $tab : 'profile',
+            'user' => $user,
+        ]);
     }
 
     public function update(Request $request): RedirectResponse
@@ -45,7 +56,20 @@ final class ReviewerProfileController extends Controller
         $user->forceFill(['password' => $data['password'], 'password_set_at' => now()])->save();
         Auditor::record(AuditAction::AuthPasswordChanged, $user, $user);
 
-        return redirect()->route('reviewer.profile.show')->with('status', 'Đã đổi mật khẩu thành công.');
+        return redirect()->route('reviewer.profile.show', ['tab' => 'security'])->with('status', 'Đã đổi mật khẩu thành công.');
+    }
+
+    public function updateAppearance(Request $request): JsonResponse|RedirectResponse
+    {
+        $data = $request->validate(['theme' => ['required', Rule::in(['light', 'dark', 'system'])]]);
+        $user = $request->user();
+        $before = ['theme' => $user->theme];
+        $user->forceFill($data)->save();
+        Auditor::record(AuditAction::AccountPreferencesUpdated, $user, $user, $before, ['theme' => $user->theme]);
+
+        return $request->expectsJson()
+            ? response()->json(['theme' => $user->theme])
+            : redirect()->route('reviewer.profile.show', ['tab' => 'appearance'])->with('status', 'Đã lưu giao diện.');
     }
 
     public function updateAvatar(Request $request): RedirectResponse
@@ -79,7 +103,7 @@ final class ReviewerProfileController extends Controller
     public function showTwoFactorSetup(Request $request, BeginTwoFactorSetupAction $begin): View|RedirectResponse
     {
         if ($request->user()->hasTwoFactorEnabled()) {
-            return redirect()->route('reviewer.profile.show');
+            return redirect()->route('reviewer.profile.show', ['tab' => 'security']);
         }
 
         return view('reviewer::profile.two-factor-setup', $begin->handle($request->user()));
@@ -100,7 +124,7 @@ final class ReviewerProfileController extends Controller
     {
         $codes = $request->session()->get('reviewer_two_factor_recovery_codes');
         if (! is_array($codes) || $codes === []) {
-            return redirect()->route('reviewer.profile.show');
+            return redirect()->route('reviewer.profile.show', ['tab' => 'security']);
         }
 
         return view('reviewer::profile.two-factor-recovery', ['codes' => $codes]);
@@ -110,7 +134,7 @@ final class ReviewerProfileController extends Controller
     {
         $request->session()->forget('reviewer_two_factor_recovery_codes');
 
-        return redirect()->route('reviewer.profile.show')->with('status', 'Đã bật xác thực hai bước.');
+        return redirect()->route('reviewer.profile.show', ['tab' => 'security'])->with('status', 'Đã bật xác thực hai bước.');
     }
 
     public function disableTwoFactor(Request $request, DisableTwoFactorAction $disable): RedirectResponse
@@ -118,6 +142,6 @@ final class ReviewerProfileController extends Controller
         $request->validate(['current_password' => ['required', 'string']]);
         $disable->handle($request->user(), (string) $request->input('current_password'), $request);
 
-        return redirect()->route('reviewer.profile.show')->with('status', 'Đã tắt xác thực hai bước.');
+        return redirect()->route('reviewer.profile.show', ['tab' => 'security'])->with('status', 'Đã tắt xác thực hai bước.');
     }
 }

@@ -56,6 +56,59 @@ final class ReviewerPortalTest extends TestCase
         $this->actingAs($admin)->get(route('reviewer.dashboard'))->assertForbidden();
     }
 
+    public function test_reviewer_shell_and_profile_match_admin_design_system(): void
+    {
+        $reviewer = User::factory()->create(['name' => 'Reviewer UI']);
+        $reviewer->assignRole(Role::Reviewer->value);
+
+        $this->actingAs($reviewer)
+            ->get(route('reviewer.dashboard'))
+            ->assertOk()
+            ->assertSee('Cổng reviewer')
+            ->assertSee('Review câu hỏi')
+            ->assertSee('Quản lý tài khoản')
+            ->assertSee(route('reviewer.notifications.index'), false)
+            ->assertSee(route('reviewer.logout'), false)
+            ->assertDontSee('account_circle')
+            ->assertDontSee(route('admin.logout'), false);
+
+        $this->get(route('reviewer.profile.show'))
+            ->assertOk()
+            ->assertSee('Hồ sơ reviewer')
+            ->assertSee('Thông tin tài khoản')
+            ->assertSee('Ảnh đại diện');
+
+        $this->get(route('reviewer.profile.show', ['tab' => 'security']))
+            ->assertOk()
+            ->assertSee('Đổi mật khẩu')
+            ->assertSee('Xác thực hai bước');
+
+        $this->get(route('reviewer.profile.show', ['tab' => 'appearance']))
+            ->assertOk()
+            ->assertSee('Chế độ giao diện');
+    }
+
+    public function test_reviewer_dashboard_and_notification_permissions_control_shell(): void
+    {
+        $role = \Spatie\Permission\Models\Role::findByName(Role::Reviewer->value, 'web');
+        $role->revokePermissionTo(['reviewer_dashboard.view', 'reviewer_notification.view']);
+
+        $reviewer = User::factory()->create();
+        $reviewer->assignRole(Role::Reviewer->value);
+
+        $this->actingAs($reviewer)
+            ->get(route('reviewer.dashboard'))
+            ->assertForbidden();
+
+        $this->get(route('reviewer.questions.flags.index'))
+            ->assertOk()
+            ->assertDontSee('Tổng quan')
+            ->assertDontSee(route('reviewer.notifications.index'), false)
+            ->assertSee('Review câu hỏi');
+
+        $this->get(route('reviewer.notifications.index'))->assertForbidden();
+    }
+
     public function test_reviewer_two_factor_challenge_uses_reviewer_portal(): void
     {
         $reviewer = User::factory()->create(['email' => 'reviewer-2fa@example.com']);
