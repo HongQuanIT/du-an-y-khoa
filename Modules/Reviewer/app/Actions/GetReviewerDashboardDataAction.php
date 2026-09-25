@@ -8,7 +8,9 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Enums\ReviewerFlag;
+use Modules\QuestionBank\Enums\ReviewFlagOutcome;
 use Modules\QuestionBank\Models\Question;
+use Modules\QuestionBank\Models\QuestionFlagChangeEvent;
 use Modules\QuestionBank\Models\QuestionReviewerFlag;
 
 final class GetReviewerDashboardDataAction
@@ -68,7 +70,16 @@ final class GetReviewerDashboardDataAction
             'priorityQuestions' => $canViewQuestions ? (clone $pending)
                 ->with(['lessons:id,name', 'creator:id,name'])->orderBy('updated_at')->limit(6)->get() : collect(),
             'recentFlags' => $canViewQuestions ? (clone $history)
-                ->with(['question:id,code,stem'])->orderByDesc('reviewed_at')->limit(5)->get() : collect(),
+                ->with(['question:id,code,stem'])->orderByDesc('reviewed_at')->paginate(5, ['*'], 'recent_flags_page') : collect(),
+            'recentFlagChanges' => $canViewQuestions ? QuestionFlagChangeEvent::query()
+                ->where('reviewer_id', $reviewer->getKey())
+                ->with(['question:id,code,stem'])->latest()->paginate(5, ['*'], 'flag_changes_page') : collect(),
+            'recentOutcomes' => $canViewQuestions ? (clone $history)
+                ->whereIn('outcome', [
+                    ReviewFlagOutcome::Confirmed->value,
+                    ReviewFlagOutcome::FalsePositive->value,
+                ])
+                ->with(['question:id,code,stem'])->latest('outcome_at')->paginate(5, ['*'], 'outcomes_page') : collect(),
         ];
     }
 

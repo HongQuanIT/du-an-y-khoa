@@ -57,10 +57,10 @@
 
         <article class="space-y-5">
             <div x-show="!keyInfoEnabled">
-                <div id="reviewer-stem" class="prose prose-sm max-w-none font-body-lg text-body-lg leading-relaxed text-on-surface select-text">{!! $stemHtml !!}</div>
+                <div id="reviewer-stem" class="question-rich-content prose prose-sm max-w-none font-body-lg text-body-lg leading-relaxed text-on-surface select-text">{!! $stemHtml !!}</div>
             </div>
             <div x-cloak x-show="keyInfoEnabled">
-                <div class="prose prose-sm max-w-none font-body-lg text-body-lg leading-relaxed text-on-surface select-text"
+                <div class="question-rich-content prose prose-sm max-w-none font-body-lg text-body-lg leading-relaxed text-on-surface select-text"
                     data-testid="reviewer-key-info-stem">{!! $keyInfoHtml !!}</div>
             </div>
 
@@ -106,7 +106,7 @@
                         <span class="material-symbols-outlined mt-0.5 shrink-0 text-amber-700">stethoscope</span>
                         <div>
                             <p class="mb-1 text-[11px] font-bold uppercase tracking-wide text-amber-700">Kiến thức</p>
-                            <div class="prose prose-sm max-w-none font-body-md text-body-md leading-relaxed italic">{!! $attendingTip !!}</div>
+                            <div class="question-rich-content prose prose-sm max-w-none font-body-md text-body-md leading-relaxed italic">{!! $attendingTip !!}</div>
                         </div>
                     </div>
                 </div>
@@ -119,7 +119,7 @@
                 <p class="text-[11px] font-bold uppercase tracking-wide text-on-surface-variant">Gợi ý</p>
                 <ul class="list-disc space-y-1 pl-5 text-sm text-on-surface">
                     @foreach ($hints as $hint)
-                        <li>{{ $hint->content }}</li>
+                        <li class="question-rich-content">{!! \App\Support\Html\SafeHtml::forDisplay((string) $hint->content) !!}</li>
                     @endforeach
                 </ul>
             </div>
@@ -148,7 +148,7 @@
                             'border border-outline-variant text-on-surface-variant' => ! ($revealAnswers && $option->is_correct),
                         ])>{{ $option->label }}</span>
                         <div class="min-w-0 flex-1 space-y-1 pt-1">
-                            <div class="prose prose-sm max-w-none font-body-md text-body-md text-on-surface">{!! $optionContent !!}</div>
+                            <div class="question-rich-content prose prose-sm max-w-none font-body-md text-body-md text-on-surface">{!! $optionContent !!}</div>
                         </div>
                         @if ($revealAnswers && $option->is_correct)
                             <span class="material-symbols-outlined text-[#16A34A]"
@@ -162,7 +162,7 @@
                                 'text-[#16A34A]' => $option->is_correct,
                                 'text-error' => ! $option->is_correct,
                             ])>{{ $option->is_correct ? 'Đáp án đúng' : 'Vì sao sai' }}</p>
-                            <div class="prose prose-sm max-w-none text-body-sm leading-relaxed text-on-surface-variant">
+                            <div class="question-rich-content prose prose-sm max-w-none text-body-sm leading-relaxed text-on-surface-variant">
                                 {!! $optionExplanation !!}
                             </div>
                         </div>

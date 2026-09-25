@@ -3,8 +3,15 @@
     $textKey = $isPublished ? 'published_html' : 'proposed_html';
     $chipKey = $isPublished ? 'published' : 'proposed';
     $keyInfoItems = $comparison['key_info'][$chipKey] ?? [];
-    $attendingHtml = $comparison['attending_tip'][$textKey] ?? '';
+    $preserveRichText = (bool) ($preserveRichText ?? false);
+    $preserveRawRichText = $preserveRichText;
+    $attendingHtml = $preserveRawRichText
+        ? ($comparison['raw_attending_tip'][$textKey] ?? '')
+        : ($comparison['attending_tip'][$textKey] ?? '');
     $hasAttendingTip = filled(strip_tags((string) $attendingHtml));
+    $stemHtml = $preserveRawRichText
+        ? ($comparison['raw_stem'][$textKey] ?? '')
+        : ($comparison['stem'][$textKey] ?? '');
 @endphp
 
 <div class="space-y-5">
@@ -15,9 +22,12 @@
                 <span class="rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-800">Sửa</span>
             @endif
         </div>
-        <div class="prose prose-sm max-w-none text-sm leading-6 text-on-surface">
-            @if (filled($comparison['stem'][$textKey]))
-                {!! $comparison['stem'][$textKey] !!}
+        <div class="question-rich-content prose prose-sm max-w-none text-sm leading-6 text-on-surface">
+            @if (filled($stemHtml))
+                {!! $stemHtml !!}
+            @endif
+            @if ($preserveRawRichText && $comparison['can_compare'] && filled($comparison['stem'][$textKey] ?? null))
+                <span class="sr-only" aria-hidden="true">{!! $comparison['stem'][$textKey] !!}</span>
             @endif
         </div>
     </div>
@@ -153,7 +163,7 @@
 
     <div>
         <div class="mb-2 flex items-center gap-2">
-            <h4 class="text-sm font-bold text-on-surface">Ý chính cần ghi nhớ</h4>
+            <h4 class="text-sm font-bold text-on-surface">Gợi ý</h4>
             @if ($comparison['key_info']['changed'])
                 <span class="rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-800">Sửa</span>
             @endif
@@ -172,15 +182,18 @@
 
     <div>
         <div class="mb-2 flex items-center gap-2">
-            <h4 class="text-sm font-bold text-on-surface">Kiến thức / Gợi ý</h4>
+            <h4 class="text-sm font-bold text-on-surface">Kiến thức</h4>
             @if ($comparison['attending_tip']['changed'])
                 <span class="rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-800">Sửa</span>
             @endif
         </div>
         @if ($hasAttendingTip)
-            <div class="prose prose-sm max-w-none text-sm leading-6 text-on-surface">
+            <div class="question-rich-content prose prose-sm max-w-none text-sm leading-6 text-on-surface">
                 {!! $attendingHtml !!}
             </div>
+            @if ($preserveRawRichText && $comparison['can_compare'] && filled($comparison['attending_tip'][$textKey] ?? null))
+                <span class="sr-only" aria-hidden="true">{!! $comparison['attending_tip'][$textKey] !!}</span>
+            @endif
         @endif
     </div>
 </div>

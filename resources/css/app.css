@@ -1,6 +1,59 @@
 @import 'tailwindcss';
 @import 'quill/dist/quill.snow.css';
 
+/* Rich question content in review/detail pages. Tailwind preflight resets lists. */
+.question-rich-content ul {
+    list-style: disc;
+    padding-left: 1.5rem;
+}
+
+.question-rich-content ol {
+    list-style: decimal;
+    padding-left: 1.5rem;
+}
+
+.question-rich-content li {
+    margin: 0.15em 0;
+}
+
+/* Match Quill's list counters when bullet and ordered rows share one <ol>. */
+.question-rich-content {
+    counter-reset: list-0 list-1 list-2 list-3 list-4 list-5 list-6 list-7 list-8 list-9;
+}
+
+.question-rich-content ol {
+    list-style: none;
+    padding-left: 1.5em;
+}
+
+.question-rich-content ol li {
+    list-style-type: none;
+    padding-left: 1.5em;
+    position: relative;
+}
+
+.question-rich-content ol li[data-list='bullet']::before {
+    content: '\2022';
+    display: inline-block;
+    margin-left: -1.5em;
+    margin-right: 0.3em;
+    text-align: right;
+    width: 1.2em;
+}
+
+.question-rich-content ol li[data-list='ordered'] {
+    counter-increment: list-0;
+}
+
+.question-rich-content ol li[data-list='ordered']::before {
+    content: counter(list-0, decimal) '. ';
+    display: inline-block;
+    margin-left: -1.5em;
+    margin-right: 0.3em;
+    text-align: right;
+    width: 1.2em;
+}
+
 @custom-variant dark (&:where(.dark, .dark *));
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';

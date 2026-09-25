@@ -106,5 +106,8 @@
     </div>
     @endif
 
-    @include('questionbank::partials.question-review-comparison', ['comparison' => $comparison])
+    @include('questionbank::partials.question-review-comparison', [
+        'comparison' => $comparison,
+        'preserveRichText' => true,
+    ])
 </x-layouts.teach>

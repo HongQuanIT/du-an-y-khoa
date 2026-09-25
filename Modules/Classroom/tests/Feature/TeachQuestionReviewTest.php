@@ -6,6 +6,7 @@ namespace Modules\Classroom\Tests\Feature;
 
 use App\Models\User;
 use App\Support\Enums\Permission;
+use App\Support\Enums\PortalGroup;
 use App\Support\Enums\Role;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -17,6 +18,7 @@ use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionReviewRequest;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\Support\CreatesMedicalTaxonomy;
 use Tests\TestCase;
 
@@ -102,6 +104,27 @@ final class TeachQuestionReviewTest extends TestCase
             ->assertSee('Cần sửa stem');
     }
 
+    public function test_instructor_is_redirected_to_list_after_question_is_published(): void
+    {
+        $instructor = $this->instructor();
+        $question = $this->makeInReviewQuestion($instructor);
+
+        $this->actingAsWithWebSession($instructor, 'web')
+            ->post(route('teach.questions.reviews.approve', $question), ['review_note' => 'Đạt'])
+            ->assertRedirect();
+
+        $question->refresh()->forceFill([
+            'status' => QuestionStatus::Published,
+            'assigned_instructor_id' => null,
+            'instructor_id' => null,
+        ])->save();
+
+        $this->actingAsWithWebSession($instructor, 'web')
+            ->get(route('teach.questions.reviews.show', $question->fresh()))
+            ->assertRedirect(route('teach.questions.reviews.index', ['tab' => 'approved']))
+            ->assertSessionHas('status', 'Câu hỏi đã xuất bản và không còn trong màn hình duyệt.');
+    }
+
     public function test_instructor_can_approve_without_bumping_version(): void
     {
         $instructor = $this->instructor();
@@ -112,7 +135,7 @@ final class TeachQuestionReviewTest extends TestCase
             ->post(route('teach.questions.reviews.approve', $question), [
                 'review_note' => 'Nội dung ổn.',
             ])
-            ->assertRedirect(route('teach.questions.reviews.index', ['tab' => 'approved']));
+            ->assertRedirect(route('teach.questions.reviews.show', $question));
 
         $question->refresh();
 
@@ -219,8 +242,8 @@ final class TeachQuestionReviewTest extends TestCase
             ->assertSee(strip_tags((string) $question->stem), false)
             ->assertDontSee('Giải thích chung', false)
             ->assertDontSee('Chưa nhập.', false)
-            ->assertSee('Ý chính cần ghi nhớ', false)
-            ->assertSee('Kiến thức / Gợi ý', false);
+            ->assertSee('Gợi ý', false)
+            ->assertSee('Kiến thức', false);
     }
 
     public function test_review_detail_preserves_stem_html_and_hides_empty_key_info(): void
@@ -242,8 +265,8 @@ final class TeachQuestionReviewTest extends TestCase
             ->assertSee('<li>Troponin tăng</li>', false)
             ->assertSee('<em>cấy máu</em>', false)
             ->assertSee('Đau ngực kiểu mạch vành', false)
-            ->assertSee('Ý chính cần ghi nhớ', false)
-            ->assertSee('Kiến thức / Gợi ý', false)
+            ->assertSee('Gợi ý', false)
+            ->assertSee('Kiến thức', false)
             ->assertDontSee('Giải thích chung', false);
     }
 
@@ -383,7 +406,7 @@ final class TeachQuestionReviewTest extends TestCase
         $restrictedRole = \Spatie\Permission\Models\Role::create([
             'name' => 'restricted_instructor',
             'guard_name' => 'web',
-            'portal' => \App\Support\Enums\PortalGroup::Instructor->value,
+            'portal' => PortalGroup::Instructor->value,
         ]);
         $restrictedInstructor = User::factory()->create();
         $restrictedInstructor->assignRole($restrictedRole);
@@ -399,7 +422,7 @@ final class TeachQuestionReviewTest extends TestCase
 
         // 3. question.view_any không mở cổng giảng viên; teach review chỉ dùng question.view
         $restrictedRole->givePermissionTo('question.view_any');
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
         $restrictedInstructor->forgetCachedPermissions();
 
         $this->actingAsWithWebSession($restrictedInstructor, 'web')
@@ -412,7 +435,7 @@ final class TeachQuestionReviewTest extends TestCase
 
         // 4. Cấp question.view -> xem được index/show nhưng không duyệt / không từ chối được (403)
         $restrictedRole->givePermissionTo(Permission::QuestionView->value);
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
         $restrictedInstructor->forgetCachedPermissions();
 
         $this->actingAsWithWebSession($restrictedInstructor, 'web')
@@ -439,7 +462,7 @@ final class TeachQuestionReviewTest extends TestCase
 
         // 5. Cấp question.approve -> thấy và bấm được Duyệt chuyên môn, nhưng chưa có quyền Từ chối
         $restrictedRole->givePermissionTo('question.approve');
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
         $restrictedInstructor->forgetCachedPermissions();
 
         $this->actingAsWithWebSession($restrictedInstructor, 'web')
@@ -458,11 +481,11 @@ final class TeachQuestionReviewTest extends TestCase
             ->post(route('teach.questions.reviews.approve', $question), [
                 'review_note' => 'Duyệt thành công khi có quyền question.approve',
             ])
-            ->assertRedirect(route('teach.questions.reviews.index', ['tab' => 'approved']));
+            ->assertRedirect(route('teach.questions.reviews.show', $question));
 
         // 6. Cấp question.reject -> thấy và bấm được cả Từ chối
         $restrictedRole->givePermissionTo('question.reject');
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
         $restrictedInstructor->forgetCachedPermissions();
 
         $rejectedQuestion = $this->makeInReviewQuestion($restrictedInstructor);

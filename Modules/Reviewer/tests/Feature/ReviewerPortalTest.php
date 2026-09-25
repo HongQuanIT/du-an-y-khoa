@@ -160,6 +160,24 @@ final class ReviewerPortalTest extends TestCase
             ->assertOk()->assertSee($pending->code);
     }
 
+    public function test_reviewer_is_redirected_to_history_after_question_is_published(): void
+    {
+        $reviewer = User::factory()->create();
+        $reviewer->assignRole(Role::Reviewer->value);
+        $question = Question::factory()->create(['status' => QuestionStatus::InFlagReview->value]);
+
+        $question->forceFill([
+            'reviewer_1_id' => $reviewer->getKey(),
+            'reviewer_1_flag' => ReviewerFlag::Green->value,
+            'status' => QuestionStatus::Published,
+        ])->save();
+
+        $this->actingAs($reviewer)
+            ->get(route('reviewer.questions.flags.show', $question->fresh()))
+            ->assertRedirect(route('reviewer.questions.flags.index', ['tab' => 'done']))
+            ->assertSessionHas('status', 'Câu hỏi đã được xuất bản và không còn trong hàng đợi review.');
+    }
+
     public function test_dashboard_shows_personal_review_metrics_and_eligible_queue(): void
     {
         $reviewer = User::factory()->create();
