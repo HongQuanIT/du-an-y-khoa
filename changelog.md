@@ -2,6 +2,12 @@
 
 ## 2026-09-25
 
+### Feat — Mở rộng dashboard Reviewer và chuẩn hóa tên Câu hỏi Editor
+
+- Bổ sung KPI, biểu đồ hoạt động, việc cần xử lý, hàng đợi ưu tiên và lịch sử review cho dashboard Reviewer.
+- Dashboard Reviewer tính số liệu theo lịch sử gắn cờ và ẩn dữ liệu câu hỏi khi thiếu quyền `question_flag.view`.
+- Đổi nhãn `Câu hỏi của tôi` thành `Câu hỏi` trên menu, tiêu đề trang và KPI của portal Editor.
+
 ### Fix — Form Editor khi câu đang cảnh báo cờ
 
 - `workflowStatuses` có nhánh `flag_conflict`, hết lỗi 500 khi mở form sửa.

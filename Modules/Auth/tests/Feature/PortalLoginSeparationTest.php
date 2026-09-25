@@ -182,7 +182,7 @@ final class PortalLoginSeparationTest extends TestCase
             ->withSession([TwoFactorSession::KEY => now()->timestamp])
             ->get(route('editor.dashboard'))
             ->assertOk()
-            ->assertSee('Câu hỏi của tôi')
+            ->assertSee('Câu hỏi')
             ->assertDontSee('Người dùng');
     }
 

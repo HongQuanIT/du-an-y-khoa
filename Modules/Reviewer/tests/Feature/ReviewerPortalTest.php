@@ -15,6 +15,7 @@ use Modules\Auth\Services\TotpService;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Enums\ReviewerFlag;
 use Modules\QuestionBank\Models\Question;
+use Modules\QuestionBank\Models\QuestionReviewerFlag;
 use PragmaRX\Google2FA\Google2FA;
 use Tests\TestCase;
 
@@ -157,5 +158,69 @@ final class ReviewerPortalTest extends TestCase
             ->assertRedirect(route('reviewer.questions.flags.index', ['tab' => 'done']));
         $this->get(route('reviewer.questions.flags.index', ['tab' => 'done']))
             ->assertOk()->assertSee($pending->code);
+    }
+
+    public function test_dashboard_shows_personal_review_metrics_and_eligible_queue(): void
+    {
+        $reviewer = User::factory()->create();
+        $reviewer->assignRole(Role::Reviewer->value);
+        $other = User::factory()->create();
+        $pending = Question::factory()->create(['status' => QuestionStatus::InFlagReview->value]);
+        $own = Question::factory()->create(['status' => QuestionStatus::InFlagReview->value, 'created_by' => $reviewer->getKey()]);
+        $reviewed = Question::factory()->create(['status' => QuestionStatus::PendingPublish->value, 'reviewer_1_id' => $reviewer->getKey(), 'reviewer_1_flag' => ReviewerFlag::Green->value]);
+        $otherReviewed = Question::factory()->create(['status' => QuestionStatus::PendingPublish->value]);
+
+        QuestionReviewerFlag::query()->create([
+            'question_id' => $reviewed->getKey(), 'review_cycle' => 1, 'reviewer_id' => $reviewer->getKey(),
+            'flag' => ReviewerFlag::Green, 'reviewed_at' => now(),
+        ]);
+        QuestionReviewerFlag::query()->create([
+            'question_id' => $otherReviewed->getKey(), 'review_cycle' => 1, 'reviewer_id' => $other->getKey(),
+            'flag' => ReviewerFlag::Red, 'reviewed_at' => now(),
+        ]);
+
+        $response = $this->actingAs($reviewer)->get(route('reviewer.dashboard'))
+            ->assertOk()
+            ->assertSee('Nhịp độ review')
+            ->assertSee('Phân bố cờ')
+            ->assertSee('Tỷ lệ cờ xanh')
+            ->assertSee('1 xanh · 0 đỏ')
+            ->assertSee($pending->code)
+            ->assertSee($reviewed->code)
+            ->assertDontSee($own->code)
+            ->assertDontSee($otherReviewed->code);
+
+        $response->assertViewHas('charts', function (array $charts): bool {
+            return count($charts[0]['labels']) === 30
+                && $charts[0]['datasets'][0]['data'][29] === 1
+                && $charts[1]['datasets'][0]['data'] === [1, 0];
+        });
+    }
+
+    public function test_dashboard_has_useful_empty_state(): void
+    {
+        $reviewer = User::factory()->create();
+        $reviewer->assignRole(Role::Reviewer->value);
+
+        $this->actingAs($reviewer)->get(route('reviewer.dashboard'))
+            ->assertOk()
+            ->assertSee('Đã xử lý hết hàng đợi')
+            ->assertSee('Hiện không có câu hỏi chờ review.')
+            ->assertSee('Bạn chưa có lượt review nào.');
+    }
+
+    public function test_dashboard_hides_queue_when_question_view_permission_is_removed(): void
+    {
+        $role = \Spatie\Permission\Models\Role::findByName(Role::Reviewer->value, 'web');
+        $role->revokePermissionTo('question_flag.view');
+        $reviewer = User::factory()->create();
+        $reviewer->assignRole(Role::Reviewer->value);
+        $pending = Question::factory()->create(['status' => QuestionStatus::InFlagReview->value]);
+
+        $this->actingAs($reviewer)->get(route('reviewer.dashboard'))
+            ->assertOk()
+            ->assertSee('Chưa có quyền xem câu hỏi')
+            ->assertDontSee($pending->code)
+            ->assertDontSee(route('reviewer.questions.flags.index'), false);
     }
 }

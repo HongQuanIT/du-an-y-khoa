@@ -41,7 +41,7 @@ final class GetEditorDashboardDataAction
         return [
             'refreshed_at' => now()->toIso8601String(),
             'kpis' => [
-                $this->kpi('Câu hỏi của tôi', (clone $questions)->count(), 'Tất cả bản nháp và đã xuất bản', 'quiz'),
+                $this->kpi('Câu hỏi', (clone $questions)->count(), 'Tất cả bản nháp và đã xuất bản', 'quiz'),
                 $this->kpi('Bản nháp', $drafts, 'Cần hoàn thiện trước khi gửi duyệt', 'edit_note', $drafts > 0 ? 'warning' : null),
                 $this->kpi('Cần chỉnh sửa', $returned, 'Câu hỏi bị trả về cần xử lý lại', 'assignment_return', $returned > 0 ? 'critical' : null),
                 $this->kpi('Đang chờ duyệt', $inReview + $pendingPublish, $inReview.' chờ giảng viên · '.$pendingPublish.' chờ xuất bản', 'hourglass_top'),
