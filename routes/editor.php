@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
+use Modules\Admin\Http\Controllers\EditorImageUploadController;
 use Modules\Admin\Http\Controllers\BlueprintController;
 use Modules\Admin\Http\Controllers\Cms\BannerController;
 use Modules\Admin\Http\Controllers\Cms\FaqController;
@@ -139,6 +140,13 @@ Route::middleware(['auth', 'portal:editor'])->group(function (): void {
             ->middleware('permission:cms.update')->name('cms.menus.edit');
         Route::put('/cms/menus/{menu}', [MenuController::class, 'update'])
             ->middleware('permission:cms.update')->name('cms.menus.update');
+        Route::post('/rich-editor/images', EditorImageUploadController::class)
+            ->middleware([
+                'permission:editor_media.upload',
+                'throttle:30,1',
+            ])
+            ->name('rich-editor.images');
+
         Route::get('/media', [MediaController::class, 'index'])
             ->middleware('permission:editor_media.view')->name('media.index');
         Route::get('/media/items', [MediaController::class, 'items'])
