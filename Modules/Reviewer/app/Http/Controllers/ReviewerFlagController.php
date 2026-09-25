@@ -107,10 +107,9 @@ final class ReviewerFlagController extends Controller
             'note.required' => 'Cờ đỏ bắt buộc phải ghi chú lý do.',
         ]);
 
-        $result = $action->handle($actor, $question, ReviewerFlag::from($data['flag']), $data['note'] ?? null);
-        $tab = $result->status === QuestionStatus::FlagConflict ? 'warning' : 'done';
+        $action->handle($actor, $question, ReviewerFlag::from($data['flag']), $data['note'] ?? null);
 
-        return redirect()->route('reviewer.questions.flags.index', ['tab' => $tab])
+        return redirect()->route('reviewer.questions.flags.show', $question->fresh())
             ->with('status', 'Đã ghi nhận cờ của bạn.');
     }
 
@@ -154,10 +153,8 @@ final class ReviewerFlagController extends Controller
             default => 'Đã ghi nhận. Câu vẫn ở Cảnh báo vì hai cờ vẫn khác nhau.',
         };
 
-        $tab = $result->status === QuestionStatus::FlagConflict ? 'warning' : 'done';
-
         return redirect()
-            ->route('reviewer.questions.flags.index', ['tab' => $tab])
+            ->route('reviewer.questions.flags.show', $question->fresh())
             ->with('status', $message);
     }
 
