@@ -21,7 +21,7 @@
         || filled($filters['import_batch_id'] ?? null);
 @endphp
 
-<x-layouts.admin :title="$isReviewer ? 'Ngân hàng câu hỏi — Quản trị nội dung' : 'Câu hỏi của tôi — Quản trị nội dung'">
+<x-layouts.admin :title="$isReviewer ? 'Ngân hàng câu hỏi — Quản trị nội dung' : 'Câu hỏi — Quản trị nội dung'">
     <div x-data="questionColumnPrefs({
             storageKey: 'admin.questions.columns.v1',
             defaults: @js($defaultColumns),
@@ -40,7 +40,7 @@
         <header class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <h1 class="font-headline-md text-headline-md font-bold tracking-tight text-on-surface">
-                    {{ $isReviewer ? 'Ngân hàng câu hỏi' : 'Câu hỏi của tôi' }}
+                    {{ $isReviewer ? 'Ngân hàng câu hỏi' : 'Câu hỏi' }}
                 </h1>
                 <p class="mt-1 font-body-sm text-body-sm text-on-surface-variant">
                     {{ $isReviewer ? 'Quản lý, kiểm duyệt, lọc theo danh mục chuyên khoa và xuất bản câu hỏi y khoa.' : 'Danh sách và theo dõi các câu hỏi do chính bạn biên soạn.' }}
