@@ -2,6 +2,12 @@
 
 ## 2026-09-25
 
+### Fix — Đồng bộ format và luồng rời trang duyệt Teach/Reviewer
+
+- Đồng bộ rich text, bullet, đánh số và thụt lề theo Editor trên màn hình Teach và Reviewer.
+- Đổi nhãn `Gợi ý` và `Kiến thức` trong màn hình duyệt câu hỏi.
+- Sau khi duyệt hoặc gắn cờ, người dùng vẫn ở trang chi tiết; khi câu đã xuất bản và F5 sẽ quay về danh sách.
+
 ### Feat — Mở rộng dashboard Reviewer và chuẩn hóa tên Câu hỏi Editor
 
 - Bổ sung KPI, biểu đồ hoạt động, việc cần xử lý, hàng đợi ưu tiên và lịch sử review cho dashboard Reviewer.

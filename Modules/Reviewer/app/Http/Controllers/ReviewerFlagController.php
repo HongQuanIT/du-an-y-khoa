@@ -54,6 +54,18 @@ final class ReviewerFlagController extends Controller
     public function show(Request $request, Question $question): View
     {
         $actor = $request->user();
+
+        if (in_array($question->status, [
+            QuestionStatus::Published,
+            QuestionStatus::Private,
+            QuestionStatus::Retired,
+        ], true)) {
+            redirect()
+                ->route('reviewer.questions.flags.index', ['tab' => 'done'])
+                ->with('status', 'Câu hỏi đã được xuất bản và không còn trong hàng đợi review.')
+                ->throwResponse();
+        }
+
         abort_unless($this->visibleTo($question, $actor), 403);
 
         $question->load([

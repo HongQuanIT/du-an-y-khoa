@@ -90,6 +90,18 @@ final class TeachQuestionReviewController extends Controller
     public function show(Question $question): View
     {
         $this->authorizeView();
+
+        if (in_array($question->status, [
+            QuestionStatus::Published,
+            QuestionStatus::Private,
+            QuestionStatus::Retired,
+        ], true)) {
+            redirect()
+                ->route('teach.questions.reviews.index', ['tab' => self::TAB_APPROVED])
+                ->with('status', 'Câu hỏi đã xuất bản và không còn trong màn hình duyệt.')
+                ->throwResponse();
+        }
+
         abort_unless($this->canViewQuestion($question), 404);
 
         $question->load([
@@ -132,7 +144,7 @@ final class TeachQuestionReviewController extends Controller
         $action->approve($this->actor(), $question, $data['review_note'] ?? null);
 
         return redirect()
-            ->route('teach.questions.reviews.index', ['tab' => self::TAB_APPROVED])
+            ->route('teach.questions.reviews.show', $question)
             ->with('status', 'Đã duyệt chuyên môn.');
     }
 

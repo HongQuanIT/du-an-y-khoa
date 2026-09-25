@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\QuestionBank\Support;
 
+use App\Support\Html\SafeHtml;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Modules\QuestionBank\Enums\Difficulty;
@@ -103,10 +104,10 @@ final class QuestionReviewComparison
             $changedLabels[] = 'Đáp án';
         }
         if ($keyInfo['changed']) {
-            $changedLabels[] = 'Ý chính';
+            $changedLabels[] = 'Gợi ý';
         }
         if ($attendingTip['changed']) {
-            $changedLabels[] = 'Kiến thức / Gợi ý';
+            $changedLabels[] = 'Kiến thức';
         }
 
         if (! $canCompare) {
@@ -119,6 +120,14 @@ final class QuestionReviewComparison
             'has_changes' => $changedLabels !== [],
             'changed_labels' => $changedLabels,
             'stem' => $stem,
+            'raw_stem' => [
+                'published_html' => SafeHtml::forDisplay((string) ($snapshot['stem'] ?? '')),
+                'proposed_html' => SafeHtml::forDisplay((string) $question->stem),
+            ],
+            'raw_attending_tip' => [
+                'published_html' => SafeHtml::forDisplay((string) ($snapshot['attending_tip'] ?? '')),
+                'proposed_html' => SafeHtml::forDisplay((string) $question->attending_tip),
+            ],
             'attending_tip' => $attendingTip,
             'difficulty' => [
                 'changed' => $difficultyChanged,

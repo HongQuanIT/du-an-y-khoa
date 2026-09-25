@@ -40,6 +40,31 @@
         @endif
     </div>
     @if ($canViewQuestions)
+        <div class="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <section class="rounded-xl border border-outline-variant bg-surface p-5" aria-labelledby="reviewer-changes-heading">
+                <header class="mb-4"><h2 id="reviewer-changes-heading" class="font-headline-sm text-on-surface">Thay đổi ý định gắn cờ</h2><p class="mt-1 font-body-sm text-on-surface-variant">Các lần bạn đổi cờ hoặc xác nhận lại quyết định.</p></header>
+                @forelse ($recentFlagChanges as $change)
+                    <div class="flex items-start gap-3 border-t border-outline-variant py-3">
+                        <span class="material-symbols-outlined text-amber-600">edit_note</span>
+                        <div class="min-w-0 flex-1"><p class="font-label-md text-on-surface">{{ $change->question?->code ?? 'Câu hỏi đã xóa' }} · {{ $change->reaffirmed ? 'Xác nhận lại' : 'Đổi '.$change->from_flag->label().' → '.$change->to_flag->label() }}</p><p class="truncate font-body-sm text-on-surface-variant">{{ $change->question ? \Illuminate\Support\Str::limit(strip_tags($change->question->stem), 100) : 'Không còn nội dung' }}</p></div>
+                        <time class="shrink-0 font-label-sm text-on-surface-variant">{{ $change->created_at?->diffForHumans() }}</time>
+                    </div>
+            @empty
+                <p class="border-t border-outline-variant py-5 font-body-sm text-on-surface-variant">Chưa có lần thay đổi cờ nào.</p>
+            @endforelse
+            @if ($recentFlagChanges->hasPages())<div class="mt-3 border-t border-outline-variant pt-3">{{ $recentFlagChanges->withQueryString()->links() }}</div>@endif
+            </section>
+            <section class="rounded-xl border border-outline-variant bg-surface p-5" aria-labelledby="reviewer-outcomes-heading">
+                <header class="mb-4"><h2 id="reviewer-outcomes-heading" class="font-headline-sm text-on-surface">Kết quả đánh giá từ Admin</h2><p class="mt-1 font-body-sm text-on-surface-variant">Các câu hỏi Admin đã đánh dấu đúng hoặc sai cờ của bạn.</p></header>
+                @forelse ($recentOutcomes as $flag)
+                    @php($isCorrect = $flag->outcome === \Modules\QuestionBank\Enums\ReviewFlagOutcome::Confirmed)
+                    <div class="flex items-start gap-3 border-t border-outline-variant py-3"><span @class(['material-symbols-outlined', 'text-emerald-700' => $isCorrect, 'text-red-600' => ! $isCorrect])>{{ $isCorrect ? 'check_circle' : 'cancel' }}</span><div class="min-w-0 flex-1"><p class="font-label-md text-on-surface">{{ $flag->question?->code ?? 'Câu hỏi đã xóa' }} · <span @class(['text-emerald-700' => $isCorrect, 'text-red-600' => ! $isCorrect])>{{ $isCorrect ? 'Đánh dấu đúng' : 'Đánh dấu sai' }}</span></p><p class="truncate font-body-sm text-on-surface-variant">{{ $flag->question ? \Illuminate\Support\Str::limit(strip_tags($flag->question->stem), 100) : 'Không còn nội dung' }}</p></div><time class="shrink-0 font-label-sm text-on-surface-variant">{{ $flag->outcome_at?->diffForHumans() }}</time></div>
+            @empty
+                <p class="border-t border-outline-variant py-5 font-body-sm text-on-surface-variant">Chưa có kết quả đánh giá từ Admin.</p>
+            @endforelse
+            @if ($recentOutcomes->hasPages())<div class="mt-3 border-t border-outline-variant pt-3">{{ $recentOutcomes->withQueryString()->links() }}</div>@endif
+            </section>
+        </div>
         <section class="mb-8 rounded-xl border border-outline-variant bg-surface p-5" aria-labelledby="reviewer-history-heading">
             <header class="mb-4 flex items-start justify-between gap-3"><div><h2 id="reviewer-history-heading" class="font-headline-sm text-on-surface">Review gần đây</h2><p class="mt-1 font-body-sm text-on-surface-variant">Các lượt gắn cờ mới nhất của bạn.</p></div><a href="{{ route('reviewer.questions.flags.index', ['tab' => 'done']) }}" class="shrink-0 font-label-md font-semibold text-primary">Xem lịch sử →</a></header>
             @forelse ($recentFlags as $flag)
@@ -47,6 +72,7 @@
             @empty
                 <p class="border-t border-outline-variant py-5 font-body-sm text-on-surface-variant">Bạn chưa có lượt review nào.</p>
             @endforelse
+            @if ($recentFlags->hasPages())<div class="mt-3 border-t border-outline-variant pt-3">{{ $recentFlags->withQueryString()->links() }}</div>@endif
         </section>
     @endif
     <x-admin.quick-actions :actions="array_values(array_filter([

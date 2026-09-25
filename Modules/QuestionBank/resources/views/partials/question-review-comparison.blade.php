@@ -6,6 +6,7 @@
     $proposedBadge = $proposedBadge ?? 'Hiện tại';
     $newCopy = $newCopy ?? 'Câu này chưa từng xuất bản — bên trái trống, bên phải là toàn bộ nội dung mới.';
     $sameCopy = $sameCopy ?? 'Nội dung gửi duyệt trùng với bản đang dùng.';
+    $preserveRichText = (bool) ($preserveRichText ?? false);
 @endphp
 
 <section class="mb-6 rounded-2xl border border-outline-variant bg-surface p-5">
@@ -54,6 +55,7 @@
                 'side' => 'published',
                 'comparison' => $comparison,
                 'empty' => $empty,
+                'preserveRichText' => $preserveRichText,
             ])
         @else
             <div class="rounded-xl border border-dashed border-outline-variant bg-surface-container-low px-4 py-10 text-center text-sm text-on-surface-variant">
@@ -71,6 +73,7 @@
             'side' => 'proposed',
             'comparison' => $comparison,
             'empty' => $empty,
+            'preserveRichText' => $preserveRichText,
         ])
     </section>
 </div>
