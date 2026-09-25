@@ -54,6 +54,7 @@ final class CreateSessionData
         public readonly array $articles = [],
         public readonly array $symptoms = [],
         public readonly ?string $adaptiveFocus = null,
+        public readonly ?string $name = null,
     ) {}
 
     /**
@@ -63,7 +64,10 @@ final class CreateSessionData
      */
     public function filtersPayload(): array
     {
+        $name = is_string($this->name) ? trim($this->name) : '';
+
         return [
+            'name' => $name !== '' ? $name : null,
             'blueprint_id' => $this->blueprintId,
             'blueprint_section_id' => $this->blueprintSectionId,
             'core_clinical_topic_ids' => array_values($this->coreClinicalTopicIds),

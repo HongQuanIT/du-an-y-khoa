@@ -201,6 +201,14 @@ final class AdaptiveQuestionSelector
             [], // adaptive UI không chọn bài học thủ công
         );
 
+        // Hệ/Môn present but ∩ empty ⇒ empty pool (not full matrix).
+        if (
+            $scopedLessonIds === []
+            && $this->filters->hasContentFilter($data->organSystemIds, $data->subjectIds, [])
+        ) {
+            return [];
+        }
+
         if ($scopedLessonIds === []) {
             return $matrixLessonIds;
         }

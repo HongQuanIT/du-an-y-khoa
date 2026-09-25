@@ -901,7 +901,7 @@ final class GetAdminReportDataAction
             ['key' => 'flags_total', 'label' => 'Tổng cờ', 'align' => 'right'],
             ['key' => 'flags_red', 'label' => 'Cờ đỏ', 'align' => 'right'],
             ['key' => 'flags_green', 'label' => 'Cờ xanh', 'align' => 'right'],
-            ['key' => 'flags_incorrect', 'label' => 'Gắn sai', 'align' => 'right'],
+            ['key' => 'flags_incorrect', 'label' => 'Sai', 'align' => 'right'],
         ];
 
         $instructorColumns = [
@@ -915,8 +915,8 @@ final class GetAdminReportDataAction
         $editorColumns = [
             ['key' => 'editor', 'label' => 'Biên tập viên'],
             ['key' => 'submits_total', 'label' => 'Lần gửi duyệt', 'align' => 'right'],
-            ['key' => 'submits_ok', 'label' => 'Soạn đạt', 'align' => 'right'],
-            ['key' => 'submits_rework', 'label' => 'Soạn lỗi', 'align' => 'right'],
+            ['key' => 'submits_ok', 'label' => 'Đúng', 'align' => 'right'],
+            ['key' => 'submits_rework', 'label' => 'Sai', 'align' => 'right'],
         ];
 
         return [
@@ -927,7 +927,7 @@ final class GetAdminReportDataAction
                 $this->kpi(
                     'Cờ gắn sai',
                     number_format($flagIncorrect),
-                    'Đỏ oan hoặc xanh sai (đã adjudicate)',
+                    'Đánh dấu Sai khi họp giao ban',
                     'wrong_location',
                 ),
                 $this->kpi('Tổng lần duyệt GV', number_format($totalReviews), $approveCount.' approve · '.$rejectCount.' reject', 'rate_review'),
@@ -940,26 +940,26 @@ final class GetAdminReportDataAction
                     'person_alert',
                 ),
                 $this->kpi('Lần gửi duyệt', number_format($totalSubmits), 'Biên tập viên submit trong kỳ', 'edit_note'),
-                $this->kpi('Soạn đạt', number_format($editorConfirmed), 'Bản gửi đạt khi QA', 'check_circle'),
-                $this->kpi('Soạn lỗi', number_format($editorNeedsRework), 'Bản gửi cần sửa', 'error'),
+                $this->kpi('Gửi đúng', number_format($editorConfirmed), 'Mặc định Đúng / đã xác nhận', 'check_circle'),
+                $this->kpi('Gửi sai', number_format($editorNeedsRework), 'Đánh dấu Sai khi họp giao ban', 'error'),
             ],
             'charts' => [
                 $this->chart(
                     'report-review-qa-reviewers',
                     'Hiệu suất reviewer',
-                    'Top gắn cờ trong kỳ · đúng vs gắn sai (đã đánh giá QA)',
+                    'Top gắn cờ trong kỳ · Đúng vs Sai (đánh dấu giao ban)',
                     'bar',
                     'number',
                     $reviewerChartLabels,
                     [
-                        ['label' => 'Gắn đúng', 'data' => $reviewerCorrectSeries, 'color' => '#059669'],
-                        ['label' => 'Gắn sai', 'data' => $reviewerIncorrectSeries, 'color' => '#e11d48'],
+                        ['label' => 'Đúng', 'data' => $reviewerCorrectSeries, 'color' => '#059669'],
+                        ['label' => 'Sai', 'data' => $reviewerIncorrectSeries, 'color' => '#e11d48'],
                     ],
                 ),
                 $this->chart(
                     'report-review-qa-instructors',
                     'Hiệu suất giảng viên',
-                    'Top duyệt trong kỳ · đúng vs duyệt sai (đã đánh giá QA)',
+                    'Top duyệt trong kỳ · đúng vs duyệt sai',
                     'bar',
                     'number',
                     $instructorChartLabels,
@@ -971,13 +971,13 @@ final class GetAdminReportDataAction
                 $this->chart(
                     'report-review-qa-editors',
                     'Hiệu suất biên tập viên',
-                    'Top lần gửi duyệt · soạn đạt vs soạn lỗi (đã đánh giá QA)',
+                    'Top lần gửi duyệt · Đúng vs Sai (đánh dấu giao ban)',
                     'bar',
                     'number',
                     $editorChartLabels,
                     [
-                        ['label' => 'Soạn đạt', 'data' => $editorOkSeries, 'color' => '#2563eb'],
-                        ['label' => 'Soạn lỗi', 'data' => $editorReworkSeries, 'color' => '#c2410c'],
+                        ['label' => 'Đúng', 'data' => $editorOkSeries, 'color' => '#2563eb'],
+                        ['label' => 'Sai', 'data' => $editorReworkSeries, 'color' => '#c2410c'],
                     ],
                 ),
             ],

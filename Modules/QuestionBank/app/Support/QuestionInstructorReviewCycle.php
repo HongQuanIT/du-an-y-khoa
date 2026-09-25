@@ -37,6 +37,25 @@ final class QuestionInstructorReviewCycle
             'instructor_2_decision' => null,
             'rejection_reason' => null,
             'rejected_by_role' => null,
+            'reject_reason_code' => null,
+            'sticky_reviewer_1_id' => null,
+            'sticky_reviewer_2_id' => null,
+        ])->save();
+
+        $this->flagCycle->clearFlags($question->fresh() ?? $question);
+    }
+
+    /**
+     * After dual-red: bump flag cycle, keep GV approval + sticky pair, clear prior flags.
+     */
+    public function startStickyFlagResubmit(Question $question): void
+    {
+        $question->forceFill([
+            'instructor_review_cycle' => (int) $question->instructor_review_cycle + 1,
+            'rejection_reason' => null,
+            'rejected_by_role' => null,
+            'reject_reason_code' => null,
+            // Keep instructor_decision approved + sticky_reviewer_* ids.
         ])->save();
 
         $this->flagCycle->clearFlags($question->fresh() ?? $question);

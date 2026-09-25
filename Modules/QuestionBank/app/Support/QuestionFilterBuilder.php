@@ -16,7 +16,8 @@ use Modules\QuestionBank\Models\Question;
  * Content axis: bài học (lessons) gắn độc lập với môn học (subjects)
  * và hệ cơ quan (organ_systems). Questions attach only to lessons;
  * subject/organ-system filters resolve down to lessons via
- * lesson_subject / lesson_organ_system.
+ * lesson_subject / lesson_organ_system. Multiple axes AND together;
+ * multiple values within one axis OR together.
  *
  * Blueprint / core clinical topics are a separate exam matrix projected onto
  * lessons via core_topic_lessons and/or tags via core_topic_tags — questions
@@ -92,7 +93,11 @@ final class QuestionFilterBuilder
     }
 
     /**
-     * Combined lesson id set from organ-system, subject and direct lesson filters.
+     * Lesson ids matching content filters.
+     *
+     * Within one axis (e.g. multiple organ systems) values are OR-ed.
+     * Across axes that are present (hệ ∩ môn ∩ bài học), results are AND-ed
+     * so selecting both an organ system and a subject narrows the pool.
      *
      * @param  list<int>  $organSystemIds
      * @param  list<int>  $subjectIds
@@ -104,13 +109,35 @@ final class QuestionFilterBuilder
         array $subjectIds = [],
         array $lessonIds = [],
     ): array {
-        return collect($this->normalizeIds($lessonIds))
-            ->merge($this->lessonIdsForSubjects($subjectIds))
-            ->merge($this->lessonIdsForOrganSystems($organSystemIds))
-            ->unique()
-            ->sort()
-            ->values()
-            ->all();
+        $sets = [];
+
+        if ($this->normalizeIds($organSystemIds) !== []) {
+            $sets[] = $this->lessonIdsForOrganSystems($organSystemIds);
+        }
+
+        if ($this->normalizeIds($subjectIds) !== []) {
+            $sets[] = $this->lessonIdsForSubjects($subjectIds);
+        }
+
+        if ($this->normalizeIds($lessonIds) !== []) {
+            $sets[] = $this->normalizeIds($lessonIds);
+        }
+
+        if ($sets === []) {
+            return [];
+        }
+
+        $resolved = array_shift($sets);
+        foreach ($sets as $set) {
+            $resolved = array_values(array_intersect($resolved, $set));
+            if ($resolved === []) {
+                return [];
+            }
+        }
+
+        sort($resolved);
+
+        return array_values($resolved);
     }
 
     /**
@@ -399,13 +426,20 @@ final class QuestionFilterBuilder
     }
 
     /**
+     * Whether any content axis (hệ / môn / bài) was requested.
+     *
+     * Distinct from resolveContentLessonIds() === []: that can mean either
+     * "no content filter" or "filters present but empty intersection".
+     *
      * @param  list<int>  $organSystemIds
      * @param  list<int>  $subjectIds
      * @param  list<int>  $lessonIds
      */
-    private function hasContentFilter(array $organSystemIds, array $subjectIds, array $lessonIds): bool
+    public function hasContentFilter(array $organSystemIds, array $subjectIds, array $lessonIds): bool
     {
-        return $organSystemIds !== [] || $subjectIds !== [] || $lessonIds !== [];
+        return $this->normalizeIds($organSystemIds) !== []
+            || $this->normalizeIds($subjectIds) !== []
+            || $this->normalizeIds($lessonIds) !== [];
     }
 
     /**

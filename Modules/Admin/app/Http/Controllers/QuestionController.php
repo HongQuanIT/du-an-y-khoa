@@ -26,7 +26,6 @@ use Modules\QuestionBank\Actions\AdjudicateReviewOutcomesAction;
 use Modules\QuestionBank\Actions\SyncQuestionStatsAction;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\EditorSubmitOutcome;
-use Modules\QuestionBank\Enums\InstructorReviewOutcome;
 use Modules\QuestionBank\Enums\QuestionReviewAction;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Enums\QuestionWorkflowEventType;
@@ -34,7 +33,6 @@ use Modules\QuestionBank\Enums\ReviewFlagOutcome;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionFeedback;
 use Modules\QuestionBank\Models\QuestionImportBatch;
-use Modules\QuestionBank\Models\QuestionInstructorReview;
 use Modules\QuestionBank\Models\QuestionReviewerFlag;
 use Modules\QuestionBank\Models\QuestionVersion;
 use Modules\QuestionBank\Models\QuestionWorkflowEvent;
@@ -96,7 +94,7 @@ final class QuestionController extends Controller
             $statusFilters = [QuestionStatus::InReview->value];
         }
         if ($statusFilters === [] && $request->query('review') === 'must_reject') {
-            $statusFilters = [QuestionStatus::PendingPublish->value];
+            $statusFilters = [QuestionStatus::FlagConflict->value];
         }
         $difficultyFilters = AdminQuestionListQuery::stringValues($request->query('difficulty'));
         $accessFilters = AdminQuestionListQuery::stringValues($request->query('is_free'));
@@ -112,12 +110,7 @@ final class QuestionController extends Controller
             : null;
 
         $mustRejectCount = (clone $statsQuery)
-            ->where('status', QuestionStatus::PendingPublish->value)
-            ->where(function ($builder): void {
-                $builder
-                    ->where('reviewer_1_flag', 'red')
-                    ->orWhere('reviewer_2_flag', 'red');
-            })
+            ->where('status', QuestionStatus::FlagConflict->value)
             ->count();
 
         return view('admin::questions.index', [
@@ -293,6 +286,7 @@ final class QuestionController extends Controller
         if (in_array($question->status, [
             QuestionStatus::InReview,
             QuestionStatus::InFlagReview,
+            QuestionStatus::FlagConflict,
             QuestionStatus::PendingPublish,
         ], true)) {
             if ($request->filled('requested_status')) {
@@ -317,7 +311,8 @@ final class QuestionController extends Controller
             $lockMessage = match ($question->status) {
                 QuestionStatus::InReview => 'Câu đang chờ giảng viên duyệt. Không chỉnh sửa — rút về nháp nếu cần sửa.',
                 QuestionStatus::InFlagReview => 'Câu đã qua duyệt giảng viên, đang chờ reviewer. Không chỉnh sửa và không rút về nháp.',
-                default => 'Câu đang chờ xuất bản. Dùng nút «Duyệt & xuất bản» hoặc «Từ chối xuất bản» bên phải.',
+                QuestionStatus::FlagConflict => 'Câu đang cảnh báo cờ (2 reviewer khác nhau). Không chỉnh sửa — chờ reviewer đồng thuận.',
+                default => 'Câu đang chờ xuất bản. Dùng nút «Duyệt & xuất bản» hoặc «Trả về biên tập» bên phải.',
             };
 
             return back()->withErrors([
@@ -452,48 +447,17 @@ final class QuestionController extends Controller
         abort_unless($this->actor()->can(Permission::QuestionAdjudicate->value), 403);
 
         $data = $request->validate([
-            'kind' => ['required', 'string', Rule::in(['instructor', 'flag', 'submit'])],
+            'kind' => ['required', 'string', Rule::in(['flag', 'submit'])],
             'id' => ['required', 'integer', 'min:1'],
             'outcome' => ['required', 'string', 'max:40'],
             'outcome_note' => ['nullable', 'string', 'max:500'],
+        ], [
+            'kind.in' => 'Không đánh giá QA giảng viên. Chỉ QA cờ reviewer hoặc lần gửi biên tập.',
         ]);
 
         $note = filled($data['outcome_note'] ?? null) ? trim((string) $data['outcome_note']) : null;
         if ($note === '') {
             $note = null;
-        }
-
-        if ($data['kind'] === 'instructor') {
-            $review = QuestionInstructorReview::query()
-                ->where('question_id', $question->getKey())
-                ->whereKey($data['id'])
-                ->firstOrFail();
-
-            $outcome = InstructorReviewOutcome::tryFrom($data['outcome']);
-            abort_unless($outcome instanceof InstructorReviewOutcome, 422);
-
-            $action->manualInstructorOutcome(
-                $review,
-                $this->actor(),
-                $outcome,
-                $note,
-            );
-
-            $review->refresh();
-            $message = 'Đã đánh dấu QA giảng viên: '.$outcome->label();
-
-            if ($request->wantsJson() || $request->ajax()) {
-                return response()->json([
-                    'ok' => true,
-                    'message' => $message,
-                    'outcome' => $outcome->value,
-                    'outcome_label' => $outcome === InstructorReviewOutcome::Pending ? null : $outcome->label(),
-                    'outcome_note' => filled($review->outcome_note) ? (string) $review->outcome_note : null,
-                    'locked' => $outcome !== InstructorReviewOutcome::Pending,
-                ]);
-            }
-
-            return back()->with('status', $message);
         }
 
         if ($data['kind'] === 'submit') {
@@ -514,16 +478,16 @@ final class QuestionController extends Controller
             );
 
             $event->refresh();
-            $message = 'Đã đánh dấu QA biên tập viên: '.$outcome->label();
+            $message = 'Đã đánh dấu: '.$outcome->label();
 
             if ($request->wantsJson() || $request->ajax()) {
                 return response()->json([
                     'ok' => true,
                     'message' => $message,
                     'outcome' => $outcome->value,
-                    'outcome_label' => $outcome === EditorSubmitOutcome::Pending ? null : $outcome->label(),
+                    'outcome_label' => $outcome->label(),
                     'outcome_note' => filled($event->outcome_note) ? (string) $event->outcome_note : null,
-                    'locked' => $outcome !== EditorSubmitOutcome::Pending,
+                    'locked' => true,
                 ]);
             }
 
@@ -546,16 +510,16 @@ final class QuestionController extends Controller
         );
 
         $flag->refresh();
-        $message = 'Đã đánh dấu QA cờ reviewer: '.$outcome->label();
+        $message = 'Đã đánh dấu: '.$outcome->label();
 
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json([
                 'ok' => true,
                 'message' => $message,
                 'outcome' => $outcome->value,
-                'outcome_label' => $outcome === ReviewFlagOutcome::Pending ? null : $outcome->label(),
+                'outcome_label' => $outcome->label(),
                 'outcome_note' => filled($flag->outcome_note) ? (string) $flag->outcome_note : null,
-                'locked' => $outcome !== ReviewFlagOutcome::Pending,
+                'locked' => true,
             ]);
         }
 
@@ -620,6 +584,7 @@ final class QuestionController extends Controller
                     && ! in_array($question->status, [
                         QuestionStatus::InReview,
                         QuestionStatus::InFlagReview,
+                        QuestionStatus::FlagConflict,
                         QuestionStatus::PendingPublish,
                         QuestionStatus::Retired,
                     ], true)
@@ -678,7 +643,8 @@ final class QuestionController extends Controller
             QuestionStatus::InReview => $canSubmit
                 ? [QuestionStatus::Draft]
                 : [],
-            QuestionStatus::InFlagReview => [],
+            QuestionStatus::InFlagReview,
+            QuestionStatus::FlagConflict => [],
             QuestionStatus::PendingPublish => array_values(array_filter([
                 $canPublish ? QuestionStatus::Published : null,
                 $canPublish ? QuestionStatus::Private : null,

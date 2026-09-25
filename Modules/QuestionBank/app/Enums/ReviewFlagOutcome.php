@@ -6,6 +6,10 @@ namespace Modules\QuestionBank\Enums;
 
 use App\Support\Enums\Concerns\EnumValues;
 
+/**
+ * Accountability mark on a reviewer flag (monthly standup).
+ * Pending = default «Đúng» until Admin marks otherwise.
+ */
 enum ReviewFlagOutcome: string
 {
     use EnumValues;
@@ -18,10 +22,14 @@ enum ReviewFlagOutcome: string
     public function label(): string
     {
         return match ($this) {
-            self::Pending => 'Chưa đánh giá',
-            self::Confirmed => 'Gắn đúng',
-            self::FalsePositive => 'Gắn sai',
+            self::Pending, self::Confirmed => 'Đúng',
+            self::FalsePositive => 'Sai',
             self::Inconclusive => 'Chưa rõ',
         };
+    }
+
+    public function isIncorrect(): bool
+    {
+        return $this === self::FalsePositive;
     }
 }

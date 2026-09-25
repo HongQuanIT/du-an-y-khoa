@@ -25,7 +25,7 @@ final class QuestionQaCompletenessTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_one_pipeline_cycle_does_not_require_manual_qa(): void
+    public function test_one_pipeline_cycle_does_not_block_publish(): void
     {
         $question = Question::factory()->create([
             'status' => QuestionStatus::PendingPublish,
@@ -42,7 +42,7 @@ final class QuestionQaCompletenessTest extends TestCase
         $this->assertFalse(app(QuestionQaCompleteness::class)->blocksPublish($question));
     }
 
-    public function test_two_pipeline_cycles_block_when_outcomes_pending(): void
+    public function test_two_pipeline_cycles_with_pending_marks_still_allow_publish(): void
     {
         $instructor = User::factory()->create();
         $reviewer = User::factory()->create();
@@ -82,13 +82,16 @@ final class QuestionQaCompletenessTest extends TestCase
         ]);
 
         $qa = app(QuestionQaCompleteness::class);
-        $this->assertTrue($qa->blocksPublish($question));
+        $this->assertFalse($qa->blocksPublish($question));
         $assessment = $qa->assess($question);
+        $this->assertFalse($assessment['required']);
+        $this->assertTrue($assessment['complete']);
         $this->assertSame(2, $assessment['pipeline_cycles']);
-        $this->assertSame(3, $assessment['pending_total']);
+        $this->assertSame(0, $assessment['pending_reviews']);
+        $this->assertSame(2, $assessment['pending_total']); // still counted for reports
     }
 
-    public function test_two_pipeline_cycles_complete_when_all_adjudicated(): void
+    public function test_adjudicated_marks_still_allow_publish(): void
     {
         $instructor = User::factory()->create();
         $reviewer = User::factory()->create();
@@ -122,7 +125,7 @@ final class QuestionQaCompletenessTest extends TestCase
             'instructor_id' => $instructor->id,
             'decision' => InstructorReviewDecision::Approved,
             'reviewed_at' => now(),
-            'outcome' => InstructorReviewOutcome::Confirmed,
+            'outcome' => InstructorReviewOutcome::Pending,
         ]);
 
         QuestionReviewerFlag::query()->create([

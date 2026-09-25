@@ -623,14 +623,14 @@ mark[data-hl='#10b981'] {
 }
 .admin-rich-editor .ql-editor strong,
 .admin-rich-editor .ql-editor b {
-    font-weight: 700;
+    font-weight: 700 !important;
 }
 .admin-rich-editor .ql-editor em,
 .admin-rich-editor .ql-editor i {
-    font-style: italic;
+    font-style: italic !important;
 }
 .admin-rich-editor .ql-editor u {
-    text-decoration: underline;
+    text-decoration: underline !important;
 }
 .admin-rich-editor .ql-editor a {
     text-decoration: underline;

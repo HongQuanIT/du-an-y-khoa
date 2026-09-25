@@ -15,6 +15,7 @@ use Modules\Admin\Support\Auditor;
 use Modules\Admin\Support\AuditSnapshot;
 use Modules\Admin\Support\QuestionAccess;
 use Modules\QuestionBank\Actions\AdjudicateReviewOutcomesAction;
+use Modules\QuestionBank\Enums\QuestionRejectReasonCode;
 use Modules\QuestionBank\Enums\QuestionReviewAction;
 use Modules\QuestionBank\Enums\QuestionReviewStatus;
 use Modules\QuestionBank\Enums\QuestionStatus;
@@ -60,6 +61,11 @@ final class TransitionQuestionStatusAction
                 $this->assertCanSubmit($actor);
                 $this->assertReadyForStatus($question, $to);
                 $before = AuditSnapshot::question($question);
+
+                if ($question->isStickyResubmitEligible()) {
+                    return $this->submitStickyFlagResubmit($actor, $question, $before, $from);
+                }
+
                 $this->reviewCycle->startOrReset($question);
                 $this->queueCreationReview($actor, $question->refresh());
                 $this->workflowRecorder->record(
@@ -87,6 +93,17 @@ final class TransitionQuestionStatusAction
             return $question;
         }
 
+        // Sticky dual-red resubmit: Editor may post in_review (legacy) or in_flag_review → skip GV.
+        if ($from === QuestionStatus::Draft
+            && in_array($to, [QuestionStatus::InReview, QuestionStatus::InFlagReview], true)
+            && $question->isStickyResubmitEligible()) {
+            $this->assertCanSubmit($actor);
+            $this->assertReadyForStatus($question, QuestionStatus::InFlagReview);
+            $before = AuditSnapshot::question($question);
+
+            return $this->submitStickyFlagResubmit($actor, $question, $before, $from);
+        }
+
         $this->assertTransitionAllowed($actor, $question, $from, $to);
         $this->assertReadyForStatus($question, $to);
 
@@ -107,6 +124,9 @@ final class TransitionQuestionStatusAction
                 'rejected_by_role' => $from === QuestionStatus::PendingPublish
                     ? 'admin'
                     : ($question->rejected_by_role ?? 'admin'),
+                'reject_reason_code' => QuestionRejectReasonCode::Admin->value,
+                'sticky_reviewer_1_id' => null,
+                'sticky_reviewer_2_id' => null,
                 'updated_by' => $actor->getKey(),
             ])->save();
 
@@ -151,13 +171,23 @@ final class TransitionQuestionStatusAction
         }
 
         if ($to === QuestionStatus::Draft && $from === QuestionStatus::Rejected) {
+            $preserveSticky = $question->isDualRedRejection() && $question->hasStickyReviewers();
+
             $question->forceFill([
                 'status' => $to,
-                'rejection_reason' => null,
-                'rejected_by_role' => null,
+                // Keep dual_red code + sticky so next submit skips GV.
+                'rejection_reason' => $preserveSticky ? $question->rejection_reason : null,
+                'rejected_by_role' => $preserveSticky ? $question->rejected_by_role : null,
+                'reject_reason_code' => $preserveSticky
+                    ? QuestionRejectReasonCode::DualRed->value
+                    : null,
                 'updated_by' => $actor->getKey(),
             ])->save();
-            $this->reviewCycle->clearSlots($question);
+
+            if (! $preserveSticky) {
+                $this->reviewCycle->clearSlots($question);
+                $this->flagCycle->clearStickyPair($question->refresh());
+            }
 
             Auditor::record(
                 AuditAction::QuestionStatusChanged,
@@ -168,6 +198,7 @@ final class TransitionQuestionStatusAction
                 metadata: [
                     'from_status' => $from->value,
                     'to_status' => $to->value,
+                    'sticky_preserved' => $preserveSticky,
                 ],
             );
 
@@ -228,12 +259,14 @@ final class TransitionQuestionStatusAction
         if ($to === QuestionStatus::Draft && in_array($from, [
             QuestionStatus::InReview,
             QuestionStatus::InFlagReview,
+            QuestionStatus::FlagConflict,
         ], true)) {
             $question->reviewRequests()
                 ->where('status', QuestionReviewStatus::Pending->value)
                 ->where('action', QuestionReviewAction::Create->value)
                 ->delete();
             $this->reviewCycle->clearSlots($question);
+            $this->flagCycle->clearStickyPair($question->refresh());
         }
 
         if ($isPublishing) {
@@ -263,6 +296,7 @@ final class TransitionQuestionStatusAction
             );
             $this->adjudicateOutcomes->onPublish($question->refresh(), $actor);
             $this->workflowRecorder->resetRejectCount($question->refresh());
+            $this->flagCycle->clearStickyPair($question->refresh());
         }
 
         Auditor::record(
@@ -292,6 +326,7 @@ final class TransitionQuestionStatusAction
                 QuestionStatus::Draft,
             ],
             QuestionStatus::InFlagReview->value => [],
+            QuestionStatus::FlagConflict->value => [],
             QuestionStatus::PendingPublish->value => [
                 QuestionStatus::Published,
                 QuestionStatus::Private,
@@ -401,13 +436,14 @@ final class TransitionQuestionStatusAction
 
     private function assertLayerOneComplete(Question $question, User $actor, string $actionLabel): void
     {
-        if ($this->flagCycle->hasRedFlag($question)) {
+        // New path: if any reviewer flag slots are filled, require exactly 2 greens.
+        if ($this->flagCycle->flagCount($question) > 0 && ! $this->flagCycle->bothGreen($question)) {
             throw ValidationException::withMessages([
-                'status' => 'Có cờ đỏ — không xuất bản được. Chỉ được trả về biên tập.',
+                'status' => 'Chỉ xuất bản khi đủ 2 cờ xanh. Câu có cờ đỏ hoặc đang cảnh báo không xuất bản được.',
             ]);
         }
 
-        if (! $this->reviewCycle->hasRequiredApprovals($question)) {
+        if (! $this->reviewCycle->canPublish($question)) {
             throw ValidationException::withMessages([
                 'status' => 'Cần giảng viên duyệt và đủ 2 cờ xanh trước khi '.$actionLabel.'.',
             ]);
@@ -427,6 +463,52 @@ final class TransitionQuestionStatusAction
         }
     }
 
+    /**
+     * @param  mixed  $before
+     */
+    private function submitStickyFlagResubmit(
+        User $actor,
+        Question $question,
+        mixed $before,
+        QuestionStatus $from,
+    ): Question {
+        $this->reviewCycle->startStickyFlagResubmit($question);
+        $question = $question->refresh();
+
+        $question->forceFill([
+            'status' => QuestionStatus::InFlagReview,
+            'updated_by' => $actor->getKey(),
+        ])->save();
+
+        $this->workflowRecorder->record(
+            $question->refresh(),
+            QuestionWorkflowEventType::Submit,
+            $actor,
+            actorRole: 'content_editor',
+            meta: [
+                'sticky_resubmit' => true,
+                'skip_instructor' => true,
+                'sticky_reviewer_1_id' => $question->sticky_reviewer_1_id,
+                'sticky_reviewer_2_id' => $question->sticky_reviewer_2_id,
+            ],
+        );
+
+        Auditor::record(
+            AuditAction::QuestionStatusChanged,
+            $actor,
+            $question,
+            $before,
+            AuditSnapshot::question($question->refresh()),
+            metadata: [
+                'from_status' => $from->value,
+                'to_status' => QuestionStatus::InFlagReview->value,
+                'sticky_resubmit' => true,
+            ],
+        );
+
+        return $question->refresh();
+    }
+
     private function assertReadyForStatus(Question $question, QuestionStatus $to): void
     {
         if (! in_array($to, [
@@ -439,7 +521,7 @@ final class TransitionQuestionStatusAction
             return;
         }
 
-        if ($to === QuestionStatus::InReview) {
+        if (in_array($to, [QuestionStatus::InReview, QuestionStatus::InFlagReview], true)) {
             $this->assertAssignedInstructorReady($question);
         }
         $question->loadMissing('options');

@@ -19,6 +19,7 @@ final class EditorImageUploadController extends Controller
     {
         abort_unless($request->user()?->canAny([
             'media.upload',
+            'editor_media.upload',
         ]), 403);
 
         $request->validate([

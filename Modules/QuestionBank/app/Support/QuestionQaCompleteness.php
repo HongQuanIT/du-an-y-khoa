@@ -5,19 +5,21 @@ declare(strict_types=1);
 namespace Modules\QuestionBank\Support;
 
 use Modules\QuestionBank\Enums\EditorSubmitOutcome;
-use Modules\QuestionBank\Enums\InstructorReviewOutcome;
 use Modules\QuestionBank\Enums\QuestionWorkflowEventType;
 use Modules\QuestionBank\Enums\ReviewFlagOutcome;
 use Modules\QuestionBank\Models\Question;
-use Modules\QuestionBank\Models\QuestionInstructorReview;
 use Modules\QuestionBank\Models\QuestionReviewerFlag;
 use Modules\QuestionBank\Models\QuestionWorkflowEvent;
 
 /**
- * Publish QA gate: pipeline ≥2 rounds requires all current-pipeline outcomes adjudicated.
+ * Accountability marking on timeline (cờ / lần gửi).
+ *
+ * Publish gate: 2 green flags → pending_publish is enough. Pending marks default to «Đúng»;
+ * Admin marks «Sai» at monthly review — never blocks publish.
  */
 final class QuestionQaCompleteness
 {
+    /** @deprecated Kept for callers; publish no longer requires manual marking. */
     public const MIN_CYCLES_REQUIRING_MANUAL_QA = 2;
 
     /**
@@ -35,21 +37,6 @@ final class QuestionQaCompleteness
     public function assess(Question $question): array
     {
         $pipelineCycles = $question->currentPipelineReviewCycle();
-        $required = $pipelineCycles >= self::MIN_CYCLES_REQUIRING_MANUAL_QA;
-
-        if (! $required) {
-            return [
-                'required' => false,
-                'complete' => true,
-                'pipeline_cycles' => $pipelineCycles,
-                'pending_submits' => 0,
-                'pending_reviews' => 0,
-                'pending_flags' => 0,
-                'pending_total' => 0,
-                'summary' => '',
-            ];
-        }
-
         $minCycle = $question->lastPublishedReviewCycle() + 1;
 
         $pendingSubmits = QuestionWorkflowEvent::query()
@@ -62,15 +49,6 @@ final class QuestionQaCompleteness
             })
             ->count();
 
-        $pendingReviews = QuestionInstructorReview::query()
-            ->where('question_id', $question->getKey())
-            ->where('review_cycle', '>=', $minCycle)
-            ->where(function ($query): void {
-                $query->whereNull('outcome')
-                    ->orWhere('outcome', InstructorReviewOutcome::Pending->value);
-            })
-            ->count();
-
         $pendingFlags = QuestionReviewerFlag::query()
             ->where('question_id', $question->getKey())
             ->where('review_cycle', '>=', $minCycle)
@@ -80,21 +58,20 @@ final class QuestionQaCompleteness
             })
             ->count();
 
-        $pendingTotal = $pendingSubmits + $pendingReviews + $pendingFlags;
+        $pendingReviews = 0;
+        $pendingTotal = $pendingSubmits + $pendingFlags;
         $parts = [];
         if ($pendingSubmits > 0) {
-            $parts[] = $pendingSubmits.' lần gửi duyệt';
-        }
-        if ($pendingReviews > 0) {
-            $parts[] = $pendingReviews.' phiếu GV';
+            $parts[] = $pendingSubmits.' lần gửi (mặc định Đúng)';
         }
         if ($pendingFlags > 0) {
-            $parts[] = $pendingFlags.' cờ reviewer';
+            $parts[] = $pendingFlags.' cờ (mặc định Đúng)';
         }
 
         return [
-            'required' => true,
-            'complete' => $pendingTotal === 0,
+            // Never gate publish on marking — 2 green flags suffice.
+            'required' => false,
+            'complete' => true,
             'pipeline_cycles' => $pipelineCycles,
             'pending_submits' => $pendingSubmits,
             'pending_reviews' => $pendingReviews,
@@ -102,29 +79,22 @@ final class QuestionQaCompleteness
             'pending_total' => $pendingTotal,
             'summary' => $parts === []
                 ? ''
-                : 'Còn chưa đánh giá QA: '.implode(', ', $parts).'.',
+                : 'Chưa đánh dấu thủ công (đếm báo cáo): '.implode(', ', $parts).'.',
         ];
     }
 
     public function isCompleteForPublish(Question $question): bool
     {
-        return $this->assess($question)['complete'];
+        return true;
     }
 
     public function blocksPublish(Question $question): bool
     {
-        $assessment = $this->assess($question);
-
-        return $assessment['required'] && ! $assessment['complete'];
+        return false;
     }
 
     public function publishBlockedMessage(Question $question): string
     {
-        $assessment = $this->assess($question);
-        $base = 'Pipeline ≥'.$assessment['pipeline_cycles'].' vòng — hãy đánh giá QA trên «Lịch sử duyệt» trước khi xuất bản.';
-
-        return filled($assessment['summary'])
-            ? $base.' '.$assessment['summary']
-            : $base;
+        return 'Hai cờ xanh đủ điều kiện xuất bản. Đánh dấu Đúng/Sai trên «Lịch sử duyệt» phục vụ họp giao ban, không chặn XB.';
     }
 }

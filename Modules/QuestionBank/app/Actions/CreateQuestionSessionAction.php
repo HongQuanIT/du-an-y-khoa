@@ -56,6 +56,7 @@ final class CreateQuestionSessionAction
             articles: $data->articles,
             symptoms: $data->symptoms,
             adaptiveFocus: $data->adaptiveFocus,
+            name: $data->name,
         );
 
         $questionIds = $this->selector->forSession($user, $data);
@@ -86,6 +87,7 @@ final class CreateQuestionSessionAction
             articles: $data->articles,
             symptoms: $data->symptoms,
             adaptiveFocus: $data->adaptiveFocus,
+            name: $data->name,
         );
         $timeLimit = $data->mode === SessionMode::Exam ? $actualCount * 90 : null;
 

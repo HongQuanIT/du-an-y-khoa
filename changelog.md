@@ -2,6 +2,15 @@
 
 ## 2026-09-25
 
+### Fix — Form Editor khi câu đang cảnh báo cờ
+
+- `workflowStatuses` có nhánh `flag_conflict`, hết lỗi 500 khi mở form sửa.
+- Khóa sửa nội dung cho đến khi hai reviewer thống nhất cờ.
+
+### Change — Ẩn câu đã xuất bản khỏi hàng đợi duyệt
+
+- Tab **Đã gắn cờ** của reviewer và tab **Đã duyệt** của giảng viên không còn liệt kê câu `published` / `private` / `retired`.
+
 ### Fix — Gợi ý email đăng nhập Reviewer
 
 - Thêm placeholder email mờ cho form đăng nhập Reviewer để đồng bộ với các portal khác.
@@ -72,6 +81,43 @@
 - Thêm profile riêng cho Editor với hồ sơ, avatar, giao diện, đổi mật khẩu và 2FA trong `/editor`.
 - Tách menu, Media controller/support và middleware kiểm quyền view cho portal Editor; layout Editor dùng route profile riêng.
 - Chuẩn hóa helper quyền route dùng chung để UI Admin/Editor ẩn hiện theo permission đúng hơn.
+
+### Change — Đánh dấu Đúng/Sai (họp giao ban); 2 cờ xanh đủ XB
+
+- Bỏ gate «phải QA ≥2 vòng trước xuất bản»: `pending_publish` (2 xanh) XB ngay; đánh dấu không chặn.
+- Timeline: «Đúng» chỉ lưu DB (thống kê), không hiện badge; chỉ hiện khi đánh dấu **Sai**. Nút **Đánh dấu** vẫn luôn có.
+- Đổi nhãn Soạn đạt/Gắn đúng → Đúng/Sai; bỏ badge «Cần QA trước XB». Cập nhật SRS 35.
+
+### UX — Dual-red return: Editor sticky submit + badge reviewer
+
+- Form Editor: banner dual-red + copy «chỉ gửi lại 2 sticky reviewer»; panel sticky CTA «Gửi lại để gắn cờ», ẩn picker GV; target `in_flag_review`.
+- Tab Đã gắn cờ: nhãn «Đã trả Editor» (rejected) / «Đã trả Editor · chờ sửa» (draft sticky).
+- Backend nhận cả `in_review` (legacy rewrite) và `in_flag_review` khi sticky; cập nhật SRS 35.
+
+### Fix — Quill không in đậm / format trên form editor
+
+- Gốc lỗi: Alpine Proxy bọc instance Quill 2 → `blot` null → `Cannot read properties of null (reading 'offset')`.
+- Không gắn Quill lên state Alpine; chỉ giữ trên DOM `surface.__quill`.
+- Portal Editor: route upload `editor.rich-editor.images`; CSS format `strong/em/u` dùng `!important`.
+
+### Change — Bỏ QA thủ công giảng viên trên lịch sử duyệt
+
+- Timeline / API không còn đánh giá «Duyệt đúng / Duyệt sai» cho phiếu GV; chỉ đánh dấu cờ reviewer và lần gửi Editor.
+- Hai cờ xanh đủ điều kiện xuất bản.
+
+### Feat — Luồng cờ conflict, dual-red auto-return, sticky reviewer
+
+- Chờ đủ 2 cờ rồi phân nhánh: 2 xanh → XB; 2 đỏ → auto trả Editor + sticky pair (skip GV khi gửi lại); lệch → `flag_conflict` / tab Cảnh báo.
+- Đổi cờ trong Cảnh báo: popup chịu trách nhiệm + audit `question_flag_change_events`; giữ nguyên/đổi chéo vẫn lệch thì status không đổi.
+- Seed mặc định: Admin/SA không có `question.reject` (gán tay qua RBAC); dual-red không cần Admin Reject.
+- Hàng đợi gắn cờ nằm trên portal Reviewer.
+- Cập nhật SRS Module 35.
+
+### Fix — Bộ lọc QBank AND giữa trục + chặn ∩ rỗng
+
+- Hệ/Môn/Bài: trong một trục OR, giữa các trục AND (thay UNION); lookup bài học cascade theo Hệ/Môn.
+- Giao cắt rỗng không còn đếm/tạo phiên từ cả ngân hàng (custom + adaptive).
+- Lưu tên phiên từ builder; empty state modal bài học rõ khi lệch Hệ/Môn.
 
 ### Refactor — Tách quyền và route nội dung cho Editor
 

@@ -23,7 +23,9 @@
         <p x-show="!lessonResults.length"
             class="rounded-lg bg-surface-container-low p-3 text-sm text-on-surface-variant"
             x-text="blueprintId
-                ? 'Kỳ thi này chưa map bài học nào, hoặc không khớp từ khóa.'
-                : 'Chưa có bài học, hoặc không khớp từ khóa tìm kiếm.'"></p>
+                ? 'Kỳ thi này chưa map bài học nào, hoặc không khớp Hệ/Môn/từ khóa đã chọn.'
+                : ((organSystemIds.length || subjectIds.length)
+                    ? 'Không có bài học khớp Hệ/Môn đã chọn (hoặc từ khóa tìm kiếm).'
+                    : 'Chưa có bài học, hoặc không khớp từ khóa tìm kiếm.')"></p>
     </div>
 </div>

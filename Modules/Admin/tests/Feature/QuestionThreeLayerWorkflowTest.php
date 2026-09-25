@@ -13,6 +13,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Modules\Auth\Models\TwoFactorSecret;
 use Modules\Auth\Services\TotpService;
+use Modules\QuestionBank\Actions\ChangeReviewerFlagInConflictAction;
 use Modules\QuestionBank\Actions\FlagQuestionReviewAction;
 use Modules\QuestionBank\Actions\InstructorReviewQuestionAction;
 use Modules\QuestionBank\Enums\Difficulty;
@@ -177,13 +178,22 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
 
         $this->assertSame(QuestionStatus::Published, $question->fresh()->status);
         $this->assertSame(1, (int) $question->fresh()->version);
+
+        $this->actingAsStaff($reviewerA)
+            ->get(route('reviewer.questions.flags.index', ['tab' => 'done']))
+            ->assertOk()
+            ->assertDontSee($question->code);
+
+        $this->actingAsStaff($instructor)
+            ->get(route('teach.questions.reviews.index', ['tab' => 'approved']))
+            ->assertOk()
+            ->assertDontSee($question->code);
     }
 
-    public function test_red_flag_fail_fast_to_pending_publish_and_blocks_publish(): void
+    public function test_single_red_flag_waits_for_second_reviewer(): void
     {
         $instructor = $this->instructorWithSubject();
         $reviewerA = $this->createReviewer();
-        $admin = $this->staffUser(Role::Admin);
         $question = $this->makeQuestion(QuestionStatus::InReview, [
             'assigned_instructor_id' => $instructor->id,
             'instructor_review_cycle' => 1,
@@ -198,35 +208,268 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
         );
 
         $question->refresh();
-        $this->assertSame(QuestionStatus::PendingPublish, $question->status);
+        $this->assertSame(QuestionStatus::InFlagReview, $question->status);
         $this->assertTrue($question->hasRedReviewerFlag());
+    }
 
-        $this->actingAsStaff($admin)
-            ->from(route('admin.questions.edit', $question))
-            ->post(route('admin.questions.transition', $question), [
-                'status' => QuestionStatus::Published->value,
-            ])
-            ->assertSessionHasErrors('status');
+    public function test_dual_red_auto_returns_and_sticky_resubmit_skips_instructor(): void
+    {
+        $instructor = $this->instructorWithSubject();
+        $reviewerA = $this->createReviewer();
+        $reviewerB = $this->createReviewer();
+        $editor = $this->staffUser(Role::ContentEditor);
+        $outsider = $this->createReviewer();
+        $question = $this->makeQuestion(QuestionStatus::InReview, [
+            'assigned_instructor_id' => $instructor->id,
+            'instructor_review_cycle' => 1,
+            'created_by' => $editor->id,
+        ]);
 
-        $this->actingAsStaff($admin)
-            ->get(route('admin.questions.index', ['review' => 'must_reject']))
+        app(InstructorReviewQuestionAction::class)->approve($instructor, $question);
+        app(FlagQuestionReviewAction::class)->handle($reviewerA, $question->fresh(), ReviewerFlag::Red, 'Lỗi A');
+        app(FlagQuestionReviewAction::class)->handle($reviewerB, $question->fresh(), ReviewerFlag::Red, 'Lỗi B');
+
+        $question->refresh();
+        $this->assertSame(QuestionStatus::Rejected, $question->status);
+        $this->assertTrue($question->isDualRedRejection());
+        $this->assertTrue($question->hasStickyReviewers());
+        $this->assertSame(1, (int) $question->pipeline_reject_count);
+
+        $this->actingAsStaff($reviewerA)
+            ->get(route('reviewer.questions.flags.index', ['tab' => 'done']))
+            ->assertOk()
+            ->assertSee($question->code)
+            ->assertSee('Đã trả Editor', false)
+            ->assertSee('data-testid="returned-to-editor-badge"', false);
+
+        $this->actingAsStaff($editor)
+            ->get(route('editor.questions.edit', $question))
+            ->assertOk()
+            ->assertSee('Hai reviewer đánh Không đạt — đã trả về biên tập', false)
+            ->assertSee('Cặp reviewer sticky được giữ', false)
+            ->assertSee('Chuyển về nháp để chỉnh sửa', false);
+
+        app(\Modules\Admin\Actions\TransitionQuestionStatusAction::class)->handle(
+            $editor,
+            $question->fresh(),
+            QuestionStatus::Draft,
+        );
+
+        $question->refresh();
+        $this->assertSame(QuestionStatus::Draft, $question->status);
+        $this->assertTrue($question->isStickyResubmitEligible());
+
+        $this->actingAsStaff($editor)
+            ->get(route('editor.questions.edit', $question))
+            ->assertOk()
+            ->assertSee('Hai reviewer đánh Không đạt — đã trả về biên tập', false)
+            ->assertSee('data-sticky-resubmit="1"', false)
+            ->assertSee('Gửi lại để gắn cờ', false)
+            ->assertSee('Hai reviewer trước sẽ nhận lại câu', false)
+            ->assertDontSee('data-testid="assigned-instructor-picker"', false);
+
+        $this->actingAsStaff($reviewerA)
+            ->get(route('reviewer.questions.flags.index', ['tab' => 'done']))
+            ->assertOk()
+            ->assertSee($question->code)
+            ->assertSee('Đã trả Editor · chờ sửa', false);
+
+        app(\Modules\Admin\Actions\TransitionQuestionStatusAction::class)->handle(
+            $editor,
+            $question->fresh(),
+            QuestionStatus::InFlagReview,
+        );
+
+        $question->refresh();
+        $this->assertSame(QuestionStatus::InFlagReview, $question->status);
+        $this->assertTrue($question->hasStickyReviewers());
+        $this->assertNull($question->reviewer_1_id);
+
+        $this->actingAsStaff($outsider)
+            ->get(route('reviewer.questions.flags.index'))
+            ->assertOk()
+            ->assertDontSee($question->code);
+
+        $this->actingAsStaff($reviewerA)
+            ->get(route('reviewer.questions.flags.index'))
             ->assertOk()
             ->assertSee($question->code);
+    }
+
+    public function test_conflicting_flags_enter_warning_and_change_requires_ack(): void
+    {
+        $instructor = $this->instructorWithSubject();
+        $reviewerA = $this->createReviewer();
+        $reviewerB = $this->createReviewer();
+        $question = $this->makeQuestion(QuestionStatus::InReview, [
+            'assigned_instructor_id' => $instructor->id,
+            'instructor_review_cycle' => 1,
+        ]);
+
+        app(InstructorReviewQuestionAction::class)->approve($instructor, $question);
+        app(FlagQuestionReviewAction::class)->handle($reviewerA, $question->fresh(), ReviewerFlag::Green);
+        app(FlagQuestionReviewAction::class)->handle($reviewerB, $question->fresh(), ReviewerFlag::Red, 'Sai kiến thức');
+
+        $question->refresh();
+        $this->assertSame(QuestionStatus::FlagConflict, $question->status);
+
+        $editor = User::query()->findOrFail($question->created_by);
+        $this->actingAsStaff($editor)
+            ->get(route('editor.questions.edit', $question))
+            ->assertOk()
+            ->assertSee('Cảnh báo cờ', false)
+            ->assertDontSee('data-testid="editor-submit-panel"', false);
+
+        $this->actingAsStaff($reviewerA)
+            ->get(route('reviewer.questions.flags.index', ['tab' => 'warning']))
+            ->assertOk()
+            ->assertSee($question->code);
+
+        $this->actingAsStaff($reviewerA)
+            ->from(route('reviewer.questions.flags.show', $question))
+            ->put(route('reviewer.questions.flags.update', $question), [
+                'flag' => ReviewerFlag::Red->value,
+                'note' => 'Đổi sang đỏ sau khi rà lại',
+            ])
+            ->assertSessionHasErrors('responsibility_acked');
+
+        $this->actingAsStaff($reviewerA)
+            ->put(route('reviewer.questions.flags.update', $question->fresh()), [
+                'flag' => ReviewerFlag::Red->value,
+                'note' => 'Đổi sang đỏ sau khi rà lại',
+                'responsibility_acked' => '1',
+            ])
+            ->assertRedirect();
+
+        $question->refresh();
+        $this->assertSame(QuestionStatus::Rejected, $question->status);
+        $this->assertDatabaseHas('question_flag_change_events', [
+            'question_id' => $question->id,
+            'reviewer_id' => $reviewerA->id,
+            'from_flag' => 'green',
+            'to_flag' => 'red',
+            'responsibility_acked' => 1,
+        ]);
+
+        $timeline = app(\Modules\QuestionBank\Support\QuestionReviewTimeline::class)->build($question->fresh());
+        $entries = collect($timeline['cycles'])->flatMap(fn (array $c) => $c['entries']);
+        $changeEntry = $entries->firstWhere('type', 'flag_change');
+        $this->assertNotNull($changeEntry);
+        $this->assertSame($reviewerA->name, $changeEntry['actor_name']);
+        $this->assertStringContainsString('Đạt → Không đạt', $changeEntry['label']);
+        $this->assertSame('Đổi sang đỏ sau khi rà lại', $changeEntry['note']);
+
+        // Initial gắn cờ still shows the original green, not the overwritten red.
+        $initialA = $entries->first(fn (array $e): bool => ($e['type'] ?? '') === 'flag_green'
+            && ($e['actor_name'] ?? null) === $reviewerA->name);
+        $this->assertNotNull($initialA);
+
+        $this->actingAsStaff($this->staffUser(Role::Admin))
+            ->get(route('admin.questions.edit', $question))
+            ->assertOk()
+            ->assertSee('Reviewer đổi cờ', false)
+            ->assertSee('Đạt → Không đạt', false)
+            ->assertSee($reviewerA->name, false);
+    }
+
+    public function test_admin_reject_requires_permission_not_seeded_by_default(): void
+    {
+        $instructor = $this->instructorWithSubject();
+        $reviewerA = $this->createReviewer();
+        $reviewerB = $this->createReviewer();
+        $admin = $this->staffUser(Role::Admin);
+        $question = $this->makeQuestion(QuestionStatus::InReview, [
+            'assigned_instructor_id' => $instructor->id,
+            'instructor_review_cycle' => 1,
+        ]);
+
+        app(InstructorReviewQuestionAction::class)->approve($instructor, $question);
+        app(FlagQuestionReviewAction::class)->handle($reviewerA, $question->fresh(), ReviewerFlag::Green);
+        app(FlagQuestionReviewAction::class)->handle($reviewerB, $question->fresh(), ReviewerFlag::Green);
+
+        $this->assertFalse($admin->can('question.reject'));
 
         $this->actingAsStaff($admin)
             ->post(route('admin.questions.transition', $question->fresh()), [
                 'status' => QuestionStatus::Rejected->value,
-                'rejection_reason' => 'Có cờ đỏ, trả về biên tập.',
-                'red_flag_outcome' => 'confirmed',
+                'rejection_reason' => 'Vận hành',
+            ])
+            ->assertForbidden();
+
+        $admin->givePermissionTo('question.reject');
+        $admin->refresh();
+
+        $this->actingAsStaff($admin)
+            ->post(route('admin.questions.transition', $question->fresh()), [
+                'status' => QuestionStatus::Rejected->value,
+                'rejection_reason' => 'Vận hành — sai taxonomy',
             ])
             ->assertRedirect();
 
         $this->assertSame(QuestionStatus::Rejected, $question->fresh()->status);
-        $this->assertSame(1, (int) $question->fresh()->pipeline_reject_count);
-        $this->assertDatabaseHas('question_reviewer_flags', [
-            'question_id' => $question->id,
-            'flag' => 'red',
-            'outcome' => 'confirmed',
+    }
+
+    public function test_red_flag_requires_note(): void
+    {
+        $instructor = $this->instructorWithSubject();
+        $reviewer = $this->createReviewer();
+        $question = $this->makeQuestion(QuestionStatus::InReview, [
+            'assigned_instructor_id' => $instructor->id,
+            'instructor_review_cycle' => 1,
+        ]);
+        app(InstructorReviewQuestionAction::class)->approve($instructor, $question);
+
+        $this->actingAsStaff($reviewer)
+            ->from(route('reviewer.questions.flags.show', $question->fresh()))
+            ->post(route('reviewer.questions.flags.store', $question->fresh()), [
+                'flag' => ReviewerFlag::Red->value,
+                'note' => '',
+            ])
+            ->assertSessionHasErrors('note');
+
+        $this->assertSame(QuestionStatus::InFlagReview, $question->fresh()->status);
+    }
+
+    public function test_conflict_reaffirm_stays_in_warning_with_audit(): void
+    {
+        $instructor = $this->instructorWithSubject();
+        $reviewerA = $this->createReviewer();
+        $reviewerB = $this->createReviewer();
+        $conflict = $this->makeQuestion(QuestionStatus::InReview, [
+            'assigned_instructor_id' => $instructor->id,
+            'instructor_review_cycle' => 1,
+        ]);
+        app(InstructorReviewQuestionAction::class)->approve($instructor, $conflict);
+        app(FlagQuestionReviewAction::class)->handle($reviewerA, $conflict->fresh(), ReviewerFlag::Green);
+        app(FlagQuestionReviewAction::class)->handle($reviewerB, $conflict->fresh(), ReviewerFlag::Red, 'Sai');
+
+        app(ChangeReviewerFlagInConflictAction::class)->handle(
+            $reviewerA,
+            $conflict->fresh(),
+            ReviewerFlag::Green,
+            null,
+            false,
+        );
+        app(ChangeReviewerFlagInConflictAction::class)->handle(
+            $reviewerB,
+            $conflict->fresh(),
+            ReviewerFlag::Red,
+            'Giữ đỏ',
+            false,
+        );
+
+        $this->assertSame(QuestionStatus::FlagConflict, $conflict->fresh()->status);
+        $this->assertDatabaseHas('question_flag_change_events', [
+            'question_id' => $conflict->id,
+            'reviewer_id' => $reviewerA->id,
+            'reaffirmed' => 1,
+        ]);
+        $this->assertDatabaseHas('question_flag_change_events', [
+            'question_id' => $conflict->id,
+            'reviewer_id' => $reviewerB->id,
+            'from_flag' => 'red',
+            'to_flag' => 'red',
+            'reaffirmed' => 1,
         ]);
     }
 
@@ -240,17 +483,18 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
             ->assertSee('QA duyệt câu hỏi', false)
             ->assertSee('Cờ gắn sai', false)
             ->assertSee('Duyệt sai', false)
-            ->assertSee('Soạn đạt', false)
-            ->assertSee('Soạn lỗi', false)
+            ->assertSee('Gửi đúng', false)
+            ->assertSee('Gửi sai', false)
             ->assertSee('Hiệu suất biên tập viên', false)
             ->assertSee('>Biên tập viên<', false);
     }
 
-    public function test_admin_can_adjudicate_review_outcomes_with_dedicated_permission(): void
+    public function test_admin_can_adjudicate_flag_and_submit_but_not_instructor(): void
     {
         $admin = $this->staffUser(Role::Admin);
         $editor = $this->staffUser(Role::ContentEditor);
         $instructor = $this->instructorWithSubject();
+        $reviewer = $this->createReviewer();
 
         $this->assertTrue($admin->can(Permission::QuestionAdjudicate->value));
         $this->assertFalse($editor->can(Permission::QuestionAdjudicate->value));
@@ -272,26 +516,47 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
             'outcome' => InstructorReviewOutcome::Pending,
         ]);
 
+        $flag = \Modules\QuestionBank\Models\QuestionReviewerFlag::query()->create([
+            'question_id' => $question->id,
+            'review_cycle' => 1,
+            'reviewer_id' => $reviewer->id,
+            'flag' => ReviewerFlag::Green,
+            'reviewed_at' => now(),
+            'outcome' => \Modules\QuestionBank\Enums\ReviewFlagOutcome::Pending,
+        ]);
+
         $this->actingAsStaff($editor)
             ->post(route('admin.questions.review-outcomes', $question), [
-                'kind' => 'instructor',
-                'id' => $review->id,
-                'outcome' => 'miss',
-                'outcome_note' => 'Editor không được chấm QA',
+                'kind' => 'flag',
+                'id' => $flag->id,
+                'outcome' => 'confirmed',
             ])
             ->assertForbidden();
 
-        $this->actingAsStaff($admin)
-            ->get(route('admin.questions.edit', $question))
-            ->assertOk()
-            ->assertSee('data-testid="question-review-timeline"', false);
-
+        // Instructor QA đã bỏ — API từ chối kind=instructor.
         $this->actingAsStaff($admin)
             ->postJson(route('admin.questions.review-outcomes', $question), [
                 'kind' => 'instructor',
                 'id' => $review->id,
                 'outcome' => 'miss',
-                'outcome_note' => 'Approve oan',
+                'outcome_note' => 'Không được QA GV',
+            ])
+            ->assertStatus(422)
+            ->assertJsonPath('error.code', 'VALIDATION_ERROR')
+            ->assertJsonFragment(['field' => 'kind']);
+
+        $this->actingAsStaff($admin)
+            ->get(route('admin.questions.edit', $question))
+            ->assertOk()
+            ->assertSee('data-testid="question-review-timeline"', false)
+            ->assertDontSee('data-testid="review-qa-form-instructor-'.$review->id.'"', false);
+
+        $this->actingAsStaff($admin)
+            ->postJson(route('admin.questions.review-outcomes', $question), [
+                'kind' => 'flag',
+                'id' => $flag->id,
+                'outcome' => 'confirmed',
+                'outcome_note' => 'Gắn đúng',
             ])
             ->assertOk()
             ->assertJsonPath('ok', true);
@@ -299,6 +564,9 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
         $review->refresh();
         $this->assertSame(InstructorReviewOutcome::Miss, $review->outcome);
         $this->assertSame($admin->id, (int) $review->outcome_by);
+        $flag->refresh();
+        $this->assertSame(\Modules\QuestionBank\Enums\ReviewFlagOutcome::Confirmed, $flag->outcome);
+        $this->assertSame($admin->id, (int) $flag->outcome_by);
     }
 
     public function test_review_timeline_and_version_pipeline_metadata(): void
@@ -313,11 +581,11 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
             'assigned_instructor_id' => $instructor->id,
         ]);
 
-        $this->actingAsStaff($editor)
-            ->post(route('admin.questions.transition', $question), [
-                'status' => QuestionStatus::InReview->value,
-            ])
-            ->assertRedirect();
+        app(\Modules\Admin\Actions\TransitionQuestionStatusAction::class)->handle(
+            $editor,
+            $question->fresh(),
+            QuestionStatus::InReview,
+        );
 
         $question->refresh();
         $this->assertSame(1, (int) $question->instructor_review_cycle);
@@ -331,17 +599,17 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
         app(InstructorReviewQuestionAction::class)->reject($instructor, $question->fresh(), 'Sai đáp án đúng');
         $this->assertSame(1, (int) $question->fresh()->pipeline_reject_count);
 
-        $this->actingAsStaff($editor)
-            ->post(route('admin.questions.transition', $question->fresh()), [
-                'status' => QuestionStatus::Draft->value,
-            ])
-            ->assertRedirect();
+        app(\Modules\Admin\Actions\TransitionQuestionStatusAction::class)->handle(
+            $editor,
+            $question->fresh(),
+            QuestionStatus::Draft,
+        );
 
-        $this->actingAsStaff($editor)
-            ->post(route('admin.questions.transition', $question->fresh()), [
-                'status' => QuestionStatus::InReview->value,
-            ])
-            ->assertRedirect();
+        app(\Modules\Admin\Actions\TransitionQuestionStatusAction::class)->handle(
+            $editor,
+            $question->fresh(),
+            QuestionStatus::InReview,
+        );
 
         $question->refresh();
         $this->assertSame(2, (int) $question->instructor_review_cycle);

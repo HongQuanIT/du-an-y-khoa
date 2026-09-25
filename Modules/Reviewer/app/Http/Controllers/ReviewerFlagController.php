@@ -11,10 +11,12 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Modules\QuestionBank\Actions\ChangeReviewerFlagInConflictAction;
 use Modules\QuestionBank\Actions\FlagQuestionReviewAction;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Enums\ReviewerFlag;
 use Modules\QuestionBank\Models\Question;
+use Modules\QuestionBank\Models\QuestionFlagChangeEvent;
 use Modules\QuestionBank\Support\QuestionReviewerFlagCycle;
 
 final class ReviewerFlagController extends Controller
@@ -24,7 +26,11 @@ final class ReviewerFlagController extends Controller
     public function index(Request $request): View
     {
         $actor = $request->user();
-        $tab = $request->query('tab') === 'done' ? 'done' : 'pending';
+        $tab = $request->string('tab')->toString();
+        if (! in_array($tab, ['pending', 'warning', 'done'], true)) {
+            $tab = 'pending';
+        }
+
         $query = $this->scopeForTab($tab, $actor)->with(['lessons:id,name', 'assignedInstructor:id,name']);
 
         if ($request->filled('q')) {
@@ -39,6 +45,7 @@ final class ReviewerFlagController extends Controller
             'tab' => $tab,
             'stats' => [
                 'pending' => $this->scopeForTab('pending', $actor)->count(),
+                'warning' => $this->scopeForTab('warning', $actor)->count(),
                 'done' => $this->scopeForTab('done', $actor)->count(),
             ],
         ]);
@@ -59,12 +66,20 @@ final class ReviewerFlagController extends Controller
             'reviewerSlot2:id,name',
         ]);
 
+        $ownFlag = $this->flagCycle->actorFlag($question, $actor);
+        $inConflict = $question->status === QuestionStatus::FlagConflict && $ownFlag !== null;
+        $hasFlagPermission = $actor->can('question.flag');
+
         return view('reviewer::questions.show', [
             'question' => $question,
             'canFlag' => $this->canFlag($question, $actor),
-            'hasFlagPermission' => $actor->can('question.flag'),
+            'canChangeInConflict' => $inConflict && $hasFlagPermission,
+            'inConflict' => $inConflict,
+            'hasFlagPermission' => $hasFlagPermission,
             'flags' => ReviewerFlag::cases(),
-            'ownFlag' => $this->flagCycle->actorFlag($question, $actor),
+            'ownFlag' => $ownFlag,
+            'ownNote' => $this->flagCycle->actorNote($question, $actor),
+            'ackText' => QuestionFlagChangeEvent::ACK_TEXT,
         ]);
     }
 
@@ -76,17 +91,68 @@ final class ReviewerFlagController extends Controller
         $data = $request->validate([
             'flag' => ['required', 'string', Rule::in(ReviewerFlag::values())],
             'note' => [Rule::requiredIf(fn (): bool => $request->input('flag') === ReviewerFlag::Red->value), 'nullable', 'string', 'max:2000'],
+        ], [
+            'note.required' => 'Cờ đỏ bắt buộc phải ghi chú lý do.',
         ]);
 
-        $action->handle($actor, $question, ReviewerFlag::from($data['flag']), $data['note'] ?? null);
+        $result = $action->handle($actor, $question, ReviewerFlag::from($data['flag']), $data['note'] ?? null);
+        $tab = $result->status === QuestionStatus::FlagConflict ? 'warning' : 'done';
 
-        return redirect()->route('reviewer.questions.flags.index', ['tab' => 'done'])
+        return redirect()->route('reviewer.questions.flags.index', ['tab' => $tab])
             ->with('status', 'Đã ghi nhận cờ của bạn.');
+    }
+
+    public function update(
+        Request $request,
+        Question $question,
+        ChangeReviewerFlagInConflictAction $action,
+    ): RedirectResponse {
+        $actor = $request->user();
+        abort_unless($actor->can('question.flag') && $this->visibleTo($question, $actor), 403);
+
+        $data = $request->validate([
+            'flag' => ['required', 'string', Rule::in(ReviewerFlag::values())],
+            'note' => [
+                Rule::requiredIf(fn (): bool => $request->input('flag') === ReviewerFlag::Red->value),
+                'nullable',
+                'string',
+                'max:2000',
+            ],
+            'responsibility_acked' => ['sometimes', 'accepted'],
+        ], [
+            'note.required' => 'Cờ đỏ bắt buộc phải ghi chú lý do.',
+            'responsibility_acked.accepted' => 'Bạn phải xác nhận chịu trách nhiệm trước khi đổi cờ.',
+        ]);
+
+        $toFlag = ReviewerFlag::from($data['flag']);
+        $ownFlag = $this->flagCycle->actorFlag($question, $actor);
+        $isChange = $ownFlag !== null && $ownFlag !== $toFlag;
+
+        $result = $action->handle(
+            $actor,
+            $question,
+            $toFlag,
+            $data['note'] ?? null,
+            $isChange && $request->boolean('responsibility_acked'),
+        );
+
+        $message = match ($result->status) {
+            QuestionStatus::PendingPublish => 'Hai cờ xanh — câu đã vào hàng đợi xuất bản.',
+            QuestionStatus::Rejected => 'Hai cờ đỏ — hệ thống đã trả về biên tập.',
+            default => 'Đã ghi nhận. Câu vẫn ở Cảnh báo vì hai cờ vẫn khác nhau.',
+        };
+
+        $tab = $result->status === QuestionStatus::FlagConflict ? 'warning' : 'done';
+
+        return redirect()
+            ->route('reviewer.questions.flags.index', ['tab' => $tab])
+            ->with('status', $message);
     }
 
     private function visibleTo(Question $question, User $actor): bool
     {
         return $this->scopeForTab('pending', $actor)->whereKey($question->getKey())->exists()
+            || $this->scopeForTab('warning', $actor)->whereKey($question->getKey())->exists()
             || $this->scopeForTab('done', $actor)->whereKey($question->getKey())->exists();
     }
 
@@ -95,7 +161,11 @@ final class ReviewerFlagController extends Controller
         return $actor->can('question.flag')
             && $question->status === QuestionStatus::InFlagReview
             && (int) $question->created_by !== (int) $actor->getKey()
-            && ! $this->flagCycle->actorHasFlagged($question, $actor);
+            && ! $this->flagCycle->actorHasFlagged($question, $actor)
+            && (
+                ! $question->hasStickyReviewers()
+                || $this->flagCycle->actorIsStickyReviewer($question, $actor)
+            );
     }
 
     /** @return Builder<Question> */
@@ -104,14 +174,46 @@ final class ReviewerFlagController extends Controller
         $actorId = (int) $actor->getKey();
         $query = Question::query();
 
-        if ($tab === 'done') {
-            return $query->where(fn (Builder $builder) => $builder
-                ->where('reviewer_1_id', $actorId)->orWhere('reviewer_2_id', $actorId));
+        if ($tab === 'warning') {
+            return $query
+                ->where('status', QuestionStatus::FlagConflict->value)
+                ->where(fn (Builder $builder) => $builder
+                    ->where('reviewer_1_id', $actorId)
+                    ->orWhere('reviewer_2_id', $actorId));
         }
 
-        return $query->where('status', QuestionStatus::InFlagReview->value)
+        if ($tab === 'done') {
+            return $query
+                ->whereNotIn('status', [
+                    QuestionStatus::FlagConflict->value,
+                    QuestionStatus::Published->value,
+                    QuestionStatus::Private->value,
+                    QuestionStatus::Retired->value,
+                ])
+                ->where(fn (Builder $builder) => $builder
+                    ->where('reviewer_1_id', $actorId)
+                    ->orWhere('reviewer_2_id', $actorId));
+        }
+
+        return $query
+            ->where('status', QuestionStatus::InFlagReview->value)
             ->where(fn (Builder $builder) => $builder->whereNull('created_by')->orWhere('created_by', '!=', $actorId))
-            ->where(fn (Builder $builder) => $builder->whereNull('reviewer_1_id')->orWhere('reviewer_1_id', '!=', $actorId))
-            ->where(fn (Builder $builder) => $builder->whereNull('reviewer_2_id')->orWhere('reviewer_2_id', '!=', $actorId));
+            ->where(function (Builder $builder) use ($actorId): void {
+                $builder->where(function (Builder $sticky) use ($actorId): void {
+                    $sticky->whereNotNull('sticky_reviewer_1_id')
+                        ->where(fn (Builder $ids) => $ids
+                            ->where('sticky_reviewer_1_id', $actorId)
+                            ->orWhere('sticky_reviewer_2_id', $actorId));
+                })->orWhere(function (Builder $open) use ($actorId): void {
+                    $open->whereNull('sticky_reviewer_1_id')
+                        ->whereNull('sticky_reviewer_2_id')
+                        ->where(fn (Builder $slots) => $slots
+                            ->where(fn (Builder $inner) => $inner->whereNull('reviewer_1_id')->orWhere('reviewer_1_id', '!=', $actorId))
+                            ->where(fn (Builder $inner) => $inner->whereNull('reviewer_2_id')->orWhere('reviewer_2_id', '!=', $actorId)));
+                });
+            })
+            ->where(fn (Builder $builder) => $builder
+                ->where(fn (Builder $inner) => $inner->whereNull('reviewer_1_id')->orWhere('reviewer_1_id', '!=', $actorId))
+                ->where(fn (Builder $inner) => $inner->whereNull('reviewer_2_id')->orWhere('reviewer_2_id', '!=', $actorId)));
     }
 }

@@ -3,171 +3,13 @@ import 'quill/dist/quill.snow.css';
 
 const Delta = Quill.import('delta');
 
-// Patch Quill internals once so copy & paste NEVER crash across all editors
-function patchQuillInternals() {
-    try {
-        const dummy = document.createElement('div');
-        const tempQuill = new Quill(dummy);
-
-        const SelectionProto = tempQuill.selection?.constructor?.prototype;
-        if (SelectionProto && !SelectionProto.__medlearnPatched) {
-            SelectionProto.__medlearnPatched = true;
-            const originalNormalizedToRange = SelectionProto.normalizedToRange;
-
-            SelectionProto.normalizedToRange = function(range) {
-                if (!range || !range.start) {
-                    const RangeClass = this.savedRange?.constructor || Quill.import('core/selection')?.Range || Object;
-                    return new RangeClass(0, 0);
-                }
-                try {
-                    const positions = [[range.start.node, range.start.offset]];
-                    if (!range.native?.collapsed && range.end) {
-                        positions.push([range.end.node, range.end.offset]);
-                    }
-                    const indexes = positions.map(position => {
-                        const [node, offset] = position;
-                        if (!node) return 0;
-                        let blot = this.scroll.find(node, true);
-                        let curr = node;
-                        while (!blot && curr && curr !== this.root) {
-                            curr = curr.parentNode;
-                            if (curr) {
-                                blot = this.scroll.find(curr, true);
-                            }
-                        }
-                        if (!blot) {
-                            blot = this.scroll.find(this.root, true);
-                        }
-                        if (!blot || typeof blot.offset !== 'function') {
-                            return 0;
-                        }
-                        const index = blot.offset(this.scroll);
-                        if (offset === 0) {
-                            return index;
-                        }
-                        if (typeof blot.index === 'function') {
-                            try {
-                                return index + blot.index(node, offset);
-                            } catch (_) {
-                                return index;
-                            }
-                        }
-                        if (typeof blot.length === 'function') {
-                            return index + blot.length();
-                        }
-                        return index;
-                    });
-                    const scrollLen = this.scroll?.length?.() ?? 1;
-                    const end = Math.min(Math.max(...indexes), Math.max(0, scrollLen - 1));
-                    const start = Math.min(end, Math.max(0, ...indexes));
-                    const RangeClass = this.savedRange?.constructor || Quill.import('core/selection')?.Range;
-                    return new RangeClass(start, Math.max(0, end - start));
-                } catch (err) {
-                    console.warn('Quill normalizedToRange fallback:', err);
-                    if (originalNormalizedToRange) {
-                        try {
-                            return originalNormalizedToRange.call(this, range);
-                        } catch (_) {}
-                    }
-                    return this.savedRange || { index: 0, length: 0 };
-                }
-            };
-        }
-
-        const ClipboardProto = tempQuill.clipboard?.constructor?.prototype;
-        if (ClipboardProto && !ClipboardProto.__medlearnPatched) {
-            ClipboardProto.__medlearnPatched = true;
-
-            ClipboardProto.onCaptureCopy = function(e, isCut = false) {
-                if (e.defaultPrevented) return;
-                try {
-                    const rangeTuple = this.quill.selection.getRange();
-                    const range = rangeTuple ? rangeTuple[0] : null;
-                    if (!range || range.length === 0) {
-                        // Let browser native copy handle it!
-                        return;
-                    }
-                    const { html, text } = this.onCopy(range, isCut);
-                    if (!text && !html) {
-                        // Let browser native copy handle it!
-                        return;
-                    }
-                    e.preventDefault();
-                    if (text) e.clipboardData?.setData('text/plain', text);
-                    if (html) e.clipboardData?.setData('text/html', html);
-                    if (isCut) {
-                        this.quill.deleteText(range.index, range.length, 'user');
-                    }
-                } catch (err) {
-                    console.warn('Quill copy fallback to native browser copy:', err);
-                }
-            };
-
-            ClipboardProto.onCapturePaste = function(e) {
-                if (e.defaultPrevented || !this.quill.isEnabled()) return;
-                try {
-                    let range = null;
-                    try {
-                        range = this.quill.getSelection(true);
-                    } catch (_) {}
-                    if (!range) {
-                        range = { index: Math.max(0, this.quill.getLength() - 1), length: 0 };
-                    }
-                    const html = e.clipboardData?.getData('text/html');
-                    let text = e.clipboardData?.getData('text/plain');
-                    if (!html && !text) {
-                        const urlList = e.clipboardData?.getData('text/uri-list');
-                        if (urlList) {
-                            text = this.normalizeURIList ? this.normalizeURIList(urlList) : urlList;
-                        }
-                    }
-                    const files = Array.from(e.clipboardData?.files || []);
-                    if (!html && files.length > 0 && this.quill.uploader) {
-                        e.preventDefault();
-                        this.quill.uploader.upload(range, files);
-                        return;
-                    }
-                    if (html && files.length > 0 && this.quill.uploader) {
-                        const doc = new DOMParser().parseFromString(html, 'text/html');
-                        if (doc.body.childElementCount === 1 && doc.body.firstElementChild?.tagName === 'IMG') {
-                            e.preventDefault();
-                            this.quill.uploader.upload(range, files);
-                            return;
-                        }
-                    }
-                    e.preventDefault();
-                    this.onPaste(range, { html, text });
-                } catch (err) {
-                    console.warn('Quill paste fallback to plain text insert:', err);
-                    try {
-                        const text = e.clipboardData?.getData('text/plain');
-                        if (text) {
-                            e.preventDefault();
-                            let range = null;
-                            try { range = this.quill.getSelection(); } catch (_) {}
-                            const idx = range ? range.index : Math.max(0, this.quill.getLength() - 1);
-                            this.quill.insertText(idx, text, 'user');
-                            this.quill.setSelection(idx + text.length, 0, 'silent');
-                        }
-                    } catch (fallbackErr) {
-                        console.error('Quill fallback paste failed:', fallbackErr);
-                    }
-                }
-            };
-        }
-    } catch (e) {
-        console.warn('Failed to patch Quill internals:', e);
-    }
-}
-
-patchQuillInternals();
-
-// Expose Quill globally so inline x-init scripts (e.g. inside x-for) can use it
+// Expose Quill globally so inline x-init scripts (e.g. inside x-for) can use it.
 window.Quill = Quill;
 
 /**
- * Quill toolbar <button> defaults to type=submit inside a <form>.
- * Clicking Bold/Italic would submit the question form instead of applying a format.
+ * Quill toolbar buttons must be type=button inside <form>, otherwise the browser
+ * treats them as submit. Quill 2 already sets type=button; keep as defense in depth.
+ * Also prevent mousedown default so the editor selection is not collapsed before format.
  *
  * @param {import('quill').default} quill
  */
@@ -181,12 +23,26 @@ function pinQuillToolbarButtons(quill) {
     container.querySelectorAll('button').forEach((button) => {
         button.setAttribute('type', 'button');
     });
+
+    if (! container.dataset.medlearnToolbarPinned) {
+        container.dataset.medlearnToolbarPinned = '1';
+        // Preserve selection when clicking toolbar (Quill also does this; keep as fallback).
+        container.addEventListener('mousedown', (event) => {
+            const target = event.target;
+            if (! (target instanceof Element)) {
+                return;
+            }
+            if (target.closest('button, .ql-picker-label')) {
+                event.preventDefault();
+            }
+        });
+    }
 }
 
 window.pinQuillToolbarButtons = pinQuillToolbarButtons;
 
 /**
- * Register Alpine rich-text editors (Quill) used on admin question forms.
+ * Register Alpine rich-text editors (Quill) used on admin / editor question forms.
  *
  * @param {typeof import('alpinejs').default} Alpine
  */
@@ -207,25 +63,22 @@ export function registerRichEditor(Alpine) {
         async upload(event) {
             const file = event.target.files?.[0];
             event.target.value = '';
-            if (!file) return;
+            if (! file) return;
             await this.doUpload(file);
         },
 
         handleDrop(event) {
             const file = event.dataTransfer?.files?.[0];
-            if (!file || !file.type.startsWith('image/')) return;
+            if (! file || ! file.type.startsWith('image/')) return;
             this.doUpload(file);
         },
 
         handlePaste(event) {
             const active = document.activeElement;
-            if (active && (
-                active.tagName === 'INPUT' ||
-                active.tagName === 'TEXTAREA' ||
-                active.isContentEditable ||
-                active.closest?.('.ql-editor') ||
-                active.closest?.('.admin-rich-editor')
-            )) {
+            if (
+                active?.closest?.('.ql-editor') ||
+                active?.closest?.('.admin-rich-editor')
+            ) {
                 return;
             }
 
@@ -235,7 +88,7 @@ export function registerRichEditor(Alpine) {
             }
 
             const items = event.clipboardData?.items;
-            if (!items) return;
+            if (! items) return;
 
             for (let i = 0; i < items.length; i++) {
                 const item = items[i];
@@ -302,9 +155,23 @@ export function registerRichEditor(Alpine) {
     }));
 
     Alpine.data('richEditor', (initialHtml = '', uploadUrl = '') => ({
-        quill: null,
+        lastRange: null,
+
+        editor() {
+            return this.$refs.surface?.__quill || null;
+        },
 
         init() {
+            if (! this.$refs.surface) {
+                console.error('richEditor: missing surface ref');
+                return;
+            }
+
+            // Avoid double-init (Alpine morph / Livewire / HMR).
+            if (this.$refs.surface.__quill || this.$refs.surface.classList.contains('ql-container')) {
+                return;
+            }
+
             const toolbar = [
                 [{ header: [2, 3, false] }],
                 ['bold', 'italic', 'underline'],
@@ -313,54 +180,54 @@ export function registerRichEditor(Alpine) {
                 ['clean'],
             ];
 
-            this.quill = new Quill(this.$refs.surface, {
+            // Quill 2 + Alpine Proxy: never store the instance on reactive `this`.
+            const quill = new Quill(this.$refs.surface, {
                 theme: 'snow',
                 placeholder: this.$refs.surface?.dataset?.placeholder || '',
                 modules: { toolbar },
             });
-            pinQuillToolbarButtons(this.quill);
+            this.$refs.surface.__quill = quill;
+            pinQuillToolbarButtons(quill);
 
             if (initialHtml && initialHtml.trim() !== '') {
-                const paste = this.quill.clipboard.convert({ html: initialHtml, text: '' });
-                this.quill.setContents(paste, 'silent');
+                const paste = quill.clipboard.convert({ html: initialHtml, text: '' });
+                quill.setContents(paste, 'silent');
             }
 
             this.lastRange = null;
-            this.quill.on('selection-change', (range) => {
-                if (range && range.length > 0) {
+            quill.on('selection-change', (range) => {
+                if (range) {
                     this.lastRange = range;
                 }
             });
 
             this.syncInput();
-            this.quill.on('text-change', () => this.syncInput());
+            quill.on('text-change', () => this.syncInput());
 
-            // Fix: Vietnamese IME fires compositionstart before text-change,
-            // so ql-blank class is not removed until blur. Remove it immediately.
-            const editorEl = this.$refs.surface?.querySelector('.ql-editor');
+            const editorEl = quill.root;
             if (editorEl) {
                 editorEl.addEventListener('compositionstart', () => {
                     editorEl.classList.remove('ql-blank');
                 });
                 editorEl.addEventListener('compositionend', () => {
-                    // Restore ql-blank if editor is actually empty after composition
-                    const isEmpty = this.quill.getLength() <= 1;
+                    const isEmpty = quill.getLength() <= 1;
                     editorEl.classList.toggle('ql-blank', isEmpty);
                 });
             }
 
-            const toolbarModule = this.quill.getModule('toolbar');
+            const toolbarModule = quill.getModule('toolbar');
             toolbarModule.addHandler('image', () => this.uploadImage());
 
             this.$el.closest('form')?.addEventListener('submit', () => this.syncInput());
         },
 
         syncInput() {
-            if (! this.$refs.input || ! this.quill) {
+            const quill = this.editor();
+            if (! this.$refs.input || ! quill) {
                 return;
             }
 
-            let html = this.quill.root.innerHTML.trim();
+            let html = quill.root.innerHTML.trim();
             if (html === '<p><br></p>' || html === '<p></p>') {
                 html = '';
             }
@@ -380,7 +247,8 @@ export function registerRichEditor(Alpine) {
 
             input.onchange = async () => {
                 const file = input.files?.[0];
-                if (! file || ! this.quill) {
+                const quill = this.editor();
+                if (! file || ! quill) {
                     return;
                 }
 
@@ -405,9 +273,9 @@ export function registerRichEditor(Alpine) {
                     }
 
                     const data = await response.json();
-                    const range = this.quill.getSelection(true) || { index: this.quill.getLength(), length: 0 };
-                    this.quill.insertEmbed(range.index, 'image', data.url, 'user');
-                    this.quill.setSelection(range.index + 1, 0, 'silent');
+                    const range = quill.getSelection(true) || { index: quill.getLength(), length: 0 };
+                    quill.insertEmbed(range.index, 'image', data.url, 'user');
+                    quill.setSelection(range.index + 1, 0, 'silent');
                     this.syncInput();
                 } catch (error) {
                     console.error(error);
@@ -417,11 +285,12 @@ export function registerRichEditor(Alpine) {
         },
 
         insertLabTable() {
-            if (! this.quill) return;
+            const quill = this.editor();
+            if (! quill) return;
 
-            let range = this.quill.getSelection() || this.lastRange;
+            let range = quill.getSelection() || this.lastRange;
             let index = range ? range.index : 0;
-            if (this.quill.getLength() <= 1 || index < 0) {
+            if (quill.getLength() <= 1 || index < 0) {
                 index = 0;
             }
 
@@ -464,17 +333,18 @@ export function registerRichEditor(Alpine) {
     </tr>
   </tbody>
 </table><p><br></p>`;
-            const paste = this.quill.clipboard.convert({ html, text: '' });
-            this.quill.updateContents(new Delta().retain(index).concat(paste), 'user');
+            const paste = quill.clipboard.convert({ html, text: '' });
+            quill.updateContents(new Delta().retain(index).concat(paste), 'user');
             this.syncInput();
         },
 
         createTable(rows = 3, cols = 2) {
-            if (! this.quill) return;
+            const quill = this.editor();
+            if (! quill) return;
 
-            let range = this.quill.getSelection() || this.lastRange;
+            let range = quill.getSelection() || this.lastRange;
             let index = range ? range.index : 0;
-            if (this.quill.getLength() <= 1 || index < 0) {
+            if (quill.getLength() <= 1 || index < 0) {
                 index = 0;
             }
 
@@ -497,8 +367,8 @@ export function registerRichEditor(Alpine) {
             }
             tableHtml += `</tbody></table><p><br></p>`;
 
-            const paste = this.quill.clipboard.convert({ html: tableHtml, text: '' });
-            this.quill.updateContents(new Delta().retain(index).concat(paste), 'user');
+            const paste = quill.clipboard.convert({ html: tableHtml, text: '' });
+            quill.updateContents(new Delta().retain(index).concat(paste), 'user');
             this.syncInput();
         },
 

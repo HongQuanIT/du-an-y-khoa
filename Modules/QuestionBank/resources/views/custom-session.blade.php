@@ -29,7 +29,7 @@
     $initialOrganSystemIds = array_map('intval', (array) old('organ_system_ids', request('organ_system_ids', [])));
     $initialSubjectIds = array_map('intval', (array) old('subject_ids', request('subject_ids', [])));
     $initialLessonIds = array_map('intval', (array) old('lesson_ids', request('lesson_ids', [])));
-    $sessionName = 'Phiên luyện từ ' . now()->translatedFormat('j M, H:i');
+    $sessionName = old('name', 'Phiên luyện từ ' . now()->translatedFormat('j M, H:i'));
 
     $statusOptions = [
         ['value' => 'unanswered', 'label' => 'Chưa trả lời', 'icon' => 'radio_button_unchecked'],
@@ -63,6 +63,9 @@
             statuses: {{ Illuminate\Support\Js::from($initialStatuses)->toHtml() }},
             organSystemIds: {{ Illuminate\Support\Js::from($selectedOrganSystemIds)->toHtml() }},
             subjectIds: {{ Illuminate\Support\Js::from($selectedSubjectIds)->toHtml() }},
+            organSystemNames: {{ Illuminate\Support\Js::from($organSystems->pluck('name')->all())->toHtml() }},
+            subjectNames: {{ Illuminate\Support\Js::from($subjects->pluck('name')->all())->toHtml() }},
+            examNames: {{ Illuminate\Support\Js::from(collect($exams)->pluck('title')->all())->toHtml() }},
             savedOnly: {{ Illuminate\Support\Js::from($initialSavedOnly)->toHtml() }},
             blueprintId: {{ Illuminate\Support\Js::from($initialBlueprintId ? (int) $initialBlueprintId : null)->toHtml() }},
             blueprintName: {{ Illuminate\Support\Js::from($initialBlueprintName)->toHtml() }},
@@ -81,6 +84,7 @@
             folders: {{ Illuminate\Support\Js::from($bookmarkFolders)->toHtml() }},
             activeFilter: null,
             filterSearch: '',
+            sessionName: {{ Illuminate\Support\Js::from($sessionName)->toHtml() }},
             matching: null,
             counting: false,
             countRequest: 0,
@@ -211,16 +215,49 @@
                 this.taxonomySearch = '';
                 if (filter === 'lessons') this.fetchLessons();
             },
+            matchesFilterSearch(label, extras = []) {
+                const q = (this.filterSearch || '').trim().toLocaleLowerCase();
+                if (!q) return true;
+                if (String(label).toLocaleLowerCase().includes(q)) return true;
+                return (extras || []).some((name) => String(name).toLocaleLowerCase().includes(q));
+            },
             async fetchLessons() {
                 const q = this.taxonomySearch.trim();
                 const params = new URLSearchParams();
                 if (q.length >= 2) params.set('q', q);
+                this.organSystemIds.forEach((id) => params.append('organ_system_ids[]', String(id)));
+                this.subjectIds.forEach((id) => params.append('subject_ids[]', String(id)));
                 const query = params.toString();
                 const url = query ? `${this.taxonomyUrls.lessons}?${query}` : this.taxonomyUrls.lessons;
                 const res = await fetch(url, { headers: { Accept: 'application/json' } });
                 const json = await res.json();
                 const rows = json.data ?? [];
                 this.lessonResults = rows.filter((item) => this.isLessonAllowedForExam(item.id));
+            },
+            async onTaxonomyAxisChange() {
+                // Hệ/Môn change: drop bài học no longer in cascade (server also ANDs).
+                if (this.lessonIds.length && (this.organSystemIds.length || this.subjectIds.length)) {
+                    await this.pruneLessonsToCascade();
+                }
+                if (this.activeFilter === 'lessons') await this.fetchLessons();
+                await this.$nextTick();
+                this.refreshCount();
+            },
+            async pruneLessonsToCascade() {
+                if (!this.lessonIds.length) return;
+                const params = new URLSearchParams();
+                this.organSystemIds.forEach((id) => params.append('organ_system_ids[]', String(id)));
+                this.subjectIds.forEach((id) => params.append('subject_ids[]', String(id)));
+                if (![...params.keys()].length) return;
+                const res = await fetch(`${this.taxonomyUrls.lessons}?${params}`, {
+                    headers: { Accept: 'application/json' },
+                });
+                const json = await res.json();
+                const allowed = new Set((json.data ?? []).map((item) => Number(item.id)));
+                this.lessonIds = this.lessonIds.filter((id) => allowed.has(Number(id)));
+                Object.keys(this.lessonLabels).forEach((id) => {
+                    if (!allowed.has(Number(id))) delete this.lessonLabels[id];
+                });
             },
             toggleLesson(item) {
                 const idx = this.lessonIds.indexOf(item.id);
@@ -283,11 +320,11 @@
             },
             clearOrganSystems() {
                 this.organSystemIds = [];
-                this.$nextTick(() => this.refreshCount());
+                this.onTaxonomyAxisChange();
             },
             clearSubjects() {
                 this.subjectIds = [];
-                this.$nextTick(() => this.refreshCount());
+                this.onTaxonomyAxisChange();
             },
             difficultyLabel() {
                 if (!this.difficulties.length || this.difficulties.length === this.difficultyOptionCount) return 'Tất cả';
@@ -377,12 +414,21 @@
                 this.blueprintName = '';
                 this.lessonIds = [];
                 this.lessonLabels = {};
+                this.sessionName = {{ Illuminate\Support\Js::from('Phiên luyện từ ' . now()->translatedFormat('j M, H:i'))->toHtml() }};
+                this.filterSearch = '';
                 this.activeFilter = null;
                 this.$nextTick(() => this.refreshCount());
             },
         }"
-        @change.debounce.350ms="if ($event.target.name && $event.target.name !== 'count') refreshCount()"
-        @input.debounce.500ms="if ($event.target.name && $event.target.name !== 'count') refreshCount()"
+        @change.debounce.350ms="
+            if (!$event.target.name || $event.target.name === 'count' || $event.target.name === 'name') return;
+            if ($event.target.name === 'organ_system_ids[]' || $event.target.name === 'subject_ids[]') {
+                onTaxonomyAxisChange();
+                return;
+            }
+            refreshCount();
+        "
+        @input.debounce.500ms="if ($event.target.name && $event.target.name !== 'count' && $event.target.name !== 'name') refreshCount()"
         @keydown.escape.window="activeFilter = null"
         @submit="if (!canStart()) { $event.preventDefault(); return; } submitting = true">
         @csrf
@@ -504,6 +550,7 @@
 
                             <div class="-mx-6 space-y-0 border-t border-outline-variant">
                                 <button type="button" @click="openFilter('exams')"
+                                    x-show="matchesFilterSearch('kỳ thi', examNames)"
                                     :disabled="!isAdaptive() && savedOnly"
                                     :class="(!isAdaptive() && savedOnly) && 'opacity-50 pointer-events-none'"
                                     class="group flex w-full items-center justify-between border-b border-outline-variant px-6 py-4 text-left transition-colors hover:bg-surface-container-lowest">
@@ -516,6 +563,7 @@
                                 </button>
 
                                 <button type="button" @click="openFilter('systems')"
+                                    x-show="matchesFilterSearch('hệ cơ quan', organSystemNames)"
                                     :disabled="taxonomyLocked()"
                                     :class="taxonomyLocked() && 'opacity-50 pointer-events-none'"
                                     class="group flex w-full items-center justify-between border-b border-outline-variant px-6 py-4 text-left transition-colors hover:bg-surface-container-lowest">
@@ -527,6 +575,7 @@
                                 </button>
 
                                 <button type="button" @click="openFilter('subjects')"
+                                    x-show="matchesFilterSearch('môn học', subjectNames)"
                                     :disabled="taxonomyLocked()"
                                     :class="taxonomyLocked() && 'opacity-50 pointer-events-none'"
                                     class="group flex w-full items-center justify-between border-b border-outline-variant px-6 py-4 text-left transition-colors hover:bg-surface-container-lowest">
@@ -537,12 +586,12 @@
                                     <span class="text-sm text-on-surface-variant" x-text="subjectLabel()"></span>
                                 </button>
 
-                                <div x-show="!isAdaptive()">
+                                <div x-show="!isAdaptive() && matchesFilterSearch('bài học')">
                                     @include('questionbank::partials.taxonomy-session-filter-rows')
                                 </div>
 
                                 @can('bookmark.view')
-                                <button type="button" x-show="!isAdaptive()" @click="foldersModalOpen = true"
+                                <button type="button" x-show="!isAdaptive() && matchesFilterSearch('câu hỏi đã lưu')" @click="foldersModalOpen = true"
                                     class="group flex w-full items-center justify-between border-b border-outline-variant px-6 py-4 text-left transition-colors hover:bg-surface-container-lowest">
                                     <span class="flex items-center gap-4">
                                         <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">add</span>
@@ -633,7 +682,8 @@
                                 <label for="session-name" class="mb-3 block text-[11px] font-bold tracking-widest text-on-surface-variant uppercase">
                                     Tên phiên luyện
                                 </label>
-                                <input id="session-name" type="text" value="{{ $sessionName }}"
+                                <input id="session-name" type="text" name="name" maxlength="120"
+                                    x-model="sessionName"
                                     class="w-full rounded-lg border border-outline-variant bg-white px-4 py-3 text-sm focus:border-primary focus:ring-2 focus:ring-primary">
                             </div>
 

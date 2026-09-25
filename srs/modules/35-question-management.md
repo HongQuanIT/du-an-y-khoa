@@ -33,8 +33,9 @@ CRUD & **workflow duyệt 2 lớp** câu hỏi: Content Creator soạn/sửa →
 | **Version history** | Sort `version_number`; instructor + publisher; snapshot read-only | Editor | Drawer |
 | **Clone action** | Nhân bản → câu mới `draft` | Detail/List | Button |
 | **Import wizard** | Upload → map → validate → preview → commit | `/import` | Stepper |
-| **Instructor review queue** | Danh sách `in_review` chưa có phiếu của mình + approve/reject + lý do; ẩn phiếu GV kia trước khi mình quyết | `/teach/questions/reviews` | Table |
-| **Publish queue** | Danh sách `pending_publish` + publish/reject | `/admin/questions/pending-publish` | Table |
+| **Instructor review queue** | Danh sách `in_review` gán cho mình + approve/reject + lý do | `/teach/questions/reviews` | Table |
+| **Reviewer flag queue** | Tabs: Chờ gắn cờ · **Cảnh báo** · Đã gắn cờ; blind peer | `/admin/questions/flags` | Table |
+| **Publish queue** | Danh sách `pending_publish` (2 xanh) + publish; Reject nếu có `question.reject` | `/admin/questions` filter | Table |
 | **Reports queue** | Báo lỗi + xử lý | `/reports` | Table |
 | **Duplicate check (per question)** | Nút trên editor → trang chi tiết kết quả ≥30% | Form → `/duplicates` | Detail page |
 | **Empty/Loading/Error** | Chuẩn | Theo trạng thái | — |
@@ -61,17 +62,23 @@ CRUD & **workflow duyệt 2 lớp** câu hỏi: Content Creator soạn/sửa →
                                 │
 ┌───────────────────────────────▼─────────────────────────────────────────┐
 │  Lớp 1b — 2 reviewer (`question.flag`) trên /admin/questions/flags      │
-│  Gắn cờ xanh/đỏ (đỏ bắt buộc ghi chú) · KHÔNG tăng version               │
+│  Gắn cờ xanh/đỏ độc lập (blind — không thấy cờ peer) · KHÔNG +version   │
+│  Chờ ĐỦ 2 cờ rồi mới phân nhánh (không fail-fast khi đỏ đầu tiên)       │
 │  in_flag_review ──2 xanh──► pending_publish (sẵn XB)                    │
-│  in_flag_review ──≥1 đỏ──► pending_publish (fail-fast; Admin phải trả)  │
-│  Có cờ đỏ → Admin không được publish                                     │
+│  in_flag_review ──2 đỏ──► rejected (auto · dual_red; sticky 2 reviewer) │
+│  in_flag_review ──xanh≠đỏ──► flag_conflict (tab «Cảnh báo» cả 2)        │
+│  flag_conflict: đổi/giữ cờ; đổi cờ = popup chịu trách nhiệm + audit     │
+│  Giữ nguyên / đổi chéo vẫn lệch → giữ flag_conflict (không escalate)    │
+│  Sau dual_red: Editor sửa → submit thẳng in_flag_review (skip GV)       │
 └───────────────────────────────┬─────────────────────────────────────────┘
                                 │
 ┌───────────────────────────────▼─────────────────────────────────────────┐
 │  Lớp 2 — Admin có `question.publish` trên /admin                        │
 │  Chỉ publish khi GV đã duyệt + đủ 2 cờ xanh · KHÔNG sửa nội dung        │
 │  pending_publish  ──publish──►  published (+ question_versions)         │
-│  pending_publish  ──trả về──►  rejected (vận hành hoặc có cờ đỏ)        │
+│  pending_publish  ──trả về──►  rejected (vận hành) — cần `question.reject`│
+│  Seed mặc định: role `admin` CÓ publish, KHÔNG có reject (gán RBAC tay) │
+│  Dual-red không cần Admin Reject (hệ thống auto trả Editor)             │
 │  Publisher ∉ {GV được gán, 2 reviewer đã gắn cờ}                        │
 └─────────────────────────────────────────────────────────────────────────┘
 
@@ -91,10 +98,13 @@ Import: commit tạo hàng loạt `draft`.
 | `instructor_id` | Giảng viên lớp 1 quyết định gần nhất | Basic info |
 | `instructor_1_*` / `instructor_2_*` | Legacy 2 slot GV (id + decision) | — |
 | `reviewer_1_*` / `reviewer_2_*` | 2 slot cờ reviewer (id + green/red + note) | 2 cờ trắng/xanh/đỏ |
+| `sticky_reviewer_1_id` / `sticky_reviewer_2_id` | Khóa cặp reviewer sau dual_red đến khi XB / clear | Timeline; queue sticky |
+| `reject_reason_code` | `instructor` \| `dual_red` \| `admin` — điều khiển skip GV khi resubmit | Nội bộ |
 | `instructor_review_cycle` | Vòng duyệt tuyệt đối (lifetime); +1 mỗi submit / gửi lại | Timeline nội bộ; list dùng vòng tương đối sau XB |
-| `pipeline_reject_count` | Số lần trả về (GV + Admin) trong pipeline chưa XB; reset khi publish | List «Vòng N · X lần trả về» |
+| `pipeline_reject_count` | Số lần trả về (GV + dual_red + Admin) trong pipeline chưa XB; reset khi publish | List «Vòng N · X lần trả về» |
 | `publisher_id` | Super Admin publish gần nhất (lớp 2) | Basic info |
-| `rejection_reason` | Lý do từ chối (GV hoặc Super Admin) | Badge / alert |
+| `rejection_reason` | Lý do từ chối (GV / dual_red / Admin) | Badge / alert |
+| `question_flag_change_events` | Audit mọi lần đổi/reaffirm cờ (from→to, ack, user, cycle) | Lịch sử duyệt (Admin) |
 | `created_at` / `updated_at` | Thời gian tạo / sửa working copy | Basic info |
 
 > `reviewer_id` (legacy) → thay bằng `instructor_id` + `publisher_id`. Migration giữ alias đọc tạm nếu cần.
@@ -104,27 +114,24 @@ Import: commit tạo hàng loạt `draft`.
 - UI form: partial «Lịch sử duyệt» nhóm theo `review_cycle` — ai duyệt, ai gắn cờ, ai trả về, ghi chú, thời gian.
 - Khi publish: ghi `snapshot.review_pipeline` (cycle, reject count, instructor, 2 cờ, publisher) vào `question_versions`.
 - List admin: nhãn `pipelineProgressLabel()` = «Vòng N · X lần trả về» **chỉ khi đang trong pipeline** (chờ GV / chờ cờ / chờ XB / từ chối). **N = vòng trong bản làm việc hiện tại** (sau XB gần nhất), không cộng dồn vòng của các phiên bản đã XB. Nháp, đã xuất bản, private, retire → không hiện «Vòng N». Cột bản gửi: nháp → «Bản nháp».
-- Timeline «Lịch sử duyệt»: nhóm theo **phiên bản** — «Bản hiện tại» (trạng thái working copy + các vòng sau XB gần nhất) và từng **Phiên bản N đã xuất bản** (các vòng duyệt dẫn tới XB đó). Mỗi segment mở/đóng; trong segment là các vòng + QA.
+- Timeline «Lịch sử duyệt»: nhóm theo **phiên bản** — «Bản hiện tại» (trạng thái working copy + các vòng sau XB gần nhất) và từng **Phiên bản N đã xuất bản** (các vòng duyệt dẫn tới XB đó). Mỗi segment mở/đóng; trong segment là các vòng + đánh dấu Đúng/Sai.
 
-### 5.1c QA chất lượng duyệt (Admin)
-- Outcome trên `question_reviewer_flags` / `question_instructor_reviews` / **`question_workflow_events` (submit Editor)** (theo từng **vòng** `review_cycle` + actor):
-  - Reviewer: `pending|confirmed|false_positive|inconclusive` — `confirmed` = gắn đúng, `false_positive` = **gắn sai** (đỏ oan **hoặc** xanh sai).
-  - GV: `pending|confirmed|miss|over_reject|inconclusive` — Admin chỉ thấy **Duyệt đúng / Duyệt sai**; `miss` (approve sai) và `over_reject` (reject sai) đều là duyệt sai (cùng nhãn).
-  - Editor (submit): `pending|confirmed|needs_rework|inconclusive` — UI **Soạn đạt / Soạn lỗi**. «Trả về oan» không cần nhãn riêng: suy ra khi bản gửi Soạn đạt mà pipeline vẫn trả về (cùng lúc cờ đỏ gắn sai / GV over_reject).
-- **Đánh dấu ngay tại vòng (khuyến nghị UX):** trên «Lịch sử duyệt», mỗi entry cờ/duyệt/**gửi duyệt** có badge outcome + Admin (permission **`question.adjudicate`**) chỉnh outcome thủ công khi phát hiện sai — ghi `outcome_source=admin`, `outcome_by`, `outcome_at`, `outcome_note`.
-- **Cascade theo vòng khi Admin adjudicate:**
-  - Xác nhận cờ đỏ đúng → set red flags vòng đó `confirmed` + approve GV cùng vòng → `miss` (hiển thị **Duyệt sai**) + submit Editor → `needs_rework`.
-  - Đánh cờ đỏ gắn sai → red flags `false_positive`; submit Editor → `confirmed` (bản gửi đạt); không quy lỗi GV.
-  - Đánh cờ xanh gắn sai (nên đỏ) → green flags `false_positive`; nếu cùng vòng có approve GV → `miss`; submit Editor → `needs_rework`.
-  - Đánh GV duyệt sai khi reject → lưu `over_reject` (UI: **Duyệt sai**) + submit Editor → `confirmed`.
-  - Đánh GV reject đúng → submit Editor → `needs_rework`; approve đúng → submit → `confirmed`.
-- **Tự động (giữ):** Admin trả về khi có cờ đỏ chọn Cờ đỏ đúng / Cờ đỏ gắn sai; khi publish heuristic fingerprint adjudicate pending đỏ + reject GV + **submit Editor**; approve/green không bị tranh chấp → `confirmed`.
-- **Gate xuất bản theo số vòng (pipeline hiện tại, sau XB gần nhất):**
-  - **1 vòng:** được XB ngay; `onPublish` auto gắn đạt (Editor / GV approve / cờ xanh).
-  - **≥2 vòng:** **chặn** `pending_publish → published|private` nếu còn outcome `pending` trên submit / phiếu GV / cờ reviewer của các vòng sau XB gần nhất. Admin phải đánh giá trên «Lịch sử duyệt» rồi mới XB. Trả về biên tập **không** bắt buộc đủ QA.
-- **Bulk trên list** (`POST /admin/questions/bulk-transition`, tối đa 20 câu): **chỉ Xuất bản** câu `pending_publish` + **đúng 1 vòng** pipeline + **2 cờ xanh**. ≥2 vòng / cờ đỏ / thiếu điều kiện → bỏ qua (duyệt thủ công trên form). **Không** có từ chối hàng loạt. Permission: `question.publish`.
-- Báo cáo `content.review-qa`: KPI + bảng/chart Reviewer, GV, **Biên tập viên** (lần gửi / soạn đạt / soạn lỗi). Permission: `report.view` + `question.view`.
-- **UI:** «Lịch sử duyệt» — Admin chọn **Duyệt đúng / Duyệt sai** (hoặc Gắn đúng / Gắn sai / Soạn đạt / Soạn lỗi) rồi Lưu QA; ghi đúng `review_cycle` + actor. Route `POST …/review-outcomes` (`kind=instructor|flag|submit`) yêu cầu `question.adjudicate` (mặc định `admin` + `super_admin`; **không** cấp cho `content_editor`).
+### 5.1c Đánh dấu đúng/sai trên vòng duyệt (Admin — họp giao ban)
+- Outcome trên `question_reviewer_flags` / **`question_workflow_events` (submit Editor)** (theo từng **vòng** `review_cycle` + actor):
+  - Reviewer: `pending|confirmed|false_positive|inconclusive` — UI **Đúng / Sai**. `pending` = mặc định **Đúng** (chưa đánh dấu thủ công).
+  - Editor (submit): `pending|confirmed|needs_rework|inconclusive` — UI **Đúng / Sai** (`needs_rework` = Sai).
+  - **Giảng viên: không đánh dấu thủ công** — timeline chỉ ghi quyết định approve/reject.
+- **Mô hình vận hành:** 2 cờ xanh → đủ XB. Đánh dấu Sai chỉ khi họp giao ban (ai sai ở vòng nào). Không chặn xuất bản vì còn `pending`. **Đúng** lưu DB để thống kê; timeline **không hiện** badge Đúng — chỉ hiện **Sai**.
+- **Đánh dấu tại vòng:** trên «Lịch sử duyệt», entry **cờ** và **gửi duyệt** có badge Đúng (mặc định) + nút **Đánh dấu** (`question.adjudicate`) — ghi `outcome_source=admin`, `outcome_by`, `outcome_at`, `outcome_note`.
+- **Cascade theo vòng khi Admin đánh dấu cờ / submit:**
+  - Xác nhận cờ đỏ đúng → set red flags vòng đó `confirmed` + (nội bộ) approve GV cùng vòng → `miss` + submit Editor → `needs_rework`.
+  - Đánh cờ đỏ gắn sai → red flags `false_positive`; submit Editor → `confirmed`.
+  - Đánh cờ xanh gắn sai (nên đỏ) → green flags `false_positive`; submit Editor → `needs_rework`.
+- **Tự động (giữ):** khi publish heuristic fingerprint adjudicate pending đỏ + **submit Editor**; approve/green không bị tranh chấp → `confirmed`.
+- **Gate xuất bản:** `pending_publish` (2 cờ xanh) → `published|private` **không** phụ thuộc đánh dấu Đúng/Sai.
+- **Bulk trên list** (`POST /admin/questions/bulk-transition`, tối đa 20 câu): **chỉ Xuất bản** câu `pending_publish` + **đúng 1 vòng** pipeline + **2 cờ xanh**. ≥2 vòng / cờ đỏ → bỏ qua (duyệt thủ công trên form). **Không** từ chối hàng loạt. Permission: `question.publish`.
+- Báo cáo `content.review-qa`: KPI + bảng/chart Reviewer / Biên tập viên. Permission: `report.view` + `question.view`.
+- **UI:** «Lịch sử duyệt» — Admin chọn **Đúng / Sai** rồi Lưu. Route `POST …/review-outcomes` (`kind=flag|submit` only) yêu cầu `question.adjudicate`. `kind=instructor` bị từ chối.
 
 ### 5.2 Versioning — **chỉ tăng khi Super Admin publish**
 - Mọi chỉnh sửa của Content Creator trên **working copy** (`questions` + options…): **không** tạo / tăng version.
@@ -142,36 +149,42 @@ Import: commit tạo hàng loạt `draft`.
 
 | Status | Ý nghĩa | Ai chuyển tới | Hiển thị học viên (Qbank) |
 |--------|---------|---------------|---------------------------|
-| `draft` | Nháp / đang soạn; Creator sửa tự do | Tạo mới; rút lại từ `in_review` / `in_flag_review`; sau reject | Không\* |
-| `in_review` | Đã gửi, **chờ GV được gán** (lớp 1a) | Creator `submit` / gửi lại | Không\* |
-| `in_flag_review` | GV đã duyệt, **chờ 2 reviewer gắn cờ** (lớp 1b) | Instructor accept | Không\* |
-| `pending_publish` | Đủ 2 cờ xanh **hoặc** ≥1 cờ đỏ (chờ Admin) | Reviewer flag #2 hoặc cờ đỏ fail-fast | Không\* |
+| `draft` | Nháp / đang soạn; Creator sửa tự do | Tạo mới; rút lại từ `in_review`; sau reject | Không\* |
+| `in_review` | Đã gửi, **chờ GV được gán** (lớp 1a) | Creator `submit` (lần đầu / sau reject GV) | Không\* |
+| `in_flag_review` | GV đã duyệt (hoặc sticky sau dual_red), **chờ 2 reviewer gắn cờ** | Instructor accept; sticky resubmit | Không\* |
+| `flag_conflict` | 2 cờ khác màu; cả 2 reviewer ở tab «Cảnh báo» | Flag #2 lệch màu; đổi cờ vẫn lệch | Không\* |
+| `pending_publish` | Đủ **2 cờ xanh** (chờ Admin XB) | 2 xanh từ `in_flag_review` / `flag_conflict` | Không\* |
 | `published` | Admin đã publish phiên bản | Admin `publish` | Có (theo gating) |
-| `rejected` | Bị từ chối ở lớp 1a hoặc lớp 2; có `rejection_reason` | Instructor / Admin `reject` | Không\* |
+| `rejected` | Từ chối: GV / **auto dual_red** / Admin (`question.reject`) | Instructor / system / Admin | Không\* |
 | `private` | Ẩn khỏi ngân hàng câu hỏi (không hiện QBank / không lấy vào bài thi mới) | Admin | Không (Qbank) |
 | `retired` | Ngừng dùng (giữ attempt) | Admin | Không |
 
-\* **Ngoại lệ tái bản:** nếu câu đã từng publish (`published_version >= 1`), Qbank **vẫn phục vụ snapshot version đã publish** trong lúc working copy đi lại pipeline (`draft` / `in_review` / `in_flag_review` / `pending_publish` / `rejected`). Nội dung live **chỉ** đổi khi Admin publish lần mới (version +1). Câu chưa từng publish thì không lộ Qbank.
+\* **Ngoại lệ tái bản:** nếu câu đã từng publish (`published_version >= 1`), Qbank **vẫn phục vụ snapshot version đã publish** trong lúc working copy đi lại pipeline (`draft` / `in_review` / `in_flag_review` / `flag_conflict` / `pending_publish` / `rejected`). Nội dung live **chỉ** đổi khi Admin publish lần mới (version +1). Câu chưa từng publish thì không lộ Qbank.
 
-**Máy trạng thái (happy path + nhánh từ chối):**
+**Máy trạng thái (happy path + nhánh cờ):**
 
 ```
-                  submit       accept(GV)        2 xanh | ≥1 đỏ          publish
+                  submit          accept(GV)           2 xanh              publish
    draft ─────────────► in_review ──► in_flag_review ──► pending_publish ──► published
-    ▲                    │                                  │
-    │      reject(GV)    │                                  │ trả về (vận hành / cờ đỏ)
-    │◄── rejected ◄──────┘                                  ▼
-    │◄─────────────────────────────── rejected ◄────────────┘
+    ▲                    │                  │  │
+    │      reject(GV)    │                  │  └─ xanh≠đỏ → flag_conflict ─┐
+    │◄── rejected ◄──────┘                  │       (giữ / đổi chéo: ở yên) │
+    │◄── rejected ◄── 2 đỏ (auto dual_red) ─┘                              │
+    │         │                              ▲── 2 xanh / 2 đỏ từ conflict ─┘
+    │         └─ sticky submit (skip GV) ──► in_flag_review (đúng 2 R cũ)
+    │◄── rejected ◄── Admin reject (`question.reject`, vận hành)
     └─ Creator sửa (không +version) ─┘
 ```
 
-- List admin: cột **Trạng thái** = xuất bản (đã XB / riêng tư / ngừng dùng). Cột **Bản gửi duyệt** = editor đã gửi bản cập nhật chưa + 2 cờ reviewer (trắng chờ / xanh đạt / đỏ không đạt).
-- Reviewer chỉ **xanh / đỏ**; cờ đỏ **bắt buộc ghi chú**. ≥1 đỏ → fail-fast vào `pending_publish`, Admin **không publish**, phải trả editor.
-- Một phiếu reject GV = fail ngay. Admin không phá thế cờ y khoa (không publish khi có đỏ).
-- Từ `in_review` (GV chưa approve/reject): Creator **không sửa** nội dung nhưng **được withdraw** → `draft` rồi chỉnh và gửi lại. Withdraw xóa slot duyệt hiện tại.
-- Từ `in_flag_review` trở đi (đã qua GV): Creator **không sửa** và **không rút nháp** — chờ reviewer / Admin.
-- `/teach` ẩn phiếu của GV kia trước khi mình quyết định (tránh neo theo).
-- Từ `pending_publish`: **không** cho Creator sửa trực tiếp — Admin trả về (`rejected`) vì lý do vận hành hoặc vì cờ đỏ.
+- List admin: cột **Trạng thái** = xuất bản. Cột **Bản gửi duyệt** = trạng thái pipeline + 2 cờ reviewer.
+- Reviewer tabs: **Chờ gắn cờ** · **Cảnh báo** (`flag_conflict`) · **Đã gắn cờ**. Blind: không lộ cờ / note peer.
+- Reviewer chỉ **xanh / đỏ**; đỏ **bắt buộc ghi chú**. Phải đủ 2 cờ mới phân nhánh. **Không** fail-fast đỏ đầu tiên.
+- Đổi cờ trong `flag_conflict`: popup xác nhận chịu trách nhiệm (tick bắt buộc) + ghi `question_flag_change_events` (Admin xem lịch sử dù status không đổi).
+- 2 đỏ → auto `rejected` (`reject_reason_code=dual_red`, `rejected_by_role=system`); lưu sticky pair; Editor sửa → submit **skip GV**, chỉ 2 sticky reviewer thấy lại.
+- UI Editor sticky: banner «Hai reviewer đánh Không đạt»; CTA **Gửi lại để gắn cờ** (target `in_flag_review`, ẩn picker GV). Tab reviewer **Đã gắn cờ**: nhãn «Đã trả Editor» khi dual_red sticky.
+- Một phiếu reject GV = fail ngay (`reject_reason_code=instructor`); resubmit qua GV lại (không sticky R).
+- Admin publish chỉ khi 2 xanh. Admin **Reject** trả về vận hành cần `question.reject` — **seed mặc định role `admin` không có** (gán tay trên RBAC). Giảng viên vẫn có `question.reject` cho lớp 1a.
+- Từ `in_review`: Creator withdraw → `draft`. Từ `in_flag_review` / `flag_conflict` / `pending_publish`: Creator **không** sửa / rút.
 - `retired` / `private`: chỉ Super Admin; không đi ngược về Creator trừ clone.
 
 **Quyền (deny by default):**
@@ -179,11 +192,12 @@ Import: commit tạo hàng loạt `draft`.
 | Actor | Role | Được làm |
 |-------|------|----------|
 | Content Creator | `content_editor` | CRUD working copy; `submit`; withdraw; clone; import draft; xử lý report (sửa) |
-| Giảng viên | `instructor` | 1 phiếu `approve` / `reject` trên `/teach` (**không** publish, **không** +version); `pending_publish` chỉ khi đủ 2 accept khác người; 1 reject = fail ngay; xem lại đã duyệt / đã từ chối |
-| Admin | `admin` | Xem + **publish / private / retire / xoá** (`question.publish`, `question.delete`); **đánh dấu QA duyệt** (`question.adjudicate`); **không** `question.create` / `question.update` / không duyệt thay GV |
-| Super Admin | `super_admin` | Oversight + cùng quyền trạng thái/xoá/QA như Admin; **không** soạn/sửa nội dung (tránh xung đột biên tập); publish vẫn cần đã qua lớp GV + khác người duyệt |
+| Giảng viên | `instructor` | 1 phiếu `approve` / `reject` trên `/teach` (**không** publish, **không** +version); 1 reject = fail ngay |
+| Reviewer | `reviewer` | Gắn cờ / đổi cờ trong conflict (`question.flag`); tab Cảnh báo; **không** publish / edit |
+| Admin | `admin` | **publish / private / retire / xoá** (`question.publish`, `question.delete`); QA (`question.adjudicate`); Reject chỉ nếu được gán `question.reject` (seed mặc định **không**); **không** create/update / không duyệt thay GV |
+| Super Admin | `super_admin` | Oversight + cùng quyền trạng thái/xoá/QA; seed mặc định cũng **không** `question.reject` (gán tay nếu cần); **không** soạn nội dung |
 
-Permissions: `question.create|update|delete|submit` (create/update chỉ `content_editor`), `question.review` (instructor), `question.publish` + `question.adjudicate` (`admin` + `super_admin`).
+Permissions: `question.create|update|delete|submit` (`content_editor`), `question.review` + `question.approve` + `question.reject` (instructor lớp 1), `question.flag` (reviewer), `question.publish` + `question.adjudicate` (admin/SA); `question.reject` cho Admin trả về = opt-in RBAC.
 
 ### 5.4 Question analytics (Admin — **rollup job**, không COUNT realtime trên list)
 - **Danh sách câu hỏi:** chỉ đọc `stats_cache` JSON trên `questions` — **không** aggregate trực tiếp từ `question_attempts`.

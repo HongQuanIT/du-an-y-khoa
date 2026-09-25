@@ -12,6 +12,7 @@ enum QuestionWorkflowEventType: string
 
     case Submit = 'submit';
     case AdminReject = 'admin_reject';
+    case DualRedReject = 'dual_red_reject';
     case Publish = 'publish';
 
     public function label(): string
@@ -19,6 +20,7 @@ enum QuestionWorkflowEventType: string
         return match ($this) {
             self::Submit => 'Gửi duyệt',
             self::AdminReject => 'Admin trả về',
+            self::DualRedReject => 'Hai cờ đỏ · trả về',
             self::Publish => 'Xuất bản',
         };
     }

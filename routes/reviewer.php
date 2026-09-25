@@ -35,6 +35,8 @@ Route::middleware(['auth', 'portal:reviewer'])->group(function (): void {
             ->middleware('permission:question_flag.view')->name('questions.flags.show');
         Route::post('/questions/flags/{question}', [ReviewerFlagController::class, 'store'])
             ->middleware('permission:question.flag')->name('questions.flags.store');
+        Route::put('/questions/flags/{question}', [ReviewerFlagController::class, 'update'])
+            ->middleware('permission:question.flag')->name('questions.flags.update');
         Route::get('/profile', [ReviewerProfileController::class, 'show'])
             ->middleware('permission:profile.view')->name('profile.show');
         Route::put('/profile', [ReviewerProfileController::class, 'update'])

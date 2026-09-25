@@ -159,6 +159,8 @@ class RolePermissionSeeder extends Seeder
             'question.import',
             // Instructor layer-1 only.
             PermissionEnum::QuestionReview->value,
+            'question.approve',
+            'question.reject',
             'question_flag.view',
             // Reviewer flag queue only.
             PermissionEnum::QuestionFlag->value,

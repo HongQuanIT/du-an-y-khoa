@@ -81,6 +81,7 @@ final class CreateQuestionSessionRequest extends FormRequest
         return [
             'mode' => ['required', Rule::enum(SessionMode::class)],
             'source' => ['required', Rule::enum(SessionSource::class), 'in:custom,weak_topics'],
+            'name' => ['nullable', 'string', 'max:120'],
             'adaptive_focus' => [
                 Rule::requiredIf($isAdaptive),
                 'nullable',
@@ -135,6 +136,8 @@ final class CreateQuestionSessionRequest extends FormRequest
     {
         $isAdaptive = $this->input('source') === SessionSource::WeakTopics->value;
 
+        $name = trim((string) $this->input('name', ''));
+
         return new CreateSessionData(
             mode: SessionMode::from((string) $this->input('mode')),
             source: SessionSource::from((string) $this->input('source', SessionSource::Custom->value)),
@@ -157,6 +160,7 @@ final class CreateQuestionSessionRequest extends FormRequest
             adaptiveFocus: $isAdaptive
                 ? (string) $this->input('adaptive_focus', 'balanced')
                 : null,
+            name: $name !== '' ? $name : null,
         );
     }
 }

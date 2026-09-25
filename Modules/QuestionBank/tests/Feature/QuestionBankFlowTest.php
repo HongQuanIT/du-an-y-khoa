@@ -227,6 +227,106 @@ final class QuestionBankFlowTest extends TestCase
         $this->assertSame(25, $session->filters['count']);
     }
 
+    public function test_custom_session_persists_display_name_from_builder(): void
+    {
+        $this->createQuestion($this->topic, true, Difficulty::Easy, 'Câu đặt tên');
+
+        $payload = array_merge($this->sessionPayload(count: 1), [
+            'name' => '  Ôn tim mạch sáng nay  ',
+        ]);
+
+        $this->actingAs($this->user)
+            ->post(route('qbank.store'), $payload)
+            ->assertRedirect();
+
+        $session = QuestionSession::firstOrFail();
+        $this->assertSame('Ôn tim mạch sáng nay', $session->filters['name']);
+        $this->assertSame('Ôn tim mạch sáng nay', $session->displayName());
+    }
+
+    public function test_organ_system_and_subject_filters_are_anded_when_counting(): void
+    {
+        $cardio = $this->makeOrganSystem(['name' => 'Hệ tim mạch', 'slug' => 'he-tim-and-count']);
+        $anatomy = $this->makeSubject(['name' => 'Giải phẫu', 'slug' => 'giai-phau-and-count']);
+        $pathology = $this->makeSubject(['name' => 'Bệnh học', 'slug' => 'benh-hoc-and-count']);
+
+        $both = $this->makeLesson([
+            'name' => 'Cả hai',
+            'slug' => 'ca-hai-and-count',
+            'organSystems' => [$cardio],
+            'subjects' => [$anatomy],
+        ]);
+        $cardioPath = $this->makeLesson([
+            'name' => 'Chỉ tim bệnh học',
+            'slug' => 'tim-benh-and-count',
+            'organSystems' => [$cardio],
+            'subjects' => [$pathology],
+        ]);
+
+        $this->createQuestion($both, true, Difficulty::Easy, 'Match AND');
+        $this->createQuestion($cardioPath, true, Difficulty::Easy, 'Cardio only path');
+
+        $this->actingAs($this->user)
+            ->postJson(route('qbank.count'), [
+                'mode' => SessionMode::Study->value,
+                'source' => 'custom',
+                'count' => 10,
+                'organ_system_ids' => [$cardio->id],
+                'subject_ids' => [$anatomy->id],
+                'question_status_mode' => 'latest',
+                'saved_only' => false,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.count', 1);
+    }
+
+    public function test_empty_organ_subject_intersection_counts_zero_not_full_bank(): void
+    {
+        $cardio = $this->makeOrganSystem(['name' => 'Hệ tim mạch', 'slug' => 'he-tim-empty-intersect']);
+        $resp = $this->makeOrganSystem(['name' => 'Hệ hô hấp', 'slug' => 'he-ho-hap-empty-intersect']);
+        $anatomy = $this->makeSubject(['name' => 'Giải phẫu', 'slug' => 'giai-phau-empty-intersect']);
+        $pathology = $this->makeSubject(['name' => 'Bệnh học', 'slug' => 'benh-hoc-empty-intersect']);
+
+        $cardioPath = $this->makeLesson([
+            'name' => 'Tim ∩ Bệnh học',
+            'slug' => 'tim-benh-empty-intersect',
+            'organSystems' => [$cardio],
+            'subjects' => [$pathology],
+        ]);
+        $respAnatomy = $this->makeLesson([
+            'name' => 'Hô hấp ∩ Giải phẫu',
+            'slug' => 'ho-hap-giai-empty-intersect',
+            'organSystems' => [$resp],
+            'subjects' => [$anatomy],
+        ]);
+
+        $this->createQuestion($cardioPath, true, Difficulty::Easy, 'Cardio pathology');
+        $this->createQuestion($respAnatomy, true, Difficulty::Easy, 'Resp anatomy');
+        // Unrelated published question — must NOT inflate count when ∩ is empty.
+        $this->createQuestion($this->topic, true, Difficulty::Easy, 'Outside filter');
+
+        $payload = [
+            'mode' => SessionMode::Study->value,
+            'source' => 'custom',
+            'count' => 10,
+            'organ_system_ids' => [$cardio->id],
+            'subject_ids' => [$anatomy->id],
+            'question_status_mode' => 'latest',
+            'saved_only' => false,
+        ];
+
+        $this->actingAs($this->user)
+            ->postJson(route('qbank.count'), $payload)
+            ->assertOk()
+            ->assertJsonPath('data.count', 0);
+
+        $this->actingAs($this->user)
+            ->from(route('qbank.create'))
+            ->post(route('qbank.store'), $payload)
+            ->assertRedirect(route('qbank.create'))
+            ->assertSessionHasErrors();
+    }
+
     public function test_can_count_and_create_session_for_specific_folder(): void
     {
         $folder = BookmarkFolder::query()->create([
