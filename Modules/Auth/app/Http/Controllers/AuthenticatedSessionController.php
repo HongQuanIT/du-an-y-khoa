@@ -75,6 +75,13 @@ final class AuthenticatedSessionController extends Controller
         return $this->finishLogin($request, $user, LoginPortal::Editor, route('editor.dashboard', absolute: false));
     }
 
+    public function storeReviewer(LoginRequest $request, AttemptLoginAction $action): RedirectResponse
+    {
+        $user = $action->handle($request->toData(), LoginPortal::Reviewer);
+
+        return $this->finishLogin($request, $user, LoginPortal::Reviewer, route('reviewer.dashboard', absolute: false));
+    }
+
     public function storeAdmin(LoginRequest $request, AttemptLoginAction $action): RedirectResponse
     {
         $user = $action->handle($request->toData(), LoginPortal::Admin);
@@ -123,6 +130,14 @@ final class AuthenticatedSessionController extends Controller
         return redirect()->route('editor.login');
     }
 
+    public function destroyReviewer(Request $request): RedirectResponse
+    {
+        $this->auditLogout($request->user(), AuditPortal::Reviewer);
+        $this->logout($request);
+
+        return redirect()->route('reviewer.login');
+    }
+
     public function destroyAdmin(Request $request): RedirectResponse
     {
         $user = $request->user();
@@ -160,6 +175,7 @@ final class AuthenticatedSessionController extends Controller
             LoginPortal::Instructor => redirect()->route('teach.2fa.challenge'),
             LoginPortal::Partner => redirect()->route('partner.2fa.challenge'),
             LoginPortal::Editor => redirect()->route('editor.2fa.challenge'),
+            LoginPortal::Reviewer => redirect()->route('reviewer.2fa.challenge'),
             LoginPortal::Admin => redirect()->route('admin.2fa.challenge'),
         };
     }

@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-09-25
+
+### Feat — Tách portal Reviewer khỏi Admin
+
+- Thêm portal `/reviewer` với login, 2FA, dashboard, profile và quản lý phiên đăng nhập riêng.
+- Chuyển hàng đợi gắn cờ câu hỏi khỏi Admin sang Reviewer, kèm controller, view, RBAC và test.
+- Bổ sung metadata portal Reviewer cho role, audit, redirect và middleware bảo vệ portal.
+- Thêm migration chuyển role `reviewer` từ portal Admin sang portal Reviewer.
+
 ## 2026-09-24
 
 ### Fix — Giữ liên kết profile trong portal Editor

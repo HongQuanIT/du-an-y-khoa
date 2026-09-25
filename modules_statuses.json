@@ -16,5 +16,6 @@
     "Landing": true,
     "Classroom": true,
     "Partner": true,
-    "Editor": true
+    "Editor": true,
+    "Reviewer": true
 }

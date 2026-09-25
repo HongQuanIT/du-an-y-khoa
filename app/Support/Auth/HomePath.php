@@ -19,6 +19,7 @@ final class HomePath
             PortalGroup::Instructor => route('teach.dashboard', absolute: false),
             PortalGroup::Partner => self::partnerPath($user),
             PortalGroup::Editor => route('editor.dashboard', absolute: false),
+            PortalGroup::Reviewer => route('reviewer.dashboard', absolute: false),
             PortalGroup::Learner => route('dashboard', absolute: false),
             null => route('landing.home', absolute: false),
         };
