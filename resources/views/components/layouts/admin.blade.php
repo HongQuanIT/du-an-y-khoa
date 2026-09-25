@@ -1,15 +1,20 @@
 @props([
     'title' => null,
+    'portal' => null,
+    'pendingCount' => 0,
 ])
 
 @php
+    $isReviewerPortal = $portal === 'reviewer' || request()->routeIs('reviewer.*');
     $isEditorPortal = request()->routeIs('editor.*')
         || (\App\Support\Auth\PortalAccess::allows(auth()->user(), \App\Support\Enums\PortalGroup::Editor)
             && request()->is('admin/questions*', 'admin/taxonomy*', 'admin/blueprints*', 'admin/blueprint-sections*', 'admin/core-clinical-topics*', 'admin/categories*', 'admin/tags*', 'admin/cms/pages*', 'admin/media*'));
-    $navItems = $isEditorPortal
-        ? \Modules\Editor\Support\EditorMenu::for(auth()->user())
-        : \Modules\Admin\Support\AdminMenu::for(auth()->user());
-    $canSupportInbox = auth()->user()?->can('support_conversation.view')
+    $navItems = $isReviewerPortal
+        ? \Modules\Reviewer\Support\ReviewerMenu::for(auth()->user(), (int) $pendingCount)
+        : ($isEditorPortal
+            ? \Modules\Editor\Support\EditorMenu::for(auth()->user())
+            : \Modules\Admin\Support\AdminMenu::for(auth()->user()));
+    $canSupportInbox = ! $isReviewerPortal && auth()->user()?->can('support_conversation.view')
         && \Illuminate\Support\Facades\Route::has('admin.support.index');
     $supportBadgeCount = $canSupportInbox
         ? \App\Models\SupportConversation::pendingAdminAttentionCountFor(auth()->user())
@@ -18,12 +23,23 @@
         ? \App\Models\SupportConversation::pendingAdminAttentionIdsFor(auth()->user())
         : [];
     $supportActive = request()->routeIs('admin.support.*');
-    $staffRoleLabel = $isEditorPortal ? 'Biên tập viên' : auth()->user()?->getRoleNames()
+    $staffRoleLabel = $isReviewerPortal ? 'Reviewer' : ($isEditorPortal ? 'Biên tập viên' : auth()->user()?->getRoleNames()
         ->map(fn (string $name): ?\App\Support\Enums\Role => \App\Support\Enums\Role::tryFromName($name))
         ->filter()
         ->sortByDesc(fn (\App\Support\Enums\Role $role): int => $role->rank())
         ->first()
-        ?->label() ?? 'Nhân sự';
+        ?->label() ?? 'Nhân sự');
+    $homeRoute = $isReviewerPortal ? 'reviewer.dashboard' : ($isEditorPortal ? 'editor.dashboard' : 'admin.dashboard');
+    $logoutRoute = $isReviewerPortal ? 'reviewer.logout' : ($isEditorPortal ? 'editor.logout' : 'admin.logout');
+    $profileRoute = $isReviewerPortal ? 'reviewer.profile.show' : ($isEditorPortal ? 'editor.profile.show' : 'profile.show');
+    $portalLabel = $isReviewerPortal ? 'Reviewer' : ($isEditorPortal ? 'Biên tập' : 'Quản trị');
+    $portalSubtitle = $isReviewerPortal ? 'Cổng reviewer' : ($isEditorPortal ? 'Cổng biên tập nội dung' : 'Quản trị hệ thống');
+    $notificationRoute = $isReviewerPortal
+        ? (auth()->user()?->can('reviewer_notification.view') && Route::has('reviewer.notifications.index') ? 'reviewer.notifications.index' : null)
+        : ($isEditorPortal ? 'editor.notifications.index' : 'admin.notifications.index');
+    $themeSaveUrl = $isReviewerPortal
+        ? route('reviewer.profile.appearance')
+        : ($isEditorPortal ? route('editor.profile.appearance') : route('settings.appearance'));
 @endphp
 
 <!DOCTYPE html>
@@ -31,18 +47,18 @@
 
 <head>
     <meta charset="utf-8">
-    <x-theme-init />
+    <x-theme-init :save-url="$themeSaveUrl" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="robots" content="noindex, nofollow">
     <x-activity-heartbeat />
-    @if (Route::has('admin.media.items'))
+    @if (! $isReviewerPortal && Route::has('admin.media.items'))
         <meta name="media-items-url" content="{{ route(\App\Support\Auth\PortalRoute::content('media.items')) }}">
         <meta name="media-upload-url" content="{{ route(\App\Support\Auth\PortalRoute::content('media.store')) }}">
         <meta name="media-from-url" content="{{ route(\App\Support\Auth\PortalRoute::content('media.from-url')) }}">
         <meta name="media-show-url-template" content="{{ url(request()->routeIs('editor.*') ? '/editor/media' : '/admin/media') }}/__ID__">
     @endif
-    <title>{{ $title ? $title . ($isEditorPortal ? ' — Biên tập' : ' — Quản trị') : ($isEditorPortal ? 'Biên tập' : 'Quản trị').' — '.config('app.name') }}</title>
+    <title>{{ $title ? $title.' — '.$portalLabel : $portalLabel.' — '.config('app.name') }}</title>
 
     @fonts
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -74,9 +90,9 @@
     <aside
         class="fixed top-0 left-0 z-50 hidden h-screen w-sidebar-width flex-col border-r border-outline-variant bg-surface p-4 md:flex">
         <div class="mb-6 px-2">
-            <a href="{{ route($isEditorPortal ? 'editor.dashboard' : 'admin.dashboard') }}" class="block">
+            <a href="{{ route($homeRoute) }}" class="block">
                 <span class="font-headline-sm text-headline-sm font-extrabold text-primary tracking-tight">{{ config('app.name') }}</span>
-                <span class="mt-0.5 block font-label-sm text-label-sm text-on-surface-variant">{{ $isEditorPortal ? 'Cổng biên tập nội dung' : 'Quản trị hệ thống' }}</span>
+                <span class="mt-0.5 block font-label-sm text-label-sm text-on-surface-variant">{{ $portalSubtitle }}</span>
             </a>
         </div>
         <nav class="flex flex-1 flex-col gap-1 overflow-y-auto" aria-label="Menu quản trị">
@@ -116,7 +132,7 @@
                 @endif
             @endforeach
         </nav>
-        <form method="post" action="{{ route($isEditorPortal ? 'editor.logout' : 'admin.logout') }}" class="mt-4 border-t border-outline-variant pt-4">
+        <form method="post" action="{{ route($logoutRoute) }}" class="mt-4 border-t border-outline-variant pt-4">
             @csrf
             <button type="submit"
                 class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 font-label-md text-label-md text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface">
@@ -134,7 +150,7 @@
         class="fixed top-0 bottom-0 left-0 z-[60] flex w-sidebar-width flex-col border-r border-outline-variant bg-surface p-4 md:hidden"
         @click.stop>
         <div class="mb-4 flex items-center justify-between px-2">
-            <span class="font-label-md text-label-md font-semibold text-on-surface-variant">{{ $isEditorPortal ? 'Biên tập' : 'Quản trị' }}</span>
+            <span class="font-label-md text-label-md font-semibold text-on-surface-variant">{{ $portalLabel }}</span>
             <button type="button" @click="menu = false"
                 class="inline-flex size-10 items-center justify-center rounded-lg text-on-surface transition-colors hover:bg-surface-container-low"
                 aria-label="Đóng menu">
@@ -188,11 +204,9 @@
                         class="absolute top-1 right-1 min-w-4 items-center justify-center rounded-full bg-error px-1 text-[10px] font-bold leading-4 text-white {{ $supportBadgeCount > 0 ? 'inline-flex' : 'hidden' }}">@if ($supportBadgeCount > 0){{ $supportBadgeCount > 99 ? '99+' : $supportBadgeCount }}@endif</span>
                 </a>
             @endif
-            @include('notification::partials.bell', [
-                'indexRoute' => request()->routeIs('editor.*')
-                    ? 'editor.notifications.index'
-                    : 'admin.notifications.index',
-            ])
+            @if ($notificationRoute)
+                @include('notification::partials.bell', ['indexRoute' => $notificationRoute])
+            @endif
             <div class="relative" @click.outside="accountMenu = false">
                 <button type="button" @click="accountMenu = !accountMenu; notificationsOpen = false"
                     class="flex items-center gap-3 rounded-xl p-1.5 text-left transition-colors hover:bg-surface-container-low focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
@@ -226,9 +240,16 @@
                             <p class="font-body-md text-body-md text-on-surface-variant">{{ $staffRoleLabel }}</p>
                         </div>
 
-                        @if (request()->routeIs('editor.*'))
+                        @if ($isEditorPortal)
                             @can('editor_profile.view')
                                 <a href="{{ route('editor.profile.show') }}" @click="accountMenu = false"
+                                    class="block w-full rounded-lg bg-primary px-4 py-2.5 text-center font-label-md text-label-md font-bold text-on-primary transition-opacity hover:opacity-90">
+                                    Quản lý tài khoản
+                                </a>
+                            @endcan
+                        @elseif ($isReviewerPortal)
+                            @can('profile.view')
+                                <a href="{{ route($profileRoute) }}" @click="accountMenu = false"
                                     class="block w-full rounded-lg bg-primary px-4 py-2.5 text-center font-label-md text-label-md font-bold text-on-primary transition-opacity hover:opacity-90">
                                     Quản lý tài khoản
                                 </a>
@@ -256,7 +277,7 @@
                         </fieldset>
                     </div>
 
-                    <form action="{{ route($isEditorPortal ? 'editor.logout' : 'admin.logout') }}" method="post" class="border-t border-outline-variant p-3">
+                    <form action="{{ route($logoutRoute) }}" method="post" class="border-t border-outline-variant p-3">
                         @csrf
                         <button type="submit"
                             class="w-full rounded-lg px-4 py-2.5 font-label-md text-label-md font-bold tracking-wide text-on-surface-variant uppercase transition-colors hover:bg-surface-container-low">
@@ -274,7 +295,9 @@
         </div>
     </main>
 
-    @include('media::admin.picker')
+    @unless ($isReviewerPortal)
+        @include('media::admin.picker')
+    @endunless
     @livewireScriptConfig
     @stack('scripts')
 </body>

@@ -2,6 +2,12 @@
 
 ## 2026-09-25
 
+### Feat — Đồng bộ UI và phân quyền portal Reviewer
+
+- Reviewer dùng shell Admin cho header/sidebar/profile, giữ UI review câu hỏi cũ và bỏ Hồ sơ khỏi sidebar.
+- Thêm quyền `reviewer_dashboard.view` và `reviewer_notification.view` để bật/tắt dashboard và chuông thông báo.
+- Bổ sung route `/reviewer/notifications`, migration quyền mặc định và test kiểm soát sidebar/notification.
+
 ### Feat — Tách portal Reviewer khỏi Admin
 
 - Thêm portal `/reviewer` với login, 2FA, dashboard, profile và quản lý phiên đăng nhập riêng.

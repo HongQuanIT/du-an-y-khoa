@@ -62,6 +62,7 @@ final class ReviewerFlagController extends Controller
         return view('reviewer::questions.show', [
             'question' => $question,
             'canFlag' => $this->canFlag($question, $actor),
+            'hasFlagPermission' => $actor->can('question.flag'),
             'flags' => ReviewerFlag::cases(),
             'ownFlag' => $this->flagCycle->actorFlag($question, $actor),
         ]);

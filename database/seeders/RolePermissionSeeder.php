@@ -106,8 +106,10 @@ class RolePermissionSeeder extends Seeder
                 ->all(),
 
             RoleEnum::Reviewer => [
+                'reviewer_dashboard.view',
                 'question_flag.view',
                 PermissionEnum::QuestionFlag->value,
+                'reviewer_notification.view',
                 'profile.view',
                 'profile.update',
                 'profile.password_update',

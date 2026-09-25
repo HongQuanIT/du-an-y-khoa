@@ -349,9 +349,9 @@ final class PermissionCatalog
             'contact' => 'Liên hệ & góp ý',
             'support', 'support_conversation' => 'Hỗ trợ trực tuyến',
             'system', 'system_setting' => 'Cài đặt hệ thống',
-            'notification', 'notification_broadcast', 'teach_notification', 'editor_notification' => 'Thông báo',
+            'notification', 'notification_broadcast', 'teach_notification', 'editor_notification', 'reviewer_notification' => 'Thông báo',
             'profile', 'teach_profile', 'partner_profile', 'editor_profile' => 'Hồ sơ tài khoản',
-            'teaching_dashboard', 'learner_dashboard', 'editor_dashboard' => 'Bảng điều khiển',
+            'teaching_dashboard', 'learner_dashboard', 'editor_dashboard', 'reviewer_dashboard' => 'Bảng điều khiển',
             default => Str::headline($resource),
         };
     }

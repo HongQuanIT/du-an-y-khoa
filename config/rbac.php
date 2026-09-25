@@ -18,12 +18,18 @@ return [
 
     'catalog' => [
         'reviewer' => [
+            'dashboard' => [
+                'reviewer_dashboard' => ['view'],
+            ],
             'account' => [
                 'profile' => ['view', 'update', 'password_update', 'avatar_update', 'two_factor_toggle'],
             ],
             'question_bank' => [
                 'question_flag' => ['view'],
                 'question' => ['flag'],
+            ],
+            'notification' => [
+                'reviewer_notification' => ['view'],
             ],
         ],
         'admin' => [

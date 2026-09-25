@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Route;
 use Modules\Auth\Http\Controllers\AuthenticatedSessionController;
 use Modules\Auth\Http\Controllers\PortalTwoFactorChallengeController;
+use Modules\Notification\Http\Controllers\NotificationController;
 use Modules\Reviewer\Http\Controllers\ReviewerDashboardController;
 use Modules\Reviewer\Http\Controllers\ReviewerFlagController;
 use Modules\Reviewer\Http\Controllers\ReviewerProfileController;
@@ -24,7 +25,10 @@ Route::middleware(['auth', 'portal:reviewer'])->group(function (): void {
         ->middleware('throttle:auth')->name('2fa.challenge.verify');
 
     Route::middleware('staff.2fa')->group(function (): void {
-        Route::get('/', ReviewerDashboardController::class)->middleware('permission:question_flag.view')->name('dashboard');
+        Route::get('/', ReviewerDashboardController::class)->middleware('permission:reviewer_dashboard.view')->name('dashboard');
+        Route::get('/notifications', [NotificationController::class, 'index'])
+            ->middleware('permission:reviewer_notification.view')
+            ->name('notifications.index');
         Route::get('/questions/flags', [ReviewerFlagController::class, 'index'])
             ->middleware('permission:question_flag.view')->name('questions.flags.index');
         Route::get('/questions/flags/{question}', [ReviewerFlagController::class, 'show'])
@@ -37,6 +41,8 @@ Route::middleware(['auth', 'portal:reviewer'])->group(function (): void {
             ->middleware('permission:profile.update')->name('profile.update');
         Route::put('/profile/password', [ReviewerProfileController::class, 'updatePassword'])
             ->middleware('permission:profile.password_update')->name('profile.password');
+        Route::put('/profile/appearance', [ReviewerProfileController::class, 'updateAppearance'])
+            ->middleware('permission:profile.update')->name('profile.appearance');
         Route::put('/profile/avatar', [ReviewerProfileController::class, 'updateAvatar'])
             ->middleware('permission:profile.avatar_update')->name('profile.avatar');
         Route::delete('/profile/avatar', [ReviewerProfileController::class, 'destroyAvatar'])

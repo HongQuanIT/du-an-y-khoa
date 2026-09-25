@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Notification\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -47,7 +48,7 @@ final class NotificationController extends Controller
         ));
     }
 
-    public function markRead(Request $request, UserNotification $notification): RedirectResponse|\Illuminate\Http\JsonResponse
+    public function markRead(Request $request, UserNotification $notification): RedirectResponse|JsonResponse
     {
         abort_unless((int) $notification->user_id === (int) $request->user()->getKey(), 403);
 
@@ -76,10 +77,16 @@ final class NotificationController extends Controller
             return route('editor.notifications.index');
         }
 
+        if ($actionUrl !== null
+            && $request->routeIs('reviewer.*')
+            && parse_url($actionUrl, PHP_URL_PATH) === '/admin/notifications') {
+            return route('reviewer.notifications.index');
+        }
+
         return $actionUrl;
     }
 
-    public function markAllRead(Request $request): RedirectResponse|\Illuminate\Http\JsonResponse
+    public function markAllRead(Request $request): RedirectResponse|JsonResponse
     {
         UserNotification::query()
             ->where('user_id', $request->user()->getKey())
@@ -116,6 +123,10 @@ final class NotificationController extends Controller
             return 'layouts.editor';
         }
 
+        if ($request->routeIs('reviewer.*')) {
+            return 'layouts.reviewer';
+        }
+
         return 'layouts.app';
     }
 
@@ -131,6 +142,10 @@ final class NotificationController extends Controller
 
         if ($request->routeIs('editor.*')) {
             return 'editor.notifications.index';
+        }
+
+        if ($request->routeIs('reviewer.*')) {
+            return 'reviewer.notifications.index';
         }
 
         return 'notifications.index';
