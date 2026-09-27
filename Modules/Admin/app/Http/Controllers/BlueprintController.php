@@ -15,6 +15,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Modules\Auth\Models\Profession;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
 use Modules\QuestionBank\Models\Blueprint;
 use Modules\QuestionBank\Models\BlueprintSection;
@@ -60,6 +61,7 @@ final class BlueprintController extends Controller
         $this->authorizePermission('blueprint.create');
         $data = $this->validatedBlueprint($request);
         $blueprint = Blueprint::query()->create($data);
+        $this->syncProfessions($request, $blueprint);
 
         return redirect()->route(PortalRoute::content('blueprints.edit'), $blueprint)->with('status', 'Đã tạo ma trận đề thi.');
     }
@@ -67,7 +69,7 @@ final class BlueprintController extends Controller
     public function edit(Blueprint $blueprint): View
     {
         $this->authorizePermission('blueprint.update');
-        $blueprint->load(['sections.coreClinicalTopics.lessons', 'sections.coreClinicalTopics.tags']);
+        $blueprint->load(['sections.coreClinicalTopics.lessons', 'sections.coreClinicalTopics.tags', 'professions:id,name']);
 
         return view('admin::blueprints.form', $this->formData($blueprint));
     }
@@ -76,6 +78,7 @@ final class BlueprintController extends Controller
     {
         $this->authorizePermission('blueprint.update');
         $blueprint->update($this->validatedBlueprint($request, $blueprint));
+        $this->syncProfessions($request, $blueprint);
 
         return back()->with('status', 'Đã cập nhật ma trận đề thi.');
     }
@@ -339,6 +342,11 @@ final class BlueprintController extends Controller
                 ? $this->actor()->can('blueprint.update')
                 : $this->actor()->can('blueprint.create'),
             'canDelete' => $blueprint->exists && $this->actor()->can('blueprint.delete'),
+            'professions' => Profession::query()
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(['id', 'name']),
         ];
     }
 
@@ -369,6 +377,23 @@ final class BlueprintController extends Controller
             'status' => $data['status'],
             'sort_order' => (int) $data['sort_order'],
         ];
+    }
+
+    private function syncProfessions(Request $request, Blueprint $blueprint): void
+    {
+        $ids = collect($request->input('profession_ids', []))
+            ->map(fn ($id): int => (int) $id)
+            ->filter(fn (int $id): bool => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        $request->validate([
+            'profession_ids' => ['nullable', 'array'],
+            'profession_ids.*' => ['integer', 'distinct', 'exists:professions,id'],
+        ]);
+
+        $blueprint->professions()->sync($ids);
     }
 
     private function resolveBlueprintSlug(string $name, ?Blueprint $blueprint): string

@@ -54,44 +54,6 @@
 
     <div>
         <div class="mb-2 flex items-center gap-2">
-            <h4 class="text-sm font-bold text-on-surface">Bài học</h4>
-            @if ($comparison['lessons']['changed'])
-                <span class="rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-800">Sửa</span>
-            @endif
-        </div>
-        <div class="flex flex-wrap gap-2">
-            @forelse ($comparison['lessons'][$chipKey] as $lesson)
-                <span @class([
-                    'inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold',
-                    'bg-rose-100 text-rose-800 line-through' => $lesson['change'] === 'removed',
-                    'bg-emerald-100 text-emerald-900' => $lesson['change'] === 'added',
-                    'bg-surface-container-high text-on-surface' => $lesson['change'] === 'same',
-                ])>
-                    {{ $lesson['label'] }}
-                </span>
-            @empty
-                <span class="text-sm text-on-surface-variant">{{ $empty }}</span>
-            @endforelse
-        </div>
-    </div>
-
-    <div>
-        <div class="mb-2 flex items-center gap-2">
-            <h4 class="text-sm font-bold text-on-surface">Độ khó</h4>
-            @if ($comparison['difficulty']['changed'])
-                <span class="rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-800">Sửa</span>
-            @endif
-        </div>
-        <span @class([
-            'inline-flex rounded-lg px-2.5 py-1 text-xs font-semibold',
-            'bg-rose-100 text-rose-800 line-through' => $isPublished && $comparison['difficulty']['changed'],
-            'bg-emerald-100 text-emerald-900' => ! $isPublished && $comparison['difficulty']['changed'],
-            'bg-surface-container-high text-on-surface' => ! $comparison['difficulty']['changed'],
-        ])>{{ $comparison['difficulty'][$chipKey] }}</span>
-    </div>
-
-    <div>
-        <div class="mb-2 flex items-center gap-2">
             <h4 class="text-sm font-bold text-on-surface">Đáp án</h4>
             @if (collect($comparison['options'])->contains(fn (array $row): bool => $row['change'] !== 'same'))
                 <span class="rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-800">Sửa</span>
@@ -196,4 +158,44 @@
             @endif
         @endif
     </div>
+
+    @foreach ([
+        ['title' => 'Bài học', 'field' => 'lessons'],
+        ['title' => 'Đối tượng', 'field' => 'professions'],
+        ['title' => 'Độ khó', 'field' => 'difficulty', 'scalar' => true],
+        ['title' => 'Kỳ thi', 'field' => 'blueprints'],
+        ['title' => 'Truy cập', 'field' => 'access', 'scalar' => true],
+    ] as $meta)
+        <div>
+            <div class="mb-2 flex items-center gap-2">
+                <h4 class="text-sm font-bold text-on-surface">{{ $meta['title'] }}</h4>
+                @if ($comparison[$meta['field']]['changed'])
+                    <span class="rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-800">Sửa</span>
+                @endif
+            </div>
+            @if ($meta['scalar'] ?? false)
+                <span @class([
+                    'inline-flex rounded-lg px-2.5 py-1 text-xs font-semibold',
+                    'bg-rose-100 text-rose-800 line-through' => $isPublished && $comparison[$meta['field']]['changed'],
+                    'bg-emerald-100 text-emerald-900' => ! $isPublished && $comparison[$meta['field']]['changed'],
+                    'bg-surface-container-high text-on-surface' => ! $comparison[$meta['field']]['changed'],
+                ])>{{ $comparison[$meta['field']][$chipKey] }}</span>
+            @else
+                <div class="flex flex-wrap gap-2">
+                    @forelse ($comparison[$meta['field']][$chipKey] as $item)
+                        <span @class([
+                            'inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold',
+                            'bg-rose-100 text-rose-800 line-through' => $item['change'] === 'removed',
+                            'bg-emerald-100 text-emerald-900' => $item['change'] === 'added',
+                            'bg-surface-container-high text-on-surface' => $item['change'] === 'same',
+                        ])>
+                            {{ $item['label'] }}
+                        </span>
+                    @empty
+                        <span class="text-sm text-on-surface-variant">{{ $empty }}</span>
+                    @endforelse
+                </div>
+            @endif
+        </div>
+    @endforeach
 </div>

@@ -53,7 +53,7 @@ final class AdminMenu
                 'match' => 'admin.users.*',
             ],
             [
-                'label' => 'Dữ liệu học viên',
+                'label' => 'Danh mục học viên',
                 'icon' => 'clinical_notes',
                 'route' => 'admin.institutions.index',
                 'permission' => 'learner_catalog.view',
@@ -200,6 +200,13 @@ final class AdminMenu
                 'route' => 'admin.settings.index',
                 'permission' => 'system_setting.view',
                 'match' => 'admin.settings.*',
+            ],
+            [
+                'label' => 'Log thích ứng',
+                'icon' => 'insights',
+                'route' => 'admin.adaptive-briefing',
+                'permission' => null,
+                'match' => 'admin.adaptive-briefing',
             ],
             [
                 'label' => 'Audit',

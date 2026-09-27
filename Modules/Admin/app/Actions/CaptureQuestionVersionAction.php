@@ -54,6 +54,8 @@ final class CaptureQuestionVersionAction
             'status' => $question->status->value,
             'lesson_ids' => $question->lessons->pluck('id')->map(fn ($id): int => (int) $id)->values()->all(),
             'tag_ids' => $question->tags->pluck('id')->map(fn ($id): int => (int) $id)->values()->all(),
+            'profession_ids' => $question->professions->pluck('id')->map(fn ($id): int => (int) $id)->values()->all(),
+            'blueprint_ids' => $question->blueprints->pluck('id')->map(fn ($id): int => (int) $id)->values()->all(),
             'is_free' => (bool) $question->is_free,
             'is_priority' => (bool) $question->is_priority,
             'options' => $question->options->map(fn (QuestionOption $option): array => [

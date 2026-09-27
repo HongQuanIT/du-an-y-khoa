@@ -7,13 +7,14 @@ namespace Modules\QuestionBank\Services;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Log;
+use Modules\Auth\Models\LearnerProfile;
 use Modules\QuestionBank\Data\CreateSessionData;
 use Modules\QuestionBank\Enums\UserQuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionSession;
 use Modules\QuestionBank\Models\QuestionStatus as UserQuestionStatusModel;
+use Modules\QuestionBank\Support\AdaptiveTrace;
 use Modules\QuestionBank\Support\QuestionFilterBuilder;
 use Modules\QuestionBank\Support\ServePublishedQuestion;
 
@@ -24,7 +25,7 @@ use Modules\QuestionBank\Support\ServePublishedQuestion;
  *   pool → split unseen/seen → score seen (Weakness + Memory × mode) → cooldown
  *   → weighted random without replacement → shuffle.
  *
- * Debug: mỗi bước ghi Log::debug channel `adaptive` (xem storage/logs/laravel.log).
+ * Mỗi bước ghi kênh `adaptive` → storage/logs/adaptive.log (không phụ thuộc LOG_LEVEL).
  */
 final class AdaptiveQuestionSelector
 {
@@ -58,8 +59,7 @@ final class AdaptiveQuestionSelector
         $weights = self::FOCUS_WEIGHTS[$focus];
         $now = CarbonImmutable::now();
 
-        // ─── DEBUG: đầu vào phiên ───────────────────────────────────────────
-        Log::debug('[adaptive] start', [
+        $this->trace('start', [
             'user_id' => $userId,
             'limit' => $limit,
             'focus' => $focus,
@@ -74,7 +74,7 @@ final class AdaptiveQuestionSelector
         $poolIds = $this->poolQuestionIds($userId, $canUsePremium, $data);
 
         if ($poolIds === []) {
-            Log::debug('[adaptive] empty pool — no questions', ['user_id' => $userId]);
+            $this->trace('empty_pool', ['user_id' => $userId]);
 
             return [];
         }
@@ -96,7 +96,7 @@ final class AdaptiveQuestionSelector
         $quotaUnseen = min($quotaUnseen, $unseenCount, $limit);
         $quotaReview = $limit - $quotaUnseen;
 
-        Log::debug('[adaptive] coverage split', [
+        $this->trace('coverage_split', [
             'pool_size' => $poolSize,
             'unseen_count' => $unseenCount,
             'seen_count' => count($seenIds),
@@ -106,9 +106,10 @@ final class AdaptiveQuestionSelector
         ]);
 
         $pickedUnseen = $this->sampleUniform($unseenIds, $quotaUnseen);
-        $pickedReview = $quotaReview > 0
+        $review = $quotaReview > 0
             ? $this->sampleReview($userId, $seenIds, $quotaReview, $focus, $weights, $now)
-            : [];
+            : ['ids' => [], 'rows' => []];
+        $pickedReview = $review['ids'];
 
         // Nếu review thiếu (pool seen nhỏ), bù thêm unseen còn lại.
         $picked = array_values(array_unique([...$pickedUnseen, ...$pickedReview]));
@@ -120,7 +121,7 @@ final class AdaptiveQuestionSelector
             );
             $picked = array_values(array_unique([...$picked, ...$filler]));
 
-            Log::debug('[adaptive] top-up after shortfall', [
+            $this->trace('top_up', [
                 'need' => $need,
                 'filled' => count($filler),
             ]);
@@ -129,12 +130,14 @@ final class AdaptiveQuestionSelector
         // ─── Bước 6: shuffle thứ tự hiển thị (tránh dồn câu “nặng” lên đầu) ─
         $ordered = collect($picked)->shuffle()->values()->all();
 
-        Log::debug('[adaptive] result', [
+        $this->trace('result', [
             'focus' => $focus,
             'picked_count' => count($ordered),
             'picked_unseen' => count($pickedUnseen),
             'picked_review' => count($pickedReview),
             'question_ids' => $ordered,
+            'sheet' => $this->selectionSheet($ordered, $pickedReview, $review['rows']),
+            'ranking' => $this->selectionRanking($ordered, $pickedReview, $review['rows']),
         ]);
 
         return $ordered;
@@ -145,15 +148,15 @@ final class AdaptiveQuestionSelector
      */
     public function countPool(int $userId, bool $canUsePremium, CreateSessionData $data): int
     {
-        return count($this->poolQuestionIds($userId, $canUsePremium, $data));
+        return count($this->poolQuestionIds($userId, $canUsePremium, $data, trace: false));
     }
 
     /**
      * @return array<int, string>
      */
-    private function poolQuestionIds(int $userId, bool $canUsePremium, CreateSessionData $data): array
+    private function poolQuestionIds(int $userId, bool $canUsePremium, CreateSessionData $data, bool $trace = true): array
     {
-        $lessonIds = $this->poolLessonIds($data);
+        [$lessonIds, $lessonScope] = $this->poolLessonIds($data);
 
         $query = ServePublishedQuestion::scopeAvailable(Question::query()->select('id'))
             ->when(! $canUsePremium, fn (Builder $q) => $q->where('is_free', true))
@@ -171,30 +174,34 @@ final class AdaptiveQuestionSelector
             blueprintSectionId: $data->blueprintSectionId,
             coreClinicalTopicIds: $data->coreClinicalTopicIds,
             tagIds: $data->tagIds,
+            professionId: $this->learnerProfessionId($userId),
         );
 
         $ids = $query->pluck('id')->map(fn ($id) => (string) $id)->all();
 
-        Log::debug('[adaptive] pool built', [
-            'lesson_ids_count' => count($lessonIds),
-            'pool_size' => count($ids),
-            'blueprint_id' => $data->blueprintId,
-        ]);
+        if ($trace) {
+            $this->trace('pool', [
+                'scope' => $lessonScope,
+                'lesson_ids_count' => count($lessonIds),
+                'pool_size' => count($ids),
+                'blueprint_id' => $data->blueprintId,
+                'organ_system_ids' => $data->organSystemIds,
+                'subject_ids' => $data->subjectIds,
+                'premium_only_free' => ! $canUsePremium,
+            ]);
+        }
 
         return $ids;
     }
 
     /**
-     * Lesson scope for adaptive: optional hệ/môn ∩ matrix; không dùng weak-lesson heuristic.
+     * Lesson scope for adaptive. A selected kỳ thi does not expand to every
+     * lesson in the matrix; membership is question_blueprints.
      *
-     * @return array<int, int>
+     * @return array{0: array<int, int>, 1: string}
      */
     private function poolLessonIds(CreateSessionData $data): array
     {
-        $matrixLessonIds = $data->blueprintId !== null
-            ? $this->filters->mappedLessonIdsForBlueprint(blueprintId: $data->blueprintId)
-            : [];
-
         $scopedLessonIds = $this->filters->resolveContentLessonIds(
             $data->organSystemIds,
             $data->subjectIds,
@@ -206,23 +213,17 @@ final class AdaptiveQuestionSelector
             $scopedLessonIds === []
             && $this->filters->hasContentFilter($data->organSystemIds, $data->subjectIds, [])
         ) {
-            return [];
+            return [[], 'empty_content_filter'];
         }
 
         if ($scopedLessonIds === []) {
-            return $matrixLessonIds;
+            return [[], $data->blueprintId !== null ? 'blueprint_membership' : 'all'];
         }
 
-        if ($matrixLessonIds === []) {
-            return $scopedLessonIds;
-        }
-
-        $allowed = array_flip($matrixLessonIds);
-
-        return array_values(array_filter(
+        return [
             $scopedLessonIds,
-            static fn (int $id): bool => isset($allowed[$id]),
-        ));
+            $data->blueprintId !== null ? 'blueprint_and_content' : 'organ_subject',
+        ];
     }
 
     /**
@@ -271,7 +272,7 @@ final class AdaptiveQuestionSelector
      *
      * @param  array<int, string>  $seenIds
      * @param  array{w: float, m: float}  $weights
-     * @return array<int, string>
+     * @return array{ids: array<int, string>, rows: array<string, array<string, mixed>>}
      */
     private function sampleReview(
         int $userId,
@@ -282,7 +283,7 @@ final class AdaptiveQuestionSelector
         CarbonImmutable $now,
     ): array {
         if ($seenIds === [] || $limit <= 0) {
-            return [];
+            return ['ids' => [], 'rows' => []];
         }
 
         $stats = UserQuestionStatusModel::query()
@@ -344,20 +345,115 @@ final class AdaptiveQuestionSelector
 
         usort($debugTop, static fn (array $a, array $b): int => $b['weight'] <=> $a['weight']);
 
-        Log::debug('[adaptive] review scores (top 15)', [
+        $weightValues = array_values($scored);
+        $this->trace('review_scores', [
             'focus' => $focus,
+            'w_weakness' => $weights['w'],
+            'w_memory' => $weights['m'],
             'candidates' => count($scored),
+            'weight_min' => $weightValues === [] ? null : round(min($weightValues), 4),
+            'weight_max' => $weightValues === [] ? null : round(max($weightValues), 4),
+            'formula' => 'weight = max(0.01, (wW*weakness + wM*memory) * cooldown)',
             'top' => array_slice($debugTop, 0, 15),
         ]);
 
         $picked = $this->weightedSampleWithoutReplacement($scored, $limit);
 
-        Log::debug('[adaptive] review sampled', [
+        $this->trace('review_sampled', [
+            'limit' => $limit,
             'picked' => $picked,
             'weights' => array_intersect_key($scored, array_flip($picked)),
         ]);
 
-        return $picked;
+        $rows = [];
+        foreach ($debugTop as $row) {
+            $rows[(string) $row['question_id']] = $row;
+        }
+
+        return ['ids' => $picked, 'rows' => $rows];
+    }
+
+    /**
+     * One row per selected question, with the indicators used to pick it.
+     *
+     * @param  array<int, string>  $ordered
+     * @param  array<int, string>  $pickedReview
+     * @param  array<string, array<string, mixed>>  $reviewRows
+     * @return list<array<string, mixed>>
+     */
+    private function selectionSheet(array $ordered, array $pickedReview, array $reviewRows): array
+    {
+        $review = array_flip($pickedReview);
+        $sheet = [];
+
+        foreach ($ordered as $questionId) {
+            $questionId = (string) $questionId;
+            if (isset($review[$questionId], $reviewRows[$questionId])) {
+                $sheet[] = ['kind' => 'review', ...$reviewRows[$questionId]];
+
+                continue;
+            }
+
+            $sheet[] = [
+                'question_id' => $questionId,
+                'kind' => 'fresh',
+                'correct' => 0,
+                'wrong' => 0,
+                'weakness' => null,
+                'days_since_seen' => null,
+                'memory' => null,
+                'cooldown' => null,
+                'weight' => null,
+            ];
+        }
+
+        return $sheet;
+    }
+
+    /**
+     * Every question considered for this session, with the priority used to draw it.
+     *
+     * @param  array<int, string>  $ordered
+     * @param  array<int, string>  $pickedReview
+     * @param  array<string, array<string, mixed>>  $reviewRows
+     * @return list<array<string, mixed>>
+     */
+    private function selectionRanking(array $ordered, array $pickedReview, array $reviewRows): array
+    {
+        $selected = array_flip(array_map(strval(...), $ordered));
+        $reviewPicked = array_flip(array_map(strval(...), $pickedReview));
+        $ranking = [];
+
+        foreach ($reviewRows as $questionId => $row) {
+            $questionId = (string) $questionId;
+            $ranking[] = [
+                'kind' => 'review',
+                'selected' => isset($selected[$questionId]),
+                ...$row,
+            ];
+        }
+
+        foreach ($ordered as $questionId) {
+            $questionId = (string) $questionId;
+            if (isset($reviewPicked[$questionId])) {
+                continue;
+            }
+
+            $ranking[] = [
+                'question_id' => $questionId,
+                'kind' => 'fresh',
+                'selected' => true,
+                'correct' => 0,
+                'wrong' => 0,
+                'weakness' => null,
+                'days_since_seen' => null,
+                'memory' => null,
+                'cooldown' => null,
+                'weight' => null,
+            ];
+        }
+
+        return $ranking;
     }
 
     /**
@@ -400,43 +496,34 @@ final class AdaptiveQuestionSelector
     }
 
     /**
-     * CooldownFactor: vừa đưa vào session gần đây → giảm mạnh.
+     * CooldownFactor: câu vừa nằm trong phiên gần nhất thì giảm mạnh hơn.
      *
-     *   sessions_since_served | last_served age | factor
-     *   ≥2                    | bất kỳ          | 1.00
-     *   1                     | bất kỳ          | 0.10
-     *   0 (chưa có session mới) + served ≤2 ngày | 0.30
-     *   0 + served >2 ngày (im lặng lâu)         | 1.00  ← tránh phạt oan
-     *   chưa từng serve                          | 1.00
+     *   Trong vòng 2 ngày, phiên mới nhất có câu đó | 0.10
+     *   Trong vòng 2 ngày, câu không ở phiên mới nhất | 0.30
+     *   Đã có ≥2 phiên sau lần chọn, hoặc quá 2 ngày | 1.00
+     *   Chưa từng serve | 1.00
      */
     private function cooldownFactor(
         int $sessionsSinceServed,
         ?CarbonImmutable $lastServedAt,
         CarbonImmutable $now,
     ): float {
-        if ($sessionsSinceServed >= 2 || $sessionsSinceServed === PHP_INT_MAX) {
-            return 1.0;
-        }
-
-        if ($sessionsSinceServed === 1) {
-            return 0.10;
-        }
-
-        // sessionsSinceServed === 0: chưa có session nào sau lần serve.
-        if ($lastServedAt === null) {
+        if ($sessionsSinceServed === PHP_INT_MAX || $lastServedAt === null || $sessionsSinceServed >= 2) {
             return 1.0;
         }
 
         $daysSinceServed = abs((float) $now->diffInDays($lastServedAt));
+        if ($daysSinceServed > 2.0) {
+            return 1.0;
+        }
 
-        // Cửa sổ cooldown theo thời gian khi user chưa mở session mới.
-        return $daysSinceServed <= 2.0 ? 0.30 : 1.0;
+        return $sessionsSinceServed === 0 ? 0.10 : 0.30;
     }
 
     /**
      * Weighted random sampling without replacement (roulette, O(n·k)).
      *
-     * @param  array<string, float>  $weights question_id => weight
+     * @param  array<string, float>  $weights  question_id => weight
      * @return array<int, string>
      */
     private function weightedSampleWithoutReplacement(array $weights, int $limit): array
@@ -489,5 +576,20 @@ final class AdaptiveQuestionSelector
         $focus = $focus ?: 'balanced';
 
         return array_key_exists($focus, self::FOCUS_WEIGHTS) ? $focus : 'balanced';
+    }
+
+    /**
+     * @param  array<string, mixed>  $context
+     */
+    private function trace(string $step, array $context = []): void
+    {
+        AdaptiveTrace::write($step, $context);
+    }
+
+    private function learnerProfessionId(int $userId): ?int
+    {
+        $professionId = LearnerProfile::query()->where('user_id', $userId)->value('profession_id');
+
+        return $professionId === null ? null : (int) $professionId;
     }
 }

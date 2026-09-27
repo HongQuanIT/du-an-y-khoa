@@ -10,9 +10,11 @@ use Illuminate\Validation\ValidationException;
 use Modules\Admin\Enums\AuditAction;
 use Modules\Admin\Support\Auditor;
 use Modules\Admin\Support\AuditSnapshot;
+use Modules\Auth\Models\Profession;
 use Modules\QuestionBank\Enums\QuestionReviewAction;
 use Modules\QuestionBank\Enums\QuestionReviewStatus;
 use Modules\QuestionBank\Enums\QuestionStatus;
+use Modules\QuestionBank\Models\Blueprint;
 use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionVersion;
@@ -79,6 +81,26 @@ final class RestoreQuestionVersionAction
                 ->values()
                 ->all();
             $question->tags()->sync($tagIds);
+
+            if (array_key_exists('profession_ids', $snapshot)) {
+                $question->professions()->sync(
+                    Profession::query()
+                        ->whereIn('id', array_map('intval', (array) $snapshot['profession_ids']))
+                        ->pluck('id')
+                        ->map(fn ($id): int => (int) $id)
+                        ->all(),
+                );
+            }
+
+            if (array_key_exists('blueprint_ids', $snapshot)) {
+                $question->blueprints()->sync(
+                    Blueprint::query()
+                        ->whereIn('id', array_map('intval', (array) $snapshot['blueprint_ids']))
+                        ->pluck('id')
+                        ->map(fn ($id): int => (int) $id)
+                        ->all(),
+                );
+            }
 
             $question->options()->delete();
             foreach (array_values((array) ($snapshot['options'] ?? [])) as $index => $option) {

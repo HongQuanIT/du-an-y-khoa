@@ -1,6 +1,37 @@
 # Changelog
 
+## 2026-09-27
+
+### Ops — Menu log thích ứng
+
+- Sidebar admin có mục «Log thích ứng», mở `/admin/adaptive-briefing`.
+- Trang log có nút xóa toàn bộ file `storage/logs/adaptive.log`.
+- Công thức «Tránh lặp»: trong 2 ngày, câu ở phiên mới nhất nhân 0,10; câu ở phiên trước đó nhân 0,30; đủ 2 phiên mới hoặc lần chọn đã quá 2 ngày thì nhân 1,00.
+
+### Feat — Phân loại câu hỏi theo chức danh và kỳ thi
+
+- Câu hỏi gắn trực tiếp với chức danh học viên và blueprint, không còn dùng thẻ cho hai trục này.
+- Khi học viên chọn một kỳ thi, pool chỉ còn câu được gán vào blueprint đó. Chức danh trên hồ sơ thu hẹp thêm pool.
+- Ma trận đề chọn các chức danh được thấy kỳ thi đó. Kỳ thi chưa gán chức danh vẫn hiện với mọi người.
+- Form soạn câu chọn chức danh và kỳ thi giống chọn thẻ: tìm, tích trong danh sách, rồi hiện chip có thể gỡ.
+- Màn duyệt giảng viên và các trang so sánh câu hỏi đối chiếu thêm đối tượng, kỳ thi và quyền truy cập với bản đang dùng.
+- Đổi nhãn menu và nhóm quyền «Dữ liệu học viên» thành «Danh mục học viên».
+
+## 2026-09-26
+
+### Ops — Log riêng luồng chọn câu thích ứng
+
+- Trace thuật toán phiên luyện thích ứng ghi vào `storage/logs/adaptive.log`, mức `debug` cố định, tách khỏi `LOG_LEVEL` của log ứng dụng.
+- Mỗi lần tạo phiên ghi lần lượt nhánh chọn (`weighted_selector` hoặc `legacy_incorrect_first`), pool, chia unseen/seen, điểm review, kết quả và `last_served_at`.
+- Trang tạm `/admin/adaptive-briefing` đọc nhật ký đó và kể lại từng lần chọn câu bằng ngôn ngữ nghiệp vụ.
+- Mỗi phiên thích ứng có một bảng chọn câu riêng, xếp theo điểm ưu tiên, kèm % suất vào nhóm ôn và công thức của từng chỉ số.
+- Đổi tên điểm gộp độ yếu và mức nhớ thành «Điểm cần ôn».
+
 ## 2026-09-25
+
+### Docs — Bộ test case thủ công quy trình tạo câu hỏi
+
+- Thêm `docs/testcase-quy-trinh-tao-cau-hoi.xlsx`: 31 kịch bản cho luồng nạp đề, từ tạo nháp, import, gửi duyệt, rút nháp, yêu cầu xóa đến duyệt giảng viên và gắn cờ.
 
 ### Fix — Giữ Reviewer ở trang chi tiết sau khi gắn cờ
 

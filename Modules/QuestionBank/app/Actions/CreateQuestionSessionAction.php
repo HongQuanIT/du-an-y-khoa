@@ -10,8 +10,10 @@ use App\Support\Audit\Auditor;
 use App\Support\Audit\Enums\AuditAction;
 use App\Support\Concerns\AsAction;
 use Illuminate\Support\Facades\DB;
+use Modules\QuestionBank\Support\AdaptiveTrace;
 use Modules\QuestionBank\Data\CreateSessionData;
 use Modules\QuestionBank\Enums\SessionMode;
+use Modules\QuestionBank\Enums\SessionSource;
 use Modules\QuestionBank\Enums\SessionStatus;
 use Modules\QuestionBank\Enums\UserQuestionStatus;
 use Modules\QuestionBank\Models\QuestionSession;
@@ -156,5 +158,17 @@ final class CreateQuestionSessionAction
                 'last_served_session_id' => $sessionId,
             ])->save();
         }
+
+        if ($session->source !== SessionSource::WeakTopics) {
+            return;
+        }
+
+        AdaptiveTrace::write('served', [
+            'session_id' => $sessionId,
+            'user_id' => $userId,
+            'count' => count($questionIds),
+            'question_ids' => array_values($questionIds),
+        ]);
+        AdaptiveTrace::finish();
     }
 }

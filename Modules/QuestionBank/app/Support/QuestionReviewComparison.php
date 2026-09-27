@@ -7,7 +7,9 @@ namespace Modules\QuestionBank\Support;
 use App\Support\Html\SafeHtml;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
+use Modules\Auth\Models\Profession;
 use Modules\QuestionBank\Enums\Difficulty;
+use Modules\QuestionBank\Models\Blueprint;
 use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionOption;
@@ -38,6 +40,9 @@ final class QuestionReviewComparison
      *     difficulty: array{changed: bool, published: string, proposed: string},
      *     stem_image: array{changed: bool, published_url: string|null, proposed_url: string|null},
      *     lessons: array{changed: bool, published: list<Chip>, proposed: list<Chip>},
+     *     professions: array{changed: bool, published: list<Chip>, proposed: list<Chip>},
+     *     blueprints: array{changed: bool, published: list<Chip>, proposed: list<Chip>},
+     *     access: array{changed: bool, published: string, proposed: string},
      *     key_info: array{changed: bool, published: list<array{html: string, change: string}>, proposed: list<array{html: string, change: string}>},
      *     options: list<OptionRow>
      * }
@@ -47,6 +52,8 @@ final class QuestionReviewComparison
         $question->loadMissing([
             'options' => fn ($query) => $query->orderBy('order'),
             'lessons:id,name',
+            'professions:id,name',
+            'blueprints:id,name',
         ]);
 
         $publishedVersion = (int) ($question->published_version ?? 0);
@@ -78,6 +85,9 @@ final class QuestionReviewComparison
         $imageChanged = (string) $publishedImage !== (string) $proposedImage;
 
         $lessons = $this->compareLessons($snapshot, $question);
+        $professions = $this->compareMembership($snapshot, $question, 'profession_ids', 'professions', Profession::class, $canCompare, 'Đối tượng #');
+        $blueprints = $this->compareMembership($snapshot, $question, 'blueprint_ids', 'blueprints', Blueprint::class, $canCompare, 'Kỳ thi #');
+        $access = $this->compareAccess($snapshot, $question, $canCompare);
         $keyInfo = $this->compareKeyInfo(
             array_values((array) ($snapshot['key_info'] ?? [])),
             array_values((array) ($question->key_info ?? [])),
@@ -97,8 +107,17 @@ final class QuestionReviewComparison
         if ($lessons['changed']) {
             $changedLabels[] = 'Bài học';
         }
+        if ($professions['changed']) {
+            $changedLabels[] = 'Đối tượng';
+        }
+        if ($blueprints['changed']) {
+            $changedLabels[] = 'Kỳ thi';
+        }
         if ($difficultyChanged) {
             $changedLabels[] = 'Độ khó';
+        }
+        if ($access['changed']) {
+            $changedLabels[] = 'Truy cập';
         }
         if (collect($options)->contains(fn (array $row): bool => $row['change'] !== 'same')) {
             $changedLabels[] = 'Đáp án';
@@ -140,6 +159,9 @@ final class QuestionReviewComparison
                 'proposed_url' => $this->imageUrl($proposedImage),
             ],
             'lessons' => $lessons,
+            'professions' => $professions,
+            'blueprints' => $blueprints,
+            'access' => $access,
             'key_info' => $keyInfo,
             'options' => $options,
         ];
@@ -181,6 +203,98 @@ final class QuestionReviewComparison
         return [
             'changed' => $publishedIds->sort()->values()->all() !== $proposedIds->sort()->values()->all(),
             'published' => $published,
+            'proposed' => $proposed,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $snapshot
+     * @param  class-string<Profession|Blueprint>  $modelClass
+     * @return array{changed: bool, published: list<Chip>, proposed: list<Chip>}
+     */
+    private function compareMembership(
+        array $snapshot,
+        Question $question,
+        string $snapshotKey,
+        string $relation,
+        string $modelClass,
+        bool $canCompare,
+        string $missingLabel,
+    ): array {
+        $proposedIds = $question->{$relation}
+            ->pluck('id')
+            ->map(fn ($id): int => (int) $id)
+            ->filter(fn (int $id): bool => $id > 0)
+            ->unique()
+            ->values();
+
+        if (! $canCompare) {
+            $publishedIds = collect();
+        } elseif (! array_key_exists($snapshotKey, $snapshot)) {
+            $publishedIds = $proposedIds;
+        } else {
+            $publishedIds = collect($snapshot[$snapshotKey] ?? [])
+                ->map(fn ($id): int => (int) $id)
+                ->filter(fn (int $id): bool => $id > 0)
+                ->unique()
+                ->values();
+        }
+
+        $names = $modelClass::query()
+            ->whereIn('id', $publishedIds->merge($proposedIds)->unique()->all())
+            ->pluck('name', 'id');
+
+        $publishedSet = $publishedIds->flip();
+        $proposedSet = $proposedIds->flip();
+        $label = fn (int $id): string => (string) ($names[$id] ?? $missingLabel.$id);
+
+        $published = $publishedIds->map(fn (int $id): array => [
+            'label' => $label($id),
+            'change' => $proposedSet->has($id) ? 'same' : 'removed',
+        ])->all();
+
+        $proposed = $proposedIds->map(fn (int $id): array => [
+            'label' => $label($id),
+            'change' => $publishedSet->has($id) ? 'same' : 'added',
+        ])->all();
+
+        return [
+            'changed' => $publishedIds->sort()->values()->all() !== $proposedIds->sort()->values()->all(),
+            'published' => $published,
+            'proposed' => $proposed,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $snapshot
+     * @return array{changed: bool, published: string, proposed: string}
+     */
+    private function compareAccess(array $snapshot, Question $question, bool $canCompare): array
+    {
+        $proposedFree = (bool) $question->is_free;
+        $proposed = $proposedFree ? 'Miễn phí' : 'Chỉ Premium';
+
+        if (! $canCompare) {
+            return [
+                'changed' => true,
+                'published' => '—',
+                'proposed' => $proposed,
+            ];
+        }
+
+        if (! array_key_exists('is_free', $snapshot)) {
+            return [
+                'changed' => false,
+                'published' => $proposed,
+                'proposed' => $proposed,
+            ];
+        }
+
+        $publishedFree = (bool) $snapshot['is_free'];
+
+        return [
+            'changed' => $publishedFree !== $proposedFree,
+            'published' => $publishedFree ? 'Miễn phí' : 'Chỉ Premium',
             'proposed' => $proposed,
         ];
     }

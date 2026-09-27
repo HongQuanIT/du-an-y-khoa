@@ -128,11 +128,11 @@ Không đo bằng ngày (đó là Memory). Đo bằng **lần serve gần nhất
 SelectionWeight = max(ε, BasePriority × CooldownFactor)
 ```
 
-| Sessions kể từ `last_served_at` | CooldownFactor |
-|---------------------------------|----------------|
-| 0 và serve ≤ 2 ngày trước | 0.3 |
-| 1 | 0.1 |
-| ≥2 **hoặc** serve đã > 2 ngày mà chưa có session mới | 1.0 |
+| Sessions kể từ `last_served_at` | Trong vòng 2 ngày | Quá 2 ngày |
+|---------------------------------|------------------:|----------:|
+| 0 — câu nằm trong phiên mới nhất | 0.10 | 1.00 |
+| 1 — câu không ở phiên mới nhất | 0.30 | 1.00 |
+| ≥2 | 1.00 | 1.00 |
 
 (Tránh phạt oan câu serve lâu rồi khi user chưa mở session mới.)
 

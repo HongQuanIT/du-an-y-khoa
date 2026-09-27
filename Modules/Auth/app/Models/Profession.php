@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace Modules\Auth\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Modules\QuestionBank\Models\Blueprint;
+use Modules\QuestionBank\Models\Question;
 
 final class Profession extends Model
 {
@@ -26,5 +29,17 @@ final class Profession extends Model
     public function learnerProfiles(): HasMany
     {
         return $this->hasMany(LearnerProfile::class);
+    }
+
+    /** @return BelongsToMany<Question, $this> */
+    public function questions(): BelongsToMany
+    {
+        return $this->belongsToMany(Question::class, 'question_professions')->withTimestamps();
+    }
+
+    /** @return BelongsToMany<Blueprint, $this> */
+    public function blueprints(): BelongsToMany
+    {
+        return $this->belongsToMany(Blueprint::class, 'blueprint_professions')->withTimestamps();
     }
 }

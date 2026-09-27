@@ -11,6 +11,7 @@ use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionHint;
 use Modules\QuestionBank\Models\QuestionOption;
+use Modules\QuestionBank\Support\QuestionFilterBuilder;
 
 /**
  * Stable, allow-listed snapshots for entities covered by the admin audit trail.
@@ -45,7 +46,7 @@ final class AuditSnapshot
         // since the audit snapshot serializes lesson names below.
         $question->load('lessons:id,name');
 
-        $inferredCoreIds = app(\Modules\QuestionBank\Support\QuestionFilterBuilder::class)
+        $inferredCoreIds = app(QuestionFilterBuilder::class)
             ->inferredCoreClinicalTopicIds(
                 $question->lessons->pluck('id')->map(fn ($id): int => (int) $id)->all(),
             );
@@ -75,6 +76,18 @@ final class AuditSnapshot
                 ->values()
                 ->all(),
             'tag_ids' => $question->tags
+                ->pluck('id')
+                ->map(fn ($id): int => (int) $id)
+                ->sort()
+                ->values()
+                ->all(),
+            'profession_ids' => $question->professions
+                ->pluck('id')
+                ->map(fn ($id): int => (int) $id)
+                ->sort()
+                ->values()
+                ->all(),
+            'blueprint_ids' => $question->blueprints
                 ->pluck('id')
                 ->map(fn ($id): int => (int) $id)
                 ->sort()
