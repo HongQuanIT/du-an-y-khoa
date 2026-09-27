@@ -8,6 +8,7 @@
 - Khi học viên chọn một kỳ thi, pool chỉ còn câu được gán vào blueprint đó. Chức danh trên hồ sơ thu hẹp thêm pool.
 - Ma trận đề chọn các chức danh được thấy kỳ thi đó. Kỳ thi chưa gán chức danh vẫn hiện với mọi người.
 - Form soạn câu chọn chức danh và kỳ thi giống chọn thẻ: tìm, tích trong danh sách, rồi hiện chip có thể gỡ.
+- Màn duyệt giảng viên và các trang so sánh câu hỏi đối chiếu thêm đối tượng, kỳ thi và quyền truy cập với bản đang dùng.
 - Đổi nhãn menu và nhóm quyền «Dữ liệu học viên» thành «Danh mục học viên».
 
 ## 2026-09-26

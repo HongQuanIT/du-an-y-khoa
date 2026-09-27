@@ -6,8 +6,11 @@ namespace Modules\QuestionBank\Tests\Unit;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Admin\Actions\CaptureQuestionVersionAction;
+use Modules\Auth\Models\Profession;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionStatus;
+use Modules\QuestionBank\Enums\TaxonomyStatus;
+use Modules\QuestionBank\Models\Blueprint;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Support\QuestionReviewComparison;
 use Tests\Support\CreatesMedicalTaxonomy;
@@ -64,6 +67,7 @@ final class QuestionReviewComparisonTest extends TestCase
             'status' => QuestionStatus::Published,
             'version' => 1,
             'published_version' => 1,
+            'is_free' => true,
         ]);
         $question->lessons()->sync([$oldLesson->id]);
         $keep = $question->options()->create([
@@ -100,6 +104,23 @@ final class QuestionReviewComparisonTest extends TestCase
             'status' => QuestionStatus::InReview,
         ])->save();
         $question->lessons()->sync([$newLesson->id]);
+        $question->professions()->sync([
+            Profession::query()->create([
+                'code' => 'resident',
+                'name' => 'Bác sĩ nội trú',
+                'is_active' => true,
+                'sort_order' => 1,
+            ])->id,
+        ]);
+        $question->blueprints()->sync([
+            Blueprint::query()->create([
+                'name' => 'Nội trú 2026',
+                'slug' => 'noi-tru-2026',
+                'status' => TaxonomyStatus::Active,
+                'sort_order' => 1,
+            ])->id,
+        ]);
+        $question->forceFill(['is_free' => false])->save();
 
         $comparison = app(QuestionReviewComparison::class)->compare($question->fresh(['options', 'lessons']));
 
@@ -119,6 +140,15 @@ final class QuestionReviewComparisonTest extends TestCase
         $this->assertSame('Khó', $comparison['difficulty']['proposed']);
         $this->assertSame('removed', $comparison['lessons']['published'][0]['change']);
         $this->assertSame('added', $comparison['lessons']['proposed'][0]['change']);
+        $this->assertContains('Đối tượng', $comparison['changed_labels']);
+        $this->assertContains('Kỳ thi', $comparison['changed_labels']);
+        $this->assertContains('Truy cập', $comparison['changed_labels']);
+        $this->assertSame('added', $comparison['professions']['proposed'][0]['change']);
+        $this->assertSame('Bác sĩ nội trú', $comparison['professions']['proposed'][0]['label']);
+        $this->assertSame('added', $comparison['blueprints']['proposed'][0]['change']);
+        $this->assertSame('Nội trú 2026', $comparison['blueprints']['proposed'][0]['label']);
+        $this->assertSame('Miễn phí', $comparison['access']['published']);
+        $this->assertSame('Chỉ Premium', $comparison['access']['proposed']);
 
         $changes = collect($comparison['options'])->pluck('change')->all();
         $this->assertContains('modified', $changes);
