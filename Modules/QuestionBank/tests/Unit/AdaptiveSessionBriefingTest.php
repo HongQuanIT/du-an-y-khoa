@@ -1,0 +1,108 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\QuestionBank\Tests\Unit;
+
+use Modules\QuestionBank\Services\AdaptiveSessionBriefing;
+use PHPUnit\Framework\TestCase;
+
+final class AdaptiveSessionBriefingTest extends TestCase
+{
+    public function test_brief_tells_a_balanced_session_in_business_language(): void
+    {
+        $log = <<<'LOG'
+[2026-09-26 14:05:01] testing.DEBUG: [adaptive] path {"path":"weighted_selector","user_id":7,"limit":2,"focus":"balanced","blueprint_id":3,"trace_id":"run1"}
+[2026-09-26 14:05:01] testing.DEBUG: [adaptive] start {"user_id":7,"limit":2,"focus":"balanced","w_weakness":0.55,"w_memory":0.45,"blueprint_id":3,"organ_system_ids":[],"subject_ids":[],"can_use_premium":true,"trace_id":"run1"}
+[2026-09-26 14:05:01] testing.DEBUG: [adaptive] pool {"scope":"blueprint_matrix","lesson_ids_count":4,"pool_size":4,"blueprint_id":3,"organ_system_ids":[],"subject_ids":[],"premium_only_free":false,"trace_id":"run1"}
+[2026-09-26 14:05:01] testing.DEBUG: [adaptive] coverage_split {"pool_size":4,"unseen_count":2,"seen_count":2,"unseen_ratio":0.5,"quota_unseen":1,"quota_review":1,"trace_id":"run1"}
+[2026-09-26 14:05:01] testing.DEBUG: [adaptive] review_scores {"focus":"balanced","w_weakness":0.55,"w_memory":0.45,"candidates":2,"weight_min":0.2,"weight_max":0.7,"formula":"weight = max(0.01, (wW*weakness + wM*memory) * cooldown)","top":[{"question_id":"q-weak","correct":2,"wrong":8,"weakness":0.75,"days_since_seen":3,"memory":0.14,"base":0.48,"sessions_since_served":0,"cooldown":0.3,"weight":0.14}],"trace_id":"run1"}
+[2026-09-26 14:05:01] testing.DEBUG: [adaptive] review_sampled {"limit":1,"picked":["q-weak"],"weights":{"q-weak":0.14},"trace_id":"run1"}
+[2026-09-26 14:05:01] testing.DEBUG: [adaptive] result {"focus":"balanced","picked_count":2,"picked_unseen":1,"picked_review":1,"question_ids":["q-weak","q-new"],"trace_id":"run1"}
+[2026-09-26 14:05:01] testing.DEBUG: [adaptive] served {"session_id":"s1","user_id":7,"count":2,"question_ids":["q-weak","q-new"],"trace_id":"run1"}
+LOG;
+
+        $briefing = new AdaptiveSessionBriefing(
+            learners: [7 => 'Mai Anh'],
+            blueprints: [3 => 'Nội tổng quát'],
+            questions: ['q-weak' => 'Q1042', 'q-new' => 'Q2201'],
+        );
+
+        $card = $briefing->brief($briefing->runs($log)[0]);
+        $text = $this->flatten($card);
+
+        $this->assertSame('Mai Anh', $card['learner']);
+        $this->assertSame('Cân bằng', $card['focus']);
+        $this->assertStringContainsString('Mai Anh nhận 2 câu hướng Cân bằng từ 4 câu của Nội tổng quát.', $card['headline']);
+        $this->assertStringContainsString('Q1042', $text);
+        $this->assertStringContainsString('Hay trả lời sai (8 sai / 10 lần)', $text);
+        $this->assertStringContainsString('Q2201', $text);
+        $this->assertStringNotContainsString('weakness', $text);
+        $this->assertStringNotContainsString('cooldown', $text);
+        $this->assertStringNotContainsString('trace_id', $text);
+        $this->assertStringNotContainsString('q-weak', $text);
+        $this->assertStringNotContainsString('user_id', $text);
+    }
+
+    public function test_each_session_table_ranks_questions_by_priority(): void
+    {
+        $log = <<<'LOG'
+[2026-09-26 14:05:01] testing.DEBUG: [adaptive] path {"path":"weighted_selector","user_id":7,"trace_id":"run1"}
+[2026-09-26 14:05:01] testing.DEBUG: [adaptive] result {"picked_count":2,"question_ids":["q-low","q-new"],"ranking":[{"question_id":"q-high","kind":"review","selected":false,"correct":1,"wrong":1,"weakness":0.5,"days_since_seen":2,"memory":0.1,"cooldown":1,"weight":0.9},{"question_id":"q-low","kind":"review","selected":true,"correct":2,"wrong":8,"weakness":0.75,"days_since_seen":3,"memory":0.14,"cooldown":0.3,"weight":0.2},{"question_id":"q-new","kind":"fresh","selected":true,"correct":0,"wrong":0,"weakness":null,"weight":null}],"trace_id":"run1"}
+[2026-09-26 14:06:01] testing.DEBUG: [adaptive] path {"path":"weighted_selector","user_id":7,"trace_id":"run2"}
+[2026-09-26 14:06:01] testing.DEBUG: [adaptive] result {"picked_count":1,"question_ids":["q-only"],"ranking":[{"question_id":"q-only","kind":"review","selected":true,"correct":0,"wrong":4,"weakness":0.8,"days_since_seen":1,"memory":0.05,"cooldown":1,"weight":0.6}],"trace_id":"run2"}
+LOG;
+
+        $briefing = new AdaptiveSessionBriefing(
+            learners: [7 => 'Mai Anh'],
+            questions: [
+                'q-high' => 'Q9000',
+                'q-low' => 'Q1042',
+                'q-new' => 'Q2201',
+                'q-only' => 'Q3000',
+            ],
+        );
+        $runs = $briefing->runs($log);
+        $first = $briefing->brief($runs[0])['table'];
+        $second = $briefing->brief($runs[1])['table'];
+
+        $this->assertSame(['Q9000', 'Q1042', 'Q2201'], array_column($first, 'code'));
+        $this->assertSame(['0,90', '0,20', 'Chọn đều'], array_column($first, 'priority'));
+        $this->assertSame(['81,82%', '18,18%', '—'], array_column($first, 'share'));
+        $this->assertSame(['Không', 'Có', 'Có'], array_column($first, 'chosen'));
+        $this->assertSame(['Q3000'], array_column($second, 'code'));
+        $this->assertSame('0,60', $second[0]['priority']);
+        $this->assertSame('100,00%', $second[0]['share']);
+    }
+
+    public function test_runs_stay_separate_when_two_learners_are_logged(): void
+    {
+        $log = <<<'LOG'
+[2026-09-26 14:05:01] testing.DEBUG: [adaptive] path {"path":"weighted_selector","user_id":1,"focus":"weak_focus","trace_id":"a"}
+[2026-09-26 14:05:02] testing.DEBUG: [adaptive] path {"path":"legacy_incorrect_first","user_id":2,"trace_id":"b"}
+[2026-09-26 14:05:02] testing.DEBUG: [adaptive] result {"picked_count":3,"trace_id":"a"}
+LOG;
+
+        $briefing = new AdaptiveSessionBriefing(learners: [1 => 'An', 2 => 'Bình']);
+        $runs = $briefing->runs($log);
+
+        $this->assertCount(2, $runs);
+        $this->assertArrayHasKey('result', $runs[0]['steps']);
+        $this->assertArrayNotHasKey('result', $runs[1]['steps']);
+    }
+
+    /**
+     * @param  array<string, mixed>  $value
+     */
+    private function flatten(array $value): string
+    {
+        $parts = [];
+        array_walk_recursive($value, function (mixed $item) use (&$parts): void {
+            if (is_string($item)) {
+                $parts[] = $item;
+            }
+        });
+
+        return implode(' ', $parts);
+    }
+}

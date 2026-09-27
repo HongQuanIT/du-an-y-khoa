@@ -10,6 +10,7 @@ use App\Support\TargetExams;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Modules\QuestionBank\Support\AdaptiveTrace;
 use Modules\Personalization\Models\Bookmark;
 use Modules\Personalization\Models\BookmarkFolderItem;
 use Modules\QuestionBank\Data\CreateSessionData;
@@ -187,10 +188,27 @@ final class SessionQuestionSelector
         bool $canUsePremium,
         CreateSessionData $data,
     ): array {
+        AdaptiveTrace::begin();
+
         // Dashboard "weak topic" drill: chỉ câu sai trong 1 bài học.
         if ($data->lessonIds !== []) {
+            AdaptiveTrace::write('path', [
+                'path' => 'legacy_incorrect_first',
+                'user_id' => $userId,
+                'lesson_ids' => $data->lessonIds,
+                'limit' => $limit,
+            ]);
+
             return $this->legacyIncorrectFirstQuestions($userId, $limit, $canUsePremium, $data);
         }
+
+        AdaptiveTrace::write('path', [
+            'path' => 'weighted_selector',
+            'user_id' => $userId,
+            'limit' => $limit,
+            'focus' => $data->adaptiveFocus,
+            'blueprint_id' => $data->blueprintId,
+        ]);
 
         return $this->adaptive->pick($userId, $limit, $canUsePremium, $data);
     }

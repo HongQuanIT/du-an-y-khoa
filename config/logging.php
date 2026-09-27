@@ -127,6 +127,15 @@ return [
             'path' => storage_path('logs/laravel.log'),
         ],
 
+        // Trace thuật toán phiên luyện thích ứng. Mức debug cố định,
+        // không phụ thuộc LOG_LEVEL của kênh mặc định.
+        'adaptive' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/adaptive.log'),
+            'level' => 'debug',
+            'replace_placeholders' => true,
+        ],
+
     ],
 
 ];

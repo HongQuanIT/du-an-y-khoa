@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Support\Enums\Permission;
 use Illuminate\Support\Facades\Route;
+use Modules\Admin\Http\Controllers\AdaptiveLogController;
 use Modules\Admin\Http\Controllers\AuditLogController;
 use Modules\Admin\Http\Controllers\BillingGatewayController;
 use Modules\Admin\Http\Controllers\BillingPaymentController;
@@ -82,6 +83,7 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
 
     Route::middleware(['staff.2fa', 'admin.implied_view'])->group(function (): void {
         Route::get('/', DashboardController::class)->name('dashboard');
+        Route::get('/adaptive-briefing', AdaptiveLogController::class)->name('adaptive-briefing');
 
         Route::group([], function (): void {
             Route::get('/learner-data/institutions', [InstitutionController::class, 'index'])->middleware('permission:learner_catalog.view')->name('institutions.index');

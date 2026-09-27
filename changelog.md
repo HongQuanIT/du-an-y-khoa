@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-09-26
+
+### Ops — Log riêng luồng chọn câu thích ứng
+
+- Trace thuật toán phiên luyện thích ứng ghi vào `storage/logs/adaptive.log`, mức `debug` cố định, tách khỏi `LOG_LEVEL` của log ứng dụng.
+- Mỗi lần tạo phiên ghi lần lượt nhánh chọn (`weighted_selector` hoặc `legacy_incorrect_first`), pool, chia unseen/seen, điểm review, kết quả và `last_served_at`.
+- Trang tạm `/admin/adaptive-briefing` đọc nhật ký đó và kể lại từng lần chọn câu bằng ngôn ngữ nghiệp vụ.
+- Mỗi phiên thích ứng có một bảng chọn câu riêng, xếp theo điểm ưu tiên, kèm % suất vào nhóm ôn và công thức của từng chỉ số.
+- Đổi tên điểm gộp độ yếu và mức nhớ thành «Điểm cần ôn».
+
 ## 2026-09-25
 
 ### Docs — Bộ test case thủ công quy trình tạo câu hỏi

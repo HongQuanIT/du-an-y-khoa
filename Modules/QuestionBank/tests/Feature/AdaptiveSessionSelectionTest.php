@@ -7,6 +7,7 @@ namespace Modules\QuestionBank\Tests\Feature;
 use App\Models\User;
 use App\Support\Enums\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\Log;
 use Modules\QuestionBank\Data\CreateSessionData;
 use Modules\QuestionBank\Enums\Difficulty;
@@ -184,7 +185,12 @@ final class AdaptiveSessionSelectionTest extends TestCase
 
     public function test_adaptive_session_store_logs_and_returns_requested_count(): void
     {
-        Log::spy();
+        $steps = [];
+        Log::listen(function (MessageLogged $event) use (&$steps): void {
+            if (str_starts_with($event->message, '[adaptive] ')) {
+                $steps[] = substr($event->message, strlen('[adaptive] '));
+            }
+        });
 
         $this->seedQuestion('A');
         $this->seedQuestion('B');
@@ -205,9 +211,10 @@ final class AdaptiveSessionSelectionTest extends TestCase
         $this->assertSame('balanced', $session->filters['adaptive_focus']);
         $this->assertCount(2, $session->question_ids);
 
-        Log::shouldHaveReceived('debug')->withArgs(function (string $message): bool {
-            return str_starts_with($message, '[adaptive]');
-        })->atLeast()->once();
+        $this->assertSame(
+            ['path', 'start', 'pool', 'coverage_split', 'result', 'served'],
+            $steps,
+        );
     }
 
     private function seedQuestion(string $stem): Question
