@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Modules\QuestionBank\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Modules\Auth\Models\Profession;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
 
 /**
@@ -40,5 +42,17 @@ class Blueprint extends Model
     public function sections(): HasMany
     {
         return $this->hasMany(BlueprintSection::class)->orderBy('sort_order')->orderBy('name');
+    }
+
+    /** @return BelongsToMany<Profession, $this> */
+    public function professions(): BelongsToMany
+    {
+        return $this->belongsToMany(Profession::class, 'blueprint_professions')->withTimestamps();
+    }
+
+    /** @return BelongsToMany<Question, $this> */
+    public function questions(): BelongsToMany
+    {
+        return $this->belongsToMany(Question::class, 'question_blueprints')->withTimestamps();
     }
 }

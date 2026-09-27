@@ -171,6 +171,9 @@ final class QuestionBankFlowTest extends TestCase
             'sort_order' => 1,
         ]);
         $coreTopic->lessons()->sync([$this->topic->id]);
+        Question::query()
+            ->whereHas('lessons', fn ($lessons) => $lessons->where('lessons.id', $this->topic->id))
+            ->each(fn (Question $question) => $question->blueprints()->sync([$blueprint->id]));
 
         $this->actingAs($this->user)
             ->postJson(route('qbank.count'), [

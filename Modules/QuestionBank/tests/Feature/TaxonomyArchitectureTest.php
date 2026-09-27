@@ -8,7 +8,10 @@ use App\Models\User;
 use App\Support\Enums\Role;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
+use Modules\Admin\Actions\SaveAdminQuestionAction;
 use Modules\QuestionBank\Data\ListQuestionsData;
+use Modules\QuestionBank\Database\Seeders\MedicalLicensingExamBlueprintSeeder;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
@@ -19,6 +22,7 @@ use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\Tag;
 use Modules\QuestionBank\Repositories\QuestionRepository;
+use Modules\QuestionBank\Support\QuestionFilterBuilder;
 use Tests\Support\CreatesMedicalTaxonomy;
 use Tests\TestCase;
 
@@ -59,7 +63,7 @@ final class TaxonomyArchitectureTest extends TestCase
             'subjects' => [$anatomy],
         ]);
 
-        $filters = app(\Modules\QuestionBank\Support\QuestionFilterBuilder::class);
+        $filters = app(QuestionFilterBuilder::class);
 
         $this->assertEqualsCanonicalizing(
             [$both->id, $cardioOnly->id],
@@ -239,7 +243,7 @@ final class TaxonomyArchitectureTest extends TestCase
         [$coreTopic] = $this->seedCoreTopicAndLessons();
         $coreTopic->lessons()->sync([$lesson->id]);
 
-        $scopes = app(\Modules\QuestionBank\Support\QuestionFilterBuilder::class)
+        $scopes = app(QuestionFilterBuilder::class)
             ->taxonomyScopesForBlueprints([$coreTopic->section->blueprint_id]);
 
         $scope = $scopes[$coreTopic->section->blueprint_id];
@@ -285,6 +289,13 @@ final class TaxonomyArchitectureTest extends TestCase
         ]);
         $match->lessons()->attach($lessonA->id);
         $match->tags()->sync([$tag->id]);
+        $match->blueprints()->sync([$coreTopic->section->blueprint_id]);
+
+        $sameLesson = Question::factory()->create([
+            'difficulty' => Difficulty::Easy,
+            'status' => QuestionStatus::Published,
+        ]);
+        $sameLesson->lessons()->attach($lessonA->id);
 
         Question::factory()->create([
             'difficulty' => Difficulty::Easy,
@@ -313,6 +324,7 @@ final class TaxonomyArchitectureTest extends TestCase
         ));
 
         $this->assertTrue($byBlueprint->contains('id', $match->id));
+        $this->assertFalse($byBlueprint->contains('id', $sameLesson->id));
         $this->assertTrue($byCoreTopic->contains('id', $match->id));
         $this->assertTrue($byLesson->contains('id', $match->id));
         $this->assertTrue($byTag->contains('id', $match->id));
@@ -324,9 +336,9 @@ final class TaxonomyArchitectureTest extends TestCase
         $admin = User::factory()->create();
         $admin->assignRole(Role::Admin->value);
 
-        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        $this->expectException(ValidationException::class);
 
-        app(\Modules\Admin\Actions\SaveAdminQuestionAction::class)->handle($admin, null, [
+        app(SaveAdminQuestionAction::class)->handle($admin, null, [
             'stem' => '<p>Test stem</p>',
             'difficulty' => Difficulty::Medium->value,
             'lesson_ids' => [],
@@ -347,7 +359,7 @@ final class TaxonomyArchitectureTest extends TestCase
         $admin = User::factory()->create();
         $admin->assignRole(Role::Admin->value);
 
-        $question = app(\Modules\Admin\Actions\SaveAdminQuestionAction::class)->handle($admin, null, [
+        $question = app(SaveAdminQuestionAction::class)->handle($admin, null, [
             'stem' => '<p>Test stem</p>',
             'difficulty' => Difficulty::Medium->value,
             'lesson_ids' => [$lesson->id],
@@ -365,8 +377,8 @@ final class TaxonomyArchitectureTest extends TestCase
 
     public function test_medical_licensing_exam_blueprint_seeder_is_idempotent(): void
     {
-        $this->seed(\Modules\QuestionBank\Database\Seeders\MedicalLicensingExamBlueprintSeeder::class);
-        $this->seed(\Modules\QuestionBank\Database\Seeders\MedicalLicensingExamBlueprintSeeder::class);
+        $this->seed(MedicalLicensingExamBlueprintSeeder::class);
+        $this->seed(MedicalLicensingExamBlueprintSeeder::class);
 
         $this->assertSame(1, Blueprint::query()->where('code', 'medical_practice_licensing_exam')->count());
         $this->assertSame(17, BlueprintSection::query()->count());

@@ -6,6 +6,7 @@ namespace Modules\QuestionBank\Tests\Feature;
 
 use App\Models\User;
 use App\Support\Enums\Role;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\Log;
@@ -47,6 +48,7 @@ final class AdaptiveSessionSelectionTest extends TestCase
         parent::setUp();
 
         RoleModel::findOrCreate(Role::Student->value, 'web');
+        $this->seed(RolePermissionSeeder::class);
         $this->user = User::factory()->create();
         $this->user->assignRole(Role::Student->value);
         $this->lesson = $this->makeLesson([
@@ -226,6 +228,7 @@ final class AdaptiveSessionSelectionTest extends TestCase
             'difficulty' => Difficulty::Medium,
         ]);
         $question->lessons()->sync([$this->lesson->id]);
+        $question->blueprints()->sync([$this->blueprint->id]);
         QuestionOption::factory()->create([
             'question_id' => $question->getKey(),
             'is_correct' => true,

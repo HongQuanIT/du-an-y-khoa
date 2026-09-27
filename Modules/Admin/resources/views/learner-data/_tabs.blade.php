@@ -8,7 +8,7 @@
     ];
 @endphp
 
-<nav class="mb-6 overflow-x-auto rounded-xl border border-outline-variant bg-surface p-1" aria-label="Quản lý dữ liệu học viên">
+<nav class="mb-6 overflow-x-auto rounded-xl border border-outline-variant bg-surface p-1" aria-label="Quản lý danh mục học viên">
     <div class="flex min-w-max gap-1">
         @foreach ($learnerDataTabs as $tab)
             @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), $tab['route']))

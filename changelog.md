@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-09-27
+
+### Feat — Phân loại câu hỏi theo chức danh và kỳ thi
+
+- Câu hỏi gắn trực tiếp với chức danh học viên và blueprint, không còn dùng thẻ cho hai trục này.
+- Khi học viên chọn một kỳ thi, pool chỉ còn câu được gán vào blueprint đó. Chức danh trên hồ sơ thu hẹp thêm pool.
+- Ma trận đề chọn các chức danh được thấy kỳ thi đó. Kỳ thi chưa gán chức danh vẫn hiện với mọi người.
+- Form soạn câu chọn chức danh và kỳ thi giống chọn thẻ: tìm, tích trong danh sách, rồi hiện chip có thể gỡ.
+- Đổi nhãn menu và nhóm quyền «Dữ liệu học viên» thành «Danh mục học viên».
+
 ## 2026-09-26
 
 ### Ops — Log riêng luồng chọn câu thích ứng

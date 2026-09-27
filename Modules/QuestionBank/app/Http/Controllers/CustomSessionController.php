@@ -9,8 +9,11 @@ use App\Support\Http\Responses\ApiResponse;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
+use Modules\Personalization\Models\BookmarkFolder;
 use Modules\QuestionBank\Actions\CreateQuestionSessionAction;
+use Modules\QuestionBank\Enums\SessionMode;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
 use Modules\QuestionBank\Http\Requests\CreateQuestionSessionRequest;
 use Modules\QuestionBank\Models\Blueprint;
@@ -28,19 +31,30 @@ final class CustomSessionController extends Controller
         private readonly SessionQuestionSelector $selector,
     ) {}
 
-    public function create(\Illuminate\Http\Request $request): View
+    public function create(Request $request): View
     {
         $userId = $request->user() ? (int) $request->user()->getKey() : 0;
         $bookmarkFolders = $userId > 0
-            ? \Modules\Personalization\Models\BookmarkFolder::query()
+            ? BookmarkFolder::query()
                 ->where('user_id', $userId)
                 ->withCount('items')
                 ->orderByDesc('id')
                 ->get()
             : collect();
 
+        $professionId = $request->user()?->learnerProfile?->profession_id;
+        $professionId = $professionId !== null ? (int) $professionId : null;
+
         $exams = Blueprint::query()
             ->where('status', TaxonomyStatus::Active)
+            ->when($professionId, function ($query) use ($professionId): void {
+                $query->where(function ($inner) use ($professionId): void {
+                    $inner->whereHas(
+                        'professions',
+                        fn ($professions) => $professions->where('professions.id', $professionId),
+                    )->orWhereDoesntHave('professions');
+                });
+            })
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get(['id', 'name', 'code', 'description']);
@@ -57,7 +71,7 @@ final class CustomSessionController extends Controller
                     'title' => $blueprint->name,
                     'hint' => filled($blueprint->description)
                         ? (string) $blueprint->description
-                        : 'Ma trận đề thi — lọc câu hỏi theo danh mục đã map.',
+                        : 'Chỉ gồm câu đã được gán vào kỳ thi này.',
                     'icon' => match ($blueprint->code) {
                         'medical_practice_licensing_exam' => 'stethoscope',
                         default => 'assignment',
@@ -78,7 +92,7 @@ final class CustomSessionController extends Controller
             throw ValidationException::withMessages(['filters' => $exception->getMessage()]);
         }
 
-        $route = $session->mode === \Modules\QuestionBank\Enums\SessionMode::Exam
+        $route = $session->mode === SessionMode::Exam
             ? 'exam.session'
             : 'qbank.session';
 

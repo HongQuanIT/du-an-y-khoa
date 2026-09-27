@@ -22,6 +22,7 @@ use Modules\Admin\Actions\SaveAdminQuestionAction;
 use Modules\Admin\Actions\TransitionQuestionStatusAction;
 use Modules\Admin\Support\AdminQuestionListQuery;
 use Modules\Admin\Support\QuestionAccess;
+use Modules\Auth\Models\Profession;
 use Modules\QuestionBank\Actions\AdjudicateReviewOutcomesAction;
 use Modules\QuestionBank\Actions\SyncQuestionStatsAction;
 use Modules\QuestionBank\Enums\Difficulty;
@@ -30,6 +31,8 @@ use Modules\QuestionBank\Enums\QuestionReviewAction;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Enums\QuestionWorkflowEventType;
 use Modules\QuestionBank\Enums\ReviewFlagOutcome;
+use Modules\QuestionBank\Enums\TaxonomyStatus;
+use Modules\QuestionBank\Models\Blueprint;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionFeedback;
 use Modules\QuestionBank\Models\QuestionImportBatch;
@@ -206,6 +209,8 @@ final class QuestionController extends Controller
             'lessons.subjects',
             'lessons.organSystems',
             'tags',
+            'professions:id,name',
+            'blueprints:id,name',
             'creator:id,name,email',
             'instructor:id,name',
             'assignedInstructor:id,name',
@@ -616,6 +621,29 @@ final class QuestionController extends Controller
                     ->where('version', (int) $question->published_version)
                     ->value('created_at')
                 : null,
+            'classificationProfessions' => Profession::query()
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(['id', 'name']),
+            'classificationBlueprints' => Blueprint::query()
+                ->where('status', TaxonomyStatus::Active)
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(['id', 'name']),
+            'suggestedBlueprintIds' => $question->exists
+                ? Blueprint::query()
+                    ->whereHas(
+                        'sections.coreClinicalTopics.lessons',
+                        fn ($lessons) => $lessons->whereIn(
+                            'lessons.id',
+                            $question->lessons->pluck('id')->all(),
+                        ),
+                    )
+                    ->pluck('id')
+                    ->map(fn ($id): int => (int) $id)
+                    ->all()
+                : [],
         ];
     }
 
@@ -690,6 +718,10 @@ final class QuestionController extends Controller
             'lesson_ids.*' => ['required', 'integer', 'distinct', 'exists:lessons,id'],
             'tag_ids' => ['nullable', 'array'],
             'tag_ids.*' => ['integer', 'distinct', 'exists:tags,id'],
+            'profession_ids' => ['nullable', 'array'],
+            'profession_ids.*' => ['integer', 'distinct', 'exists:professions,id'],
+            'blueprint_ids' => ['nullable', 'array'],
+            'blueprint_ids.*' => ['integer', 'distinct', 'exists:blueprints,id'],
             'hints' => ['nullable', 'array'],
             'hints.*.id' => ['nullable', 'integer'],
             'hints.*.content' => ['nullable', 'string', 'max:2000'],
@@ -740,6 +772,10 @@ final class QuestionController extends Controller
             'lesson_ids' => collect($data['lesson_ids'] ?? [])
                 ->map(fn ($id): int => (int) $id)->unique()->values()->all(),
             'tag_ids' => collect($data['tag_ids'] ?? [])
+                ->map(fn ($id): int => (int) $id)->unique()->values()->all(),
+            'profession_ids' => collect($data['profession_ids'] ?? [])
+                ->map(fn ($id): int => (int) $id)->unique()->values()->all(),
+            'blueprint_ids' => collect($data['blueprint_ids'] ?? [])
                 ->map(fn ($id): int => (int) $id)->unique()->values()->all(),
             'is_free' => $request->boolean('is_free'),
             'is_priority' => $request->boolean('is_priority') || $request->boolean('exam_flag'),

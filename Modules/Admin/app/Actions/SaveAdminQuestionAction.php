@@ -314,7 +314,7 @@ final class SaveAdminQuestionAction
     /** @param  array<string, mixed>  $data */
     private function syncTaxonomyRelations(Question $question, array $data): void
     {
-        // Blueprint CCT is inferred via lesson / tag mapping — no direct Q↔CCT pivot.
+        // Kỳ thi membership is question_blueprints, not an inferred CCT link.
         $question->lessons()->sync($this->buildLessonSyncPayload($data));
 
         if (array_key_exists('tag_ids', $data)) {
@@ -325,6 +325,20 @@ final class SaveAdminQuestionAction
                 ->values()
                 ->all();
             $question->tags()->sync($tagIds);
+        }
+
+        foreach (['profession_ids' => 'professions', 'blueprint_ids' => 'blueprints'] as $key => $relation) {
+            if (! array_key_exists($key, $data)) {
+                continue;
+            }
+
+            $ids = collect($data[$key])
+                ->map(fn ($id): int => (int) $id)
+                ->filter(fn (int $id): bool => $id > 0)
+                ->unique()
+                ->values()
+                ->all();
+            $question->{$relation}()->sync($ids);
         }
     }
 

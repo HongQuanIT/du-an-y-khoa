@@ -7,6 +7,7 @@ namespace Modules\QuestionBank\Services;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Modules\Auth\Models\LearnerProfile;
 use Modules\QuestionBank\Data\CreateSessionData;
 use Modules\QuestionBank\Enums\UserQuestionStatus;
 use Modules\QuestionBank\Models\Question;
@@ -173,6 +174,7 @@ final class AdaptiveQuestionSelector
             blueprintSectionId: $data->blueprintSectionId,
             coreClinicalTopicIds: $data->coreClinicalTopicIds,
             tagIds: $data->tagIds,
+            professionId: $this->learnerProfessionId($userId),
         );
 
         $ids = $query->pluck('id')->map(fn ($id) => (string) $id)->all();
@@ -193,16 +195,13 @@ final class AdaptiveQuestionSelector
     }
 
     /**
-     * Lesson scope for adaptive: optional hệ/môn ∩ matrix; không dùng weak-lesson heuristic.
+     * Lesson scope for adaptive. A selected kỳ thi does not expand to every
+     * lesson in the matrix; membership is question_blueprints.
      *
      * @return array{0: array<int, int>, 1: string}
      */
     private function poolLessonIds(CreateSessionData $data): array
     {
-        $matrixLessonIds = $data->blueprintId !== null
-            ? $this->filters->mappedLessonIdsForBlueprint(blueprintId: $data->blueprintId)
-            : [];
-
         $scopedLessonIds = $this->filters->resolveContentLessonIds(
             $data->organSystemIds,
             $data->subjectIds,
@@ -218,20 +217,13 @@ final class AdaptiveQuestionSelector
         }
 
         if ($scopedLessonIds === []) {
-            return [$matrixLessonIds, 'blueprint_matrix'];
+            return [[], $data->blueprintId !== null ? 'blueprint_membership' : 'all'];
         }
 
-        if ($matrixLessonIds === []) {
-            return [$scopedLessonIds, 'organ_subject'];
-        }
-
-        $allowed = array_flip($matrixLessonIds);
-        $intersection = array_values(array_filter(
+        return [
             $scopedLessonIds,
-            static fn (int $id): bool => isset($allowed[$id]),
-        ));
-
-        return [$intersection, 'matrix_intersect_organ_subject'];
+            $data->blueprintId !== null ? 'blueprint_and_content' : 'organ_subject',
+        ];
     }
 
     /**
@@ -540,7 +532,7 @@ final class AdaptiveQuestionSelector
     /**
      * Weighted random sampling without replacement (roulette, O(n·k)).
      *
-     * @param  array<string, float>  $weights question_id => weight
+     * @param  array<string, float>  $weights  question_id => weight
      * @return array<int, string>
      */
     private function weightedSampleWithoutReplacement(array $weights, int $limit): array
@@ -601,5 +593,12 @@ final class AdaptiveQuestionSelector
     private function trace(string $step, array $context = []): void
     {
         AdaptiveTrace::write($step, $context);
+    }
+
+    private function learnerProfessionId(int $userId): ?int
+    {
+        $professionId = LearnerProfile::query()->where('user_id', $userId)->value('profession_id');
+
+        return $professionId === null ? null : (int) $professionId;
     }
 }

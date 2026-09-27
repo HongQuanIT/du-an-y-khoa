@@ -59,6 +59,30 @@
                             @error('sort_order') <p class="mt-1.5 font-label-sm text-error">{{ $message }}</p> @enderror
                         </div>
                     </div>
+                    <fieldset class="space-y-2" @disabled(! $canUpdate)>
+                        <legend class="mb-1 font-label-sm font-medium text-on-surface-variant">Chức danh được ôn kỳ thi này</legend>
+                        <p class="text-[11px] leading-4 text-on-surface-variant">
+                            Để trống thì mọi chức danh đều thấy kỳ thi. Chọn chức danh để chỉ nhóm đó được ôn.
+                        </p>
+                        @php
+                            $selectedProfessionIds = collect(old(
+                                'profession_ids',
+                                $blueprint->exists && $blueprint->relationLoaded('professions')
+                                    ? $blueprint->professions->pluck('id')->all()
+                                    : [],
+                            ))->map(fn ($id) => (int) $id)->all();
+                        @endphp
+                        <div class="grid grid-cols-1 gap-1">
+                            @foreach ($professions as $profession)
+                                <label class="flex cursor-pointer items-center gap-2 rounded px-1 py-1 text-sm">
+                                    <input type="checkbox" name="profession_ids[]" value="{{ $profession->id }}"
+                                        @checked(in_array((int) $profession->id, $selectedProfessionIds, true))
+                                        class="size-4 rounded text-primary">
+                                    <span>{{ $profession->name }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                    </fieldset>
                 </div>
 
                 <div class="flex min-h-[20rem] flex-col p-5">

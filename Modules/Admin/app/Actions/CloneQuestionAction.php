@@ -88,6 +88,26 @@ final class CloneQuestionAction
                 $clone->tags()->sync($tagIds);
             }
 
+            $professionIds = collect($snapshot['profession_ids'] ?? [])
+                ->map(fn ($id): int => (int) $id)
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+            if ($professionIds !== []) {
+                $clone->professions()->sync($professionIds);
+            }
+
+            $blueprintIds = collect($snapshot['blueprint_ids'] ?? [])
+                ->map(fn ($id): int => (int) $id)
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+            if ($blueprintIds !== []) {
+                $clone->blueprints()->sync($blueprintIds);
+            }
+
             $this->syncOptionsFromSnapshot($clone, $snapshot);
 
             $clone->load('options', 'lessons');

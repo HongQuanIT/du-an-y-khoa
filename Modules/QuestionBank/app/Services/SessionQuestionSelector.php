@@ -10,18 +10,18 @@ use App\Support\TargetExams;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Modules\QuestionBank\Support\AdaptiveTrace;
+use Modules\Auth\Models\LearnerProfile;
 use Modules\Personalization\Models\Bookmark;
 use Modules\Personalization\Models\BookmarkFolderItem;
 use Modules\QuestionBank\Data\CreateSessionData;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionScopeType;
-use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Enums\SessionSource;
 use Modules\QuestionBank\Enums\UserQuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionStatus as UserQuestionStatusModel;
+use Modules\QuestionBank\Support\AdaptiveTrace;
 use Modules\QuestionBank\Support\QuestionFilterBuilder;
 use Modules\QuestionBank\Support\ServePublishedQuestion;
 
@@ -249,6 +249,7 @@ final class SessionQuestionSelector
             blueprintSectionId: $data->blueprintSectionId,
             coreClinicalTopicIds: $data->coreClinicalTopicIds,
             tagIds: $data->tagIds,
+            professionId: $this->learnerProfessionId($userId),
         );
 
         $incorrect = QuestionAttempt::query()
@@ -385,6 +386,17 @@ final class SessionQuestionSelector
             ->all();
     }
 
+    private function learnerProfessionId(?int $userId): ?int
+    {
+        if ($userId === null || $userId <= 0) {
+            return null;
+        }
+
+        $professionId = LearnerProfile::query()->where('user_id', $userId)->value('profession_id');
+
+        return $professionId === null ? null : (int) $professionId;
+    }
+
     /**
      * @param  Collection<int, string>  $picked
      * @param  array<int, int>  $topicIds
@@ -514,6 +526,7 @@ final class SessionQuestionSelector
             subjectIds: $subjectIds,
             lessonIds: $lessonIds,
             tagIds: $data->tagIds,
+            professionId: $this->learnerProfessionId($userId),
         );
 
         // Apply saved-only or specific folder filtering

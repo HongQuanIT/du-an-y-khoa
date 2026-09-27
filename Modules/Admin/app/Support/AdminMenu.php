@@ -53,7 +53,7 @@ final class AdminMenu
                 'match' => 'admin.users.*',
             ],
             [
-                'label' => 'Dữ liệu học viên',
+                'label' => 'Danh mục học viên',
                 'icon' => 'clinical_notes',
                 'route' => 'admin.institutions.index',
                 'permission' => 'learner_catalog.view',

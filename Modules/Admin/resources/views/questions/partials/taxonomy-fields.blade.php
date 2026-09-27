@@ -27,6 +27,43 @@
         'tag_ids',
         collect($selectedTags)->pluck('id')->all(),
     ))->map(fn ($id) => (int) $id)->unique()->values()->all();
+
+    $selectedProfessionIds = collect(old(
+        'profession_ids',
+        $question->exists && $question->relationLoaded('professions')
+            ? $question->professions->pluck('id')->all()
+            : [],
+    ))->map(fn ($id) => (int) $id)->unique()->values()->all();
+
+    $selectedBlueprintIds = collect(old(
+        'blueprint_ids',
+        $question->exists && $question->relationLoaded('blueprints')
+            ? $question->blueprints->pluck('id')->all()
+            : [],
+    ))->map(fn ($id) => (int) $id)->unique()->values()->all();
+
+    $suggestedBlueprintIds = collect($suggestedBlueprintIds ?? [])->map(fn ($id) => (int) $id)->all();
+
+    $professionCatalog = collect($classificationProfessions ?? [])->map(fn ($profession) => [
+        'id' => (int) $profession->id,
+        'name' => $profession->name,
+    ])->values()->all();
+
+    $blueprintCatalog = collect($classificationBlueprints ?? [])->map(fn ($blueprintOption) => [
+        'id' => (int) $blueprintOption->id,
+        'name' => $blueprintOption->name,
+        'suggested' => in_array((int) $blueprintOption->id, $suggestedBlueprintIds, true),
+    ])->values()->all();
+
+    $selectedProfessions = collect($professionCatalog)
+        ->filter(fn (array $profession) => in_array($profession['id'], $selectedProfessionIds, true))
+        ->keyBy('id')
+        ->all();
+
+    $selectedBlueprints = collect($blueprintCatalog)
+        ->filter(fn (array $blueprintOption) => in_array($blueprintOption['id'], $selectedBlueprintIds, true))
+        ->keyBy('id')
+        ->all();
 @endphp
 
 <div class="space-y-4 border-t border-outline-variant pt-3"
@@ -35,6 +72,12 @@
          selectedLessonIds: @js($selectedLessonIds),
          selectedTags: @js(collect($selectedTags)->keyBy('id')->all()),
          selectedTagIds: @js($selectedTagIds),
+         professionCatalog: @js($professionCatalog),
+         selectedProfessions: @js((object) $selectedProfessions),
+         selectedProfessionIds: @js($selectedProfessionIds),
+         blueprintCatalog: @js($blueprintCatalog),
+         selectedBlueprints: @js((object) $selectedBlueprints),
+         selectedBlueprintIds: @js($selectedBlueprintIds),
          urls: {
              organSystems: @js(route(request()->routeIs('editor.*') ? 'editor.taxonomy.lookups.organ-systems' : 'admin.taxonomy.lookups.organ-systems')),
              subjects: @js(route(request()->routeIs('editor.*') ? 'editor.taxonomy.lookups.subjects' : 'admin.taxonomy.lookups.subjects')),
@@ -119,6 +162,69 @@
     </div>
 
     <div>
+        <label class="mb-1 block text-xs font-semibold text-on-surface-variant">Đối tượng</label>
+        <p class="mb-2 text-[11px] leading-4 text-on-surface-variant">
+            Một câu có thể dành cho nhiều đối tượng.
+        </p>
+        <input type="search" x-model="professionSearch" @input.debounce.300ms="searchProfessions()"
+               placeholder="Tìm chức danh (bác sĩ, điều dưỡng…)"
+               class="mb-2 h-10 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm">
+        <div x-show="professionResults.length > 0" x-cloak class="max-h-28 space-y-1 overflow-y-auto">
+            <template x-for="item in professionResults" :key="'profession-result-'+item.id">
+                <label class="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm hover:bg-surface-container-low">
+                    <input type="checkbox" :checked="selectedProfessionIds.includes(item.id)"
+                           @change="toggleProfession(item)" class="size-4 rounded text-primary">
+                    <span x-text="item.name"></span>
+                </label>
+            </template>
+        </div>
+        <div class="mt-2 flex flex-wrap gap-1.5">
+            <template x-for="id in selectedProfessionIds" :key="'profession-chip-'+id">
+                <span class="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+                    <span x-text="selectedProfessions[id]?.name || ('#'+id)"></span>
+                    <button type="button" @click="removeProfession(id)" class="material-symbols-outlined text-[14px]">close</button>
+                </span>
+            </template>
+        </div>
+        <template x-for="id in selectedProfessionIds" :key="'profession-'+id">
+            <input type="hidden" name="profession_ids[]" :value="id">
+        </template>
+    </div>
+
+    <div>
+        <label class="mb-1 block text-xs font-semibold text-on-surface-variant">Kỳ thi</label>
+        <p class="mb-2 text-[11px] leading-4 text-on-surface-variant">
+            Chỉ câu được chọn mới vào pool khi học viên ôn kỳ thi đó. Bài học không kéo theo mọi câu.
+        </p>
+        <input type="search" x-model="blueprintSearch" @input.debounce.300ms="searchBlueprints()"
+               placeholder="Tìm kỳ thi…"
+               class="mb-2 h-10 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm">
+        <div x-show="blueprintResults.length > 0" x-cloak class="max-h-28 space-y-1 overflow-y-auto">
+            <template x-for="item in blueprintResults" :key="'blueprint-result-'+item.id">
+                <label class="flex cursor-pointer items-start gap-2 rounded px-2 py-1 text-sm hover:bg-surface-container-low">
+                    <input type="checkbox" :checked="selectedBlueprintIds.includes(item.id)"
+                           @change="toggleBlueprint(item)" class="mt-0.5 size-4 rounded text-primary">
+                    <span class="min-w-0">
+                        <span class="block" x-text="item.name"></span>
+                        <span class="block text-[11px] text-on-surface-variant" x-show="item.suggested">Gợi ý vì bài học đang nằm trong ma trận này</span>
+                    </span>
+                </label>
+            </template>
+        </div>
+        <div class="mt-2 flex flex-wrap gap-1.5">
+            <template x-for="id in selectedBlueprintIds" :key="'blueprint-chip-'+id">
+                <span class="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+                    <span x-text="selectedBlueprints[id]?.name || ('#'+id)"></span>
+                    <button type="button" @click="removeBlueprint(id)" class="material-symbols-outlined text-[14px]">close</button>
+                </span>
+            </template>
+        </div>
+        <template x-for="id in selectedBlueprintIds" :key="'blueprint-'+id">
+            <input type="hidden" name="blueprint_ids[]" :value="id">
+        </template>
+    </div>
+
+    <div>
         <label class="mb-1 block text-xs font-semibold text-on-surface-variant">Thẻ</label>
         <input type="search" x-model="tagSearch" @input.debounce.300ms="searchTags()"
                placeholder="Tìm thẻ (ECG, cấp cứu…)"
@@ -159,6 +265,10 @@
             lessonLookupError: '',
             tagSearch: '',
             tagResults: [],
+            professionSearch: '',
+            professionResults: [],
+            blueprintSearch: '',
+            blueprintResults: [],
             notifyLessonsChanged() {
                 this.$nextTick(() => {
                     this.$root.closest('form')?.dispatchEvent(new CustomEvent('question-lessons-changed', {
@@ -266,6 +376,42 @@
             removeTag(id) {
                 this.selectedTagIds = this.selectedTagIds.filter(x => x !== id);
                 delete this.selectedTags[id];
+            },
+            searchProfessions() {
+                this.professionResults = this.filterCatalog(this.professionCatalog, this.professionSearch);
+            },
+            toggleProfession(item) {
+                this.toggleCatalogItem(item, 'selectedProfessionIds', 'selectedProfessions');
+            },
+            removeProfession(id) {
+                this.removeCatalogItem(id, 'selectedProfessionIds', 'selectedProfessions');
+            },
+            searchBlueprints() {
+                this.blueprintResults = this.filterCatalog(this.blueprintCatalog, this.blueprintSearch);
+            },
+            toggleBlueprint(item) {
+                this.toggleCatalogItem(item, 'selectedBlueprintIds', 'selectedBlueprints');
+            },
+            removeBlueprint(id) {
+                this.removeCatalogItem(id, 'selectedBlueprintIds', 'selectedBlueprints');
+            },
+            filterCatalog(catalog, query) {
+                const q = query.trim().toLowerCase();
+                if (q.length < 1) return [];
+                return (catalog || []).filter(item => (item.name || '').toLowerCase().includes(q));
+            },
+            toggleCatalogItem(item, idsKey, itemsKey) {
+                const idx = this[idsKey].indexOf(item.id);
+                if (idx >= 0) {
+                    this.removeCatalogItem(item.id, idsKey, itemsKey);
+                } else {
+                    this[idsKey].push(item.id);
+                    this[itemsKey][item.id] = item;
+                }
+            },
+            removeCatalogItem(id, idsKey, itemsKey) {
+                this[idsKey] = this[idsKey].filter(x => x !== id);
+                delete this[itemsKey][id];
             },
         };
     }

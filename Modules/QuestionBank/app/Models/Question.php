@@ -20,6 +20,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Scout\Searchable;
+use Modules\Auth\Models\Profession;
 use Modules\QuestionBank\Database\Factories\QuestionFactory;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\InstructorReviewDecision;
@@ -330,6 +331,18 @@ class Question extends Model
     public function tags(): BelongsToMany
     {
         return $this->belongsToMany(Tag::class, 'question_tags')->withTimestamps();
+    }
+
+    /** @return BelongsToMany<Profession, $this> */
+    public function professions(): BelongsToMany
+    {
+        return $this->belongsToMany(Profession::class, 'question_professions')->withTimestamps();
+    }
+
+    /** @return BelongsToMany<Blueprint, $this> */
+    public function blueprints(): BelongsToMany
+    {
+        return $this->belongsToMany(Blueprint::class, 'question_blueprints')->withTimestamps();
     }
 
     /** @return HasMany<QuestionHint, $this> */

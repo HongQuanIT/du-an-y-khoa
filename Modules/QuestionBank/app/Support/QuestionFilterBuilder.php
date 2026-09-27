@@ -19,9 +19,9 @@ use Modules\QuestionBank\Models\Question;
  * lesson_subject / lesson_organ_system. Multiple axes AND together;
  * multiple values within one axis OR together.
  *
- * Blueprint / core clinical topics are a separate exam matrix projected onto
- * lessons via core_topic_lessons and/or tags via core_topic_tags — questions
- * never require a direct question↔CCT pivot.
+ * Blueprint membership is explicit on question_blueprints. A selected kỳ thi
+ * does not pull every question of a mapped lesson. Section and core-topic
+ * filters still narrow through mapped lessons and tags.
  */
 final class QuestionFilterBuilder
 {
@@ -31,6 +31,7 @@ final class QuestionFilterBuilder
      * @param  list<int>  $subjectIds
      * @param  list<int>  $lessonIds
      * @param  list<int>  $tagIds
+     * @param  int|null  $professionId  Learner chức danh. Null skips the filter.
      */
     public function apply(
         Builder $query,
@@ -42,6 +43,7 @@ final class QuestionFilterBuilder
         array $lessonIds = [],
         array $tagIds = [],
         ?string $difficulty = null,
+        ?int $professionId = null,
     ): Builder {
         if ($this->hasBlueprintFilter($blueprintId, $blueprintSectionId, $coreClinicalTopicIds)) {
             $this->applyBlueprintViaMapping(
@@ -76,7 +78,19 @@ final class QuestionFilterBuilder
             $query->where('difficulty', $difficulty);
         }
 
-        return $query;
+        return $this->applyProfession($query, $professionId);
+    }
+
+    public function applyProfession(Builder $query, ?int $professionId): Builder
+    {
+        if ($professionId === null || $professionId <= 0) {
+            return $query;
+        }
+
+        return $query->whereHas(
+            'professions',
+            fn (Builder $professions) => $professions->where('professions.id', $professionId),
+        );
     }
 
     /**
@@ -497,13 +511,24 @@ final class QuestionFilterBuilder
         ?int $blueprintSectionId,
         array $coreClinicalTopicIds,
     ): Builder {
+        if ($blueprintId !== null) {
+            $query->whereHas(
+                'blueprints',
+                fn (Builder $blueprints) => $blueprints->where('blueprints.id', $blueprintId),
+            );
+        }
+
+        if ($blueprintSectionId === null && $coreClinicalTopicIds === []) {
+            return $blueprintId !== null ? $query : $query->whereRaw('0 = 1');
+        }
+
         $mappedLessons = $this->mappedLessonIdsForBlueprint(
-            $blueprintId,
+            null,
             $blueprintSectionId,
             $coreClinicalTopicIds,
         );
         $mappedTags = $this->mappedTagIdsForBlueprint(
-            $blueprintId,
+            null,
             $blueprintSectionId,
             $coreClinicalTopicIds,
         );

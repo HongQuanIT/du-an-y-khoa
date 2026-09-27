@@ -300,7 +300,7 @@ final class PermissionCatalog
             'user' => 'Người dùng',
             'learner_profile' => 'Hồ sơ học viên',
             'user_session' => 'Phiên đăng nhập',
-            'learner_catalog' => 'Dữ liệu học viên',
+            'learner_catalog' => 'Danh mục học viên',
             'role' => 'Vai trò',
             'permission', 'role_permission' => 'Quyền hạn',
             'question', 'editor_question' => 'Câu hỏi',
