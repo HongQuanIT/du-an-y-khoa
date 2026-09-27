@@ -202,6 +202,13 @@ final class AdminMenu
                 'match' => 'admin.settings.*',
             ],
             [
+                'label' => 'Log thích ứng',
+                'icon' => 'insights',
+                'route' => 'admin.adaptive-briefing',
+                'permission' => null,
+                'match' => 'admin.adaptive-briefing',
+            ],
+            [
                 'label' => 'Audit',
                 'icon' => 'history',
                 'route' => 'admin.audit.index',

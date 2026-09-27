@@ -2,6 +2,12 @@
 
 ## 2026-09-27
 
+### Ops — Menu log thích ứng
+
+- Sidebar admin có mục «Log thích ứng», mở `/admin/adaptive-briefing`.
+- Trang log có nút xóa toàn bộ file `storage/logs/adaptive.log`.
+- Công thức «Tránh lặp»: trong 2 ngày, câu ở phiên mới nhất nhân 0,10; câu ở phiên trước đó nhân 0,30; đủ 2 phiên mới hoặc lần chọn đã quá 2 ngày thì nhân 1,00.
+
 ### Feat — Phân loại câu hỏi theo chức danh và kỳ thi
 
 - Câu hỏi gắn trực tiếp với chức danh học viên và blueprint, không còn dùng thẻ cho hai trục này.

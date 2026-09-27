@@ -427,8 +427,8 @@ final class AdaptiveSessionBriefing
 
         $cooldown = (float) ($row['cooldown'] ?? 1);
         $hold = match (true) {
-            $cooldown <= 0.15 => ' Câu vừa xuất hiện ở phiên liền trước, nên cơ hội được chọn lại rất thấp.',
-            $cooldown <= 0.35 => ' Câu vừa được đưa vào phiên trong hai ngày qua, nên bị giảm cơ hội chọn lại.',
+            $cooldown <= 0.15 => ' Trong vòng hai ngày câu nằm trong phiên mới nhất, nên cơ hội được chọn lại rất thấp.',
+            $cooldown <= 0.35 => ' Trong vòng hai ngày câu không nằm ở phiên mới nhất, nên bị giảm cơ hội chọn lại.',
             default => '',
         };
 
@@ -700,7 +700,7 @@ final class AdaptiveSessionBriefing
             ['name' => 'Độ yếu', 'expr' => '(số lần sai + 1) / (số lần đúng + số lần sai + 2)'],
             ['name' => 'Mức nhớ', 'expr' => '1 − e^(− số ngày chưa gặp / 20)'],
             ['name' => 'Điểm cần ôn', 'expr' => $base],
-            ['name' => 'Tránh lặp', 'expr' => 'Đúng 1 phiên mới kể từ lần chọn gần nhất thì nhân 0,10. Chưa có phiên mới và lần chọn trong vòng 2 ngày thì nhân 0,30. Từ 2 phiên mới, hoặc lần chọn đã hơn 2 ngày, thì nhân 1,00.'],
+            ['name' => 'Tránh lặp', 'expr' => 'Trong vòng 2 ngày, phiên mới nhất có câu đó — vừa chọn sáng nay, chưa mở phiên sau: nhân 0,10. Trong vòng 2 ngày, câu không ở phiên mới nhất — hôm qua vừa chọn, hôm nay đã mở một phiên khác: nhân 0,30. Đã mở thêm 2 phiên kể từ lần chọn, hoặc chưa mở phiên nào nhưng lần chọn đã quá 2 ngày: nhân 1,00.'],
             ['name' => 'Điểm ưu tiên', 'expr' => 'số lớn hơn giữa 0,01 và (điểm cần ôn × tránh lặp)'],
             ['name' => '% suất vào nhóm ôn', 'expr' => $share],
         ];

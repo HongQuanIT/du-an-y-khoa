@@ -6,8 +6,22 @@
                 <span class="material-symbols-outlined text-[16px]">schedule</span>
                 Tải lại trang sau khi tạo phiên mới
             </span>
+            @if ($log_ready)
+                <form method="post" action="{{ route('admin.adaptive-briefing.destroy') }}"
+                    onsubmit="return confirm('Xóa toàn bộ log thích ứng? Không khôi phục được.')">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit"
+                        class="inline-flex items-center gap-1.5 rounded-full border border-error/40 bg-surface px-3 py-1.5 font-label-sm font-semibold text-error hover:bg-error/10">
+                        <span class="material-symbols-outlined text-[16px]">delete</span>
+                        Xóa log
+                    </button>
+                </form>
+            @endif
         </x-slot:actions>
     </x-admin.page-header>
+
+    <x-admin.flash />
 
     @if (! $log_ready)
         <div class="rounded-xl border border-dashed border-outline-variant bg-surface px-6 py-12 text-center">

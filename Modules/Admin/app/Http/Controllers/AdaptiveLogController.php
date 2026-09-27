@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Admin\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 use Modules\QuestionBank\Services\AdaptiveSessionBriefing;
 
@@ -21,5 +22,19 @@ final class AdaptiveLogController extends Controller
             'sessions' => $page['sessions'],
             'log_ready' => $briefing->logExists(),
         ]);
+    }
+
+    public function destroy(): RedirectResponse
+    {
+        $path = (string) config('logging.channels.adaptive.path');
+        if ($path !== '' && is_file($path) && ! unlink($path)) {
+            return redirect()
+                ->route('admin.adaptive-briefing')
+                ->withErrors(['log' => 'Không xóa được file log thích ứng.']);
+        }
+
+        return redirect()
+            ->route('admin.adaptive-briefing')
+            ->with('status', 'Đã xóa toàn bộ log thích ứng.');
     }
 }

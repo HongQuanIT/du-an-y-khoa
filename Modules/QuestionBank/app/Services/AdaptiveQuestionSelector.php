@@ -496,37 +496,28 @@ final class AdaptiveQuestionSelector
     }
 
     /**
-     * CooldownFactor: vừa đưa vào session gần đây → giảm mạnh.
+     * CooldownFactor: câu vừa nằm trong phiên gần nhất thì giảm mạnh hơn.
      *
-     *   sessions_since_served | last_served age | factor
-     *   ≥2                    | bất kỳ          | 1.00
-     *   1                     | bất kỳ          | 0.10
-     *   0 (chưa có session mới) + served ≤2 ngày | 0.30
-     *   0 + served >2 ngày (im lặng lâu)         | 1.00  ← tránh phạt oan
-     *   chưa từng serve                          | 1.00
+     *   Trong vòng 2 ngày, phiên mới nhất có câu đó | 0.10
+     *   Trong vòng 2 ngày, câu không ở phiên mới nhất | 0.30
+     *   Đã có ≥2 phiên sau lần chọn, hoặc quá 2 ngày | 1.00
+     *   Chưa từng serve | 1.00
      */
     private function cooldownFactor(
         int $sessionsSinceServed,
         ?CarbonImmutable $lastServedAt,
         CarbonImmutable $now,
     ): float {
-        if ($sessionsSinceServed >= 2 || $sessionsSinceServed === PHP_INT_MAX) {
-            return 1.0;
-        }
-
-        if ($sessionsSinceServed === 1) {
-            return 0.10;
-        }
-
-        // sessionsSinceServed === 0: chưa có session nào sau lần serve.
-        if ($lastServedAt === null) {
+        if ($sessionsSinceServed === PHP_INT_MAX || $lastServedAt === null || $sessionsSinceServed >= 2) {
             return 1.0;
         }
 
         $daysSinceServed = abs((float) $now->diffInDays($lastServedAt));
+        if ($daysSinceServed > 2.0) {
+            return 1.0;
+        }
 
-        // Cửa sổ cooldown theo thời gian khi user chưa mở session mới.
-        return $daysSinceServed <= 2.0 ? 0.30 : 1.0;
+        return $sessionsSinceServed === 0 ? 0.10 : 0.30;
     }
 
     /**

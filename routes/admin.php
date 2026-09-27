@@ -83,7 +83,8 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
 
     Route::middleware(['staff.2fa', 'admin.implied_view'])->group(function (): void {
         Route::get('/', DashboardController::class)->name('dashboard');
-        Route::get('/adaptive-briefing', AdaptiveLogController::class)->name('adaptive-briefing');
+        Route::get('/adaptive-briefing', [AdaptiveLogController::class, '__invoke'])->name('adaptive-briefing');
+        Route::delete('/adaptive-briefing', [AdaptiveLogController::class, 'destroy'])->name('adaptive-briefing.destroy');
 
         Route::group([], function (): void {
             Route::get('/learner-data/institutions', [InstitutionController::class, 'index'])->middleware('permission:learner_catalog.view')->name('institutions.index');

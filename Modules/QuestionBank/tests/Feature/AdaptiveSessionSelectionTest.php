@@ -23,6 +23,7 @@ use Modules\QuestionBank\Models\CoreClinicalTopic;
 use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionOption;
+use Modules\QuestionBank\Models\QuestionSession;
 use Modules\QuestionBank\Models\QuestionStatus;
 use Modules\QuestionBank\Services\AdaptiveQuestionSelector;
 use Spatie\Permission\Models\Role as RoleModel;
@@ -185,6 +186,61 @@ final class AdaptiveSessionSelectionTest extends TestCase
         $this->assertGreaterThanOrEqual(24, $staleWins, "retention should prefer stale strong (wins={$staleWins}/40)");
     }
 
+    public function test_repeat_penalty_depends_on_the_newest_session_inside_two_days(): void
+    {
+        $newest = $this->seedQuestion('Newest session');
+        $previous = $this->seedQuestion('Previous session');
+        $aged = $this->seedQuestion('Older than two days');
+        $released = $this->seedQuestion('Two later sessions');
+
+        $this->recordServe($newest, now()->subHour());
+        $this->recordServe($previous, now()->subHours(20));
+        $this->recordServe($aged, now()->subDays(10));
+        $this->recordServe($released, now()->subHours(26));
+
+        QuestionSession::factory()->create([
+            'user_id' => $this->user->id,
+            'total' => 1,
+            'question_ids' => [],
+            'created_at' => now()->subHours(25),
+        ]);
+        QuestionSession::factory()->create([
+            'user_id' => $this->user->id,
+            'total' => 1,
+            'question_ids' => [],
+            'created_at' => now()->subHours(5),
+        ]);
+
+        $cooldowns = [];
+        Log::listen(function (MessageLogged $event) use (&$cooldowns): void {
+            if ($event->message !== '[adaptive] review_scores') {
+                return;
+            }
+
+            foreach ($event->context['top'] ?? [] as $row) {
+                $cooldowns[(string) $row['question_id']] = $row['cooldown'];
+            }
+        });
+
+        app(AdaptiveQuestionSelector::class)->pick(
+            (int) $this->user->id,
+            1,
+            true,
+            new CreateSessionData(
+                mode: SessionMode::Study,
+                source: SessionSource::WeakTopics,
+                count: 1,
+                blueprintId: $this->blueprint->id,
+                adaptiveFocus: 'balanced',
+            ),
+        );
+
+        $this->assertSame(0.1, $cooldowns[(string) $newest->getKey()]);
+        $this->assertSame(0.3, $cooldowns[(string) $previous->getKey()]);
+        $this->assertSame(1.0, $cooldowns[(string) $aged->getKey()]);
+        $this->assertSame(1.0, $cooldowns[(string) $released->getKey()]);
+    }
+
     public function test_adaptive_session_store_logs_and_returns_requested_count(): void
     {
         $steps = [];
@@ -208,7 +264,7 @@ final class AdaptiveSessionSelectionTest extends TestCase
             ])
             ->assertRedirect();
 
-        $session = \Modules\QuestionBank\Models\QuestionSession::query()->latest('id')->firstOrFail();
+        $session = QuestionSession::query()->latest('id')->firstOrFail();
         $this->assertSame(2, $session->total);
         $this->assertSame('balanced', $session->filters['adaptive_focus']);
         $this->assertCount(2, $session->question_ids);
@@ -241,5 +297,21 @@ final class AdaptiveSessionSelectionTest extends TestCase
         ]);
 
         return $question;
+    }
+
+    private function recordServe(Question $question, \DateTimeInterface $servedAt): void
+    {
+        QuestionStatus::query()->create([
+            'user_id' => $this->user->id,
+            'question_id' => $question->getKey(),
+            'status' => UserQuestionStatus::Incorrect,
+            'attempts_count' => 4,
+            'correct_count' => 1,
+            'wrong_count' => 3,
+            'omitted_count' => 0,
+            'last_attempt_at' => $servedAt,
+            'last_seen_at' => $servedAt,
+            'last_served_at' => $servedAt,
+        ]);
     }
 }

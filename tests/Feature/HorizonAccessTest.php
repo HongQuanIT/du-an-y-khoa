@@ -33,6 +33,7 @@ final class HorizonAccessTest extends TestCase
 
         $labels = collect(AdminMenu::for($admin))->pluck('label');
         $this->assertTrue($labels->contains('Horizon'));
+        $this->assertTrue($labels->contains('Log thích ứng'));
 
         $this->assertTrue(Gate::forUser($admin)->check('viewHorizon'));
 
@@ -40,7 +41,9 @@ final class HorizonAccessTest extends TestCase
             ->get(route('admin.dashboard'))
             ->assertOk()
             ->assertSee('Horizon', false)
-            ->assertSee('/horizon', false);
+            ->assertSee('/horizon', false)
+            ->assertSee('Log thích ứng', false)
+            ->assertSee('/admin/adaptive-briefing', false);
     }
 
     public function test_student_and_instructor_cannot_view_horizon(): void
