@@ -12,6 +12,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\SessionMode;
 use Modules\QuestionBank\Enums\SessionStatus;
+use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionSession;
 use Modules\QuestionBank\Models\Lesson;
 use Modules\Search\Actions\SearchScopeAction;
@@ -42,12 +43,21 @@ final class QuestionBankPageController extends Controller
                 'SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as completed_sessions',
                 [SessionStatus::Completed->value],
             )
-            ->selectRaw('COALESCE(SUM(answered_count), 0) as answered_questions')
+            ->selectRaw('COALESCE(SUM(answered_count), 0) as answer_attempts')
             ->selectRaw('COALESCE(SUM(correct_count), 0) as correct_answers')
             ->first();
 
-        $answeredQuestions = (int) ($aggregate?->getAttribute('answered_questions') ?? 0);
+        $answerAttempts = (int) ($aggregate?->getAttribute('answer_attempts') ?? 0);
         $correctAnswers = (int) ($aggregate?->getAttribute('correct_answers') ?? 0);
+        $answeredQuestions = (int) QuestionAttempt::query()
+            ->where('user_id', $userId)
+            ->whereNotNull('answered_at')
+            ->whereIn(
+                'session_id',
+                QuestionSession::query()->where('user_id', $userId)->select('id'),
+            )
+            ->distinct()
+            ->count('question_id');
 
         $history = QuestionSession::query()
             ->where('user_id', $userId)
@@ -63,8 +73,8 @@ final class QuestionBankPageController extends Controller
             'stats' => [
                 'total_sessions' => (int) ($aggregate?->getAttribute('total_sessions') ?? 0),
                 'completed_sessions' => (int) ($aggregate?->getAttribute('completed_sessions') ?? 0),
-                'accuracy' => $answeredQuestions > 0
-                    ? round($correctAnswers / $answeredQuestions * 100, 1)
+                'accuracy' => $answerAttempts > 0
+                    ? round($correctAnswers / $answerAttempts * 100, 1)
                     : 0.0,
                 'answered_questions' => $answeredQuestions,
             ],

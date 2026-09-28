@@ -76,7 +76,7 @@
         [
             'label' => 'Câu hỏi đã làm',
             'value' => number_format($stats['answered_questions'], 0, ',', '.'),
-            'hint' => 'Tổng lượt đã trả lời',
+            'hint' => 'Số câu đã làm trong ngân hàng câu hỏi',
             'icon' => 'quiz',
             'iconWrap' => 'bg-tertiary/10 text-tertiary',
         ],
@@ -330,33 +330,34 @@
                     <table class="w-full border-collapse text-left">
                         <thead>
                             <tr class="border-b border-outline-variant bg-surface-container-lowest text-on-surface-variant">
-                                <th class="px-6 py-4 text-label-md font-bold whitespace-nowrap">Ngày tạo</th>
-                                <th class="px-6 py-4 text-label-md font-bold">Phiên luyện</th>
-                                <th class="px-6 py-4 text-center text-label-md font-bold">Chế độ</th>
-                                <th class="px-6 py-4 text-center text-label-md font-bold whitespace-nowrap">Tiến độ</th>
-                                <th class="px-6 py-4 text-label-md font-bold whitespace-nowrap">Tỉ lệ đúng</th>
-                                <th class="px-6 py-4 text-label-md font-bold">Trạng thái</th>
-                                <th class="px-6 py-4 text-right text-label-md font-bold">Thao tác</th>
+                                <th class="px-4 py-3.5 text-label-md font-bold whitespace-nowrap">Ngày tạo</th>
+                                <th class="px-4 py-3.5 text-label-md font-bold">Phiên luyện</th>
+                                <th class="px-3 py-3.5 text-center text-label-md font-bold whitespace-nowrap">Chế độ</th>
+                                <th class="px-4 py-3.5 text-center text-label-md font-bold whitespace-nowrap">Tiến độ</th>
+                                <th class="px-4 py-3.5 text-label-md font-bold whitespace-nowrap">Tỉ lệ đúng</th>
+                                <th class="px-4 py-3.5 text-label-md font-bold whitespace-nowrap">Trạng thái</th>
+                                <th class="px-4 py-3.5 text-right text-label-md font-bold whitespace-nowrap">Thao tác</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-outline-variant">
                             @foreach ($sessions as $session)
                                 @php($row = $presentSession($session))
                                 <tr class="transition-colors hover:bg-surface-container-lowest">
-                                    <td class="px-6 py-5 text-sm whitespace-nowrap text-on-surface-variant">{{ $row['date'] }}</td>
-                                    <td class="min-w-56 px-6 py-5">
+                                    <td class="px-4 py-4 text-sm whitespace-nowrap text-on-surface-variant">{{ $row['date'] }}</td>
+                                    <td class="min-w-48 px-4 py-4">
                                         <p class="text-sm font-bold text-on-surface">{{ $row['title'] }}</p>
                                         <p class="mt-1 text-[11px] leading-4 text-on-surface-variant">{{ $row['subtitle'] }}</p>
                                     </td>
-                                    <td class="px-6 py-5 text-center">
-                                        <span class="rounded-lg px-2.5 py-1 text-[10px] font-bold tracking-wider uppercase {{ $row['modeClass'] }}">
+                                    <td class="px-3 py-4 text-center whitespace-nowrap">
+                                        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs leading-5 font-semibold whitespace-nowrap {{ $row['modeClass'] }}">
+                                            <span class="size-1.5 shrink-0 rounded-full bg-current"></span>
                                             {{ $row['modeLabel'] }}
                                         </span>
                                     </td>
-                                    <td class="px-6 py-5 text-center text-sm font-bold whitespace-nowrap">
+                                    <td class="px-4 py-4 text-center text-sm font-bold whitespace-nowrap">
                                         {{ $row['answered'] }} / {{ $row['total'] }}
                                     </td>
-                                    <td class="min-w-40 px-6 py-5">
+                                    <td class="min-w-36 px-4 py-4">
                                         <div class="flex items-center gap-3">
                                             <div class="h-2 min-w-20 flex-1 overflow-hidden rounded-full bg-surface-container-high">
                                                 <div class="h-full rounded-full {{ $row['barClass'] }}"
@@ -365,15 +366,15 @@
                                             <span class="text-sm font-bold text-on-surface">{{ $row['accuracyLabel'] }}</span>
                                         </div>
                                     </td>
-                                    <td class="px-6 py-5">
+                                    <td class="px-4 py-4 whitespace-nowrap">
                                         <span class="flex items-center gap-2 text-sm font-bold whitespace-nowrap {{ $row['statusClass'] }}">
                                             <span class="size-2 rounded-full {{ $row['dotClass'] }}"></span>
                                             {{ $row['statusLabel'] }}
                                         </span>
                                     </td>
-                                    <td class="px-6 py-5">
-                                        <div class="flex min-w-44 items-start justify-end gap-2">
-                                            <div class="flex min-w-32 flex-col items-stretch gap-2">
+                                    <td class="px-4 py-4">
+                                        <div class="flex items-start justify-end gap-1.5">
+                                            <div class="flex min-w-28 flex-col items-stretch gap-1.5">
                                                 @if ($row['status'] === 'active')
                                                     @can('session.start')
                                                     <a href="{{ route('qbank.session', $session) }}"
@@ -466,7 +467,8 @@
                                     <p class="mt-1 text-[11px] leading-4 text-on-surface-variant">{{ $row['subtitle'] }}</p>
                                 </div>
                                 <div class="flex shrink-0 items-center gap-1">
-                                    <span class="rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase {{ $row['modeClass'] }}">
+                                    <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs leading-5 font-semibold whitespace-nowrap {{ $row['modeClass'] }}">
+                                        <span class="size-1.5 shrink-0 rounded-full bg-current"></span>
                                         {{ $row['modeLabel'] }}
                                     </span>
                                     <div class="relative" @click.outside="if (openMenu === @js('mobile-'.(string) $session->getKey())) openMenu = null">

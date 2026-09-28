@@ -1182,6 +1182,59 @@ final class QuestionBankFlowTest extends TestCase
             ->assertViewHas('sessions', fn ($sessions): bool => $sessions->total() === 0);
     }
 
+    public function test_history_answered_question_stat_counts_each_question_once(): void
+    {
+        $repeated = $this->createQuestion($this->topic, true, Difficulty::Easy, 'Câu làm lại');
+        $once = $this->createQuestion($this->topic, true, Difficulty::Easy, 'Câu làm một lần');
+        $first = QuestionSession::create([
+            'user_id' => $this->user->id,
+            'mode' => SessionMode::Study,
+            'status' => SessionStatus::Completed,
+            'source' => 'custom',
+            'question_ids' => [$repeated->getKey()],
+            'total' => 1,
+            'answered_count' => 1,
+            'correct_count' => 1,
+        ]);
+        $second = QuestionSession::create([
+            'user_id' => $this->user->id,
+            'mode' => SessionMode::Study,
+            'status' => SessionStatus::Completed,
+            'source' => 'custom',
+            'question_ids' => [$repeated->getKey(), $once->getKey()],
+            'total' => 2,
+            'answered_count' => 2,
+            'correct_count' => 1,
+        ]);
+
+        foreach ([$first, $second] as $session) {
+            QuestionAttempt::create([
+                'session_id' => $session->getKey(),
+                'user_id' => $this->user->id,
+                'question_id' => $repeated->getKey(),
+                'selected_option_ids' => [],
+                'is_correct' => true,
+                'answered_at' => now(),
+            ]);
+        }
+        QuestionAttempt::create([
+            'session_id' => $second->getKey(),
+            'user_id' => $this->user->id,
+            'question_id' => $once->getKey(),
+            'selected_option_ids' => [],
+            'is_correct' => false,
+            'answered_at' => now(),
+        ]);
+
+        $this->actingAs($this->user)
+            ->get(route('qbank.index'))
+            ->assertOk()
+            ->assertViewHas('stats', function (array $stats): bool {
+                return $stats['answered_questions'] === 2
+                    && $stats['accuracy'] === 66.7;
+            });
+    }
+
     public function test_history_menu_renames_repeats_selected_results_and_deletes_a_session(): void
     {
         $unanswered = $this->createQuestion($this->topic, true, Difficulty::Easy, 'Repeat unanswered');
