@@ -38,15 +38,19 @@
     @elseif ($catalog === 'professions')
         <label class="flex items-start gap-2 text-body-sm"><input type="checkbox" name="requires_education_stage" value="1" x-model="form.requires_education_stage" class="mt-0.5 size-4 rounded text-primary"><span>Yêu cầu học viên chọn năm học</span></label>
         <label class="flex items-start gap-2 text-body-sm"><input type="checkbox" name="defaults_to_graduated" value="1" x-model="form.defaults_to_graduated" class="mt-0.5 size-4 rounded text-primary"><span>Mặc định là đã tốt nghiệp</span></label>
-    @elseif ($catalog === 'education-stages')
-        <label class="flex items-start gap-2 text-body-sm"><input type="checkbox" name="is_graduated" value="1" x-model="form.is_graduated" class="mt-0.5 size-4 rounded text-primary"><span>Đây là trạng thái đã tốt nghiệp</span></label>
     @endif
 
     <div>
         <label for="catalog_sort_order" class="mb-2 block text-sm font-semibold text-on-surface">Thứ tự hiển thị</label>
         <input id="catalog_sort_order" type="number" name="sort_order" min="0" max="65535" x-model="form.sort_order" class="h-12 w-full rounded-xl border border-outline-variant bg-surface-container-low px-4 text-base">
     </div>
-    <label class="flex items-center gap-2 text-body-sm text-on-surface"><input type="checkbox" name="is_active" value="1" x-model="form.is_active" class="mt-0.5 size-4 rounded text-primary">Hiển thị cho học viên</label>
+    <div>
+        <label for="catalog_status" class="mb-2 block text-sm font-semibold text-on-surface">Trạng thái</label>
+        <select id="catalog_status" name="is_active" x-model.number="form.is_active" class="h-12 w-full rounded-xl border border-outline-variant bg-surface-container-low px-4 text-base">
+            <option value="1">Đang dùng</option>
+            <option value="0">Ngừng dùng</option>
+        </select>
+    </div>
     </div>
     <div class="flex items-center justify-end gap-3 border-t border-outline-variant px-5 py-4">
         <button type="button" @click="closePanel()" class="h-11 rounded-lg px-4 text-sm font-semibold text-on-surface-variant hover:bg-surface-container-low">Hủy</button>

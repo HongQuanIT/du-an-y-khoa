@@ -159,7 +159,6 @@ final class LearnerCatalogController extends Controller
             'education-stages' => [
                 ...$common,
                 'name' => ['required', 'string', 'max:80'],
-                'is_graduated' => ['nullable', 'boolean'],
             ],
             default => abort(404),
         };
@@ -171,9 +170,6 @@ final class LearnerCatalogController extends Controller
         if ($catalog === 'professions') {
             $data['requires_education_stage'] = $request->boolean('requires_education_stage');
             $data['defaults_to_graduated'] = $request->boolean('defaults_to_graduated');
-        }
-        if ($catalog === 'education-stages') {
-            $data['is_graduated'] = $request->boolean('is_graduated');
         }
 
         return $data;
