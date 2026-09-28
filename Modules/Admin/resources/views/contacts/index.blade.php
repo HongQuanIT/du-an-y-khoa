@@ -1,7 +1,11 @@
 @php
-    $statusTone = collect($statuses)->mapWithKeys(
+$statusTone = collect($statuses)->mapWithKeys(
         fn ($status) => [$status->value => $status->tone()]
     )->all();
+    $hasActiveFilters = filled($filters['q'])
+        || $filters['status'] !== []
+        || $filters['subject'] !== []
+        || $filters['assigned'] !== [];
 @endphp
 
 <x-layouts.admin title="Liên hệ">
@@ -10,7 +14,7 @@
 
     <x-admin.flash />
 
-    <div x-data="adminContactFilter()" x-init="init()" class="space-y-6">
+    <div x-data="adminContactFilter(@js($hasActiveFilters))" x-init="init()" class="space-y-6">
         {{-- Section KPI: cùng markup/CSS với tổng quan trang câu hỏi --}}
         <section id="contact-stats" aria-labelledby="heading-contact-stats">
             <div class="mb-3 flex items-center justify-between gap-3">
@@ -185,7 +189,9 @@
                 <div class="md:col-span-3">
                     <span class="mb-1.5 block text-sm font-medium text-transparent select-none" aria-hidden="true">&nbsp;</span>
                     <x-admin.filter-action-buttons reset-method="resetFilter" fill
-                        search-aria-label="Tìm kiếm liên hệ" reset-aria-label="Xoá bộ lọc liên hệ" />
+                        search-aria-label="Tìm kiếm liên hệ" reset-aria-label="Xoá bộ lọc liên hệ"
+                        reset-label="Xoá bộ lọc" reset-icon="restart_alt" reset-title="Xoá bộ lọc"
+                        show-reset-expression="hasAppliedFilters" reset-variant="text-danger" />
                 </div>
             </form>
         @endif
@@ -212,7 +218,7 @@
     </div>
 
     <script>
-        function adminContactFilter() {
+        function adminContactFilter(initialHasFilters = false) {
             return {
                 q: @js($filters['q']),
                 statuses: @js($filters['status']),
@@ -222,6 +228,7 @@
                 subjectOpen: false,
                 assignedOpen: false,
                 loading: false,
+                hasAppliedFilters: initialHasFilters,
 
                 statusLabel() {
                     if (this.statuses.length === 0) return 'Tất cả';
@@ -303,6 +310,7 @@
                     this.subjectOpen = false;
                     this.assignedOpen = false;
                     const url = this.buildQueryUrl();
+                    this.hasAppliedFilters = true;
                     this.fetchContacts(url);
                 },
 
@@ -314,6 +322,7 @@
                     this.statusOpen = false;
                     this.subjectOpen = false;
                     this.assignedOpen = false;
+                    this.hasAppliedFilters = false;
                     const url = @js(route('admin.contacts.index'));
                     this.fetchContacts(url);
                 },

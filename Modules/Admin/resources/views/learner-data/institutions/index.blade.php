@@ -18,7 +18,7 @@
 
     <form id="institution-filter-form" method="get" action="{{ route('admin.institutions.index') }}"
         role="search" aria-label="Tìm kiếm trường học"
-        x-data="adminInstitutionFilter()" @submit.prevent="applyFilters()"
+        x-data="adminInstitutionFilter(@js(filled($filters['q']) || $filters['country_id'] !== [] || $filters['administrative_unit_id'] !== [] || $filters['status'] !== []))" @submit.prevent="applyFilters()"
         class="mb-6 grid grid-cols-1 items-end gap-4 rounded-xl border border-outline-variant bg-surface p-4 md:grid-cols-12">
         <div class="md:col-span-3">
             <label for="institution-search-q" class="mb-1.5 block text-sm font-medium text-on-surface-variant">Tìm kiếm</label>
@@ -71,6 +71,11 @@
                 fill
                 search-aria-label="Tìm kiếm trường học"
                 reset-aria-label="Xoá bộ lọc trường học"
+                reset-label="Xoá bộ lọc"
+                reset-icon="restart_alt"
+                reset-title="Xoá bộ lọc"
+                show-reset-expression="hasAppliedFilters"
+                reset-variant="text-danger"
             />
         </div>
     </form>
@@ -178,7 +183,7 @@
         </div>
     </template>
     <script>
-        function adminInstitutionFilter() { return { loading: false, filterForm() { return document.getElementById('institution-filter-form'); }, async applyFilters() { const form = this.filterForm(); if (!form) return; const url = new URL(form.getAttribute('action'), window.location.origin); const params = new URLSearchParams(new FormData(form)); params.delete('page'); url.search = params.toString(); await this.fetchResults(url.toString()); }, async resetFilters(url) { this.filterForm()?.reset(); window.dispatchEvent(new CustomEvent('learner-catalog-filters-reset')); await this.fetchResults(url); }, async fetchResults(url) { this.loading = true; try { const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } }); if (!response.ok) throw new Error('Không thể tải danh sách'); const parsed = new DOMParser().parseFromString(await response.text(), 'text/html'); const next = parsed.getElementById('institution-results-region'); const current = document.getElementById('institution-results-region'); if (!next || !current) throw new Error('Không tìm thấy vùng kết quả'); current.replaceWith(next); window.history.pushState({}, '', url); this.bindPagination(); } catch (error) { console.error(error); alert('Có lỗi xảy ra khi tải danh sách. Vui lòng thử lại.'); } finally { this.loading = false; } }, bindPagination() { document.querySelectorAll('#institution-pagination a').forEach((link) => link.addEventListener('click', (event) => { event.preventDefault(); if (link.href) this.fetchResults(link.href); })); }, init() { this.bindPagination(); } }; }
+        function adminInstitutionFilter(initialHasFilters = false) { return { loading: false, hasAppliedFilters: initialHasFilters, filterForm() { return document.getElementById('institution-filter-form'); }, hasCurrentFilters() { const form = this.filterForm(); return form ? [...new FormData(form).entries()].some(([key, value]) => key !== 'page' && String(value).trim() !== '') : false; }, async applyFilters() { const form = this.filterForm(); if (!form) return; const url = new URL(form.getAttribute('action'), window.location.origin); const params = new URLSearchParams(new FormData(form)); params.delete('page'); url.search = params.toString(); await this.fetchResults(url.toString()); this.hasAppliedFilters = this.hasCurrentFilters(); }, async resetFilters(url) { this.filterForm()?.reset(); window.dispatchEvent(new CustomEvent('learner-catalog-filters-reset')); this.hasAppliedFilters = false; await this.fetchResults(url); }, async fetchResults(url) { this.loading = true; try { const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } }); if (!response.ok) throw new Error('Không thể tải danh sách'); const parsed = new DOMParser().parseFromString(await response.text(), 'text/html'); const next = parsed.getElementById('institution-results-region'); const current = document.getElementById('institution-results-region'); if (!next || !current) throw new Error('Không tìm thấy vùng kết quả'); current.replaceWith(next); window.history.pushState({}, '', url); this.bindPagination(); } catch (error) { console.error(error); alert('Có lỗi xảy ra khi tải danh sách. Vui lòng thử lại.'); } finally { this.loading = false; } }, bindPagination() { document.querySelectorAll('#institution-pagination a').forEach((link) => link.addEventListener('click', (event) => { event.preventDefault(); if (link.href) this.fetchResults(link.href); })); }, init() { this.bindPagination(); } }; }
     </script>
     </div>
 </x-layouts.admin>

@@ -1,5 +1,9 @@
+@php
+    $hasActiveFilters = filled($filters['q']) || $filters['status'] !== [];
+@endphp
+
 <x-layouts.admin title="CMS — Banner">
-    <div x-data="adminBannerFilter()" class="space-y-6">
+    <div x-data="adminBannerFilter(@js($hasActiveFilters))" class="space-y-6">
     @include('admin::cms._sub-nav')
 
     <x-admin.page-header title="Banner / Thông báo"
@@ -67,6 +71,11 @@
                 :reset-url="route(\App\Support\Auth\PortalRoute::content('cms.banners.index'))"
                 search-aria-label="Tìm kiếm banner"
                 reset-aria-label="Xoá bộ lọc banner"
+                reset-label="Xoá bộ lọc"
+                reset-icon="restart_alt"
+                reset-title="Xoá bộ lọc"
+                show-reset-expression="hasAppliedFilters"
+                reset-variant="text-danger"
             />
         </div>
     </form>
@@ -149,10 +158,18 @@
     </div>
 
     <script>
-        function adminBannerFilter() {
+        function adminBannerFilter(initialHasFilters = false) {
             return {
                 loading: false,
+                hasAppliedFilters: initialHasFilters,
                 filterForm() { return document.getElementById('banner-filter-form'); },
+                hasCurrentFilters() {
+                    const form = this.filterForm();
+
+                    return form
+                        ? [...new FormData(form).entries()].some(([key, value]) => key !== 'page' && String(value).trim() !== '')
+                        : false;
+                },
                 async applyFilters() {
                     const form = this.filterForm();
                     if (!form) return;
@@ -161,6 +178,7 @@
                     params.delete('page');
                     url.search = params.toString();
                     await this.fetchResults(url.toString());
+                    this.hasAppliedFilters = this.hasCurrentFilters();
                 },
                 async resetFilters(url) {
                     const form = this.filterForm();
@@ -168,6 +186,7 @@
                     const query = form?.querySelector('[name="q"]');
                     if (query) query.value = '';
                     window.dispatchEvent(new CustomEvent('banner-filters-reset'));
+                    this.hasAppliedFilters = false;
                     await this.fetchResults(url);
                 },
                 async fetchResults(url) {

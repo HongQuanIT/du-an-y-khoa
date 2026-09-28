@@ -1,5 +1,12 @@
+@php
+    $hasActiveFilters = filled($filters['q'])
+        || $filters['status'] !== []
+        || $filters['purpose'] !== []
+        || $filters['host_id'] !== [];
+@endphp
+
 <x-layouts.admin title="Lớp học">
-    <div x-data="adminClassroomFilter()" class="space-y-6">
+    <div x-data="adminClassroomFilter(@js($hasActiveFilters))" class="space-y-6">
     <x-admin.page-header title="Lớp học (giám sát)"
         description="Duyệt lớp giảng viên, xem live đang dạy, force-end hoặc lưu trữ khi cần." />
 
@@ -83,6 +90,11 @@
                 :reset-url="route('admin.classrooms.index')"
                 search-aria-label="Tìm kiếm lớp học"
                 reset-aria-label="Xoá bộ lọc lớp học"
+                reset-label="Xoá bộ lọc"
+                reset-icon="restart_alt"
+                reset-title="Xoá bộ lọc"
+                show-reset-expression="hasAppliedFilters"
+                reset-variant="text-danger"
             />
         </div>
     </form>
@@ -224,10 +236,18 @@
     </div>
 
     <script>
-        function adminClassroomFilter() {
+        function adminClassroomFilter(initialHasFilters = false) {
             return {
                 loading: false,
+                hasAppliedFilters: initialHasFilters,
                 filterForm() { return document.getElementById('classroom-filter-form'); },
+                hasCurrentFilters() {
+                    const form = this.filterForm();
+
+                    return form
+                        ? [...new FormData(form).entries()].some(([key, value]) => key !== 'page' && String(value).trim() !== '')
+                        : false;
+                },
                 async applyFilters() {
                     const form = this.filterForm();
                     if (!form) return;
@@ -236,6 +256,7 @@
                     params.delete('page');
                     url.search = params.toString();
                     await this.fetchResults(url.toString());
+                    this.hasAppliedFilters = this.hasCurrentFilters();
                 },
                 async resetFilters(url) {
                     const form = this.filterForm();
@@ -243,6 +264,7 @@
                     const query = form?.querySelector('[name="q"]');
                     if (query) query.value = '';
                     window.dispatchEvent(new CustomEvent('classroom-filters-reset'));
+                    this.hasAppliedFilters = false;
                     await this.fetchResults(url);
                 },
                 async fetchResults(url) {

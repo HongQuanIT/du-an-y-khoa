@@ -22,8 +22,12 @@
     ];
 @endphp
 
+@php
+    $hasActiveFilters = $filters['status'] !== [] || $filters['provider'] !== [];
+@endphp
+
 <x-layouts.admin title="Thanh toán">
-    <div x-data="adminPaymentFilter()" class="space-y-6">
+    <div x-data="adminPaymentFilter(@js($hasActiveFilters))" class="space-y-6">
     <x-admin.page-header title="Thanh toán"
         description="Theo dõi mọi phiên checkout — chờ thanh toán, thành công, thất bại và hết hạn.">
     </x-admin.page-header>
@@ -68,6 +72,11 @@
                 :reset-url="route('admin.billing.payments.index')"
                 search-aria-label="Tìm kiếm thanh toán"
                 reset-aria-label="Xoá bộ lọc thanh toán"
+                reset-label="Xoá bộ lọc"
+                reset-icon="restart_alt"
+                reset-title="Xoá bộ lọc"
+                show-reset-expression="hasAppliedFilters"
+                reset-variant="text-danger"
             />
         </div>
     </form>
@@ -175,10 +184,18 @@
     </div>
 
     <script>
-        function adminPaymentFilter() {
+        function adminPaymentFilter(initialHasFilters = false) {
             return {
                 loading: false,
+                hasAppliedFilters: initialHasFilters,
                 filterForm() { return document.getElementById('payment-filter-form'); },
+                hasCurrentFilters() {
+                    const form = this.filterForm();
+
+                    return form
+                        ? [...new FormData(form).entries()].some(([key, value]) => key !== 'page' && String(value).trim() !== '')
+                        : false;
+                },
                 async applyFilters() {
                     const form = this.filterForm();
                     if (!form) return;
@@ -187,11 +204,13 @@
                     params.delete('page');
                     url.search = params.toString();
                     await this.fetchResults(url.toString());
+                    this.hasAppliedFilters = this.hasCurrentFilters();
                 },
                 async resetFilters(url) {
                     const form = this.filterForm();
                     form?.reset();
                     window.dispatchEvent(new CustomEvent('payment-filters-reset'));
+                    this.hasAppliedFilters = false;
                     await this.fetchResults(url);
                 },
                 async fetchResults(url) {

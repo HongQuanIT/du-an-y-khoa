@@ -35,6 +35,7 @@
             bulkUrl: @js(route('admin.questions.bulk-transition')),
             csrf: @js(csrf_token()),
             exportQuery: @js(request()->except(['page'])),
+            hasActiveFilters: @js($hasActiveFilters),
         })" class="space-y-6" :class="selectedCount > 0 ? 'pb-28' : ''">
         {{-- Header chính chuẩn SEO với thẻ H1 --}}
         <header class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -315,9 +316,11 @@
                 @endif
                 </div>
 
-                <x-admin.filter-action-buttons class="justify-end border-t border-outline-variant pt-4" loading-expression="ajaxLoading"
+                <x-admin.filter-action-buttons class="justify-start border-t border-outline-variant pt-4" loading-expression="ajaxLoading"
                     reset-method="resetQuestionFilters" :reset-url="route(\App\Support\Auth\PortalRoute::content('questions.index'))"
-                    search-aria-label="Tìm kiếm câu hỏi" reset-aria-label="Xoá bộ lọc câu hỏi" />
+                    search-aria-label="Tìm kiếm câu hỏi" reset-aria-label="Xoá bộ lọc câu hỏi"
+                    reset-label="Xoá bộ lọc" reset-icon="restart_alt" reset-title="Xoá bộ lọc"
+                    show-reset-expression="hasAppliedFilters" reset-variant="text-danger" />
             </form>
             </div>
 @endif
@@ -743,7 +746,7 @@
     </div>
 
     <script>
-        function questionColumnPrefs({ storageKey, defaults, isReviewer, canPublish, pageIds, filteredTotal, exportLimit, bulkLimit, exportUrl, bulkUrl, csrf, exportQuery }) {
+        function questionColumnPrefs({ storageKey, defaults, isReviewer, canPublish, pageIds, filteredTotal, exportLimit, bulkLimit, exportUrl, bulkUrl, csrf, exportQuery, hasActiveFilters }) {
             const toggleableColumns = [
                 { key: 'taxonomy', label: 'Bài học' },
                 { key: 'difficulty', label: 'Độ khó' },
@@ -782,6 +785,7 @@
             return {
                 open: false,
                 ajaxLoading: false,
+                hasAppliedFilters: Boolean(hasActiveFilters),
                 isReviewer,
                 canPublish: Boolean(canPublish),
                 toggleableColumns,
@@ -952,6 +956,13 @@
                     this.canScrollLeft = el.scrollLeft > 10;
                     this.canScrollRight = el.scrollLeft < (el.scrollWidth - el.clientWidth - 10);
                 },
+                hasCurrentQuestionFilters() {
+                    const form = document.getElementById('question-filter-form');
+
+                    return form
+                        ? [...new FormData(form).entries()].some(([key, value]) => key !== 'page' && String(value).trim() !== '')
+                        : false;
+                },
                 async applyQuestionFilters() {
                     const form = document.getElementById('question-filter-form');
                     if (!form) return;
@@ -961,6 +972,7 @@
                     params.delete('page');
                     url.search = params.toString();
                     await this.fetchQuestionResults(url.toString());
+                    this.hasAppliedFilters = this.hasCurrentQuestionFilters();
                 },
                 async resetQuestionFilters(url) {
                     const form = document.getElementById('question-filter-form');
@@ -969,6 +981,7 @@
                         if (queryInput) queryInput.value = '';
                     }
                     window.dispatchEvent(new CustomEvent('question-filters-reset'));
+                    this.hasAppliedFilters = false;
                     await this.fetchQuestionResults(url);
                 },
                 async fetchQuestionResults(url) {
