@@ -74,7 +74,12 @@ final class QuestionExportController extends Controller
                 return;
             }
 
-            echo $spreadsheet->xlsxBinary($export['headers'], $export['rows'], $guide);
+            echo $spreadsheet->xlsxBinary(
+                $export['headers'],
+                $export['rows'],
+                $guide,
+                QuestionImportSchema::classificationCatalogSheets(),
+            );
         }, $filename, [
             'Content-Type' => $format === 'csv'
                 ? 'text/csv; charset=UTF-8'
@@ -109,7 +114,7 @@ final class QuestionExportController extends Controller
     private function loadExportRows(Builder $query, array $ids): Collection
     {
         $questions = $query
-            ->with(['options', 'lessons', 'tags', 'hints'])
+            ->with(['options', 'lessons', 'tags', 'hints', 'professions', 'blueprints'])
             ->latest('updated_at')
             ->limit(QuestionExportLimits::MAX_ROWS)
             ->get();

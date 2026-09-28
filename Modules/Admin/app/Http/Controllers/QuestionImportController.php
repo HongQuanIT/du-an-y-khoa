@@ -65,6 +65,7 @@ final class QuestionImportController extends Controller
         $catalog = $lessons->isNotEmpty()
             ? [['name' => 'Bai_hoc', 'rows' => QuestionImportSchema::catalogLessonRows($lessons)]]
             : [];
+        $catalog = array_merge($catalog, QuestionImportSchema::classificationCatalogSheets());
 
         $filename = 'mau-import-cau-hoi.'.$format;
 

@@ -12,10 +12,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Modules\Auth\Models\Profession;
 use Modules\Auth\Models\TwoFactorSecret;
 use Modules\Auth\Services\TotpService;
 use Modules\QuestionBank\Enums\QuestionImportBatchStatus;
 use Modules\QuestionBank\Enums\QuestionStatus;
+use Modules\QuestionBank\Enums\TaxonomyStatus;
+use Modules\QuestionBank\Models\Blueprint;
 use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionImportBatch;
@@ -68,6 +71,8 @@ final class QuestionImportExportTest extends TestCase
         $this->assertNotFalse($lessonIndex);
         $this->assertSame($this->lesson->slug, $parsed['rows'][0][$lessonIndex]);
         $this->assertStringContainsString('Bai_hoc', $workbook);
+        $this->assertStringContainsString('Doi_tuong', $workbook);
+        $this->assertStringContainsString('Ky_thi', $workbook);
 
         $this->actingAsStaff($editor)
             ->get(route('editor.questions.import.template', ['format' => 'csv']))
@@ -385,7 +390,147 @@ final class QuestionImportExportTest extends TestCase
         $this->assertIsString($headerLine);
         $this->assertNotContains('id', str_getcsv($headerLine));
         $this->assertContains('code', str_getcsv($headerLine));
+        $this->assertContains('profession_codes', str_getcsv($headerLine));
+        $this->assertContains('blueprint_slugs', str_getcsv($headerLine));
         $this->assertDatabaseHas('audit_logs', ['action' => 'admin.question.export']);
+    }
+
+    public function test_import_and_export_round_trip_audience_and_exam(): void
+    {
+        $profession = Profession::query()->create([
+            'code' => 'resident',
+            'name' => 'Bác sĩ nội trú',
+            'is_active' => true,
+            'sort_order' => 1,
+        ]);
+        $blueprint = Blueprint::query()->create([
+            'name' => 'Nội trú 2026',
+            'slug' => 'noi-tru-2026',
+            'status' => TaxonomyStatus::Active,
+            'sort_order' => 1,
+        ]);
+        $editor = $this->staffUser(Role::ContentEditor);
+
+        $this->commitQuestionImport($editor, [
+            QuestionImportSchema::headers(),
+            $this->validRow('Câu gắn đối tượng và kỳ thi.', '', 'resident', 'noi-tru-2026'),
+        ]);
+
+        $question = Question::query()->firstOrFail();
+        $this->assertEquals([$profession->id], $question->professions()->pluck('professions.id')->all());
+        $this->assertEquals([$blueprint->id], $question->blueprints()->pluck('blueprints.id')->all());
+
+        $content = $this->actingAsStaff($editor)
+            ->get(route('editor.questions.export', ['format' => 'csv']))
+            ->assertOk()
+            ->streamedContent();
+
+        $this->assertStringContainsString('Bác sĩ nội trú', $content);
+        $this->assertStringContainsString('Nội trú 2026', $content);
+    }
+
+    public function test_import_rejects_unknown_audience_and_exam(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+        $file = $this->csvUpload([
+            QuestionImportSchema::headers(),
+            $this->validRow('Câu sai phân loại.', '', 'Không có chức danh', 'ky-thi-khong-co'),
+        ]);
+
+        $this->actingAsStaff($editor)
+            ->post(route('editor.questions.import.upload'), ['file' => $file])
+            ->assertRedirect();
+
+        $batch = QuestionImportBatch::query()->firstOrFail();
+        $this->actingAsStaff($editor)
+            ->post(route('editor.questions.import.map', $batch), [
+                'column_map' => QuestionImportSchema::autoMap(QuestionImportSchema::headers()),
+            ])
+            ->assertRedirect();
+
+        $this->actingAsStaff($editor)
+            ->get(route('editor.questions.import.show', $batch))
+            ->assertOk()
+            ->assertSee('Không tìm thấy đối tượng')
+            ->assertSee('Không tìm thấy kỳ thi');
+
+        $this->assertSame(0, (int) $batch->fresh()->stats['valid']);
+    }
+
+    public function test_import_update_without_classification_columns_keeps_links(): void
+    {
+        $profession = Profession::query()->create([
+            'code' => 'resident',
+            'name' => 'Bác sĩ nội trú',
+            'is_active' => true,
+            'sort_order' => 1,
+        ]);
+        $blueprint = Blueprint::query()->create([
+            'name' => 'Nội trú 2026',
+            'slug' => 'noi-tru-2026',
+            'status' => TaxonomyStatus::Active,
+            'sort_order' => 1,
+        ]);
+        $editor = $this->staffUser(Role::ContentEditor);
+
+        $this->commitQuestionImport($editor, [
+            QuestionImportSchema::headers(),
+            $this->validRow('Câu gốc có phân loại.', '', 'Bác sĩ nội trú', 'Nội trú 2026'),
+        ]);
+
+        $question = Question::query()->firstOrFail();
+        $headers = array_values(array_filter(
+            QuestionImportSchema::headers(),
+            fn (string $header): bool => ! in_array($header, ['profession_codes', 'blueprint_slugs'], true),
+        ));
+        $row = $this->validRow('Câu đã sửa đề.', $question->code, 'Bác sĩ nội trú', 'Nội trú 2026');
+        $fullHeaders = QuestionImportSchema::headers();
+        $trimmed = [];
+        foreach ($fullHeaders as $index => $header) {
+            if (in_array($header, ['profession_codes', 'blueprint_slugs'], true)) {
+                continue;
+            }
+            $trimmed[] = $row[$index];
+        }
+
+        $this->commitQuestionImport($editor, [$headers, $trimmed]);
+
+        $question->refresh();
+        $this->assertStringContainsString('Câu đã sửa đề.', strip_tags((string) $question->stem));
+        $this->assertEquals([$profession->id], $question->professions()->pluck('professions.id')->all());
+        $this->assertEquals([$blueprint->id], $question->blueprints()->pluck('blueprints.id')->all());
+    }
+
+    public function test_import_blank_classification_columns_clear_links(): void
+    {
+        Profession::query()->create([
+            'code' => 'resident',
+            'name' => 'Bác sĩ nội trú',
+            'is_active' => true,
+            'sort_order' => 1,
+        ]);
+        Blueprint::query()->create([
+            'name' => 'Nội trú 2026',
+            'slug' => 'noi-tru-2026',
+            'status' => TaxonomyStatus::Active,
+            'sort_order' => 1,
+        ]);
+        $editor = $this->staffUser(Role::ContentEditor);
+
+        $this->commitQuestionImport($editor, [
+            QuestionImportSchema::headers(),
+            $this->validRow('Câu sẽ gỡ phân loại.', '', 'resident', 'noi-tru-2026'),
+        ]);
+
+        $question = Question::query()->firstOrFail();
+        $this->commitQuestionImport($editor, [
+            QuestionImportSchema::headers(),
+            $this->validRow('Câu đã gỡ phân loại.', $question->code),
+        ]);
+
+        $question->refresh();
+        $this->assertSame(0, $question->professions()->count());
+        $this->assertSame(0, $question->blueprints()->count());
     }
 
     public function test_export_keeps_rich_text_in_csv_and_xlsx(): void
@@ -499,10 +644,14 @@ final class QuestionImportExportTest extends TestCase
     private function validRow(
         string $stem = 'Bệnh nhân 55 tuổi đau ngực. Chẩn đoán nào phù hợp nhất?',
         string $code = '',
+        string $professions = '',
+        string $blueprints = '',
     ): array {
         $row = array_fill_keys(QuestionImportSchema::headers(), '');
         $row['code'] = $code;
         $row['stem'] = $stem;
+        $row['profession_codes'] = $professions;
+        $row['blueprint_slugs'] = $blueprints;
         $row['option_a'] = 'ACS';
         $row['option_b'] = 'GERD';
         $row['option_c'] = 'Lo lắng';
@@ -527,6 +676,30 @@ final class QuestionImportExportTest extends TestCase
         app(QuestionSpreadsheet::class)->writeCsv($path, $headers, $table);
 
         return new UploadedFile($path, 'questions.csv', 'text/csv', null, true);
+    }
+
+    /**
+     * @param  list<list<string>>  $table
+     */
+    private function commitQuestionImport(User $editor, array $table): void
+    {
+        $this->actingAsStaff($editor)
+            ->post(route('editor.questions.import.upload'), ['file' => $this->csvUpload($table)])
+            ->assertRedirect();
+
+        $batch = QuestionImportBatch::query()
+            ->where('status', QuestionImportBatchStatus::Uploaded)
+            ->latest()
+            ->firstOrFail();
+        $this->actingAsStaff($editor)
+            ->post(route('editor.questions.import.map', $batch), [
+                'column_map' => QuestionImportSchema::autoMap($table[0]),
+            ])
+            ->assertRedirect();
+
+        $this->actingAsStaff($editor)
+            ->post(route('editor.questions.import.commit', $batch))
+            ->assertRedirect();
     }
 
     private function staffUser(Role $role): User

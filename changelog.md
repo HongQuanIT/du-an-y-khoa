@@ -2,6 +2,12 @@
 
 ## 2026-09-28
 
+### Feat — Xuất/nhập đối tượng và kỳ thi của câu hỏi
+
+- File Excel và CSV thêm cột đối tượng và kỳ thi; xuất ghi tên, nhập nhận cả tên, mã hoặc slug.
+- Mẫu nhập và file xuất Excel có sheet tra cứu `Doi_tuong` và `Ky_thi`.
+- Cập nhật câu hỏi: ô trống đã ánh xạ thì gỡ phân loại; file cũ không có hai cột này thì giữ nguyên.
+
 ### Fix — Thanh thao tác hàng loạt câu hỏi admin
 
 - Thanh xuất bản, xuất Excel và xuất CSV khi chọn câu hỏi neo cố định ở chân màn hình, không còn cuộn theo danh sách.
