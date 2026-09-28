@@ -23,8 +23,11 @@ final class LearnerProfileCatalogSeederTest extends TestCase
         $this->assertDatabaseHas('administrative_units', ['code' => '79', 'name' => 'Thành phố Hồ Chí Minh']);
 
         $this->assertDatabaseHas('professions', ['code' => 'medical_student', 'name' => 'Sinh viên y']);
-        $this->assertDatabaseHas('professions', ['code' => 'doctor', 'name' => 'Bác sĩ']);
         $this->assertDatabaseHas('professions', ['code' => 'resident', 'name' => 'Bác sĩ nội trú']);
+        $this->assertDatabaseHas('professions', ['code' => 'medical_doctor', 'name' => 'Bác sĩ y khoa']);
+        $this->assertDatabaseHas('professions', ['code' => 'midwife', 'name' => 'Hộ sinh']);
+        $this->assertDatabaseHas('professions', ['code' => 'clinical_psychologist', 'name' => 'Tâm lý lâm sàng']);
+        $this->assertDatabaseMissing('professions', ['code' => 'doctor']);
 
         $this->assertDatabaseHas('education_stages', ['code' => 'year_1', 'name' => 'Năm 1']);
         $this->assertDatabaseHas('education_stages', ['code' => 'year_6', 'name' => 'Năm 6']);
@@ -43,6 +46,7 @@ final class LearnerProfileCatalogSeederTest extends TestCase
         $this->assertDatabaseCount('countries', 1);
         $this->assertDatabaseCount('administrative_units', 34);
         $this->assertSame(1, DB::table('professions')->where('code', 'medical_student')->count());
+        $this->assertSame(0, DB::table('professions')->where('code', 'doctor')->count());
         $this->assertSame(1, DB::table('institutions')->where('short_name', 'HMU')->count());
     }
 }

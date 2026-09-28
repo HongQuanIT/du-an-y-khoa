@@ -27,6 +27,9 @@ final class LearnerProfileCatalogSeeder extends Seeder
 
     private function seedProfessions(object $now): void
     {
+        // Remove the legacy broad profession replaced by the specific doctor specialties below.
+        DB::table('professions')->where('code', 'doctor')->delete();
+
         foreach ($this->professions() as $index => [$code, $name, $requiresStage, $graduated]) {
             DB::table('professions')->updateOrInsert(
                 ['code' => $code],
@@ -67,13 +70,23 @@ final class LearnerProfileCatalogSeeder extends Seeder
     {
         return [
             ['medical_student', 'Sinh viên y', true, false],
-            ['doctor', 'Bác sĩ', false, true],
             ['intern', 'Bác sĩ thực tập', false, true],
             ['resident', 'Bác sĩ nội trú', false, true],
             ['nurse', 'Điều dưỡng', true, false],
             ['pharmacist', 'Dược sĩ', true, false],
             ['technician', 'Kỹ thuật viên y tế', true, false],
             ['other_healthcare', 'Nhân viên y tế khác', false, false],
+            ['medical_doctor', 'Bác sĩ y khoa', true, false],
+            ['dentist', 'Bác sĩ răng Hàm Mặt', true, false],
+            ['preventive_medicine_doctor', 'Bác sĩ y học dự phòng', true, false],
+            ['traditional_medicine_doctor', 'Bác sĩ y học cổ truyền', true, false],
+            ['midwife', 'Hộ sinh', true, false],
+            ['medical_laboratory_technician', 'Kỹ thuật xét nghiệm y học', true, false],
+            ['medical_imaging_technician', 'Kỹ thuật hình ảnh y học', true, false],
+            ['rehabilitation_technician', 'Kỹ thuật phục hồi chức năng', true, false],
+            ['clinical_nutritionist', 'Dinh dưỡng lâm sàng', true, false],
+            ['clinical_psychologist', 'Tâm lý lâm sàng', true, false],
+            ['other', 'Khác', false, false],
         ];
     }
 
