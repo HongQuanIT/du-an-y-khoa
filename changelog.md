@@ -2,6 +2,10 @@
 
 ## 2026-09-28
 
+### Fix — Thanh thao tác hàng loạt câu hỏi admin
+
+- Thanh xuất bản, xuất Excel và xuất CSV khi chọn câu hỏi neo cố định ở chân màn hình, không còn cuộn theo danh sách.
+
 ### Fix — Lịch sử phiên luyện QBank
 
 - Cột Chế độ không còn gãy chữ; nhãn Học tập và Thi thử nằm trên một dòng, dạng pill có chấm màu.

@@ -35,7 +35,7 @@
             bulkUrl: @js(route('admin.questions.bulk-transition')),
             csrf: @js(csrf_token()),
             exportQuery: @js(request()->except(['page'])),
-        })" class="space-y-6">
+        })" class="space-y-6" :class="selectedCount > 0 ? 'pb-28' : ''">
         {{-- Header chính chuẩn SEO với thẻ H1 --}}
         <header class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -707,7 +707,7 @@
         </form>
 
         <div x-show="selectedCount > 0" x-cloak
-            class="sticky bottom-4 z-40 mx-auto flex w-full max-w-4xl flex-wrap items-center justify-between gap-3 rounded-2xl border border-outline-variant bg-surface px-4 py-3 shadow-lg">
+            class="fixed bottom-4 left-1/2 z-40 flex w-[min(56rem,calc(100vw-2rem))] -translate-x-1/2 flex-wrap items-center justify-between gap-3 rounded-2xl border border-outline-variant bg-surface px-4 py-3 shadow-lg md:left-[calc(50%+var(--spacing-sidebar-width)/2)]">
             <p class="font-label-md text-on-surface">
                 <strong x-text="selectedCount"></strong> câu đã chọn
                 <span class="text-on-surface-variant" x-show="selectedCount > exportLimit">
