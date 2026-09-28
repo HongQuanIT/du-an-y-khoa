@@ -8,8 +8,10 @@ use App\Support\Concerns\AsAction;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
+use Modules\Auth\Models\Profession;
 use Modules\QuestionBank\Enums\QuestionImportBatchStatus;
 use Modules\QuestionBank\Enums\QuestionStatus;
+use Modules\QuestionBank\Models\Blueprint;
 use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionImportBatch;
@@ -73,8 +75,24 @@ final class PrepareQuestionImportPreviewAction
 
         $seenCodes = [];
         $rows = [];
+        $professionIndex = $this->tokenIndex(
+            Profession::query()->get(['id', 'code', 'name']),
+            ['code', 'name'],
+        );
+        $blueprintIndex = $this->tokenIndex(
+            Blueprint::query()->get(['id', 'slug', 'code', 'name']),
+            ['slug', 'code', 'name'],
+        );
         foreach ($extracted as $item) {
-            $rows[] = $this->validateValues($item['values'], $item['line'], $existingByCode, $seenCodes);
+            $rows[] = $this->validateValues(
+                $item['values'],
+                $item['line'],
+                $existingByCode,
+                $seenCodes,
+                $map,
+                $professionIndex,
+                $blueprintIndex,
+            );
         }
 
         $valid = collect($rows)->where('ok', true)->count();
@@ -144,10 +162,20 @@ final class PrepareQuestionImportPreviewAction
      * @param  array<string, string>  $values
      * @param  Collection<string, Question>  $existingByCode
      * @param  array<string, int>  $seenCodes
+     * @param  array<string, int|string|null>  $columnMap
+     * @param  array<string, int>  $professionIndex
+     * @param  array<string, int>  $blueprintIndex
      * @return array{line: int, ok: bool, action: ?string, errors: list<string>, values: array<string, string>, payload?: array<string, mixed>}
      */
-    private function validateValues(array $values, int $line, Collection $existingByCode, array &$seenCodes): array
-    {
+    private function validateValues(
+        array $values,
+        int $line,
+        Collection $existingByCode,
+        array &$seenCodes,
+        array $columnMap,
+        array $professionIndex,
+        array $blueprintIndex,
+    ): array {
         $errors = [];
         $existing = null;
         $action = 'create';
@@ -232,6 +260,30 @@ final class PrepareQuestionImportPreviewAction
             $errors[] = 'Không tìm thấy thẻ: '.$this->unresolved($tagTokens, $tagIds, 'tag').'.';
         }
 
+        $professionMapped = $this->columnMapped($columnMap, 'profession_codes');
+        $professionIds = [];
+        if ($professionMapped) {
+            [$professionIds, $missingProfessions] = $this->matchTokens(
+                QuestionImportSchema::splitList($values['profession_codes']),
+                $professionIndex,
+            );
+            if ($missingProfessions !== []) {
+                $errors[] = 'Không tìm thấy đối tượng: '.implode(', ', $missingProfessions).'.';
+            }
+        }
+
+        $blueprintMapped = $this->columnMapped($columnMap, 'blueprint_slugs');
+        $blueprintIds = [];
+        if ($blueprintMapped) {
+            [$blueprintIds, $missingBlueprints] = $this->matchTokens(
+                QuestionImportSchema::splitList($values['blueprint_slugs']),
+                $blueprintIndex,
+            );
+            if ($missingBlueprints !== []) {
+                $errors[] = 'Không tìm thấy kỳ thi: '.implode(', ', $missingBlueprints).'.';
+            }
+        }
+
         if ($errors !== []) {
             return [
                 'line' => $line,
@@ -242,26 +294,34 @@ final class PrepareQuestionImportPreviewAction
             ];
         }
 
+        $payload = [
+            'existing_id' => $existing?->getKey(),
+            'code' => $existing === null ? ($code !== '' ? $code : null) : null,
+            'stem' => $values['stem'],
+            'stem_image_path' => null,
+            'key_info' => QuestionImportSchema::splitList(str_replace(["\r\n", "\n"], '|', $values['hints'])),
+            'attending_tip' => $values['attending_tip'] !== '' ? $values['attending_tip'] : null,
+            'difficulty' => $difficulty->value,
+            'lesson_ids' => $lessonIds,
+            'tag_ids' => $tagIds,
+            'is_free' => QuestionImportSchema::parseBoolean($values['is_free']),
+            'is_priority' => QuestionImportSchema::parseBoolean($values['is_priority'] ?? $values['exam_flag'] ?? null),
+            'options' => $options,
+        ];
+        if ($professionMapped) {
+            $payload['profession_ids'] = $professionIds;
+        }
+        if ($blueprintMapped) {
+            $payload['blueprint_ids'] = $blueprintIds;
+        }
+
         return [
             'line' => $line,
             'ok' => true,
             'action' => $action,
             'errors' => [],
             'values' => $values,
-            'payload' => [
-                'existing_id' => $existing?->getKey(),
-                'code' => $existing === null ? ($code !== '' ? $code : null) : null,
-                'stem' => $values['stem'],
-                'stem_image_path' => null,
-                'key_info' => QuestionImportSchema::splitList(str_replace(["\r\n", "\n"], '|', $values['hints'])),
-                'attending_tip' => $values['attending_tip'] !== '' ? $values['attending_tip'] : null,
-                'difficulty' => $difficulty->value,
-                'lesson_ids' => $lessonIds,
-                'tag_ids' => $tagIds,
-                'is_free' => QuestionImportSchema::parseBoolean($values['is_free']),
-                'is_priority' => QuestionImportSchema::parseBoolean($values['is_priority'] ?? $values['exam_flag'] ?? null),
-                'options' => $options,
-            ],
+            'payload' => $payload,
         ];
     }
 
@@ -275,6 +335,62 @@ final class PrepareQuestionImportPreviewAction
             QuestionStatus::Rejected => 'Câu '.$code.' đã bị từ chối, không được import đè.',
             default => null,
         };
+    }
+
+    /**
+     * @param  array<string, int|string|null>  $columnMap
+     */
+    private function columnMapped(array $columnMap, string $field): bool
+    {
+        return array_key_exists($field, $columnMap)
+            && $columnMap[$field] !== ''
+            && $columnMap[$field] !== null;
+    }
+
+    /**
+     * Index catalog rows by normalized code/slug and name. Earlier keys win.
+     *
+     * @param  iterable<int, object>  $records
+     * @param  list<string>  $attributes
+     * @return array<string, int>
+     */
+    private function tokenIndex(iterable $records, array $attributes): array
+    {
+        $index = [];
+        foreach ($records as $record) {
+            $id = (int) $record->id;
+            foreach ($attributes as $attribute) {
+                $key = QuestionImportSchema::normalize((string) ($record->{$attribute} ?? ''));
+                if ($key === '' || isset($index[$key])) {
+                    continue;
+                }
+                $index[$key] = $id;
+            }
+        }
+
+        return $index;
+    }
+
+    /**
+     * @param  list<string>  $tokens
+     * @param  array<string, int>  $index
+     * @return array{0: list<int>, 1: list<string>}
+     */
+    private function matchTokens(array $tokens, array $index): array
+    {
+        $ids = [];
+        $missing = [];
+        foreach ($tokens as $token) {
+            $key = QuestionImportSchema::normalize($token);
+            if ($key !== '' && isset($index[$key])) {
+                $ids[] = $index[$key];
+
+                continue;
+            }
+            $missing[] = $token;
+        }
+
+        return [array_values(array_unique($ids)), $missing];
     }
 
     /**

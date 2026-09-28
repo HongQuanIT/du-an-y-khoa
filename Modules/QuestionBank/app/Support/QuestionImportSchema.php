@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Modules\QuestionBank\Support;
 
+use Modules\Auth\Models\Profession;
 use Modules\QuestionBank\Enums\Difficulty;
+use Modules\QuestionBank\Enums\TaxonomyStatus;
+use Modules\QuestionBank\Models\Blueprint;
 
 /**
  * Canonical flattened columns for question import/export (one row = one question).
@@ -62,6 +65,22 @@ final class QuestionImportSchema
                 'label' => 'Thẻ (slug, cách nhau ;)',
                 'required' => false,
                 'aliases' => ['tag_slugs', 'tags', 'the', 'thẻ'],
+            ],
+            'profession_codes' => [
+                'label' => 'Đối tượng (mã hoặc tên, cách nhau ;)',
+                'required' => false,
+                'aliases' => [
+                    'profession_codes', 'professions', 'profession',
+                    'doi tuong', 'đối tượng', 'chuc danh', 'chức danh',
+                ],
+            ],
+            'blueprint_slugs' => [
+                'label' => 'Kỳ thi (slug hoặc tên, cách nhau ;)',
+                'required' => false,
+                'aliases' => [
+                    'blueprint_slugs', 'blueprints', 'blueprint',
+                    'ky thi', 'kỳ thi',
+                ],
             ],
             'is_free' => [
                 'label' => 'Miễn phí (0/1)',
@@ -282,6 +301,48 @@ final class QuestionImportSchema
         return $rows;
     }
 
+    /**
+     * @param  iterable<int, object>  $items
+     * @return list<list<string>>
+     */
+    public static function catalogKeyRows(iterable $items, string $keyAttribute, string $header): array
+    {
+        $rows = [[$header, 'name']];
+        foreach ($items as $item) {
+            $key = trim((string) ($item->{$keyAttribute} ?? ''));
+            if ($key === '') {
+                continue;
+            }
+            $rows[] = [$key, trim((string) ($item->name ?? ''))];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Lookup sheets for đối tượng and kỳ thi on the import template and Excel export.
+     *
+     * @return list<array{name: string, rows: list<list<string>>}>
+     */
+    public static function classificationCatalogSheets(): array
+    {
+        $professions = Profession::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get(['code', 'name']);
+        $blueprints = Blueprint::query()
+            ->where('status', TaxonomyStatus::Active)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get(['slug', 'name']);
+
+        return [
+            ['name' => 'Doi_tuong', 'rows' => self::catalogKeyRows($professions, 'code', 'code')],
+            ['name' => 'Ky_thi', 'rows' => self::catalogKeyRows($blueprints, 'slug', 'slug')],
+        ];
+    }
+
     /** @return list<list<string>> */
     public static function guideRows(): array
     {
@@ -292,6 +353,8 @@ final class QuestionImportSchema
             ['correct', 'Có', 'Một chữ: A, B, C hoặc D. Single best answer.'],
             ['difficulty', 'Có', 'very_easy | easy | medium | hard | very_hard'],
             ['lesson_slugs', 'Có', 'Copy slug thật từ sheet Bai_hoc. Nhiều bài: cách nhau ;'],
+            ['profession_codes', 'Không', 'Đối tượng. Copy mã từ sheet Doi_tuong, hoặc ghi đúng tên. Nhiều đối tượng: cách nhau ;. Ô trống khi đã ánh xạ = gỡ hết. Không có cột = giữ nguyên lúc cập nhật.'],
+            ['blueprint_slugs', 'Không', 'Kỳ thi. Copy slug từ sheet Ky_thi, hoặc ghi đúng tên. Nhiều kỳ: cách nhau ;. Ô trống khi đã ánh xạ = gỡ hết. Không có cột = giữ nguyên lúc cập nhật.'],
             ['option_*_explanation', 'Khuyến nghị', 'Giải thích theo từng đáp án. Import vẫn tạo nháp nếu thiếu.'],
             ['status / publisher_id / version / id', 'Cấm', 'Hệ thống bỏ qua. Không dùng id — khóa là mã câu hỏi.'],
             ['code', 'Không', 'Để trống = tạo mới (hệ thống cấp Q00001…). Điền mã đã có = cập nhật. Mã không tồn tại = lỗi, không import dòng đó.'],
@@ -314,6 +377,8 @@ final class QuestionImportSchema
             'difficulty' => 14.0,
             'lesson_slugs' => 30.0,
             'tag_slugs' => 22.0,
+            'profession_codes' => 28.0,
+            'blueprint_slugs' => 28.0,
             'is_free' => 10.0,
             'is_priority' => 12.0,
             'attending_tip' => 34.0,

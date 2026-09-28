@@ -23,7 +23,7 @@ final class BuildQuestionExportRowsAction
         $rows = [];
 
         foreach ($questions as $question) {
-            $question->loadMissing(['options', 'lessons', 'tags', 'hints']);
+            $question->loadMissing(['options', 'lessons', 'tags', 'hints', 'professions', 'blueprints']);
             $options = $question->options->sortBy('order')->values();
             $correct = '';
             $row = array_fill_keys(QuestionImportSchema::headers(), '');
@@ -36,6 +36,14 @@ final class BuildQuestionExportRowsAction
                 ->filter()
                 ->implode('; ');
             $row['tag_slugs'] = $question->tags->pluck('slug')->filter()->implode('; ');
+            $row['profession_codes'] = $question->professions
+                ->map(fn ($profession): string => trim((string) ($profession->name ?: $profession->code)))
+                ->filter()
+                ->implode('; ');
+            $row['blueprint_slugs'] = $question->blueprints
+                ->map(fn ($blueprint): string => trim((string) ($blueprint->name ?: $blueprint->slug)))
+                ->filter()
+                ->implode('; ');
             $row['is_free'] = $question->is_free ? '1' : '0';
             $row['is_priority'] = $question->is_priority ? '1' : '0';
             $row['attending_tip'] = $this->richField($question->attending_tip);
