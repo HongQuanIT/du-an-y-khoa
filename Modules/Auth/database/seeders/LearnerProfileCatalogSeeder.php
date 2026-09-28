@@ -27,8 +27,16 @@ final class LearnerProfileCatalogSeeder extends Seeder
 
     private function seedProfessions(object $now): void
     {
-        // Remove the legacy broad profession replaced by the specific doctor specialties below.
-        DB::table('professions')->where('code', 'doctor')->delete();
+        // Remove legacy entries that are no longer offered in the learner profile.
+        DB::table('professions')->whereIn('code', [
+            'doctor',
+            'medical_student',
+            'intern',
+            'resident',
+            'pharmacist',
+            'technician',
+            'other_healthcare',
+        ])->delete();
 
         foreach ($this->professions() as $index => [$code, $name, $requiresStage, $graduated]) {
             DB::table('professions')->updateOrInsert(
@@ -69,13 +77,7 @@ final class LearnerProfileCatalogSeeder extends Seeder
     private function professions(): array
     {
         return [
-            ['medical_student', 'Sinh viên y', true, false],
-            ['intern', 'Bác sĩ thực tập', false, true],
-            ['resident', 'Bác sĩ nội trú', false, true],
             ['nurse', 'Điều dưỡng', true, false],
-            ['pharmacist', 'Dược sĩ', true, false],
-            ['technician', 'Kỹ thuật viên y tế', true, false],
-            ['other_healthcare', 'Nhân viên y tế khác', false, false],
             ['medical_doctor', 'Bác sĩ y khoa', true, false],
             ['dentist', 'Bác sĩ răng Hàm Mặt', true, false],
             ['preventive_medicine_doctor', 'Bác sĩ y học dự phòng', true, false],
