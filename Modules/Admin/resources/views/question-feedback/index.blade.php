@@ -2,10 +2,14 @@
     $statusTone = \Modules\QuestionBank\Models\QuestionFeedback::statusTones();
     $statusIcons = \Modules\QuestionBank\Models\QuestionFeedback::statusIcons();
     $statusIconSurfaces = \Modules\QuestionBank\Models\QuestionFeedback::statusIconSurfaces();
+    $hasActiveFilters = filled($filters['q'])
+        || $filters['status'] !== []
+        || $filters['target'] !== []
+        || $filters['category'] !== [];
 @endphp
 
 <x-layouts.admin title="Phản hồi câu hỏi">
-    <div x-data="adminQuestionFeedbackFilter()" class="space-y-6">
+    <div x-data="adminQuestionFeedbackFilter(@js($hasActiveFilters))" class="space-y-6">
     <x-admin.page-header title="Quản lý phản hồi câu hỏi"
         description="Xem, lọc và xử lý phản hồi của học viên về câu hỏi, kiến thức và đáp án." />
 
@@ -98,6 +102,11 @@
                 :reset-url="route('admin.question-feedback.index')"
                 search-aria-label="Tìm kiếm phản hồi câu hỏi"
                 reset-aria-label="Xoá bộ lọc phản hồi câu hỏi"
+                reset-label="Xoá bộ lọc"
+                reset-icon="restart_alt"
+                reset-title="Xoá bộ lọc"
+                show-reset-expression="hasAppliedFilters"
+                reset-variant="text-danger"
             />
         </div>
     </form>
@@ -212,10 +221,18 @@
     </div>
 
     <script>
-        function adminQuestionFeedbackFilter() {
+        function adminQuestionFeedbackFilter(initialHasFilters = false) {
             return {
                 loading: false,
+                hasAppliedFilters: initialHasFilters,
                 filterForm() { return document.getElementById('question-feedback-filter-form'); },
+                hasCurrentFilters() {
+                    const form = this.filterForm();
+
+                    return form
+                        ? [...new FormData(form).entries()].some(([key, value]) => key !== 'page' && String(value).trim() !== '')
+                        : false;
+                },
                 async applyFilters() {
                     const form = this.filterForm();
                     if (!form) return;
@@ -224,6 +241,7 @@
                     params.delete('page');
                     url.search = params.toString();
                     await this.fetchResults(url.toString());
+                    this.hasAppliedFilters = this.hasCurrentFilters();
                 },
                 async resetFilters(url) {
                     const form = this.filterForm();
@@ -231,6 +249,7 @@
                     const query = form?.querySelector('[name="q"]');
                     if (query) query.value = '';
                     window.dispatchEvent(new CustomEvent('question-feedback-filters-reset'));
+                    this.hasAppliedFilters = false;
                     await this.fetchResults(url);
                 },
                 async fetchResults(url) {

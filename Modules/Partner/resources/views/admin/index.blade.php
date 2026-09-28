@@ -18,10 +18,14 @@
 
         return $filters['dir'] === 'asc' ? ' ↑' : ' ↓';
     };
+
+    $hasActiveFilters = $filters['q'] !== ''
+        || $filters['status'] !== []
+        || $period['preset'] !== PartnerPeriodFilter::PRESET_THIS_MONTH;
 @endphp
 
 <x-layouts.admin title="Cộng tác viên">
-    <div x-data="adminPartnerFilter(@js($period['preset']))" class="space-y-6">
+    <div x-data="adminPartnerFilter(@js($period['preset']), @js($hasActiveFilters))" class="space-y-6">
     <x-admin.page-header title="Cộng tác viên"
         description="Hiệu suất theo kỳ; mã còn hiệu lực là trạng thái hiện tại." />
 
@@ -118,6 +122,11 @@
                     :reset-url="route('admin.partners.index')"
                     search-aria-label="Tìm kiếm cộng tác viên"
                     reset-aria-label="Xoá bộ lọc cộng tác viên"
+                    reset-label="Xoá bộ lọc"
+                    reset-icon="restart_alt"
+                    reset-title="Xoá bộ lọc"
+                    show-reset-expression="hasAppliedFilters"
+                    reset-variant="text-danger"
                 />
             </div>
         </div>
@@ -224,11 +233,19 @@
     </div>
 
     <script>
-        function adminPartnerFilter(initialPreset) {
+        function adminPartnerFilter(initialPreset, initialHasFilters = false) {
             return {
                 loading: false,
                 preset: initialPreset,
+                hasAppliedFilters: initialHasFilters,
                 filterForm() { return document.getElementById('partner-filter-form'); },
+                hasCurrentFilters() {
+                    const form = this.filterForm();
+
+                    return form
+                        ? [...new FormData(form).entries()].some(([key, value]) => key !== 'page' && String(value).trim() !== '')
+                        : false;
+                },
                 async applyFilters() {
                     const form = this.filterForm();
                     if (!form) return;
@@ -237,12 +254,14 @@
                     params.delete('page');
                     url.search = params.toString();
                     await this.fetchResults(url.toString());
+                    this.hasAppliedFilters = this.hasCurrentFilters();
                 },
                 async resetFilters(url) {
                     const form = this.filterForm();
                     form?.reset();
                     this.preset = 'this_month';
                     window.dispatchEvent(new CustomEvent('partner-filters-reset'));
+                    this.hasAppliedFilters = false;
                     await this.fetchResults(url);
                 },
                 async fetchResults(url) {

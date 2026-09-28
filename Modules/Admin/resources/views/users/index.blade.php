@@ -13,7 +13,7 @@
 @endphp
 
 <x-layouts.admin title="Người dùng">
-    <div x-data="adminUserFilter()" class="space-y-6">
+    <div x-data="adminUserFilter(@js($hasActiveFilters))" class="space-y-6">
     <x-admin.page-header title="Người dùng"
         description="Tìm kiếm, lọc và quản lý tài khoản trên hệ thống.">
         <x-slot:actions>
@@ -129,13 +129,18 @@
             </div>
         </details>
 
-        <div class="flex justify-end border-t border-outline-variant pt-4">
+        <div class="flex justify-start border-t border-outline-variant pt-4">
             <x-admin.filter-action-buttons
                 class="w-full max-w-xs"
                 fill
                 :reset-url="route('admin.users.index')"
                 search-aria-label="Tìm kiếm người dùng"
                 reset-aria-label="Xoá bộ lọc người dùng"
+                reset-label="Xoá bộ lọc"
+                reset-icon="restart_alt"
+                reset-title="Xoá bộ lọc"
+                show-reset-expression="hasAppliedFilters"
+                reset-variant="text-danger"
             />
         </div>
     </form>
@@ -276,11 +281,19 @@
     </div>
 
     <script>
-        function adminUserFilter() {
+        function adminUserFilter(initialHasFilters = false) {
             return {
                 loading: false,
+                hasAppliedFilters: initialHasFilters,
                 filterForm() {
                     return document.getElementById('user-filter-form');
+                },
+                hasCurrentFilters() {
+                    const form = this.filterForm();
+
+                    return form
+                        ? [...new FormData(form).entries()].some(([key, value]) => key !== 'page' && String(value).trim() !== '')
+                        : false;
                 },
                 async applyFilters() {
                     const form = this.filterForm();
@@ -290,6 +303,7 @@
                     params.delete('page');
                     url.search = params.toString();
                     await this.fetchResults(url.toString());
+                    this.hasAppliedFilters = this.hasCurrentFilters();
                 },
                 async resetFilters(url) {
                     const form = this.filterForm();
@@ -298,6 +312,7 @@
                     if (queryInput) queryInput.value = '';
                     form?.querySelectorAll('details').forEach((details) => { details.open = false; });
                     window.dispatchEvent(new CustomEvent('user-filters-reset'));
+                    this.hasAppliedFilters = false;
                     await this.fetchResults(url);
                 },
                 async fetchResults(url) {

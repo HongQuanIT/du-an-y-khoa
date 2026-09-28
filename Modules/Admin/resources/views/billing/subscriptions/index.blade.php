@@ -1,5 +1,13 @@
+@php
+    $hasActiveFilters = filled($filters['q'])
+        || $filters['status'] !== []
+        || $filters['plan'] !== []
+        || $filters['sku'] !== []
+        || $filters['source'] !== [];
+@endphp
+
 <x-layouts.admin title="Lịch sử Premium">
-    <div x-data="adminSubscriptionFilter()" class="space-y-6">
+    <div x-data="adminSubscriptionFilter(@js($hasActiveFilters))" class="space-y-6">
     <x-admin.page-header title="Lịch sử Premium"
         description="Các lần kích hoạt gói trả phí của học viên — theo SKU và nguồn.">
     </x-admin.page-header>
@@ -66,13 +74,18 @@
             />
         </div>
 
-        <div class="md:col-span-12 flex justify-end border-t border-outline-variant pt-4">
+        <div class="md:col-span-12 flex justify-start border-t border-outline-variant pt-4">
             <div class="w-full max-w-xs">
                 <x-admin.filter-action-buttons
                     fill
                     :reset-url="route('admin.billing.subscriptions.index')"
                     search-aria-label="Tìm kiếm lịch sử Premium"
                     reset-aria-label="Xoá bộ lọc lịch sử Premium"
+                    reset-label="Xoá bộ lọc"
+                    reset-icon="restart_alt"
+                    reset-title="Xoá bộ lọc"
+                    show-reset-expression="hasAppliedFilters"
+                    reset-variant="text-danger"
                 />
             </div>
         </div>
@@ -152,10 +165,18 @@
     </div>
 
     <script>
-        function adminSubscriptionFilter() {
+        function adminSubscriptionFilter(initialHasFilters = false) {
             return {
                 loading: false,
+                hasAppliedFilters: initialHasFilters,
                 filterForm() { return document.getElementById('subscription-filter-form'); },
+                hasCurrentFilters() {
+                    const form = this.filterForm();
+
+                    return form
+                        ? [...new FormData(form).entries()].some(([key, value]) => key !== 'page' && String(value).trim() !== '')
+                        : false;
+                },
                 async applyFilters() {
                     const form = this.filterForm();
                     if (!form) return;
@@ -164,6 +185,7 @@
                     params.delete('page');
                     url.search = params.toString();
                     await this.fetchResults(url.toString());
+                    this.hasAppliedFilters = this.hasCurrentFilters();
                 },
                 async resetFilters(url) {
                     const form = this.filterForm();
@@ -171,6 +193,7 @@
                     const query = form?.querySelector('[name="q"]');
                     if (query) query.value = '';
                     window.dispatchEvent(new CustomEvent('subscription-filters-reset'));
+                    this.hasAppliedFilters = false;
                     await this.fetchResults(url);
                 },
                 async fetchResults(url) {

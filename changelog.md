@@ -11,6 +11,13 @@
 - Cột Chế độ không còn gãy chữ; nhãn Học tập và Thi thử nằm trên một dòng, dạng pill có chấm màu.
 - Thẻ «Câu hỏi đã làm» đếm số câu khác nhau đã trả lời trong ngân hàng câu hỏi, không cộng dồn mỗi lần làm lại.
 - Độ chính xác vẫn tính trên tổng lượt trả lời.
+### Feat — Đồng bộ bộ lọc quản trị
+
+- Đồng bộ bộ lọc danh mục học viên cho Người dùng, Câu hỏi, Phản hồi câu hỏi, Lớp học, CMS, Liên hệ, Lịch sử Premium, Thanh toán và Cộng tác viên.
+- Chỉ hiển thị thao tác «Xoá bộ lọc» sau khi có điều kiện lọc; dùng text đỏ và icon reset thay cho button.
+- Đặt cụm thao tác tìm kiếm về bên trái ở các trang đã yêu cầu.
+
+## 2026-09-28
 
 ### Feat — Cập nhật danh mục chức danh học viên
 
