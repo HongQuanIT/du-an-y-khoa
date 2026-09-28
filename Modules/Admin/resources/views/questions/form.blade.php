@@ -331,15 +331,25 @@
           x-data='{
               options: @json($optionRows),
               hints: @json($hintRows),
+              newHint: "",
               correct: {{ (int) $correctIndex }},
-              addHint() { this.hints.push({ id: null, content: "" }); },
+              addHint(event) {
+                  if (event?.isComposing) return;
+                  const content = this.newHint.trim();
+                  if (!content || this.hints.some(hint => hint.content.trim().toLowerCase() === content.toLowerCase())) return;
+                  this.hints = this.hints.filter(hint => hint.content.trim() !== "");
+                  this.hints.push({ id: null, content });
+                  this.newHint = "";
+              },
               removeHint(i) {
-                  if (this.hints.length <= 1) {
-                      this.hints = [{ id: null, content: "" }];
-                      return;
-                  }
                   this.hints.splice(i, 1);
-              }
+              },
+              removeLastHint() {
+                  if (!this.newHint && this.hints.length) this.hints.pop();
+              },
+              init() {
+                  this.hints = this.hints.filter(hint => hint.content.trim() !== "");
+              },
           }'>
         @csrf
         @unless ($isNew) @method('PUT') @endunless
@@ -459,17 +469,32 @@
                         <div>
                             <div class="mb-2 flex items-center justify-between">
                                 <label class="text-sm font-semibold text-on-surface">Gợi ý (theo thứ tự)</label>
-                                <button type="button" @click="addHint()"
-                                        class="inline-flex items-center gap-1 rounded-lg border border-outline-variant px-2.5 py-1 text-xs font-semibold text-on-surface hover:bg-surface-container-low">
-                                    <span class="material-symbols-outlined text-[14px]">add</span>Thêm gợi ý
-                                </button>
                             </div>
                             <p class="mb-3 text-[11px] leading-4 text-on-surface-variant">
-                                Gợi ý hiển thị lần lượt — không hiện gợi ý 2 trước gợi ý 1. Không lấy từ khái niệm.
+                                Nhập gợi ý rồi nhấn Enter để thêm. Gợi ý hiển thị lần lượt — không lấy từ khái niệm.
                             </p>
+                            <div class="flex min-h-11 flex-wrap items-center gap-2 rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-2 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary">
+                                <template x-for="(hint, index) in hints" :key="'hint-chip-'+index">
+                                    <span x-show="hint.content.trim()" class="inline-flex max-w-full items-center gap-1.5 rounded-full bg-surface-container-high px-3 py-1.5 text-sm text-on-surface">
+                                        <span class="max-w-[min(70vw,28rem)] truncate" x-text="hint.content"></span>
+                                        <button type="button" @click="removeHint(index)" class="material-symbols-outlined shrink-0 text-[16px] text-on-surface-variant hover:text-error" title="Xoá gợi ý" aria-label="Xoá gợi ý">close</button>
+                                    </span>
+                                </template>
+                                <input type="text" x-model="newHint" @keydown.enter.prevent.stop="true" @keyup.enter.prevent.stop="addHint($event)" @keydown.backspace="removeLastHint()"
+                                    placeholder="Nhập gợi ý..."
+                                    class="min-w-[12rem] flex-1 border-0 bg-transparent px-1 py-1 text-sm text-on-surface outline-none placeholder:text-on-surface-variant/60 focus:ring-0">
+                            </div>
+                            <template x-for="(hint, index) in hints" :key="'hint-input-'+index">
+                                <div x-show="hint.content.trim()">
+                                    <input type="hidden" :name="'hints['+index+'][id]'" :value="hint.id || ''">
+                                    <input type="hidden" :name="'hints['+index+'][content]'" :value="hint.content">
+                                </div>
+                            </template>
+
+                            <template x-if="false">
                              <div class="space-y-2">
                                 <template x-for="(hint, index) in hints" :key="'hint-'+index">
-                                    <div class="rounded-xl border border-outline-variant bg-surface-container-lowest p-3 space-y-2">
+                                    <div x-show="false" class="rounded-xl border border-outline-variant bg-surface-container-lowest p-3 space-y-2">
                                         <div class="flex items-center justify-between">
                                             <span class="text-xs font-bold text-on-surface-variant" x-text="'Hint ' + (index + 1)"></span>
                                             <button type="button" @click="removeHint(index)"
@@ -530,6 +555,7 @@
                                     </div>
                                 </template>
                             </div>
+                            </template>
                         </div>
 
                         <x-admin.rich-editor name="attending_tip" label="Kiến thức / Gợi ý"

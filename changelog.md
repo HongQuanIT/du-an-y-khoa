@@ -7,6 +7,13 @@
 - File Excel và CSV thêm cột đối tượng và kỳ thi; xuất ghi tên, nhập nhận cả tên, mã hoặc slug.
 - Mẫu nhập và file xuất Excel có sheet tra cứu `Doi_tuong` và `Ky_thi`.
 - Cập nhật câu hỏi: ô trống đã ánh xạ thì gỡ phân loại; file cũ không có hai cột này thì giữ nguyên.
+### Feat — Cải thiện trải nghiệm quản trị
+
+- Đổi nhãn danh mục «Chức danh» thành «Chức danh / Ngành nghề».
+- Nhập gợi ý câu hỏi bằng chip: Enter tạo một gợi ý, hỗ trợ xoá và giữ thứ tự dữ liệu.
+- Tối ưu sidebar cho mobile/iPad: dùng drawer, giới hạn chiều rộng và hỗ trợ cuộn menu.
+
+## 2026-09-28
 
 ### Fix — Thanh thao tác hàng loạt câu hỏi admin
 
