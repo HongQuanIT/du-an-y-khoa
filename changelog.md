@@ -2,6 +2,13 @@
 
 ## 2026-09-27
 
+### Feat — Đồng bộ UI và thao tác danh mục học viên
+
+- Đồng bộ bảng, drawer chỉnh sửa và popup xoá với danh mục Kiến thức.
+- Thêm nút xoá cho quốc gia, tỉnh/thành phố, trường học, chức danh và năm học.
+- Tự sinh tên viết tắt khi tạo danh mục; chỉ hiển thị trường này khi sửa.
+- Giữ nút hành động ở cuối drawer và xử lý đúng dữ liệu liên kết khi xoá.
+
 ### Ops — Menu log thích ứng
 
 - Sidebar admin có mục «Log thích ứng», mở `/admin/adaptive-briefing`.

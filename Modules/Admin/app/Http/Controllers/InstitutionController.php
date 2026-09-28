@@ -99,6 +99,16 @@ final class InstitutionController extends Controller
         return back()->with('status', 'Đã cập nhật trường học.');
     }
 
+    public function destroy(Request $request, Institution $institution): RedirectResponse
+    {
+        abort_unless($request->user()->can('learner_catalog.update'), 403);
+        $institution->loadCount('learnerProfiles');
+
+        $institution->delete();
+
+        return redirect()->route('admin.institutions.index')->with('status', 'Đã xoá trường học.');
+    }
+
     private function form(Institution $institution): View
     {
         return view('admin::learner-data.institutions.form', [
