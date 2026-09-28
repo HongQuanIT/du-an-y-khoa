@@ -88,14 +88,15 @@
     x-init="initTheme()"
     @keydown.escape.window="menu = false; accountMenu = false; notificationsOpen = false">
     <aside
-        class="fixed top-0 left-0 z-50 hidden h-screen w-sidebar-width flex-col border-r border-outline-variant bg-surface p-4 md:flex">
+        class="fixed top-0 left-0 z-50 hidden h-screen w-sidebar-width flex-col border-r border-outline-variant bg-surface p-4 xl:flex">
         <div class="mb-6 px-2">
             <a href="{{ route($homeRoute) }}" class="block">
                 <span class="font-headline-sm text-headline-sm font-extrabold text-primary tracking-tight">{{ config('app.name') }}</span>
                 <span class="mt-0.5 block font-label-sm text-label-sm text-on-surface-variant">{{ $portalSubtitle }}</span>
             </a>
         </div>
-        <nav class="flex flex-1 flex-col gap-1 overflow-y-auto" aria-label="Menu quản trị">
+        <nav class="min-h-0 flex-1 overflow-y-auto" aria-label="Menu quản trị">
+            <div class="flex flex-col gap-1">
             @foreach ($navItems as $item)
                 @php
                     $active = isset($item['path'])
@@ -131,6 +132,7 @@
                     </span>
                 @endif
             @endforeach
+            </div>
         </nav>
         <form method="post" action="{{ route($logoutRoute) }}" class="mt-4 border-t border-outline-variant pt-4">
             @csrf
@@ -142,12 +144,12 @@
         </form>
     </aside>
 
-    <div x-show="menu" x-cloak @click="menu = false" class="fixed inset-0 z-50 bg-black/40 md:hidden"></div>
+    <div x-show="menu" x-cloak @click="menu = false" class="fixed inset-0 z-50 bg-black/40 xl:hidden"></div>
     <aside x-show="menu" x-cloak x-transition:enter="transition ease-out duration-200"
         x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0"
         x-transition:leave="transition ease-in duration-150" x-transition:leave-start="translate-x-0"
         x-transition:leave-end="-translate-x-full"
-        class="fixed top-0 bottom-0 left-0 z-[60] flex w-sidebar-width flex-col border-r border-outline-variant bg-surface p-4 md:hidden"
+        class="fixed top-0 bottom-0 left-0 z-[60] flex w-[min(85vw,var(--spacing-sidebar-width))] flex-col border-r border-outline-variant bg-surface p-4 xl:hidden"
         @click.stop>
         <div class="mb-4 flex items-center justify-between px-2">
             <span class="font-label-md text-label-md font-semibold text-on-surface-variant">{{ $portalLabel }}</span>
@@ -157,7 +159,8 @@
                 <span class="material-symbols-outlined text-[24px] leading-none">close</span>
             </button>
         </div>
-        <nav class="flex flex-1 flex-col gap-1">
+        <nav class="min-h-0 flex-1 overflow-y-auto">
+            <div class="flex flex-col gap-1">
             @foreach ($navItems as $item)
                 @php
                     $href = $item['route']
@@ -180,14 +183,15 @@
                     </a>
                 @endif
             @endforeach
+            </div>
         </nav>
     </aside>
 
     <header
-        class="fixed top-0 right-0 left-0 z-40 flex h-header-height items-center justify-between border-b border-outline-variant bg-surface px-margin-mobile md:left-sidebar-width md:px-margin-desktop">
+        class="fixed top-0 right-0 left-0 z-40 flex h-header-height items-center justify-between border-b border-outline-variant bg-surface px-margin-mobile xl:left-sidebar-width xl:px-margin-desktop">
         <div class="flex min-w-0 flex-1 items-center gap-2">
             <button type="button" @click="menu = true"
-                class="hidden size-10 shrink-0 items-center justify-center rounded-lg text-on-surface transition-colors hover:bg-surface-container-low max-md:inline-flex"
+                class="hidden size-10 shrink-0 items-center justify-center rounded-lg text-on-surface transition-colors hover:bg-surface-container-low max-xl:inline-flex"
                 :aria-expanded="menu" aria-label="Mở menu">
                 <span class="material-symbols-outlined text-[24px] leading-none">menu</span>
             </button>
@@ -289,8 +293,8 @@
         </div>
     </header>
 
-    <main class="min-h-screen min-w-0 overflow-x-hidden bg-surface-container-lowest pt-header-height md:ml-sidebar-width md:max-w-[calc(100vw-var(--spacing-sidebar-width))]">
-        <div class="min-w-0 max-w-full p-margin-mobile md:p-margin-desktop">
+    <main class="min-h-screen min-w-0 overflow-x-hidden bg-surface-container-lowest pt-header-height xl:ml-sidebar-width xl:max-w-[calc(100vw-var(--spacing-sidebar-width))]">
+        <div class="min-w-0 max-w-full p-margin-mobile xl:p-margin-desktop">
             {{ $slot }}
         </div>
     </main>

@@ -194,8 +194,8 @@ final class LearnerCatalogController extends Controller
                 'counts' => ['institutions', 'learnerProfiles'],
             ],
             'professions' => [
-                'model' => Profession::class, 'table' => 'professions', 'title' => 'Chức danh',
-                'singular' => 'chức danh', 'route' => 'admin.professions', 'counts' => ['learnerProfiles'],
+                'model' => Profession::class, 'table' => 'professions', 'title' => 'Chức danh / Ngành nghề',
+                'singular' => 'chức danh / ngành nghề', 'route' => 'admin.professions', 'counts' => ['learnerProfiles'],
             ],
             'education-stages' => [
                 'model' => EducationStage::class, 'table' => 'education_stages', 'title' => 'Năm học',

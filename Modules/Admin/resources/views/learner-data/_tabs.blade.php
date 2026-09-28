@@ -3,7 +3,7 @@
         ['label' => 'Quốc gia', 'route' => 'admin.countries.index', 'match' => 'admin.countries.*'],
         ['label' => 'Tỉnh/Thành phố', 'route' => 'admin.administrative-units.index', 'match' => 'admin.administrative-units.*'],
         ['label' => 'Trường học', 'route' => 'admin.institutions.index', 'match' => 'admin.institutions.*'],
-        ['label' => 'Chức danh', 'route' => 'admin.professions.index', 'match' => 'admin.professions.*'],
+        ['label' => 'Chức danh / Ngành nghề', 'route' => 'admin.professions.index', 'match' => 'admin.professions.*'],
         ['label' => 'Năm học', 'route' => 'admin.education-stages.index', 'match' => 'admin.education-stages.*'],
     ];
 @endphp
