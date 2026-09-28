@@ -2,7 +2,7 @@
     <div x-data="learnerCatalogPage({
         storeUrl: @js(route($config['route'].'.store')),
         updateUrl: @js(route($config['route'].'.update', ['item' => '__item__'])),
-        initialEditing: @js($editing ? collect($editing->getAttributes())->only(['id', 'name', 'code', 'country_id', 'type', 'requires_education_stage', 'defaults_to_graduated', 'is_graduated', 'sort_order', 'is_active'])->all() : null),
+        initialEditing: @js($editing ? collect($editing->getAttributes())->only(['id', 'name', 'code', 'country_id', 'type', 'requires_education_stage', 'defaults_to_graduated', 'sort_order', 'is_active'])->all() : null),
         reopen: @js($editing !== null || $errors->any() || request()->boolean('create')),
     })">
     <x-admin.page-header :title="'Quản lý '.$config['title']" description="Danh mục chuẩn được dùng trong hồ sơ và autocomplete của học viên.">
@@ -51,8 +51,8 @@
                         label="Trạng thái"
                         placeholder="Tất cả"
                         :options="[
-                            ['id' => 'active', 'label' => 'Đang hiển thị', 'tone' => 'bg-emerald-50 text-emerald-800 border-emerald-200'],
-                            ['id' => 'inactive', 'label' => 'Đã ẩn', 'tone' => 'bg-surface-container-high text-on-surface-variant border-outline-variant'],
+                            ['id' => 'active', 'label' => 'Đang dùng', 'tone' => 'bg-emerald-50 text-emerald-800 border-emerald-200'],
+                            ['id' => 'inactive', 'label' => 'Ngừng dùng', 'tone' => 'bg-surface-container-high text-on-surface-variant border-outline-variant'],
                         ]"
                         :selected="$filters['status']"
                     />
@@ -116,7 +116,7 @@
                                 <td class="px-5 py-3.5 text-right align-middle">
                                     @if ($canUpdate)
                                         <div class="inline-flex items-center justify-end gap-1.5">
-                                            <button type="button" @click="openEdit(@js(collect($item->getAttributes())->only(['id', 'name', 'code', 'country_id', 'type', 'requires_education_stage', 'defaults_to_graduated', 'is_graduated', 'sort_order', 'is_active'])->all()))" class="inline-flex h-8 items-center rounded-lg border border-outline-variant px-2.5 text-xs font-medium text-on-surface hover:bg-surface-container-low">Sửa</button>
+                                            <button type="button" @click="openEdit(@js(collect($item->getAttributes())->only(['id', 'name', 'code', 'country_id', 'type', 'requires_education_stage', 'defaults_to_graduated', 'sort_order', 'is_active'])->all()))" class="inline-flex h-8 items-center rounded-lg border border-outline-variant px-2.5 text-xs font-medium text-on-surface hover:bg-surface-container-low">Sửa</button>
                                             <button type="button" @click="confirming = { id: {{ $item->id }}, name: @js($item->name), url: @js(route($config['route'].'.destroy', $item->id)) }" class="inline-flex h-8 items-center rounded-lg px-2.5 text-xs font-medium text-error hover:bg-error/10">Xoá</button>
                                         </div>
                                     @endif
@@ -186,9 +186,9 @@
                 panel: null,
                 confirming: null,
                 form: {},
-                blankForm() { return { id: null, name: '', code: '', codeTouched: false, country_id: '', type: 'province', requires_education_stage: false, defaults_to_graduated: false, is_graduated: false, sort_order: 0, is_active: true }; },
+                blankForm() { return { id: null, name: '', code: '', codeTouched: false, country_id: '', type: 'province', requires_education_stage: false, defaults_to_graduated: false, sort_order: 0, is_active: 1 }; },
                 openCreate() { this.form = this.blankForm(); this.panel = 'create'; },
-                openEdit(item) { this.form = { ...this.blankForm(), ...item, codeTouched: true, country_id: String(item.country_id || '') }; this.panel = 'edit'; },
+                openEdit(item) { this.form = { ...this.blankForm(), ...item, codeTouched: true, country_id: String(item.country_id || ''), is_active: item.is_active ? 1 : 0 }; this.panel = 'edit'; },
                 closePanel() { this.panel = null; },
                 generateCode() {
                     if (this.form.codeTouched || !this.form.name.trim()) return;

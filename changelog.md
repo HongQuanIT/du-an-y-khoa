@@ -2,6 +2,14 @@
 
 ## 2026-09-28
 
+### Feat — Chuẩn hóa trạng thái danh mục học viên
+
+- Form tạo và sửa dùng lựa chọn Đang dùng hoặc Ngừng dùng thay cho checkbox hiển thị.
+- Bộ lọc trạng thái dùng cùng thuật ngữ trên danh mục và trường học.
+- Bỏ cấu hình trạng thái tốt nghiệp khỏi luồng tạo và sửa Năm học.
+
+## 2026-09-28
+
 ### Feat — Cải thiện thao tác danh mục học viên
 
 - Mở drawer Thêm và Sửa tại chỗ cho quốc gia, tỉnh/thành phố, trường học, chức danh/ngành nghề và năm học.

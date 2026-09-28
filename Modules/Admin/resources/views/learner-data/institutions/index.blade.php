@@ -62,8 +62,8 @@
                 label="Trạng thái"
                 placeholder="Tất cả"
                 :options="[
-                    ['id' => 'active', 'label' => 'Đang hiển thị', 'tone' => 'bg-emerald-50 text-emerald-800 border-emerald-200'],
-                    ['id' => 'inactive', 'label' => 'Đã ẩn', 'tone' => 'bg-surface-container-high text-on-surface-variant border-outline-variant'],
+                    ['id' => 'active', 'label' => 'Đang dùng', 'tone' => 'bg-emerald-50 text-emerald-800 border-emerald-200'],
+                    ['id' => 'inactive', 'label' => 'Ngừng dùng', 'tone' => 'bg-surface-container-high text-on-surface-variant border-outline-variant'],
                 ]"
                 :selected="$filters['status']"
             />
@@ -155,7 +155,7 @@
                         <label for="new_institution_sort_order" class="mb-1.5 block text-label-sm text-on-surface-variant">Thứ tự hiển thị</label>
                         <input id="new_institution_sort_order" type="number" name="sort_order" min="0" max="65535" x-model="form.sort_order" class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3">
                     </div>
-                    <label class="flex items-center gap-3 text-base text-on-surface"><input type="checkbox" name="is_active" value="1" x-model="form.is_active" class="size-5 rounded text-primary">Đang hiển thị cho học viên</label>
+                    <div><label for="institution_status" class="mb-1.5 block text-label-sm text-on-surface-variant">Trạng thái</label><select id="institution_status" name="is_active" x-model.number="form.is_active" class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3"><option value="1">Đang dùng</option><option value="0">Ngừng dùng</option></select></div>
                     </div>
                     <div class="flex flex-wrap items-center justify-end gap-3 border-t border-outline-variant px-5 py-4">
                         <button type="button" @click="closePanel()" class="h-11 rounded-lg px-4 text-sm font-semibold text-on-surface-variant hover:bg-surface-container-low">Hủy</button>
@@ -183,9 +183,9 @@
                 panel: null,
                 confirming: null,
                 form: {},
-                blankForm() { return { id: null, country_id: config.defaultCountryId, administrative_unit_id: '', name: '', short_name: '', type: 'university', search_aliases: '', sort_order: 0, is_active: true }; },
+                blankForm() { return { id: null, country_id: config.defaultCountryId, administrative_unit_id: '', name: '', short_name: '', type: 'university', search_aliases: '', sort_order: 0, is_active: 1 }; },
                 openCreate() { this.form = this.blankForm(); this.panel = 'create'; },
-                openEdit(item) { this.form = { ...this.blankForm(), ...item, country_id: String(item.country_id || ''), administrative_unit_id: String(item.administrative_unit_id || ''), search_aliases: item.search_aliases || '' }; this.panel = 'edit'; },
+                openEdit(item) { this.form = { ...this.blankForm(), ...item, country_id: String(item.country_id || ''), administrative_unit_id: String(item.administrative_unit_id || ''), search_aliases: item.search_aliases || '', is_active: item.is_active ? 1 : 0 }; this.panel = 'edit'; },
                 closePanel() { this.panel = null; },
                 get formAction() { return this.panel === 'edit' ? config.updateUrl.replace('__item__', this.form.id) : config.storeUrl; },
                 init() { if (config.reopen) { config.initialEditing ? this.openEdit(config.initialEditing) : this.openCreate(); } },
