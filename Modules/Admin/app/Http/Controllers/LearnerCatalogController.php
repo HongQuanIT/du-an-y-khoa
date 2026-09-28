@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Modules\Admin\Support\AdminQuestionListQuery;
@@ -91,6 +92,29 @@ final class LearnerCatalogController extends Controller
         $model->update($data);
 
         return redirect()->route($config['route'].'.index')->with('status', 'Đã cập nhật '.$config['singular'].'.');
+    }
+
+    public function destroy(Request $request, int $item, string $catalog): RedirectResponse
+    {
+        abort_unless($request->user()->can('learner_catalog.update'), 403);
+        $config = $this->config($catalog);
+        $model = $config['model']::query()->withCount($config['counts'])->findOrFail($item);
+        $blockingRelations = match ($catalog) {
+            'countries' => ['administrativeUnits', 'institutions'],
+            'administrative-units' => ['institutions'],
+            default => [],
+        };
+        $linkedCount = collect($blockingRelations)->sum(
+            fn (string $relation): int => (int) $model->{Str::snake($relation).'_count'}
+        );
+
+        if ($linkedCount > 0) {
+            return back()->with('error', 'Không thể xoá '.$config['singular'].' vì còn danh mục liên quan đang sử dụng.');
+        }
+
+        $model->delete();
+
+        return redirect()->route($config['route'].'.index')->with('status', 'Đã xoá '.$config['singular'].'.');
     }
 
     /** @return array<string, mixed> */

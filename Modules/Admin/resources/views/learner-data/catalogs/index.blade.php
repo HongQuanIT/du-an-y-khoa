@@ -1,5 +1,5 @@
 <x-layouts.admin :title="$config['title']">
-    <div x-data="{ formModalOpen: @js($editing !== null || $errors->any() || request()->boolean('create')) }">
+    <div x-data="{ formModalOpen: @js($editing !== null || $errors->any() || request()->boolean('create')), confirming: null }">
     <x-admin.page-header :title="'Quản lý '.$config['title']" description="Danh mục chuẩn được dùng trong hồ sơ và autocomplete của học viên.">
         @if ($canCreate)
             <x-slot:actions>
@@ -66,26 +66,27 @@
             </form>
 
             <div id="learner-catalog-results-region" aria-live="polite">
-            <div class="overflow-x-auto rounded-xl border border-outline-variant bg-surface">
-                <table class="min-w-full text-left text-body-sm">
+            <div class="overflow-hidden rounded-xl border border-outline-variant bg-surface">
+                <div class="w-full overflow-x-auto">
+                <table class="w-full min-w-[760px] border-collapse text-left text-sm">
                     <caption class="sr-only">Danh sách {{ strtolower($config['title']) }} của học viên</caption>
-                    <thead class="border-b border-outline-variant bg-surface-container-low text-label-md text-on-surface-variant">
+                    <thead class="border-b border-outline-variant bg-surface-container-low text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
                         <tr>
-                            <th class="px-4 py-3">Tên danh mục</th>
+                            <th class="px-5 py-3">Tên</th>
                             <th class="px-4 py-3">Thông tin</th>
-                            <th class="px-4 py-3">Học viên</th>
-                            <th class="px-4 py-3">Trạng thái</th>
-                            <th class="px-4 py-3"></th>
+                            <th class="w-[110px] px-4 py-3 text-right">Học viên</th>
+                            <th class="w-[140px] px-4 py-3">Trạng thái</th>
+                            <th class="w-[160px] px-5 py-3 text-right">Thao tác</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody class="divide-y divide-outline-variant/60">
                         @forelse ($items as $item)
-                            <tr class="border-b border-outline-variant/60 last:border-0">
-                                <td class="px-4 py-3">
+                            <tr class="transition-colors hover:bg-surface-container-low">
+                                <td class="px-5 py-3.5 align-middle">
                                     <p class="font-medium text-on-surface">{{ $item->name }}</p>
                                     <p class="font-mono text-label-sm text-on-surface-variant">{{ $item->code }} · TT {{ $item->sort_order }}</p>
                                 </td>
-                                <td class="px-4 py-3 text-on-surface-variant">
+                                <td class="px-4 py-3.5 align-middle text-on-surface-variant">
                                     @if ($catalog === 'countries')
                                         {{ number_format($item->administrative_units_count) }} địa phương · {{ number_format($item->institutions_count) }} trường
                                     @elseif ($catalog === 'administrative-units')
@@ -96,15 +97,18 @@
                                         {{ $item->is_graduated ? 'Đã tốt nghiệp' : 'Đang học' }}
                                     @endif
                                 </td>
-                                <td class="px-4 py-3 tabular-nums">{{ number_format($item->learner_profiles_count) }}</td>
-                                <td class="px-4 py-3">
-                                    <span @class(['rounded-full px-2.5 py-1 text-label-sm', 'bg-primary-fixed/40 text-primary' => $item->is_active, 'bg-surface-container text-on-surface-variant' => ! $item->is_active])>
-                                        {{ $item->is_active ? 'Đang hiển thị' : 'Đã ẩn' }}
+                                <td class="px-4 py-3.5 text-right align-middle tabular-nums">{{ number_format($item->learner_profiles_count) }}</td>
+                                <td class="px-4 py-3.5 align-middle">
+                                    <span @class(['inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold', 'bg-emerald-50 text-emerald-800' => $item->is_active, 'bg-slate-100 text-slate-600' => ! $item->is_active])>
+                                        {{ $item->is_active ? 'Đang dùng' : 'Ngừng dùng' }}
                                     </span>
                                 </td>
-                                <td class="px-4 py-3 text-right">
+                                <td class="px-5 py-3.5 text-right align-middle">
                                     @if ($canUpdate)
-                                        <a href="{{ route($config['route'].'.index', ['edit' => $item->id] + $filters) }}" class="font-label-sm font-semibold text-primary hover:underline">Sửa</a>
+                                        <div class="inline-flex items-center justify-end gap-1.5">
+                                            <a href="{{ route($config['route'].'.index', ['edit' => $item->id] + $filters) }}" class="inline-flex h-8 items-center rounded-lg border border-outline-variant px-2.5 text-xs font-medium text-on-surface hover:bg-surface-container-low">Sửa</a>
+                                            <button type="button" @click="confirming = { id: {{ $item->id }}, name: @js($item->name), url: @js(route($config['route'].'.destroy', $item->id)) }" class="inline-flex h-8 items-center rounded-lg px-2.5 text-xs font-medium text-error hover:bg-error/10">Xoá</button>
+                                        </div>
                                     @endif
                                 </td>
                             </tr>
@@ -113,6 +117,10 @@
                         @endforelse
                     </tbody>
                 </table>
+                </div>
+                <div class="border-t border-outline-variant px-5 py-3 text-xs text-on-surface-variant">
+                    {{ $items->firstItem() ?? 0 }}–{{ $items->lastItem() ?? 0 }} / {{ $items->total() }} mục · {{ $items->lastPage() }} trang
+                </div>
             </div>
             <div class="mt-4" id="learner-catalog-pagination">{{ $items->links() }}</div>
             </div>
@@ -122,15 +130,15 @@
 
     @if ($editing || $canCreate)
         <div x-cloak x-show="formModalOpen" x-transition.opacity @keydown.escape.window="@if($editing) window.location.href = '{{ route($config['route'].'.index') }}' @else formModalOpen = false @endif"
-            class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="catalog-form-title">
+            class="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-labelledby="catalog-form-title">
             @if ($editing)
-                <a href="{{ route($config['route'].'.index') }}" class="absolute inset-0 bg-scrim/50" aria-label="Đóng"></a>
+                <a href="{{ route($config['route'].'.index') }}" class="absolute inset-0 bg-on-surface/40" aria-label="Đóng"></a>
             @else
-                <button type="button" class="absolute inset-0 bg-scrim/50" aria-label="Đóng" @click="formModalOpen = false"></button>
+                <button type="button" class="absolute inset-0 bg-on-surface/40" aria-label="Đóng" @click="formModalOpen = false"></button>
             @endif
-            <section x-show="formModalOpen" x-transition class="relative z-10 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-outline-variant bg-surface p-5 shadow-xl md:p-6">
-                <div class="mb-5 flex items-center justify-between gap-3">
-                    <h2 id="catalog-form-title" class="font-title-lg font-semibold text-on-surface">{{ $editing ? 'Chỉnh sửa '.$config['singular'] : 'Thêm '.$config['singular'] }}</h2>
+            <section x-show="formModalOpen" x-transition class="relative z-10 flex h-full w-full max-w-md flex-col overflow-hidden border-l border-outline-variant bg-surface shadow-2xl">
+                <div class="flex items-start justify-between gap-3 border-b border-outline-variant px-5 py-4">
+                    <div><h2 id="catalog-form-title" class="text-base font-semibold text-on-surface">{{ $editing ? 'Sửa '.$config['singular'] : 'Thêm '.$config['singular'] }}</h2><p class="mt-0.5 text-xs text-on-surface-variant">Danh mục dùng trong hồ sơ và bộ lọc học viên.</p></div>
                     @if ($editing)
                         <a href="{{ route($config['route'].'.index') }}" class="flex size-9 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container" aria-label="Đóng"><span class="material-symbols-outlined">close</span></a>
                     @else
@@ -141,6 +149,21 @@
             </section>
         </div>
     @endif
+
+    <template x-teleport="body">
+        <div x-show="confirming" x-cloak class="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <div class="absolute inset-0 bg-on-surface/40" @click="confirming = null"></div>
+            <div class="relative w-full max-w-md rounded-2xl border border-outline-variant bg-surface p-5 shadow-2xl">
+                <h3 class="text-base font-semibold text-on-surface">Xoá {{ $config['singular'] }}?</h3>
+                <p class="mt-2 text-sm text-on-surface-variant">«<span x-text="confirming?.name"></span>» sẽ bị xoá khỏi danh mục. Hành động này không thể hoàn tác.</p>
+                <form :action="confirming?.url" method="post" class="mt-5 flex justify-end gap-2">
+                    @csrf @method('DELETE')
+                    <button type="button" @click="confirming = null" class="h-10 rounded-lg px-3 text-sm font-semibold text-on-surface-variant hover:bg-surface-container-low">Hủy</button>
+                    <button type="submit" class="h-10 rounded-lg bg-error px-4 text-sm font-semibold text-white hover:opacity-90">Xoá</button>
+                </form>
+            </div>
+        </div>
+    </template>
     <script>
         function adminLearnerCatalogFilter() {
             return {

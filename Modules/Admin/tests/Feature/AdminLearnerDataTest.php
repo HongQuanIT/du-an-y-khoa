@@ -9,9 +9,9 @@ use App\Support\Enums\Role;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Auth\Database\Seeders\AuthDatabaseSeeder;
+use Modules\Auth\Models\AdministrativeUnit;
 use Modules\Auth\Models\Country;
 use Modules\Auth\Models\Institution;
-use Modules\Auth\Models\AdministrativeUnit;
 use Modules\Auth\Models\Profession;
 use Spatie\Permission\Models\Role as RoleModel;
 use Tests\TestCase;
@@ -44,7 +44,7 @@ final class AdminLearnerDataTest extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.institutions.index', ['edit' => $existing->id]))
             ->assertOk()
-            ->assertSee('Chỉnh sửa trường/cơ sở đào tạo')
+            ->assertSee('Sửa trường học')
             ->assertSee($existing->name);
 
         $this->actingAs($admin)
@@ -85,7 +85,7 @@ final class AdminLearnerDataTest extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.professions.index', ['edit' => $professionForEdit->id]))
             ->assertOk()
-            ->assertSee('Chỉnh sửa chức danh')
+            ->assertSee('Sửa chức danh')
             ->assertSee($professionForEdit->name);
 
         $this->actingAs($admin)->post(route('admin.countries.store'), [
@@ -176,7 +176,7 @@ final class AdminLearnerDataTest extends TestCase
         $this->actingAsWithWebSession($user)
             ->get(route('admin.institutions.index'))
             ->assertOk()
-            ->assertSee('Chỉnh sửa')
+            ->assertSee('Sửa')
             ->assertDontSee('Thêm trường');
 
         $this->actingAsWithWebSession($user)
