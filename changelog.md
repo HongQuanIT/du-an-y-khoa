@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-09-28
+
+### Feat — Cập nhật danh mục chức danh học viên
+
+- Bổ sung các chức danh chuyên ngành theo danh sách nghiệp vụ.
+- Xoá chức danh tổng quát `doctor` khỏi dữ liệu seed cũ.
+- Bổ sung kiểm thử để đảm bảo seeder idempotent và không còn `doctor`.
+
 ## 2026-09-27
 
 ### Feat — Đồng bộ UI và thao tác danh mục học viên
