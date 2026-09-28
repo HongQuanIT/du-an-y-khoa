@@ -2,6 +2,12 @@
 
 ## 2026-09-28
 
+### Fix — Lịch sử phiên luyện QBank
+
+- Cột Chế độ không còn gãy chữ; nhãn Học tập và Thi thử nằm trên một dòng, dạng pill có chấm màu.
+- Thẻ «Câu hỏi đã làm» đếm số câu khác nhau đã trả lời trong ngân hàng câu hỏi, không cộng dồn mỗi lần làm lại.
+- Độ chính xác vẫn tính trên tổng lượt trả lời.
+
 ### Feat — Cập nhật danh mục chức danh học viên
 
 - Bổ sung các chức danh chuyên ngành theo danh sách nghiệp vụ.
