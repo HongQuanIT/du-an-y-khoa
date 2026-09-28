@@ -572,7 +572,7 @@ class Question extends Model
     {
         return match ($this->status) {
             QuestionStatus::Retired => 'Ngừng dùng',
-            QuestionStatus::Private => 'Riêng tư (exam)',
+            QuestionStatus::Private => 'Ẩn khỏi ngân hàng',
             QuestionStatus::Published => 'Đã xuất bản',
             default => ((int) $this->published_version > 0)
                 ? 'Đã xuất bản'

@@ -29,6 +29,14 @@
 
 ## 2026-09-28
 
+### Refactor — Đổi nhãn trạng thái ẩn câu hỏi
+
+- Đổi tên hiển thị trạng thái `private` từ «Riêng tư (exam)» thành «Ẩn khỏi ngân hàng» trên danh sách, form sửa và hộp xác nhận.
+- Giữ mã trạng thái và đường chuyển về xuất bản mà không duyệt lại. Trạng thái «Ngừng dùng» không đổi.
+- Nới cột trạng thái trên danh sách câu hỏi cho nhãn mới.
+
+## 2026-09-28
+
 ### Feat — Chuẩn hóa trạng thái danh mục học viên
 
 - Form tạo và sửa dùng lựa chọn Đang dùng hoặc Ngừng dùng thay cho checkbox hiển thị.

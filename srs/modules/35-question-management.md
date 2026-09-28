@@ -27,7 +27,7 @@ CRUD & **workflow duyệt 2 lớp** câu hỏi: Content Creator soạn/sửa →
 | **Question table** | Filter (status/hệ cơ quan-môn học-bài học/difficulty/report), search, sort | List | Table |
 | **Question editor** | Rich editor stem, options + giải thích theo đáp án, references, lab values, media, bài học (≥1) + tags | Create/edit | Form nhiều section |
 | **Preview pane** | Xem như học viên (study/exam) | Editor | Split |
-| **Workflow bar** | Draft → Chờ GV → Chờ publish → Published / Rejected / Private | Editor | — |
+| **Workflow bar** | Draft → Chờ GV → Chờ publish → Đã xuất bản / Từ chối / Ẩn khỏi ngân hàng | Editor | — |
 | **Metadata panel** | Creator, Instructor reviewer, Publisher, Created/Updated | Editor/Detail | Sidebar |
 | **Analytics panel** | Attempts, correct rate, reports — đọc `stats_cache` | Detail | Tab |
 | **Version history** | Sort `version_number`; instructor + publisher; snapshot read-only | Editor | Drawer |
@@ -156,7 +156,7 @@ Import: commit tạo hàng loạt `draft`.
 | `pending_publish` | Đủ **2 cờ xanh** (chờ Admin XB) | 2 xanh từ `in_flag_review` / `flag_conflict` | Không\* |
 | `published` | Admin đã publish phiên bản | Admin `publish` | Có (theo gating) |
 | `rejected` | Từ chối: GV / **auto dual_red** / Admin (`question.reject`) | Instructor / system / Admin | Không\* |
-| `private` | Ẩn khỏi ngân hàng câu hỏi (không hiện QBank / không lấy vào bài thi mới) | Admin | Không (Qbank) |
+| `private` | **Ẩn khỏi ngân hàng** (không hiện QBank / không lấy vào bài thi mới; xuất bản lại ngay, không duyệt lại) | Admin | Không (Qbank) |
 | `retired` | Ngừng dùng (giữ attempt) | Admin | Không |
 
 \* **Ngoại lệ tái bản:** nếu câu đã từng publish (`published_version >= 1`), Qbank **vẫn phục vụ snapshot version đã publish** trong lúc working copy đi lại pipeline (`draft` / `in_review` / `in_flag_review` / `flag_conflict` / `pending_publish` / `rejected`). Nội dung live **chỉ** đổi khi Admin publish lần mới (version +1). Câu chưa từng publish thì không lộ Qbank.

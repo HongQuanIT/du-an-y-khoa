@@ -30,7 +30,7 @@ enum QuestionStatus: string
             self::PendingPublish => 'Chờ xuất bản',
             self::Published => 'Đã xuất bản',
             self::Rejected => 'Từ chối',
-            self::Private => 'Riêng tư (exam)',
+            self::Private => 'Ẩn khỏi ngân hàng',
             self::Retired => 'Ngừng dùng',
         };
     }
