@@ -1,9 +1,14 @@
 <x-layouts.admin :title="$config['title']">
-    <div x-data="{ formModalOpen: @js($editing !== null || $errors->any() || request()->boolean('create')), confirming: null }">
+    <div x-data="learnerCatalogPage({
+        storeUrl: @js(route($config['route'].'.store')),
+        updateUrl: @js(route($config['route'].'.update', ['item' => '__item__'])),
+        initialEditing: @js($editing ? collect($editing->getAttributes())->only(['id', 'name', 'code', 'country_id', 'type', 'requires_education_stage', 'defaults_to_graduated', 'is_graduated', 'sort_order', 'is_active'])->all() : null),
+        reopen: @js($editing !== null || $errors->any() || request()->boolean('create')),
+    })">
     <x-admin.page-header :title="'Quản lý '.$config['title']" description="Danh mục chuẩn được dùng trong hồ sơ và autocomplete của học viên.">
         @if ($canCreate)
             <x-slot:actions>
-                <a href="{{ route($config['route'].'.index', ['create' => 1]) }}" class="rounded-lg bg-primary px-3 py-2 font-label-md text-on-primary hover:opacity-90">Thêm {{ $config['singular'] }}</a>
+                <button type="button" @click="openCreate()" class="rounded-lg bg-primary px-3 py-2 font-label-md text-on-primary hover:opacity-90">Thêm {{ $config['singular'] }}</button>
             </x-slot:actions>
         @endif
     </x-admin.page-header>
@@ -111,7 +116,7 @@
                                 <td class="px-5 py-3.5 text-right align-middle">
                                     @if ($canUpdate)
                                         <div class="inline-flex items-center justify-end gap-1.5">
-                                            <a href="{{ route($config['route'].'.index', ['edit' => $item->id] + $filters) }}" class="inline-flex h-8 items-center rounded-lg border border-outline-variant px-2.5 text-xs font-medium text-on-surface hover:bg-surface-container-low">Sửa</a>
+                                            <button type="button" @click="openEdit(@js(collect($item->getAttributes())->only(['id', 'name', 'code', 'country_id', 'type', 'requires_education_stage', 'defaults_to_graduated', 'is_graduated', 'sort_order', 'is_active'])->all()))" class="inline-flex h-8 items-center rounded-lg border border-outline-variant px-2.5 text-xs font-medium text-on-surface hover:bg-surface-container-low">Sửa</button>
                                             <button type="button" @click="confirming = { id: {{ $item->id }}, name: @js($item->name), url: @js(route($config['route'].'.destroy', $item->id)) }" class="inline-flex h-8 items-center rounded-lg px-2.5 text-xs font-medium text-error hover:bg-error/10">Xoá</button>
                                         </div>
                                     @endif
@@ -133,22 +138,14 @@
 
     </div>
 
-    @if ($editing || $canCreate)
-        <div x-cloak x-show="formModalOpen" x-transition.opacity @keydown.escape.window="@if($editing) window.location.href = '{{ route($config['route'].'.index') }}' @else formModalOpen = false @endif"
+    @if ($canCreate || $canUpdate)
+        <div x-cloak x-show="panel !== null" x-transition.opacity @keydown.escape.window="closePanel()"
             class="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-labelledby="catalog-form-title">
-            @if ($editing)
-                <a href="{{ route($config['route'].'.index') }}" class="absolute inset-0 bg-on-surface/40" aria-label="Đóng"></a>
-            @else
-                <button type="button" class="absolute inset-0 bg-on-surface/40" aria-label="Đóng" @click="formModalOpen = false"></button>
-            @endif
-            <section x-show="formModalOpen" x-transition class="relative z-10 flex h-full w-full max-w-md flex-col overflow-hidden border-l border-outline-variant bg-surface shadow-2xl">
+            <button type="button" class="absolute inset-0 bg-on-surface/40" aria-label="Đóng" @click="closePanel()"></button>
+            <section x-show="panel !== null" x-transition class="relative z-10 flex h-full w-full max-w-md flex-col overflow-hidden border-l border-outline-variant bg-surface shadow-2xl">
                 <div class="flex items-start justify-between gap-3 border-b border-outline-variant px-5 py-4">
-                    <div><h2 id="catalog-form-title" class="text-base font-semibold text-on-surface">{{ $editing ? 'Sửa '.$config['singular'] : 'Thêm '.$config['singular'] }}</h2><p class="mt-0.5 text-xs text-on-surface-variant">Danh mục dùng trong hồ sơ và bộ lọc học viên.</p></div>
-                    @if ($editing)
-                        <a href="{{ route($config['route'].'.index') }}" class="flex size-9 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container" aria-label="Đóng"><span class="material-symbols-outlined">close</span></a>
-                    @else
-                        <button type="button" @click="formModalOpen = false" class="flex size-9 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container" aria-label="Đóng"><span class="material-symbols-outlined">close</span></button>
-                    @endif
+                    <div><h2 id="catalog-form-title" class="text-base font-semibold text-on-surface" x-text="panel === 'edit' ? 'Sửa {{ $config['singular'] }}' : 'Thêm {{ $config['singular'] }}'"></h2><p class="mt-0.5 text-xs text-on-surface-variant">Danh mục dùng trong hồ sơ và bộ lọc học viên.</p></div>
+                    <button type="button" @click="closePanel()" class="flex size-9 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container" aria-label="Đóng"><span class="material-symbols-outlined">close</span></button>
                 </div>
                 @include('admin::learner-data.catalogs._form')
             </section>
@@ -181,6 +178,27 @@
                 async fetchResults(url) { this.loading = true; try { const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } }); if (!response.ok) throw new Error('Không thể tải danh sách'); const parsed = new DOMParser().parseFromString(await response.text(), 'text/html'); const next = parsed.getElementById('learner-catalog-results-region'); const current = document.getElementById('learner-catalog-results-region'); if (!next || !current) throw new Error('Không tìm thấy vùng kết quả'); current.replaceWith(next); window.history.pushState({}, '', url); this.bindPagination(); } catch (error) { console.error(error); alert('Có lỗi xảy ra khi tải danh sách. Vui lòng thử lại.'); } finally { this.loading = false; } },
                 bindPagination() { document.querySelectorAll('#learner-catalog-pagination a').forEach((link) => link.addEventListener('click', (event) => { event.preventDefault(); if (link.href) this.fetchResults(link.href); })); },
                 init() { this.bindPagination(); },
+            };
+        }
+
+        function learnerCatalogPage(config) {
+            return {
+                panel: null,
+                confirming: null,
+                form: {},
+                blankForm() { return { id: null, name: '', code: '', codeTouched: false, country_id: '', type: 'province', requires_education_stage: false, defaults_to_graduated: false, is_graduated: false, sort_order: 0, is_active: true }; },
+                openCreate() { this.form = this.blankForm(); this.panel = 'create'; },
+                openEdit(item) { this.form = { ...this.blankForm(), ...item, codeTouched: true, country_id: String(item.country_id || '') }; this.panel = 'edit'; },
+                closePanel() { this.panel = null; },
+                generateCode() {
+                    if (this.form.codeTouched || !this.form.name.trim()) return;
+                    const words = this.form.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toUpperCase().match(/[A-Z]+/g) || [];
+                    this.form.code = this.form.country_id !== undefined && @js($catalog === 'countries')
+                        ? (words.length > 1 ? words.map((word) => word[0]).join('').slice(0, 2) : (words[0] || '').slice(0, 2))
+                        : words.map((word) => word[0]).join('').slice(0, 20);
+                },
+                get formAction() { return this.panel === 'edit' ? config.updateUrl.replace('__item__', this.form.id) : config.storeUrl; },
+                init() { if (config.reopen) { config.initialEditing ? this.openEdit(config.initialEditing) : this.openCreate(); } },
             };
         }
     </script>

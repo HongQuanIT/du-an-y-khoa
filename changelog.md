@@ -2,6 +2,14 @@
 
 ## 2026-09-28
 
+### Feat — Cải thiện thao tác danh mục học viên
+
+- Mở drawer Thêm và Sửa tại chỗ cho quốc gia, tỉnh/thành phố, trường học, chức danh/ngành nghề và năm học.
+- Giữ đúng dữ liệu bản ghi khi mở drawer và không tải lại trang khi chọn thao tác.
+- Loại bỏ các chức danh seed không còn sử dụng, đồng thời dọn dữ liệu cũ khi chạy seed.
+
+## 2026-09-28
+
 ### Feat — Xuất/nhập đối tượng và kỳ thi của câu hỏi
 
 - File Excel và CSV thêm cột đối tượng và kỳ thi; xuất ghi tên, nhập nhận cả tên, mã hoặc slug.

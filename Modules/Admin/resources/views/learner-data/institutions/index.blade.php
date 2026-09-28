@@ -1,11 +1,17 @@
 <x-layouts.admin title="Trường và cơ sở đào tạo">
-    <div x-data="{ formModalOpen: @js($editing !== null || $errors->any() || request()->boolean('create')), confirming: null }">
+    <div x-data="adminInstitutionPage({
+        storeUrl: @js(route('admin.institutions.store')),
+        updateUrl: @js(route('admin.institutions.update', ['institution' => '__item__'])),
+        defaultCountryId: @js((string) $countries->firstWhere('code', 'VN')?->id),
+        initialEditing: @js($editing ? $editing->only(['id', 'country_id', 'administrative_unit_id', 'name', 'short_name', 'type', 'search_aliases', 'sort_order', 'is_active']) : null),
+        reopen: @js($editing !== null || $errors->any() || request()->boolean('create')),
+    })">
     <x-admin.page-header title="Trường và cơ sở đào tạo" description="Danh mục chuẩn dùng khi học viên hoàn thiện hồ sơ.">
         <x-slot:actions>
             <div class="flex gap-2">
                 @if ($canCreate)
                     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.institutions.create'))
-<a href="{{ route('admin.institutions.index', ['create' => 1]) }}" class="rounded-lg bg-primary px-3 py-2 font-label-md text-on-primary hover:opacity-90">Thêm trường</a>
+<button type="button" @click="openCreate()" class="rounded-lg bg-primary px-3 py-2 font-label-md text-on-primary hover:opacity-90">Thêm trường</button>
 @endif
                 @endif
             </div>
@@ -99,7 +105,7 @@
                             @if ($canUpdate)
                                 <div class="inline-flex items-center justify-end gap-1.5">
                                     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.institutions.edit'))
-                                        <a href="{{ route('admin.institutions.index', ['edit' => $institution->id] + $filters) }}" class="inline-flex h-8 items-center rounded-lg border border-outline-variant px-2.5 text-xs font-medium text-on-surface hover:bg-surface-container-low">Sửa</a>
+                                        <button type="button" @click="openEdit(@js($institution->only(['id', 'country_id', 'administrative_unit_id', 'name', 'short_name', 'type', 'search_aliases', 'sort_order', 'is_active'])))" class="inline-flex h-8 items-center rounded-lg border border-outline-variant px-2.5 text-xs font-medium text-on-surface hover:bg-surface-container-low">Sửa</button>
                                     @endif
                                     <button type="button" @click="confirming = { name: @js($institution->name), url: @js(route('admin.institutions.destroy', $institution)) }" class="inline-flex h-8 items-center rounded-lg px-2.5 text-xs font-medium text-error hover:bg-error/10">Xoá</button>
                                 </div>
@@ -119,53 +125,41 @@
     <div class="mt-4" id="institution-pagination">{{ $institutions->links() }}</div>
     </div>
 
-    @if ($editing || $canCreate)
-        <div x-cloak x-show="formModalOpen" x-transition.opacity @keydown.escape.window="@if($editing) window.location.href = '{{ route('admin.institutions.index') }}' @else formModalOpen = false @endif"
+    @if ($canCreate || $canUpdate)
+        <div x-cloak x-show="panel !== null" x-transition.opacity @keydown.escape.window="closePanel()"
             class="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-labelledby="institution-form-title">
-            @if ($editing)
-                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.institutions.index'))
-                <a href="{{ route('admin.institutions.index') }}" class="absolute inset-0 bg-on-surface/40" aria-label="Đóng"></a>
-@endif
-            @else
-                <button type="button" class="absolute inset-0 bg-on-surface/40" aria-label="Đóng" @click="formModalOpen = false"></button>
-            @endif
-            <section x-show="formModalOpen" x-transition
+            <button type="button" class="absolute inset-0 bg-on-surface/40" aria-label="Đóng" @click="closePanel()"></button>
+            <section x-show="panel !== null" x-transition
                 class="relative z-10 flex h-full w-full max-w-lg flex-col overflow-hidden border-l border-outline-variant bg-surface shadow-2xl"
-                x-data="{ country: @js((string) old('country_id', $editing?->country_id ?? $countries->firstWhere('code', 'VN')?->id)), units: @js($units->map(fn ($unit) => ['id' => (string) $unit->id, 'country_id' => (string) $unit->country_id, 'name' => $unit->name])) }">
+                x-data="{ units: @js($units->map(fn ($unit) => ['id' => (string) $unit->id, 'country_id' => (string) $unit->country_id, 'name' => $unit->name])) }">
                 <div class="flex items-start justify-between gap-3 border-b border-outline-variant px-5 py-4">
-                    <div><h2 id="institution-form-title" class="text-base font-semibold text-on-surface">{{ $editing ? 'Sửa trường học' : 'Thêm trường học' }}</h2><p class="mt-0.5 text-xs text-on-surface-variant">Danh mục dùng trong hồ sơ học viên.</p></div>
-                    @if ($editing)
-                        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.institutions.index'))
-<a href="{{ route('admin.institutions.index') }}" class="flex size-9 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container" aria-label="Đóng"><span class="material-symbols-outlined">close</span></a>
-@endif
-                    @else
-                        <button type="button" @click="formModalOpen = false" class="flex size-9 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container" aria-label="Đóng"><span class="material-symbols-outlined">close</span></button>
-                    @endif
+                    <div><h2 id="institution-form-title" class="text-base font-semibold text-on-surface" x-text="panel === 'edit' ? 'Sửa trường học' : 'Thêm trường học'"></h2><p class="mt-0.5 text-xs text-on-surface-variant">Danh mục dùng trong hồ sơ học viên.</p></div>
+                    <button type="button" @click="closePanel()" class="flex size-9 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container" aria-label="Đóng"><span class="material-symbols-outlined">close</span></button>
                 </div>
                 <div class="px-5 pt-4"><x-auth.errors /></div>
-                <form method="post" action="{{ $editing ? route('admin.institutions.update', $editing) : route('admin.institutions.store') }}" class="flex min-h-0 flex-1 flex-col">
+                <form method="post" :action="formAction" class="flex min-h-0 flex-1 flex-col">
                     @csrf
-                    @if ($editing) @method('PUT') @endif
+                    <input type="hidden" name="_method" :value="panel === 'edit' ? 'PUT' : 'POST'">
                     <div class="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-5">
                     <div class="grid gap-5 md:grid-cols-2">
-                        <div><label for="new_institution_country" class="mb-1.5 block text-label-sm text-on-surface-variant">Quốc gia</label><select id="new_institution_country" name="country_id" x-model="country" required class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3">@foreach($countries as $country)<option value="{{ $country->id }}">{{ $country->name }}</option>@endforeach</select></div>
-                        <div><label for="new_institution_unit" class="mb-1.5 block text-label-sm text-on-surface-variant">Tỉnh/Thành phố</label><select id="new_institution_unit" name="administrative_unit_id" required class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3"><option value="">Chọn địa phương</option><template x-for="unit in units.filter(item => item.country_id === country)" :key="unit.id"><option :value="unit.id" x-text="unit.name" :selected="unit.id === @js((string) old('administrative_unit_id', $editing?->administrative_unit_id))"></option></template></select></div>
+                        <div><label for="new_institution_country" class="mb-1.5 block text-label-sm text-on-surface-variant">Quốc gia</label><select id="new_institution_country" name="country_id" x-model="form.country_id" required class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3">@foreach($countries as $country)<option value="{{ $country->id }}">{{ $country->name }}</option>@endforeach</select></div>
+                        <div><label for="new_institution_unit" class="mb-1.5 block text-label-sm text-on-surface-variant">Tỉnh/Thành phố</label><select id="new_institution_unit" name="administrative_unit_id" x-model="form.administrative_unit_id" required class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3"><option value="">Chọn địa phương</option><template x-for="unit in units.filter(item => item.country_id === form.country_id)" :key="unit.id"><option :value="unit.id" x-text="unit.name"></option></template></select></div>
                     </div>
-                    <div><label for="new_institution_name" class="mb-1.5 block text-label-sm text-on-surface-variant">Tên đầy đủ</label><input id="new_institution_name" name="name" value="{{ old('name', $editing?->name) }}" required maxlength="180" class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3"></div>
+                    <div><label for="new_institution_name" class="mb-1.5 block text-label-sm text-on-surface-variant">Tên đầy đủ</label><input id="new_institution_name" name="name" x-model="form.name" required maxlength="180" class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3"></div>
                     <div class="grid gap-5 md:grid-cols-2">
-                        <div><label for="new_institution_short_name" class="mb-1.5 block text-label-sm text-on-surface-variant">Tên viết tắt</label><input id="new_institution_short_name" name="short_name" value="{{ old('short_name', $editing?->short_name) }}" maxlength="80" class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3"></div>
-                        <div><label for="new_institution_type" class="mb-1.5 block text-label-sm text-on-surface-variant">Loại cơ sở</label><select id="new_institution_type" name="type" class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3">@foreach(['university' => 'Đại học', 'college' => 'Cao đẳng', 'hospital' => 'Bệnh viện', 'training_center' => 'Trung tâm đào tạo', 'other' => 'Khác'] as $value => $label)<option value="{{ $value }}" @selected(old('type', $editing?->type ?: 'university') === $value)>{{ $label }}</option>@endforeach</select></div>
+                        <div><label for="new_institution_short_name" class="mb-1.5 block text-label-sm text-on-surface-variant">Tên viết tắt</label><input id="new_institution_short_name" name="short_name" x-model="form.short_name" maxlength="80" class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3"></div>
+                        <div><label for="new_institution_type" class="mb-1.5 block text-label-sm text-on-surface-variant">Loại cơ sở</label><select id="new_institution_type" name="type" x-model="form.type" class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3">@foreach(['university' => 'Đại học', 'college' => 'Cao đẳng', 'hospital' => 'Bệnh viện', 'training_center' => 'Trung tâm đào tạo', 'other' => 'Khác'] as $value => $label)<option value="{{ $value }}">{{ $label }}</option>@endforeach</select></div>
                     </div>
-                    <div><label for="new_institution_aliases" class="mb-1.5 block text-label-sm text-on-surface-variant">Tên khác/từ khóa tìm kiếm</label><textarea id="new_institution_aliases" name="search_aliases" rows="3" maxlength="1000" class="w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 py-2" placeholder="Phân cách bằng dấu phẩy">{{ old('search_aliases', $editing?->search_aliases) }}</textarea></div>
+                    <div><label for="new_institution_aliases" class="mb-1.5 block text-label-sm text-on-surface-variant">Tên khác/từ khóa tìm kiếm</label><textarea id="new_institution_aliases" name="search_aliases" x-model="form.search_aliases" rows="3" maxlength="1000" class="w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 py-2" placeholder="Phân cách bằng dấu phẩy"></textarea></div>
                     <div>
                         <label for="new_institution_sort_order" class="mb-1.5 block text-label-sm text-on-surface-variant">Thứ tự hiển thị</label>
-                        <input id="new_institution_sort_order" type="number" name="sort_order" min="0" max="65535" value="{{ old('sort_order', $editing?->sort_order ?? 0) }}" class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3">
+                        <input id="new_institution_sort_order" type="number" name="sort_order" min="0" max="65535" x-model="form.sort_order" class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3">
                     </div>
-                    <label class="flex items-center gap-3 text-base text-on-surface"><input type="checkbox" name="is_active" value="1" @checked(old('is_active', $editing ? $editing->is_active : true)) class="size-5 rounded text-primary">Đang hiển thị cho học viên</label>
+                    <label class="flex items-center gap-3 text-base text-on-surface"><input type="checkbox" name="is_active" value="1" x-model="form.is_active" class="size-5 rounded text-primary">Đang hiển thị cho học viên</label>
                     </div>
                     <div class="flex flex-wrap items-center justify-end gap-3 border-t border-outline-variant px-5 py-4">
-                        <button type="button" @click="window.location.href = '{{ route('admin.institutions.index') }}'" class="h-11 rounded-lg px-4 text-sm font-semibold text-on-surface-variant hover:bg-surface-container-low">Hủy</button>
-                        <button class="h-11 rounded-lg bg-primary px-5 text-sm font-semibold text-on-primary">{{ $editing ? 'Lưu thay đổi' : 'Thêm trường' }}</button>
+                        <button type="button" @click="closePanel()" class="h-11 rounded-lg px-4 text-sm font-semibold text-on-surface-variant hover:bg-surface-container-low">Hủy</button>
+                        <button type="submit" class="h-11 rounded-lg bg-primary px-5 text-sm font-semibold text-on-primary" x-text="panel === 'edit' ? 'Lưu thay đổi' : 'Thêm trường'"></button>
                     </div>
                 </form>
             </section>
@@ -184,6 +178,19 @@
     </template>
     <script>
         function adminInstitutionFilter(initialHasFilters = false) { return { loading: false, hasAppliedFilters: initialHasFilters, filterForm() { return document.getElementById('institution-filter-form'); }, hasCurrentFilters() { const form = this.filterForm(); return form ? [...new FormData(form).entries()].some(([key, value]) => key !== 'page' && String(value).trim() !== '') : false; }, async applyFilters() { const form = this.filterForm(); if (!form) return; const url = new URL(form.getAttribute('action'), window.location.origin); const params = new URLSearchParams(new FormData(form)); params.delete('page'); url.search = params.toString(); await this.fetchResults(url.toString()); this.hasAppliedFilters = this.hasCurrentFilters(); }, async resetFilters(url) { this.filterForm()?.reset(); window.dispatchEvent(new CustomEvent('learner-catalog-filters-reset')); this.hasAppliedFilters = false; await this.fetchResults(url); }, async fetchResults(url) { this.loading = true; try { const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } }); if (!response.ok) throw new Error('Không thể tải danh sách'); const parsed = new DOMParser().parseFromString(await response.text(), 'text/html'); const next = parsed.getElementById('institution-results-region'); const current = document.getElementById('institution-results-region'); if (!next || !current) throw new Error('Không tìm thấy vùng kết quả'); current.replaceWith(next); window.history.pushState({}, '', url); this.bindPagination(); } catch (error) { console.error(error); alert('Có lỗi xảy ra khi tải danh sách. Vui lòng thử lại.'); } finally { this.loading = false; } }, bindPagination() { document.querySelectorAll('#institution-pagination a').forEach((link) => link.addEventListener('click', (event) => { event.preventDefault(); if (link.href) this.fetchResults(link.href); })); }, init() { this.bindPagination(); } }; }
+        function adminInstitutionPage(config) {
+            return {
+                panel: null,
+                confirming: null,
+                form: {},
+                blankForm() { return { id: null, country_id: config.defaultCountryId, administrative_unit_id: '', name: '', short_name: '', type: 'university', search_aliases: '', sort_order: 0, is_active: true }; },
+                openCreate() { this.form = this.blankForm(); this.panel = 'create'; },
+                openEdit(item) { this.form = { ...this.blankForm(), ...item, country_id: String(item.country_id || ''), administrative_unit_id: String(item.administrative_unit_id || ''), search_aliases: item.search_aliases || '' }; this.panel = 'edit'; },
+                closePanel() { this.panel = null; },
+                get formAction() { return this.panel === 'edit' ? config.updateUrl.replace('__item__', this.form.id) : config.storeUrl; },
+                init() { if (config.reopen) { config.initialEditing ? this.openEdit(config.initialEditing) : this.openCreate(); } },
+            };
+        }
     </script>
     </div>
 </x-layouts.admin>
