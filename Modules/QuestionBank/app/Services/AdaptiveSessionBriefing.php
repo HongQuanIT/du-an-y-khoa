@@ -119,7 +119,7 @@ final class AdaptiveSessionBriefing
                     $rows[$key]['weight'] = $entry['weight'];
                     $rows[$key]['role'] = 'Ôn lại';
                 } elseif ($rows[$key]['role'] === '') {
-                    $rows[$key]['role'] = 'Câu mới';
+                    $rows[$key]['role'] = 'Chưa chấm';
                 }
             }
         }
@@ -226,8 +226,7 @@ final class AdaptiveSessionBriefing
 
         $picked = (int) ($result['picked_count'] ?? $served['count'] ?? 0);
         $poolSize = (int) ($split['pool_size'] ?? $pool['pool_size'] ?? 0);
-        $newCount = (int) ($result['picked_unseen'] ?? $split['quota_unseen'] ?? 0);
-        $reviewCount = (int) ($result['picked_review'] ?? $split['quota_review'] ?? 0);
+        [$newCount, $reviewCount] = $this->selectedCounts($result, $split);
 
         return [
             'when' => $this->when($run['at']),
@@ -238,14 +237,18 @@ final class AdaptiveSessionBriefing
             'summary' => $this->summary($isLegacy, $empty, $focusMeta['intent'], $start, $pool, $split, $topUp),
             'stats' => $empty ? [] : [
                 ['label' => 'Câu được chọn', 'value' => (string) max($picked, $newCount + $reviewCount)],
-                ['label' => 'Câu mới', 'value' => (string) $newCount],
+                ['label' => 'Câu chưa chấm', 'value' => (string) $newCount],
                 ['label' => 'Câu ôn lại', 'value' => (string) $reviewCount],
                 ['label' => 'Câu trong đề', 'value' => (string) $poolSize],
             ],
             'reasons' => $isLegacy || $empty ? [] : $this->reasons($sampled, $scores),
             'fresh' => $isLegacy || $empty ? [] : $this->freshQuestions($result, $sampled),
             'table' => $isLegacy || $empty ? [] : $this->sessionTable($result, $scores, $sampled),
-            'formulas' => $isLegacy || $empty ? [] : $this->formulas($focusMeta, $scores, $split),
+            'formulas' => $isLegacy || $empty ? [] : $this->formulas($focusMeta, [
+                ...$scores,
+                'w_weakness' => $scores['w_weakness'] ?? $start['w_weakness'] ?? null,
+                'w_memory' => $scores['w_memory'] ?? $start['w_memory'] ?? null,
+            ], $split),
             'closing' => $this->closing($isLegacy, $empty, isset($steps['served'])),
         ];
     }
@@ -339,10 +342,11 @@ final class AdaptiveSessionBriefing
             return 'Bộ lọc hiện tại không còn câu đã xuất bản để bắt đầu phiên.';
         }
 
-        $scope = match ((string) ($pool['scope'] ?? 'blueprint_matrix')) {
+        $scope = match ((string) ($pool['scope'] ?? 'blueprint_membership')) {
             'organ_subject' => 'Phạm vi là hệ và môn đã chọn.',
-            'matrix_intersect_organ_subject' => 'Phạm vi là phần giao giữa đề thi với hệ và môn đã chọn.',
+            'matrix_intersect_organ_subject', 'blueprint_and_content' => 'Phạm vi là phần giao giữa đề thi với hệ và môn đã chọn.',
             'empty_content_filter' => 'Hệ hoặc môn đã chọn không nằm trong đề.',
+            'all' => 'Phạm vi là mọi câu đã xuất bản.',
             default => 'Phạm vi là toàn bộ đề thi.',
         };
 
@@ -358,13 +362,14 @@ final class AdaptiveSessionBriefing
         $unseen = (int) ($split['unseen_count'] ?? 0);
         $seen = (int) ($split['seen_count'] ?? 0);
         $mix = match (true) {
-            $unseen === 0 && $seen > 0 => ' Học viên đã làm hết các câu trong phạm vi này, nên cả phiên dùng để ôn lại.',
-            $seen === 0 => ' Học viên chưa làm câu nào trong phạm vi này, nên cả phiên là câu mới.',
-            default => " Trong đề còn {$unseen} câu chưa làm và {$seen} câu đã gặp. Phiên dành ".(int) ($split['quota_unseen'] ?? 0).' chỗ cho câu mới và '.(int) ($split['quota_review'] ?? 0).' chỗ để ôn.',
+            $unseen === 0 && $seen > 0 => ' Học viên đã được chấm hết các câu trong phạm vi này, nên cả phiên dùng để ôn lại.',
+            $seen === 0 => ' Học viên chưa có câu nào được chấm trong phạm vi này, nên cả phiên là câu chưa chấm.',
+            default => " Trong phạm vi còn {$unseen} câu chưa chấm và {$seen} câu đã chấm. Phiên dành ".(int) ($split['quota_unseen'] ?? 0).' chỗ cho câu chưa chấm và '.(int) ($split['quota_review'] ?? 0).' chỗ để ôn câu đã chấm.',
         };
 
-        $extra = $topUp !== null
-            ? ' Số câu ôn không đủ, nên hệ thống lấy thêm câu khác trong đề.'
+        $filled = (int) ($topUp['filled'] ?? 0);
+        $extra = $topUp !== null && $filled > 0
+            ? " Nhóm ôn không đủ câu, nên hệ thống bốc thêm {$filled} câu trong phần còn lại của đề."
             : '';
 
         return $intent.' '.$scope.$mix.$extra;
@@ -505,17 +510,17 @@ final class AdaptiveSessionBriefing
         return match ($focus) {
             'weak_focus' => [
                 'label' => 'Điểm yếu',
-                'intent' => 'Hướng luyện này ưu tiên chỗ học viên còn sai.',
+                'intent' => 'Hướng luyện này ưu tiên câu hay trả lời sai, và vẫn dành một phần cho câu đang dễ quên.',
                 'tone' => 'rose',
             ],
             'retention' => [
                 'label' => 'Củng cố',
-                'intent' => 'Hướng luyện này ưu tiên chỗ đã lâu chưa gặp, để tránh quên.',
+                'intent' => 'Hướng luyện này ưu tiên câu có mức cần ôn cao: độ bền thấp hoặc đã lâu kể từ lần chấm.',
                 'tone' => 'amber',
             ],
             default => [
                 'label' => 'Cân bằng',
-                'intent' => 'Hướng luyện này chia đều giữa chỗ còn sai và chỗ đã lâu chưa gặp.',
+                'intent' => 'Hướng luyện này cân giữa câu hay sai và câu đang dễ quên.',
                 'tone' => 'sky',
             ],
         };
@@ -630,9 +635,10 @@ final class AdaptiveSessionBriefing
                 'correct' => (int) ($row['correct'] ?? 0),
                 'weakness' => isset($row['weakness']) && $row['weakness'] !== null ? (float) $row['weakness'] : null,
                 'days' => isset($row['days_since_seen']) && $row['days_since_seen'] !== null ? (float) $row['days_since_seen'] : null,
+                'stability' => isset($row['stability_days']) && $row['stability_days'] !== null ? (float) $row['stability_days'] : null,
                 'memory' => isset($row['memory']) && $row['memory'] !== null ? (float) $row['memory'] : null,
                 'cooldown' => isset($row['cooldown']) && $row['cooldown'] !== null ? (float) $row['cooldown'] : null,
-                'role' => ($row['kind'] ?? '') === 'fresh' || ! $hasPriority ? 'Câu mới' : 'Ôn lại',
+                'role' => ($row['kind'] ?? '') === 'fresh' || ! $hasPriority ? 'Chưa chấm' : 'Ôn lại',
             ];
         }
 
@@ -667,7 +673,8 @@ final class AdaptiveSessionBriefing
                 'wrong' => (string) $row['wrong'],
                 'correct' => (string) $row['correct'],
                 'weakness' => $row['weakness'] === null ? '—' : ((int) round($row['weakness'] * 100)).'%',
-                'days' => $row['days'] === null ? '—' : (string) (int) round($row['days']),
+                'days' => $row['days'] === null ? '—' : $this->decimal($row['days']),
+                'stability' => $this->decimal($row['stability']),
                 'memory' => $this->decimal($row['memory']),
                 'hold' => $this->holdLabel($row['cooldown']),
                 'role' => (string) $row['role'],
@@ -678,6 +685,56 @@ final class AdaptiveSessionBriefing
     }
 
     /**
+     * Counts the questions actually placed in the session, including top-up.
+     *
+     * @param  array<string, mixed>  $result
+     * @param  array<string, mixed>  $split
+     * @return array{0: int, 1: int}
+     */
+    private function selectedCounts(array $result, array $split): array
+    {
+        $sheet = (array) ($result['sheet'] ?? []);
+        if ($sheet !== []) {
+            return $this->countKinds($sheet, selectedOnly: false);
+        }
+
+        $ranking = (array) ($result['ranking'] ?? []);
+        if ($ranking !== []) {
+            return $this->countKinds($ranking, selectedOnly: true);
+        }
+
+        return [
+            (int) ($result['picked_unseen'] ?? $split['quota_unseen'] ?? 0),
+            (int) ($result['picked_review'] ?? $split['quota_review'] ?? 0),
+        ];
+    }
+
+    /**
+     * @param  array<mixed>  $rows
+     * @return array{0: int, 1: int}
+     */
+    private function countKinds(array $rows, bool $selectedOnly): array
+    {
+        $fresh = 0;
+        $review = 0;
+        foreach ($rows as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            if ($selectedOnly && array_key_exists('selected', $row) && ! $row['selected']) {
+                continue;
+            }
+            if (($row['kind'] ?? '') === 'fresh') {
+                $fresh++;
+            } else {
+                $review++;
+            }
+        }
+
+        return [$fresh, $review];
+    }
+
+    /**
      * @param  array{label: string, intent: string, tone: string}  $focus
      * @param  array<string, mixed>  $scores
      * @param  array<string, mixed>  $split
@@ -685,24 +742,26 @@ final class AdaptiveSessionBriefing
      */
     private function formulas(array $focus, array $scores, array $split): array
     {
-        $weaknessWeight = isset($scores['w_weakness']) ? $this->decimal($scores['w_weakness']) : null;
-        $memoryWeight = isset($scores['w_memory']) ? $this->decimal($scores['w_memory']) : null;
+        $weaknessWeight = isset($scores['w_weakness']) && $scores['w_weakness'] !== null ? $this->decimal($scores['w_weakness']) : null;
+        $memoryWeight = isset($scores['w_memory']) && $scores['w_memory'] !== null ? $this->decimal($scores['w_memory']) : null;
         $base = ($weaknessWeight !== null && $memoryWeight !== null)
-            ? "{$weaknessWeight} × độ yếu + {$memoryWeight} × mức nhớ. Điểm này đo câu cần được ôn nhiều đến mức nào, trước khi giảm vì vừa được chọn. Trọng số theo hướng {$focus['label']}."
-            : 'trọng số độ yếu × độ yếu + trọng số trí nhớ × mức nhớ. Điểm này đo câu cần được ôn nhiều đến mức nào, trước khi giảm vì vừa được chọn.';
+            ? "**{$weaknessWeight} × độ yếu + {$memoryWeight} × mức cần ôn**. Điểm này đo câu cần được ôn nhiều đến mức nào, trước khi giảm vì vừa được chọn. Trọng số theo hướng {$focus['label']}."
+            : '**trọng số độ yếu × độ yếu + trọng số mức cần ôn × mức cần ôn**. Điểm này đo câu cần được ôn nhiều đến mức nào, trước khi giảm vì vừa được chọn.';
         $reviewSlots = (int) ($split['quota_review'] ?? 0);
-        $share = 'điểm ưu tiên của câu / tổng điểm ưu tiên của các câu đã gặp × 100';
-        if ($reviewSlots > 0) {
-            $share .= ". Phiên này bốc {$reviewSlots} câu trong nhóm ôn theo tỉ lệ này.";
+        $share = '**điểm ưu tiên của câu / tổng điểm ưu tiên của các câu đã chấm × 100**. Đây là suất ở vòng bốc đầu tiên.';
+        if ($reviewSlots > 1) {
+            $share .= " Phiên này bốc {$reviewSlots} câu đã chấm theo trọng số, không hoàn lại, nên các vòng sau tính trên phần còn lại.";
+        } elseif ($reviewSlots === 1) {
+            $share .= ' Phiên này bốc 1 câu đã chấm theo tỉ lệ này.';
         }
 
         return [
-            ['name' => 'Độ yếu', 'expr' => '(số lần sai + 1) / (số lần đúng + số lần sai + 2)'],
-            ['name' => 'Mức nhớ', 'expr' => '1 − e^(− số ngày từ lần chấm / độ bền). Đúng thì độ bền ×2, sai thì ×0,3'],
+            ['name' => 'Độ yếu', 'expr' => 'Giả như câu đã có sẵn 1 lần đúng và 1 lần sai, rồi mới cộng các lần đã chấm: **(số lần sai + 1) / (số lần đúng + số lần sai + 2)**. Sai đúng một lần thì độ yếu là 67%, không phải 100%. Sai 8/10 thì là 75%. Câu bỏ qua thì không cộng vào.'],
+            ['name' => 'Mức cần ôn', 'expr' => '**1 − e^(− số ngày từ lần chấm / độ bền)**. Càng gần 1 thì càng dễ quên. Lần chấm đầu đặt **độ bền = 1 ngày**. Đúng thì **×2**, sai thì **×0,3**, rồi kẹp từ **0,5 đến 365 ngày**. Câu chưa có độ bền thì **mức cần ôn = 1**.'],
             ['name' => 'Điểm cần ôn', 'expr' => $base],
-            ['name' => 'Tránh lặp', 'expr' => 'Trong vòng 2 ngày, phiên mới nhất có câu đó — vừa chọn sáng nay, chưa mở phiên sau: nhân 0,10. Trong vòng 2 ngày, câu không ở phiên mới nhất — hôm qua vừa chọn, hôm nay đã mở một phiên khác: nhân 0,30. Đã mở thêm 2 phiên kể từ lần chọn, hoặc chưa mở phiên nào nhưng lần chọn đã quá 2 ngày: nhân 1,00.'],
-            ['name' => 'Điểm ưu tiên', 'expr' => 'số lớn hơn giữa 0,01 và (điểm cần ôn × tránh lặp)'],
-            ['name' => '% suất vào nhóm ôn', 'expr' => $share],
+            ['name' => 'Tránh lặp', 'expr' => '**×0,10** nếu trong 2 ngày câu đang nằm ở phiên mới nhất. **×0,30** nếu trong 2 ngày và đã có đúng một phiên tạo sau lần chọn. **×1,00** nếu chưa từng được chọn, nếu đã có từ hai phiên tạo sau lần chọn, hoặc nếu lần chọn đã quá 2 ngày.'],
+            ['name' => 'Điểm ưu tiên', 'expr' => '**số lớn hơn giữa 0,01 và (điểm cần ôn × tránh lặp)**'],
+            ['name' => '% suất vòng đầu', 'expr' => $share],
         ];
     }
 

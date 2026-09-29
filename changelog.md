@@ -2,6 +2,13 @@
 
 ## 2026-09-29
 
+### Fix — Trang log thích ứng khớp selector
+
+- Nhãn và công thức theo lần chấm, độ bền và mức cần ôn. Các phép tính được in đậm.
+- Số câu chưa chấm và câu ôn lại tính cả câu bốc thêm. Phạm vi đề kèm hệ hoặc môn ghi là phần giao.
+
+## 2026-09-29
+
 ### Fix — Phiên thi thử ở lại ngân hàng câu hỏi
 
 - Tạo và kết thúc phiên chế độ thi từ ngân hàng câu hỏi đi /qbank/session, không còn /exams.
