@@ -35,7 +35,7 @@ final class ListRecentLearningActivitiesAction
                     'detail' => sprintf('Đúng %d/%d câu (%d%%)', $session->correct_count, $session->answered_count, $rate),
                     'time' => $session->updated_at->locale('vi')->diffForHumans(),
                     'url' => route(
-                        $session->mode === SessionMode::Exam ? 'exam.summary' : 'qbank.summary',
+                        $session->isFormalExam() ? 'exam.summary' : 'qbank.summary',
                         $session,
                     ),
                 ];

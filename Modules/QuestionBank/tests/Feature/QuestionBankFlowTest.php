@@ -878,13 +878,13 @@ final class QuestionBankFlowTest extends TestCase
         $payload = $this->sessionPayload(count: 2, difficulty: Difficulty::Hard);
         $payload['mode'] = SessionMode::Exam->value;
 
-        $this->actingAs($this->user)->post(route('qbank.store'), $payload)->assertRedirect(route('exam.session', QuestionSession::first()));
+        $this->actingAs($this->user)->post(route('qbank.store'), $payload)->assertRedirect(route('qbank.session', QuestionSession::first()));
         $session = QuestionSession::firstOrFail();
         $this->assertSame(180, $session->time_limit_seconds);
         $firstSessionQuestion = Question::findOrFail($session->question_ids[0]);
 
         $this->actingAs($this->user)
-            ->get(route('exam.session', $session))
+            ->get(route('qbank.session', $session))
             ->assertOk()
             ->assertViewIs('questionbank::exam-session')
             ->assertSeeInOrder([
@@ -909,7 +909,7 @@ final class QuestionBankFlowTest extends TestCase
             ->assertSee($firstSessionQuestion->stem);
 
         $this->actingAs($this->user)
-            ->get(route('exam.session', [$session, 'index' => 1]))
+            ->get(route('qbank.session', [$session, 'index' => 1]))
             ->assertOk()
             ->assertDontSee('Câu tiếp theo')
             ->assertDontSee('Lưu câu trả lời');
@@ -931,7 +931,7 @@ final class QuestionBankFlowTest extends TestCase
             } else {
                 $this->actingAs($this->user)
                     ->post(route('qbank.session.answer', $session), $answer)
-                    ->assertRedirect(route('exam.session', [$session, 'index' => 1]));
+                    ->assertRedirect(route('qbank.session', [$session, 'index' => 1]));
             }
         }
 
@@ -944,7 +944,7 @@ final class QuestionBankFlowTest extends TestCase
 
         $this->actingAs($this->user)
             ->post(route('qbank.session.finish', $session))
-            ->assertRedirect(route('exam.summary', $session));
+            ->assertRedirect(route('qbank.summary', $session));
 
         $this->assertSame(SessionStatus::Completed, $session->refresh()->status);
         $this->assertSame(2, $session->correct_count);
@@ -1106,17 +1106,17 @@ final class QuestionBankFlowTest extends TestCase
 
             Carbon::setTestNow('2026-08-06 09:02:00');
             $this->actingAs($this->user)
-                ->get(route('exam.session', $session))
+                ->get(route('qbank.session', $session))
                 ->assertOk()
                 ->assertViewHas('remainingSeconds', 480);
 
             $this->actingAs($this->user)
                 ->post(route('qbank.session.resume', $session))
-                ->assertRedirect(route('exam.session', [$session, 'index' => 0]));
+                ->assertRedirect(route('qbank.session', [$session, 'index' => 0]));
 
             Carbon::setTestNow('2026-08-06 09:03:00');
             $this->actingAs($this->user)
-                ->get(route('exam.session', $session))
+                ->get(route('qbank.session', $session))
                 ->assertOk()
                 ->assertViewHas('remainingSeconds', 420);
             $this->actingAs($this->user)
@@ -1126,15 +1126,15 @@ final class QuestionBankFlowTest extends TestCase
 
             Carbon::setTestNow('2026-08-06 10:03:00');
             $this->actingAs($this->user)
-                ->get(route('exam.session', $session))
+                ->get(route('qbank.session', $session))
                 ->assertOk()
                 ->assertViewHas('remainingSeconds', 420);
 
             $this->actingAs($this->user)->post(route('qbank.session.resume', $session));
             Carbon::setTestNow('2026-08-06 10:10:01');
             $this->actingAs($this->user)
-                ->get(route('exam.session', $session))
-                ->assertRedirect(route('exam.summary', $session));
+                ->get(route('qbank.session', $session))
+                ->assertRedirect(route('qbank.summary', $session));
             $this->assertSame(SessionStatus::Completed, $session->refresh()->status);
         } finally {
             Carbon::setTestNow();

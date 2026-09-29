@@ -55,7 +55,7 @@ final class WeakTopicSessionController extends Controller
             }
 
             return redirect()
-                ->route('exam.session', $session)
+                ->route('qbank.session', $session)
                 ->with('status', 'Đã tạo phiên làm lại các câu sai trong bài thi.');
         }
 

@@ -13,7 +13,6 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Modules\Personalization\Models\BookmarkFolder;
 use Modules\QuestionBank\Actions\CreateQuestionSessionAction;
-use Modules\QuestionBank\Enums\SessionMode;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
 use Modules\QuestionBank\Http\Requests\CreateQuestionSessionRequest;
 use Modules\QuestionBank\Models\ExamCatalog;
@@ -84,12 +83,8 @@ final class CustomSessionController extends Controller
             throw ValidationException::withMessages(['filters' => $exception->getMessage()]);
         }
 
-        $route = $session->mode === SessionMode::Exam
-            ? 'exam.session'
-            : 'qbank.session';
-
         return redirect()
-            ->route($route, $session)
+            ->route('qbank.session', $session)
             ->with('status', 'Đã tạo phiên luyện tập.');
     }
 

@@ -92,6 +92,15 @@ class QuestionSession extends Model
         return $this->hasMany(QuestionSessionSnapshot::class, 'session_id')->orderBy('position');
     }
 
+    /**
+     * Kỳ thi tạo từ module Exam (nguồn exam). Chế độ thi của ngân hàng câu hỏi
+     * vẫn là phiên luyện và giữ route /qbank/session.
+     */
+    public function isFormalExam(): bool
+    {
+        return $this->source === SessionSource::Exam;
+    }
+
     public function displayName(): string
     {
         $name = ($this->filters ?? [])['name'] ?? null;

@@ -75,7 +75,7 @@ final class ResolveContinueLearningAction
             'url' => $task !== null
                 ? route('study-plan.session', [$task->study_plan_id, $task])
                 : route(
-                    $session->mode === SessionMode::Exam ? 'exam.session' : 'qbank.session',
+                    $session->isFormalExam() ? 'exam.session' : 'qbank.session',
                     $session,
                 ),
         ];
