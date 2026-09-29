@@ -55,7 +55,7 @@ final class ExamCatalogController extends Controller
                 ->where('is_active', true)
                 ->orderBy('sort_order')
                 ->orderBy('name')
-                ->get(['id', 'name']),
+                ->get(['id', 'name', 'code']),
             'blueprints' => Blueprint::query()
                 ->orderBy('sort_order')
                 ->orderBy('name')
@@ -129,7 +129,6 @@ final class ExamCatalogController extends Controller
             ->when($q !== '', function ($query) use ($like): void {
                 $query->where(function ($inner) use ($like): void {
                     $inner->where('name', 'like', $like)
-                        ->orWhere('slug', 'like', $like)
                         ->orWhere('code', 'like', $like);
                 });
             })
@@ -205,13 +204,10 @@ final class ExamCatalogController extends Controller
     private function validated(Request $request, ?ExamCatalog $catalog = null): array
     {
         $name = trim((string) $request->input('name', ''));
-        $slugInput = trim((string) $request->input('slug', ''));
-        $slug = Str::slug($slugInput !== '' ? $slugInput : $name);
-        if ($slug === '') {
-            $slug = 'ky-thi';
-        }
-        if ($catalog === null) {
-            $slug = $this->uniqueSlug($slug);
+        $slug = $catalog?->slug;
+        if (! is_string($slug) || $slug === '') {
+            $generated = Str::slug($name);
+            $slug = $this->uniqueSlug($generated !== '' ? $generated : 'ky-thi');
         }
 
         $code = trim((string) $request->input('code', ''));
