@@ -67,21 +67,22 @@
 
                     @if (count($session['table']) > 0)
                         <h3 class="mt-6 font-label-md text-on-surface">Bảng chọn câu của phiên này</h3>
-                        <p class="mt-1 font-body-sm text-on-surface-variant">Điểm ưu tiên cao hơn thì câu dễ được chọn hơn. Câu mới chưa làm được lấy đều, nên không có điểm ưu tiên.</p>
+                        <p class="mt-1 font-body-sm text-on-surface-variant">Điểm ưu tiên cao hơn thì câu dễ được chọn hơn. Câu chưa chấm được lấy đều, nên không có điểm ưu tiên.</p>
                         <div class="mt-3 overflow-x-auto rounded-lg border border-outline-variant">
-                            <table class="w-full min-w-[980px] border-collapse text-left">
+                            <table class="w-full min-w-[1120px] border-collapse text-left">
                                 <thead>
                                     <tr class="border-b border-outline-variant bg-surface-container-low font-label-sm text-on-surface-variant">
                                         <th class="px-3 py-3 text-right font-medium" scope="col">Hạng</th>
                                         <th class="px-3 py-3 font-medium" scope="col">Mã câu</th>
                                         <th class="bg-primary/5 px-3 py-3 text-right font-semibold text-on-surface" scope="col">Điểm ưu tiên</th>
-                                        <th class="bg-primary/5 px-3 py-3 text-right font-semibold text-on-surface" scope="col">% suất vào nhóm ôn</th>
+                                        <th class="bg-primary/5 px-3 py-3 text-right font-semibold text-on-surface" scope="col">% suất vòng đầu</th>
                                         <th class="px-3 py-3 font-medium" scope="col">Vào phiên</th>
                                         <th class="px-3 py-3 text-right font-medium" scope="col">Số lần sai</th>
                                         <th class="px-3 py-3 text-right font-medium" scope="col">Số lần đúng</th>
                                         <th class="px-3 py-3 text-right font-medium" scope="col">Độ yếu</th>
-                                        <th class="px-3 py-3 text-right font-medium" scope="col">Ngày chưa gặp</th>
-                                        <th class="px-3 py-3 text-right font-medium" scope="col">Mức nhớ</th>
+                                        <th class="px-3 py-3 text-right font-medium" scope="col">Ngày từ lần chấm</th>
+                                        <th class="px-3 py-3 text-right font-medium" scope="col">Độ bền</th>
+                                        <th class="px-3 py-3 text-right font-medium" scope="col">Mức cần ôn</th>
                                         <th class="px-3 py-3 font-medium" scope="col">Tránh lặp</th>
                                         <th class="px-3 py-3 font-medium" scope="col">Cách xét</th>
                                     </tr>
@@ -101,6 +102,7 @@
                                             <td class="px-3 py-3 text-right tabular-nums">{{ $row['correct'] }}</td>
                                             <td class="px-3 py-3 text-right tabular-nums">{{ $row['weakness'] }}</td>
                                             <td class="px-3 py-3 text-right tabular-nums">{{ $row['days'] }}</td>
+                                            <td class="px-3 py-3 text-right tabular-nums">{{ $row['stability'] }}</td>
                                             <td class="px-3 py-3 text-right tabular-nums">{{ $row['memory'] }}</td>
                                             <td class="px-3 py-3">{{ $row['hold'] }}</td>
                                             <td class="px-3 py-3">{{ $row['role'] }}</td>
@@ -114,8 +116,14 @@
                             <dl class="mt-2 space-y-2 rounded-lg bg-surface-container-low px-4 py-3">
                                 @foreach ($session['formulas'] as $formula)
                                     <div>
-                                        <dt class="font-label-sm text-on-surface">{{ $formula['name'] }}</dt>
-                                        <dd class="font-body-sm text-on-surface-variant">{{ $formula['expr'] }}</dd>
+                                        <dt class="font-label-sm font-semibold text-on-surface">{{ $formula['name'] }}</dt>
+                                        <dd class="font-body-sm text-on-surface-variant">
+                                            {!! preg_replace_callback(
+                                                '/\*\*(.+?)\*\*/u',
+                                                static fn (array $matches): string => '<strong class="font-bold text-on-surface">'.$matches[1].'</strong>',
+                                                e($formula['expr']),
+                                            ) !!}
+                                        </dd>
                                     </div>
                                 @endforeach
                             </dl>

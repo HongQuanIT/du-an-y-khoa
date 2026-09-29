@@ -75,6 +75,46 @@ LOG;
         $this->assertSame('100,00%', $second[0]['share']);
     }
 
+    public function test_brief_uses_the_forgetting_curve_and_counts_top_up(): void
+    {
+        $log = <<<'LOG'
+[2026-09-29 16:00:00] testing.DEBUG: [adaptive] path {"path":"weighted_selector","user_id":7,"focus":"retention","trace_id":"curve"}
+[2026-09-29 16:00:00] testing.DEBUG: [adaptive] start {"user_id":7,"focus":"retention","w_weakness":0.3,"w_memory":0.7,"trace_id":"curve"}
+[2026-09-29 16:00:00] testing.DEBUG: [adaptive] pool {"scope":"blueprint_and_content","pool_size":6,"trace_id":"curve"}
+[2026-09-29 16:00:00] testing.DEBUG: [adaptive] coverage_split {"pool_size":6,"unseen_count":3,"seen_count":3,"quota_unseen":2,"quota_review":1,"trace_id":"curve"}
+[2026-09-29 16:00:00] testing.DEBUG: [adaptive] top_up {"need":1,"filled":1,"trace_id":"curve"}
+[2026-09-29 16:00:00] testing.DEBUG: [adaptive] result {"picked_count":4,"picked_unseen":2,"picked_review":1,"sheet":[{"question_id":"q-graded","kind":"review","weakness":0.75,"days_since_seen":10.5,"stability_days":4,"memory":0.93,"cooldown":1,"weight":0.8,"correct":1,"wrong":3},{"question_id":"q-fresh-1","kind":"fresh","weight":null},{"question_id":"q-fresh-2","kind":"fresh","weight":null},{"question_id":"q-fresh-3","kind":"fresh","weight":null}],"trace_id":"curve"}
+LOG;
+
+        $card = (new AdaptiveSessionBriefing(
+            questions: ['q-graded' => 'Q1', 'q-fresh-1' => 'Q2', 'q-fresh-2' => 'Q3', 'q-fresh-3' => 'Q4'],
+        ))->brief((new AdaptiveSessionBriefing)->runs($log)[0]);
+
+        $this->assertSame('3', $card['stats'][1]['value']);
+        $this->assertSame('Câu chưa chấm', $card['stats'][1]['label']);
+        $this->assertSame('1', $card['stats'][2]['value']);
+        $this->assertStringContainsString('phần giao giữa đề thi', $card['summary']);
+        $this->assertStringContainsString('3 câu chưa chấm và 3 câu đã chấm', $card['summary']);
+        $this->assertStringContainsString('bốc thêm 1 câu', $card['summary']);
+        $this->assertStringContainsString('độ bền thấp hoặc đã lâu kể từ lần chấm', $card['summary']);
+
+        $formulas = array_column($card['formulas'], 'expr', 'name');
+        $this->assertStringContainsString('**(số lần sai + 1) / (số lần đúng + số lần sai + 2)**', $formulas['Độ yếu']);
+        $this->assertStringContainsString('Câu bỏ qua thì không cộng vào', $formulas['Độ yếu']);
+        $this->assertStringContainsString('67%', $formulas['Độ yếu']);
+        $this->assertStringContainsString('**0,5 đến 365 ngày**', $formulas['Mức cần ôn']);
+        $this->assertStringContainsString('0,30 × độ yếu + 0,70 × mức cần ôn', $formulas['Điểm cần ôn']);
+        $this->assertStringContainsString('đã quá 2 ngày', $formulas['Tránh lặp']);
+        $this->assertStringContainsString('từ hai phiên tạo sau lần chọn', $formulas['Tránh lặp']);
+
+        $graded = $card['table'][0];
+        $this->assertSame('10,50', $graded['days']);
+        $this->assertSame('4,00', $graded['stability']);
+        $this->assertSame('0,93', $graded['memory']);
+        $this->assertSame('Ôn lại', $graded['role']);
+        $this->assertSame('Chưa chấm', $card['table'][1]['role']);
+    }
+
     public function test_runs_stay_separate_when_two_learners_are_logged(): void
     {
         $log = <<<'LOG'
