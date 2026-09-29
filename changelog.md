@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-09-29
+
+### Feat — Tinh gọn danh mục học viên
+
+- Chức danh/ngành nghề chọn một trạng thái học viên: chọn năm học hoặc đã tốt nghiệp.
+- Ẩn tên viết tắt và mã khỏi form, danh sách Tỉnh/Thành phố.
+- Không còn hiển thị thứ tự trong danh sách danh mục.
+
 ## 2026-09-28
 
 ### Feat — Chuẩn hóa trạng thái danh mục học viên
