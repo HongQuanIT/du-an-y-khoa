@@ -2,6 +2,13 @@
 
 ## 2026-09-29
 
+### Feat — Nhớ độ bền trí nhớ từng câu
+
+- Lưu độ bền và thời điểm chấm gần nhất khi trả lời đúng hoặc sai.
+- Phiên thích ứng ước lượng còn nhớ theo đường cong quên; câu bỏ qua không tính là đã học.
+
+## 2026-09-29
+
 ### Feat — Sắp lại tổng quan phân loại
 
 - Tổng quan phân loại hiện câu học viên thấy được, kỳ thi chọn được, bài học có câu và thẻ đang gắn câu.

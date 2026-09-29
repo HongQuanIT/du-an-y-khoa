@@ -12,11 +12,14 @@ use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\Log;
 use Modules\Auth\Models\LearnerProfile;
 use Modules\Auth\Models\Profession;
+use Modules\QuestionBank\Actions\AnswerQuestionAction;
+use Modules\QuestionBank\Actions\CompleteQuestionSessionAction;
 use Modules\QuestionBank\Data\CreateSessionData;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionStatus as PublicationStatus;
 use Modules\QuestionBank\Enums\SessionMode;
 use Modules\QuestionBank\Enums\SessionSource;
+use Modules\QuestionBank\Enums\SessionStatus;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
 use Modules\QuestionBank\Enums\UserQuestionStatus;
 use Modules\QuestionBank\Models\Blueprint;
@@ -28,6 +31,7 @@ use Modules\QuestionBank\Models\QuestionOption;
 use Modules\QuestionBank\Models\QuestionSession;
 use Modules\QuestionBank\Models\QuestionStatus;
 use Modules\QuestionBank\Services\AdaptiveQuestionSelector;
+use Modules\QuestionBank\Services\QuestionSessionSnapshots;
 use Spatie\Permission\Models\Role as RoleModel;
 use Tests\Support\CreatesMedicalTaxonomy;
 use Tests\TestCase;
@@ -110,8 +114,10 @@ final class AdaptiveSessionSelectionTest extends TestCase
             'correct_count' => 2,
             'wrong_count' => 8,
             'omitted_count' => 0,
-            'last_attempt_at' => now()->subDay(),
-            'last_seen_at' => now()->subDay(),
+            'last_attempt_at' => now()->subHour(),
+            'last_seen_at' => now()->subHour(),
+            'last_graded_at' => now()->subHour(),
+            'memory_stability_days' => 0.5,
             'last_served_at' => now()->subDays(10),
         ]);
 
@@ -126,6 +132,8 @@ final class AdaptiveSessionSelectionTest extends TestCase
             'omitted_count' => 0,
             'last_attempt_at' => now()->subDays(40),
             'last_seen_at' => now()->subDays(40),
+            'last_graded_at' => now()->subDays(40),
+            'memory_stability_days' => 20,
             'last_served_at' => now()->subDays(40),
         ]);
 
@@ -163,8 +171,10 @@ final class AdaptiveSessionSelectionTest extends TestCase
             'correct_count' => 1,
             'wrong_count' => 9,
             'omitted_count' => 0,
-            'last_attempt_at' => now()->subDay(),
-            'last_seen_at' => now()->subDay(),
+            'last_attempt_at' => now()->subHour(),
+            'last_seen_at' => now()->subHour(),
+            'last_graded_at' => now()->subHour(),
+            'memory_stability_days' => 0.5,
             'last_served_at' => now()->subDays(10),
         ]);
 
@@ -178,6 +188,8 @@ final class AdaptiveSessionSelectionTest extends TestCase
             'omitted_count' => 0,
             'last_attempt_at' => now()->subDays(40),
             'last_seen_at' => now()->subDays(40),
+            'last_graded_at' => now()->subDays(40),
+            'memory_stability_days' => 20,
             'last_served_at' => now()->subDays(40),
         ]);
 
@@ -256,6 +268,110 @@ final class AdaptiveSessionSelectionTest extends TestCase
         $this->assertSame(1.0, $cooldowns[(string) $released->getKey()]);
     }
 
+    public function test_same_elapsed_time_lower_stability_has_higher_urgency(): void
+    {
+        $fragile = $this->seedQuestion('Fragile');
+        $durable = $this->seedQuestion('Durable');
+        $gradedAt = now()->subDays(10);
+
+        foreach ([[$fragile, 0.5], [$durable, 32.0]] as [$question, $stability]) {
+            QuestionStatus::query()->create([
+                'user_id' => $this->user->id,
+                'question_id' => $question->getKey(),
+                'status' => UserQuestionStatus::Correct,
+                'attempts_count' => 4,
+                'correct_count' => 3,
+                'wrong_count' => 1,
+                'omitted_count' => 0,
+                'last_attempt_at' => $gradedAt,
+                'last_seen_at' => $gradedAt,
+                'last_graded_at' => $gradedAt,
+                'memory_stability_days' => $stability,
+                'last_served_at' => now()->subDays(30),
+            ]);
+        }
+
+        $memory = [];
+        Log::listen(function (MessageLogged $event) use (&$memory): void {
+            if ($event->message !== '[adaptive] review_scores') {
+                return;
+            }
+
+            foreach ($event->context['top'] ?? [] as $row) {
+                $memory[(string) $row['question_id']] = $row['memory'];
+            }
+        });
+
+        app(AdaptiveQuestionSelector::class)->pick(
+            (int) $this->user->id,
+            1,
+            true,
+            new CreateSessionData(
+                mode: SessionMode::Study,
+                source: SessionSource::WeakTopics,
+                count: 1,
+                blueprintId: $this->blueprint->id,
+                adaptiveFocus: 'retention',
+            ),
+        );
+
+        $this->assertGreaterThan(0.9, $memory[(string) $fragile->getKey()]);
+        $this->assertLessThan(0.4, $memory[(string) $durable->getKey()]);
+    }
+
+    public function test_correct_doubles_stability_and_omit_does_not_move_the_clock(): void
+    {
+        $graded = $this->seedQuestion('Graded once');
+        $skipped = $this->seedQuestion('Skipped once');
+
+        $session = QuestionSession::factory()->create([
+            'user_id' => $this->user->id,
+            'mode' => SessionMode::Study,
+            'status' => SessionStatus::Active,
+            'question_ids' => [(string) $graded->getKey(), (string) $skipped->getKey()],
+            'total' => 2,
+            'answered_count' => 0,
+            'correct_count' => 0,
+        ]);
+        app(QuestionSessionSnapshots::class)->capture($session);
+
+        $correctId = (int) QuestionOption::query()
+            ->where('question_id', $graded->getKey())
+            ->where('is_correct', true)
+            ->value('id');
+
+        app(AnswerQuestionAction::class)->handle($session, $graded, [$correctId], autoComplete: false);
+
+        $status = QuestionStatus::query()->where('question_id', $graded->getKey())->firstOrFail();
+        $this->assertEquals(2.0, (float) $status->memory_stability_days);
+        $this->assertNotNull($status->last_graded_at);
+
+        app(CompleteQuestionSessionAction::class)->handle($session->fresh());
+
+        $status->refresh();
+        $this->assertEquals(2.0, (float) $status->memory_stability_days);
+
+        $omitted = QuestionStatus::query()->where('question_id', $skipped->getKey())->firstOrFail();
+        $this->assertSame(UserQuestionStatus::Omitted, $omitted->status);
+        $this->assertNull($omitted->memory_stability_days);
+        $this->assertNull($omitted->last_graded_at);
+        $this->assertNotNull($omitted->last_seen_at);
+
+        $again = QuestionSession::factory()->create([
+            'user_id' => $this->user->id,
+            'mode' => SessionMode::Study,
+            'status' => SessionStatus::Active,
+            'question_ids' => [(string) $graded->getKey()],
+            'total' => 1,
+            'answered_count' => 0,
+            'correct_count' => 0,
+        ]);
+
+        app(AnswerQuestionAction::class)->handle($again, $graded, [$correctId], autoComplete: false);
+
+        $this->assertEquals(4.0, (float) $status->fresh()->memory_stability_days);
+    }
+
     public function test_adaptive_session_store_logs_and_returns_requested_count(): void
     {
         $steps = [];
@@ -327,6 +443,8 @@ final class AdaptiveSessionSelectionTest extends TestCase
             'omitted_count' => 0,
             'last_attempt_at' => $servedAt,
             'last_seen_at' => $servedAt,
+            'last_graded_at' => $servedAt,
+            'memory_stability_days' => 4,
             'last_served_at' => $servedAt,
         ]);
     }

@@ -17,6 +17,7 @@ use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionSession;
 use Modules\QuestionBank\Models\QuestionStatus as UserQuestionStatusModel;
 use Modules\QuestionBank\Services\QuestionGrader;
+use Modules\QuestionBank\Support\MemoryStability;
 use RuntimeException;
 
 /**
@@ -223,7 +224,7 @@ final class AnswerQuestionAction
             $wrongCount = $isCorrect ? 0 : 1;
         }
 
-        $status->fill([
+        $attributes = [
             // `marked` is the temporary bookmark fallback and therefore has
             // priority over the derived answer state until explicitly removed.
             'status' => $status->exists && $status->status === UserQuestionStatus::Marked
@@ -235,7 +236,17 @@ final class AnswerQuestionAction
             'last_attempt_at' => $answeredAt,
             'last_seen_at' => $answeredAt,
             'last_correct_at' => $isCorrect ? $answeredAt : $status->last_correct_at,
-        ])->save();
+        ];
+
+        if ($incrementAttempts || ! $status->exists) {
+            $attributes['memory_stability_days'] = MemoryStability::afterGrade(
+                $status->memory_stability_days !== null ? (float) $status->memory_stability_days : null,
+                $isCorrect,
+            );
+            $attributes['last_graded_at'] = $answeredAt;
+        }
+
+        $status->fill($attributes)->save();
     }
 
     private function liveQuestionExists(Question $question): bool

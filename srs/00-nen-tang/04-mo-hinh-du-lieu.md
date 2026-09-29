@@ -173,12 +173,14 @@ Index: `user_id, status`, `mode`, `exam_id`.
 Index: `(user_id, question_id)`, `session_id`, `answered_at`. Bảng lớn → cân nhắc partition theo tháng.
 
 ### QuestionStatus (trạng thái câu theo user — cache trạng thái + rollup adaptive)
-`id, user_id, question_id, status(unseen/incorrect/correct/omitted/marked), attempts_count, correct_count, wrong_count, omitted_count, last_attempt_at, last_seen_at, last_served_at, last_served_session_id, last_correct_at`. Unique `(user_id, question_id)`.
+`id, user_id, question_id, status(unseen/incorrect/correct/omitted/marked), attempts_count, correct_count, wrong_count, omitted_count, last_attempt_at, last_seen_at, last_graded_at, memory_stability_days, last_served_at, last_served_session_id, last_correct_at`. Unique `(user_id, question_id)`.
 
 - Filter QBank: `status`, `last_attempt_at`.
-- Adaptive Memory: `last_seen_at` = lần gần nhất **làm đúng/sai hoặc bỏ qua**.
+- Adaptive Memory (forgetting curve): lưu `memory_stability_days` (`S`) và `last_graded_at`. Lúc chọn câu tính `R = exp(−t/S)` với `t` từ `last_graded_at`, nhu cầu ôn = `1 − R`. `S` khởi tạo 1 ngày ở lần chấm đầu, đúng thì `×2`, sai thì `×0.3`, kẹp `[0.5, 365]`. Không lưu `R`.
+- `last_seen_at` = lần gần nhất **làm đúng/sai hoặc bỏ qua**. Omit không đổi `S` và không đổi `last_graded_at`.
 - Adaptive Weakness: `correct_count` / `wrong_count` (omit không cộng).
 - Adaptive Cooldown: `last_served_at` / `last_served_session_id` khi câu được đưa vào session.
+- Flashcard SRS vẫn dùng bảng `flashcard_reviews` (SM-2), không dùng chung hai cột `memory_stability_days` / `last_graded_at`.
 
 ## 5. Nhóm Cá nhân hóa
 
