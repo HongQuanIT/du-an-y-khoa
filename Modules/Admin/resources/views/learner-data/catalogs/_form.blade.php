@@ -35,16 +35,6 @@
                 <option value="city">Thành phố trực thuộc trung ương</option>
             </select>
         </div>
-    @elseif ($catalog === 'professions')
-        <div>
-            <label for="profession_profile_status" class="mb-2 block text-sm font-semibold text-on-surface">Trạng thái</label>
-            <select id="profession_profile_status" x-model="form.profile_status" class="h-12 w-full rounded-xl border border-outline-variant bg-surface-container-low px-4 text-base">
-                <option value="requires_stage">Chọn năm học</option>
-                <option value="graduated">Đã tốt nghiệp</option>
-            </select>
-            <input type="hidden" name="requires_education_stage" :value="form.profile_status === 'requires_stage' ? '1' : '0'">
-            <input type="hidden" name="defaults_to_graduated" :value="form.profile_status === 'graduated' ? '1' : '0'">
-        </div>
     @endif
 
     <div>

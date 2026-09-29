@@ -85,7 +85,7 @@ final class OnboardingController extends Controller
         $profession = Profession::query()->findOrFail($validated['profession_id']);
         $stageId = $validated['education_stage_id'] ?? null;
 
-        if ($profession->defaults_to_graduated) {
+        if (($validated['study_status'] ?? null) === 'graduated' || $profession->defaults_to_graduated) {
             $stageId = EducationStage::query()->where('code', 'graduated')->value('id');
         }
 

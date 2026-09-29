@@ -2,7 +2,7 @@
     <div x-data="learnerCatalogPage({
         storeUrl: @js(route($config['route'].'.store')),
         updateUrl: @js(route($config['route'].'.update', ['item' => '__item__'])),
-        initialEditing: @js($editing ? collect($editing->getAttributes())->only(['id', 'name', 'code', 'country_id', 'type', 'requires_education_stage', 'defaults_to_graduated', 'sort_order', 'is_active'])->all() : null),
+        initialEditing: @js($editing ? collect($editing->getAttributes())->only(['id', 'name', 'code', 'country_id', 'type', 'sort_order', 'is_active'])->all() : null),
         reopen: @js($editing !== null || $errors->any() || request()->boolean('create')),
     })">
     <x-admin.page-header :title="'Quản lý '.$config['title']" description="Danh mục chuẩn được dùng trong hồ sơ và autocomplete của học viên.">
@@ -78,15 +78,20 @@
             <div id="learner-catalog-results-region" aria-live="polite">
             <div class="overflow-hidden rounded-xl border border-outline-variant bg-surface">
                 <div class="w-full overflow-x-auto">
-                <table class="w-full min-w-[760px] border-collapse text-left text-sm">
+                <table @class([
+                    'w-full min-w-[760px] border-collapse text-left text-sm',
+                    'table-fixed' => $catalog === 'professions',
+                ])>
                     <caption class="sr-only">Danh sách {{ strtolower($config['title']) }} của học viên</caption>
                     <thead class="border-b border-outline-variant bg-surface-container-low text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
                         <tr>
-                            <th class="px-5 py-3">Tên</th>
-                            <th class="px-4 py-3">Thông tin</th>
-                            <th class="w-[110px] px-4 py-3 text-right">Học viên</th>
-                            <th class="w-[140px] px-4 py-3">Trạng thái</th>
-                            <th class="w-[160px] px-5 py-3 text-right">Thao tác</th>
+                            <th @class(['px-5 py-3', 'w-[40%]' => $catalog === 'professions'])>Tên</th>
+                            @if ($catalog !== 'professions')
+                                <th class="px-4 py-3">Thông tin</th>
+                            @endif
+                            <th @class(['px-4 py-3', 'text-center w-[20%]' => $catalog === 'professions', 'text-right w-[110px]' => $catalog !== 'professions'])>Học viên</th>
+                            <th @class(['px-4 py-3', 'w-[20%]' => $catalog === 'professions', 'w-[140px]' => $catalog !== 'professions'])>Trạng thái</th>
+                            <th @class(['px-5 py-3', 'text-left w-[20%]' => $catalog === 'professions', 'text-right w-[160px]' => $catalog !== 'professions'])>Thao tác</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-outline-variant/60">
@@ -98,34 +103,34 @@
                                         <p class="font-mono text-label-sm text-on-surface-variant">{{ $item->code }}</p>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3.5 align-middle text-on-surface-variant">
-                                    @if ($catalog === 'countries')
-                                        {{ number_format($item->administrative_units_count) }} địa phương · {{ number_format($item->institutions_count) }} trường
-                                    @elseif ($catalog === 'administrative-units')
-                                        {{ $item->country?->name }} · {{ $item->type === 'city' ? 'Thành phố' : 'Tỉnh' }} · {{ number_format($item->institutions_count) }} trường
-                                    @elseif ($catalog === 'professions')
-                                        {{ $item->defaults_to_graduated ? 'Đã tốt nghiệp' : ($item->requires_education_stage ? 'Yêu cầu năm học' : 'Không yêu cầu năm học') }}
-                                    @else
-                                        {{ $item->is_graduated ? 'Đã tốt nghiệp' : 'Đang học' }}
-                                    @endif
-                                </td>
-                                <td class="px-4 py-3.5 text-right align-middle tabular-nums">{{ number_format($item->learner_profiles_count) }}</td>
+                                @if ($catalog !== 'professions')
+                                    <td class="px-4 py-3.5 align-middle text-on-surface-variant">
+                                        @if ($catalog === 'countries')
+                                            {{ number_format($item->administrative_units_count) }} địa phương · {{ number_format($item->institutions_count) }} trường
+                                        @elseif ($catalog === 'administrative-units')
+                                            {{ $item->country?->name }} · {{ $item->type === 'city' ? 'Thành phố' : 'Tỉnh' }} · {{ number_format($item->institutions_count) }} trường
+                                        @else
+                                            {{ $item->is_graduated ? 'Đã tốt nghiệp' : 'Đang học' }}
+                                        @endif
+                                    </td>
+                                @endif
+                                <td @class(['px-4 py-3.5 align-middle tabular-nums', 'text-center' => $catalog === 'professions', 'text-right' => $catalog !== 'professions'])>{{ number_format($item->learner_profiles_count) }}</td>
                                 <td class="px-4 py-3.5 align-middle">
                                     <span @class(['inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold', 'bg-emerald-50 text-emerald-800' => $item->is_active, 'bg-slate-100 text-slate-600' => ! $item->is_active])>
                                         {{ $item->is_active ? 'Đang dùng' : 'Ngừng dùng' }}
                                     </span>
                                 </td>
-                                <td class="px-5 py-3.5 text-right align-middle">
+                                <td @class(['px-5 py-3.5 align-middle', 'text-left' => $catalog === 'professions', 'text-right' => $catalog !== 'professions'])>
                                     @if ($canUpdate)
-                                        <div class="inline-flex items-center justify-end gap-1.5">
-                                            <button type="button" @click="openEdit(@js(collect($item->getAttributes())->only(['id', 'name', 'code', 'country_id', 'type', 'requires_education_stage', 'defaults_to_graduated', 'sort_order', 'is_active'])->all()))" class="inline-flex h-8 items-center rounded-lg border border-outline-variant px-2.5 text-xs font-medium text-on-surface hover:bg-surface-container-low">Sửa</button>
+                                        <div @class(['inline-flex items-center gap-1.5', 'justify-start' => $catalog === 'professions', 'justify-end' => $catalog !== 'professions'])>
+                                            <button type="button" @click="openEdit(@js(collect($item->getAttributes())->only(['id', 'name', 'code', 'country_id', 'type', 'sort_order', 'is_active'])->all()))" class="inline-flex h-8 items-center rounded-lg border border-outline-variant px-2.5 text-xs font-medium text-on-surface hover:bg-surface-container-low">Sửa</button>
                                             <button type="button" @click="confirming = { id: {{ $item->id }}, name: @js($item->name), url: @js(route($config['route'].'.destroy', $item->id)) }" class="inline-flex h-8 items-center rounded-lg px-2.5 text-xs font-medium text-error hover:bg-error/10">Xoá</button>
                                         </div>
                                     @endif
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="5" class="px-4 py-10 text-center text-on-surface-variant">Chưa có dữ liệu phù hợp.</td></tr>
+                            <tr><td colspan="{{ $catalog === 'professions' ? 4 : 5 }}" class="px-4 py-10 text-center text-on-surface-variant">Chưa có dữ liệu phù hợp.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -188,7 +193,7 @@
                 panel: null,
                 confirming: null,
                 form: {},
-                blankForm() { return { id: null, name: '', code: '', codeTouched: false, country_id: '', type: 'province', requires_education_stage: true, defaults_to_graduated: false, profile_status: 'requires_stage', sort_order: 0, is_active: 1 }; },
+                blankForm() { return { id: null, name: '', code: '', codeTouched: false, country_id: '', type: 'province', sort_order: 0, is_active: 1 }; },
                 openCreate() { this.form = this.blankForm(); this.panel = 'create'; },
                 openEdit(item) {
                     this.form = {
@@ -196,7 +201,6 @@
                         ...item,
                         codeTouched: true,
                         country_id: String(item.country_id || ''),
-                        profile_status: item.defaults_to_graduated ? 'graduated' : 'requires_stage',
                         is_active: item.is_active ? 1 : 0,
                     };
                     this.panel = 'edit';
