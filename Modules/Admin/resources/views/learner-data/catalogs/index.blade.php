@@ -104,7 +104,7 @@
                                     @elseif ($catalog === 'administrative-units')
                                         {{ $item->country?->name }} · {{ $item->type === 'city' ? 'Thành phố' : 'Tỉnh' }} · {{ number_format($item->institutions_count) }} trường
                                     @elseif ($catalog === 'professions')
-                                        {{ $item->defaults_to_graduated ? 'Mặc định đã tốt nghiệp' : ($item->requires_education_stage ? 'Yêu cầu năm học' : 'Không yêu cầu năm học') }}
+                                        {{ $item->defaults_to_graduated ? 'Đã tốt nghiệp' : ($item->requires_education_stage ? 'Yêu cầu năm học' : 'Không yêu cầu năm học') }}
                                     @else
                                         {{ $item->is_graduated ? 'Đã tốt nghiệp' : 'Đang học' }}
                                     @endif

@@ -2,6 +2,12 @@
 
 ## 2026-09-29
 
+### Fix — Nhãn trạng thái chức danh
+
+- Danh sách chức danh/ngành nghề hiển thị “Đã tốt nghiệp” thay cho “Mặc định đã tốt nghiệp”.
+
+## 2026-09-29
+
 ### Fix — Rút gọn nhãn trạng thái chức danh
 
 - Dùng nhãn Trạng thái, Chọn năm học và Đã tốt nghiệp trong form chức danh/ngành nghề.
