@@ -2,6 +2,12 @@
 
 ## 2026-09-29
 
+### Fix — Rút gọn nhãn trạng thái chức danh
+
+- Dùng nhãn Trạng thái, Chọn năm học và Đã tốt nghiệp trong form chức danh/ngành nghề.
+
+## 2026-09-29
+
 ### Feat — Tinh gọn danh mục học viên
 
 - Chức danh/ngành nghề chọn một trạng thái học viên: chọn năm học hoặc đã tốt nghiệp.
