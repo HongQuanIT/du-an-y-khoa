@@ -10,11 +10,11 @@ use Illuminate\Validation\ValidationException;
 use Modules\Exam\Enums\ExamStatus;
 use Modules\Exam\Models\Exam;
 use Modules\Exam\Models\ExamTopic;
-use Modules\QuestionBank\Models\Blueprint;
+use Modules\QuestionBank\Models\ExamCatalog;
 use Modules\QuestionBank\Support\BlueprintExamAllocator;
 
 /**
- * Learner creates a personal exam paper (bài thi) from a blueprint matrix (kỳ thi).
+ * Learner creates a personal exam paper from a kỳ thi that has a matrix.
  */
 final class CreateLearnerExamFromBlueprintAction
 {
@@ -23,8 +23,17 @@ final class CreateLearnerExamFromBlueprintAction
         private readonly GenerateExamQuestionsAction $generateQuestions,
     ) {}
 
-    public function handle(User $user, Blueprint $blueprint): Exam
+    public function handle(User $user, ExamCatalog $catalog): Exam
     {
+        $catalog->loadMissing('blueprint');
+        $blueprint = $catalog->blueprint;
+
+        if ($blueprint === null) {
+            throw ValidationException::withMessages([
+                'blueprint' => 'Kỳ thi này chưa gắn ma trận nên chưa tạo được phiên đề thi.',
+            ]);
+        }
+
         $matrix = $this->allocator->allocate($blueprint);
 
         if (! $matrix['ready']) {
@@ -33,12 +42,13 @@ final class CreateLearnerExamFromBlueprintAction
             ]);
         }
 
-        return DB::transaction(function () use ($user, $blueprint, $matrix): Exam {
+        return DB::transaction(function () use ($user, $catalog, $blueprint, $matrix): Exam {
             $exam = Exam::query()->create([
                 'user_id' => $user->id,
                 'blueprint_id' => $blueprint->id,
-                'title' => $blueprint->name,
-                'description' => $blueprint->description,
+                'exam_catalog_id' => $catalog->id,
+                'title' => $catalog->name,
+                'description' => $catalog->description,
                 'duration_minutes' => $matrix['suggested_duration_minutes'],
                 'status' => ExamStatus::Published,
                 'is_published' => true,

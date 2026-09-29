@@ -25,7 +25,7 @@
     $initialStatuses = array_values((array) old('question_statuses', request('question_statuses', [])));
     $initialStatusMode = old('question_status_mode', request('question_status_mode', 'latest'));
     $initialSavedOnly = (bool) old('saved_only', request()->boolean('saved_only'));
-    $initialBlueprintId = old('blueprint_id', request('blueprint_id'));
+    $initialBlueprintId = old('exam_catalog_id', request('exam_catalog_id'));
     $initialOrganSystemIds = array_map('intval', (array) old('organ_system_ids', request('organ_system_ids', [])));
     $initialSubjectIds = array_map('intval', (array) old('subject_ids', request('subject_ids', [])));
     $initialLessonIds = array_map('intval', (array) old('lesson_ids', request('lesson_ids', [])));
@@ -179,10 +179,11 @@
                     body.set('saved_only', this.savedOnly ? '1' : '0');
                     body.set('folder_id', this.folderId ? String(this.folderId) : '');
                     if (this.blueprintId) {
-                        body.set('blueprint_id', String(this.blueprintId));
+                        body.set('exam_catalog_id', String(this.blueprintId));
                     } else {
-                        body.delete('blueprint_id');
+                        body.delete('exam_catalog_id');
                     }
+                    body.delete('blueprint_id');
                     const response = await fetch(this.countUrl, {
                         method: 'POST',
                         headers: {
@@ -341,13 +342,11 @@
                 return this.blueprintScopes[this.blueprintId] || this.blueprintScopes[String(this.blueprintId)] || null;
             },
             /**
-             * Taxonomy picker scope:
-             * - no exam → unrestricted (full QBank)
-             * - exam selected → that exam matrix only
+             * QBank practice never narrows hệ/môn/bài by a matrix.
+             * Kỳ thi only filters questions tagged with that catalog.
              */
             activeTaxonomyScope() {
-                if (!this.blueprintId) return null;
-                return this.currentBlueprintScope() || { lessonIds: [], subjectIds: [], organSystemIds: [] };
+                return null;
             },
             isLessonAllowedForExam(lessonId) {
                 const scope = this.activeTaxonomyScope();
@@ -434,7 +433,7 @@
         @csrf
         <input type="hidden" name="source" :value="source">
         <input type="hidden" name="adaptive_focus" :value="adaptiveFocus" :disabled="!isAdaptive()">
-        <input type="hidden" name="blueprint_id" :value="blueprintId ?? ''" :disabled="!blueprintId">
+        <input type="hidden" name="exam_catalog_id" :value="blueprintId ?? ''" :disabled="!blueprintId">
         <input type="hidden" name="question_status_mode" value="{{ $initialStatusMode }}">
         <input type="hidden" name="saved_only" :value="savedOnly ? '1' : '0'" :disabled="isAdaptive()">
         <input type="hidden" name="folder_id" :value="folderId ?? ''" :disabled="isAdaptive()">
@@ -457,6 +456,12 @@
                     Đặt lại
                 </button>
             </div>
+            @if ($needsProfession ?? false)
+                <div class="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+                    Hồ sơ chưa có chức danh. Hãy chọn chức danh trước khi tạo phiên luyện.
+                    <a href="{{ route('profile.show') }}" class="ml-1 font-semibold underline">Mở hồ sơ</a>
+                </div>
+            @endif
 
             <div class="mb-8">
                 <h1 class="font-headline-sm text-on-surface">Chọn loại phiên luyện</h1>
@@ -836,12 +841,10 @@
                 <div class="custom-scrollbar space-y-4 overflow-y-auto p-4">
                     <div x-show="activeFilter === 'exams'" class="space-y-4">
                         <p class="text-sm text-on-surface-variant" x-show="!isAdaptive()">
-                            Không chọn kỳ thi → Hệ / Môn / Bài học lấy toàn bộ ngân hàng câu hỏi.
-                            Chọn kỳ thi → chỉ danh mục thuộc ma trận kỳ đó.
+                            Không chọn kỳ thi: mọi câu đúng chức danh của bạn. Chọn kỳ thi: chỉ câu đã gắn kỳ thi đó. Hệ, môn và bài học không bị cắt theo ma trận.
                         </p>
                         <p class="text-sm text-on-surface-variant" x-show="isAdaptive()" x-cloak>
-                            Không chọn kỳ thi → Hệ / Môn lấy toàn bộ ngân hàng.
-                            Chọn kỳ thi → chỉ danh mục thuộc ma trận kỳ đó.
+                            Không chọn kỳ thi: mọi câu đúng chức danh. Chọn kỳ thi: chỉ câu đã gắn kỳ thi đó.
                         </p>
                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
                             @forelse ($exams as $exam)
@@ -860,7 +863,11 @@
                                 </button>
                             @empty
                                 <p class="col-span-full rounded-lg bg-surface-container-low p-4 text-sm text-on-surface-variant">
-                                    Chưa có ma trận đề thi. Tạo tại Admin → Ma trận đề thi.
+                                    @if ($needsProfession ?? false)
+                                        Hãy chọn chức danh trên hồ sơ trước khi luyện theo kỳ thi.
+                                    @else
+                                        Chưa có kỳ thi cho chức danh của bạn.
+                                    @endif
                                 </p>
                             @endforelse
                         </div>
@@ -892,10 +899,6 @@
                             @empty
                                 <p class="rounded-lg bg-surface-container-low p-3 text-sm text-on-surface-variant">Chưa có dữ liệu hệ cơ quan.</p>
                             @endforelse
-                            <p x-show="blueprintId && !(activeTaxonomyScope()?.organSystemIds || []).length"
-                                class="rounded-lg bg-surface-container-low p-3 text-sm text-on-surface-variant">
-                                Kỳ thi này chưa map hệ cơ quan nào. Liên kết danh mục trên ma trận đề thi.
-                            </p>
                         </div>
                     </div>
 
@@ -925,10 +928,6 @@
                             @empty
                                 <p class="rounded-lg bg-surface-container-low p-3 text-sm text-on-surface-variant">Chưa có dữ liệu môn học.</p>
                             @endforelse
-                            <p x-show="blueprintId && !(activeTaxonomyScope()?.subjectIds || []).length"
-                                class="rounded-lg bg-surface-container-low p-3 text-sm text-on-surface-variant">
-                                Kỳ thi này chưa map môn học nào. Liên kết danh mục trên ma trận đề thi.
-                            </p>
                         </div>
                     </div>
 

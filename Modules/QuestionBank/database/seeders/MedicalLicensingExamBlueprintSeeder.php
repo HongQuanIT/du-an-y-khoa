@@ -40,6 +40,8 @@ final class MedicalLicensingExamBlueprintSeeder extends Seeder
             ]);
         }
 
+        $this->ensureLicensingExamCatalog($blueprintId);
+
         foreach (MedicalLicensingExamBlueprint::sections() as $section) {
             $exists = DB::table('blueprint_sections')
                 ->where('blueprint_id', $blueprintId)
@@ -104,5 +106,33 @@ final class MedicalLicensingExamBlueprintSeeder extends Seeder
                 ]);
             }
         }
+    }
+
+    private function ensureLicensingExamCatalog(int $blueprintId): void
+    {
+        if (! DB::getSchemaBuilder()->hasTable('exam_catalogs')) {
+            return;
+        }
+
+        if (DB::table('exam_catalogs')->where('blueprint_id', $blueprintId)->exists()) {
+            return;
+        }
+
+        $slug = Str::slug(MedicalLicensingExamBlueprint::NAME);
+        if (DB::table('exam_catalogs')->where('slug', $slug)->exists()) {
+            $slug .= '-'.$blueprintId;
+        }
+
+        DB::table('exam_catalogs')->insert([
+            'name' => MedicalLicensingExamBlueprint::NAME,
+            'slug' => $slug,
+            'code' => MedicalLicensingExamBlueprint::CODE,
+            'description' => 'Kỳ thi gắn ma trận cấp phép hành nghề.',
+            'blueprint_id' => $blueprintId,
+            'status' => TaxonomyStatus::Active->value,
+            'sort_order' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 }

@@ -12,7 +12,7 @@ Muốn **xóa hết rồi seed lại từ đầu**, dùng `app:seed … --fresh`
 
 | Profile | Class | Nội dung chính |
 |---------|--------|----------------|
-| **local** | `DatabaseSeeder` | Full demo: QBank VM14K, library, study plan, banner, search, promo billing… |
+| **local** | `DatabaseSeeder` | Full demo: QBank, library, study plan, banner, search, promo billing… |
 | **staging** | `StagingSeeder` | Baseline gần prod + QA users + FAQ. Không demo learning content |
 | **production** | `ProductionSeeder` | Baseline tối thiểu. Không user cố định, không FAQ demo |
 

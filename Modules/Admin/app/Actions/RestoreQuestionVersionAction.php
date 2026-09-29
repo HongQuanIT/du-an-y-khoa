@@ -92,6 +92,12 @@ final class RestoreQuestionVersionAction
                 );
             }
 
+            if (array_key_exists('exam_catalog_ids', $snapshot) || array_key_exists('blueprint_ids', $snapshot)) {
+                $question->examCatalogs()->sync(
+                    \Modules\QuestionBank\Models\ExamCatalog::idsForSnapshot($snapshot),
+                );
+            }
+
             if (array_key_exists('blueprint_ids', $snapshot)) {
                 $question->blueprints()->sync(
                     Blueprint::query()

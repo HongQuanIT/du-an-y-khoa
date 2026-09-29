@@ -12,6 +12,8 @@ use Modules\QuestionBank\Data\CreateSessionData;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\SessionMode;
 use Modules\QuestionBank\Enums\SessionSource;
+use Modules\QuestionBank\Enums\TaxonomyStatus;
+use Modules\QuestionBank\Models\ExamCatalog;
 
 /**
  * Validates the custom-session builder before a question snapshot is drawn.
@@ -73,6 +75,35 @@ final class CreateQuestionSessionRequest extends FormRequest
         ]);
     }
 
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator): void {
+            $professionId = $this->user()?->learnerProfile?->profession_id;
+            if ($professionId === null) {
+                $validator->errors()->add('profession', 'Hãy chọn chức danh trên hồ sơ trước khi tạo phiên luyện.');
+
+                return;
+            }
+
+            if (! $this->filled('exam_catalog_id')) {
+                return;
+            }
+
+            $allowed = ExamCatalog::query()
+                ->whereKey($this->integer('exam_catalog_id'))
+                ->where('status', TaxonomyStatus::Active)
+                ->whereHas(
+                    'professions',
+                    fn ($professions) => $professions->where('professions.id', (int) $professionId),
+                )
+                ->exists();
+
+            if (! $allowed) {
+                $validator->errors()->add('exam_catalog_id', 'Kỳ thi không thuộc chức danh của bạn.');
+            }
+        });
+    }
+
     /** @return array<string, mixed> */
     public function rules(): array
     {
@@ -93,6 +124,11 @@ final class CreateQuestionSessionRequest extends FormRequest
                 'nullable',
                 'integer',
                 'exists:blueprints,id',
+            ],
+            'exam_catalog_id' => [
+                'nullable',
+                'integer',
+                'exists:exam_catalogs,id',
             ],
             'blueprint_section_id' => ['nullable', 'integer', 'exists:blueprint_sections,id'],
             'core_clinical_topic_ids' => ['nullable', 'array'],
@@ -143,6 +179,7 @@ final class CreateQuestionSessionRequest extends FormRequest
             source: SessionSource::from((string) $this->input('source', SessionSource::Custom->value)),
             count: $this->integer('count'),
             blueprintId: $this->filled('blueprint_id') ? $this->integer('blueprint_id') : null,
+            examCatalogId: $this->filled('exam_catalog_id') ? $this->integer('exam_catalog_id') : null,
             blueprintSectionId: $this->filled('blueprint_section_id') ? $this->integer('blueprint_section_id') : null,
             coreClinicalTopicIds: array_values(array_unique(array_map('intval', $this->input('core_clinical_topic_ids', [])))),
             organSystemIds: array_values(array_unique(array_map('intval', $this->input('organ_system_ids', [])))),

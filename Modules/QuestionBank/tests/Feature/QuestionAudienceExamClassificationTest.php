@@ -15,7 +15,7 @@ use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Enums\SessionMode;
 use Modules\QuestionBank\Enums\SessionSource;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
-use Modules\QuestionBank\Models\Blueprint;
+use Modules\QuestionBank\Models\ExamCatalog;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Services\SessionQuestionSelector;
 use Spatie\Permission\Models\Role as RoleModel;
@@ -46,14 +46,14 @@ final class QuestionAudienceExamClassificationTest extends TestCase
         ]);
 
         $lesson = $this->makeLesson(['name' => 'Nhồi máu cơ tim']);
-        $blueprint = Blueprint::query()->create([
+        $catalog = ExamCatalog::query()->create([
             'name' => 'Nội trú 2026',
             'slug' => 'noi-tru-2026',
             'status' => TaxonomyStatus::Active,
             'sort_order' => 1,
         ]);
-        $blueprint->professions()->sync([$resident->id]);
-        $otherExam = Blueprint::query()->create([
+        $catalog->professions()->sync([$resident->id]);
+        $otherExam = ExamCatalog::query()->create([
             'name' => 'Tốt nghiệp Y6',
             'slug' => 'tot-nghiep-y6',
             'status' => TaxonomyStatus::Active,
@@ -63,11 +63,11 @@ final class QuestionAudienceExamClassificationTest extends TestCase
 
         $forResident = $this->publishedQuestion('STEMI', $lesson->id);
         $forResident->professions()->sync([$resident->id]);
-        $forResident->blueprints()->sync([$blueprint->id]);
+        $forResident->examCatalogs()->sync([$catalog->id]);
 
         $sameLessonOtherAudience = $this->publishedQuestion('Troponin', $lesson->id);
         $sameLessonOtherAudience->professions()->sync([$student->id]);
-        $sameLessonOtherAudience->blueprints()->sync([$blueprint->id]);
+        $sameLessonOtherAudience->examCatalogs()->sync([$catalog->id]);
 
         $residentUser = User::factory()->create();
         $residentUser->assignRole(Role::Student->value);
@@ -82,7 +82,7 @@ final class QuestionAudienceExamClassificationTest extends TestCase
             mode: SessionMode::Study,
             source: SessionSource::WeakTopics,
             count: 10,
-            blueprintId: $blueprint->id,
+            examCatalogId: $catalog->id,
         );
 
         $ids = $selector->forSession($residentUser, $data);

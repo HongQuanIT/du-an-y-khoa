@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\Exam\Enums\ExamStatus;
 use Modules\QuestionBank\Models\Blueprint;
+use Modules\QuestionBank\Models\ExamCatalog;
 use Modules\QuestionBank\Models\Question;
 
 class Exam extends Model
@@ -16,6 +17,7 @@ class Exam extends Model
     protected $fillable = [
         'user_id',
         'blueprint_id',
+        'exam_catalog_id',
         'title',
         'description',
         'icon',
@@ -27,6 +29,7 @@ class Exam extends Model
     protected $casts = [
         'user_id' => 'integer',
         'blueprint_id' => 'integer',
+        'exam_catalog_id' => 'integer',
         'is_published' => 'boolean',
         'duration_minutes' => 'integer',
         'status' => ExamStatus::class,
@@ -42,6 +45,12 @@ class Exam extends Model
     public function blueprint(): BelongsTo
     {
         return $this->belongsTo(Blueprint::class);
+    }
+
+    /** @return BelongsTo<ExamCatalog, $this> */
+    public function examCatalog(): BelongsTo
+    {
+        return $this->belongsTo(ExamCatalog::class);
     }
 
     /**

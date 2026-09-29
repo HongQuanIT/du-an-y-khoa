@@ -98,6 +98,11 @@ final class CloneQuestionAction
                 $clone->professions()->sync($professionIds);
             }
 
+            $catalogIds = \Modules\QuestionBank\Models\ExamCatalog::idsForSnapshot($snapshot);
+            if ($catalogIds !== []) {
+                $clone->examCatalogs()->sync($catalogIds);
+            }
+
             $blueprintIds = collect($snapshot['blueprint_ids'] ?? [])
                 ->map(fn ($id): int => (int) $id)
                 ->filter()

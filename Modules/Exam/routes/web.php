@@ -19,7 +19,7 @@ Route::middleware(['auth', 'learner', 'permission:exam.view'])
     ->name('exam.')
     ->group(function (): void {
         Route::get('/', ExamIndexController::class)->middleware('permission:exam.view')->name('index');
-        Route::post('/from-blueprint/{blueprint}', CreateExamFromBlueprintController::class)
+        Route::post('/from-blueprint/{examCatalog}', CreateExamFromBlueprintController::class)
             ->middleware(['permission:exam.take', 'subscription:exam.simulation'])
             ->name('from-blueprint');
         Route::post('/{exam}/start', StartExamController::class)

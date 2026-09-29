@@ -87,6 +87,12 @@ final class AuditSnapshot
                 ->sort()
                 ->values()
                 ->all(),
+            'exam_catalog_ids' => $question->examCatalogs
+                ->pluck('id')
+                ->map(fn ($id): int => (int) $id)
+                ->sort()
+                ->values()
+                ->all(),
             'blueprint_ids' => $question->blueprints
                 ->pluck('id')
                 ->map(fn ($id): int => (int) $id)

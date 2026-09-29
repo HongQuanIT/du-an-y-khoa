@@ -114,7 +114,7 @@ final class QuestionExportController extends Controller
     private function loadExportRows(Builder $query, array $ids): Collection
     {
         $questions = $query
-            ->with(['options', 'lessons', 'tags', 'hints', 'professions', 'blueprints'])
+            ->with(['options', 'lessons', 'tags', 'hints', 'professions', 'examCatalogs'])
             ->latest('updated_at')
             ->limit(QuestionExportLimits::MAX_ROWS)
             ->get();

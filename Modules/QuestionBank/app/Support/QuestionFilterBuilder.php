@@ -19,9 +19,8 @@ use Modules\QuestionBank\Models\Question;
  * lesson_subject / lesson_organ_system. Multiple axes AND together;
  * multiple values within one axis OR together.
  *
- * Blueprint membership is explicit on question_blueprints. A selected kỳ thi
- * does not pull every question of a mapped lesson. Section and core-topic
- * filters still narrow through mapped lessons and tags.
+ * A selected kỳ thi is exam_catalogs membership. It does not pull lessons from a matrix.
+ * Section and core-topic filters still narrow through mapped lessons and tags.
  */
 final class QuestionFilterBuilder
 {
@@ -32,6 +31,7 @@ final class QuestionFilterBuilder
      * @param  list<int>  $lessonIds
      * @param  list<int>  $tagIds
      * @param  int|null  $professionId  Learner chức danh. Null skips the filter.
+     * @param  int|null  $examCatalogId  Kỳ thi catalog. Null skips the filter.
      */
     public function apply(
         Builder $query,
@@ -44,6 +44,7 @@ final class QuestionFilterBuilder
         array $tagIds = [],
         ?string $difficulty = null,
         ?int $professionId = null,
+        ?int $examCatalogId = null,
     ): Builder {
         if ($this->hasBlueprintFilter($blueprintId, $blueprintSectionId, $coreClinicalTopicIds)) {
             $this->applyBlueprintViaMapping(
@@ -78,7 +79,22 @@ final class QuestionFilterBuilder
             $query->where('difficulty', $difficulty);
         }
 
-        return $this->applyProfession($query, $professionId);
+        return $this->applyExamCatalog(
+            $this->applyProfession($query, $professionId),
+            $examCatalogId,
+        );
+    }
+
+    public function applyExamCatalog(Builder $query, ?int $examCatalogId): Builder
+    {
+        if ($examCatalogId === null || $examCatalogId <= 0) {
+            return $query;
+        }
+
+        return $query->whereHas(
+            'examCatalogs',
+            fn (Builder $catalogs) => $catalogs->where('exam_catalogs.id', $examCatalogId),
+        );
     }
 
     public function applyProfession(Builder $query, ?int $professionId): Builder

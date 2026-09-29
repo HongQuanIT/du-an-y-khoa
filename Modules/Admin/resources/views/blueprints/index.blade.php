@@ -1,5 +1,5 @@
 <x-layouts.admin title="Ma trận đề thi">
-    <x-admin.page-header title="Ma trận đề thi" description="Ma trận → Phần → Chủ đề lâm sàng. Map CCT ↔ danh mục y khoa; câu hỏi khớp qua danh mục (không gắn trực tiếp).">
+    <x-admin.page-header title="Ma trận đề thi" description="Ma trận → Phần → Chủ đề lâm sàng. Dùng khi kỳ thi gắn ma trận để tạo phiên đề thi. Ngân hàng câu hỏi không đọc ma trận.">
         <x-slot:actions>
             @if ($canCreate)
                 @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.blueprints.create'))

@@ -15,16 +15,26 @@ use Modules\QuestionBank\Support\ServePublishedQuestion;
 
 /**
  * Pick published bank questions for an exam's CCT quotas and sync the exam_question pivot.
+ * When the paper comes from a kỳ thi, only questions tagged to that catalog (and the
+ * learner's chức danh, when the profile has one) are eligible.
  */
 final class GenerateExamQuestionsAction
 {
     public function __construct(private readonly QuestionFilterBuilder $filterBuilder) {}
+
+    private ?int $examCatalogId = null;
+
+    private ?int $professionId = null;
 
     /**
      * @return array{synced: int, errors: list<string>}
      */
     public function handle(Exam $exam): array
     {
+        $exam->loadMissing('user.learnerProfile');
+        $this->examCatalogId = $exam->exam_catalog_id !== null ? (int) $exam->exam_catalog_id : null;
+        $professionId = $exam->user?->learnerProfile?->profession_id;
+        $this->professionId = $professionId !== null ? (int) $professionId : null;
         $exam->load('examTopics.coreClinicalTopic');
         $usedQuestionIds = [];
         $syncData = [];
@@ -194,7 +204,20 @@ final class GenerateExamQuestionsAction
     /** @return Builder<Question> */
     private function bankQuery(?Difficulty $difficulty = null): Builder
     {
-        return ServePublishedQuestion::scopeAvailable(Question::query())
+        $query = ServePublishedQuestion::scopeAvailable(Question::query())
             ->when($difficulty !== null, fn (Builder $query) => $query->where('difficulty', $difficulty->value));
+
+        if ($this->examCatalogId !== null) {
+            $query->whereHas(
+                'examCatalogs',
+                fn (Builder $catalogs) => $catalogs->where('exam_catalogs.id', $this->examCatalogId),
+            );
+        }
+
+        if ($this->professionId !== null) {
+            $this->filterBuilder->applyProfession($query, $this->professionId);
+        }
+
+        return $query;
     }
 }

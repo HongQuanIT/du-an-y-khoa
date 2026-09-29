@@ -16,11 +16,10 @@ use Modules\QuestionBank\Actions\CreateQuestionSessionAction;
 use Modules\QuestionBank\Enums\SessionMode;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
 use Modules\QuestionBank\Http\Requests\CreateQuestionSessionRequest;
-use Modules\QuestionBank\Models\Blueprint;
+use Modules\QuestionBank\Models\ExamCatalog;
 use Modules\QuestionBank\Models\OrganSystem;
 use Modules\QuestionBank\Models\Subject;
 use Modules\QuestionBank\Services\SessionQuestionSelector;
-use Modules\QuestionBank\Support\QuestionFilterBuilder;
 use RuntimeException;
 
 /** Custom Q-Bank session builder and create endpoint. */
@@ -45,41 +44,34 @@ final class CustomSessionController extends Controller
         $professionId = $request->user()?->learnerProfile?->profession_id;
         $professionId = $professionId !== null ? (int) $professionId : null;
 
-        $exams = Blueprint::query()
-            ->where('status', TaxonomyStatus::Active)
-            ->when($professionId, function ($query) use ($professionId): void {
-                $query->where(function ($inner) use ($professionId): void {
-                    $inner->whereHas(
-                        'professions',
-                        fn ($professions) => $professions->where('professions.id', $professionId),
-                    )->orWhereDoesntHave('professions');
-                });
-            })
-            ->orderBy('sort_order')
-            ->orderBy('name')
-            ->get(['id', 'name', 'code', 'description']);
-
-        $blueprintScopes = app(QuestionFilterBuilder::class)
-            ->taxonomyScopesForBlueprints($exams->pluck('id')->all());
+        $exams = $professionId === null
+            ? collect()
+            : ExamCatalog::query()
+                ->where('status', TaxonomyStatus::Active)
+                ->whereHas(
+                    'professions',
+                    fn ($professions) => $professions->where('professions.id', $professionId),
+                )
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(['id', 'name', 'code', 'description', 'blueprint_id']);
 
         return view('questionbank::custom-session', [
             'subjects' => Subject::query()->where('status', TaxonomyStatus::Active)->orderBy('sort_order')->orderBy('name')->get(),
             'organSystems' => OrganSystem::query()->where('status', TaxonomyStatus::Active)->orderBy('sort_order')->orderBy('name')->get(),
+            'needsProfession' => $professionId === null,
             'exams' => $exams
-                ->map(fn (Blueprint $blueprint): array => [
-                    'id' => (int) $blueprint->id,
-                    'title' => $blueprint->name,
-                    'hint' => filled($blueprint->description)
-                        ? (string) $blueprint->description
-                        : 'Chỉ gồm câu đã được gán vào kỳ thi này.',
-                    'icon' => match ($blueprint->code) {
-                        'medical_practice_licensing_exam' => 'stethoscope',
-                        default => 'assignment',
-                    },
+                ->map(fn (ExamCatalog $catalog): array => [
+                    'id' => (int) $catalog->id,
+                    'title' => $catalog->name,
+                    'hint' => filled($catalog->description)
+                        ? (string) $catalog->description
+                        : 'Chỉ gồm câu đã gắn kỳ thi này và đúng chức danh.',
+                    'icon' => 'assignment',
                 ])
                 ->values()
                 ->all(),
-            'blueprintScopes' => $blueprintScopes,
+            'blueprintScopes' => [],
             'bookmarkFolders' => $bookmarkFolders,
         ]);
     }

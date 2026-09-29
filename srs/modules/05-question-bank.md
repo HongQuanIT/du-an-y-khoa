@@ -21,7 +21,7 @@ Trình duyệt & bộ lọc câu hỏi để tạo phiên luyện tập. Ngườ
 | Thành phần | Chức năng | Hiển thị/Ẩn | Điều kiện | Responsive |
 |-----------|-----------|-------------|-----------|-----------|
 | **Session type selector** | Chọn **Tuỳ chỉnh** vs **Thích ứng** | Luôn | — | 2 thẻ ngang; mobile xếp dọc |
-| **Filter panel (tuỳ chỉnh)** | Chọn **Kỳ thi (ma trận) → Hệ/Môn/Bài học**, độ khó, trạng thái, câu đã lưu | Khi loại = tuỳ chỉnh | Không chọn kỳ thi → toàn bộ NHCH; chọn kỳ thi → chỉ danh mục trong ma trận kỳ đó | Desktop bên trái; mobile: bottom sheet |
+| **Filter panel (tuỳ chỉnh)** | Chọn **Kỳ thi → Hệ/Môn/Bài học**, độ khó, trạng thái, câu đã lưu | Khi loại = tuỳ chỉnh | Không chọn kỳ thi → câu đúng chức danh học viên; chọn kỳ thi → câu đúng chức danh và đã gắn kỳ thi đó. Không cắt theo ma trận | Desktop bên trái; mobile: bottom sheet |
 | **Exam picker (thích ứng)** | Chỉ chọn đề thi theo ma trận; hệ thống chọn câu theo sức học / điểm yếu | Khi loại = thích ứng | Ẩn độ khó, trạng thái, bộ lọc chủ đề thủ công | Desktop trái; mobile full width |
 | **Count preview** | Hiển thị số câu khớp filter realtime | Luôn | Adaptive: cần đã chọn đề | — |
 | **Mode selector** | Study vs Exam | Luôn | — | Toggle |
@@ -78,7 +78,7 @@ Ngoại lệ:
 - **Exclude:** câu chưa từng live hoặc đã `retired`/`private`. Include khi có `published_version` (snapshot live) — kể cả lúc working copy đang `draft`/`in_review`/`pending_publish`/`rejected` để tái bản; learner **không** đọc working copy chưa publish. Gating tier vẫn áp dụng.
 - **Taxonomy filter:** chọn Hệ cơ quan và/hoặc Môn học → đếm/lọc gồm mọi Bài học gắn trực tiếp (`lesson_organ_system` / `lesson_subject`). Hai trục độc lập, không cha–con. Câu hỏi gắn ≥1 Bài học (các bài ngang hàng).
 - **Saved filters:** lưu snapshot tiêu chí.
-- **Adaptive option:** phiên luyện thích ứng chỉ yêu cầu chọn đề thi (blueprint/ma trận); server bỏ độ khó/trạng thái; chọn câu theo ma trận + chủ đề yếu / câu sai / chưa làm.
+- **Adaptive option:** phiên luyện thích ứng chọn kỳ thi (danh mục, không phải ma trận) hoặc để trống. Không chọn kỳ thi → câu đúng chức danh. Có chọn → câu đúng chức danh và gắn kỳ thi đó. Hệ/môn vẫn lọc trên tập đó.
 
 ## 6. Database
 - Đọc: `questions`, `question_lesson`, `lessons`, `subjects`, `organ_systems`, `lesson_subject`, `lesson_organ_system`, `tags`, `question_tags`, `question_status` (theo user).

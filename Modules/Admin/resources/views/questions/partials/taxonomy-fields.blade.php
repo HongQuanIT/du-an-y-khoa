@@ -36,23 +36,26 @@
     ))->map(fn ($id) => (int) $id)->unique()->values()->all();
 
     $selectedBlueprintIds = collect(old(
-        'blueprint_ids',
-        $question->exists && $question->relationLoaded('blueprints')
-            ? $question->blueprints->pluck('id')->all()
+        'exam_catalog_ids',
+        $question->exists && $question->relationLoaded('examCatalogs')
+            ? $question->examCatalogs->pluck('id')->all()
             : [],
     ))->map(fn ($id) => (int) $id)->unique()->values()->all();
-
-    $suggestedBlueprintIds = collect($suggestedBlueprintIds ?? [])->map(fn ($id) => (int) $id)->all();
 
     $professionCatalog = collect($classificationProfessions ?? [])->map(fn ($profession) => [
         'id' => (int) $profession->id,
         'name' => $profession->name,
     ])->values()->all();
 
-    $blueprintCatalog = collect($classificationBlueprints ?? [])->map(fn ($blueprintOption) => [
-        'id' => (int) $blueprintOption->id,
-        'name' => $blueprintOption->name,
-        'suggested' => in_array((int) $blueprintOption->id, $suggestedBlueprintIds, true),
+    $blueprintCatalog = collect($classificationExamCatalogs ?? $classificationBlueprints ?? [])->map(fn ($catalog) => [
+        'id' => (int) $catalog->id,
+        'name' => $catalog->name,
+        'profession_ids' => $catalog->relationLoaded('professions')
+            ? $catalog->professions->pluck('id')->map(fn ($id) => (int) $id)->all()
+            : [],
+        'profession_names' => $catalog->relationLoaded('professions')
+            ? $catalog->professions->pluck('name')->values()->all()
+            : [],
     ])->values()->all();
 
     $selectedProfessions = collect($professionCatalog)
@@ -194,22 +197,24 @@
     <div>
         <label class="mb-1 block text-xs font-semibold text-on-surface-variant">Kỳ thi</label>
         <p class="mb-2 text-[11px] leading-4 text-on-surface-variant">
-            Chỉ câu được chọn mới vào pool khi học viên ôn kỳ thi đó. Bài học không kéo theo mọi câu.
+            Danh sách gồm kỳ thi của đối tượng đang chọn. Kỳ thi chưa gắn đối tượng vẫn hiện ở đây.
         </p>
-        <input type="search" x-model="blueprintSearch" @input.debounce.300ms="searchBlueprints()"
-               placeholder="Tìm kỳ thi…"
+        <input type="search" x-model="blueprintSearch" @focus="showBlueprintChoices()" @input.debounce.200ms="showBlueprintChoices()"
+               placeholder="Tìm hoặc chọn kỳ thi…"
                class="mb-2 h-10 w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-sm">
-        <div x-show="blueprintResults.length > 0" x-cloak class="max-h-28 space-y-1 overflow-y-auto">
+        <div x-show="blueprintPickerOpen" x-cloak class="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-outline-variant p-2">
             <template x-for="item in blueprintResults" :key="'blueprint-result-'+item.id">
                 <label class="flex cursor-pointer items-start gap-2 rounded px-2 py-1 text-sm hover:bg-surface-container-low">
-                    <input type="checkbox" :checked="selectedBlueprintIds.includes(item.id)"
+                    <input type="checkbox" :checked="selectedBlueprintIds.map(Number).includes(Number(item.id))"
                            @change="toggleBlueprint(item)" class="mt-0.5 size-4 rounded text-primary">
                     <span class="min-w-0">
                         <span class="block" x-text="item.name"></span>
-                        <span class="block text-[11px] text-on-surface-variant" x-show="item.suggested">Gợi ý vì bài học đang nằm trong ma trận này</span>
+                        <span class="block text-[11px] text-on-surface-variant"
+                              x-text="(item.profession_names || []).length ? item.profession_names.join(', ') : 'Chưa gắn đối tượng'"></span>
                     </span>
                 </label>
             </template>
+            <p x-show="blueprintResults.length === 0" class="px-2 py-1 text-[11px] text-on-surface-variant">Không có kỳ thi phù hợp.</p>
         </div>
         <div class="mt-2 flex flex-wrap gap-1.5">
             <template x-for="id in selectedBlueprintIds" :key="'blueprint-chip-'+id">
@@ -220,7 +225,7 @@
             </template>
         </div>
         <template x-for="id in selectedBlueprintIds" :key="'blueprint-'+id">
-            <input type="hidden" name="blueprint_ids[]" :value="id">
+            <input type="hidden" name="exam_catalog_ids[]" :value="id">
         </template>
     </div>
 
@@ -269,6 +274,7 @@
             professionResults: [],
             blueprintSearch: '',
             blueprintResults: [],
+            blueprintPickerOpen: false,
             notifyLessonsChanged() {
                 this.$nextTick(() => {
                     this.$root.closest('form')?.dispatchEvent(new CustomEvent('question-lessons-changed', {
@@ -382,12 +388,40 @@
             },
             toggleProfession(item) {
                 this.toggleCatalogItem(item, 'selectedProfessionIds', 'selectedProfessions');
+                this.pruneExamCatalogs();
+                if (this.blueprintPickerOpen) {
+                    this.showBlueprintChoices();
+                }
             },
             removeProfession(id) {
                 this.removeCatalogItem(id, 'selectedProfessionIds', 'selectedProfessions');
+                this.pruneExamCatalogs();
+                if (this.blueprintPickerOpen) {
+                    this.showBlueprintChoices();
+                }
             },
-            searchBlueprints() {
-                this.blueprintResults = this.filterCatalog(this.blueprintCatalog, this.blueprintSearch);
+            showBlueprintChoices() {
+                this.blueprintPickerOpen = true;
+                this.blueprintResults = this.filterCatalog(this.catalogsForPicker(), this.blueprintSearch, true);
+            },
+            catalogsForPicker() {
+                const allowed = new Set(this.selectedProfessionIds.map((id) => Number(id)));
+
+                return this.blueprintCatalog.filter((item) => {
+                    const professionIds = (item.profession_ids || []).map((id) => Number(id));
+                    if (professionIds.length === 0) {
+                        return true;
+                    }
+
+                    return professionIds.some((id) => allowed.has(id));
+                });
+            },
+            catalogsForSelectedProfessions() {
+                return this.catalogsForPicker();
+            },
+            pruneExamCatalogs() {
+                const allowedIds = new Set(this.catalogsForSelectedProfessions().map((item) => Number(item.id)));
+                this.selectedBlueprintIds = this.selectedBlueprintIds.filter((id) => allowedIds.has(Number(id)));
             },
             toggleBlueprint(item) {
                 this.toggleCatalogItem(item, 'selectedBlueprintIds', 'selectedBlueprints');
@@ -395,13 +429,13 @@
             removeBlueprint(id) {
                 this.removeCatalogItem(id, 'selectedBlueprintIds', 'selectedBlueprints');
             },
-            filterCatalog(catalog, query) {
-                const q = query.trim().toLowerCase();
-                if (q.length < 1) return [];
-                return (catalog || []).filter(item => (item.name || '').toLowerCase().includes(q));
+            filterCatalog(catalog, query, allowBlank = false) {
+                const q = String(query || '').trim().toLowerCase();
+                if (q.length < 1 && ! allowBlank) return [];
+                return (catalog || []).filter(item => q.length < 1 || (item.name || '').toLowerCase().includes(q));
             },
             toggleCatalogItem(item, idsKey, itemsKey) {
-                const idx = this[idsKey].indexOf(item.id);
+                const idx = this[idsKey].map(Number).indexOf(Number(item.id));
                 if (idx >= 0) {
                     this.removeCatalogItem(item.id, idsKey, itemsKey);
                 } else {
@@ -410,8 +444,10 @@
                 }
             },
             removeCatalogItem(id, idsKey, itemsKey) {
-                this[idsKey] = this[idsKey].filter(x => x !== id);
+                const target = Number(id);
+                this[idsKey] = this[idsKey].filter(x => Number(x) !== target);
                 delete this[itemsKey][id];
+                delete this[itemsKey][target];
             },
         };
     }

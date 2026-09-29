@@ -18,7 +18,7 @@ use Modules\Auth\Services\TotpService;
 use Modules\QuestionBank\Enums\QuestionImportBatchStatus;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
-use Modules\QuestionBank\Models\Blueprint;
+use Modules\QuestionBank\Models\ExamCatalog;
 use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionImportBatch;
@@ -403,12 +403,13 @@ final class QuestionImportExportTest extends TestCase
             'is_active' => true,
             'sort_order' => 1,
         ]);
-        $blueprint = Blueprint::query()->create([
+        $catalog = ExamCatalog::query()->create([
             'name' => 'Nội trú 2026',
             'slug' => 'noi-tru-2026',
             'status' => TaxonomyStatus::Active,
             'sort_order' => 1,
         ]);
+        $catalog->professions()->sync([$profession->id]);
         $editor = $this->staffUser(Role::ContentEditor);
 
         $this->commitQuestionImport($editor, [
@@ -418,7 +419,7 @@ final class QuestionImportExportTest extends TestCase
 
         $question = Question::query()->firstOrFail();
         $this->assertEquals([$profession->id], $question->professions()->pluck('professions.id')->all());
-        $this->assertEquals([$blueprint->id], $question->blueprints()->pluck('blueprints.id')->all());
+        $this->assertEquals([$catalog->id], $question->examCatalogs()->pluck('exam_catalogs.id')->all());
 
         $content = $this->actingAsStaff($editor)
             ->get(route('editor.questions.export', ['format' => 'csv']))
@@ -465,12 +466,13 @@ final class QuestionImportExportTest extends TestCase
             'is_active' => true,
             'sort_order' => 1,
         ]);
-        $blueprint = Blueprint::query()->create([
+        $catalog = ExamCatalog::query()->create([
             'name' => 'Nội trú 2026',
             'slug' => 'noi-tru-2026',
             'status' => TaxonomyStatus::Active,
             'sort_order' => 1,
         ]);
+        $catalog->professions()->sync([$profession->id]);
         $editor = $this->staffUser(Role::ContentEditor);
 
         $this->commitQuestionImport($editor, [
@@ -498,23 +500,24 @@ final class QuestionImportExportTest extends TestCase
         $question->refresh();
         $this->assertStringContainsString('Câu đã sửa đề.', strip_tags((string) $question->stem));
         $this->assertEquals([$profession->id], $question->professions()->pluck('professions.id')->all());
-        $this->assertEquals([$blueprint->id], $question->blueprints()->pluck('blueprints.id')->all());
+        $this->assertEquals([$catalog->id], $question->examCatalogs()->pluck('exam_catalogs.id')->all());
     }
 
     public function test_import_blank_classification_columns_clear_links(): void
     {
-        Profession::query()->create([
+        $profession = Profession::query()->create([
             'code' => 'resident',
             'name' => 'Bác sĩ nội trú',
             'is_active' => true,
             'sort_order' => 1,
         ]);
-        Blueprint::query()->create([
+        $catalog = ExamCatalog::query()->create([
             'name' => 'Nội trú 2026',
             'slug' => 'noi-tru-2026',
             'status' => TaxonomyStatus::Active,
             'sort_order' => 1,
         ]);
+        $catalog->professions()->sync([$profession->id]);
         $editor = $this->staffUser(Role::ContentEditor);
 
         $this->commitQuestionImport($editor, [
@@ -530,7 +533,7 @@ final class QuestionImportExportTest extends TestCase
 
         $question->refresh();
         $this->assertSame(0, $question->professions()->count());
-        $this->assertSame(0, $question->blueprints()->count());
+        $this->assertSame(0, $question->examCatalogs()->count());
     }
 
     public function test_export_keeps_rich_text_in_csv_and_xlsx(): void

@@ -10,6 +10,8 @@ use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\Log;
+use Modules\Auth\Models\LearnerProfile;
+use Modules\Auth\Models\Profession;
 use Modules\QuestionBank\Data\CreateSessionData;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionStatus as PublicationStatus;
@@ -44,6 +46,8 @@ final class AdaptiveSessionSelectionTest extends TestCase
 
     private Blueprint $blueprint;
 
+    private Profession $profession;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -52,6 +56,17 @@ final class AdaptiveSessionSelectionTest extends TestCase
         $this->seed(RolePermissionSeeder::class);
         $this->user = User::factory()->create();
         $this->user->assignRole(Role::Student->value);
+        $this->profession = Profession::query()->create([
+            'code' => 'adaptive-student',
+            'name' => 'Sinh viên thích ứng',
+            'sort_order' => 1,
+            'is_active' => true,
+        ]);
+        LearnerProfile::query()->create([
+            'user_id' => $this->user->id,
+            'profession_id' => $this->profession->id,
+            'onboarding_completed_at' => now(),
+        ]);
         $this->lesson = $this->makeLesson([
             'name' => 'Adaptive lesson',
             'slug' => 'adaptive-lesson-select',
@@ -285,6 +300,7 @@ final class AdaptiveSessionSelectionTest extends TestCase
         ]);
         $question->lessons()->sync([$this->lesson->id]);
         $question->blueprints()->sync([$this->blueprint->id]);
+        $question->professions()->sync([$this->profession->id]);
         QuestionOption::factory()->create([
             'question_id' => $question->getKey(),
             'is_correct' => true,

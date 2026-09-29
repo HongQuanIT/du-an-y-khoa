@@ -17,6 +17,9 @@ use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Enums\SessionMode;
 use Modules\QuestionBank\Enums\SessionSource;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
+use Modules\Auth\Models\LearnerProfile;
+use Modules\Auth\Models\Profession;
+use Modules\QuestionBank\Models\ExamCatalog;
 use Modules\QuestionBank\Models\Blueprint;
 use Modules\QuestionBank\Models\BlueprintSection;
 use Modules\QuestionBank\Models\CoreClinicalTopic;
@@ -35,6 +38,8 @@ final class ExamModuleTest extends TestCase
 
     private User $user;
 
+    private int $professionId;
+
     private Lesson $topic;
 
     protected function setUp(): void
@@ -47,6 +52,18 @@ final class ExamModuleTest extends TestCase
 
         $this->user = User::factory()->create();
         $this->user->assignRole(Role::Student->value);
+        $profession = Profession::query()->create([
+            'code' => 'resident-exam-test',
+            'name' => 'Bác sĩ nội trú',
+            'is_active' => true,
+            'sort_order' => 1,
+        ]);
+        LearnerProfile::query()->create([
+            'user_id' => $this->user->id,
+            'profession_id' => $profession->id,
+            'onboarding_completed_at' => now(),
+        ]);
+        $this->professionId = (int) $profession->id;
         $this->topic = $this->makeLesson([
             'name' => 'Nội tổng quát',
             'slug' => 'noi-tong-quat-exam-test',
@@ -68,16 +85,20 @@ final class ExamModuleTest extends TestCase
 
     public function test_premium_user_can_create_bai_thi_from_blueprint_and_start(): void
     {
-        [$blueprint, , $coreTopic] = $this->seedWeightedBlueprint('Resident Matrix', 2);
+        [$blueprint, , $coreTopic, $catalog] = $this->seedWeightedBlueprint('Resident Matrix', 2);
         $q1 = $this->examPoolQuestion('Resident first');
         $q1->lessons()->sync([$this->topic->id]);
+        $q1->examCatalogs()->sync([$catalog->id]);
+        $q1->professions()->sync([$this->professionId]);
         $q2 = $this->examPoolQuestion('Resident second');
         $q2->lessons()->sync([$this->topic->id]);
+        $q2->examCatalogs()->sync([$catalog->id]);
+        $q2->professions()->sync([$this->professionId]);
 
         $this->grantPremium($this->user);
 
         $this->actingAs($this->user)
-            ->post(route('exam.from-blueprint', $blueprint))
+            ->post(route('exam.from-blueprint', $catalog))
             ->assertRedirect();
 
         $exam = Exam::query()->where('user_id', $this->user->id)->firstOrFail();
@@ -98,12 +119,13 @@ final class ExamModuleTest extends TestCase
 
     public function test_creating_exam_requires_exam_simulation_entitlement(): void
     {
-        [$blueprint] = $this->seedWeightedBlueprint('Locked Matrix', 1);
+        [$blueprint, , , $catalog] = $this->seedWeightedBlueprint('Locked Matrix', 1);
         $q = $this->examPoolQuestion('Locked Q');
         $q->lessons()->sync([$this->topic->id]);
+        $q->examCatalogs()->sync([$catalog->id]);
 
         $this->actingAs($this->user)
-            ->post(route('exam.from-blueprint', $blueprint))
+            ->post(route('exam.from-blueprint', $catalog))
             ->assertRedirect(route('subscription.upgrade'));
 
         $this->assertSame(0, Exam::query()->count());
@@ -270,7 +292,7 @@ final class ExamModuleTest extends TestCase
     }
 
     /**
-     * @return array{0: Blueprint, 1: BlueprintSection, 2: CoreClinicalTopic}
+     * @return array{0: Blueprint, 1: BlueprintSection, 2: CoreClinicalTopic, 3: ExamCatalog}
      */
     private function seedWeightedBlueprint(string $name, int $total): array
     {
@@ -303,7 +325,16 @@ final class ExamModuleTest extends TestCase
 
         $coreTopic->lessons()->sync([$this->topic->id]);
 
-        return [$blueprint, $section, $coreTopic];
+        $catalog = ExamCatalog::query()->create([
+            'name' => $name,
+            'slug' => 'ky-thi-'.uniqid(),
+            'status' => TaxonomyStatus::Active,
+            'sort_order' => 1,
+            'blueprint_id' => $blueprint->id,
+        ]);
+        $catalog->professions()->sync([$this->professionId]);
+
+        return [$blueprint, $section, $coreTopic, $catalog];
     }
 
     private function grantPremium(User $user): void

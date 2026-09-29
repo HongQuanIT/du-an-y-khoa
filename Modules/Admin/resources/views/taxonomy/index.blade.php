@@ -30,7 +30,7 @@
                 <div class="min-w-0 flex-1">
                     <h3 class="font-label-lg font-semibold text-on-surface group-hover:text-primary">Ma trận đề thi</h3>
                     <p class="mt-1 text-sm text-on-surface-variant">
-                        Ma trận → Phần → Chủ đề lâm sàng (128 chủ đề theo QĐ 22/QĐ-HĐYKQG). Dùng cho cấu hình kỳ thi và bộ lọc phiên luyện.
+                        Ma trận → Phần → Chủ đề lâm sàng (128 chủ đề theo QĐ 22/QĐ-HĐYKQG). Chỉ dùng khi kỳ thi gắn ma trận để tạo phiên đề thi.
                     </p>
                     <p class="mt-3 text-xs font-semibold text-primary">Quản lý ma trận →</p>
                 </div>

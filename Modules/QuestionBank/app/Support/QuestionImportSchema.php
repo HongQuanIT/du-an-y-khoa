@@ -7,7 +7,7 @@ namespace Modules\QuestionBank\Support;
 use Modules\Auth\Models\Profession;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
-use Modules\QuestionBank\Models\Blueprint;
+use Modules\QuestionBank\Models\ExamCatalog;
 
 /**
  * Canonical flattened columns for question import/export (one row = one question).
@@ -331,7 +331,7 @@ final class QuestionImportSchema
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get(['code', 'name']);
-        $blueprints = Blueprint::query()
+        $catalogs = ExamCatalog::query()
             ->where('status', TaxonomyStatus::Active)
             ->orderBy('sort_order')
             ->orderBy('name')
@@ -339,7 +339,7 @@ final class QuestionImportSchema
 
         return [
             ['name' => 'Doi_tuong', 'rows' => self::catalogKeyRows($professions, 'code', 'code')],
-            ['name' => 'Ky_thi', 'rows' => self::catalogKeyRows($blueprints, 'slug', 'slug')],
+            ['name' => 'Ky_thi', 'rows' => self::catalogKeyRows($catalogs, 'slug', 'slug')],
         ];
     }
 
@@ -354,7 +354,7 @@ final class QuestionImportSchema
             ['difficulty', 'Có', 'very_easy | easy | medium | hard | very_hard'],
             ['lesson_slugs', 'Có', 'Copy slug thật từ sheet Bai_hoc. Nhiều bài: cách nhau ;'],
             ['profession_codes', 'Không', 'Đối tượng. Copy mã từ sheet Doi_tuong, hoặc ghi đúng tên. Nhiều đối tượng: cách nhau ;. Ô trống khi đã ánh xạ = gỡ hết. Không có cột = giữ nguyên lúc cập nhật.'],
-            ['blueprint_slugs', 'Không', 'Kỳ thi. Copy slug từ sheet Ky_thi, hoặc ghi đúng tên. Nhiều kỳ: cách nhau ;. Ô trống khi đã ánh xạ = gỡ hết. Không có cột = giữ nguyên lúc cập nhật.'],
+            ['blueprint_slugs', 'Không', 'Kỳ thi. Copy slug từ sheet Ky_thi, hoặc ghi đúng tên. Kỳ thi phải thuộc một đối tượng của câu. Nhiều kỳ: cách nhau ;. Ô trống khi đã ánh xạ = gỡ hết. Không có cột = giữ nguyên lúc cập nhật.'],
             ['option_*_explanation', 'Khuyến nghị', 'Giải thích theo từng đáp án. Import vẫn tạo nháp nếu thiếu.'],
             ['status / publisher_id / version / id', 'Cấm', 'Hệ thống bỏ qua. Không dùng id — khóa là mã câu hỏi.'],
             ['code', 'Không', 'Để trống = tạo mới (hệ thống cấp Q00001…). Điền mã đã có = cập nhật. Mã không tồn tại = lỗi, không import dòng đó.'],

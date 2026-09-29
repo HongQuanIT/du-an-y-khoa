@@ -11,11 +11,12 @@ use Illuminate\Validation\ValidationException;
 use Modules\Auth\Models\Profession;
 use Modules\QuestionBank\Enums\QuestionImportBatchStatus;
 use Modules\QuestionBank\Enums\QuestionStatus;
-use Modules\QuestionBank\Models\Blueprint;
+use Modules\QuestionBank\Models\ExamCatalog;
 use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionImportBatch;
 use Modules\QuestionBank\Models\Tag;
+use Modules\QuestionBank\Support\ExamCatalogAssignment;
 use Modules\QuestionBank\Support\QuestionImportSchema;
 use Modules\QuestionBank\Support\QuestionSpreadsheet;
 
@@ -79,8 +80,8 @@ final class PrepareQuestionImportPreviewAction
             Profession::query()->get(['id', 'code', 'name']),
             ['code', 'name'],
         );
-        $blueprintIndex = $this->tokenIndex(
-            Blueprint::query()->get(['id', 'slug', 'code', 'name']),
+        $catalogIndex = $this->tokenIndex(
+            ExamCatalog::query()->get(['id', 'slug', 'code', 'name']),
             ['slug', 'code', 'name'],
         );
         foreach ($extracted as $item) {
@@ -91,7 +92,7 @@ final class PrepareQuestionImportPreviewAction
                 $seenCodes,
                 $map,
                 $professionIndex,
-                $blueprintIndex,
+                $catalogIndex,
             );
         }
 
@@ -281,6 +282,20 @@ final class PrepareQuestionImportPreviewAction
             );
             if ($missingBlueprints !== []) {
                 $errors[] = 'Không tìm thấy kỳ thi: '.implode(', ', $missingBlueprints).'.';
+            } else {
+                $professionIdsForCheck = $professionIds;
+                if (! $professionMapped && $existing !== null) {
+                    $professionIdsForCheck = $existing->professions()
+                        ->pluck('professions.id')
+                        ->map(fn ($id): int => (int) $id)
+                        ->all();
+                }
+                try {
+                    ExamCatalogAssignment::assertMatchesProfessions($professionIdsForCheck, $blueprintIds);
+                } catch (ValidationException $exception) {
+                    $errors[] = $exception->validator->errors()->first('exam_catalog_ids')
+                        ?? 'Kỳ thi không khớp đối tượng.';
+                }
             }
         }
 
@@ -312,7 +327,7 @@ final class PrepareQuestionImportPreviewAction
             $payload['profession_ids'] = $professionIds;
         }
         if ($blueprintMapped) {
-            $payload['blueprint_ids'] = $blueprintIds;
+            $payload['exam_catalog_ids'] = $blueprintIds;
         }
 
         return [

@@ -250,6 +250,7 @@ final class SessionQuestionSelector
             coreClinicalTopicIds: $data->coreClinicalTopicIds,
             tagIds: $data->tagIds,
             professionId: $this->learnerProfessionId($userId),
+            examCatalogId: $data->examCatalogId,
         );
 
         $incorrect = QuestionAttempt::query()
@@ -527,6 +528,7 @@ final class SessionQuestionSelector
             lessonIds: $lessonIds,
             tagIds: $data->tagIds,
             professionId: $this->learnerProfessionId($userId),
+            examCatalogId: $data->examCatalogId,
         );
 
         // Apply saved-only or specific folder filtering

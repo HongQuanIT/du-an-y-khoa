@@ -345,6 +345,12 @@ class Question extends Model
         return $this->belongsToMany(Blueprint::class, 'question_blueprints')->withTimestamps();
     }
 
+    /** @return BelongsToMany<ExamCatalog, $this> */
+    public function examCatalogs(): BelongsToMany
+    {
+        return $this->belongsToMany(ExamCatalog::class, 'question_exam_catalogs')->withTimestamps();
+    }
+
     /** @return HasMany<QuestionHint, $this> */
     public function hints(): HasMany
     {

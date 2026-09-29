@@ -19,6 +19,7 @@ use Modules\Admin\Http\Controllers\Cms\PageController;
 use Modules\Admin\Http\Controllers\ContactInquiryController;
 use Modules\Admin\Http\Controllers\CurriculumTaxonomyController;
 use Modules\Admin\Http\Controllers\DashboardController;
+use Modules\Admin\Http\Controllers\ExamCatalogController;
 use Modules\Admin\Http\Controllers\EditorImageUploadController;
 use Modules\Admin\Http\Controllers\ExamController;
 use Modules\Admin\Http\Controllers\InstitutionController;
@@ -360,6 +361,7 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
             Route::get('/taxonomy', [TaxonomyController::class, 'index'])->name('taxonomy.index');
             Route::middleware('permission:blueprint.view')->group(function (): void {
                 Route::get('/blueprints', [BlueprintController::class, 'index'])->name('blueprints.index');
+                Route::get('/exam-catalogs', [ExamCatalogController::class, 'index'])->name('exam-catalogs.index');
             });
             Route::middleware('permission:curriculum.view')->group(function (): void {
                 Route::get('/categories', [CurriculumTaxonomyController::class, 'index'])->name('curriculum.index');
@@ -372,6 +374,8 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
             Route::middleware('permission:blueprint.create')->group(function (): void {
                 Route::get('/blueprints/create', [BlueprintController::class, 'create'])->name('blueprints.create');
                 Route::post('/blueprints', [BlueprintController::class, 'store'])->name('blueprints.store');
+                Route::get('/exam-catalogs/create', [ExamCatalogController::class, 'create'])->name('exam-catalogs.create');
+                Route::post('/exam-catalogs', [ExamCatalogController::class, 'store'])->name('exam-catalogs.store');
                 Route::post('/blueprints/{blueprint}/sections', [BlueprintController::class, 'storeSection'])->name('blueprints.sections.store');
                 Route::post('/blueprint-sections/{section}/core-topics', [BlueprintController::class, 'storeCoreTopic'])->name('blueprint-sections.core-topics.store');
                 Route::put('/core-clinical-topics/{topic}/medical-nodes', [BlueprintController::class, 'syncCoreTopicMedicalNodes'])->name('core-clinical-topics.medical-nodes.sync');
@@ -390,6 +394,8 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
                 Route::get('/blueprints/{blueprint}/edit', [BlueprintController::class, 'edit'])->name('blueprints.edit');
                 Route::put('/blueprints/{blueprint}', [BlueprintController::class, 'update'])->name('blueprints.update');
                 Route::put('/blueprints/{blueprint}/weights', [BlueprintController::class, 'updateWeights'])->name('blueprints.weights.update');
+                Route::get('/exam-catalogs/{examCatalog}/edit', [ExamCatalogController::class, 'edit'])->name('exam-catalogs.edit');
+                Route::put('/exam-catalogs/{examCatalog}', [ExamCatalogController::class, 'update'])->name('exam-catalogs.update');
             });
             Route::middleware('permission:curriculum.update')->group(function (): void {
                 Route::put('/categories/organ-systems/{organSystem}', [CurriculumTaxonomyController::class, 'updateOrganSystem'])->name('curriculum.organ-systems.update');
@@ -416,6 +422,10 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
             Route::delete('/blueprints/{blueprint}', [BlueprintController::class, 'destroy'])
                 ->middleware('permission:blueprint.delete')
                 ->name('blueprints.destroy');
+
+            Route::delete('/exam-catalogs/{examCatalog}', [ExamCatalogController::class, 'destroy'])
+                ->middleware('permission:blueprint.delete')
+                ->name('exam-catalogs.destroy');
 
             Route::delete('/blueprint-sections/{section}', [BlueprintController::class, 'destroySection'])
                 ->middleware('permission:blueprint.delete')
