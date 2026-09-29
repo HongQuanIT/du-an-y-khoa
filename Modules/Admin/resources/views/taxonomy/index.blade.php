@@ -1,77 +1,51 @@
 <x-layouts.admin title="Phân loại câu hỏi">
     <x-admin.page-header title="Phân loại câu hỏi"
-        description="Quản lý ba lớp phân loại: ma trận đề thi, danh mục kiến thức 3 cấp và thẻ.">
+        description="Kiểm tra học viên có tìm được câu không: chức danh, kỳ thi, bài học và thẻ.">
     </x-admin.page-header>
 
     @include('admin::taxonomy._sub-nav', ['active' => 'overview'])
 
     <x-admin.flash />
 
-    <div class="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.blueprints.index'))
-            <x-admin.kpi-card label="Ma trận đề thi" :value="number_format($stats['blueprints'])" hint="{{ number_format($stats['sections']) }} phần · {{ number_format($stats['core_topics']) }} chủ đề lâm sàng" icon="assignment" />
-        @endif
-        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.curriculum.index'))
-            <x-admin.kpi-card label="Danh mục kiến thức" :value="number_format($stats['lessons'])" hint="{{ number_format($stats['organ_systems']) }} hệ cơ quan · {{ number_format($stats['subjects']) }} môn học · {{ number_format($stats['lessons']) }} bài học" icon="account_tree" />
-        @endif
-        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.tags.index'))
-            <x-admin.kpi-card label="Thẻ" :value="number_format($stats['tags'])" hint="Nhãn phân loại bổ sung" icon="sell" />
-        @endif
-    </div>
+    @if (count($kpis) > 0)
+        <div class="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            @foreach ($kpis as $kpi)
+                <x-admin.kpi-card
+                    :label="$kpi['label']"
+                    :value="$kpi['value']"
+                    :hint="$kpi['hint']"
+                    :icon="$kpi['icon']"
+                    :href="$kpi['href']"
+                    :severity="$kpi['severity']" />
+            @endforeach
+        </div>
+    @endif
 
-    <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.blueprints.index'))
-<a href="{{ route(\App\Support\Auth\PortalRoute::content('blueprints.index')) }}"
-            class="group rounded-xl border border-outline-variant bg-surface p-5 transition-colors hover:border-primary/40 hover:bg-primary/5">
-            <div class="flex items-start gap-4">
-                <span class="flex size-12 items-center justify-center rounded-xl bg-primary-container text-on-primary-container">
-                    <span class="material-symbols-outlined text-[28px]">assignment</span>
-                </span>
-                <div class="min-w-0 flex-1">
-                    <h3 class="font-label-lg font-semibold text-on-surface group-hover:text-primary">Ma trận đề thi</h3>
-                    <p class="mt-1 text-sm text-on-surface-variant">
-                        Ma trận → Phần → Chủ đề lâm sàng (128 chủ đề theo QĐ 22/QĐ-HĐYKQG). Chỉ dùng khi kỳ thi gắn ma trận để tạo phiên đề thi.
-                    </p>
-                    <p class="mt-3 text-xs font-semibold text-primary">Quản lý ma trận →</p>
-                </div>
-            </div>
-        </a>
-@endif
-
-        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.curriculum.index'))
-<a href="{{ route(\App\Support\Auth\PortalRoute::content('curriculum.index')) }}"
-            class="group rounded-xl border border-outline-variant bg-surface p-5 transition-colors hover:border-primary/40 hover:bg-primary/5">
-            <div class="flex items-start gap-4">
-                <span class="flex size-12 items-center justify-center rounded-xl bg-secondary-container text-on-secondary-container">
-                    <span class="material-symbols-outlined text-[28px]">account_tree</span>
-                </span>
-                <div class="min-w-0 flex-1">
-                    <h3 class="font-label-lg font-semibold text-on-surface group-hover:text-primary">Danh mục kiến thức</h3>
-                    <p class="mt-1 text-sm text-on-surface-variant">
-                        Danh mục chương trình 3 cấp: Hệ cơ quan → Môn học → Bài học. Câu hỏi gắn vào bài học; triệu chứng &amp; khái niệm quản lý ở mục Thẻ.
-                    </p>
-                    <p class="mt-3 text-xs font-semibold text-primary">Quản lý danh mục →</p>
-                </div>
-            </div>
-        </a>
-@endif
-
-        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.tags.index'))
-<a href="{{ route(\App\Support\Auth\PortalRoute::content('tags.index')) }}"
-            class="group rounded-xl border border-outline-variant bg-surface p-5 transition-colors hover:border-primary/40 hover:bg-primary/5">
-            <div class="flex items-start gap-4">
-                <span class="flex size-12 items-center justify-center rounded-xl bg-tertiary-container text-on-tertiary-container">
-                    <span class="material-symbols-outlined text-[28px]">sell</span>
-                </span>
-                <div class="min-w-0 flex-1">
-                    <h3 class="font-label-lg font-semibold text-on-surface group-hover:text-primary">Thẻ</h3>
-                    <p class="mt-1 text-sm text-on-surface-variant">
-                        Nhãn phân loại (ECG, cấp cứu, trọng tâm…) để lọc câu hỏi và tùy chỉnh phiên luyện.
-                    </p>
-                    <p class="mt-3 text-xs font-semibold text-primary">Quản lý thẻ →</p>
-                </div>
-            </div>
-        </a>
-@endif
-    </div>
+    @if (count($areas) > 0)
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            @foreach ($areas as $area)
+                <a href="{{ $area['href'] }}"
+                    class="group flex flex-col rounded-xl border border-outline-variant bg-surface p-5 transition-colors hover:border-primary/40 hover:bg-primary/5">
+                    <div class="flex items-start gap-4">
+                        <span class="flex size-12 shrink-0 items-center justify-center rounded-xl {{ $area['icon_class'] }}">
+                            <span class="material-symbols-outlined text-[28px]">{{ $area['icon'] }}</span>
+                        </span>
+                        <div class="min-w-0 flex-1">
+                            <h3 class="font-label-lg font-semibold text-on-surface group-hover:text-primary">{{ $area['title'] }}</h3>
+                            <p class="mt-1 text-sm text-on-surface-variant">{{ $area['summary'] }}</p>
+                        </div>
+                    </div>
+                    <dl class="mt-4 grid grid-cols-2 gap-2">
+                        @foreach ($area['facts'] as $fact)
+                            <div class="rounded-lg bg-surface-container-low px-3 py-2">
+                                <dt class="text-[11px] font-medium text-on-surface-variant">{{ $fact['label'] }}</dt>
+                                <dd class="mt-0.5 text-sm font-semibold text-on-surface">{{ $fact['value'] }}</dd>
+                            </div>
+                        @endforeach
+                    </dl>
+                    <p class="mt-4 text-xs font-semibold text-primary">{{ $area['action'] }} →</p>
+                </a>
+            @endforeach
+        </div>
+    @endif
 </x-layouts.admin>

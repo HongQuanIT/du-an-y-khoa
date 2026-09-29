@@ -9,12 +9,12 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Modules\Auth\Models\LearnerProfile;
 use Modules\QuestionBank\Data\CreateSessionData;
-use Modules\QuestionBank\Enums\UserQuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionSession;
 use Modules\QuestionBank\Models\QuestionStatus as UserQuestionStatusModel;
 use Modules\QuestionBank\Support\AdaptiveTrace;
+use Modules\QuestionBank\Support\MemoryStability;
 use Modules\QuestionBank\Support\QuestionFilterBuilder;
 use Modules\QuestionBank\Support\ServePublishedQuestion;
 
@@ -22,16 +22,13 @@ use Modules\QuestionBank\Support\ServePublishedQuestion;
  * Adaptive session picker (docs/adaptive-session-algorithm.md).
  *
  * Pipeline:
- *   pool → split unseen/seen → score seen (Weakness + Memory × mode) → cooldown
+ *   pool → split unseen/graded → score graded (Weakness + forgetting curve × mode) → cooldown
  *   → weighted random without replacement → shuffle.
  *
  * Mỗi bước ghi kênh `adaptive` → storage/logs/adaptive.log (không phụ thuộc LOG_LEVEL).
  */
 final class AdaptiveQuestionSelector
 {
-    /** Memory curve: MemoryScore = 1 - e^(-days / T). */
-    private const MEMORY_TAU_DAYS = 20.0;
-
     /** Floor weight so sampling never hard-zeros a candidate. */
     private const WEIGHT_EPSILON = 0.01;
 
@@ -81,8 +78,8 @@ final class AdaptiveQuestionSelector
 
         $limit = max(1, min($limit, count($poolIds)));
 
-        // ─── Bước 2: Coverage split (unseen = chưa từng attempt chấm/omit) ──
-        $seenIds = $this->seenQuestionIds($userId, $poolIds);
+        // Coverage split: unseen = chưa có lần chấm (omit không tạo S).
+        $seenIds = $this->gradedQuestionIds($userId, $poolIds);
         $unseenIds = array_values(array_diff($poolIds, $seenIds));
 
         $poolSize = count($poolIds);
@@ -228,12 +225,12 @@ final class AdaptiveQuestionSelector
     }
 
     /**
-     * Seen = đã có attempt (đúng/sai/omit) hoặc last_seen_at đã được ghi.
+     * Graded = đã chấm đúng/sai. Omit-only vẫn thuộc unseen.
      *
      * @param  array<int, string>  $poolIds
      * @return array<int, string>
      */
-    private function seenQuestionIds(int $userId, array $poolIds): array
+    private function gradedQuestionIds(int $userId, array $poolIds): array
     {
         if ($poolIds === []) {
             return [];
@@ -242,6 +239,7 @@ final class AdaptiveQuestionSelector
         $fromAttempts = QuestionAttempt::query()
             ->where('user_id', $userId)
             ->whereIn('question_id', $poolIds)
+            ->whereNotNull('is_correct')
             ->distinct()
             ->pluck('question_id')
             ->map(fn ($id) => (string) $id)
@@ -250,17 +248,7 @@ final class AdaptiveQuestionSelector
         $fromStatus = UserQuestionStatusModel::query()
             ->where('user_id', $userId)
             ->whereIn('question_id', $poolIds)
-            ->where(function ($query): void {
-                $query->whereNotNull('last_seen_at')
-                    ->orWhere('correct_count', '>', 0)
-                    ->orWhere('wrong_count', '>', 0)
-                    ->orWhere('omitted_count', '>', 0)
-                    ->orWhereIn('status', [
-                        UserQuestionStatus::Correct,
-                        UserQuestionStatus::Incorrect,
-                        UserQuestionStatus::Omitted,
-                    ]);
-            })
+            ->whereNotNull('last_graded_at')
             ->pluck('question_id')
             ->map(fn ($id) => (string) $id)
             ->all();
@@ -310,12 +298,16 @@ final class AdaptiveQuestionSelector
             // Weakness (Laplace): (wrong+1)/(n+2) — omit KHÔNG vào mẫu.
             $weakness = ($wrong + 1) / ($gradedAttempts + 2);
 
-            // Memory: 1 - e^(-days/T); chưa từng last_seen → coi như rất lâu (1.0).
-            $lastSeen = $row?->last_seen_at;
-            $days = $lastSeen === null
-                ? 365.0
-                : max(0.0, abs((float) $now->diffInDays($lastSeen)));
-            $memory = 1.0 - exp(-$days / self::MEMORY_TAU_DAYS);
+            // Memory: urgency = 1 − exp(−t/S), t từ last_graded_at.
+            $stability = $row?->memory_stability_days;
+            $lastGraded = $row?->last_graded_at;
+            if ($stability !== null && (float) $stability > 0 && $lastGraded !== null) {
+                $days = MemoryStability::elapsedDays($lastGraded, $now);
+                $memory = MemoryStability::urgency((float) $stability, $days);
+            } else {
+                $days = 365.0;
+                $memory = 1.0;
+            }
 
             $base = ($weights['w'] * $weakness) + ($weights['m'] * $memory);
 
@@ -335,6 +327,7 @@ final class AdaptiveQuestionSelector
                 'wrong' => $wrong,
                 'weakness' => round($weakness, 4),
                 'days_since_seen' => round($days, 2),
+                'stability_days' => $stability !== null ? round((float) $stability, 2) : null,
                 'memory' => round($memory, 4),
                 'base' => round($base, 4),
                 'sessions_since_served' => $sessionsSinceServed === PHP_INT_MAX ? null : $sessionsSinceServed,
@@ -354,7 +347,7 @@ final class AdaptiveQuestionSelector
             'candidates' => count($scored),
             'weight_min' => $weightValues === [] ? null : round(min($weightValues), 4),
             'weight_max' => $weightValues === [] ? null : round(max($weightValues), 4),
-            'formula' => 'weight = max(0.01, (wW*weakness + wM*memory) * cooldown)',
+            'formula' => 'weight = max(0.01, (wW*weakness + wM*(1-exp(-t/S))) * cooldown)',
             'top' => array_slice($debugTop, 0, 15),
         ]);
 

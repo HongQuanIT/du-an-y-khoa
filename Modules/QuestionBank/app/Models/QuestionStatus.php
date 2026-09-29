@@ -23,6 +23,8 @@ use Modules\QuestionBank\Enums\UserQuestionStatus;
  * @property int $omitted_count
  * @property Carbon|null $last_attempt_at
  * @property Carbon|null $last_seen_at
+ * @property float|null $memory_stability_days
+ * @property Carbon|null $last_graded_at
  * @property Carbon|null $last_served_at
  * @property string|null $last_served_session_id
  * @property Carbon|null $last_correct_at
@@ -43,6 +45,8 @@ class QuestionStatus extends Model
         'omitted_count',
         'last_attempt_at',
         'last_seen_at',
+        'memory_stability_days',
+        'last_graded_at',
         'last_served_at',
         'last_served_session_id',
         'last_correct_at',
@@ -56,6 +60,8 @@ class QuestionStatus extends Model
         'omitted_count' => 'integer',
         'last_attempt_at' => 'datetime',
         'last_seen_at' => 'datetime',
+        'memory_stability_days' => 'float',
+        'last_graded_at' => 'datetime',
         'last_served_at' => 'datetime',
         'last_correct_at' => 'datetime',
     ];

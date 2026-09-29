@@ -21,6 +21,7 @@ use Modules\QuestionBank\Models\QuestionSession;
 use Modules\QuestionBank\Models\QuestionStatus as UserQuestionStatusModel;
 use Modules\QuestionBank\Services\QuestionGrader;
 use Modules\QuestionBank\Services\QuestionSessionSnapshots;
+use Modules\QuestionBank\Support\MemoryStability;
 use RuntimeException;
 
 /**
@@ -222,7 +223,7 @@ final class CompleteQuestionSessionAction
             };
         }
 
-        $status->fill([
+        $attributes = [
             'status' => $nextStatus,
             'attempts_count' => $attemptsCount,
             'correct_count' => $correctCount,
@@ -233,7 +234,18 @@ final class CompleteQuestionSessionAction
             'last_correct_at' => $nextStatus === UserQuestionStatus::Correct
                 ? $attemptedAt
                 : $status->last_correct_at,
-        ])->save();
+        ];
+
+        $graded = in_array($nextStatus, [UserQuestionStatus::Correct, UserQuestionStatus::Incorrect], true);
+        if ($graded && ($incrementAttempts || ! $status->exists)) {
+            $attributes['memory_stability_days'] = MemoryStability::afterGrade(
+                $status->memory_stability_days !== null ? (float) $status->memory_stability_days : null,
+                $nextStatus === UserQuestionStatus::Correct,
+            );
+            $attributes['last_graded_at'] = $attemptedAt;
+        }
+
+        $status->fill($attributes)->save();
     }
 
     private function liveQuestionExists(Question $question): bool

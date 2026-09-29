@@ -2,6 +2,27 @@
 
 ## 2026-09-29
 
+### Feat — Gọn trang tổng kết phiên
+
+- Bỏ biểu đồ tỷ lệ đúng theo chủ đề.
+- Đổi tiêu đề phân tích thành "Phân tích bài theo phiên".
+
+## 2026-09-29
+
+### Feat — Nhớ độ bền trí nhớ từng câu
+
+- Lưu độ bền và thời điểm chấm gần nhất khi trả lời đúng hoặc sai.
+- Phiên thích ứng ước lượng còn nhớ theo đường cong quên; câu bỏ qua không tính là đã học.
+
+## 2026-09-29
+
+### Feat — Sắp lại tổng quan phân loại
+
+- Tổng quan phân loại hiện câu học viên thấy được, kỳ thi chọn được, bài học có câu và thẻ đang gắn câu.
+- Các ô kỳ thi, danh mục, thẻ và ma trận hiện số đang dùng. Đổi nhãn Tags thành Thẻ.
+
+## 2026-09-29
+
 ### Feat — Gọn form kỳ thi
 
 - Bỏ đường dẫn định danh; form và danh sách kỳ thi chỉ hiện mã.

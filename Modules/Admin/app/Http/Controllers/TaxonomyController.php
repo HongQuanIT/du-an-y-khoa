@@ -8,31 +8,15 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Support\Enums\Permission;
 use Illuminate\View\View;
-use Modules\QuestionBank\Models\Blueprint;
-use Modules\QuestionBank\Models\CoreClinicalTopic;
-use Modules\QuestionBank\Models\Lesson;
-use Modules\QuestionBank\Models\OrganSystem;
-use Modules\QuestionBank\Models\Subject;
-use Modules\QuestionBank\Models\Tag;
+use Modules\Admin\Actions\BuildTaxonomyOverviewAction;
 
 final class TaxonomyController extends Controller
 {
-    public function index(): View
+    public function index(BuildTaxonomyOverviewAction $overview): View
     {
         $this->authorizePermission('taxonomy.view');
 
-        return view('admin::taxonomy.index', [
-            'stats' => [
-                'blueprints' => Blueprint::query()->count(),
-                'sections' => Blueprint::query()->withCount('sections')->get()->sum('sections_count'),
-                'core_topics' => CoreClinicalTopic::query()->count(),
-                'organ_systems' => OrganSystem::query()->count(),
-                'subjects' => Subject::query()->count(),
-                'lessons' => Lesson::query()->count(),
-                'tags' => Tag::query()->count(),
-            ],
-            'canCreate' => $this->actor()->canAny(['taxonomy.create']),
-        ]);
+        return view('admin::taxonomy.index', $overview->handle($this->actor()));
     }
 
     private function authorizePermission(string|Permission ...$permissions): void

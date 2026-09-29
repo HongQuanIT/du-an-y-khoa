@@ -419,10 +419,10 @@ final class AdaptiveSessionBriefing
 
         $days = (float) ($row['days_since_seen'] ?? 0);
         $memory = match (true) {
-            $days >= 30 => 'đã hơn một tháng chưa gặp câu này',
-            $days >= 7 => 'đã '.(int) round($days).' ngày chưa gặp câu này',
-            $days >= 1 => 'mới gặp khoảng '.(int) round($days).' ngày trước',
-            default => 'vừa gặp trong ngày',
+            $days >= 30 => 'đã hơn một tháng kể từ lần chấm',
+            $days >= 7 => 'đã '.(int) round($days).' ngày kể từ lần chấm',
+            $days >= 1 => 'mới chấm khoảng '.(int) round($days).' ngày trước',
+            default => 'vừa được chấm trong ngày',
         };
 
         $cooldown = (float) ($row['cooldown'] ?? 1);
@@ -698,7 +698,7 @@ final class AdaptiveSessionBriefing
 
         return [
             ['name' => 'Độ yếu', 'expr' => '(số lần sai + 1) / (số lần đúng + số lần sai + 2)'],
-            ['name' => 'Mức nhớ', 'expr' => '1 − e^(− số ngày chưa gặp / 20)'],
+            ['name' => 'Mức nhớ', 'expr' => '1 − e^(− số ngày từ lần chấm / độ bền). Đúng thì độ bền ×2, sai thì ×0,3'],
             ['name' => 'Điểm cần ôn', 'expr' => $base],
             ['name' => 'Tránh lặp', 'expr' => 'Trong vòng 2 ngày, phiên mới nhất có câu đó — vừa chọn sáng nay, chưa mở phiên sau: nhân 0,10. Trong vòng 2 ngày, câu không ở phiên mới nhất — hôm qua vừa chọn, hôm nay đã mở một phiên khác: nhân 0,30. Đã mở thêm 2 phiên kể từ lần chọn, hoặc chưa mở phiên nào nhưng lần chọn đã quá 2 ngày: nhân 1,00.'],
             ['name' => 'Điểm ưu tiên', 'expr' => 'số lớn hơn giữa 0,01 và (điểm cần ôn × tránh lặp)'],

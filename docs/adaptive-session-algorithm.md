@@ -6,7 +6,7 @@
 | **SRS** | `srs/modules/05-question-bank.md` |
 | **UI** | `/qbank` · source `weak_topics` · focus `weak_focus` \| `balanced` \| `retention` |
 | **Bản giải thích ngắn** | [`adaptive-session-explained.md`](./adaptive-session-explained.md) |
-| **Trạng thái** | UI + migration + **selector V3 (weighted)** đã áp dụng khi tạo phiên thích ứng |
+| **Trạng thái** | Selector dùng forgetting curve: `R = exp(−t/S)`, đúng ×2, sai ×0.3, kẹp `[0.5, 365]` |
 
 ---
 
@@ -17,7 +17,7 @@ Học viên chọn **đề thi (blueprint)** + **hướng luyện**. Hệ thốn
 | Mục tiêu học | Cách hệ thống thể hiện |
 |--------------|------------------------|
 | Vá lỗ hổng | Ưu tiên câu có **Weakness** cao |
-| Chống quên | Ưu tiên câu **lâu chưa gặp** (**Memory** / `last_seen`) |
+| Chống quên | Ưu tiên câu có **xác suất còn nhớ thấp** (`memory_urgency = 1 − R`), theo độ bền riêng và thời gian từ lần chấm |
 | Không nhàm / không spam | **Cooldown** giảm xác suất câu vừa được đưa vào session |
 | Đa dạng | **Weighted random** (không cố định Top-N) |
 
@@ -51,9 +51,9 @@ Lưu `adaptive_focus` vào `question_sessions.filters` (JSON đã có — không
 6. Order               Shuffle nhẹ / anti-clump theo lesson (tuỳ chọn)
 ```
 
-### 3.1 Còn câu chưa làm (`unseen > 0`)
+### 3.1 Còn câu chưa chấm (`unseen > 0`)
 
-Dành một phần chỗ cho câu mới (coverage), phần còn lại chấm điểm câu đã gặp.
+Dành một phần chỗ cho câu chưa có `last_graded_at` (coverage), phần còn lại chấm điểm câu đã chấm. Câu chỉ bị bỏ qua vẫn thuộc nhóm này: chưa có `S`.
 
 Gợi ý quota:
 
@@ -87,36 +87,53 @@ WeaknessScore = (wrong_count + 1) / (attempt_count + 2)   # Laplace smoothing
 
 → Không kết luận “yếu hơn” chỉ vì mới sai 1 lần.
 
-`attempt_count` ở đây = số lần **đã chấm** (đúng hoặc sai). **Omit không tính vào mẫu wrong-rate** (tránh làm loãng/làm méo weakness), nhưng **có cập nhật `last_seen_at`** (xem §4.2).
+`attempt_count` ở đây = số lần **đã chấm** (đúng hoặc sai). **Omit không tính vào mẫu wrong-rate** (tránh làm loãng/làm méo weakness) và **không đổi độ bền nhớ** (xem §4.2).
 
-### 4.2 Memory — đến hạn ôn lại
+### 4.2 Memory — đường cong quên theo độ bền
 
-**Câu hỏi:** Đã bao lâu user **gặp** câu này (làm hoặc bỏ qua)?
+**Câu hỏi:** Nếu đưa câu này ra bây giờ, học viên còn nhớ được bao nhiêu?
+
+Hai câu cùng số ngày chưa gặp có mức nhớ khác nhau nếu lịch sử đúng/sai khác nhau. Memory vì vậy tách thành độ bền (lưu) và xác suất còn nhớ (tính lúc chọn câu).
 
 ```text
-days = max(0, now − last_seen_at)   # đơn vị ngày
-MemoryScore = 1 − exp(−days / T)    # đề xuất T = 20
+S     = memory_stability_days          # lưu trên user × câu
+t     = max(0, now − last_graded_at)   # ngày kể từ lần chấm đúng/sai gần nhất
+R     = exp(−t / S)                    # xác suất còn nhớ
+urgency = 1 − R                        # MemoryScore dùng trong §5
 ```
 
-| `last_seen_at` cách đây | MemoryScore (T=20) |
-|-------------------------|--------------------|
-| 1 ngày | ~0.05 |
-| 10 ngày | ~0.39 |
-| 40 ngày | ~0.86 |
-| 60+ ngày | ~0.95 → bão hòa |
+`R` không ghi xuống database. Ngày hôm sau `t` đổi nên `R` đổi.
 
-**Định nghĩa `last_seen_at` (quan trọng):**
+| Cùng 10 ngày kể từ lần chấm | S | R | Urgency |
+|-----------------------------|--:|--:|--------:|
+| Đúng nhiều lần | 32 | ~0.73 | 0.27 |
+| Sai nhiều lần (kẹp sàn) | 0.5 | ~0 | ~1.0 |
+
+**Cập nhật `S` (V1, rule-based).** Hệ số là điểm xuất phát để hiệu chỉnh bằng dữ liệu thật, chưa khóa cứng.
+
+```text
+Chưa từng chấm          S = null          # câu unseen, không vào Memory
+Lần chấm đầu            S₀ = 1 ngày, rồi áp rule dưới
+Đúng                    S = clamp(S × 2,   0.5, 365)
+Sai                     S = clamp(S × 0.3, 0.5, 365)
+```
+
+Thứ tự: nhân hệ số trước, kẹp sau. Lần sai đầu: `1 × 0.3 = 0.3` rồi kẹp lên `0.5`.
+
+**`last_seen_at` vẫn là “đã gặp”, không phải đồng hồ quên.**
 
 > Timestamp lần gần nhất user **đã tiếp xúc có ý nghĩa** với câu: **trả lời (đúng/sai)** hoặc **bỏ qua / omit**.
 
-| Sự kiện | Cập nhật `last_seen_at`? | Ghi chú |
-|---------|--------------------------|---------|
-| Trả lời đúng / sai | Có | Đồng thời cập nhật counters weakness |
-| Bỏ qua / omit (`is_correct = null`) | Có | Không tăng `wrong_count` |
-| Chỉ nằm trong session nhưng chưa mở (chưa serve UI) | Không (V1) | |
-| Mở câu trên player (optional V2) | Có thể | Nếu muốn Memory nhạy với “đã xem stem” |
+| Sự kiện | `last_seen_at` | `last_graded_at` | `S` |
+|---------|----------------|------------------|-----|
+| Trả lời đúng / sai | Có | Có (`now`) | ×2 hoặc ×0.3, rồi kẹp |
+| Bỏ qua / omit (`is_correct = null`) | Có | Không | Không đổi |
+| Chỉ nằm trong session nhưng chưa mở | Không | Không | Không |
+| Mở câu trên player (optional V2) | Có thể | Không | Không |
 
-`last_attempt_at` hiện có trên `question_status` ≈ lần attempt gần nhất; **không thay thế** `last_seen_at` nếu sau này tách “xem” khỏi “attempt”. V1 có thể backfill `last_seen_at = last_attempt_at` rồi ghi cả omit.
+`last_attempt_at` hiện cập nhật cả omit, nên **không dùng làm `t`**. Đồng hồ `R(t)` là `last_graded_at`.
+
+Câu chưa chấm (`S` null) không có urgency. Chúng đi theo quota unseen ở §3.1.
 
 ### 4.3 Cooldown — tạm tránh lặp session
 
@@ -145,7 +162,7 @@ SelectionWeight = max(ε, BasePriority × CooldownFactor)
 Cùng công thức, khác trọng số:
 
 ```text
-BasePriority = w_W × WeaknessScore + w_M × MemoryScore
+BasePriority = w_W × WeaknessScore + w_M × memory_urgency
 ```
 
 | Mode UI | Key | w_W | w_M | Khi nào dùng |
@@ -154,41 +171,37 @@ BasePriority = w_W × WeaknessScore + w_M × MemoryScore
 | **Cân bằng** *(default)* | `balanced` | 0.55 | 0.45 | Luyện ngày thường |
 | **Củng cố** | `retention` | 0.30 | 0.70 | Chống quên |
 
-Ví dụ cùng cặp câu:
+Ví dụ cùng cặp câu đã chấm:
 
-| | Q yếu mới làm (W=0.90, M=0.05) | Q khá vững 40 ngày (W=0.20, M=0.86) |
+| | A — vừa chấm (W=0.90, t=0, R=1, urgency=0) | D — khá vững (W=0.20, S=20, t=40, R≈0.14, urgency≈0.86) |
 |--|--:|--:|
 | Điểm yếu | **0.77** | 0.30 |
-| Cân bằng | 0.52 | 0.50 |
-| Củng cố | 0.31 | **0.66** |
+| Cân bằng | 0.50 | 0.50 |
+| Củng cố | 0.27 | **0.66** |
+
+`R(40/20) = e^{-2} ≈ 0.135`. Câu A vừa được chấm nên urgency về 0 dù vẫn yếu; mode Củng cố vì vậy nhường chỗ cho câu D.
 
 ---
 
-## 6. Hiện trạng dữ liệu vs nhu cầu
+## 6. Hiện trạng dữ liệu vs forgetting curve
+
+Selector V3 đang chạy với `memory_urgency = 1 − exp(−t / S)` lấy `t` từ `last_graded_at` và `S` từ `memory_stability_days`.
 
 ### Đã có
 
 | Nguồn | Field | Dùng cho |
 |-------|-------|----------|
-| `question_status` | `status`, `attempts_count`, `last_attempt_at`, `last_correct_at` | Filter QBank; gần với attempt gần nhất |
-| `question_attempts` | `is_correct`, `answered_at`, … | Lịch sử thô; omit = `is_correct` null |
-| `question_sessions` | `filters` JSON | Có thể lưu `adaptive_focus` |
-| Selector hiện tại | Incorrect-first → unseen → top-up | Chưa có score / mode / cooldown |
-
-### Còn thiếu (cần migrate / rollup)
-
-| Nhu cầu thuật toán | Thiếu gì hôm nay |
-|--------------------|------------------|
-| Memory theo “đã làm **hoặc** bỏ qua” | Chưa có `last_seen_at` tường minh; omit có thể không đồng nhất với “seen” |
-| Weakness nhanh (không aggregate mỗi request) | Chưa có `correct_count` / `wrong_count` trên cache user×question |
-| Cooldown theo session serve | Chưa có `last_served_at` / `last_served_session_id` |
-| Mode | UI đã gửi `adaptive_focus`; chưa persist / chưa dùng khi chọn câu |
+| `question_status` | `correct_count`, `wrong_count`, `omitted_count`, `last_seen_at`, `last_graded_at`, `memory_stability_days`, `last_served_at` | Weakness, đã gặp, đường cong quên, cooldown |
+| `question_attempts` | `is_correct`, `answered_at` | Lịch sử thô; omit = `is_correct` null. Backfill `S` và `last_graded_at` |
+| `question_sessions` | `filters.adaptive_focus` | Ba mode |
 
 ---
 
-## 7. Đề xuất migration
+## 7. Schema
 
-### 7.1 Mở rộng `question_status` (khuyến nghị — 1 hàng / user×question)
+§7.1–7.3 và §7.5 đã có trên `question_status`.
+
+### 7.1 Mở rộng `question_status` — đã ship
 
 Bảng này đã là cache tiến độ; phù hợp làm **learning stats** cho adaptive.
 
@@ -267,6 +280,34 @@ user_question_learning_stats
 
 Chỉ tách khi team muốn tách “status filter UI” khỏi “adaptive scoring”. Mặc định **không cần**.
 
+### 7.5 Forgetting curve
+
+Thêm trên `question_status` (cùng hàng user × câu):
+
+```php
+$table->decimal('memory_stability_days', 8, 2)->nullable()->after('last_seen_at');
+$table->timestamp('last_graded_at')->nullable()->after('memory_stability_days');
+$table->index(['user_id', 'last_graded_at']);
+```
+
+| Cột | Ý nghĩa | Null khi |
+|-----|---------|----------|
+| `memory_stability_days` | Độ bền `S`, đơn vị ngày | Chưa từng chấm |
+| `last_graded_at` | Mốc tính `t` cho `R(t)` | Chưa từng chấm, và sau omit |
+
+Backfill từ `question_attempts` đã chấm (`is_correct` không null), theo thứ tự `answered_at`:
+
+```text
+S = null
+với từng lần đúng/sai, cũ → mới:
+    nếu S null: S = 1
+    đúng: S = clamp(S × 2, 0.5, 365)
+    sai:  S = clamp(S × 0.3, 0.5, 365)
+last_graded_at = MAX(answered_at) của các lần đã chấm
+```
+
+Omit không tham gia replay. Câu chỉ có omit giữ `S` null và `last_graded_at` null.
+
 ---
 
 ## 8. Write-path (để số liệu đúng)
@@ -274,20 +315,22 @@ Chỉ tách khi team muốn tách “status filter UI” khỏi “adaptive scor
 | Hook | Việc cần làm |
 |------|----------------|
 | Tạo adaptive session (sau khi chọn N câu) | Với mỗi `question_id`: set `last_served_at = now`, `last_served_session_id` |
-| `AnswerQuestionAction` (đúng/sai) | `last_seen_at = now`; ± `correct_count` / `wrong_count`; sync `status` |
-| Omit / complete session bỏ trống | `last_seen_at = now`; `omitted_count++`; `status = omitted` khi phù hợp |
+| `AnswerQuestionAction` (đúng/sai) | `last_seen_at = now`; `last_graded_at = now`; ± `correct_count` / `wrong_count`; cập nhật `S` theo §4.2; sync `status` |
+| Omit / complete session bỏ trống | `last_seen_at = now`; `omitted_count++`; `status = omitted` khi phù hợp. Không đụng `S` và `last_graded_at` |
 | (V2) Mở câu trên player | Có thể touch `last_seen_at` nếu product đồng ý “xem = gặp” |
 
-Idempotency: re-answer cùng session không double-count (giữ rule attempt unique hiện tại).
+Idempotency: re-answer cùng session không double-count counter và không nhân `S` lần hai (giữ rule attempt unique hiện tại).
 
 ---
 
 ## 9. Pseudo-code chọn N câu (Review)
 
 ```text
-for q in pool_seen:
+for q in pool where last_graded_at is not null:
     W = (wrong + 1) / (correct + wrong + 2)
-    M = 1 - exp(-days_since(last_seen_at) / T)
+    t = days_since(last_graded_at)
+    R = exp(-t / S)
+    M = 1 - R
     P = w_W(mode)*W + w_M(mode)*M
     C = cooldown_factor(last_served_at, recent_sessions)
     weight[q] = max(eps, P * C)
@@ -295,7 +338,7 @@ for q in pool_seen:
 return weighted_sample_without_replacement(pool, weight, N)
 ```
 
-Hằng số V1 đề xuất: `T = 20`, `ε = 0.01`, trọng số mode §5. **Chưa tối ưu** — cần simulation trước khi khóa.
+Hằng số V1: `S` khởi tạo `1`, đúng `× 2`, sai `× 0.3`, kẹp `[0.5, 365]`, `ε = 0.01`, trọng số mode §5. Hệ số nhân là điểm xuất phát — chỉnh sau khi có dữ liệu thật.
 
 ---
 
@@ -303,23 +346,22 @@ Hằng số V1 đề xuất: `T = 20`, `ε = 0.01`, trọng số mode §5. **Ch�
 
 | Phase | Việc | Kết quả |
 |-------|------|---------|
-| **A** | Migration `question_status` + backfill + write-path | ✅ Done — đủ dữ liệu Memory / Weakness / Cooldown |
-| **B** | Persist + validate `adaptive_focus` | UI nối backend |
-| **C** | `AdaptiveQuestionSelector` V1: Top-N theo Weakness (+ coverage) | Chứng minh “yếu → ưu tiên” |
-| **D** | V2: + Memory theo mode | 3 mode có hiệu ứng đo được |
-| **E** | V3: + Cooldown + weighted random | Hành vi Practice đích |
-| **F** | Simulation + metrics | Chỉnh `T`, trọng số, cửa sổ cooldown |
+| **A** | Migration `question_status` + backfill + write-path | ✅ Done |
+| **B** | Persist + validate `adaptive_focus` | ✅ UI nối backend |
+| **C–E** | Selector V3: Weakness + cooldown + weighted random | ✅ Đang chạy |
+| **G** | Forgetting curve: `M = 1 − exp(−t/S)`, đúng ×2, sai ×0.3 | ✅ Đang chạy |
+| **F** | Simulation + metrics | Chỉnh hệ số `S`, trọng số mode, cửa sổ cooldown |
 
-**Hiện tại:** UI 3 mode đã có; selector vẫn incorrect-first.
+**Hiện tại:** UI 3 mode và selector dùng forgetting curve theo độ bền riêng từng câu.
 
 ---
 
 ## 11. Metrics & kiểm thử
 
-- % session có ≥1 câu high-memory (ví dụ MemoryScore ≥ 0.8)
+- % session có ≥1 câu urgency cao (ví dụ `memory_urgency ≥ 0.8`)
 - Mean Weakness của câu được chọn vs random baseline (theo từng mode)
 - Tỷ lệ trùng câu giữa 2 session liền kề (cooldown hiệu lực)
-- Unit: smoothing, memory curve, mode ranking, cooldown factor
+- Unit: smoothing, `R(t)`, cập nhật `S` (đúng ×2, sai ×0.3, kẹp, omit không đổi `S`), mode ranking, cooldown factor
 - Feature: adaptive bắt buộc blueprint; focus ảnh hưởng thứ tự ưu tiên (seed cố định trong test)
 
 ---
@@ -331,6 +373,9 @@ Hằng số V1 đề xuất: `T = 20`, `ε = 0.01`, trọng số mode §5. **Ch�
 | Một tỷ lệ W/M cố định cho mọi user? | Không — 3 mode |
 | Count là % priority riêng? | Không — chỉ làm mượt / tin cậy Weakness |
 | Omit có tính Weakness? | Không |
-| Omit có tính Memory (`last_seen`)? | **Có** |
+| Omit có cập nhật `last_seen_at`? | Có — đánh dấu đã gặp |
+| Omit có đổi `S` hoặc `last_graded_at`? | Không — đồng hồ quên giữ nguyên |
+| Memory Engine của adaptive practice | Forgetting curve `R = exp(−t/S)`, urgency `1 − R`. Flashcard giữ SM-2 ở module 18 |
+| Hệ số `S` | V1: khởi tạo 1, đúng ×2, sai ×0.3, kẹp [0.5, 365]. Chưa khóa cứng |
 | Elo / IRT sớm? | Không |
-| Nơi lưu stats? | Mở rộng `question_status` |
+| Nơi lưu stats? | Mở rộng `question_status` (`memory_stability_days`, `last_graded_at`) |
