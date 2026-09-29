@@ -120,7 +120,7 @@ final class WeakTopicSessionTest extends TestCase
             ->where('status', SessionStatus::Active)
             ->firstOrFail();
 
-        $response->assertRedirect(route('exam.session', $repeated));
+        $response->assertRedirect(route('qbank.session', $repeated));
         $this->assertSame(SessionMode::Exam, $repeated->mode);
         $this->assertSame([$question->getKey()], $repeated->question_ids);
         $this->assertSame((string) $original->getKey(), $repeated->filters['repeated_from_session_id']);

@@ -26,6 +26,7 @@
         $question->lessons,
         $question->difficulty,
     );
+    $playerRoute = $session->isFormalExam() ? 'exam.session' : 'qbank.session';
 @endphp
 
 <x-layouts.auth title="Chế độ thi">
@@ -447,8 +448,8 @@
                 <footer
                     class="absolute inset-x-0 bottom-0 z-40 flex items-center justify-between border-t border-outline-variant bg-white px-4 py-4 sm:px-6">
                     @if ($previousIndex !== null)
-                        <a href="{{ route('qbank.session', [$session, 'index' => $previousIndex]) }}"
-                            @click.prevent="navigate(@js(route('qbank.session', [$session, 'index' => $previousIndex], absolute: false)))"
+                        <a href="{{ route($playerRoute, [$session, 'index' => $previousIndex]) }}"
+                            @click.prevent="navigate(@js(route($playerRoute, [$session, 'index' => $previousIndex], absolute: false)))"
                             class="flex items-center gap-2 rounded-lg px-4 py-2 text-on-surface-variant transition-all hover:bg-surface-variant active:scale-95">
                             <span class="material-symbols-outlined">arrow_back</span>
                             <span class="hidden font-label-md sm:inline">Câu trước</span>
@@ -463,7 +464,7 @@
                         </button>
                         @if ($nextIndex !== null)
                             <button type="button"
-                                @click="navigate(@js(route('qbank.session', [$session, 'index' => $nextIndex], absolute: false)))"
+                                @click="navigate(@js(route($playerRoute, [$session, 'index' => $nextIndex], absolute: false)))"
                                 :disabled="answering"
                                 class="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-white shadow-sm transition-all hover:bg-primary-container active:scale-95 disabled:opacity-50 sm:px-6">
                                 <span class="font-label-md">Câu tiếp theo</span>
@@ -497,9 +498,9 @@
                             @php
                                 $wasAnswered = isset($answeredLookup[(string) $questionId]);
                                 $wasFlagged = isset($flaggedLookup[(string) $questionId]);
-                                $questionUrl = route('qbank.session', [$session, 'index' => $position]);
+                                $questionUrl = route($playerRoute, [$session, 'index' => $position]);
                             @endphp
-                            <a href="{{ $questionUrl }}" @click.prevent="navigate(@js(route('qbank.session', [$session, 'index' => $position], absolute: false)))"
+                            <a href="{{ $questionUrl }}" @click.prevent="navigate(@js(route($playerRoute, [$session, 'index' => $position], absolute: false)))"
                                 @class([
                                     'relative flex aspect-square items-center justify-center overflow-hidden rounded-lg border text-sm transition-colors',
                                     'border-primary bg-primary font-bold text-white hover:opacity-90' => $wasAnswered && $position !== $index,

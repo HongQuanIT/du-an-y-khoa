@@ -2,6 +2,13 @@
 
 ## 2026-09-29
 
+### Fix — Phiên thi thử ở lại ngân hàng câu hỏi
+
+- Tạo và kết thúc phiên chế độ thi từ ngân hàng câu hỏi đi /qbank/session, không còn /exams.
+- Đường dẫn /exams chỉ còn cho kỳ thi tạo từ module Exam.
+
+## 2026-09-29
+
 ### Feat — Đề xuất học tập trên tổng kết phiên
 
 - Tab Đề xuất học tập gộp đúng, đúng có gợi ý, sai và chưa làm trên một thanh đủ 100%.

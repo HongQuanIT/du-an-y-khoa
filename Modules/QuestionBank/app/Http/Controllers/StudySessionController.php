@@ -409,19 +409,13 @@ final class StudySessionController extends Controller
 
     private function summaryUrl(QuestionSession $session): string
     {
-        if ($session->mode === SessionMode::Exam) {
-            return route('exam.summary', $session);
-        }
-
-        return route('qbank.summary', $session);
+        return route($session->isFormalExam() ? 'exam.summary' : 'qbank.summary', $session);
     }
 
     private function sessionUrl(QuestionSession $session, int $index = 0): string
     {
-        if ($session->mode === SessionMode::Exam) {
-            return route('exam.session', [$session, 'index' => $index]);
-        }
+        $route = $session->isFormalExam() ? 'exam.session' : 'qbank.session';
 
-        return route('qbank.session', [$session, 'index' => $index]);
+        return route($route, [$session, 'index' => $index]);
     }
 }
