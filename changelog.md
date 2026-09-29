@@ -2,6 +2,14 @@
 
 ## 2026-09-29
 
+### Feat — Đề xuất học tập trên tổng kết phiên
+
+- Tab Đề xuất học tập gộp đúng, đúng có gợi ý, sai và chưa làm trên một thanh đủ 100%.
+- Bài cần ôn đứng cạnh thanh tiến trình; mở dòng vẫn xem số liệu bài.
+- Biểu đồ kết quả hiện tỉ lệ đúng có gợi ý bằng vàng nhạt, nằm trong phần đúng.
+
+## 2026-09-29
+
 ### Feat — Gọn trang tổng kết phiên
 
 - Bỏ biểu đồ tỷ lệ đúng theo chủ đề.

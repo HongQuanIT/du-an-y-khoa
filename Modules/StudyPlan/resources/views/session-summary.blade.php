@@ -28,6 +28,9 @@
     ];
     $reviewUrl = $summaryConfig['review_url'];
     $detailUrl = $summaryConfig['back_url'];
+    $lessonProgress = $lessonProgress ?? [];
+    $correctWithHintCount = $correctWithHintCount ?? 0;
+    $hintAccuracy = $total > 0 ? (int) round($correctWithHintCount / $total * 100) : 0;
     $questionTimeLabel = static function (int $totalSeconds): string {
         $totalSeconds = max(0, $totalSeconds);
 
@@ -82,6 +85,9 @@
                         <div class="text-center md:text-left">
                             <p class="mb-1 text-xs font-bold text-on-surface-variant uppercase">Đúng</p>
                             <p class="text-2xl font-bold text-[#16A34A]">{{ $correctCount }}</p>
+                            <p class="mt-1 text-xs font-semibold text-[#CA8A04]" data-testid="hint-correct-rate">
+                                {{ $hintAccuracy }}% có gợi ý
+                            </p>
                         </div>
                         <div class="text-center md:text-left">
                             <p class="mb-1 text-xs font-bold text-on-surface-variant uppercase">Sai</p>
@@ -143,14 +149,40 @@
                 </ul>
             </div>
 
-            <div class="overflow-hidden rounded-2xl border border-outline-variant bg-white shadow-sm lg:col-span-12">
-                <div class="flex items-center justify-between border-b border-outline-variant p-6">
-                    <h2 class="font-headline-sm text-headline-sm">Phân tích bài theo phiên</h2>
-                    <a href="{{ $reviewUrl }}" class="flex items-center gap-1 text-sm font-bold text-primary hover:underline">
+            <div class="overflow-hidden rounded-2xl border border-outline-variant bg-white shadow-sm lg:col-span-12"
+                x-data="{ analysisTab: 'session' }" data-testid="lesson-analysis-tabs">
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant">
+                    <div class="flex min-w-0 flex-1 overflow-x-auto" role="tablist" aria-label="Phân tích bài">
+                        <button type="button" role="tab" id="analysis-tab-session"
+                            @click="analysisTab = 'session'"
+                            :aria-selected="analysisTab === 'session'"
+                            aria-controls="analysis-panel-session"
+                            class="shrink-0 border-b-2 px-6 py-4 text-sm font-bold transition-colors"
+                            :class="analysisTab === 'session'
+                                ? 'border-primary text-primary'
+                                : 'border-transparent text-on-surface-variant hover:text-on-surface'">
+                            Phân tích bài theo phiên
+                        </button>
+                        <button type="button" role="tab" id="analysis-tab-process"
+                            @click="analysisTab = 'process'"
+                            :aria-selected="analysisTab === 'process'"
+                            aria-controls="analysis-panel-process"
+                            class="shrink-0 border-b-2 px-6 py-4 text-sm font-bold transition-colors"
+                            :class="analysisTab === 'process'
+                                ? 'border-primary text-primary'
+                                : 'border-transparent text-on-surface-variant hover:text-on-surface'">
+                            Đề xuất học tập
+                        </button>
+                    </div>
+                    <a href="{{ $reviewUrl }}" x-show="analysisTab === 'session'"
+                        class="mr-6 flex items-center gap-1 text-sm font-bold text-primary hover:underline">
                         Xem từng câu
                         <span class="material-symbols-outlined text-base">chevron_right</span>
                     </a>
                 </div>
+
+                <div id="analysis-panel-session" role="tabpanel" aria-labelledby="analysis-tab-session"
+                    x-show="analysisTab === 'session'">
 
                 @if ($topics === [])
                     <p class="p-6 text-body-sm text-on-surface-variant">Chưa có dữ liệu chủ đề để phân tích.</p>
@@ -232,6 +264,88 @@
                         @endforeach
                     </div>
                 @endif
+                </div>
+
+                <div id="analysis-panel-process" role="tabpanel" aria-labelledby="analysis-tab-process"
+                    x-show="analysisTab === 'process'" x-cloak x-data="{ openLesson: null }" data-testid="lesson-progress">
+                    @if ($lessonProgress === [])
+                        <p class="p-6 text-body-sm text-on-surface-variant">Chưa có bài để đề xuất.</p>
+                    @else
+                        <div class="divide-y divide-outline-variant">
+                            @foreach ($lessonProgress as $lesson)
+                                <div>
+                                    <div class="flex items-end gap-3 px-6 py-4 hover:bg-surface-container-low/60">
+                                    <button type="button"
+                                        class="flex min-w-0 flex-1 items-center gap-3 text-left"
+                                        @click="openLesson = openLesson === {{ $lesson['lesson_id'] }} ? null : {{ $lesson['lesson_id'] }}"
+                                        :aria-expanded="openLesson === {{ $lesson['lesson_id'] }}"
+                                        aria-controls="lesson-detail-{{ $lesson['lesson_id'] }}">
+                                        <span class="material-symbols-outlined text-[20px] text-on-surface-variant transition-transform"
+                                            :class="openLesson === {{ $lesson['lesson_id'] }} ? 'rotate-90' : ''"
+                                            aria-hidden="true">chevron_right</span>
+                                        @php
+                                            $hintCount = min($lesson['correct_with_hint'], $lesson['correct']);
+                                            $unaidedCount = $lesson['correct'] - $hintCount;
+                                            $latestAccuracy = $lesson['graded'] > 0
+                                                ? (int) round($lesson['correct'] / $lesson['graded'] * 100)
+                                                : 0;
+                                        @endphp
+                                        <span class="min-w-0 flex-1">
+                                            <span class="block truncate font-bold text-on-surface">{{ $lesson['name'] }}</span>
+                                            <span class="mt-2 flex items-center gap-3">
+                                                <span class="flex h-1.5 flex-1 overflow-hidden rounded-full bg-surface-container"
+                                                    title="{{ $unaidedCount }} đúng, {{ $hintCount }} đúng có gợi ý, {{ $lesson['wrong'] }} sai, {{ $lesson['not_done'] }} chưa làm">
+                                                    <span class="h-full bg-[#16A34A]" style="width: {{ $lesson['unaided_share'] }}%"></span>
+                                                    <span class="h-full bg-[#FDE68A]" style="width: {{ $lesson['hint_share'] }}%"></span>
+                                                    <span class="h-full bg-error" style="width: {{ $lesson['wrong_share'] }}%"></span>
+                                                </span>
+                                                <span class="shrink-0 text-xs font-bold text-on-surface">
+                                                    {{ $lesson['graded'] > 0 ? $latestAccuracy.'% đúng' : 'Chưa làm' }}
+                                                </span>
+                                            </span>
+                                        </span>
+                                    </button>
+                                    @if ($lesson['needs_review'])
+                                        <form method="POST" action="{{ route('qbank.weak-topics.session', $lesson['lesson_id']) }}" class="shrink-0">
+                                            @csrf
+                                            <button type="submit"
+                                                class="inline-flex items-center gap-1 rounded-lg bg-error px-3 py-1.5 text-sm font-bold text-white transition-opacity hover:opacity-90">
+                                                Cần ôn
+                                                <span class="material-symbols-outlined text-base">chevron_right</span>
+                                            </button>
+                                        </form>
+                                    @endif
+                                    </div>
+                                    <div id="lesson-detail-{{ $lesson['lesson_id'] }}" x-show="openLesson === {{ $lesson['lesson_id'] }}" x-cloak
+                                        class="space-y-4 px-6 pb-4 pl-14">
+                                        <dl class="grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3">
+                                            <div>
+                                                <dt class="text-xs text-on-surface-variant">Tổng số câu</dt>
+                                                <dd class="font-bold text-on-surface" data-testid="lesson-{{ $lesson['lesson_id'] }}-total">{{ $lesson['total'] }}</dd>
+                                            </div>
+                                            <div>
+                                                <dt class="text-xs text-on-surface-variant">Câu đúng</dt>
+                                                <dd class="font-bold text-[#16A34A]" data-testid="lesson-{{ $lesson['lesson_id'] }}-correct">{{ $lesson['correct'] }}</dd>
+                                            </div>
+                                            <div>
+                                                <dt class="text-xs text-on-surface-variant">Đúng có gợi ý</dt>
+                                                <dd class="font-bold text-[#CA8A04]" data-testid="lesson-{{ $lesson['lesson_id'] }}-hint">{{ $lesson['correct_with_hint'] }}</dd>
+                                            </div>
+                                            <div>
+                                                <dt class="text-xs text-on-surface-variant">Câu sai</dt>
+                                                <dd class="font-bold text-error" data-testid="lesson-{{ $lesson['lesson_id'] }}-wrong">{{ $lesson['wrong'] }}</dd>
+                                            </div>
+                                            <div>
+                                                <dt class="text-xs text-on-surface-variant">Chưa làm</dt>
+                                                <dd class="font-bold text-on-surface" data-testid="lesson-{{ $lesson['lesson_id'] }}-not-done">{{ $lesson['not_done'] }}</dd>
+                                            </div>
+                                        </dl>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
             </div>
 
             <div class="overflow-hidden rounded-2xl border border-outline-variant bg-white shadow-sm lg:col-span-12"

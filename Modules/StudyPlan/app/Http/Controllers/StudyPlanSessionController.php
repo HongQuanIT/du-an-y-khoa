@@ -250,6 +250,7 @@ final class StudyPlanSessionController extends Controller
 
         $total = count($questionIds);
         $correctCount = 0;
+        $correctWithHintCount = 0;
         $wrongCount = 0;
         $skippedCount = 0;
         $flaggedCount = 0;
@@ -298,6 +299,9 @@ final class StudyPlanSessionController extends Controller
 
             if ($attempt->is_correct) {
                 $correctCount++;
+                if ($attempt->used_hint) {
+                    $correctWithHintCount++;
+                }
                 foreach ($topicNames as $topicName) {
                     $byTopic[$topicName]['correct']++;
                 }
@@ -310,15 +314,7 @@ final class StudyPlanSessionController extends Controller
         }
 
         $accuracy = $total > 0 ? (int) round(($correctCount / $total) * 100) : 0;
-        $correctShare = $total > 0 ? ($correctCount / $total) * 100 : 0;
-        $wrongShare = $total > 0 ? ($wrongCount / $total) * 100 : 0;
-        $donutStyle = sprintf(
-            'conic-gradient(#16A34A 0%% %.2f%%, #DC2626 %.2f%% %.2f%%, #BDC9C6 %.2f%% 100%%)',
-            $correctShare,
-            $correctShare,
-            $correctShare + $wrongShare,
-            $correctShare + $wrongShare,
-        );
+        $donutStyle = QuestionSessionInsights::resultDonutStyle($total, $correctCount, $correctWithHintCount, $wrongCount);
 
         $topics = collect($byTopic)
             ->map(function (array $row) use ($plan, $task) {
@@ -380,6 +376,7 @@ final class StudyPlanSessionController extends Controller
             'session' => $session,
             'total' => $total,
             'correctCount' => $correctCount,
+            'correctWithHintCount' => $correctWithHintCount,
             'wrongCount' => $wrongCount,
             'skippedCount' => $skippedCount,
             'flaggedCount' => $flaggedCount,
@@ -387,6 +384,7 @@ final class StudyPlanSessionController extends Controller
             'donutStyle' => $donutStyle,
             'timeSpentSeconds' => $timeSpent,
             'topics' => $topics,
+            'lessonProgress' => $this->insights->lessonProgress($session),
             'chartBars' => $chartBars,
             'questionOverview' => $this->insights->questionOverview($session),
         ]);
