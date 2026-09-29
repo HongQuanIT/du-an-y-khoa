@@ -74,6 +74,7 @@ final class SessionSummaryController extends Controller
             'summary' => $summary,
             'total' => $summary['total'],
             'correctCount' => $summary['correct'],
+            'correctWithHintCount' => $summary['correct_with_hint'],
             'wrongCount' => $summary['wrong'],
             'skippedCount' => $summary['skipped'],
             'flaggedCount' => $summary['flagged'],
@@ -81,6 +82,7 @@ final class SessionSummaryController extends Controller
             'donutStyle' => $summary['donut_style'],
             'timeSpentSeconds' => $summary['time_spent_seconds'],
             'topics' => $topics,
+            'lessonProgress' => $this->insights->lessonProgress($session),
             'chartBars' => $chartBars,
             'questionOverview' => $this->insights->questionOverview($session),
             'summaryConfig' => [

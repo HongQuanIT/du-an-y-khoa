@@ -7,9 +7,13 @@ namespace Modules\QuestionBank\Services;
 use App\Support\Html\SafeHtml;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
+use Modules\QuestionBank\Enums\UserQuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionSession;
+use Modules\QuestionBank\Models\QuestionStatus as UserQuestionStatusModel;
+use Modules\QuestionBank\Support\ServePublishedQuestion;
 
 /**
  * Builds the immutable summary/review read model for a session.
@@ -20,8 +24,8 @@ final class QuestionSessionInsights
 
     /**
      * @return array{
-     *   total: int, answered: int, correct: int, wrong: int, skipped: int,
-     *   flagged: int, accuracy: int, time_spent_seconds: int,
+     *   total: int, answered: int, correct: int, correct_with_hint: int, wrong: int, skipped: int,
+     *   flagged: int, accuracy: int, hint_accuracy: int, time_spent_seconds: int,
      *   donut_style: string, topics: list<array<string, mixed>>
      * }
      */
@@ -36,6 +40,7 @@ final class QuestionSessionInsights
         ));
 
         $correct = 0;
+        $correctWithHint = 0;
         $wrong = 0;
         $skipped = 0;
         $flagged = 0;
@@ -82,6 +87,9 @@ final class QuestionSessionInsights
 
             if ($attempt->is_correct) {
                 $correct++;
+                if ($attempt->used_hint) {
+                    $correctWithHint++;
+                }
                 foreach ($topicNames as $topicName) {
                     $byTopic[$topicName]['correct']++;
                 }
@@ -96,15 +104,8 @@ final class QuestionSessionInsights
         $total = count($questionIds);
         $answered = $correct + $wrong;
         $accuracy = $total > 0 ? (int) round($correct / $total * 100) : 0;
-        $correctShare = $total > 0 ? $correct / $total * 100 : 0;
-        $wrongShare = $total > 0 ? $wrong / $total * 100 : 0;
-        $donutStyle = sprintf(
-            'conic-gradient(#16A34A 0%% %.2f%%, #DC2626 %.2f%% %.2f%%, #BDC9C6 %.2f%% 100%%)',
-            $correctShare,
-            $correctShare,
-            $correctShare + $wrongShare,
-            $correctShare + $wrongShare,
-        );
+        $hintAccuracy = $total > 0 ? (int) round($correctWithHint / $total * 100) : 0;
+        $donutStyle = self::resultDonutStyle($total, $correct, $correctWithHint, $wrong);
 
         $topics = collect($byTopic)
             ->map(function (array $row): array {
@@ -125,10 +126,12 @@ final class QuestionSessionInsights
             'total' => $total,
             'answered' => $answered,
             'correct' => $correct,
+            'correct_with_hint' => $correctWithHint,
             'wrong' => $wrong,
             'skipped' => $skipped,
             'flagged' => $flagged,
             'accuracy' => $accuracy,
+            'hint_accuracy' => $hintAccuracy,
             'time_spent_seconds' => $timeSpent,
             'donut_style' => $donutStyle,
             'topics' => $topics,
@@ -305,5 +308,276 @@ final class QuestionSessionInsights
         }
 
         return $attempts;
+    }
+
+    /**
+     * Correct-with-hint is a band inside the correct arc, not a separate slice.
+     */
+    public static function resultDonutStyle(int $total, int $correct, int $correctWithHint, int $wrong): string
+    {
+        $correctWithHint = min(max(0, $correctWithHint), max(0, $correct));
+        $unaidedShare = $total > 0 ? ($correct - $correctWithHint) / $total * 100 : 0;
+        $correctShare = $total > 0 ? $correct / $total * 100 : 0;
+        $wrongEnd = $correctShare + ($total > 0 ? $wrong / $total * 100 : 0);
+
+        return sprintf(
+            'conic-gradient(#16A34A 0%% %.2f%%, #FDE68A %.2f%% %.2f%%, #DC2626 %.2f%% %.2f%%, #BDC9C6 %.2f%% 100%%)',
+            $unaidedShare,
+            $unaidedShare,
+            $correctShare,
+            $correctShare,
+            $wrongEnd,
+            $wrongEnd,
+        );
+    }
+
+    /**
+     * Integer percents that add up to 100. Spare points go to the largest
+     * fractional remainders so equal splits such as 2/2/2 do not stop at 99.
+     *
+     * @param  array<string, int>  $counts
+     * @return array<string, int>
+     */
+    public static function percentShares(array $counts): array
+    {
+        $shares = array_fill_keys(array_keys($counts), 0);
+        $total = array_sum($counts);
+        if ($total <= 0) {
+            return $shares;
+        }
+
+        $remainders = [];
+        foreach ($counts as $key => $count) {
+            $exact = max(0, $count) / $total * 100;
+            $shares[$key] = (int) floor($exact);
+            $remainders[$key] = $exact - $shares[$key];
+        }
+
+        $left = 100 - array_sum($shares);
+        $order = array_keys($counts);
+        usort($order, function (string $leftKey, string $rightKey) use ($remainders, $counts, $order): int {
+            $remainder = $remainders[$rightKey] <=> $remainders[$leftKey];
+            if ($remainder !== 0) {
+                return $remainder;
+            }
+
+            $count = $counts[$rightKey] <=> $counts[$leftKey];
+            if ($count !== 0) {
+                return $count;
+            }
+
+            return array_search($leftKey, $order, true) <=> array_search($rightKey, $order, true);
+        });
+
+        foreach ($order as $key) {
+            if ($left <= 0) {
+                break;
+            }
+            if ($counts[$key] <= 0) {
+                continue;
+            }
+            $shares[$key]++;
+            $left--;
+        }
+
+        return $shares;
+    }
+
+    /**
+     * Cumulative lesson progress for the lessons in this session.
+     * Counts use the latest graded outcome. Correct-with-hint is the subset
+     * whose latest correct attempt used a hint. Not-done is every other question.
+     *
+     * @return list<array{
+     *   lesson_id: int, name: string, total: int, graded: int, coverage: int,
+     *   sessions: int, correct: int, correct_with_hint: int, wrong: int, not_done: int,
+     *   unaided_share: int, hint_share: int, wrong_share: int, needs_review: bool
+     * }>
+     */
+    public function lessonProgress(QuestionSession $session): array
+    {
+        $questionIds = array_values(array_unique(array_map(
+            'strval',
+            $session->question_ids ?? [],
+        )));
+        if ($questionIds === []) {
+            return [];
+        }
+
+        $lessons = DB::table('question_lesson')
+            ->join('lessons', 'lessons.id', '=', 'question_lesson.lesson_id')
+            ->whereIn('question_lesson.question_id', $questionIds)
+            ->select('lessons.id', 'lessons.name')
+            ->distinct()
+            ->orderBy('lessons.name')
+            ->get();
+        if ($lessons->isEmpty()) {
+            return [];
+        }
+
+        $lessonIds = $lessons->map(fn ($lesson): int => (int) $lesson->id)->all();
+        $links = DB::table('question_lesson')
+            ->whereIn('lesson_id', $lessonIds)
+            ->get(['lesson_id', 'question_id']);
+        $linkedIds = $links->pluck('question_id')->map(fn ($id): string => (string) $id)->unique()->all();
+        $available = ServePublishedQuestion::scopeAvailable(Question::query())
+            ->whereIn('id', $linkedIds)
+            ->pluck('id')
+            ->map(fn ($id): string => (string) $id)
+            ->all();
+        $availableLookup = array_fill_keys($available, true);
+
+        $statuses = $available === []
+            ? collect()
+            : UserQuestionStatusModel::query()
+                ->where('user_id', $session->user_id)
+                ->whereIn('question_id', $available)
+                ->get()
+                ->keyBy(fn (UserQuestionStatusModel $status): string => (string) $status->question_id);
+
+        $sessionCounts = DB::table('question_attempts')
+            ->join('question_lesson', 'question_lesson.question_id', '=', 'question_attempts.question_id')
+            ->where('question_attempts.user_id', $session->user_id)
+            ->whereIn('question_lesson.lesson_id', $lessonIds)
+            ->selectRaw('question_lesson.lesson_id as lesson_id, COUNT(DISTINCT question_attempts.session_id) as sessions')
+            ->groupBy('question_lesson.lesson_id')
+            ->get()
+            ->mapWithKeys(fn ($row): array => [(int) $row->lesson_id => (int) $row->sessions]);
+
+        $hintOnLatestCorrect = $this->latestCorrectUsedHint((int) $session->user_id, $available);
+
+        $questionsByLesson = [];
+        foreach ($links as $link) {
+            $questionId = (string) $link->question_id;
+            if (! isset($availableLookup[$questionId])) {
+                continue;
+            }
+            $questionsByLesson[(int) $link->lesson_id][] = $questionId;
+        }
+
+        $rows = [];
+        foreach ($lessons as $lesson) {
+            $lessonId = (int) $lesson->id;
+            $questionIdsForLesson = array_values(array_unique($questionsByLesson[$lessonId] ?? []));
+            $correct = 0;
+            $correctWithHint = 0;
+            $wrong = 0;
+
+            foreach ($questionIdsForLesson as $questionId) {
+                $status = $statuses->get($questionId);
+                if (! $status instanceof UserQuestionStatusModel) {
+                    continue;
+                }
+                $outcome = $this->latestOutcome($status);
+                if ($outcome === 'correct') {
+                    $correct++;
+                    if ($hintOnLatestCorrect[$questionId] ?? false) {
+                        $correctWithHint++;
+                    }
+                } elseif ($outcome === 'incorrect') {
+                    $wrong++;
+                }
+            }
+
+            $total = count($questionIdsForLesson);
+            $graded = $correct + $wrong;
+            $hintCount = min($correctWithHint, $correct);
+            $notDone = max(0, $total - $graded);
+            $shares = self::percentShares([
+                'unaided' => $correct - $hintCount,
+                'hint' => $hintCount,
+                'wrong' => $wrong,
+                'not_done' => $notDone,
+            ]);
+            $rows[] = [
+                'lesson_id' => $lessonId,
+                'name' => (string) $lesson->name,
+                'total' => $total,
+                'graded' => $graded,
+                'coverage' => $total > 0 ? (int) round($graded / $total * 100) : 0,
+                'sessions' => (int) ($sessionCounts[$lessonId] ?? 0),
+                'correct' => $correct,
+                'correct_with_hint' => $correctWithHint,
+                'wrong' => $wrong,
+                'not_done' => $notDone,
+                'unaided_share' => $shares['unaided'],
+                'hint_share' => $shares['hint'],
+                'wrong_share' => $shares['wrong'],
+                'needs_review' => $graded > 0 && ($correct / $graded) < 0.5,
+            ];
+        }
+
+        usort($rows, function (array $left, array $right): int {
+            $leftRank = ($left['correct'] + $left['wrong']) === 0 ? 1 : 0;
+            $rightRank = ($right['correct'] + $right['wrong']) === 0 ? 1 : 0;
+            if ($leftRank !== $rightRank) {
+                return $leftRank <=> $rightRank;
+            }
+
+            $leftRate = ($left['correct'] + $left['wrong']) > 0
+                ? $left['correct'] / ($left['correct'] + $left['wrong'])
+                : 1;
+            $rightRate = ($right['correct'] + $right['wrong']) > 0
+                ? $right['correct'] / ($right['correct'] + $right['wrong'])
+                : 1;
+
+            return $leftRate <=> $rightRate ?: strcmp($left['name'], $right['name']);
+        });
+
+        return $rows;
+    }
+
+    /**
+     * @param  list<string>  $questionIds
+     * @return array<string, bool>
+     */
+    private function latestCorrectUsedHint(int $userId, array $questionIds): array
+    {
+        if ($questionIds === []) {
+            return [];
+        }
+
+        $usedHint = [];
+        $attempts = QuestionAttempt::query()
+            ->where('user_id', $userId)
+            ->whereIn('question_id', $questionIds)
+            ->whereNotNull('is_correct')
+            ->orderByDesc('answered_at')
+            ->orderByDesc('id')
+            ->get(['question_id', 'is_correct', 'used_hint']);
+
+        foreach ($attempts as $attempt) {
+            $questionId = (string) $attempt->question_id;
+            if (array_key_exists($questionId, $usedHint)) {
+                continue;
+            }
+            $usedHint[$questionId] = $attempt->is_correct === true && $attempt->used_hint;
+        }
+
+        return $usedHint;
+    }
+
+    private function latestOutcome(UserQuestionStatusModel $status): ?string
+    {
+        return match ($status->status) {
+            UserQuestionStatus::Correct => 'correct',
+            UserQuestionStatus::Incorrect => 'incorrect',
+            UserQuestionStatus::Omitted => 'omitted',
+            UserQuestionStatus::Marked => $this->markedOutcome($status),
+            default => null,
+        };
+    }
+
+    private function markedOutcome(UserQuestionStatusModel $status): ?string
+    {
+        if ($status->last_graded_at === null) {
+            return null;
+        }
+
+        if ($status->last_correct_at !== null && $status->last_correct_at->equalTo($status->last_graded_at)) {
+            return 'correct';
+        }
+
+        return 'incorrect';
     }
 }

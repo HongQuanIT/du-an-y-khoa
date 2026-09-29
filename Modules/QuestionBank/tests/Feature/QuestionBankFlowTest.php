@@ -663,6 +663,9 @@ final class QuestionBankFlowTest extends TestCase
             ->assertViewIs('studyplan::session-summary')
             ->assertViewHas('summary', fn (array $summary): bool => $summary['accuracy'] === 50)
             ->assertViewHas('accuracy', 50)
+            ->assertViewHas('correctWithHintCount', 1)
+            ->assertSee('50% có gợi ý')
+            ->assertSee('data-testid="hint-correct-rate"', false)
             ->assertViewHas('questionOverview', function (array $rows): bool {
                 return count($rows) === 2
                     && collect($rows)->every(fn (array $row): bool => $row['peer_accuracy'] === 50
@@ -1450,6 +1453,51 @@ final class QuestionBankFlowTest extends TestCase
         $question->professions()->sync([$this->profession->id]);
 
         return $question;
+    }
+
+    public function test_summary_shows_cumulative_lesson_progress(): void
+    {
+        foreach (['Một', 'Hai', 'Ba', 'Bốn'] as $stem) {
+            $this->createQuestion($this->topic, true, Difficulty::Easy, $stem);
+        }
+
+        $this->actingAs($this->user)->post(route('qbank.store'), $this->sessionPayload(count: 2));
+        $session = QuestionSession::firstOrFail();
+
+        foreach ($session->question_ids as $index => $questionId) {
+            $question = Question::with('options')->findOrFail($questionId);
+            $wrong = $question->options->firstWhere('is_correct', false);
+
+            $this->actingAs($this->user)->post(route('qbank.session.answer', $session), [
+                'question_id' => $questionId,
+                'option_ids' => [$wrong->id],
+                'index' => $index,
+            ]);
+        }
+
+        $this->actingAs($this->user)->post(route('qbank.session.finish', $session));
+
+        $this->actingAs($this->user)
+            ->get(route('qbank.summary', $session))
+            ->assertOk()
+            ->assertSee('Đề xuất học tập')
+            ->assertSee('data-testid="lesson-analysis-tabs"', false)
+            ->assertSee('data-testid="lesson-progress"', false)
+            ->assertSee('role="tablist"', false)
+            ->assertSee('Tim mạch')
+            ->assertSee('0% đúng')
+            ->assertSee('width: 50%', false)
+            ->assertSee('Tổng số câu')
+            ->assertSee('Câu đúng')
+            ->assertSee('Đúng có gợi ý')
+            ->assertSee('Câu sai')
+            ->assertSee('Chưa làm')
+            ->assertSee('data-testid="lesson-'.$this->topic->id.'-total">4', false)
+            ->assertSee('data-testid="lesson-'.$this->topic->id.'-correct">0', false)
+            ->assertSee('data-testid="lesson-'.$this->topic->id.'-hint">0', false)
+            ->assertSee('data-testid="lesson-'.$this->topic->id.'-wrong">2', false)
+            ->assertSee('data-testid="lesson-'.$this->topic->id.'-not-done">2', false)
+            ->assertSee('Cần ôn');
     }
 
     public function test_empty_active_session_does_not_redirect_loop_with_summary(): void
