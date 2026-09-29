@@ -2,6 +2,13 @@
 
 ## 2026-09-29
 
+### Feat — Học viên chọn tình trạng học tập
+
+- Onboarding chọn Đã tốt nghiệp hoặc Chưa tốt nghiệp sau khi chọn chức danh; năm học chỉ hiện khi chưa tốt nghiệp.
+- Bỏ thông tin năm học/tốt nghiệp khỏi quản trị chức danh và cân đối lại các cột bảng.
+
+## 2026-09-29
+
 ### Fix — Nhãn trạng thái chức danh
 
 - Danh sách chức danh/ngành nghề hiển thị “Đã tốt nghiệp” thay cho “Mặc định đã tốt nghiệp”.

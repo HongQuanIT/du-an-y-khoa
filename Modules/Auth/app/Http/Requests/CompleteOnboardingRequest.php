@@ -21,6 +21,7 @@ final class CompleteOnboardingRequest extends FormRequest
             'institution_id' => ['required', 'integer', Rule::exists('institutions', 'id')->where('is_active', true)],
             'profession_id' => ['required', 'integer', Rule::exists('professions', 'id')->where('is_active', true)],
             'education_stage_id' => ['nullable', 'integer', Rule::exists('education_stages', 'id')->where('is_active', true)],
+            'study_status' => ['nullable', Rule::in(['graduated', 'studying'])],
             'marketing_consent' => ['sometimes', 'accepted'],
         ];
     }
@@ -33,6 +34,7 @@ final class CompleteOnboardingRequest extends FormRequest
             'institution_id' => 'trường/cơ sở đào tạo',
             'profession_id' => 'chức danh',
             'education_stage_id' => 'năm học',
+            'study_status' => 'tình trạng học tập',
         ];
     }
 
@@ -59,9 +61,19 @@ final class CompleteOnboardingRequest extends FormRequest
                 $validator->errors()->add('institution_id', 'Trường không thuộc tỉnh/thành phố đã chọn.');
             }
 
-            $profession = Profession::query()->find($this->input('profession_id'));
-            if ($profession?->requires_education_stage && ! $this->filled('education_stage_id')) {
-                $validator->errors()->add('education_stage_id', 'Vui lòng chọn năm học hoặc trạng thái tốt nghiệp.');
+            if ($this->routeIs('onboarding.profile.store') && ! $this->filled('study_status')) {
+                $validator->errors()->add('study_status', 'Vui lòng chọn tình trạng học tập.');
+            }
+
+            if ($this->filled('study_status')) {
+                if ($this->input('study_status') === 'studying' && ! $this->filled('education_stage_id')) {
+                    $validator->errors()->add('education_stage_id', 'Vui lòng chọn năm học.');
+                }
+            } else {
+                $profession = Profession::query()->find($this->input('profession_id'));
+                if ($profession?->requires_education_stage && ! $this->filled('education_stage_id')) {
+                    $validator->errors()->add('education_stage_id', 'Vui lòng chọn năm học hoặc trạng thái tốt nghiệp.');
+                }
             }
         }];
     }

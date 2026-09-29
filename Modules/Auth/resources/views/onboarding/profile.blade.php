@@ -27,6 +27,7 @@
                 initialUnit: @js((string) old('administrative_unit_id', $profile->administrative_unit_id)),
                 initialProfession: @js((string) old('profession_id', $profile->profession_id)),
                 initialStage: @js((string) old('education_stage_id', $profile->education_stage_id)),
+                initialStudyStatus: @js(old('study_status', '')),
                 initialInstitutionId: @js((string) ($initialInstitution?->id ?? '')),
                 initialInstitutionName: @js((string) ($initialInstitution?->name ?? '')),
             })" x-init="init()">
@@ -95,7 +96,7 @@
             </div>
 
             <div class="relative" @click.outside="professionOpen = false">
-                <label for="profession_search" class="mb-1.5 block font-label-sm font-medium text-on-surface-variant">Chức danh hiện tại</label>
+                <label for="profession_search" class="mb-1.5 block font-label-sm font-medium text-on-surface-variant">Chức danh/Ngành nghề</label>
                 <input type="hidden" name="profession_id" :value="professionId">
                 <input id="profession_search" type="search" x-model="professionQuery" @input="professionTyped" @focus="professionOpen = true" @click="professionOpen = true"
                     @keydown.escape="professionOpen = false" autocomplete="off" placeholder="Chọn hoặc tìm chức danh"
@@ -111,7 +112,29 @@
                 @error('profession_id') <p class="mt-1 text-body-sm text-error">{{ $message }}</p> @enderror
             </div>
 
-            <div class="relative" x-show="showEducationStage" @click.outside="stageOpen = false" x-cloak>
+            <fieldset>
+                <input type="hidden" name="study_status" :value="studyStatus">
+                <legend class="mb-2 block font-label-sm font-medium text-on-surface-variant">Tình trạng học tập</legend>
+                <div class="grid grid-cols-2 gap-2">
+                    <button type="button" @click="chooseStudyStatus('graduated')"
+                        :aria-pressed="studyStatus === 'graduated'"
+                        :class="studyStatus === 'graduated' ? 'border-primary bg-primary text-on-primary shadow-sm' : 'border-outline-variant bg-surface text-on-surface hover:border-primary hover:bg-primary-container/40'"
+                        class="flex h-12 items-center justify-center gap-2 rounded-lg border px-3 font-label-sm transition-colors">
+                        <span class="material-symbols-outlined text-[20px]">workspace_premium</span>
+                        Đã tốt nghiệp
+                    </button>
+                    <button type="button" @click="chooseStudyStatus('studying')"
+                        :aria-pressed="studyStatus === 'studying'"
+                        :class="studyStatus === 'studying' ? 'border-primary bg-primary text-on-primary shadow-sm' : 'border-outline-variant bg-surface text-on-surface hover:border-primary hover:bg-primary-container/40'"
+                        class="flex h-12 items-center justify-center gap-2 rounded-lg border px-3 font-label-sm transition-colors">
+                        <span class="material-symbols-outlined text-[20px]">school</span>
+                        Chưa tốt nghiệp
+                    </button>
+                </div>
+                @error('study_status') <p class="mt-1 text-body-sm text-error">{{ $message }}</p> @enderror
+            </fieldset>
+
+            <div class="relative" x-show="studyStatus === 'studying'" @click.outside="stageOpen = false" x-cloak>
                 <label for="stage_search" class="mb-1.5 block font-label-sm font-medium text-on-surface-variant">Năm học</label>
                 <input type="hidden" name="education_stage_id" :value="stageId">
                 <input id="stage_search" type="search" x-model="stageQuery" @input="stageId = ''" @focus="stageOpen = true" @click="stageOpen = true"
@@ -175,8 +198,7 @@
                         get matchingUnits() { return this.unitId ? this.filteredUnits : this.filterOptions(this.filteredUnits, this.unitQuery); },
                         get matchingProfessions() { return this.professionId ? this.professions : this.filterOptions(this.professions, this.professionQuery); },
                         get matchingStages() { return this.stageId ? this.stages : this.filterOptions(this.stages, this.stageQuery); },
-                        get selectedProfession() { return this.professions.find(item => item.id === this.professionId); },
-                        get showEducationStage() { return Boolean(this.selectedProfession?.requires_stage) && !this.selectedProfession?.graduated; },
+                        studyStatus: config.initialStudyStatus,
                         init() {
                             this.countryQuery = this.labelFor(this.countries, this.countryId);
                             this.unitQuery = this.labelFor(this.units, this.unitId);
@@ -227,7 +249,10 @@
                             this.professionId = item.id;
                             this.professionQuery = item.name;
                             this.professionOpen = false;
-                            if (!this.showEducationStage) {
+                        },
+                        chooseStudyStatus(status) {
+                            this.studyStatus = status;
+                            if (status === 'graduated') {
                                 this.stageId = '';
                                 this.stageQuery = '';
                             }

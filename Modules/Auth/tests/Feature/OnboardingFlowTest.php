@@ -58,7 +58,7 @@ final class OnboardingFlowTest extends TestCase
 
         $country = Country::query()->where('code', 'VN')->firstOrFail();
         $institution = Institution::query()->where('short_name', 'HMU')->firstOrFail();
-        $profession = Profession::query()->where('code', 'medical_student')->firstOrFail();
+        $profession = Profession::query()->where('code', 'medical_doctor')->firstOrFail();
         $stage = EducationStage::query()->where('code', 'year_3')->firstOrFail();
 
         $this->post(route('onboarding.profile.store'), [
@@ -66,6 +66,7 @@ final class OnboardingFlowTest extends TestCase
             'administrative_unit_id' => $institution->administrative_unit_id,
             'institution_id' => $institution->id,
             'profession_id' => $profession->id,
+            'study_status' => 'studying',
             'education_stage_id' => $stage->id,
             'marketing_consent' => '1',
         ])->assertRedirect(route('dashboard'));
@@ -117,12 +118,13 @@ final class OnboardingFlowTest extends TestCase
         $country = Country::query()->where('code', 'VN')->firstOrFail();
         $institution = Institution::query()->where('short_name', 'HMU')->firstOrFail();
         $otherInstitution = Institution::query()->where('short_name', 'UMP')->firstOrFail();
-        $profession = Profession::query()->where('code', 'doctor')->firstOrFail();
+        $profession = Profession::query()->where('code', 'medical_doctor')->firstOrFail();
 
         $this->post(route('onboarding.profile.store'), [
             'country_id' => $country->id,
             'administrative_unit_id' => $institution->administrative_unit_id,
             'institution_id' => $otherInstitution->id,
+            'study_status' => 'graduated',
             'profession_id' => $profession->id,
         ])->assertSessionHasErrors('institution_id');
     }

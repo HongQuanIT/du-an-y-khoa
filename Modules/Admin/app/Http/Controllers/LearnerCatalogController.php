@@ -167,7 +167,7 @@ final class LearnerCatalogController extends Controller
         $data['sort_order'] = (int) ($data['sort_order'] ?? 0);
         $data['is_active'] = $request->boolean('is_active');
 
-        if ($catalog === 'professions') {
+        if ($catalog === 'professions' && ($request->has('requires_education_stage') || $request->has('defaults_to_graduated'))) {
             $data['requires_education_stage'] = $request->boolean('requires_education_stage');
             $data['defaults_to_graduated'] = $request->boolean('defaults_to_graduated');
         }
