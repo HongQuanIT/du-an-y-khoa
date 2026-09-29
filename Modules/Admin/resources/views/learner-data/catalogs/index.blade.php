@@ -94,7 +94,9 @@
                             <tr class="transition-colors hover:bg-surface-container-low">
                                 <td class="px-5 py-3.5 align-middle">
                                     <p class="font-medium text-on-surface">{{ $item->name }}</p>
-                                    <p class="font-mono text-label-sm text-on-surface-variant">{{ $item->code }} · TT {{ $item->sort_order }}</p>
+                                    @if ($catalog !== 'administrative-units')
+                                        <p class="font-mono text-label-sm text-on-surface-variant">{{ $item->code }}</p>
+                                    @endif
                                 </td>
                                 <td class="px-4 py-3.5 align-middle text-on-surface-variant">
                                     @if ($catalog === 'countries')
@@ -186,9 +188,19 @@
                 panel: null,
                 confirming: null,
                 form: {},
-                blankForm() { return { id: null, name: '', code: '', codeTouched: false, country_id: '', type: 'province', requires_education_stage: false, defaults_to_graduated: false, sort_order: 0, is_active: 1 }; },
+                blankForm() { return { id: null, name: '', code: '', codeTouched: false, country_id: '', type: 'province', requires_education_stage: true, defaults_to_graduated: false, profile_status: 'requires_stage', sort_order: 0, is_active: 1 }; },
                 openCreate() { this.form = this.blankForm(); this.panel = 'create'; },
-                openEdit(item) { this.form = { ...this.blankForm(), ...item, codeTouched: true, country_id: String(item.country_id || ''), is_active: item.is_active ? 1 : 0 }; this.panel = 'edit'; },
+                openEdit(item) {
+                    this.form = {
+                        ...this.blankForm(),
+                        ...item,
+                        codeTouched: true,
+                        country_id: String(item.country_id || ''),
+                        profile_status: item.defaults_to_graduated ? 'graduated' : 'requires_stage',
+                        is_active: item.is_active ? 1 : 0,
+                    };
+                    this.panel = 'edit';
+                },
                 closePanel() { this.panel = null; },
                 generateCode() {
                     if (this.form.codeTouched || !this.form.name.trim()) return;

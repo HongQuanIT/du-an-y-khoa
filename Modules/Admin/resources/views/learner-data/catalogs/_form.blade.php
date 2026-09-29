@@ -20,12 +20,12 @@
         <input id="catalog_name" name="name" x-model="form.name" @input="generateCode()" required maxlength="120" placeholder="Ví dụ: {{ $config['title'] }}" class="h-12 w-full rounded-xl border border-outline-variant bg-surface-container-low px-4 text-base">
     </div>
 
-    <div x-show="panel === 'edit'">
+    <div x-show="panel === 'edit' && ! @js($catalog === 'administrative-units')">
         <label for="catalog_code" class="mb-2 block text-sm font-semibold text-on-surface">Tên viết tắt</label>
-        <input id="catalog_code" name="code" x-model="form.code" @input="form.codeTouched = true" required maxlength="50" :disabled="panel !== 'edit'" :readonly="@js($catalog === 'countries') && form.code === 'VN'" class="h-12 w-full rounded-xl border border-outline-variant bg-surface-container-low px-4 text-base read-only:opacity-60">
+        <input id="catalog_code" name="code" x-model="form.code" @input="form.codeTouched = true" required maxlength="50" :disabled="panel !== 'edit' || @js($catalog === 'administrative-units')" :readonly="@js($catalog === 'countries') && form.code === 'VN'" class="h-12 w-full rounded-xl border border-outline-variant bg-surface-container-low px-4 text-base read-only:opacity-60">
         <p class="mt-1.5 text-xs text-on-surface-variant">Tên viết tắt dùng để nhận diện danh mục.</p>
     </div>
-    <input type="hidden" name="code" :value="form.code" :disabled="panel === 'edit'">
+    <input type="hidden" name="code" :value="form.code" :disabled="panel === 'edit' && ! @js($catalog === 'administrative-units')">
 
     @if ($catalog === 'administrative-units')
         <div>
@@ -36,8 +36,15 @@
             </select>
         </div>
     @elseif ($catalog === 'professions')
-        <label class="flex items-start gap-2 text-body-sm"><input type="checkbox" name="requires_education_stage" value="1" x-model="form.requires_education_stage" class="mt-0.5 size-4 rounded text-primary"><span>Yêu cầu học viên chọn năm học</span></label>
-        <label class="flex items-start gap-2 text-body-sm"><input type="checkbox" name="defaults_to_graduated" value="1" x-model="form.defaults_to_graduated" class="mt-0.5 size-4 rounded text-primary"><span>Mặc định là đã tốt nghiệp</span></label>
+        <div>
+            <label for="profession_profile_status" class="mb-2 block text-sm font-semibold text-on-surface">Trạng thái học viên</label>
+            <select id="profession_profile_status" x-model="form.profile_status" class="h-12 w-full rounded-xl border border-outline-variant bg-surface-container-low px-4 text-base">
+                <option value="requires_stage">Yêu cầu học viên chọn năm học</option>
+                <option value="graduated">Mặc định là đã tốt nghiệp</option>
+            </select>
+            <input type="hidden" name="requires_education_stage" :value="form.profile_status === 'requires_stage' ? '1' : '0'">
+            <input type="hidden" name="defaults_to_graduated" :value="form.profile_status === 'graduated' ? '1' : '0'">
+        </div>
     @endif
 
     <div>
