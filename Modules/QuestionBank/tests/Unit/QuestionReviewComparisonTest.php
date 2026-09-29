@@ -10,7 +10,7 @@ use Modules\Auth\Models\Profession;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
-use Modules\QuestionBank\Models\Blueprint;
+use Modules\QuestionBank\Models\ExamCatalog;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Support\QuestionReviewComparison;
 use Tests\Support\CreatesMedicalTaxonomy;
@@ -112,14 +112,14 @@ final class QuestionReviewComparisonTest extends TestCase
                 'sort_order' => 1,
             ])->id,
         ]);
-        $question->blueprints()->sync([
-            Blueprint::query()->create([
-                'name' => 'Nội trú 2026',
-                'slug' => 'noi-tru-2026',
-                'status' => TaxonomyStatus::Active,
-                'sort_order' => 1,
-            ])->id,
+        $catalog = ExamCatalog::query()->create([
+            'name' => 'Nội trú 2026',
+            'slug' => 'noi-tru-2026',
+            'status' => TaxonomyStatus::Active,
+            'sort_order' => 1,
         ]);
+        $catalog->professions()->sync($question->professions()->pluck('professions.id'));
+        $question->examCatalogs()->sync([$catalog->id]);
         $question->forceFill(['is_free' => false])->save();
 
         $comparison = app(QuestionReviewComparison::class)->compare($question->fresh(['options', 'lessons']));

@@ -299,7 +299,7 @@ Index: `host_user_id`, `visibility`, `status`, `join_code`.
 `id, uuid, title, type(mock/self_assessment/org_exam), description, duration_minutes, pass_score, available_from/to, access_type, is_premium, status(draft/published/archived), created_by, timestamps, soft delete`.
 
 ### Blueprint / CoreClinicalTopic (ma trận thi — trục riêng)
-Ma trận thi tách khỏi phân loại nội dung: `blueprints` → `blueprint_sections` → `core_clinical_topics` (CCT). CCT **map sang Bài học** qua pivot `core_topic_lessons` (`core_clinical_topic_id`, `lesson_id`, timestamps) — thay cho `core_topic_medical_taxonomy_nodes` cũ; và map sang Tag qua `core_topic_tags`. Câu hỏi **không** gắn trực tiếp CCT; eligibility suy ra qua bài học/tag đã map.
+Ma trận thi tách khỏi phân loại nội dung và tách khỏi danh mục kỳ thi. `exam_catalogs` là kỳ thi (tên, trạng thái, đối tượng qua `exam_catalog_professions`, `blueprint_id` nullable). Câu hỏi gắn kỳ thi qua `question_exam_catalogs`. `blueprints` → `blueprint_sections` → `core_clinical_topics` (CCT) là ma trận, chỉ dùng khi tạo phiên đề thi. CCT **map sang Bài học** qua pivot `core_topic_lessons` (`core_clinical_topic_id`, `lesson_id`, timestamps) và map sang Tag qua `core_topic_tags`. Câu hỏi **không** gắn trực tiếp CCT.
 
 ### ExamTopic (phân bổ câu theo CCT — admin config)
 `id, exam_id FK, core_clinical_topic_id FK, question_count INT, sort_order INT`. Unique `(exam_id, core_clinical_topic_id)`.

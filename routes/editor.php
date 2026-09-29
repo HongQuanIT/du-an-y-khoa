@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
+use Modules\Admin\Http\Controllers\ExamCatalogController;
 use Modules\Admin\Http\Controllers\EditorImageUploadController;
 use Modules\Admin\Http\Controllers\BlueprintController;
 use Modules\Admin\Http\Controllers\Cms\BannerController;
@@ -164,15 +165,21 @@ Route::middleware(['auth', 'portal:editor'])->group(function (): void {
 
         Route::middleware('permission:editor_taxonomy.view')->group(function (): void {
             Route::get('/blueprints', [BlueprintController::class, 'index'])->middleware('permission:editor_blueprint.view')->name('blueprints.index');
+            Route::get('/exam-catalogs', [ExamCatalogController::class, 'index'])->middleware('permission:editor_blueprint.view')->name('exam-catalogs.index');
             Route::get('/blueprints/create', [BlueprintController::class, 'create'])->middleware('permission:editor_blueprint.create')->name('blueprints.create');
             Route::post('/blueprints', [BlueprintController::class, 'store'])->middleware('permission:editor_blueprint.create')->name('blueprints.store');
+            Route::get('/exam-catalogs/create', [ExamCatalogController::class, 'create'])->middleware('permission:editor_blueprint.create')->name('exam-catalogs.create');
+            Route::post('/exam-catalogs', [ExamCatalogController::class, 'store'])->middleware('permission:editor_blueprint.create')->name('exam-catalogs.store');
             Route::post('/blueprints/{blueprint}/sections', [BlueprintController::class, 'storeSection'])->middleware('permission:editor_blueprint.create')->name('blueprints.sections.store');
             Route::post('/blueprint-sections/{section}/core-topics', [BlueprintController::class, 'storeCoreTopic'])->middleware('permission:editor_blueprint.create')->name('blueprint-sections.core-topics.store');
             Route::get('/blueprints/{blueprint}/edit', [BlueprintController::class, 'edit'])->middleware('permission:editor_blueprint.update')->name('blueprints.edit');
             Route::put('/blueprints/{blueprint}', [BlueprintController::class, 'update'])->middleware('permission:editor_blueprint.update')->name('blueprints.update');
+            Route::get('/exam-catalogs/{examCatalog}/edit', [ExamCatalogController::class, 'edit'])->middleware('permission:editor_blueprint.update')->name('exam-catalogs.edit');
+            Route::put('/exam-catalogs/{examCatalog}', [ExamCatalogController::class, 'update'])->middleware('permission:editor_blueprint.update')->name('exam-catalogs.update');
             Route::put('/blueprints/{blueprint}/weights', [BlueprintController::class, 'updateWeights'])->middleware('permission:editor_blueprint.update')->name('blueprints.weights.update');
             Route::put('/core-clinical-topics/{topic}/medical-nodes', [BlueprintController::class, 'syncCoreTopicMedicalNodes'])->middleware('permission:editor_blueprint.update')->name('core-clinical-topics.medical-nodes.sync');
             Route::delete('/blueprints/{blueprint}', [BlueprintController::class, 'destroy'])->middleware('permission:editor_blueprint.delete')->name('blueprints.destroy');
+            Route::delete('/exam-catalogs/{examCatalog}', [ExamCatalogController::class, 'destroy'])->middleware('permission:editor_blueprint.delete')->name('exam-catalogs.destroy');
             Route::delete('/blueprint-sections/{section}', [BlueprintController::class, 'destroySection'])->middleware('permission:editor_blueprint.delete')->name('blueprint-sections.destroy');
             Route::delete('/core-clinical-topics/{topic}', [BlueprintController::class, 'destroyCoreTopic'])->middleware('permission:editor_blueprint.delete')->name('core-clinical-topics.destroy');
             Route::get('/categories', [CurriculumTaxonomyController::class, 'index'])->middleware('permission:editor_curriculum.view')->name('curriculum.index');

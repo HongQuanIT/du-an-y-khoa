@@ -175,6 +175,7 @@ final class AdaptiveQuestionSelector
             coreClinicalTopicIds: $data->coreClinicalTopicIds,
             tagIds: $data->tagIds,
             professionId: $this->learnerProfessionId($userId),
+            examCatalogId: $data->examCatalogId,
         );
 
         $ids = $query->pluck('id')->map(fn ($id) => (string) $id)->all();

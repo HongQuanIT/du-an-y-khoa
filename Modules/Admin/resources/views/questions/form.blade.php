@@ -82,7 +82,7 @@
         $question->status === \Modules\QuestionBank\Enums\QuestionStatus::FlagConflict => ['label' => 'Cảnh báo cờ', 'class' => 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300'],
         $question->status === \Modules\QuestionBank\Enums\QuestionStatus::PendingPublish => ['label' => 'Chờ xuất bản', 'class' => 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300'],
         $question->status === \Modules\QuestionBank\Enums\QuestionStatus::Rejected => ['label' => 'Từ chối', 'class' => 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'],
-        $question->status === \Modules\QuestionBank\Enums\QuestionStatus::Private => ['label' => 'Riêng tư', 'class' => 'bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300'],
+        $question->status === \Modules\QuestionBank\Enums\QuestionStatus::Private => ['label' => 'Ẩn khỏi ngân hàng', 'class' => 'bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300'],
         $question->status === \Modules\QuestionBank\Enums\QuestionStatus::Retired => ['label' => 'Ngừng dùng', 'class' => 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'],
         default => ['label' => 'Bản nháp', 'class' => 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'],
     } : null;
@@ -597,10 +597,10 @@
                             </button>
                             <button type="submit"
                                 form="question-private-form"
-                                onclick="return confirm('Ẩn câu này khỏi ngân hàng câu hỏi (private)? Học viên sẽ không thấy câu trong QBank / bài thi mới.')"
+                                onclick="return confirm('Ẩn câu này khỏi ngân hàng? Học viên sẽ không thấy câu trong QBank và bài thi mới. Có thể xuất bản lại ngay.')"
                                 class="flex w-full items-center justify-center gap-2 rounded-xl border border-violet-300 py-2.5 font-label-md font-semibold text-violet-800 hover:bg-violet-50">
                                 <span class="material-symbols-outlined text-[18px]">lock</span>
-                                Ẩn khỏi ngân hàng (private)
+                                Ẩn khỏi ngân hàng
                             </button>
                             @endif
                             @if ($canReject)
@@ -648,21 +648,21 @@
                     <div class="rounded-2xl border border-primary/30 bg-primary/5 p-4">
                         <h2 class="mb-2 font-label-md font-semibold text-on-surface">Quản lý xuất bản</h2>
                         <p class="mb-3 text-xs leading-5 text-on-surface-variant">
-                            Chỉ đổi trạng thái (xuất bản / private / ngừng dùng) hoặc xoá. Không chỉnh sửa nội dung — tránh xung đột với biên tập viên.
+                            Chỉ đổi trạng thái (xuất bản / ẩn khỏi ngân hàng / ngừng dùng) hoặc xoá. Không chỉnh sửa nội dung — tránh xung đột với biên tập viên.
                         </p>
                         <div class="flex flex-col gap-2">
                             @if ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::Published)
                                 <button type="submit"
                                     form="question-private-form"
-                                    onclick="return confirm('Ẩn câu đã xuất bản khỏi ngân hàng câu hỏi (private)?')"
+                                    onclick="return confirm('Ẩn câu đã xuất bản khỏi ngân hàng? Học viên sẽ không thấy câu trong QBank và bài thi mới. Có thể xuất bản lại ngay.')"
                                     class="flex w-full items-center justify-center gap-2 rounded-xl border border-violet-300 py-2.5 font-label-md font-semibold text-violet-800 hover:bg-violet-50">
                                     <span class="material-symbols-outlined text-[18px]">lock</span>
-                                    Ẩn khỏi ngân hàng (private)
+                                    Ẩn khỏi ngân hàng
                                 </button>
                             @else
                                 <button type="submit"
                                     form="question-publish-form"
-                                    onclick="return confirm('Đưa câu private trở lại ngân hàng công khai?')"
+                                    onclick="return confirm('Đưa câu đang ẩn trở lại ngân hàng?')"
                                     class="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 font-label-md font-semibold text-on-primary hover:bg-primary/90">
                                     <span class="material-symbols-outlined text-[18px]">publish</span>
                                     Xuất bản công khai

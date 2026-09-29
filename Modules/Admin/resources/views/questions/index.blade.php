@@ -496,7 +496,7 @@
                                     </td>
 
                                 {{-- Trạng thái workflow, đồng bộ với bộ lọc QuestionStatus --}}
-                                <td class="w-[140px] min-w-[120px] px-4 py-4 align-top whitespace-nowrap"
+                                <td class="w-[180px] min-w-[160px] px-4 py-4 align-top whitespace-nowrap"
                                     x-show="cols.status" x-cloak>
                                     @php
                                         $statusLabel = $question->status->label();

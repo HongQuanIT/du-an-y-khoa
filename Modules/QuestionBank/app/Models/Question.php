@@ -345,6 +345,12 @@ class Question extends Model
         return $this->belongsToMany(Blueprint::class, 'question_blueprints')->withTimestamps();
     }
 
+    /** @return BelongsToMany<ExamCatalog, $this> */
+    public function examCatalogs(): BelongsToMany
+    {
+        return $this->belongsToMany(ExamCatalog::class, 'question_exam_catalogs')->withTimestamps();
+    }
+
     /** @return HasMany<QuestionHint, $this> */
     public function hints(): HasMany
     {
@@ -572,7 +578,7 @@ class Question extends Model
     {
         return match ($this->status) {
             QuestionStatus::Retired => 'Ngừng dùng',
-            QuestionStatus::Private => 'Riêng tư (exam)',
+            QuestionStatus::Private => 'Ẩn khỏi ngân hàng',
             QuestionStatus::Published => 'Đã xuất bản',
             default => ((int) $this->published_version > 0)
                 ? 'Đã xuất bản'

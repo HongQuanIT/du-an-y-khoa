@@ -20,6 +20,7 @@ use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionHint;
 use Modules\QuestionBank\Models\QuestionOption;
 use Modules\QuestionBank\Services\QuestionContentFingerprint;
+use Modules\QuestionBank\Support\ExamCatalogAssignment;
 use Modules\QuestionBank\Support\QuestionInstructorReviewCycle;
 
 /**
@@ -314,7 +315,7 @@ final class SaveAdminQuestionAction
     /** @param  array<string, mixed>  $data */
     private function syncTaxonomyRelations(Question $question, array $data): void
     {
-        // Kỳ thi membership is question_blueprints, not an inferred CCT link.
+        // Kỳ thi membership is question_exam_catalogs. The matrix is not inferred from lessons.
         $question->lessons()->sync($this->buildLessonSyncPayload($data));
 
         if (array_key_exists('tag_ids', $data)) {
@@ -327,7 +328,7 @@ final class SaveAdminQuestionAction
             $question->tags()->sync($tagIds);
         }
 
-        foreach (['profession_ids' => 'professions', 'blueprint_ids' => 'blueprints'] as $key => $relation) {
+        foreach (['profession_ids' => 'professions', 'exam_catalog_ids' => 'examCatalogs'] as $key => $relation) {
             if (! array_key_exists($key, $data)) {
                 continue;
             }
@@ -338,6 +339,14 @@ final class SaveAdminQuestionAction
                 ->unique()
                 ->values()
                 ->all();
+
+            if ($key === 'exam_catalog_ids') {
+                $professionIds = array_key_exists('profession_ids', $data)
+                    ? collect($data['profession_ids'])->map(fn ($id): int => (int) $id)->all()
+                    : $question->professions()->pluck('professions.id')->map(fn ($id): int => (int) $id)->all();
+                ExamCatalogAssignment::assertMatchesProfessions($professionIds, $ids);
+            }
+
             $question->{$relation}()->sync($ids);
         }
     }

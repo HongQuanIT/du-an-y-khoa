@@ -11,10 +11,11 @@ use App\Support\Enums\Role;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Modules\Auth\Models\LearnerProfile;
+use Modules\Auth\Models\Profession;
 use Modules\Personalization\Models\BookmarkFolder;
 use Modules\Personalization\Models\BookmarkFolderItem;
 use Modules\QuestionBank\Actions\RepeatQuestionSessionAction;
-use Modules\QuestionBank\Database\Seeders\DemoLearningSeeder;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionScopeType;
 use Modules\QuestionBank\Enums\QuestionStatus as PublicationStatus;
@@ -23,6 +24,7 @@ use Modules\QuestionBank\Enums\SessionStatus;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
 use Modules\QuestionBank\Enums\UserQuestionStatus;
 use Modules\QuestionBank\Models\Blueprint;
+use Modules\QuestionBank\Models\ExamCatalog;
 use Modules\QuestionBank\Models\BlueprintSection;
 use Modules\QuestionBank\Models\CoreClinicalTopic;
 use Modules\QuestionBank\Models\Lesson;
@@ -48,6 +50,8 @@ final class QuestionBankFlowTest extends TestCase
 
     private Lesson $topic;
 
+    private Profession $profession;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -55,6 +59,17 @@ final class QuestionBankFlowTest extends TestCase
         $this->seed(RolePermissionSeeder::class);
         $this->user = User::factory()->create();
         $this->user->assignRole(Role::Student->value);
+        $this->profession = Profession::query()->create([
+            'code' => 'qbank-flow-student',
+            'name' => 'Sinh viên Y',
+            'sort_order' => 1,
+            'is_active' => true,
+        ]);
+        LearnerProfile::query()->create([
+            'user_id' => $this->user->id,
+            'profession_id' => $this->profession->id,
+            'onboarding_completed_at' => now(),
+        ]);
         $this->topic = $this->makeLesson([
             'name' => 'Tim mạch',
             'slug' => 'tim-mach-qbank-test',
@@ -81,6 +96,14 @@ final class QuestionBankFlowTest extends TestCase
             'status' => TaxonomyStatus::Active,
             'sort_order' => 1,
         ]);
+        $catalog = ExamCatalog::query()->create([
+            'name' => 'Kỳ thi đánh giá năng lực hành nghề Bác sĩ Y khoa',
+            'slug' => 'ky-thi-danh-gia-nang-luc',
+            'code' => 'KY-QBANK-FLOW',
+            'status' => TaxonomyStatus::Active,
+            'sort_order' => 1,
+        ]);
+        $catalog->professions()->sync([$this->profession->id]);
 
         $builderResponse = $this->actingAs($this->user)
             ->get(route('qbank.create'))
@@ -1376,66 +1399,6 @@ final class QuestionBankFlowTest extends TestCase
             ->assertSee('2 phút cho mỗi câu');
     }
 
-    public function test_demo_seed_keeps_200_questions_and_includes_the_long_goodpasture_case(): void
-    {
-        $this->seed(DemoLearningSeeder::class);
-
-        $this->assertSame(200, Question::count());
-        $question = Question::with(['options', 'lessons'])
-            ->where('stem', 'like', 'A 24-year-old man comes to the emergency department%')
-            ->firstOrFail();
-        $options = $question->options->sortBy('order')->values();
-
-        $this->assertSame(Difficulty::VeryHard, $question->difficulty);
-        $this->assertTrue(
-            $question->lessons->contains(fn ($lesson): bool => $lesson->slug === 'urology')
-            || $question->lessons->isNotEmpty(),
-        );
-        $this->assertSame(['A', 'B', 'C', 'D'], $options->pluck('label')->all());
-        $this->assertSame('Goodpasture syndrome', $options->first()?->content);
-        $this->assertTrue((bool) $options->first()?->is_correct);
-        $this->assertTrue($options->slice(1)->every(fn (QuestionOption $option): bool => ! $option->is_correct));
-        $this->assertSame([
-            'blood-tinged sputum',
-            'three episodes of blood in his urine',
-            'linear deposits of IgG along the glomerular basement membrane',
-        ], $question->key_info);
-        $this->assertSame(
-            'Ho ra máu kết hợp tiểu máu, suy thận và IgG lắng đọng dạng đường thẳng dọc màng đáy cầu thận là bộ dấu hiệu điển hình của bệnh kháng màng đáy cầu thận (hội chứng Goodpasture).',
-            $question->attending_tip,
-        );
-
-        foreach (QuestionScopeType::cases() as $scopeType) {
-            $this->assertSame(
-                200,
-                QuestionScope::query()
-                    ->where('scope_type', $scopeType)
-                    ->distinct()
-                    ->count('question_id'),
-            );
-        }
-        $this->assertDatabaseHas('question_scopes', [
-            'question_id' => $question->getKey(),
-            'scope_type' => QuestionScopeType::Exam->value,
-            'scope_key' => 'usmle-step-2-ck',
-        ]);
-        $this->assertDatabaseHas('question_scopes', [
-            'question_id' => $question->getKey(),
-            'scope_type' => QuestionScopeType::Symptom->value,
-            'scope_key' => 'dyspnea',
-        ]);
-        $scopeCount = QuestionScope::count();
-
-        $this->seed(DemoLearningSeeder::class);
-
-        $this->assertSame(200, Question::count());
-        $this->assertSame($scopeCount, QuestionScope::count());
-        $this->assertSame(
-            1,
-            Question::where('stem', 'like', 'A 24-year-old man comes to the emergency department%')->count(),
-        );
-    }
-
     /** @return array<string, mixed> */
     private function sessionPayload(
         int $count,
@@ -1484,6 +1447,7 @@ final class QuestionBankFlowTest extends TestCase
         ]);
 
         $question->lessons()->sync([$topic->id]);
+        $question->professions()->sync([$this->profession->id]);
 
         return $question;
     }

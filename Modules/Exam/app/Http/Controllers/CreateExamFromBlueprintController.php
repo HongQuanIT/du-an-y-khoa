@@ -14,11 +14,11 @@ use Modules\QuestionBank\Data\CreateSessionData;
 use Modules\QuestionBank\Enums\SessionMode;
 use Modules\QuestionBank\Enums\SessionSource;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
-use Modules\QuestionBank\Models\Blueprint;
+use Modules\QuestionBank\Models\ExamCatalog;
 use RuntimeException;
 
 /**
- * Học viên chọn kỳ thi (ma trận) → tạo bài thi cá nhân → vào phòng thi.
+ * Học viên chọn kỳ thi đã gắn ma trận → tạo bài thi cá nhân → vào phòng thi.
  */
 final class CreateExamFromBlueprintController extends Controller
 {
@@ -27,15 +27,27 @@ final class CreateExamFromBlueprintController extends Controller
         private readonly CreateQuestionSessionAction $createSession,
     ) {}
 
-    public function __invoke(Blueprint $blueprint): RedirectResponse
+    public function __invoke(ExamCatalog $examCatalog): RedirectResponse
     {
-        abort_unless($blueprint->status === TaxonomyStatus::Active, 404);
+        abort_unless($examCatalog->status === TaxonomyStatus::Active, 404);
+        $examCatalog->loadMissing('blueprint');
+        abort_unless($examCatalog->blueprint_id !== null, 404);
 
         $user = request()->user();
         abort_unless($user instanceof User, 403);
 
+        $professionId = $user->learnerProfile?->profession_id;
+        if ($professionId === null) {
+            throw ValidationException::withMessages([
+                'profession' => 'Hãy chọn chức danh trên hồ sơ trước khi tạo phiên đề thi.',
+            ]);
+        }
+
+        $allowed = $examCatalog->professions()->where('professions.id', (int) $professionId)->exists();
+        abort_unless($allowed, 404);
+
         try {
-            $exam = $this->createExam->handle($user, $blueprint);
+            $exam = $this->createExam->handle($user, $examCatalog);
         } catch (ValidationException $exception) {
             return back()->withErrors($exception->errors());
         }
@@ -59,6 +71,6 @@ final class CreateExamFromBlueprintController extends Controller
 
         return redirect()
             ->route('exam.session', $session)
-            ->with('status', 'Đã tạo bài thi từ ma trận «'.$blueprint->name.'».');
+            ->with('status', 'Đã tạo bài thi từ kỳ thi «'.$examCatalog->name.'».');
     }
 }

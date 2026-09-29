@@ -901,7 +901,7 @@ Tạo các tài khoản cố định (mật khẩu mặc định `password` — 
 ### 20.2 Dữ liệu ngân hàng câu hỏi (tuỳ chọn)
 
 ```bash
-# Demo ~30 câu + topics + session mẫu (không cần file ngoài)
+# Tiến độ demo của học viên mẫu (phiên, lần làm, trạng thái). Không tạo câu hỏi.
 php artisan db:seed --class=Modules\\QuestionBank\\Database\\Seeders\\DemoLearningSeeder --force
 
 # Hoặc seed toàn bộ module QuestionBank (demo + volume nếu bật SEED_VOLUME)
@@ -909,8 +909,6 @@ php artisan db:seed --class=Modules\\QuestionBank\\Database\\Seeders\\QuestionBa
 ```
 
 > **Không** đặt `SEED_VOLUME=true` trên production — biến này sinh hàng nghìn bản ghi test hiệu năng.
-
-Dataset VM14K (~14k câu): copy file JSONL vào `Modules/QuestionBank/database/seeders/data/vm14k/` rồi chạy seeder tương ứng (xem README trong thư mục đó). Chỉ dùng khi đã có đủ disk/RAM và thời gian import Meilisearch.
 
 ### 20.3 Index Meilisearch sau seed
 

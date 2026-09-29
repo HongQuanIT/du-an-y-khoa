@@ -7,7 +7,7 @@
 ## 0. Tóm tắt module
 Tạo & quản lý đề thi/kỳ thi: **cấu hình phân bổ câu theo Core Clinical Topic (CCT)** trong ma trận thi — CCT map sang Bài học qua `core_topic_lessons` (admin không chọn từng câu thủ công); hệ thống **tự động lấy câu từ ngân hàng đã xuất bản** (ServePublished / không `private`/`retired`), cấu hình thời gian/điểm chuẩn/lịch, publish + **access control** (mua/đăng ký mới được làm), chấm & xuất kết quả.
 
-> **Nguồn câu bài thi:** cùng ngân hàng QBank (câu đã publish / còn snapshot live). Câu `private` bị ẩn khỏi ngân hàng và **không** được pick vào bài thi mới.
+> **Nguồn câu bài thi:** học viên chọn kỳ thi đã gắn ma trận. Hệ thống phân bổ theo ma trận, rồi rút câu đã gắn đúng kỳ thi đó và đúng chức danh học viên. Kỳ thi chưa gắn ma trận không hiện ở màn này. Ngân hàng câu hỏi không dùng ma trận.
 
 | Route | Màn hình |
 |-------|----------|

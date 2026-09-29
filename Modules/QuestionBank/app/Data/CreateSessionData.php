@@ -38,6 +38,7 @@ final class CreateSessionData
         public readonly SessionSource $source = SessionSource::Custom,
         public readonly int $count = 10,
         public readonly ?int $blueprintId = null,
+        public readonly ?int $examCatalogId = null,
         public readonly ?int $blueprintSectionId = null,
         public readonly array $coreClinicalTopicIds = [],
         public readonly array $organSystemIds = [],
@@ -69,6 +70,7 @@ final class CreateSessionData
         return [
             'name' => $name !== '' ? $name : null,
             'blueprint_id' => $this->blueprintId,
+            'exam_catalog_id' => $this->examCatalogId,
             'blueprint_section_id' => $this->blueprintSectionId,
             'core_clinical_topic_ids' => array_values($this->coreClinicalTopicIds),
             'organ_system_ids' => array_values($this->organSystemIds),

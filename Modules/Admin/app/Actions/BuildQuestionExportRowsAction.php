@@ -23,7 +23,7 @@ final class BuildQuestionExportRowsAction
         $rows = [];
 
         foreach ($questions as $question) {
-            $question->loadMissing(['options', 'lessons', 'tags', 'hints', 'professions', 'blueprints']);
+            $question->loadMissing(['options', 'lessons', 'tags', 'hints', 'professions', 'examCatalogs']);
             $options = $question->options->sortBy('order')->values();
             $correct = '';
             $row = array_fill_keys(QuestionImportSchema::headers(), '');
@@ -40,8 +40,8 @@ final class BuildQuestionExportRowsAction
                 ->map(fn ($profession): string => trim((string) ($profession->name ?: $profession->code)))
                 ->filter()
                 ->implode('; ');
-            $row['blueprint_slugs'] = $question->blueprints
-                ->map(fn ($blueprint): string => trim((string) ($blueprint->name ?: $blueprint->slug)))
+            $row['blueprint_slugs'] = $question->examCatalogs
+                ->map(fn ($catalog): string => trim((string) ($catalog->name ?: $catalog->slug)))
                 ->filter()
                 ->implode('; ');
             $row['is_free'] = $question->is_free ? '1' : '0';

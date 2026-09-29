@@ -32,7 +32,6 @@ use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Enums\QuestionWorkflowEventType;
 use Modules\QuestionBank\Enums\ReviewFlagOutcome;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
-use Modules\QuestionBank\Models\Blueprint;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionFeedback;
 use Modules\QuestionBank\Models\QuestionImportBatch;
@@ -210,7 +209,7 @@ final class QuestionController extends Controller
             'lessons.organSystems',
             'tags',
             'professions:id,name',
-            'blueprints:id,name',
+            'examCatalogs:id,name',
             'creator:id,name,email',
             'instructor:id,name',
             'assignedInstructor:id,name',
@@ -626,24 +625,12 @@ final class QuestionController extends Controller
                 ->orderBy('sort_order')
                 ->orderBy('name')
                 ->get(['id', 'name']),
-            'classificationBlueprints' => Blueprint::query()
+            'classificationExamCatalogs' => \Modules\QuestionBank\Models\ExamCatalog::query()
                 ->where('status', TaxonomyStatus::Active)
+                ->with('professions:id,name')
                 ->orderBy('sort_order')
                 ->orderBy('name')
                 ->get(['id', 'name']),
-            'suggestedBlueprintIds' => $question->exists
-                ? Blueprint::query()
-                    ->whereHas(
-                        'sections.coreClinicalTopics.lessons',
-                        fn ($lessons) => $lessons->whereIn(
-                            'lessons.id',
-                            $question->lessons->pluck('id')->all(),
-                        ),
-                    )
-                    ->pluck('id')
-                    ->map(fn ($id): int => (int) $id)
-                    ->all()
-                : [],
         ];
     }
 
@@ -720,8 +707,8 @@ final class QuestionController extends Controller
             'tag_ids.*' => ['integer', 'distinct', 'exists:tags,id'],
             'profession_ids' => ['nullable', 'array'],
             'profession_ids.*' => ['integer', 'distinct', 'exists:professions,id'],
-            'blueprint_ids' => ['nullable', 'array'],
-            'blueprint_ids.*' => ['integer', 'distinct', 'exists:blueprints,id'],
+            'exam_catalog_ids' => ['nullable', 'array'],
+            'exam_catalog_ids.*' => ['integer', 'distinct', 'exists:exam_catalogs,id'],
             'hints' => ['nullable', 'array'],
             'hints.*.id' => ['nullable', 'integer'],
             'hints.*.content' => ['nullable', 'string', 'max:2000'],
@@ -775,7 +762,7 @@ final class QuestionController extends Controller
                 ->map(fn ($id): int => (int) $id)->unique()->values()->all(),
             'profession_ids' => collect($data['profession_ids'] ?? [])
                 ->map(fn ($id): int => (int) $id)->unique()->values()->all(),
-            'blueprint_ids' => collect($data['blueprint_ids'] ?? [])
+            'exam_catalog_ids' => collect($data['exam_catalog_ids'] ?? [])
                 ->map(fn ($id): int => (int) $id)->unique()->values()->all(),
             'is_free' => $request->boolean('is_free'),
             'is_priority' => $request->boolean('is_priority') || $request->boolean('exam_flag'),

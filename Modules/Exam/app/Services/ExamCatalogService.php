@@ -9,7 +9,7 @@ use Illuminate\Support\Collection;
 use Modules\QuestionBank\Enums\SessionMode;
 use Modules\QuestionBank\Enums\SessionSource;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
-use Modules\QuestionBank\Models\Blueprint;
+use Modules\QuestionBank\Models\ExamCatalog;
 use Modules\QuestionBank\Models\QuestionSession;
 use Modules\QuestionBank\Support\BlueprintExamAllocator;
 
@@ -18,28 +18,48 @@ final class ExamCatalogService
     public function __construct(private readonly BlueprintExamAllocator $allocator) {}
 
     /**
-     * Kỳ thi = ma trận (blueprint) sẵn sàng để học viên tạo bài thi.
+     * Kỳ thi đã gắn ma trận, và thuộc chức danh của học viên khi hồ sơ có chức danh.
      *
      * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator<int, array<string, mixed>>
      */
-    public function blueprintCards(): \Illuminate\Contracts\Pagination\LengthAwarePaginator
+    public function blueprintCards(?User $user = null): \Illuminate\Contracts\Pagination\LengthAwarePaginator
     {
-        $blueprints = Blueprint::query()
+        $professionId = $user?->learnerProfile?->profession_id;
+
+        $catalogs = ExamCatalog::query()
             ->where('status', TaxonomyStatus::Active)
-            ->withCount('sections')
+            ->whereNotNull('blueprint_id')
+            ->when($professionId !== null, function ($query) use ($professionId): void {
+                $query->whereHas(
+                    'professions',
+                    fn ($professions) => $professions->where('professions.id', (int) $professionId),
+                );
+            }, function ($query): void {
+                $query->whereRaw('0 = 1');
+            })
+            ->with(['blueprint' => fn ($query) => $query->withCount('sections')])
             ->orderBy('sort_order')
             ->orderBy('name')
             ->paginate(9);
 
-        $blueprints->getCollection()->transform(function (Blueprint $blueprint): array {
-            $matrix = $this->allocator->allocate($blueprint);
+        $catalogs->getCollection()->transform(function (ExamCatalog $catalog): array {
+            $blueprint = $catalog->blueprint;
+            $matrix = $blueprint !== null
+                ? $this->allocator->allocate($blueprint)
+                : [
+                    'ready' => false,
+                    'reason' => 'Kỳ thi chưa gắn ma trận.',
+                    'total_questions' => 0,
+                    'suggested_duration_minutes' => 0,
+                    'topic_count' => 0,
+                ];
 
             return [
-                'id' => $blueprint->id,
-                'name' => $blueprint->name,
-                'code' => $blueprint->code,
-                'description' => $blueprint->description,
-                'sections_count' => (int) $blueprint->sections_count,
+                'id' => $catalog->id,
+                'name' => $catalog->name,
+                'code' => $catalog->code,
+                'description' => $catalog->description,
+                'sections_count' => (int) ($blueprint->sections_count ?? 0),
                 'ready' => $matrix['ready'],
                 'reason' => $matrix['reason'],
                 'question_count' => $matrix['total_questions'],
@@ -48,7 +68,7 @@ final class ExamCatalogService
             ];
         });
 
-        return $blueprints;
+        return $catalogs;
     }
 
     /**

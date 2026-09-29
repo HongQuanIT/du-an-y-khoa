@@ -5,6 +5,7 @@
     $active = $active ?? null;
     $tabs = [
         ['key' => 'overview', 'label' => 'Tổng quan', 'suffix' => 'taxonomy.index', 'access' => 'admin.taxonomy.index', 'icon' => 'dashboard'],
+        ['key' => 'exam-catalogs', 'label' => 'Kỳ thi', 'suffix' => 'exam-catalogs.index', 'access' => 'admin.exam-catalogs.index', 'icon' => 'quiz'],
         ['key' => 'blueprints', 'label' => 'Ma trận đề thi', 'suffix' => 'blueprints.index', 'access' => 'admin.blueprints.index', 'icon' => 'assignment'],
         ['key' => 'curriculum', 'label' => 'Danh mục kiến thức', 'suffix' => 'curriculum.index', 'access' => 'admin.curriculum.index', 'icon' => 'account_tree'],
         ['key' => 'tags', 'label' => 'Tags', 'suffix' => 'tags.index', 'access' => 'admin.tags.index', 'icon' => 'sell'],

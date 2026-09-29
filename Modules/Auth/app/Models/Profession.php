@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\QuestionBank\Models\Blueprint;
+use Modules\QuestionBank\Models\ExamCatalog;
 use Modules\QuestionBank\Models\Question;
 
 final class Profession extends Model
@@ -41,5 +42,11 @@ final class Profession extends Model
     public function blueprints(): BelongsToMany
     {
         return $this->belongsToMany(Blueprint::class, 'blueprint_professions')->withTimestamps();
+    }
+
+    /** @return BelongsToMany<ExamCatalog, $this> */
+    public function examCatalogs(): BelongsToMany
+    {
+        return $this->belongsToMany(ExamCatalog::class, 'exam_catalog_professions')->withTimestamps();
     }
 }

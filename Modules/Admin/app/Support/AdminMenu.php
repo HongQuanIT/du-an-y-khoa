@@ -88,6 +88,7 @@ final class AdminMenu
                 'match' => [
                     'admin.taxonomy.*',
                     'admin.blueprints.*',
+                    'admin.exam-catalogs.*',
                     'admin.curriculum.*',
                     'admin.tags.*',
                 ],

@@ -29,7 +29,7 @@
                 <p class="mb-2 text-sm font-bold uppercase tracking-wide text-primary">Mô phỏng kỳ thi</p>
                 <h1 class="font-headline-lg text-headline-lg font-bold text-on-surface">Kỳ thi</h1>
                 <p class="mt-3 text-sm leading-6 text-on-surface-variant sm:text-base">
-                    Chọn kỳ thi theo ma trận đề bộ — hệ thống tạo bài thi riêng với đủ số câu, phân bổ và thời gian tương ứng.
+                    Chọn kỳ thi đã gắn ma trận đề. Hệ thống tạo bài thi riêng theo phân bổ và thời gian của ma trận.
                 </p>
             </div>
             @unless ($canStartExam)
@@ -43,7 +43,7 @@
 
         <div class="mb-4">
             <h2 class="text-lg font-bold text-on-surface">Chọn kỳ thi</h2>
-            <p class="mt-1 text-sm text-on-surface-variant">Mỗi lần tạo sẽ sinh một bài thi mới từ ma trận (không trùng đề với lần trước).</p>
+            <p class="mt-1 text-sm text-on-surface-variant">Chỉ hiện kỳ thi đã gắn ma trận và đúng chức danh. Mỗi lần tạo sinh một bài thi mới.</p>
         </div>
 
         <div class="grid gap-4 lg:grid-cols-3">
@@ -65,7 +65,7 @@
                                         <p class="mt-0.5 font-mono text-[11px] text-on-surface-variant">{{ $card['code'] }}</p>
                                     @endif
                                     <p class="mt-1 text-sm leading-6 text-on-surface-variant line-clamp-2">
-                                        {{ $card['description'] ?: 'Ma trận đề thi theo cấu trúc chuẩn.' }}
+                                        {{ $card['description'] ?: 'Kỳ thi có ma trận đề.' }}
                                     </p>
                                 </div>
                             </div>

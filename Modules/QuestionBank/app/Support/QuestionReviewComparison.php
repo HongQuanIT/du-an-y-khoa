@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Storage;
 use Modules\Auth\Models\Profession;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Models\Blueprint;
+use Modules\QuestionBank\Models\ExamCatalog;
 use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionOption;
@@ -85,8 +86,12 @@ final class QuestionReviewComparison
         $imageChanged = (string) $publishedImage !== (string) $proposedImage;
 
         $lessons = $this->compareLessons($snapshot, $question);
+        if (! array_key_exists('exam_catalog_ids', $snapshot) && array_key_exists('blueprint_ids', $snapshot)) {
+            $snapshot['exam_catalog_ids'] = ExamCatalog::idsForSnapshot($snapshot);
+        }
+
         $professions = $this->compareMembership($snapshot, $question, 'profession_ids', 'professions', Profession::class, $canCompare, 'Đối tượng #');
-        $blueprints = $this->compareMembership($snapshot, $question, 'blueprint_ids', 'blueprints', Blueprint::class, $canCompare, 'Kỳ thi #');
+        $blueprints = $this->compareMembership($snapshot, $question, 'exam_catalog_ids', 'examCatalogs', ExamCatalog::class, $canCompare, 'Kỳ thi #');
         $access = $this->compareAccess($snapshot, $question, $canCompare);
         $keyInfo = $this->compareKeyInfo(
             array_values((array) ($snapshot['key_info'] ?? [])),
@@ -209,7 +214,7 @@ final class QuestionReviewComparison
 
     /**
      * @param  array<string, mixed>  $snapshot
-     * @param  class-string<Profession|Blueprint>  $modelClass
+     * @param  class-string<Profession|Blueprint|ExamCatalog>  $modelClass
      * @return array{changed: bool, published: list<Chip>, proposed: list<Chip>}
      */
     private function compareMembership(
