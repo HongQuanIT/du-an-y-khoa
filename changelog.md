@@ -2,6 +2,13 @@
 
 ## 2026-09-29
 
+### Feat — Gọn trang tổng kết phiên
+
+- Bỏ biểu đồ tỷ lệ đúng theo chủ đề.
+- Đổi tiêu đề phân tích thành "Phân tích bài theo phiên".
+
+## 2026-09-29
+
 ### Feat — Nhớ độ bền trí nhớ từng câu
 
 - Lưu độ bền và thời điểm chấm gần nhất khi trả lời đúng hoặc sai.

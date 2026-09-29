@@ -671,9 +671,9 @@ final class QuestionBankFlowTest extends TestCase
                         && $row['difficulty'] === 'Trung bình');
             })
             ->assertSee('Tóm tắt nhanh')
-            ->assertSee('Tỷ lệ đúng theo chủ đề')
-            ->assertSee('id="student-session-topic-accuracy"', false)
-            ->assertSee('Phân tích chi tiết chủ đề')
+            ->assertDontSee('Tỷ lệ đúng theo chủ đề')
+            ->assertDontSee('id="student-session-topic-accuracy"', false)
+            ->assertSee('Phân tích bài theo phiên')
             ->assertSee('Tổng quan từng câu')
             ->assertSee('Thời gian cho mỗi câu hỏi')
             ->assertSee('Thống kê đồng nghiệp')

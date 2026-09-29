@@ -3,7 +3,6 @@
      * @var \Modules\StudyPlan\Models\StudyPlan $plan
      * @var \Modules\StudyPlan\Models\StudyPlanTask $task
      * @var list<array<string, mixed>> $topics
-     * @var list<array{label: string, height: int, rate: int}> $chartBars
      * @var list<array<string, mixed>> $questionOverview
      */
     $minutes = intdiv(max(0, $timeSpentSeconds), 60);
@@ -29,19 +28,6 @@
     ];
     $reviewUrl = $summaryConfig['review_url'];
     $detailUrl = $summaryConfig['back_url'];
-    $topicChart = [[
-        'id' => 'student-session-topic-accuracy',
-        'title' => 'Tỷ lệ đúng theo chủ đề',
-        'subtitle' => 'Kết quả của phiên vừa hoàn thành',
-        'type' => 'bar',
-        'format' => 'percent',
-        'labels' => array_column($chartBars, 'label'),
-        'datasets' => [[
-            'label' => 'Tỷ lệ đúng',
-            'data' => array_column($chartBars, 'rate'),
-            'color' => '#0f766e',
-        ]],
-    ]];
     $questionTimeLabel = static function (int $totalSeconds): string {
         $totalSeconds = max(0, $totalSeconds);
 
@@ -157,19 +143,9 @@
                 </ul>
             </div>
 
-            @if ($chartBars !== [])
-                <div class="lg:col-span-12" data-admin-dashboard-charts data-charts='@json($topicChart)'>
-                    <x-admin.trend-chart
-                        id="student-session-topic-accuracy"
-                        title="Tỷ lệ đúng theo chủ đề"
-                        subtitle="Kết quả của phiên vừa hoàn thành"
-                        full-width />
-                </div>
-            @endif
-
             <div class="overflow-hidden rounded-2xl border border-outline-variant bg-white shadow-sm lg:col-span-12">
                 <div class="flex items-center justify-between border-b border-outline-variant p-6">
-                    <h2 class="font-headline-sm text-headline-sm">Phân tích chi tiết chủ đề</h2>
+                    <h2 class="font-headline-sm text-headline-sm">Phân tích bài theo phiên</h2>
                     <a href="{{ $reviewUrl }}" class="flex items-center gap-1 text-sm font-bold text-primary hover:underline">
                         Xem từng câu
                         <span class="material-symbols-outlined text-base">chevron_right</span>
@@ -455,8 +431,4 @@
             </div>
         </div>
     </div>
-
-    @if ($chartBars !== [])
-        @vite('resources/js/admin/dashboard-charts.js')
-    @endif
 </x-layouts.app>
