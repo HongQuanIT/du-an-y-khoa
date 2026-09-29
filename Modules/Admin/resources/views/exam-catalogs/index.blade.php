@@ -15,7 +15,7 @@
 
     @include('admin::taxonomy._sub-nav', ['active' => 'exam-catalogs'])
 
-    <x-admin.flash :except="['name', 'slug', 'code', 'blueprint_id', 'profession_ids', 'description', 'status']" />
+    <x-admin.flash :except="['name', 'code', 'blueprint_id', 'profession_ids', 'description', 'status']" />
 
     <div class="space-y-4"
          x-data="examCatalogIndex({
@@ -30,12 +30,11 @@
             canCreate: @js($canCreate),
             canUpdate: @js($canUpdate),
             canDelete: @js($canDelete),
-            professions: @js($professions->map(fn ($profession) => ['id' => (int) $profession->id, 'name' => $profession->name])->values()),
+            professions: @js($professions->map(fn ($profession) => ['id' => (int) $profession->id, 'name' => $profession->name, 'code' => $profession->code])->values()),
             openCreatePanel: @js($openCreate),
             reopenPanel: @js($reopenPanel),
             fieldErrors: @js([
                 'name' => $reopenPanel ? $errors->first('name') : '',
-                'slug' => $reopenPanel ? $errors->first('slug') : '',
                 'code' => $reopenPanel ? $errors->first('code') : '',
                 'blueprint_id' => $reopenPanel ? $errors->first('blueprint_id') : '',
             ]),
@@ -43,7 +42,6 @@
                 'id' => $editingId ?: null,
                 'update_url' => $reopenUpdateUrl,
                 'name' => old('name', ''),
-                'slug' => old('slug', ''),
                 'code' => old('code', ''),
                 'description' => old('description', ''),
                 'status' => old('status', 'active'),
@@ -56,7 +54,7 @@
             <div class="relative min-w-0 flex-1">
                 <span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant">search</span>
                 <input type="search" x-model="query" @input="applySearch()"
-                    placeholder="Tìm kỳ thi theo tên, mã hoặc đường dẫn…"
+                    placeholder="Tìm kỳ thi theo tên hoặc mã…"
                     class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low py-2 pl-10 pr-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20">
             </div>
             <select x-model="statusFilter" @change="changeFilter()"
@@ -107,7 +105,7 @@
                                 <td class="px-5 py-3.5 align-middle">
                                     <div class="min-w-0">
                                         <p class="truncate font-medium text-on-surface" x-text="item.name" :title="item.name"></p>
-                                        <p class="truncate font-mono text-[11px] text-on-surface-variant" x-text="item.code || item.slug"></p>
+                                        <p x-show="item.code" class="truncate font-mono text-[11px] text-on-surface-variant" x-text="item.code"></p>
                                     </div>
                                 </td>
                                 <td class="px-4 py-3.5 align-middle text-on-surface-variant">
@@ -180,13 +178,6 @@
                                     :class="fieldErrors.name ? 'border-error focus:border-error focus:ring-error/20' : 'border-outline-variant focus:border-primary focus:ring-primary/20'">
                                 <p x-show="fieldErrors.name" x-text="fieldErrors.name" class="mt-1.5 text-xs text-error"></p>
                             </div>
-                            <div x-show="panel === 'edit'">
-                                <label class="mb-1.5 block text-xs font-semibold text-on-surface-variant">Đường dẫn định danh</label>
-                                <input name="slug" x-model="form.slug"
-                                    class="h-11 w-full rounded-lg border bg-surface-container-lowest px-3 font-mono text-sm outline-none focus:ring-2"
-                                    :class="fieldErrors.slug ? 'border-error focus:border-error focus:ring-error/20' : 'border-outline-variant focus:border-primary focus:ring-primary/20'">
-                                <p x-show="fieldErrors.slug" x-text="fieldErrors.slug" class="mt-1.5 text-xs text-error"></p>
-                            </div>
                             <div>
                                 <label class="mb-1.5 block text-xs font-semibold text-on-surface-variant">Mã</label>
                                 <input name="code" x-model="form.code" maxlength="100" placeholder="Tùy chọn"
@@ -215,19 +206,51 @@
                                 </select>
                                 <p x-show="fieldErrors.blueprint_id" x-text="fieldErrors.blueprint_id" class="mt-1.5 text-xs text-error"></p>
                             </div>
-                            <fieldset>
-                                <legend class="mb-2 text-xs font-semibold text-on-surface-variant">Đối tượng</legend>
-                                <div class="grid gap-1">
-                                    <template x-for="profession in professions" :key="'profession-'+profession.id">
-                                        <label class="flex items-center gap-2 text-sm">
-                                            <input type="checkbox" class="size-4 rounded text-primary"
-                                                :checked="form.profession_ids.map(Number).includes(Number(profession.id))"
-                                                @change="toggleProfession(profession.id)">
-                                            <span x-text="profession.name"></span>
-                                        </label>
+                            <div>
+                                <p class="mb-1.5 text-xs font-semibold text-on-surface-variant">Đối tượng</p>
+                                <div class="mb-2 flex flex-wrap gap-1.5" x-show="form.profession_ids.length">
+                                    <template x-for="id in form.profession_ids" :key="'profession-chip-'+id">
+                                        <span class="inline-flex max-w-full items-center gap-1 rounded-lg bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
+                                            <span class="min-w-0 truncate" x-text="professionLabel(id)"></span>
+                                            <button type="button" @click="removeProfession(id)"
+                                                class="inline-flex size-5 shrink-0 items-center justify-center rounded-md text-primary/70 hover:bg-primary/15 hover:text-primary"
+                                                :aria-label="'Bỏ ' + professionLabel(id)">
+                                                <span class="material-symbols-outlined text-[14px]">close</span>
+                                            </button>
+                                        </span>
                                     </template>
                                 </div>
-                            </fieldset>
+                                <div class="relative" @click.outside="professionOpen = false">
+                                    <div class="relative">
+                                        <span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant">search</span>
+                                        <input type="search" x-model="professionQuery"
+                                            @focus="professionOpen = true"
+                                            @click="professionOpen = true"
+                                            @keydown.escape.prevent="professionOpen = false"
+                                            @keydown.enter.prevent="addFirstProfession()"
+                                            autocomplete="off" placeholder="Tìm và chọn đối tượng…"
+                                            role="combobox" :aria-expanded="professionOpen"
+                                            class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-lowest py-2 pl-10 pr-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                                    </div>
+                                    <div x-show="professionOpen" x-cloak
+                                        class="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border border-outline-variant bg-surface p-1 shadow-xl"
+                                        role="listbox">
+                                        <template x-for="item in professionSuggestions" :key="'sug-profession-'+item.id">
+                                            <button type="button" role="option" @mousedown.prevent="addProfession(item)"
+                                                class="flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-surface-container-low">
+                                                <span class="min-w-0 truncate font-medium" x-text="item.name"></span>
+                                                <span class="shrink-0 font-mono text-[11px] text-on-surface-variant" x-show="item.code" x-text="item.code"></span>
+                                            </button>
+                                        </template>
+                                        <p x-show="professionSuggestions.length === 0 && professions.length > 0" class="px-3 py-2 text-xs text-on-surface-variant">
+                                            Không còn đối tượng phù hợp.
+                                        </p>
+                                        <p x-show="professions.length === 0" class="px-3 py-2 text-xs text-error">
+                                            Chưa có đối tượng — hãy thêm chức danh trước.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
                             <div>
                                 <label class="mb-1.5 block text-xs font-semibold text-on-surface-variant">Mô tả</label>
                                 <textarea name="description" x-model="form.description" rows="3" maxlength="2000" placeholder="Tùy chọn"
@@ -277,6 +300,8 @@
                 canUpdate: config.canUpdate,
                 canDelete: config.canDelete,
                 professions: config.professions || [],
+                professionQuery: '',
+                professionOpen: false,
                 query: config.query || '',
                 statusFilter: config.status || 'all',
                 nameSort: config.dir === 'desc' ? 'desc' : 'asc',
@@ -291,12 +316,11 @@
                 panel: null,
                 confirming: null,
                 form: {
-                    name: '', slug: '', code: '', description: '', status: 'active',
+                    name: '', code: '', description: '', status: 'active',
                     sort_order: 0, blueprint_id: '', profession_ids: [],
                 },
                 fieldErrors: {
                     name: config.fieldErrors?.name || '',
-                    slug: config.fieldErrors?.slug || '',
                     code: config.fieldErrors?.code || '',
                     blueprint_id: config.fieldErrors?.blueprint_id || '',
                 },
@@ -387,7 +411,6 @@
                         id: null,
                         update_url: '',
                         name: '',
-                        slug: '',
                         code: '',
                         description: '',
                         status: 'active',
@@ -397,22 +420,61 @@
                     };
                 },
                 clearFieldErrors() {
-                    this.fieldErrors = { name: '', slug: '', code: '', blueprint_id: '' };
+                    this.fieldErrors = { name: '', code: '', blueprint_id: '' };
                 },
-                toggleProfession(id) {
+                resetProfessionPicker() {
+                    this.professionQuery = '';
+                    this.professionOpen = false;
+                },
+                professionLabel(id) {
+                    const needle = Number(id);
+                    return this.professions.find((item) => Number(item.id) === needle)?.name || ('#' + id);
+                },
+                get professionSuggestions() {
+                    const q = this.professionQuery.trim().toLowerCase();
+                    const selected = this.form.profession_ids.map(Number);
+
+                    return this.professions
+                        .filter((item) => ! selected.includes(Number(item.id)))
+                        .filter((item) => {
+                            if (q === '') {
+                                return true;
+                            }
+
+                            return [item.name, item.code]
+                                .filter(Boolean)
+                                .some((value) => String(value).toLowerCase().includes(q));
+                        })
+                        .slice()
+                        .sort((a, b) => String(a.name).localeCompare(String(b.name), 'vi', { sensitivity: 'base' }))
+                        .slice(0, 10);
+                },
+                addProfession(item) {
+                    const id = Number(item.id);
+                    if (! this.form.profession_ids.map(Number).includes(id)) {
+                        this.form.profession_ids = [...this.form.profession_ids.map(Number), id];
+                    }
+                    this.professionQuery = '';
+                },
+                addFirstProfession() {
+                    const first = this.professionSuggestions[0];
+                    if (first) {
+                        this.addProfession(first);
+                    }
+                },
+                removeProfession(id) {
                     const target = Number(id);
-                    const current = this.form.profession_ids.map(Number);
-                    this.form.profession_ids = current.includes(target)
-                        ? current.filter((value) => value !== target)
-                        : [...current, target];
+                    this.form.profession_ids = this.form.profession_ids.map(Number).filter((value) => value !== target);
                 },
                 openCreate() {
                     this.clearFieldErrors();
+                    this.resetProfessionPicker();
                     this.form = this.blankForm();
                     this.panel = 'create';
                 },
                 openEdit(item) {
                     this.clearFieldErrors();
+                    this.resetProfessionPicker();
                     this.form = {
                         ...this.blankForm(),
                         ...item,
@@ -425,6 +487,7 @@
                 },
                 closePanel() {
                     this.clearFieldErrors();
+                    this.resetProfessionPicker();
                     this.panel = null;
                 },
                 init() {

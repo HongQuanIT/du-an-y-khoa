@@ -2,7 +2,13 @@
 
 ## 2026-09-29
 
-<<<<<<< HEAD
+### Feat — Gọn form kỳ thi
+
+- Bỏ đường dẫn định danh; form và danh sách kỳ thi chỉ hiện mã.
+- Chọn đối tượng bằng ô tìm kiếm và chip, giống danh mục kiến thức.
+
+## 2026-09-29
+
 ### Feat — Học viên chọn tình trạng học tập
 
 - Onboarding chọn Đã tốt nghiệp hoặc Chưa tốt nghiệp sau khi chọn chức danh; năm học chỉ hiện khi chưa tốt nghiệp.
@@ -27,14 +33,15 @@
 - Chức danh/ngành nghề chọn một trạng thái học viên: chọn năm học hoặc đã tốt nghiệp.
 - Ẩn tên viết tắt và mã khỏi form, danh sách Tỉnh/Thành phố.
 - Không còn hiển thị thứ tự trong danh sách danh mục.
-=======
+
+## 2026-09-29
+
 ### Feat — Tách kỳ thi khỏi ma trận đề
 
 - Thêm danh mục kỳ thi, gắn đối tượng, và tùy chọn một ma trận đề. Câu hỏi gắn kỳ thi thay vì gắn thẳng ma trận.
 - Luyện tập lọc theo chức danh; chọn kỳ thi thì chỉ lấy câu đúng chức danh và kỳ thi đó. Phiên đề thi chỉ mở kỳ thi đã có ma trận.
 - Tạo, sửa, xóa kỳ thi ngay trên danh sách. Bỏ mục chức danh trên form ma trận.
 - Gỡ seed câu hỏi demo từ VM14K.
->>>>>>> f86da96 (feat(qbank): tách kỳ thi khỏi ma trận đề)
 
 ## 2026-09-28
 
