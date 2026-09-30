@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-09-30
+
+### Fix — Nút Đặt lại trên trang tạo phiên
+
+- Không gọi form.reset(), vì tên phiên và chế độ học/thi không có giá trị HTML mặc định nên bị xóa trắng.
+- State bộ lọc được đặt lại bằng Alpine, số câu đếm lại đúng sau khi bấm.
+
+## 2026-09-30
+
+### Fix — Bộ lọc Làm đúng gồm cả câu đúng có gợi ý
+
+- Lần chấm mới nhất đúng thì vào «Làm đúng», có dùng gợi ý hay không.
+- «Đúng có gợi ý» vẫn chỉ gồm câu đúng và đã mở gợi ý.
+- Cùng quy tắc trên bộ lọc trạng thái của kế hoạch học tập.
+
 ## 2026-09-29
 
 ### Fix — Trang log thích ứng khớp selector

@@ -615,8 +615,10 @@ final class SessionQuestionSelector
             ->filter(function (QuestionAttempt $attempt) use ($statuses): bool {
                 return match (true) {
                     $attempt->is_correct === false => in_array('incorrect', $statuses, true),
-                    $attempt->is_correct === true && $attempt->used_hint => in_array('correct_with_hints', $statuses, true),
-                    $attempt->is_correct === true => in_array('correct', $statuses, true),
+                    // "Làm đúng" is every latest correct grade, with or without a hint.
+                    // "Đúng có gợi ý" stays the hinted subset.
+                    $attempt->is_correct === true => in_array('correct', $statuses, true)
+                        || ($attempt->used_hint && in_array('correct_with_hints', $statuses, true)),
                     default => false,
                 };
             })

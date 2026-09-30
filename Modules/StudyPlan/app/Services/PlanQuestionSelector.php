@@ -234,8 +234,9 @@ final class PlanQuestionSelector
             ->filter(function (QuestionAttempt $attempt) use ($statuses): bool {
                 return match (true) {
                     $attempt->is_correct === false => in_array('incorrect', $statuses, true),
-                    $attempt->is_correct === true && $attempt->used_hint => in_array('correct_with_hints', $statuses, true),
-                    $attempt->is_correct === true => in_array('correct', $statuses, true),
+                    // "Trả lời đúng" includes hinted corrects. "Đúng có gợi ý" is the subset.
+                    $attempt->is_correct === true => in_array('correct', $statuses, true)
+                        || ($attempt->used_hint && in_array('correct_with_hints', $statuses, true)),
                     default => false,
                 };
             })
