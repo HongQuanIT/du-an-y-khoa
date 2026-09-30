@@ -233,6 +233,79 @@ final class QuestionBankFlowTest extends TestCase
         $this->assertSame('Phiên luyện thích ứng', $session->displayName());
     }
 
+    public function test_correct_status_filter_includes_latest_answers_that_used_a_hint(): void
+    {
+        $plain = $this->createQuestion($this->topic, true, Difficulty::Easy, 'Đúng không gợi ý');
+        $hinted = $this->createQuestion($this->topic, true, Difficulty::Easy, 'Đúng có gợi ý');
+        $wrong = $this->createQuestion($this->topic, true, Difficulty::Easy, 'Làm sai');
+        $earlier = QuestionSession::query()->create([
+            'user_id' => $this->user->id,
+            'mode' => SessionMode::Study,
+            'status' => SessionStatus::Completed,
+            'source' => 'custom',
+            'question_ids' => [(string) $hinted->getKey()],
+            'total' => 1,
+        ]);
+        $session = QuestionSession::query()->create([
+            'user_id' => $this->user->id,
+            'mode' => SessionMode::Study,
+            'status' => SessionStatus::Completed,
+            'source' => 'custom',
+            'question_ids' => [
+                (string) $plain->getKey(),
+                (string) $hinted->getKey(),
+                (string) $wrong->getKey(),
+            ],
+            'total' => 3,
+        ]);
+
+        QuestionAttempt::query()->create([
+            'session_id' => $earlier->getKey(),
+            'user_id' => $this->user->id,
+            'question_id' => $hinted->getKey(),
+            'is_correct' => false,
+            'used_hint' => false,
+            'answered_at' => now()->subMinute(),
+        ]);
+        foreach ([
+            [$plain, true, false],
+            [$hinted, true, true],
+            [$wrong, false, false],
+        ] as [$question, $isCorrect, $usedHint]) {
+            QuestionAttempt::query()->create([
+                'session_id' => $session->getKey(),
+                'user_id' => $this->user->id,
+                'question_id' => $question->getKey(),
+                'is_correct' => $isCorrect,
+                'used_hint' => $usedHint,
+                'answered_at' => now(),
+            ]);
+        }
+
+        $payload = [
+            'mode' => SessionMode::Study->value,
+            'source' => 'custom',
+            'count' => 1,
+            'lesson_ids' => [$this->topic->id],
+            'question_status_mode' => 'latest',
+        ];
+
+        $this->actingAs($this->user)
+            ->postJson(route('qbank.count'), [...$payload, 'question_statuses' => ['correct']])
+            ->assertOk()
+            ->assertJsonPath('data.count', 2);
+
+        $this->actingAs($this->user)
+            ->postJson(route('qbank.count'), [...$payload, 'question_statuses' => ['correct_with_hints']])
+            ->assertOk()
+            ->assertJsonPath('data.count', 1);
+
+        $this->actingAs($this->user)
+            ->postJson(route('qbank.count'), [...$payload, 'question_statuses' => ['incorrect']])
+            ->assertOk()
+            ->assertJsonPath('data.count', 1);
+    }
+
     public function test_session_size_can_equal_the_full_matching_pool(): void
     {
         for ($index = 1; $index <= 25; $index++) {
