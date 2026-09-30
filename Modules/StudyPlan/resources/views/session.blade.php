@@ -306,11 +306,10 @@
             });
         },
         toggleKeyInfo() {
-            if (!this.hasKeyInfo) return;
             this.keyInfoEnabled = !this.keyInfoEnabled;
             this.highlightMode = false;
             this.selectionBar.show = false;
-            if (this.keyInfoEnabled) {
+            if (this.keyInfoEnabled && this.hasKeyInfo) {
                 this.keyInfoUsed = true;
                 this.persistAnnotation({ key_info_used: true });
             }
@@ -750,12 +749,12 @@
 
                         <div class="flex min-h-12 items-center border-y border-outline-variant bg-surface-container-lowest px-1"
                             data-testid="question-knowledge-toolbar">
-                            <button type="button" @click="toggleKeyInfo()" :disabled="!hasKeyInfo"
-                                class="inline-flex h-12 items-center gap-2 border-b-2 px-3 text-label-sm font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+                            <button type="button" @click="toggleKeyInfo()"
+                                class="inline-flex h-12 items-center gap-2 border-b-2 px-3 text-label-sm font-bold transition-colors"
                                 :class="keyInfoEnabled
                                     ? 'border-amber-600 text-amber-700'
                                     : 'border-transparent text-on-surface-variant hover:bg-surface-container-high hover:text-primary'"
-                                title="{{ $hasKeyInfo ? 'Gạch chân các ý chính' : 'Câu này chưa có gợi ý được đánh dấu' }}"
+                                title="Gạch chân các đoạn gợi ý khớp trong câu hỏi"
                                 :aria-pressed="keyInfoEnabled">
                                 <span class="material-symbols-outlined text-[18px]">format_align_left</span>
                                 <span>Gợi ý</span>

@@ -516,20 +516,27 @@ final class QuestionBankFlowTest extends TestCase
         $this->assertSame(1, $session->total);
     }
 
-    public function test_key_info_derives_clinical_clues_for_legacy_questions(): void
+    public function test_key_info_underlines_only_hint_phrases_that_match_the_stem(): void
     {
         $stem = '[Amboss] Ca lâm sàng #064 – Skin & Subcutaneous Tissue. '
             .'Viêm khớp gối nóng đỏ, dịch đục, sốt. '
             .'Xét nghiệm dịch khớp ưu tiên để loại trừ?';
         $renderer = app(QuestionKeyInfoRenderer::class);
-        $phrases = $renderer->resolvePhrases($stem, []);
 
-        $this->assertSame(['Viêm khớp gối nóng đỏ, dịch đục, sốt.'], $phrases);
+        $this->assertSame([], $renderer->resolvePhrases($stem, []));
+        $this->assertStringNotContainsString('data-key-info', $renderer->render($stem, []));
+
+        $phrases = $renderer->resolvePhrases($stem, ['dịch đục', 'không nằm trong đề']);
+        $html = $renderer->render($stem, $phrases);
+
+        $this->assertSame(['dịch đục', 'không nằm trong đề'], $phrases);
+        $this->assertSame(1, substr_count($html, 'data-key-info'));
         $this->assertStringContainsString(
             '<span data-key-info class="underline decoration-amber-600 decoration-2 underline-offset-2">'
-                .'Viêm khớp gối nóng đỏ, dịch đục, sốt.</span>',
-            $renderer->render($stem, $phrases),
+                .'dịch đục</span>',
+            $html,
         );
+        $this->assertStringNotContainsString('underline decoration-amber-600 decoration-2 underline-offset-2">Viêm khớp gối', $html);
     }
 
     public function test_custom_scope_filters_are_real_hard_boundaries_and_preserve_free_gating(): void

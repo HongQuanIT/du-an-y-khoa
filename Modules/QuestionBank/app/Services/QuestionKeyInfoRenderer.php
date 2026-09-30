@@ -6,70 +6,19 @@ namespace Modules\QuestionBank\Services;
 
 use App\Support\Html\SafeHtml;
 
-/** Resolve and safely render the key clinical phrases in a question stem. */
+/** Resolve and safely render authored hint phrases in a question stem. */
 final class QuestionKeyInfoRenderer
 {
     /**
-     * Prefer editor-curated phrases and derive a conservative fallback for
-     * legacy/demo questions that do not have key_info yet.
+     * Return only editor-authored hint phrases. Matching against the stem
+     * happens in render(); questions with no phrases stay unmarked.
      *
      * @param  array<int, mixed>  $curated
      * @return list<string>
      */
     public function resolvePhrases(string $stem, array $curated): array
     {
-        $curated = $this->normalizePhrases($curated);
-
-        if ($curated !== []) {
-            return $curated;
-        }
-
-        // Strip HTML so NLP runs on plain text only
-        $plainStem = SafeHtml::plainText($stem);
-
-        $sentences = preg_split('/(?<=[.!?])\s+/u', trim($plainStem)) ?: [];
-        $candidates = collect($sentences)
-            ->map(fn (string $sentence, int $index): array => [
-                'index' => $index,
-                'text' => trim($sentence),
-            ])
-            ->filter(function (array $item): bool {
-                $text = $item['text'];
-
-                return mb_strlen($text) >= 12
-                    && mb_strlen($text) <= 240
-                    && ! str_starts_with($text, '[')
-                    && ! str_ends_with($text, '?');
-            })
-            ->map(function (array $item): array {
-                $text = $item['text'];
-                $clinicalSignals = preg_match_all(
-                    '/\b(?:sốt|đau|đỏ|dịch|máu|ho|khó thở|mạch|huyết áp|nhiệt độ|xét nghiệm|creatinine|protein|casts?|fever|pain|blood|sputum|urine|biopsy|deposits?)\b/ui',
-                    $text,
-                );
-
-                return $item + [
-                    'score' => ($clinicalSignals ?: 0) * 4
-                        + substr_count($text, ',') * 2
-                        + (preg_match('/\d/u', $text) === 1 ? 2 : 0),
-                ];
-            })
-            ->filter(fn (array $item): bool => $item['score'] > 0)
-            ->sortByDesc('score')
-            ->take(3)
-            ->sortBy('index')
-            ->pluck('text')
-            ->values()
-            ->all();
-
-        if ($candidates !== []) {
-            return $candidates;
-        }
-
-        $fallback = preg_replace('/^\[[^\]]+\]\s*/u', '', trim($plainStem)) ?? trim($plainStem);
-        $fallback = trim($fallback, " \t\n\r\0\x0B?:");
-
-        return mb_strlen($fallback) >= 4 ? [$fallback] : [];
+        return $this->normalizePhrases($curated);
     }
 
     /**
