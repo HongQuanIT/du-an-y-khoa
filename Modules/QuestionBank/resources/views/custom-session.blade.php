@@ -396,7 +396,9 @@
                 this.$nextTick(() => this.refreshCount());
             },
             resetBuilder() {
-                this.$refs.builderForm.reset();
+                // Do not call form.reset(): radios and the session name have no
+                // HTML default, so the browser clears them without Alpine writing
+                // the same values back. The count request then fails validation.
                 this.mode = 'study';
                 this.source = 'custom';
                 this.adaptiveFocus = 'balanced';
