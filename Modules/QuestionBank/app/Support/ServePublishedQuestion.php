@@ -44,6 +44,24 @@ final class ServePublishedQuestion
             && ! in_array($question->status, [QuestionStatus::Retired, QuestionStatus::Private], true);
     }
 
+    /**
+     * List label for the live bank pointer. Workflow status stays on its own pill.
+     */
+    public static function servingLabel(Question $question): string
+    {
+        $version = (int) ($question->published_version ?? 0);
+
+        if (self::isAvailable($question)) {
+            return $version > 0 ? 'Đang phục vụ v'.$version : 'Đang phục vụ';
+        }
+
+        if ($version < 1 && (int) $question->version < 1) {
+            return 'Chưa phát hành';
+        }
+
+        return 'Không phục vụ';
+    }
+
     public static function needsOverlay(Question $question): bool
     {
         return self::isAvailable($question)

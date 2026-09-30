@@ -213,11 +213,16 @@ final class TransitionQuestionStatusAction
         }
 
         $nextVersion = $isPublishing ? ((int) $question->version + 1) : (int) $question->version;
+        // Leaving retirement drops the live pointer. History stays in question_versions.
+        // Draft and later review states stay out of the bank until the next publish.
+        $returnedFromRetirement = $from === QuestionStatus::Retired && $to === QuestionStatus::Draft;
 
         $question->forceFill([
             'status' => $to,
             'version' => $nextVersion,
-            'published_version' => $isPublishing ? $nextVersion : $question->published_version,
+            'published_version' => $isPublishing
+                ? $nextVersion
+                : ($returnedFromRetirement ? null : $question->published_version),
             'updated_by' => $actor->getKey(),
             'reviewer_id' => $isPublishing
                 ? $actor->getKey()
@@ -421,7 +426,15 @@ final class TransitionQuestionStatusAction
             return;
         }
 
-        // Rejected / retired → draft (creator resumes editing)
+        if ($from === QuestionStatus::Retired && $to === QuestionStatus::Draft) {
+            if (! $actor->can(Permission::QuestionPublish->value)) {
+                abort(403, 'Chỉ admin mới đưa câu ngừng dùng về nháp.');
+            }
+
+            return;
+        }
+
+        // Rejected → draft (creator resumes editing). Retired stays with admin.
         if (! $actor->can(Permission::QuestionUpdate->value)) {
             abort(403, 'Cần quyền question.update.');
         }

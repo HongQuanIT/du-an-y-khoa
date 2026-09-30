@@ -82,6 +82,8 @@ Route::middleware(['auth', 'portal:editor'])->group(function (): void {
                 ->middleware('permission:editor_question.submit|editor_question.update')->name('questions.transition');
             Route::delete('/questions/{question}', [QuestionController::class, 'destroy'])
                 ->middleware('permission:editor_question.delete')->name('questions.destroy');
+            Route::post('/questions/{question}/retire-request', [QuestionController::class, 'requestRetirement'])
+                ->middleware('permission:editor_question.delete')->name('questions.retire-request');
             Route::get('/questions/eligible-instructors', [QuestionController::class, 'eligibleInstructors'])
                 ->name('questions.eligible-instructors');
             Route::match(['get', 'post'], '/questions/export', QuestionExportController::class)

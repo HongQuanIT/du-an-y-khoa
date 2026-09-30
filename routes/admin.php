@@ -342,6 +342,9 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
         Route::delete('/questions/{question}', [QuestionController::class, 'destroy'])
             ->middleware('permission:'.Permission::QuestionDelete->value)
             ->name('questions.destroy');
+        Route::post('/questions/{question}/retire-request', [QuestionController::class, 'requestRetirement'])
+            ->middleware('permission:'.Permission::QuestionDelete->value)
+            ->name('questions.retire-request');
 
         // JSON pickers: soạn câu hỏi (create/update) hoặc quản lý phân loại/ma trận (topic.view).
         Route::middleware('permission:'.Permission::QuestionCreate->value.'|'.Permission::QuestionUpdate->value.'|taxonomy.view|blueprint.view|curriculum.view')->group(function (): void {

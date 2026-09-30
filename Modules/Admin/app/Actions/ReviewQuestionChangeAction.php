@@ -43,6 +43,7 @@ final class ReviewQuestionChangeAction
                 QuestionReviewAction::Create => $this->approveCreation($reviewer, $question),
                 QuestionReviewAction::Update => $this->approveUpdate($reviewer, $question, $reviewRequest),
                 QuestionReviewAction::Delete => $this->approveDeletion($reviewer, $question),
+                QuestionReviewAction::Retire => $this->approveRetirement($reviewer, $question),
             };
 
             $reviewRequest->forceFill([
@@ -128,6 +129,11 @@ final class ReviewQuestionChangeAction
         throw ValidationException::withMessages([
             'review' => 'Không duyệt thay đổi nội dung tại đây. Mọi create/edit phải do giảng viên duyệt trên /teach, sau đó admin xuất bản để tăng phiên bản.',
         ]);
+    }
+
+    private function approveRetirement(User $reviewer, Question $question): void
+    {
+        $this->transitionStatus->handle($reviewer, $question, QuestionStatus::Retired);
     }
 
     private function approveDeletion(User $reviewer, Question $question): void

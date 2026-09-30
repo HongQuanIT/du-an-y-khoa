@@ -15,6 +15,16 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Modules\Auth\Models\TwoFactorSecret;
 use Modules\Auth\Services\TotpService;
+use Modules\Classroom\Enums\LiveSessionStatus;
+use Modules\Classroom\Models\Classroom;
+use Modules\Classroom\Models\LiveSession;
+use Modules\Exam\Enums\ExamStatus;
+use Modules\Exam\Models\Exam;
+use Modules\Personalization\Models\Bookmark;
+use Modules\StudyPlan\Enums\TaskStatus;
+use Modules\StudyPlan\Enums\TaskType;
+use Modules\StudyPlan\Models\StudyPlan;
+use Modules\StudyPlan\Models\StudyPlanTask;
 use Modules\QuestionBank\Actions\FlagQuestionReviewAction;
 use Modules\QuestionBank\Actions\InstructorReviewQuestionAction;
 use Modules\QuestionBank\Enums\Difficulty;
@@ -23,6 +33,8 @@ use Modules\QuestionBank\Enums\QuestionReviewStatus;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Enums\ReviewerFlag;
 use Modules\QuestionBank\Enums\SessionMode;
+use Modules\QuestionBank\Enums\SessionSource;
+use Modules\QuestionBank\Enums\SessionStatus;
 use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
@@ -872,22 +884,165 @@ final class AdminQuestionManagementTest extends TestCase
         $this->assertSame($originalStem, strip_tags($served->stem));
     }
 
-    public function test_creator_delete_is_soft_deleted_only_after_admin_approves(): void
+    public function test_editor_retire_request_hides_the_question_only_after_admin_approves(): void
     {
         $creator = $this->staffUser(Role::ContentEditor);
         $admin = $this->staffUser(Role::Admin);
         $question = $this->makePublishedQuestion(createdBy: $creator);
 
         $this->actingAsStaff($creator)
-            ->delete(route('admin.questions.destroy', $question))
-            ->assertRedirect(route('admin.questions.index'));
+            ->get(route('editor.questions.edit', $question))
+            ->assertOk()
+            ->assertSee('Yêu cầu ngừng dùng', false)
+            ->assertDontSee('Yêu cầu xóa', false);
 
+        $this->actingAsStaff($creator)
+            ->delete(route('editor.questions.destroy', $question))
+            ->assertForbidden();
         $this->assertNotSoftDeleted('questions', ['id' => $question->id]);
+
+        $this->actingAsStaff($creator)
+            ->post(route('editor.questions.retire-request', $question))
+            ->assertRedirect();
+
+        $question->refresh();
+        $this->assertSame(QuestionStatus::Published, $question->status);
         $reviewRequest = QuestionReviewRequest::query()->where('question_id', $question->id)->firstOrFail();
-        $this->assertSame(QuestionReviewAction::Delete, $reviewRequest->action);
+        $this->assertSame(QuestionReviewAction::Retire, $reviewRequest->action);
+
+        $this->actingAsStaff($admin)
+            ->get(route('admin.questions.reviews.show', $reviewRequest))
+            ->assertOk()
+            ->assertSee('Duyệt ngừng dùng', false)
+            ->assertSee('Editor yêu cầu ngừng dùng', false)
+            ->assertDontSee('Xác nhận xóa', false);
 
         $this->actingAsStaff($admin)
             ->post(route('admin.questions.reviews.approve', $reviewRequest))
+            ->assertRedirect(route('admin.questions.edit', $question));
+
+        $question->refresh();
+        $this->assertSame(QuestionStatus::Retired, $question->status);
+        $this->assertNotSoftDeleted('questions', ['id' => $question->id]);
+
+        $this->actingAsStaff($creator)
+            ->get(route('editor.questions.edit', $question))
+            ->assertOk()
+            ->assertSee('Đã ngừng dùng — không còn trên ngân hàng', false)
+            ->assertSee('phiên bản gần nhất', false)
+            ->assertDontSee('QBank đang phục vụ phiên bản', false);
+
+        $this->actingAsStaff($creator)
+            ->post(route('editor.questions.transition', $question), [
+                'status' => QuestionStatus::Draft->value,
+            ])
+            ->assertForbidden();
+        $this->assertSame(QuestionStatus::Retired, $question->fresh()->status);
+
+        $this->actingAsStaff($admin)
+            ->post(route('admin.questions.transition', $question), [
+                'status' => QuestionStatus::Draft->value,
+            ])
+            ->assertRedirect();
+
+        $question->refresh();
+        $this->assertSame(QuestionStatus::Draft, $question->status);
+        $this->assertNull($question->published_version);
+        $this->assertSame(1, (int) $question->version);
+        $this->assertFalse(\Modules\QuestionBank\Support\ServePublishedQuestion::isAvailable($question));
+
+        $this->actingAsStaff($creator)
+            ->get(route('editor.questions.edit', $question))
+            ->assertOk()
+            ->assertSee('Nháp', false)
+            ->assertSee('Không có bản đang phát hành', false)
+            ->assertDontSee('So sánh với bản đang dùng', false)
+            ->assertDontSee('QBank đang phục vụ phiên bản', false);
+    }
+
+    public function test_admin_must_confirm_deletion_after_seeing_shared_usage(): void
+    {
+        $creator = $this->staffUser(Role::ContentEditor);
+        $admin = $this->staffUser(Role::Admin);
+        $question = $this->makePublishedQuestion(createdBy: $creator);
+        $learner = User::factory()->create(['name' => 'Học viên giữ bookmark']);
+
+        $exam = Exam::query()->create([
+            'user_id' => $learner->id,
+            'title' => 'Đề nội khoa tháng 9',
+            'duration_minutes' => 60,
+            'status' => ExamStatus::Published,
+            'is_published' => true,
+        ]);
+        $exam->questions()->attach($question->getKey(), ['order' => 1]);
+
+        $plan = StudyPlan::factory()->create([
+            'user_id' => $learner->id,
+            'name' => 'Kế hoạch nội trú',
+        ]);
+        StudyPlanTask::query()->create([
+            'study_plan_id' => $plan->id,
+            'date' => now()->toDateString(),
+            'type' => TaskType::Questions,
+            'target' => 1,
+            'status' => TaskStatus::Pending,
+            'ref' => ['question_ids' => [(string) $question->getKey()]],
+        ]);
+
+        Bookmark::query()->create([
+            'user_id' => $learner->id,
+            'bookmarkable_type' => Bookmark::TYPE_QUESTION,
+            'bookmarkable_id' => (string) $question->getKey(),
+        ]);
+
+        $classroom = Classroom::query()->create([
+            'title' => 'Lớp chữa đề nội',
+            'host_user_id' => $admin->id,
+        ]);
+        LiveSession::query()->create([
+            'classroom_id' => $classroom->id,
+            'title' => 'Buổi chữa đề chiều',
+            'status' => LiveSessionStatus::Scheduled,
+            'question_set' => [
+                'source' => 'manual',
+                'question_ids' => [(string) $question->getKey()],
+            ],
+        ]);
+
+        QuestionSession::query()->create([
+            'user_id' => $learner->id,
+            'mode' => SessionMode::Study,
+            'status' => SessionStatus::Active,
+            'source' => SessionSource::Custom,
+            'question_ids' => [(string) $question->getKey()],
+            'total' => 1,
+        ]);
+
+        $this->actingAsStaff($admin)
+            ->get(route('admin.questions.edit', $question))
+            ->assertOk()
+            ->assertSee('Kiểm tra trước khi xóa', false)
+            ->assertSee('Đề nội khoa tháng 9', false)
+            ->assertSee('Kế hoạch nội trú', false)
+            ->assertSee('Học viên giữ bookmark', false)
+            ->assertSee('1 lượt lưu của học viên', false)
+            ->assertSee('Buổi chữa đề chiều', false)
+            ->assertSee('1 phiên đang mở vẫn làm tiếp được', false)
+            ->assertSee('Xác nhận xóa', false)
+            ->assertSee('Không xóa', false);
+
+        $this->actingAsStaff($admin)
+            ->from(route('admin.questions.edit', $question))
+            ->delete(route('admin.questions.destroy', $question))
+            ->assertRedirect(route('admin.questions.edit', $question))
+            ->assertSessionHasErrors('confirm_deletion');
+
+        $this->assertNotSoftDeleted('questions', ['id' => $question->id]);
+
+        $this->actingAsStaff($admin)
+            ->delete(route('admin.questions.destroy', $question), [
+                'confirm_deletion' => '1',
+            ])
             ->assertRedirect(route('admin.questions.index'));
 
         $this->assertSoftDeleted('questions', ['id' => $question->id]);
@@ -1087,6 +1242,8 @@ final class AdminQuestionManagementTest extends TestCase
             ->get(route('admin.questions.index', ['status' => 'draft']))
             ->assertOk()
             ->assertSee('Nháp')
+            ->assertSee('Chưa phát hành', false)
+            ->assertDontSee('Đang phục vụ', false)
             ->assertDontSee('Câu đã xuất bản để lọc', false);
 
         $this->actingAsStaff($admin)
@@ -1095,8 +1252,78 @@ final class AdminQuestionManagementTest extends TestCase
             ]))
             ->assertOk()
             ->assertSee('Stem draft test', false)
+            ->assertSee('Chưa phát hành', false)
             ->assertSee('Câu đã xuất bản để lọc', false)
+            ->assertSee('Đã xuất bản', false)
+            ->assertSee('Đang phục vụ v1', false)
+            ->assertDontSee('Đã xuất bản ·', false)
             ->assertSee($published->code, false);
+    }
+
+    public function test_question_index_bank_card_counts_questions_students_can_see(): void
+    {
+        $admin = $this->staffUser(Role::Admin);
+        $this->makePublishedQuestion(stem: 'Câu đang phát hành');
+        Question::factory()->create([
+            'stem' => 'Bản làm việc vẫn phục vụ snapshot',
+            'status' => QuestionStatus::Draft,
+            'version' => 4,
+            'published_version' => 4,
+        ]);
+        Question::factory()->create([
+            'stem' => 'Câu ngừng dùng',
+            'status' => QuestionStatus::Retired,
+            'version' => 2,
+            'published_version' => 2,
+        ]);
+        Question::factory()->create([
+            'stem' => 'Câu đang ẩn',
+            'status' => QuestionStatus::Private,
+            'version' => 3,
+            'published_version' => 3,
+        ]);
+        $this->makeDraftQuestion();
+
+        $this->actingAsStaff($admin)
+            ->get(route('admin.questions.index'))
+            ->assertOk()
+            ->assertSee('Ngân hàng (Qbank)', false)
+            ->assertSee('id="stats-in-bank-count" class="text-headline-sm font-bold text-on-surface">2<', false)
+            ->assertDontSee('>Đã xuất bản</p>', false);
+    }
+
+    public function test_question_index_free_card_counts_only_free_questions_in_the_bank(): void
+    {
+        $admin = $this->staffUser(Role::Admin);
+        $this->makePublishedQuestion(stem: 'Câu miễn phí đang phát hành', isFree: true);
+        $this->makePublishedQuestion(stem: 'Câu trả phí đang phát hành', isFree: false);
+        Question::factory()->create([
+            'stem' => 'Nháp miễn phí vẫn phục vụ snapshot',
+            'status' => QuestionStatus::Draft,
+            'is_free' => true,
+            'version' => 4,
+            'published_version' => 4,
+        ]);
+        Question::factory()->create([
+            'stem' => 'Nháp miễn phí chưa phát hành',
+            'status' => QuestionStatus::Draft,
+            'is_free' => true,
+            'version' => 0,
+            'published_version' => null,
+        ]);
+        Question::factory()->create([
+            'stem' => 'Ngừng dùng nhưng từng miễn phí',
+            'status' => QuestionStatus::Retired,
+            'is_free' => true,
+            'version' => 2,
+            'published_version' => 2,
+        ]);
+
+        $this->actingAsStaff($admin)
+            ->get(route('admin.questions.index'))
+            ->assertOk()
+            ->assertSee('Miễn phí (Qbank)', false)
+            ->assertSee('id="stats-free-in-bank-count" class="text-headline-sm font-bold text-on-surface">2<', false);
     }
 
     public function test_questions_index_shows_attempt_stats_from_rollup(): void

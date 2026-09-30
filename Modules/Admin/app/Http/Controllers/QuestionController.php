@@ -18,6 +18,8 @@ use Illuminate\View\View;
 use Modules\Admin\Actions\BulkTransitionQuestionsAction;
 use Modules\Admin\Actions\CloneQuestionAction;
 use Modules\Admin\Actions\RequestQuestionDeletionAction;
+use Modules\Admin\Actions\RequestQuestionRetirementAction;
+use Modules\Admin\Actions\SummarizeQuestionDeletionImpactAction;
 use Modules\Admin\Actions\SaveAdminQuestionAction;
 use Modules\Admin\Actions\TransitionQuestionStatusAction;
 use Modules\Admin\Support\AdminQuestionListQuery;
@@ -43,6 +45,7 @@ use Modules\QuestionBank\Support\QuestionExportLimits;
 use Modules\QuestionBank\Support\QuestionQaCompleteness;
 use Modules\QuestionBank\Support\QuestionReviewComparison;
 use Modules\QuestionBank\Support\QuestionReviewTimeline;
+use Modules\QuestionBank\Support\ServePublishedQuestion;
 
 final class QuestionController extends Controller
 {
@@ -132,13 +135,13 @@ final class QuestionController extends Controller
             ],
             'stats' => [
                 'total' => (clone $statsQuery)->count(),
-                'published' => (clone $statsQuery)->where('status', QuestionStatus::Published->value)->count(),
+                'in_bank' => ServePublishedQuestion::scopeAvailable(clone $statsQuery)->count(),
+                'free_in_bank' => ServePublishedQuestion::scopeAvailable(clone $statsQuery)->where('is_free', true)->count(),
                 'pending' => (clone $statsQuery)->whereIn('status', [
                     QuestionStatus::InReview->value,
                     QuestionStatus::InFlagReview->value,
                 ])->count(),
                 'must_reject' => $mustRejectCount,
-                'free' => (clone $statsQuery)->where('is_free', true)->count(),
             ],
             'canCreate' => $actor->can(Permission::QuestionCreate->value),
             'canPublish' => $actor->can(Permission::QuestionPublish->value),
@@ -360,19 +363,36 @@ final class QuestionController extends Controller
         });
     }
 
-    public function destroy(Question $question, RequestQuestionDeletionAction $action): RedirectResponse
+    public function destroy(Request $request, Question $question, RequestQuestionDeletionAction $action): RedirectResponse
+    {
+        $this->authorizePermission(Permission::QuestionView);
+        $this->authorizePermission(Permission::QuestionDelete);
+        QuestionAccess::authorizeView($this->actor(), $question);
+        abort_unless(
+            QuestionAccess::canPublish($this->actor()),
+            403,
+            'Editor gửi yêu cầu ngừng dùng, không xóa câu hỏi.',
+        );
+        $request->validate([
+            'confirm_deletion' => ['accepted'],
+        ], [
+            'confirm_deletion.accepted' => 'Hãy kiểm tra tác động và xác nhận xóa câu hỏi.',
+        ]);
+
+        $action->handle($this->actor(), $question);
+
+        return redirect()->route(PortalRoute::content('questions.index'))->with('status', 'Đã xóa câu hỏi.');
+    }
+
+    public function requestRetirement(Question $question, RequestQuestionRetirementAction $action): RedirectResponse
     {
         $this->authorizePermission(Permission::QuestionView);
         $this->authorizePermission(Permission::QuestionDelete);
         QuestionAccess::authorizeView($this->actor(), $question);
 
-        $reviewer = QuestionAccess::isReviewer($this->actor());
         $action->handle($this->actor(), $question);
 
-        return redirect()->route(PortalRoute::content('questions.index'))->with(
-            'status',
-            $reviewer ? 'Đã xóa câu hỏi.' : 'Đã gửi yêu cầu xóa để admin duyệt.',
-        );
+        return back()->with('status', 'Đã gửi yêu cầu ngừng dùng để admin duyệt.');
     }
 
     public function transition(
@@ -601,6 +621,9 @@ final class QuestionController extends Controller
             'canSubmit' => $this->actor()->can(Permission::QuestionSubmit->value),
             'canRetire' => $this->actor()->can(Permission::QuestionPublish->value),
             'canDelete' => $question->exists && $this->actor()->can(Permission::QuestionDelete->value),
+            'deletionImpact' => $question->exists && $isReviewer && $this->actor()->can(Permission::QuestionDelete->value)
+                ? app(SummarizeQuestionDeletionImpactAction::class)->handle($question)
+                : null,
             'canClone' => $question->exists && $this->actor()->canAny(['question.clone']),
             'isReviewer' => $isReviewer,
             'isRejected' => $question->exists && $question->status === QuestionStatus::Rejected,
@@ -673,7 +696,10 @@ final class QuestionController extends Controller
                 $canPublish ? QuestionStatus::Published : null,
                 $canRetire ? QuestionStatus::Retired : null,
             ])),
-            QuestionStatus::Rejected, QuestionStatus::Retired => $canUpdate
+            QuestionStatus::Rejected => $canUpdate
+                ? [QuestionStatus::Draft]
+                : [],
+            QuestionStatus::Retired => $canPublish
                 ? [QuestionStatus::Draft]
                 : [],
         };

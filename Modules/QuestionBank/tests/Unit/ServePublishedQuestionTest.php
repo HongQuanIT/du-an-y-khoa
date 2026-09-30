@@ -146,4 +146,45 @@ final class ServePublishedQuestionTest extends TestCase
         $this->assertSame((int) $correct->id, (int) $served->options->firstWhere('content', 'Match me')->getKey());
         $this->assertSame((int) $wrong->id, (int) $served->options->firstWhere('content', 'Other')->getKey());
     }
+
+    public function test_serving_label_separates_workflow_status_from_the_live_bank(): void
+    {
+        $never = (new Question)->forceFill([
+            'status' => QuestionStatus::Draft,
+            'version' => 0,
+            'published_version' => null,
+        ]);
+        $workingCopy = (new Question)->forceFill([
+            'status' => QuestionStatus::InReview,
+            'version' => 5,
+            'published_version' => 5,
+        ]);
+        $published = (new Question)->forceFill([
+            'status' => QuestionStatus::Published,
+            'version' => 5,
+            'published_version' => 5,
+        ]);
+        $hidden = (new Question)->forceFill([
+            'status' => QuestionStatus::Private,
+            'version' => 5,
+            'published_version' => 5,
+        ]);
+        $retired = (new Question)->forceFill([
+            'status' => QuestionStatus::Retired,
+            'version' => 5,
+            'published_version' => 5,
+        ]);
+        $returned = (new Question)->forceFill([
+            'status' => QuestionStatus::Draft,
+            'version' => 5,
+            'published_version' => null,
+        ]);
+
+        $this->assertSame('Chưa phát hành', ServePublishedQuestion::servingLabel($never));
+        $this->assertSame('Đang phục vụ v5', ServePublishedQuestion::servingLabel($workingCopy));
+        $this->assertSame('Đang phục vụ v5', ServePublishedQuestion::servingLabel($published));
+        $this->assertSame('Không phục vụ', ServePublishedQuestion::servingLabel($hidden));
+        $this->assertSame('Không phục vụ', ServePublishedQuestion::servingLabel($retired));
+        $this->assertSame('Không phục vụ', ServePublishedQuestion::servingLabel($returned));
+    }
 }

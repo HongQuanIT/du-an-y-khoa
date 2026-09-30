@@ -24,6 +24,7 @@ enum AuditAction: string
     case QuestionUpdateRequested = 'admin.question.update_requested';
     case QuestionDeleted = 'admin.question.delete';
     case QuestionDeleteRequested = 'admin.question.delete_requested';
+    case QuestionRetireRequested = 'admin.question.retire_requested';
     case QuestionStatusChanged = 'admin.question.status_change';
     case QuestionVersionRestored = 'admin.question.version_restore';
     case QuestionReviewApproved = 'admin.question.review_approved';
@@ -54,6 +55,7 @@ enum AuditAction: string
             self::QuestionUpdateRequested => 'Gửi yêu cầu sửa câu hỏi',
             self::QuestionDeleted => 'Xóa câu hỏi',
             self::QuestionDeleteRequested => 'Gửi yêu cầu xóa câu hỏi',
+            self::QuestionRetireRequested => 'Gửi yêu cầu ngừng dùng câu hỏi',
             self::QuestionStatusChanged => 'Đổi trạng thái câu hỏi',
             self::QuestionVersionRestored => 'Khôi phục phiên bản câu hỏi',
             self::QuestionReviewApproved => 'Phê duyệt thay đổi câu hỏi',

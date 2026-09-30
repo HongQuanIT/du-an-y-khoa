@@ -36,7 +36,7 @@
     <x-admin.flash />
 
     @if ($reviewRequest->status === \Modules\QuestionBank\Enums\QuestionReviewStatus::Pending)
-        <div class="mb-6 rounded-2xl border border-outline-variant bg-surface p-5 shadow-sm">
+        <div class="mb-6 rounded-2xl border border-outline-variant bg-surface p-5 shadow-sm" @if ($reviewRequest->action === \Modules\QuestionBank\Enums\QuestionReviewAction::Delete) x-data="{ deleteCheckOpen: false }" @endif>
             <label for="review_note" class="mb-2 block text-sm font-semibold text-on-surface">Ghi chú cho Content Creator</label>
             <textarea id="review_note" form="approve-review-form" name="review_note" rows="3"
                 class="w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm"
@@ -55,20 +55,45 @@
                 @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.reviews.approve'))
 <form id="approve-review-form" method="post" action="{{ route('admin.questions.reviews.approve', $reviewRequest) }}">
                     @csrf
-                    <button type="submit" onclick="return confirm('Phê duyệt yêu cầu này?')"
-                        class="inline-flex whitespace-nowrap items-center gap-1 rounded-xl bg-primary px-4 py-2.5 font-semibold text-on-primary hover:bg-primary/90">
-                        <span class="material-symbols-outlined text-[18px]">check</span>Phê duyệt
-                    </button>
+                    @if ($reviewRequest->action === \Modules\QuestionBank\Enums\QuestionReviewAction::Delete)
+                        <input type="hidden" name="confirm_deletion" value="1">
+                    @endif
+                    @if ($reviewRequest->action === \Modules\QuestionBank\Enums\QuestionReviewAction::Delete)
+                        <button type="button" @click="deleteCheckOpen = true"
+                            class="inline-flex whitespace-nowrap items-center gap-1 rounded-xl bg-primary px-4 py-2.5 font-semibold text-on-primary hover:bg-primary/90">
+                            <span class="material-symbols-outlined text-[18px]">check</span>Phê duyệt
+                        </button>
+                    @elseif ($reviewRequest->action === \Modules\QuestionBank\Enums\QuestionReviewAction::Retire)
+                        <button type="submit" onclick="return confirm('Duyệt ngừng dùng? Câu ẩn khỏi ngân hàng mới. Đề đã ghép và nhiệm vụ đã ghim vẫn giữ câu cho đến khi admin xét xóa.')"
+                            class="inline-flex whitespace-nowrap items-center gap-1 rounded-xl bg-primary px-4 py-2.5 font-semibold text-on-primary hover:bg-primary/90">
+                            <span class="material-symbols-outlined text-[18px]">block</span>Duyệt ngừng dùng
+                        </button>
+                    @else
+                        <button type="submit" onclick="return confirm('Phê duyệt yêu cầu này?')"
+                            class="inline-flex whitespace-nowrap items-center gap-1 rounded-xl bg-primary px-4 py-2.5 font-semibold text-on-primary hover:bg-primary/90">
+                            <span class="material-symbols-outlined text-[18px]">check</span>Phê duyệt
+                        </button>
+                    @endif
                 </form>
 @endif
             </div>
+            @if ($reviewRequest->action === \Modules\QuestionBank\Enums\QuestionReviewAction::Delete)
+                @include('admin::questions.partials.delete-approval-dialog')
+            @endif
         </div>
     @endif
 
     @if ($reviewRequest->action === \Modules\QuestionBank\Enums\QuestionReviewAction::Delete)
         <div class="mb-6 rounded-2xl border border-rose-300 bg-rose-50 p-5 text-rose-900">
             <p class="font-bold">Content Creator yêu cầu xóa câu hỏi này.</p>
-            <p class="mt-1 text-sm">Câu hỏi chỉ bị xóa mềm sau khi bạn phê duyệt.</p>
+            <p class="mt-1 text-sm">{{ $deletionImpact['summary'] ?? 'Câu hỏi chỉ bị xóa mềm sau khi bạn phê duyệt.' }}</p>
+            <p class="mt-1 text-sm">Bấm Phê duyệt để xem chi tiết và xác nhận. Câu chưa bị xóa cho đến khi bạn xác nhận trong hộp thoại.</p>
+        </div>
+    @elseif ($reviewRequest->action === \Modules\QuestionBank\Enums\QuestionReviewAction::Retire)
+        <div class="mb-6 rounded-2xl border border-rose-300 bg-rose-50 p-5 text-rose-900">
+            <p class="font-bold">Editor yêu cầu ngừng dùng câu hỏi này.</p>
+            <p class="mt-1 text-sm">{{ $deletionImpact['summary'] ?? 'Duyệt chỉ đổi trạng thái. Câu không bị xóa.' }}</p>
+            <p class="mt-1 text-sm">Duyệt chỉ ẩn câu khỏi ngân hàng mới. Đề đã ghép và nhiệm vụ đã ghim vẫn mở được câu. Xóa là bước riêng của admin, sau khi câu đã ngừng dùng một thời gian.</p>
         </div>
     @endif
 

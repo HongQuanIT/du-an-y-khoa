@@ -9,6 +9,7 @@ enum QuestionReviewAction: string
     case Create = 'create';
     case Update = 'update';
     case Delete = 'delete';
+    case Retire = 'retire';
 
     public function label(): string
     {
@@ -16,6 +17,7 @@ enum QuestionReviewAction: string
             self::Create => 'Tạo mới',
             self::Update => 'Chỉnh sửa',
             self::Delete => 'Xóa',
+            self::Retire => 'Ngừng dùng',
         };
     }
 }
