@@ -2,6 +2,14 @@
 
 ## 2026-09-30
 
+### Fix — Ghi chú trong phiên làm bài
+
+- Ô ghi chú chỉ nạp nội dung lúc mở, không ghi đè HTML mỗi lần gõ nên con trỏ không bị nhảy.
+- Nút đậm, nghiêng, danh sách giữ vùng chữ đang chọn khi bấm.
+- Cùng cách sửa trên phiên học và phiên thi thử.
+
+## 2026-09-30
+
 ### Fix — Nút Đặt lại trên trang tạo phiên
 
 - Không gọi form.reset(), vì tên phiên và chế độ học/thi không có giá trị HTML mặc định nên bị xóa trắng.

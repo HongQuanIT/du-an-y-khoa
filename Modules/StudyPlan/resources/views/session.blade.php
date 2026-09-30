@@ -463,10 +463,12 @@
             this.notesOpen = false;
         },
         formatNote(command, value = null) {
-            this.$refs.noteEditor?.focus();
+            const editor = this.$refs.noteEditor;
+            if (!editor) return;
+            editor.focus();
             document.execCommand(command, false, value);
-            this.noteHtml = this.$refs.noteEditor?.innerHTML || '';
-            this.noteText = this.$refs.noteEditor?.innerText.trim() || '';
+            this.noteHtml = editor.innerHTML;
+            this.noteText = editor.innerText.trim();
         },
     }" @keydown.escape.window="notesOpen = false; navigatorOpen = false; exitOpen = false; researchOpen = false; selectionBar.show = false"
         @mouseup.window="onTextSelect()">
@@ -1017,34 +1019,35 @@
                 <div class="space-y-4 p-6">
                     <div class="overflow-hidden rounded-lg border border-outline-variant bg-white focus-within:border-primary focus-within:ring-1 focus-within:ring-primary">
                         <div class="flex flex-wrap items-center gap-1 border-b border-outline-variant bg-surface-container-lowest p-2">
-                            <button type="button" @click="formatNote('bold')" class="flex size-8 items-center justify-center rounded hover:bg-surface-container-high" title="In đậm">
+                            <button type="button" @mousedown.prevent @click="formatNote('bold')" class="flex size-8 items-center justify-center rounded hover:bg-surface-container-high" title="In đậm">
                                 <span class="font-bold">B</span>
                             </button>
-                            <button type="button" @click="formatNote('italic')" class="flex size-8 items-center justify-center rounded hover:bg-surface-container-high" title="In nghiêng">
+                            <button type="button" @mousedown.prevent @click="formatNote('italic')" class="flex size-8 items-center justify-center rounded hover:bg-surface-container-high" title="In nghiêng">
                                 <span class="italic">I</span>
                             </button>
-                            <button type="button" @click="formatNote('underline')" class="flex size-8 items-center justify-center rounded hover:bg-surface-container-high" title="Gạch chân">
+                            <button type="button" @mousedown.prevent @click="formatNote('underline')" class="flex size-8 items-center justify-center rounded hover:bg-surface-container-high" title="Gạch chân">
                                 <span class="underline">U</span>
                             </button>
                             <div class="mx-1 h-5 w-px bg-outline-variant"></div>
-                            <button type="button" @click="formatNote('formatBlock', 'h3')" class="flex size-8 items-center justify-center rounded hover:bg-surface-container-high" title="Tiêu đề">
+                            <button type="button" @mousedown.prevent @click="formatNote('formatBlock', 'h3')" class="flex size-8 items-center justify-center rounded hover:bg-surface-container-high" title="Tiêu đề">
                                 <span class="material-symbols-outlined text-[18px]">title</span>
                             </button>
-                            <button type="button" @click="formatNote('insertUnorderedList')" class="flex size-8 items-center justify-center rounded hover:bg-surface-container-high" title="Danh sách">
+                            <button type="button" @mousedown.prevent @click="formatNote('insertUnorderedList')" class="flex size-8 items-center justify-center rounded hover:bg-surface-container-high" title="Danh sách">
                                 <span class="material-symbols-outlined text-[18px]">format_list_bulleted</span>
                             </button>
-                            <button type="button" @click="formatNote('insertOrderedList')" class="flex size-8 items-center justify-center rounded hover:bg-surface-container-high" title="Danh sách số">
+                            <button type="button" @mousedown.prevent @click="formatNote('insertOrderedList')" class="flex size-8 items-center justify-center rounded hover:bg-surface-container-high" title="Danh sách số">
                                 <span class="material-symbols-outlined text-[18px]">format_list_numbered</span>
                             </button>
-                            <button type="button" @click="formatNote('formatBlock', 'blockquote')" class="flex size-8 items-center justify-center rounded hover:bg-surface-container-high" title="Trích dẫn">
+                            <button type="button" @mousedown.prevent @click="formatNote('formatBlock', 'blockquote')" class="flex size-8 items-center justify-center rounded hover:bg-surface-container-high" title="Trích dẫn">
                                 <span class="material-symbols-outlined text-[18px]">format_quote</span>
                             </button>
-                            <button type="button" @click="formatNote('backColor', '#fef08a')" class="flex size-8 items-center justify-center rounded hover:bg-surface-container-high" title="Highlight">
+                            <button type="button" @mousedown.prevent @click="formatNote('backColor', '#fef08a')" class="flex size-8 items-center justify-center rounded hover:bg-surface-container-high" title="Highlight">
                                 <span class="material-symbols-outlined text-[18px]">ink_highlighter</span>
                             </button>
                         </div>
-                        <div x-ref="noteEditor" contenteditable="true" x-html="noteHtml"
-                            @input="noteHtml = $refs.noteEditor.innerHTML; noteText = $refs.noteEditor.innerText.trim()"
+                        <div x-ref="noteEditor" contenteditable="true"
+                            x-init="$el.innerHTML = noteHtml"
+                            @input="noteHtml = $event.target.innerHTML; noteText = $event.target.innerText.trim()"
                             class="prose prose-sm min-h-[190px] max-w-none overflow-y-auto p-4 text-body-md outline-none"
                             data-placeholder="Nhập nội dung ghi chú của bạn tại đây..."></div>
                     </div>
