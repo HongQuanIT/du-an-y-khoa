@@ -179,14 +179,29 @@
                         So sánh
                     </a>
                 @endif
-                @if ($canDelete && ! $pendingReview)
+                @if ($canDelete && ! $pendingReview && $isReviewer)
                 @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.destroy'))
-<form method="post" action="{{ route(\App\Support\Auth\PortalRoute::content('questions.destroy'), $question) }}" aria-label="Xóa câu hỏi">
-                    @csrf @method('DELETE')
-                    <button type="submit" onclick="return confirm('{{ $isReviewer ? 'Xóa câu hỏi này?' : 'Gửi yêu cầu xóa câu hỏi này để admin duyệt?' }}')"
+<div x-data="{ deleteCheckOpen: false }">
+                    <button type="button" @click="deleteCheckOpen = true"
                         class="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-rose-300 px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50">
                         <span class="material-symbols-outlined text-[16px]" aria-hidden="true">delete</span>
-                        {{ $isReviewer ? 'Xóa' : 'Yêu cầu xóa' }}
+                        Xóa
+                    </button>
+                    <form id="question-delete-form" method="post" action="{{ route(\App\Support\Auth\PortalRoute::content('questions.destroy'), $question) }}">
+                        @csrf @method('DELETE')
+                        <input type="hidden" name="confirm_deletion" value="1">
+                    </form>
+                    @include('admin::questions.partials.delete-approval-dialog', ['deleteConfirmFormId' => 'question-delete-form'])
+                </div>
+@endif
+                @elseif ($canDelete && ! $pendingReview && ! $isReviewer && in_array($question->status, [\Modules\QuestionBank\Enums\QuestionStatus::Published, \Modules\QuestionBank\Enums\QuestionStatus::Private], true))
+                @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.retire-request'))
+<form method="post" action="{{ route(\App\Support\Auth\PortalRoute::content('questions.retire-request'), $question) }}" aria-label="Yêu cầu ngừng dùng">
+                    @csrf
+                    <button type="submit" onclick="return confirm('Gửi yêu cầu ngừng dùng để admin duyệt?')"
+                        class="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-rose-300 px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50">
+                        <span class="material-symbols-outlined text-[16px]" aria-hidden="true">block</span>
+                        Yêu cầu ngừng dùng
                     </button>
                 </form>
 @endif
@@ -677,6 +692,20 @@
                             </button>
                         </div>
                     </div>
+                @elseif (! $isNew && $canPublish && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::Retired)
+                    <div class="rounded-2xl border border-rose-200 bg-rose-50/80 p-4">
+                        <h2 class="mb-2 font-label-md font-semibold text-on-surface">Câu đã ngừng dùng</h2>
+                        <p class="mb-3 text-xs leading-5 text-on-surface-variant">
+                            Câu hỏi đang ẩn khỏi ngân hàng. Đưa về editor ở trạng thái <span class="font-semibold">Nháp</span> để sửa và xuất bản lại. Ngân hàng không phát hành câu này cho đến phiên bản mới.
+                        </p>
+                        <button type="submit"
+                            form="question-unretire-form"
+                            onclick="return confirm('Đưa câu về nháp cho editor sửa? Ngân hàng không phát hành lại cho đến khi xuất bản phiên bản mới. Lịch sử phiên bản được giữ.')"
+                            class="flex w-full items-center justify-center gap-2 rounded-xl border border-outline-variant py-2.5 font-label-md font-semibold text-on-surface hover:bg-surface-container-low">
+                            <span class="material-symbols-outlined text-[18px]">undo</span>
+                            Đưa về Editor
+                        </button>
+                    </div>
                 @elseif (! $isNew && $canPublish && ! $canEditContent)
                     <div class="rounded-2xl border border-amber-200 bg-amber-50/70 p-4 text-sm text-amber-900">
                         <p class="font-semibold">Chỉ xem nội dung</p>
@@ -699,11 +728,19 @@
                             @endif
                         </p>
                     </div>
+                @elseif (! $isNew && $question->published_version && ! $canEditContent && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::Retired)
+                    <div class="rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-sm text-rose-950">
+                        <p class="font-semibold">Đã ngừng dùng — không còn trên ngân hàng</p>
+                        <p class="mt-1 text-xs leading-5">
+                            Phiên bản {{ $question->published_version }} là phiên bản gần nhất. Học viên không nhận được câu này trong ngân hàng, bài luyện mới hay đề thi mới.
+                            <a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.compare'), $question) }}" class="font-semibold text-primary hover:underline">Xem bản đã xuất bản</a>
+                        </p>
+                    </div>
                 @elseif (! $isNew && $question->published_version && ! $canEditContent)
                     <div class="rounded-2xl border border-sky-200 bg-sky-50/70 p-4 text-sm text-sky-950">
-                        <p class="font-semibold">QBank đang phục vụ phiên bản {{ $question->published_version }}</p>
+                        <p class="font-semibold">Ngân hàng đang phục vụ phiên bản {{ $question->published_version }}</p>
                         <p class="mt-1 text-xs leading-5">
-                            Working copy: {{ $question->status->label() }}.
+                            Bản đang soạn: {{ $question->status->label() }}.
                             <a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.compare'), $question) }}" class="font-semibold text-primary hover:underline">So sánh</a>
                         </p>
                     </div>
@@ -872,6 +909,8 @@
                                 <dd class="text-right font-semibold text-on-surface">
                                     @if ((int) $question->published_version > 0)
                                         v{{ $question->published_version }}
+                                    @elseif ((int) $question->version > 0)
+                                        Không có bản đang phát hành
                                     @else
                                         Chưa xuất bản
                                     @endif
@@ -954,6 +993,15 @@
             <input type="hidden" name="red_flag_outcome" id="question-reject-red-flag-outcome" value="confirmed">
         </form>
 @endif
+        @endif
+    @endif
+
+    @if (! $isNew && $canPublish && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::Retired)
+        @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.transition'))
+<form id="question-unretire-form" method="post" action="{{ route('admin.questions.transition', $question) }}" class="hidden">
+            @csrf
+            <input type="hidden" name="status" value="{{ \Modules\QuestionBank\Enums\QuestionStatus::Draft->value }}">
+        </form>
         @endif
     @endif
 

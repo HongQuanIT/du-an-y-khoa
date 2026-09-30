@@ -182,12 +182,11 @@
                     <div class="flex items-center gap-3">
                         <div
                             class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-surface-container-low text-on-surface-variant">
-                            <span class="material-symbols-outlined text-[22px]" aria-hidden="true">check_circle</span>
+                            <span class="material-symbols-outlined text-[22px]" aria-hidden="true">menu_book</span>
                         </div>
                         <div class="min-w-0">
-                            <p class="truncate text-label-sm font-medium text-on-surface-variant">Đã xuất bản</p>
-                            <p class="text-headline-sm font-bold text-on-surface">
-                                {{ number_format($stats['published']) }}</p>
+                            <p class="text-label-sm font-medium leading-4 text-on-surface-variant">Ngân hàng (Qbank)</p>
+                            <p id="stats-in-bank-count" class="text-headline-sm font-bold text-on-surface">{{ number_format($stats['in_bank']) }}</p>
                         </div>
                     </div>
                 </div>
@@ -233,9 +232,8 @@
                             <span class="material-symbols-outlined text-[22px]" aria-hidden="true">stars</span>
                         </div>
                         <div class="min-w-0">
-                            <p class="truncate text-label-sm font-medium text-on-surface-variant">Miễn phí</p>
-                            <p class="text-headline-sm font-bold text-on-surface">{{ number_format($stats['free']) }}
-                            </p>
+                            <p class="text-label-sm font-medium leading-4 text-on-surface-variant">Miễn phí (Qbank)</p>
+                            <p id="stats-free-in-bank-count" class="text-headline-sm font-bold text-on-surface">{{ number_format($stats['free_in_bank']) }}</p>
                         </div>
                     </div>
                 </div>
@@ -395,7 +393,8 @@
                                 x-show="cols.difficulty" x-cloak>Độ khó</th>
                             <th scope="col" class="w-[150px] min-w-[130px] px-4 py-3.5" x-show="cols.creator" x-cloak>
                                     Người tạo</th>
-                            <th scope="col" class="w-[140px] min-w-[120px] px-4 py-3.5" x-show="cols.status" x-cloak>
+                            <th scope="col" class="w-[180px] min-w-[160px] px-4 py-3.5" x-show="cols.status" x-cloak
+                                title="Trạng thái quy trình, và phiên bản đang phục vụ ngân hàng.">
                                 Trạng thái</th>
                             <th scope="col" class="w-[180px] min-w-[160px] px-4 py-3.5" x-show="cols.review_status"
                                 x-cloak title="Editor đã gửi bản cập nhật chưa, và 2 giảng viên đã duyệt thế nào.">
@@ -495,19 +494,22 @@
                                             class="text-xs font-medium text-on-surface">{{ $question->creator?->name ?? 'Dữ liệu hệ thống' }}</span>
                                     </td>
 
-                                {{-- Trạng thái workflow, đồng bộ với bộ lọc QuestionStatus --}}
+                                {{-- Trạng thái workflow, đồng bộ với bộ lọc QuestionStatus. Dòng dưới là ngân hàng. --}}
                                 <td class="w-[180px] min-w-[160px] px-4 py-4 align-top whitespace-nowrap"
                                     x-show="cols.status" x-cloak>
                                     @php
-                                        $statusLabel = $question->status->label();
-                                        if ((int) $question->published_version > 0 && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::Published) {
-                                            $statusLabel .= ' · v'.$question->published_version;
-                                        }
+                                        $servingLabel = \Modules\QuestionBank\Support\ServePublishedQuestion::servingLabel($question);
+                                        $isServing = str_starts_with($servingLabel, 'Đang phục vụ');
                                     @endphp
-                                    <span
-                                        class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold {{ $question->status->tone() }}">
-                                        {{ $statusLabel }}
-                                    </span>
+                                    <div class="flex flex-col items-start gap-1">
+                                        <span
+                                            class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold {{ $question->status->tone() }}">
+                                            {{ $question->status->label() }}
+                                        </span>
+                                        <p class="text-[11px] leading-4 {{ $isServing ? 'font-semibold text-on-surface' : 'font-medium text-on-surface-variant' }}">
+                                            {{ $servingLabel }}
+                                        </p>
+                                    </div>
                                 </td>
 
                                 {{-- Cột 2: Editor đã gửi bản cập nhật chưa + phiếu 2 GV --}}

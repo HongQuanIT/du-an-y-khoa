@@ -2,6 +2,16 @@
 
 ## 2026-09-30
 
+### Feat — Ngừng dùng, xóa có kiểm tra, và đếm ngân hàng trên danh sách câu hỏi
+
+- Editor gửi yêu cầu ngừng dùng. Admin duyệt thì câu ra khỏi ngân hàng mới, không đi giảng viên hay reviewer.
+- Admin đưa câu ngừng dùng về nháp thì gỡ bản đang phát hành. Lịch sử phiên bản được giữ. Editor không tự đưa về nháp.
+- Xóa chỉ dành cho admin, sau khi xem câu có trong đề, kế hoạch, bookmark và buổi đang mở.
+- Cột trạng thái thêm dòng đang phục vụ phiên bản nào, hoặc chưa phát hành, hoặc không phục vụ.
+- Card Ngân hàng (Qbank) và Miễn phí (Qbank) đếm câu học viên nhìn thấy, không đếm mọi câu đã xuất bản hay mọi câu miễn phí.
+
+## 2026-09-30
+
 ### Fix — Quay lại câu đã làm vẫn thấy lựa chọn và phần đã dùng
 
 - Đáp án đã chọn được mở lại, có nhãn lựa chọn của bạn.

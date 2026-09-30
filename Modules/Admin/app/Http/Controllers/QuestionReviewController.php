@@ -10,6 +10,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Modules\Admin\Actions\ReviewQuestionChangeAction;
+use Modules\Admin\Actions\SummarizeQuestionDeletionImpactAction;
+use Modules\QuestionBank\Enums\QuestionReviewAction;
 use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\QuestionReviewRequest;
 
@@ -30,8 +32,12 @@ final class QuestionReviewController extends Controller
                 ?? $reviewRequest->payload['medical_taxonomy_node_ids']
                 ?? [])))
             ->pluck('name', 'id');
+        $deletionImpact = in_array($reviewRequest->action, [QuestionReviewAction::Delete, QuestionReviewAction::Retire], true)
+            && $reviewRequest->question !== null
+            ? app(SummarizeQuestionDeletionImpactAction::class)->handle($reviewRequest->question)
+            : null;
 
-        return view('admin::questions.review', compact('reviewRequest', 'lessonNames'));
+        return view('admin::questions.review', compact('reviewRequest', 'lessonNames', 'deletionImpact'));
     }
 
     public function approve(
@@ -39,11 +45,21 @@ final class QuestionReviewController extends Controller
         QuestionReviewRequest $reviewRequest,
         ReviewQuestionChangeAction $action,
     ): RedirectResponse {
-        $data = $request->validate(['review_note' => ['nullable', 'string', 'max:2000']]);
+        $rules = ['review_note' => ['nullable', 'string', 'max:2000']];
+        if ($reviewRequest->action === QuestionReviewAction::Delete) {
+            $rules['confirm_deletion'] = ['accepted'];
+        }
+        $data = $request->validate($rules, [
+            'confirm_deletion.accepted' => 'Hãy kiểm tra tác động và xác nhận xóa câu hỏi.',
+        ]);
         $question = $action->approve($this->actor(), $reviewRequest, $data['review_note'] ?? null);
 
         if ($question->trashed()) {
             return redirect()->route('admin.questions.index')->with('status', 'Đã duyệt yêu cầu xóa câu hỏi.');
+        }
+
+        if ($reviewRequest->action === QuestionReviewAction::Retire) {
+            return redirect()->route('admin.questions.edit', $question)->with('status', 'Đã duyệt ngừng dùng. Câu ẩn khỏi ngân hàng mới.');
         }
 
         return redirect()->route('admin.questions.edit', $question)->with('status', 'Đã phê duyệt yêu cầu.');
