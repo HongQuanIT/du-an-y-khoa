@@ -306,6 +306,64 @@ final class QuestionBankFlowTest extends TestCase
             ->assertJsonPath('data.count', 1);
     }
 
+    public function test_flagged_status_filter_includes_flagged_questions_only(): void
+    {
+        $flaggedAnswer = $this->createQuestion($this->topic, true, Difficulty::Easy, 'Câu gắn cờ lúc nộp');
+        $flaggedNote = $this->createQuestion($this->topic, true, Difficulty::Easy, 'Câu gắn cờ trước khi nộp');
+        $plain = $this->createQuestion($this->topic, true, Difficulty::Easy, 'Câu không gắn cờ');
+        $session = QuestionSession::query()->create([
+            'user_id' => $this->user->id,
+            'mode' => SessionMode::Study,
+            'status' => SessionStatus::Active,
+            'source' => 'custom',
+            'question_ids' => [
+                (string) $flaggedAnswer->getKey(),
+                (string) $flaggedNote->getKey(),
+                (string) $plain->getKey(),
+            ],
+            'annotations' => [
+                (string) $flaggedNote->getKey() => ['flagged' => true],
+                (string) $plain->getKey() => ['flagged' => false],
+            ],
+            'total' => 3,
+        ]);
+        QuestionAttempt::query()->create([
+            'session_id' => $session->getKey(),
+            'user_id' => $this->user->id,
+            'question_id' => $flaggedAnswer->getKey(),
+            'is_correct' => false,
+            'flagged' => true,
+            'answered_at' => now(),
+        ]);
+        QuestionAttempt::query()->create([
+            'session_id' => $session->getKey(),
+            'user_id' => $this->user->id,
+            'question_id' => $plain->getKey(),
+            'is_correct' => true,
+            'flagged' => false,
+            'answered_at' => now(),
+        ]);
+
+        $payload = [
+            'mode' => SessionMode::Study->value,
+            'source' => 'custom',
+            'count' => 1,
+            'lesson_ids' => [$this->topic->id],
+            'question_status_mode' => 'latest',
+        ];
+
+        $this->actingAs($this->user)
+            ->postJson(route('qbank.count'), [...$payload, 'question_statuses' => ['flagged']])
+            ->assertOk()
+            ->assertJsonPath('data.count', 2);
+
+        $this->actingAs($this->user)
+            ->get(route('qbank.create'))
+            ->assertOk()
+            ->assertSee('Đã gắn cờ')
+            ->assertDontSee('Đã đánh dấu');
+    }
+
     public function test_session_size_can_equal_the_full_matching_pool(): void
     {
         for ($index = 1; $index <= 25; $index++) {

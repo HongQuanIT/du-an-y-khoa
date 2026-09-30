@@ -147,7 +147,7 @@ final class CreateQuestionSessionRequest extends FormRequest
             'question_statuses.*' => [
                 'string',
                 'distinct',
-                'in:unanswered,correct_with_hints,incorrect,correct,omitted,marked',
+                'in:unanswered,correct_with_hints,incorrect,correct,omitted,flagged,marked',
             ],
             'question_status_mode' => ['nullable', 'string', 'in:all,latest'],
             'saved_only' => ['nullable', 'boolean'],
