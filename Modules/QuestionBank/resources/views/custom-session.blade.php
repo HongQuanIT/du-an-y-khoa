@@ -37,7 +37,7 @@
         ['value' => 'correct', 'label' => 'Làm đúng', 'icon' => 'check_circle'],
         ['value' => 'correct_with_hints', 'label' => 'Đúng có gợi ý', 'icon' => 'lightbulb'],
         ['value' => 'omitted', 'label' => 'Bỏ qua', 'icon' => 'remove_circle'],
-        ['value' => 'marked', 'label' => 'Đã đánh dấu', 'icon' => 'folder_managed'],
+        ['value' => 'flagged', 'label' => 'Đã gắn cờ', 'icon' => 'flag'],
     ];
     $difficultyOptions = \App\Support\ScopeFilters::difficulties();
 

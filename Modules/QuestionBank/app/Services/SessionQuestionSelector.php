@@ -20,6 +20,7 @@ use Modules\QuestionBank\Enums\SessionSource;
 use Modules\QuestionBank\Enums\UserQuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
+use Modules\QuestionBank\Models\QuestionSession;
 use Modules\QuestionBank\Models\QuestionStatus as UserQuestionStatusModel;
 use Modules\QuestionBank\Support\AdaptiveTrace;
 use Modules\QuestionBank\Support\QuestionFilterBuilder;
@@ -593,7 +594,7 @@ final class SessionQuestionSelector
             ->map(static fn (string $status): string => match (strtolower($status)) {
                 'wrong' => 'incorrect',
                 'skipped' => 'omitted',
-                'saved' => 'marked',
+                'saved', 'marked' => 'flagged',
                 'unseen' => 'unanswered',
                 default => strtolower($status),
             })
@@ -625,8 +626,8 @@ final class SessionQuestionSelector
             ->pluck('question_id');
 
         $directStatuses = [];
-        if (in_array('marked', $statuses, true)) {
-            $eligible = $eligible->concat(Bookmark::questionIdsForUser($userId));
+        if (in_array('flagged', $statuses, true)) {
+            $eligible = $eligible->concat($this->flaggedQuestionIds($userId));
         }
         if (in_array('omitted', $statuses, true)) {
             $directStatuses[] = UserQuestionStatus::Omitted;
@@ -648,6 +649,40 @@ final class SessionQuestionSelector
         }
 
         return $eligible->unique()->values()->all();
+    }
+
+    /**
+     * Questions the learner still has flagged in a session.
+     * A flag before any answer lives only on the session annotation.
+     *
+     * @return array<int, string>
+     */
+    private function flaggedQuestionIds(int $userId): array
+    {
+        $ids = QuestionAttempt::query()
+            ->where('user_id', $userId)
+            ->where('flagged', true)
+            ->pluck('question_id')
+            ->map(static fn (mixed $id): string => (string) $id);
+
+        $annotations = QuestionSession::query()
+            ->where('user_id', $userId)
+            ->whereNotNull('annotations')
+            ->pluck('annotations');
+
+        foreach ($annotations as $annotationSet) {
+            if (! is_array($annotationSet)) {
+                continue;
+            }
+
+            foreach ($annotationSet as $questionId => $annotation) {
+                if (is_array($annotation) && ($annotation['flagged'] ?? false)) {
+                    $ids->push((string) $questionId);
+                }
+            }
+        }
+
+        return $ids->unique()->values()->all();
     }
 
     /**

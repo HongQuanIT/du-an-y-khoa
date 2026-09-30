@@ -2,6 +2,14 @@
 
 ## 2026-09-30
 
+### Fix — Bộ lọc Đã gắn cờ trên trang tạo phiên
+
+- Đổi «Đã đánh dấu» thành «Đã gắn cờ», icon cờ.
+- Lọc câu đang gắn cờ trong phiên hoặc trên lần nộp, kể cả khi chưa nộp.
+- Câu đã lưu vẫn là bookmark, không dùng chung bộ lọc này.
+
+## 2026-09-30
+
 ### Fix — Ghi chú trong phiên làm bài
 
 - Ô ghi chú chỉ nạp nội dung lúc mở, không ghi đè HTML mỗi lần gõ nên con trỏ không bị nhảy.
