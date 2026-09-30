@@ -94,6 +94,8 @@ final class StudyPlanSessionController extends Controller
             'stemHtml' => (string) ($annotation['stem_html'] ?? SafeHtml::forDisplay((string) $question->stem)),
             'flagged' => $flagged,
             'flaggedIds' => $flaggedIds,
+            'keyInfoUsed' => (bool) ($annotation['key_info_used'] ?? false),
+            'attendingTipUsed' => (bool) ($annotation['attending_tip_used'] ?? false),
             'bookmarked' => Bookmark::hasQuestion(
                 (int) $request->user()->getAuthIdentifier(),
                 (string) $question->getKey(),

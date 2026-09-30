@@ -45,6 +45,8 @@
     $keyInfoHtml = $keyInfoRenderer->render((string) $question->stem, $keyInfo);
     $attendingTip = \App\Support\Html\SafeHtml::forDisplay((string) ($question->attending_tip ?? ''));
     $hasAttendingTip = $attendingTip !== '';
+    $keyInfoUsed = (bool) ($keyInfoUsed ?? false);
+    $attendingTipUsed = (bool) ($attendingTipUsed ?? false);
     $canUseLearningNote = auth()->user()?->can('learning_tool.note') ?? false;
     $canUseLearningFlag = auth()->user()?->can('learning_tool.flag') ?? false;
     $canUseLearningHighlight = auth()->user()?->can('learning_tool.highlight') ?? false;
@@ -89,11 +91,11 @@
         labReferenceGroups: @js($labReferenceGroups),
         researchOpen: false,
         highlightMode: false,
-        keyInfoEnabled: @js($isAnswered && $hasKeyInfo),
-        keyInfoUsed: false,
+        keyInfoEnabled: @js($keyInfoUsed && $hasKeyInfo),
+        keyInfoUsed: @js($keyInfoUsed),
         hasKeyInfo: @js($hasKeyInfo),
-        attendingTipOpen: @js($isAnswered && $hasAttendingTip),
-        attendingTipUsed: false,
+        attendingTipOpen: @js($attendingTipUsed && $hasAttendingTip),
+        attendingTipUsed: @js($attendingTipUsed),
         attendingTip: @js($attendingTip),
         hasAttendingTip: @js($hasAttendingTip),
         imageViewerOpen: false,
@@ -566,7 +568,7 @@
                         options: @js($optionPayload),
                         selected: @js(isset($selectedOptionIds[0]) ? (int) $selectedOptionIds[0] : null),
                         revealed: @js($isAnswered),
-                        expandedOptions: [],
+                        expandedOptions: @js($isAnswered ? array_values(array_map('intval', $selectedOptionIds)) : []),
                         saving: false,
                         startedAt: Date.now(),
                         elapsed: @js($isAnswered ? (int) ($attempt?->time_spent_seconds ?? 0) : 0),
@@ -622,15 +624,18 @@
                             const picked = this.options.find((o) => o.id === this.selected);
                             return picked ? picked.correct : false;
                         },
+                        isOpen(option) {
+                            return this.revealed && (option.id === this.selected || this.expandedOptions.includes(option.id));
+                        },
                         wrapClass(option) {
-                            if (!this.revealed || !this.expandedOptions.includes(option.id)) {
+                            if (!this.isOpen(option)) {
                                 return 'border-outline-variant bg-white hover:border-primary/50 hover:bg-primary/5 cursor-pointer';
                             }
                             if (option.correct) return 'border-[#16A34A] bg-[#16A34A]/5';
                             return 'border-error bg-error/5';
                         },
                         badgeClass(option) {
-                            if (!this.revealed || !this.expandedOptions.includes(option.id)) return 'border border-outline-variant text-on-surface-variant';
+                            if (!this.isOpen(option)) return 'border border-outline-variant text-on-surface-variant';
                             if (option.correct) return 'bg-[#16A34A] text-white';
                             return 'bg-error text-white';
                         },
@@ -918,17 +923,17 @@
                                         <div class="min-w-0 flex-1 space-y-1 pt-1">
                                             <span class="block font-body-md text-body-md text-on-surface"
                                                 x-text="option.content"></span>
-                                            <template x-if="revealed && expandedOptions.includes(option.id) && option.id === selected">
+                                            <template x-if="revealed && option.id === selected">
                                                 <span class="inline-block rounded px-2 py-0.5 text-[10px] font-bold uppercase"
                                                     :class="option.correct ? 'bg-[#16A34A] text-white' : 'bg-error text-white'"
                                                     x-text="option.correct ? 'Lựa chọn của bạn · Đúng' : 'Lựa chọn của bạn'"></span>
                                             </template>
                                         </div>
-                                        <template x-if="revealed && expandedOptions.includes(option.id) && option.correct">
+                                        <template x-if="isOpen(option) && option.correct">
                                             <span class="material-symbols-outlined text-[#16A34A]"
                                                 style="font-variation-settings: 'FILL' 1;">check_circle</span>
                                         </template>
-                                        <template x-if="revealed && expandedOptions.includes(option.id) && !option.correct">
+                                        <template x-if="isOpen(option) && !option.correct">
                                             <span class="material-symbols-outlined text-error"
                                                 style="font-variation-settings: 'FILL' 1;">cancel</span>
                                         </template>

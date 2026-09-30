@@ -711,7 +711,9 @@ final class QuestionBankFlowTest extends TestCase
         $this->actingAs($this->user)
             ->get(route('qbank.session', $session))
             ->assertOk()
-            ->assertSee('keyInfoUsed: false', false)
+            ->assertSee('keyInfoEnabled: true', false)
+            ->assertSee('keyInfoUsed: true', false)
+            ->assertSee('attendingTipOpen: false', false)
             ->assertSee('attendingTipUsed: false', false);
 
         foreach ($session->question_ids as $index => $questionId) {
@@ -735,7 +737,11 @@ final class QuestionBankFlowTest extends TestCase
                     ->get(route('qbank.session', [$session, 'index' => 0]))
                     ->assertOk()
                     ->assertSee('keyInfoEnabled: true', false)
-                    ->assertSee('attendingTipOpen: true', false);
+                    ->assertSee('keyInfoUsed: true', false)
+                    ->assertSee('attendingTipOpen: false', false)
+                    ->assertSee('attendingTipUsed: false', false)
+                    ->assertSee('selected: '.$option->id, false)
+                    ->assertSee("expandedOptions: JSON.parse('[".$option->id."]')", false);
             }
         }
 
@@ -760,7 +766,11 @@ final class QuestionBankFlowTest extends TestCase
         $this->actingAs($this->user)
             ->get(route('qbank.session', [$session, 'index' => 1]))
             ->assertOk()
-            ->assertSee('Giải thích');
+            ->assertSee('Giải thích')
+            ->assertSee('attendingTipOpen: true', false)
+            ->assertSee('attendingTipUsed: true', false)
+            ->assertSee('keyInfoEnabled: false', false)
+            ->assertSee('keyInfoUsed: false', false);
 
         $this->actingAs($this->user)
             ->post(route('qbank.session.finish', $session))
