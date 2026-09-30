@@ -2,6 +2,22 @@
 
 ## 2026-09-30
 
+### Fix — Quay lại câu đã làm vẫn thấy lựa chọn và phần đã dùng
+
+- Đáp án đã chọn được mở lại, có nhãn lựa chọn của bạn.
+- Câu đã bấm Gợi ý hiện gạch chân và nhãn đã dùng gợi ý.
+- Câu đã bấm Kiến thức mở lại phần kiến thức. Chưa dùng thì hai phần này đóng.
+
+## 2026-09-30
+
+### Fix — Gợi ý không gạch cả đề khi câu không có hint
+
+- Nút Gợi ý luôn bật trên phiên học và preview học viên.
+- Chỉ gạch các đoạn gợi ý đã soạn khớp trong đề. Không khớp thì bỏ qua.
+- Câu không có gợi ý bấm nút không gạch chữ và không ghi đã dùng gợi ý.
+
+## 2026-09-30
+
 ### Fix — Bộ lọc Đã gắn cờ trên trang tạo phiên
 
 - Đổi «Đã đánh dấu» thành «Đã gắn cờ», icon cờ.

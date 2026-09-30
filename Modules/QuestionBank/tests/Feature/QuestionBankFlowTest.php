@@ -516,20 +516,27 @@ final class QuestionBankFlowTest extends TestCase
         $this->assertSame(1, $session->total);
     }
 
-    public function test_key_info_derives_clinical_clues_for_legacy_questions(): void
+    public function test_key_info_underlines_only_hint_phrases_that_match_the_stem(): void
     {
         $stem = '[Amboss] Ca lâm sàng #064 – Skin & Subcutaneous Tissue. '
             .'Viêm khớp gối nóng đỏ, dịch đục, sốt. '
             .'Xét nghiệm dịch khớp ưu tiên để loại trừ?';
         $renderer = app(QuestionKeyInfoRenderer::class);
-        $phrases = $renderer->resolvePhrases($stem, []);
 
-        $this->assertSame(['Viêm khớp gối nóng đỏ, dịch đục, sốt.'], $phrases);
+        $this->assertSame([], $renderer->resolvePhrases($stem, []));
+        $this->assertStringNotContainsString('data-key-info', $renderer->render($stem, []));
+
+        $phrases = $renderer->resolvePhrases($stem, ['dịch đục', 'không nằm trong đề']);
+        $html = $renderer->render($stem, $phrases);
+
+        $this->assertSame(['dịch đục', 'không nằm trong đề'], $phrases);
+        $this->assertSame(1, substr_count($html, 'data-key-info'));
         $this->assertStringContainsString(
             '<span data-key-info class="underline decoration-amber-600 decoration-2 underline-offset-2">'
-                .'Viêm khớp gối nóng đỏ, dịch đục, sốt.</span>',
-            $renderer->render($stem, $phrases),
+                .'dịch đục</span>',
+            $html,
         );
+        $this->assertStringNotContainsString('underline decoration-amber-600 decoration-2 underline-offset-2">Viêm khớp gối', $html);
     }
 
     public function test_custom_scope_filters_are_real_hard_boundaries_and_preserve_free_gating(): void
@@ -704,7 +711,9 @@ final class QuestionBankFlowTest extends TestCase
         $this->actingAs($this->user)
             ->get(route('qbank.session', $session))
             ->assertOk()
-            ->assertSee('keyInfoUsed: false', false)
+            ->assertSee('keyInfoEnabled: true', false)
+            ->assertSee('keyInfoUsed: true', false)
+            ->assertSee('attendingTipOpen: false', false)
             ->assertSee('attendingTipUsed: false', false);
 
         foreach ($session->question_ids as $index => $questionId) {
@@ -728,7 +737,11 @@ final class QuestionBankFlowTest extends TestCase
                     ->get(route('qbank.session', [$session, 'index' => 0]))
                     ->assertOk()
                     ->assertSee('keyInfoEnabled: true', false)
-                    ->assertSee('attendingTipOpen: true', false);
+                    ->assertSee('keyInfoUsed: true', false)
+                    ->assertSee('attendingTipOpen: false', false)
+                    ->assertSee('attendingTipUsed: false', false)
+                    ->assertSee('selected: '.$option->id, false)
+                    ->assertSee("expandedOptions: JSON.parse('[".$option->id."]')", false);
             }
         }
 
@@ -753,7 +766,11 @@ final class QuestionBankFlowTest extends TestCase
         $this->actingAs($this->user)
             ->get(route('qbank.session', [$session, 'index' => 1]))
             ->assertOk()
-            ->assertSee('Giải thích');
+            ->assertSee('Giải thích')
+            ->assertSee('attendingTipOpen: true', false)
+            ->assertSee('attendingTipUsed: true', false)
+            ->assertSee('keyInfoEnabled: false', false)
+            ->assertSee('keyInfoUsed: false', false);
 
         $this->actingAs($this->user)
             ->post(route('qbank.session.finish', $session))
