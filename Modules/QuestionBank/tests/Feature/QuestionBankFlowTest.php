@@ -651,6 +651,9 @@ final class QuestionBankFlowTest extends TestCase
             ->assertRedirect();
 
         $session = QuestionSession::firstOrFail();
+        $session->forceFill([
+            'question_ids' => [(string) $first->getKey(), (string) $second->getKey()],
+        ])->save();
 
         $this->actingAs($this->user)
             ->get(route('qbank.session', $session))
@@ -835,9 +838,38 @@ final class QuestionBankFlowTest extends TestCase
         $this->actingAs($this->user)
             ->get(route('qbank.review', $session))
             ->assertOk()
-            ->assertViewHas('items', fn (array $items): bool => count($items) === 2)
+            ->assertViewHas('items', function (array $items) use ($first, $second): bool {
+                if (count($items) !== 2) {
+                    return false;
+                }
+
+                $byId = collect($items)->keyBy('question_id');
+                $firstItem = $byId[(string) $first->getKey()] ?? null;
+                $secondItem = $byId[(string) $second->getKey()] ?? null;
+
+                return is_array($firstItem)
+                    && is_array($secondItem)
+                    && $firstItem['hint_used'] === true
+                    && $firstItem['has_key_info'] === true
+                    && $firstItem['knowledge_used'] === false
+                    && str_contains((string) $firstItem['stem_key_info_html'], 'data-key-info')
+                    && str_contains((string) $firstItem['stem_key_info_html'], 'Study first')
+                    && str_contains((string) $firstItem['knowledge_html'], 'Gợi ý dành cho câu hỏi đầu tiên.')
+                    && $secondItem['hint_used'] === false
+                    && $secondItem['has_key_info'] === true
+                    && $secondItem['knowledge_used'] === true
+                    && str_contains((string) $secondItem['stem_key_info_html'], 'Study second')
+                    && str_contains((string) $secondItem['knowledge_html'], 'Gợi ý dành cho câu hỏi thứ hai.');
+            })
             ->assertSee($first->stem)
-            ->assertSee($second->stem);
+            ->assertSee($second->stem)
+            ->assertSee('data-testid="review-list-hint-used"', false)
+            ->assertSee('data-testid="review-hint-toggle"', false)
+            ->assertSee('data-testid="review-key-info-stem"', false)
+            ->assertSee('data-testid="review-knowledge-panel"', false)
+            ->assertSee('data-key-info', false)
+            ->assertSee('Đã dùng gợi ý')
+            ->assertSee('Đã dùng kiến thức');
     }
 
     public function test_study_session_renders_question_image_next_to_stem(): void
@@ -932,6 +964,84 @@ final class QuestionBankFlowTest extends TestCase
             'Nội dung nguyên bản của phiên',
             $repeated->snapshots()->firstOrFail()->payload['stem'],
         );
+    }
+
+    public function test_qbank_review_marks_hint_use_and_shows_hint_and_knowledge(): void
+    {
+        $withHint = $this->createQuestion($this->topic, true, Difficulty::Easy, 'Bệnh nhân đau ngực khi gắng sức');
+        $withKnowledge = $this->createQuestion($this->topic, true, Difficulty::Easy, 'Bệnh nhân khó thở khi nằm');
+        $legacyHint = $this->createQuestion($this->topic, true, Difficulty::Easy, 'Câu gợi ý cũ');
+        $withHint->update([
+            'key_info' => ['đau ngực', ''],
+            'attending_tip' => '<p>STEMI cần PCI cấp cứu.</p>',
+        ]);
+        $withKnowledge->update([
+            'key_info' => ['khó thở'],
+            'attending_tip' => 'Đánh giá suy hô hấp.',
+        ]);
+
+        $session = QuestionSession::create([
+            'user_id' => $this->user->id,
+            'mode' => SessionMode::Study,
+            'status' => SessionStatus::Completed,
+            'source' => 'custom',
+            'question_ids' => [$withHint->id, $withKnowledge->id, $legacyHint->id],
+            'total' => 3,
+            'answered_count' => 3,
+            'correct_count' => 2,
+            'annotations' => [
+                (string) $withHint->id => ['key_info_used' => true],
+                (string) $withKnowledge->id => ['attending_tip_used' => true],
+            ],
+        ]);
+        app(QuestionSessionSnapshots::class)->capture($session);
+
+        foreach ([
+            [$withHint, true],
+            [$withKnowledge, true],
+            [$legacyHint, true],
+        ] as [$question, $usedHint]) {
+            QuestionAttempt::factory()->create([
+                'session_id' => $session->getKey(),
+                'user_id' => $this->user->id,
+                'question_id' => $question->id,
+                'is_correct' => true,
+                'used_hint' => $usedHint,
+            ]);
+        }
+
+        $this->actingAs($this->user)
+            ->get(route('qbank.review', $session))
+            ->assertOk()
+            ->assertViewHas('items', function (array $items) use ($withHint, $withKnowledge, $legacyHint): bool {
+                $byId = collect($items)->keyBy('question_id');
+                $hintItem = $byId[(string) $withHint->getKey()];
+                $knowledgeItem = $byId[(string) $withKnowledge->getKey()];
+                $legacyItem = $byId[(string) $legacyHint->getKey()];
+
+                return $hintItem['hint_used'] === true
+                    && $hintItem['has_key_info'] === true
+                    && $hintItem['knowledge_used'] === false
+                    && str_contains((string) $hintItem['stem_key_info_html'], 'data-key-info')
+                    && str_contains((string) $hintItem['stem_key_info_html'], 'đau ngực')
+                    && ! str_contains((string) $hintItem['stem_html'], 'data-key-info')
+                    && str_contains((string) $hintItem['knowledge_html'], 'STEMI cần PCI cấp cứu.')
+                    && $knowledgeItem['hint_used'] === false
+                    && $knowledgeItem['has_key_info'] === true
+                    && $knowledgeItem['knowledge_used'] === true
+                    && str_contains((string) $knowledgeItem['stem_key_info_html'], 'khó thở')
+                    && str_contains((string) $knowledgeItem['knowledge_html'], 'Đánh giá suy hô hấp.')
+                    && $legacyItem['hint_used'] === true
+                    && $legacyItem['has_key_info'] === false
+                    && ! str_contains((string) $legacyItem['stem_key_info_html'], 'data-key-info');
+            })
+            ->assertSee('data-testid="review-hint-toggle"', false)
+            ->assertSee('data-testid="review-key-info-stem"', false)
+            ->assertSee('data-key-info', false)
+            ->assertDontSee('review-hint-panel', false)
+            ->assertSee('Gợi ý')
+            ->assertSee('Kiến thức')
+            ->assertSee('STEMI cần PCI cấp cứu', false);
     }
 
     public function test_qbank_review_displays_question_stem_image(): void

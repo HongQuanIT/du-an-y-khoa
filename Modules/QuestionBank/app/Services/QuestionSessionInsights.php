@@ -144,6 +144,7 @@ final class QuestionSessionInsights
         $questionIds = $session->question_ids ?? [];
         $attempts = $this->attempts($session);
         $questions = $this->snapshots->questionMap($session);
+        $keyInfo = app(QuestionKeyInfoRenderer::class);
         $items = [];
         $fallbackStemImages = null;
 
@@ -178,6 +179,15 @@ final class QuestionSessionInsights
                 default => 'wrong',
             };
             $annotation = ($session->annotations ?? [])[(string) $questionId] ?? [];
+            $hintUsed = (bool) ($annotation['key_info_used'] ?? false);
+            $knowledgeUsed = (bool) ($annotation['attending_tip_used'] ?? false);
+            if (! $hintUsed && ! $knowledgeUsed && $attempt instanceof QuestionAttempt && $attempt->used_hint) {
+                $hintUsed = true;
+            }
+            $stem = (string) $question->stem;
+            $hints = $keyInfo->resolvePhrases($stem, (array) ($question->key_info ?? []));
+            $hasKeyInfo = $hints !== [] || str_contains($stem, 'data-hint');
+            $knowledgeHtml = SafeHtml::forDisplay((string) ($question->attending_tip ?? ''));
 
             $items[] = [
                 'id' => 'Q'.($position + 1),
@@ -185,10 +195,15 @@ final class QuestionSessionInsights
                 'index' => $position,
                 'result' => $result,
                 'topic' => $question->lessons->pluck('name')->join(', ') ?: 'Tổng hợp',
-                'excerpt' => Str::limit(strip_tags((string) $question->stem), 140),
-                'stem' => (string) $question->stem,
-                'stem_html' => (string) ($annotation['stem_html'] ?? SafeHtml::forDisplay((string) $question->stem)),
+                'excerpt' => Str::limit(strip_tags($stem), 140),
+                'stem' => $stem,
+                'stem_html' => (string) ($annotation['stem_html'] ?? SafeHtml::forDisplay($stem)),
+                'stem_key_info_html' => $keyInfo->render($stem, $hints),
                 'stem_image_url' => $stemImageUrl,
+                'hint_used' => $hintUsed,
+                'has_key_info' => $hasKeyInfo,
+                'knowledge_used' => $knowledgeUsed,
+                'knowledge_html' => $knowledgeHtml,
                 'note' => (string) ($annotation['note'] ?? ''),
                 'note_html' => (string) ($annotation['note_html'] ?? nl2br(e((string) ($annotation['note'] ?? '')))),
                 'flagged' => (bool) ($annotation['flagged']
