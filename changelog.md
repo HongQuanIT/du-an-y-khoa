@@ -2,6 +2,12 @@
 
 ## 2026-10-01
 
+### Feat — Xem lại câu hiện gợi ý đã dùng và phần kiến thức
+
+- Danh sách câu gắn nhãn đã dùng gợi ý ngay cạnh số câu.
+- Nút Gợi ý gạch chân đúng đoạn trong đề, cùng cách với phiên làm bài. Câu đã mở thì gạch chân sẵn.
+- Nút Kiến thức mở phần kiến thức đã chụp lúc tạo phiên. Câu đã mở thì phần này mở sẵn.
+
 ### Fix — Modal xác nhận xuất bản hàng loạt
 
 - Nút Xuất bản trên danh sách câu hỏi mở modal cùng kiểu nút xóa ở danh mục, thay hộp thoại của trình duyệt.

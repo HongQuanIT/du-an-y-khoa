@@ -25,6 +25,8 @@
             notesOpen: false,
             imageViewerOpen: false,
             imageViewerSrc: null,
+            hintReveal: {},
+            knowledgeReveal: {},
             get filtered() {
                 return this.items.filter((item) => this.matches(item, this.filter));
             },
@@ -86,6 +88,32 @@
                 if (option.state === 'wrong_selected') return 'border-error bg-error text-on-primary';
                 return 'border-outline-variant bg-surface text-on-surface-variant';
             },
+            isKeyInfoOn() {
+                const item = this.current;
+                if (!item) return false;
+                if (Object.prototype.hasOwnProperty.call(this.hintReveal, item.question_id)) {
+                    return Boolean(this.hintReveal[item.question_id]);
+                }
+                return Boolean(item.hint_used && item.has_key_info);
+            },
+            toggleKeyInfo() {
+                if (!this.current) return;
+                const questionId = this.current.question_id;
+                this.hintReveal = { ...this.hintReveal, [questionId]: !this.isKeyInfoOn() };
+            },
+            isKnowledgeOn() {
+                const item = this.current;
+                if (!item || !item.knowledge_html) return false;
+                if (Object.prototype.hasOwnProperty.call(this.knowledgeReveal, item.question_id)) {
+                    return Boolean(this.knowledgeReveal[item.question_id]);
+                }
+                return Boolean(item.knowledge_used);
+            },
+            toggleKnowledge() {
+                if (!this.current?.knowledge_html) return;
+                const questionId = this.current.question_id;
+                this.knowledgeReveal = { ...this.knowledgeReveal, [questionId]: !this.isKnowledgeOn() };
+            },
         }" @keydown.escape.window="detailOpen = false; notesOpen = false">
         <aside class="z-10 w-full shrink-0 flex-col border-r border-outline-variant bg-surface md:flex md:w-[400px] lg:w-[440px]"
             :class="detailOpen ? 'hidden md:flex' : 'flex'">
@@ -129,6 +157,13 @@
                         <div class="mb-1.5 flex items-center justify-between gap-2">
                             <div class="flex items-center gap-2">
                                 <span class="font-bold text-on-surface" x-text="item.id"></span>
+                                <span x-show="item.hint_used" x-cloak
+                                    class="inline-flex items-center gap-0.5 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-400"
+                                    title="Đã dùng gợi ý khi làm bài"
+                                    data-testid="review-list-hint-used">
+                                    <span class="material-symbols-outlined text-[13px]">lightbulb</span>
+                                    Đã dùng gợi ý
+                                </span>
                                 <span x-show="item.flagged" class="material-symbols-outlined text-[16px] text-amber-500" style="font-variation-settings: 'FILL' 1;">flag</span>
                             </div>
                             <div class="flex items-center gap-1.5">
@@ -187,9 +222,23 @@
                             </div>
 
                             <div class="grid gap-5"
-                                :class="current.stem_image_url ? 'lg:grid-cols-[minmax(0,1fr)_minmax(280px,380px)] lg:items-start' : ''">
-                                <div class="prose prose-lg max-w-none rounded-2xl border border-outline-variant bg-surface p-5 text-body-lg leading-relaxed text-on-surface shadow-sm md:p-6 dark:prose-invert"
-                                    x-html="current.stem_html"></div>
+                                :class="[current.stem_image_url ? 'lg:grid-cols-[minmax(0,1fr)_minmax(280px,380px)] lg:items-start' : '', isKeyInfoOn() ? 'key-info-active' : '']">
+                                <div class="space-y-3 rounded-2xl border border-outline-variant bg-surface p-5 shadow-sm md:p-6">
+                                    <div x-show="current.hint_used" x-cloak
+                                        class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-bold tracking-wide text-amber-700 uppercase"
+                                        data-testid="review-hint-used-badge">
+                                        <span class="material-symbols-outlined text-[15px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                                        <span>Đã dùng gợi ý</span>
+                                    </div>
+                                    <div x-show="!isKeyInfoOn()"
+                                        class="prose prose-lg max-w-none text-body-lg leading-relaxed text-on-surface dark:prose-invert"
+                                        data-testid="review-stem"
+                                        x-html="current.stem_html"></div>
+                                    <div x-show="isKeyInfoOn()" x-cloak
+                                        class="prose prose-lg max-w-none text-body-lg leading-relaxed text-on-surface dark:prose-invert"
+                                        data-testid="review-key-info-stem"
+                                        x-html="current.stem_key_info_html"></div>
+                                </div>
 
                                 <template x-if="current.stem_image_url">
                                     <aside class="overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-sm">
@@ -207,6 +256,48 @@
                                         </div>
                                     </aside>
                                 </template>
+                            </div>
+
+                            <div class="flex min-h-12 items-center border-y border-outline-variant bg-surface-container-lowest px-1"
+                                data-testid="review-knowledge-toolbar">
+                                <button type="button" @click="toggleKeyInfo()"
+                                    class="inline-flex h-12 items-center gap-2 border-b-2 px-3 text-label-sm font-bold transition-colors"
+                                    :class="isKeyInfoOn()
+                                        ? 'border-amber-600 text-amber-700'
+                                        : 'border-transparent text-on-surface-variant hover:bg-surface-container-high hover:text-primary'"
+                                    title="Gạch chân các đoạn gợi ý khớp trong câu hỏi"
+                                    :aria-pressed="isKeyInfoOn()"
+                                    data-testid="review-hint-toggle">
+                                    <span class="material-symbols-outlined text-[18px]">format_align_left</span>
+                                    <span>Gợi ý</span>
+                                </button>
+                                <button type="button" x-show="current.knowledge_html" @click="toggleKnowledge()"
+                                    class="inline-flex h-12 items-center gap-2 border-b-2 px-3 text-label-sm font-bold transition-colors"
+                                    :class="isKnowledgeOn()
+                                        ? 'border-amber-600 text-amber-700'
+                                        : 'border-transparent text-on-surface-variant hover:bg-surface-container-high hover:text-primary'"
+                                    title="Mở kiến thức cho câu hỏi"
+                                    :aria-pressed="isKnowledgeOn()"
+                                    data-testid="review-knowledge-toggle">
+                                    <span class="material-symbols-outlined text-[18px]">help</span>
+                                    <span>Kiến thức</span>
+                                </button>
+                            </div>
+
+                            <div x-show="isKnowledgeOn()" x-cloak
+                                class="rounded-xl border border-amber-200 bg-amber-50/70 p-4 text-on-surface"
+                                data-testid="review-knowledge-panel">
+                                <div x-show="current.knowledge_used"
+                                    class="mb-3 inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-bold tracking-wide text-amber-700 uppercase"
+                                    data-testid="review-knowledge-used">
+                                    <span class="material-symbols-outlined text-[15px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                                    <span>Đã dùng kiến thức</span>
+                                </div>
+                                <div class="flex items-start gap-3">
+                                    <span class="material-symbols-outlined mt-0.5 shrink-0 text-amber-700">stethoscope</span>
+                                    <div class="prose prose-sm max-w-none font-body-md text-body-md leading-relaxed italic dark:prose-invert"
+                                        x-html="current.knowledge_html"></div>
+                                </div>
                             </div>
 
                             <div class="flex flex-wrap items-center gap-2">
@@ -320,4 +411,31 @@
                 @click.stop="imageViewerOpen = false">
         </div>
     </div>
+    <style>
+        [data-testid="review-stem"] mark[data-hint],
+        [data-testid="review-key-info-stem"] mark[data-hint] {
+            cursor: pointer;
+            background-color: transparent;
+            color: inherit;
+            text-decoration: none;
+        }
+        [data-testid="review-stem"] mark[data-hint].revealed,
+        [data-testid="review-key-info-stem"] mark[data-hint].revealed,
+        .key-info-active [data-testid="review-stem"] mark[data-hint],
+        .key-info-active [data-testid="review-key-info-stem"] mark[data-hint] {
+            text-decoration: underline #ea580c;
+            text-decoration-style: solid;
+            text-decoration-thickness: 2px;
+            text-underline-offset: 4px;
+            background-color: transparent;
+        }
+    </style>
+    <script>
+        document.addEventListener('click', function (event) {
+            const hint = event.target.closest('mark[data-hint]');
+            if (!hint) return;
+            if (!hint.closest('[data-testid="review-stem"], [data-testid="review-key-info-stem"]')) return;
+            hint.classList.toggle('revealed');
+        });
+    </script>
 </x-layouts.app>
