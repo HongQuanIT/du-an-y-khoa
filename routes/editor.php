@@ -78,6 +78,8 @@ Route::middleware(['auth', 'portal:editor'])->group(function (): void {
             Route::get('/questions/{question}/stats', [QuestionController::class, 'stats'])->name('questions.stats');
             Route::put('/questions/{question}', [QuestionController::class, 'update'])
                 ->middleware('permission:editor_question.update')->name('questions.update');
+            Route::post('/questions/{question}/discard-draft', [QuestionController::class, 'discardDraft'])
+                ->middleware('permission:editor_question.update')->name('questions.discard-draft');
             Route::post('/questions/{question}/transition', [QuestionController::class, 'transition'])
                 ->middleware('permission:editor_question.submit|editor_question.update')->name('questions.transition');
             Route::delete('/questions/{question}', [QuestionController::class, 'destroy'])

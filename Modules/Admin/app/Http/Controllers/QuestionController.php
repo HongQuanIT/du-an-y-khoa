@@ -17,10 +17,11 @@ use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Modules\Admin\Actions\BulkTransitionQuestionsAction;
 use Modules\Admin\Actions\CloneQuestionAction;
+use Modules\Admin\Actions\DiscardQuestionDraftAction;
 use Modules\Admin\Actions\RequestQuestionDeletionAction;
 use Modules\Admin\Actions\RequestQuestionRetirementAction;
-use Modules\Admin\Actions\SummarizeQuestionDeletionImpactAction;
 use Modules\Admin\Actions\SaveAdminQuestionAction;
+use Modules\Admin\Actions\SummarizeQuestionDeletionImpactAction;
 use Modules\Admin\Actions\TransitionQuestionStatusAction;
 use Modules\Admin\Support\AdminQuestionListQuery;
 use Modules\Admin\Support\QuestionAccess;
@@ -34,6 +35,7 @@ use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Enums\QuestionWorkflowEventType;
 use Modules\QuestionBank\Enums\ReviewFlagOutcome;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
+use Modules\QuestionBank\Models\ExamCatalog;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionFeedback;
 use Modules\QuestionBank\Models\QuestionImportBatch;
@@ -363,6 +365,25 @@ final class QuestionController extends Controller
         });
     }
 
+    public function discardDraft(Question $question, DiscardQuestionDraftAction $action): RedirectResponse
+    {
+        $this->authorizePermission(Permission::QuestionView);
+        $this->authorizePermission(Permission::QuestionUpdate);
+        QuestionAccess::authorizeView($this->actor(), $question);
+
+        $outcome = $action->handle($this->actor(), $question);
+
+        if ($outcome === 'deleted') {
+            return redirect()
+                ->route($this->questionRoute('index'))
+                ->with('status', 'Đã hủy bản nháp.');
+        }
+
+        return redirect()
+            ->route($this->questionRoute('edit'), $question)
+            ->with('status', 'Đã hủy bản nháp. Câu hỏi trở lại phiên bản đang xuất bản trên ngân hàng.');
+    }
+
     public function destroy(Request $request, Question $question, RequestQuestionDeletionAction $action): RedirectResponse
     {
         $this->authorizePermission(Permission::QuestionView);
@@ -648,7 +669,7 @@ final class QuestionController extends Controller
                 ->orderBy('sort_order')
                 ->orderBy('name')
                 ->get(['id', 'name']),
-            'classificationExamCatalogs' => \Modules\QuestionBank\Models\ExamCatalog::query()
+            'classificationExamCatalogs' => ExamCatalog::query()
                 ->where('status', TaxonomyStatus::Active)
                 ->with('professions:id,name')
                 ->orderBy('sort_order')

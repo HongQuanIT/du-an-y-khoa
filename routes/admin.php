@@ -306,6 +306,9 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
         Route::put('/questions/{question}', [QuestionController::class, 'update'])
             ->middleware('permission:'.Permission::QuestionUpdate->value)
             ->name('questions.update');
+        Route::post('/questions/{question}/discard-draft', [QuestionController::class, 'discardDraft'])
+            ->middleware('permission:'.Permission::QuestionUpdate->value)
+            ->name('questions.discard-draft');
         Route::patch('/question-feedback/{feedback}/status', [QuestionFeedbackController::class, 'updateStatus'])
             ->middleware('permission:question_feedback.update')
             ->name('question-feedback.update-status');

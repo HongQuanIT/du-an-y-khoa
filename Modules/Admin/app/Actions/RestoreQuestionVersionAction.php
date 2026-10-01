@@ -15,6 +15,7 @@ use Modules\QuestionBank\Enums\QuestionReviewAction;
 use Modules\QuestionBank\Enums\QuestionReviewStatus;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Models\Blueprint;
+use Modules\QuestionBank\Models\ExamCatalog;
 use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionVersion;
@@ -34,7 +35,32 @@ final class RestoreQuestionVersionAction
     {
         abort_unless((string) $version->question_id === (string) $question->getKey(), 404);
 
-        return DB::transaction(function () use ($actor, $question, $version): Question {
+        return $this->applySnapshot($actor, $question, $version, restoreLiveStatus: false);
+    }
+
+    /**
+     * Drop the draft working copy and put the live published snapshot back in place.
+     */
+    public function discardWorkingCopy(User $actor, Question $question): Question
+    {
+        $publishedVersion = (int) $question->published_version;
+        $version = QuestionVersion::query()
+            ->where('question_id', $question->getKey())
+            ->where('version', $publishedVersion)
+            ->first();
+
+        if ($publishedVersion < 1 || $version === null) {
+            throw ValidationException::withMessages([
+                'status' => 'Không tìm thấy phiên bản đang xuất bản để khôi phục.',
+            ]);
+        }
+
+        return $this->applySnapshot($actor, $question, $version, restoreLiveStatus: true);
+    }
+
+    private function applySnapshot(User $actor, Question $question, QuestionVersion $version, bool $restoreLiveStatus): Question
+    {
+        return DB::transaction(function () use ($actor, $question, $version, $restoreLiveStatus): Question {
             $question = Question::query()->lockForUpdate()->findOrFail($question->getKey());
             $before = AuditSnapshot::question($question);
             $fromStatus = $question->status instanceof QuestionStatus
@@ -58,6 +84,12 @@ final class RestoreQuestionVersionAction
             }
 
             $keyInfo = array_values((array) ($snapshot['key_info'] ?? []));
+            $snapshotStatus = QuestionStatus::tryFrom((string) ($snapshot['status'] ?? ''));
+            $nextStatus = $restoreLiveStatus
+                ? (in_array($snapshotStatus, [QuestionStatus::Published, QuestionStatus::Private], true)
+                    ? $snapshotStatus
+                    : QuestionStatus::Published)
+                : QuestionStatus::Draft;
 
             $question->forceFill([
                 'stem' => (string) ($snapshot['stem'] ?? ''),
@@ -65,7 +97,7 @@ final class RestoreQuestionVersionAction
                 'key_info' => $keyInfo,
                 'attending_tip' => $snapshot['attending_tip'] ?? null,
                 'difficulty' => (string) ($snapshot['difficulty'] ?? 'medium'),
-                'status' => QuestionStatus::Draft,
+                'status' => $nextStatus,
                 'is_free' => (bool) ($snapshot['is_free'] ?? false),
                 'is_priority' => (bool) ($snapshot['is_priority'] ?? $snapshot['exam_flag'] ?? false),
                 'updated_by' => $actor->getKey(),
@@ -94,7 +126,7 @@ final class RestoreQuestionVersionAction
 
             if (array_key_exists('exam_catalog_ids', $snapshot) || array_key_exists('blueprint_ids', $snapshot)) {
                 $question->examCatalogs()->sync(
-                    \Modules\QuestionBank\Models\ExamCatalog::idsForSnapshot($snapshot),
+                    ExamCatalog::idsForSnapshot($snapshot),
                 );
             }
 
@@ -125,7 +157,7 @@ final class RestoreQuestionVersionAction
 
             $this->syncHintsFromKeyInfo($question, $keyInfo);
 
-            if (in_array($fromStatus, [
+            if ($restoreLiveStatus || in_array($fromStatus, [
                 QuestionStatus::InReview,
                 QuestionStatus::InFlagReview,
                 QuestionStatus::PendingPublish,
@@ -139,14 +171,15 @@ final class RestoreQuestionVersionAction
             }
 
             Auditor::record(
-                AuditAction::QuestionVersionRestored,
+                $restoreLiveStatus ? AuditAction::QuestionDraftDiscarded : AuditAction::QuestionVersionRestored,
                 $actor,
                 $question,
                 $before,
                 AuditSnapshot::question($question->fresh(['options', 'lessons', 'tags'])),
                 metadata: [
                     'restored_from_version' => (int) $version->version,
-                    'working_copy_only' => true,
+                    'working_copy_only' => ! $restoreLiveStatus,
+                    'discarded_working_copy' => $restoreLiveStatus,
                 ],
             );
 

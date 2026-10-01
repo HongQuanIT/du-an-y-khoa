@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-01
+
+### Fix — Hủy bỏ trên form biên tập đúng cổng và bỏ đúng bản nháp
+
+- Nút Hủy bỏ không còn đưa biên tập viên sang danh sách admin.
+- Bản nháp chưa từng xuất bản: Hủy bỏ xóa câu đó.
+- Bản nháp đang sửa trên câu đã xuất bản: Hủy bỏ trả nội dung về phiên bản ngân hàng đang dùng.
+- Câu đã xuất bản, đang ẩn, bị từ chối, hoặc nháp sau khi đưa về editor: Hủy bỏ chỉ rời form, không xóa câu.
+
 ## 2026-09-30
 
 ### Feat — Ngừng dùng, xóa có kiểm tra, và đếm ngân hàng trên danh sách câu hỏi

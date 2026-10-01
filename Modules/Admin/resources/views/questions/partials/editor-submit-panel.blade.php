@@ -133,10 +133,39 @@
             @endif
         @endif
 
-        <a href="{{ route('admin.questions.index') }}"
-           class="mt-2 flex w-full items-center justify-center rounded-xl py-2 text-xs font-semibold text-on-surface-variant transition-colors hover:text-on-surface">
-            Hủy bỏ
-        </a>
+        @php
+            $canDiscardOverlayDraft = ! $isNew
+                && $question->status === QuestionStatus::Draft
+                && (int) $question->published_version > 0;
+            $canDiscardUnpublishedDraft = ! $isNew
+                && $question->status === QuestionStatus::Draft
+                && (int) ($question->published_version ?? 0) < 1
+                && (int) $question->version === 0;
+        @endphp
+
+        @if ($canDiscardOverlayDraft)
+            <button type="submit"
+                form="editor-discard-draft-form"
+                data-testid="editor-discard-draft"
+                onclick="return confirm('Hủy bản nháp này? Nội dung đang soạn sẽ bị bỏ, câu hỏi trở lại phiên bản đang xuất bản.')"
+                class="mt-2 flex w-full items-center justify-center rounded-xl py-2 text-xs font-semibold text-on-surface-variant transition-colors hover:text-on-surface">
+                Hủy bỏ
+            </button>
+        @elseif ($canDiscardUnpublishedDraft)
+            <button type="submit"
+                form="editor-discard-draft-form"
+                data-testid="editor-discard-draft"
+                onclick="return confirm('Hủy bản nháp này? Câu hỏi chưa từng xuất bản sẽ bị xóa.')"
+                class="mt-2 flex w-full items-center justify-center rounded-xl py-2 text-xs font-semibold text-on-surface-variant transition-colors hover:text-on-surface">
+                Hủy bỏ
+            </button>
+        @else
+            <a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.index')) }}"
+               data-testid="editor-cancel"
+               class="mt-2 flex w-full items-center justify-center rounded-xl py-2 text-xs font-semibold text-on-surface-variant transition-colors hover:text-on-surface">
+                Hủy bỏ
+            </a>
+        @endif
     </div>
 @endif
 
