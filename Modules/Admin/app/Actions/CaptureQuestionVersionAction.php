@@ -21,6 +21,9 @@ final class CaptureQuestionVersionAction
         $question->loadMissing([
             'lessons:id',
             'tags:id',
+            'professions:id',
+            'examCatalogs:id',
+            'blueprints:id',
             'options' => fn ($query) => $query->orderBy('order'),
         ]);
 

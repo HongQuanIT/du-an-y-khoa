@@ -2,6 +2,11 @@
 
 ## 2026-10-01
 
+### Fix — Modal xác nhận xuất bản hàng loạt
+
+- Nút Xuất bản trên danh sách câu hỏi mở modal cùng kiểu nút xóa ở danh mục, thay hộp thoại của trình duyệt.
+- Kết quả xuất bản ghi rõ số câu đủ điều kiện đã xuất bản và số câu không đủ điều kiện.
+
 ### Fix — Modal xác nhận Gửi duyệt và Hủy bỏ
 
 - Gửi duyệt và Hủy bỏ mở modal cùng kiểu nút xóa ở danh mục, thay hộp thoại của trình duyệt.

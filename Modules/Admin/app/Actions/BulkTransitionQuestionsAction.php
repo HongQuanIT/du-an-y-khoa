@@ -112,23 +112,28 @@ final class BulkTransitionQuestionsAction
             }
         }
 
-        $parts = [];
-        if ($published > 0) {
-            $parts[] = 'Đã XB '.$published;
-        }
-        if ($skipped !== []) {
-            $parts[] = 'Bỏ qua '.count($skipped);
-        }
-        if ($failed !== []) {
-            $parts[] = 'Lỗi '.count($failed);
-        }
-
         return [
             'published' => $published,
             'skipped' => $skipped,
             'failed' => $failed,
-            'message' => $parts === [] ? 'Không có câu nào được xử lý.' : implode(' · ', $parts).'.',
+            'message' => $this->resultMessage($published, count($skipped), count($failed)),
         ];
+    }
+
+    private function resultMessage(int $published, int $ineligible, int $failed): string
+    {
+        $lines = [
+            $published > 0
+                ? "Đã xuất bản {$published} câu đủ điều kiện."
+                : 'Chưa xuất bản câu nào đủ điều kiện.',
+            "{$ineligible} câu không đủ điều kiện xuất bản.",
+        ];
+
+        if ($failed > 0) {
+            $lines[] = "{$failed} câu gặp lỗi hệ thống, chưa xuất bản được.";
+        }
+
+        return implode("\n", $lines);
     }
 
     /**

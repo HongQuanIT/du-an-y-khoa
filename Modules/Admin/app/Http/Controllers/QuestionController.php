@@ -472,7 +472,7 @@ final class QuestionController extends Controller
             $sample = collect($result['skipped'])->take(5)->map(
                 fn (array $row): string => $row['code'].': '.$row['reason'],
             )->implode('; ');
-            $flash .= ' Chi tiết bỏ qua: '.$sample;
+            $flash .= ' Câu không đủ điều kiện: '.$sample;
             if (count($result['skipped']) > 5) {
                 $flash .= '…';
             }

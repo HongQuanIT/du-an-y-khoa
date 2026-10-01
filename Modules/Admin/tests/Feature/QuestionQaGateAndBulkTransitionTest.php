@@ -91,7 +91,8 @@ final class QuestionQaGateAndBulkTransitionTest extends TestCase
                 'ids' => [$ready->id, $multiCycle->id],
             ])
             ->assertOk()
-            ->assertJsonPath('published', 1);
+            ->assertJsonPath('published', 1)
+            ->assertJsonPath('message', "Đã xuất bản 1 câu đủ điều kiện.\n1 câu không đủ điều kiện xuất bản.");
 
         $this->assertSame(QuestionStatus::Published, $ready->fresh()->status);
         $this->assertSame(QuestionStatus::PendingPublish, $multiCycle->fresh()->status);
@@ -110,7 +111,8 @@ final class QuestionQaGateAndBulkTransitionTest extends TestCase
                 'ids' => [$question->id],
             ])
             ->assertOk()
-            ->assertJsonPath('published', 0);
+            ->assertJsonPath('published', 0)
+            ->assertJsonPath('message', "Chưa xuất bản câu nào đủ điều kiện.\n1 câu không đủ điều kiện xuất bản.");
 
         $this->assertSame(QuestionStatus::PendingPublish, $question->fresh()->status);
     }
@@ -135,6 +137,8 @@ final class QuestionQaGateAndBulkTransitionTest extends TestCase
             ->get(route('admin.questions.index'))
             ->assertOk()
             ->assertSee('bulkPublish()', false)
+            ->assertSee('data-testid="question-bulk-publish-modal"', false)
+            ->assertSee('Xuất bản hàng loạt?', false)
             ->assertDontSee('bulkReject()', false)
             ->assertDontSee('Từ chối hàng loạt', false);
     }
