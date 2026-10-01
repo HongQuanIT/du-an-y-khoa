@@ -49,6 +49,9 @@
             isNew: @js($isNew),
             canSubmit: @js($canSubmitFlow),
             stickyResubmit: @js($isStickyResubmit),
+            cancelUrl: @js(route(\App\Support\Auth\PortalRoute::content('questions.index'))),
+            submitLabel: @js($submitLabel),
+            submitTargetStatus: @js($submitTargetStatus),
         })">
         <div class="mb-3">
             @if ($isStickyResubmit)
@@ -104,9 +107,9 @@
 
             <div class="grid grid-cols-1 gap-2">
                 @if ($showSubmitCta)
-                    <button type="submit"
+                    <button type="button"
                         data-testid="editor-submit-for-review"
-                        @click="prepareSubmit($event, @js($submitTargetStatus))"
+                        @click="requestReview()"
                         class="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 font-label-md font-semibold text-on-primary hover:bg-primary/90">
                         <span class="material-symbols-outlined text-[18px]">send</span>
                         {{ $submitLabel }}
@@ -144,28 +147,51 @@
         @endphp
 
         @if ($canDiscardOverlayDraft)
-            <button type="submit"
-                form="editor-discard-draft-form"
+            <button type="button"
                 data-testid="editor-discard-draft"
-                onclick="return confirm('Hủy bản nháp này? Nội dung đang soạn sẽ bị bỏ, câu hỏi trở lại phiên bản đang xuất bản.')"
+                @click="requestDiscard('overlay')"
                 class="mt-2 flex w-full items-center justify-center rounded-xl py-2 text-xs font-semibold text-on-surface-variant transition-colors hover:text-on-surface">
                 Hủy bỏ
             </button>
         @elseif ($canDiscardUnpublishedDraft)
-            <button type="submit"
-                form="editor-discard-draft-form"
+            <button type="button"
                 data-testid="editor-discard-draft"
-                onclick="return confirm('Hủy bản nháp này? Câu hỏi chưa từng xuất bản sẽ bị xóa.')"
+                @click="requestDiscard('unpublished')"
                 class="mt-2 flex w-full items-center justify-center rounded-xl py-2 text-xs font-semibold text-on-surface-variant transition-colors hover:text-on-surface">
                 Hủy bỏ
             </button>
         @else
-            <a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.index')) }}"
-               data-testid="editor-cancel"
-               class="mt-2 flex w-full items-center justify-center rounded-xl py-2 text-xs font-semibold text-on-surface-variant transition-colors hover:text-on-surface">
+            <button type="button"
+                data-testid="editor-cancel"
+                @click="requestLeave()"
+                class="mt-2 flex w-full items-center justify-center rounded-xl py-2 text-xs font-semibold text-on-surface-variant transition-colors hover:text-on-surface">
                 Hủy bỏ
-            </a>
+            </button>
         @endif
+
+        <template x-teleport="body">
+            <div x-show="confirm" x-cloak
+                data-testid="editor-confirm-modal"
+                class="fixed inset-0 z-50 flex items-center justify-center p-4"
+                @keydown.escape.window="confirm = null">
+                <div class="absolute inset-0 bg-on-surface/40" @click="confirm = null"></div>
+                <div class="relative w-full max-w-md rounded-2xl border border-outline-variant bg-surface p-5 shadow-2xl"
+                    role="alertdialog" aria-modal="true" aria-labelledby="editor-confirm-title">
+                    <h3 id="editor-confirm-title" class="text-base font-semibold text-on-surface" x-text="confirm?.title"></h3>
+                    <p class="mt-2 text-sm text-on-surface-variant" x-text="confirm?.body"></p>
+                    <div class="mt-5 flex justify-end gap-2">
+                        <button type="button" @click="confirm = null"
+                            class="h-10 rounded-lg px-3 text-sm font-semibold text-on-surface-variant hover:bg-surface-container-low">Hủy</button>
+                        <button type="button"
+                            data-testid="editor-confirm-accept"
+                            @click="acceptConfirm()"
+                            class="h-10 rounded-lg px-4 text-sm font-semibold text-white hover:opacity-90"
+                            :class="confirm?.danger ? 'bg-error' : 'bg-primary'"
+                            x-text="confirm?.label"></button>
+                    </div>
+                </div>
+            </div>
+        </template>
     </div>
 @endif
 
@@ -181,7 +207,11 @@
             isNew: Boolean(config.isNew),
             canSubmit: Boolean(config.canSubmit),
             stickyResubmit: Boolean(config.stickyResubmit),
+            cancelUrl: config.cancelUrl || '',
+            submitLabel: config.submitLabel || 'Gửi duyệt',
+            submitTargetStatus: config.submitTargetStatus || 'in_review',
             submitError: '',
+            confirm: null,
 
             init() {
                 const form = this.$root.closest('form');
@@ -221,8 +251,107 @@
                     if (! this.stickyResubmit && nextStatus === 'in_review' && ! this.hasInstructor) {
                         event.preventDefault();
                         this.submitError = 'Hãy chọn giảng viên chuyên môn trước khi gửi duyệt.';
-                        return;
                     }
+                }
+            },
+
+            requestReview() {
+                this.submitError = '';
+                const nextStatus = this.submitTargetStatus;
+                if (this.lessonCount < 1) {
+                    this.submitError = 'Hãy chọn ít nhất một bài học trước khi gửi duyệt.';
+                    return;
+                }
+                if (! this.stickyResubmit && nextStatus === 'in_review' && ! this.hasInstructor) {
+                    this.submitError = 'Hãy chọn giảng viên chuyên môn trước khi gửi duyệt.';
+                    return;
+                }
+
+                if (nextStatus === 'in_flag_review') {
+                    this.confirm = {
+                        action: 'submit',
+                        nextStatus,
+                        title: 'Gửi lại để gắn cờ?',
+                        body: 'Hai reviewer trước sẽ nhận lại câu. Giảng viên không duyệt lại vòng này.',
+                        label: this.submitLabel,
+                        danger: false,
+                    };
+                    return;
+                }
+
+                if (this.currentStatus === 'in_review') {
+                    this.confirm = {
+                        action: 'submit',
+                        nextStatus,
+                        title: 'Gửi duyệt lại?',
+                        body: 'Phiếu giảng viên trên vòng hiện tại sẽ được reset.',
+                        label: this.submitLabel,
+                        danger: false,
+                    };
+                    return;
+                }
+
+                this.confirm = {
+                    action: 'submit',
+                    nextStatus,
+                    title: 'Gửi duyệt?',
+                    body: 'Gửi câu này cho giảng viên duyệt? Trong lúc chờ duyệt sẽ không sửa được nội dung.',
+                    label: this.submitLabel,
+                    danger: false,
+                };
+            },
+
+            requestDiscard(kind) {
+                this.confirm = kind === 'unpublished'
+                    ? {
+                        action: 'discard',
+                        title: 'Hủy bản nháp?',
+                        body: 'Câu hỏi chưa từng xuất bản sẽ bị xóa.',
+                        label: 'Xóa bản nháp',
+                        danger: true,
+                    }
+                    : {
+                        action: 'discard',
+                        title: 'Hủy bản nháp?',
+                        body: 'Nội dung đang soạn sẽ bị bỏ, câu hỏi trở lại phiên bản đang xuất bản.',
+                        label: 'Hủy bản nháp',
+                        danger: true,
+                    };
+            },
+
+            requestLeave() {
+                this.confirm = {
+                    action: 'leave',
+                    title: 'Rời trang soạn thảo?',
+                    body: 'Thay đổi chưa lưu sẽ không được giữ.',
+                    label: 'Rời trang',
+                    danger: false,
+                };
+            },
+
+            acceptConfirm() {
+                const pending = this.confirm;
+                if (! pending) {
+                    return;
+                }
+                this.confirm = null;
+
+                if (pending.action === 'submit') {
+                    const statusInput = document.getElementById('question_requested_status');
+                    if (statusInput) {
+                        statusInput.value = pending.nextStatus;
+                    }
+                    this.$root.closest('form')?.requestSubmit();
+                    return;
+                }
+
+                if (pending.action === 'discard') {
+                    document.getElementById('editor-discard-draft-form')?.requestSubmit();
+                    return;
+                }
+
+                if (pending.action === 'leave' && this.cancelUrl) {
+                    window.location.assign(this.cancelUrl);
                 }
             },
         }));

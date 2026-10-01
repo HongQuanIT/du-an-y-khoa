@@ -2,6 +2,11 @@
 
 ## 2026-10-01
 
+### Fix — Modal xác nhận Gửi duyệt và Hủy bỏ
+
+- Gửi duyệt và Hủy bỏ mở modal cùng kiểu nút xóa ở danh mục, thay hộp thoại của trình duyệt.
+- Gửi duyệt chỉ hỏi khi câu đã có bài học và giảng viên. Lưu nháp không hỏi.
+
 ### Fix — Hủy bỏ trên form biên tập đúng cổng và bỏ đúng bản nháp
 
 - Nút Hủy bỏ không còn đưa biên tập viên sang danh sách admin.

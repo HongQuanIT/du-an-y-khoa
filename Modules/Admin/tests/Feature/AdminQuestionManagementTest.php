@@ -898,6 +898,8 @@ final class AdminQuestionManagementTest extends TestCase
             ->assertOk()
             ->assertSee('data-testid="editor-discard-draft"', false)
             ->assertSee(route('editor.questions.discard-draft', $question), false)
+            ->assertSee('Gửi câu này cho giảng viên duyệt?', false)
+            ->assertSee('Câu hỏi chưa từng xuất bản sẽ bị xóa.', false)
             ->assertDontSee(route('admin.questions.index'), false);
 
         $this->actingAsStaff($editor)
@@ -926,7 +928,8 @@ final class AdminQuestionManagementTest extends TestCase
             ->get(route('editor.questions.edit', $question))
             ->assertOk()
             ->assertSee('data-testid="editor-discard-draft"', false)
-            ->assertSee('Hủy bản nháp này? Nội dung đang soạn sẽ bị bỏ', false);
+            ->assertSee('data-testid="editor-confirm-modal"', false)
+            ->assertSee('Nội dung đang soạn sẽ bị bỏ, câu hỏi trở lại phiên bản đang xuất bản.', false);
 
         $this->actingAsStaff($editor)
             ->post(route('editor.questions.discard-draft', $question))
@@ -957,6 +960,9 @@ final class AdminQuestionManagementTest extends TestCase
             ->assertOk()
             ->assertSee('data-testid="editor-cancel"', false)
             ->assertSee(route('editor.questions.index'), false)
+            ->assertSee('data-testid="editor-confirm-modal"', false)
+            ->assertSee('Rời trang soạn thảo?', false)
+            ->assertSee('Thay đổi chưa lưu sẽ không được giữ.', false)
             ->assertDontSee('id="editor-discard-draft-form"', false)
             ->assertDontSee(route('admin.questions.index'), false);
     }
