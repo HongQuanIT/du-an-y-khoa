@@ -745,6 +745,30 @@
                 </button>
             </div>
         </div>
+
+        <template x-teleport="body">
+            <div x-show="dialog" x-cloak
+                data-testid="question-bulk-publish-modal"
+                class="fixed inset-0 z-50 flex items-center justify-center p-4"
+                @keydown.escape.window="closeDialog()">
+                <div class="absolute inset-0 bg-on-surface/40" @click="closeDialog()"></div>
+                <div class="relative w-full max-w-md rounded-2xl border border-outline-variant bg-surface p-5 shadow-2xl"
+                    role="alertdialog" aria-modal="true" aria-labelledby="question-bulk-publish-title">
+                    <h3 id="question-bulk-publish-title" class="text-base font-semibold text-on-surface" x-text="dialog?.title"></h3>
+                    <p class="mt-2 whitespace-pre-line text-sm text-on-surface-variant" x-text="dialog?.body"></p>
+                    <div class="mt-5 flex justify-end gap-2">
+                        <button type="button" x-show="dialog?.mode === 'confirm'" @click="dialog = null"
+                            class="h-10 rounded-lg px-3 text-sm font-semibold text-on-surface-variant hover:bg-surface-container-low">Hủy</button>
+                        <button type="button"
+                            data-testid="question-bulk-publish-accept"
+                            @click="acceptDialog()"
+                            :disabled="bulkBusy"
+                            class="h-10 rounded-lg bg-primary px-4 text-sm font-semibold text-on-primary hover:bg-primary/90 disabled:opacity-60"
+                            x-text="bulkBusy ? 'Đang xuất bản…' : (dialog?.label || 'Xuất bản')"></button>
+                    </div>
+                </div>
+            </div>
+        </template>
     </div>
 
     <script>
@@ -806,6 +830,7 @@
                 exportFormat: 'xlsx',
                 selectedIds: loadSelected(),
                 bulkBusy: false,
+                dialog: null,
                 toggle(key) {
                     this.cols[key] = !this.cols[key];
                     this.persist();
@@ -871,13 +896,35 @@
                 bulkIds() {
                     return this.selectedIds.slice(0, this.bulkLimit);
                 },
-                async bulkPublish() {
+                bulkPublish() {
                     if (this.selectedCount === 0 || this.bulkBusy) return;
                     const ids = this.bulkIds();
-                    const msg = ids.length < this.selectedCount
-                        ? `Xuất bản tối đa ${this.bulkLimit} câu đầu? Chỉ câu 1 vòng + 2 cờ xanh được XB; còn lại bỏ qua (duyệt thủ công).`
-                        : 'Xuất bản các câu đủ điều kiện (1 vòng + 2 cờ xanh)? Câu ≥2 vòng / có cờ đỏ / không chờ XB sẽ bị bỏ qua — duyệt thủ công trên form.';
-                    if (!window.confirm(msg)) return;
+                    const truncated = ids.length < this.selectedCount;
+                    this.dialog = {
+                        mode: 'confirm',
+                        title: 'Xuất bản hàng loạt?',
+                        body: truncated
+                            ? `Chỉ xuất bản tối đa ${this.bulkLimit} câu đầu trong số đã chọn. Chỉ câu đúng 1 vòng và đủ 2 cờ xanh được xuất bản; câu còn lại bị bỏ qua để duyệt thủ công.`
+                            : 'Chỉ câu đủ điều kiện (1 vòng và 2 cờ xanh) được xuất bản. Câu từ 2 vòng, có cờ đỏ hoặc chưa chờ xuất bản sẽ bị bỏ qua.',
+                        label: 'Xuất bản',
+                    };
+                },
+                closeDialog() {
+                    if (this.bulkBusy) return;
+                    const shouldReload = Boolean(this.dialog?.reload);
+                    this.dialog = null;
+                    if (shouldReload) {
+                        window.location.reload();
+                    }
+                },
+                async acceptDialog() {
+                    if (!this.dialog || this.bulkBusy) return;
+                    if (this.dialog.mode === 'notice') {
+                        this.closeDialog();
+                        return;
+                    }
+                    const ids = this.bulkIds();
+                    this.dialog = null;
                     await this.runBulk({ ids });
                 },
                 async runBulk(payload) {
@@ -898,14 +945,34 @@
                             const firstError = data?.errors
                                 ? Object.values(data.errors).flat()[0]
                                 : (data?.message || 'Xuất bản hàng loạt thất bại.');
-                            window.alert(firstError);
+                            this.dialog = {
+                                mode: 'notice',
+                                title: 'Không xuất bản được',
+                                body: firstError,
+                                label: 'Đóng',
+                            };
                             return;
                         }
-                        window.alert(data.message || 'Đã xử lý.');
                         this.clearSelected();
-                        window.location.reload();
+                        const published = Number(data.published || 0);
+                        const ineligible = Array.isArray(data.skipped) ? data.skipped.length : 0;
+                        const failed = Array.isArray(data.failed) ? data.failed.length : 0;
+                        this.dialog = {
+                            mode: 'notice',
+                            title: published === 0
+                                ? 'Chưa xuất bản'
+                                : (ineligible > 0 || failed > 0 ? 'Kết quả xuất bản' : 'Đã xuất bản'),
+                            body: data.message || 'Đã xử lý.',
+                            label: 'Đóng',
+                            reload: true,
+                        };
                     } catch (e) {
-                        window.alert('Không kết nối được máy chủ.');
+                        this.dialog = {
+                            mode: 'notice',
+                            title: 'Không xuất bản được',
+                            body: 'Không kết nối được máy chủ.',
+                            label: 'Đóng',
+                        };
                     } finally {
                         this.bulkBusy = false;
                     }

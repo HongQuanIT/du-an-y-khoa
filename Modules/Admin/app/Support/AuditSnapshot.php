@@ -39,6 +39,9 @@ final class AuditSnapshot
             'options' => fn ($query) => $query->orderBy('order'),
             'hints' => fn ($query) => $query->orderBy('sort_order'),
             'tags:id',
+            'professions:id',
+            'examCatalogs:id',
+            'blueprints:id',
         ]);
 
         // Force-load lessons with `name` even if the relation was previously
