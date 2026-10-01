@@ -949,6 +949,15 @@
     </form>
     @endif
 
+    @if (! $isNew && ($canEditContent ?? false) && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::Draft && (
+        (int) $question->published_version > 0
+        || (int) $question->version === 0
+    ))
+        <form id="editor-discard-draft-form" method="post" action="{{ route(\App\Support\Auth\PortalRoute::content('questions.discard-draft'), $question) }}" class="hidden">
+            @csrf
+        </form>
+    @endif
+
     @if (! $isNew && $canSubmit && in_array($question->status, [
         \Modules\QuestionBank\Enums\QuestionStatus::InReview,
         \Modules\QuestionBank\Enums\QuestionStatus::Rejected,

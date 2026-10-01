@@ -6,6 +6,7 @@ namespace Modules\Admin\Tests\Feature;
 
 use App\Models\User;
 use App\Support\Auth\TwoFactorSession;
+use App\Support\Enums\Permission;
 use App\Support\Enums\Role;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -13,6 +14,8 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Modules\Admin\Actions\CaptureQuestionVersionAction;
+use Modules\Admin\Actions\TransitionQuestionStatusAction;
 use Modules\Auth\Models\TwoFactorSecret;
 use Modules\Auth\Services\TotpService;
 use Modules\Classroom\Enums\LiveSessionStatus;
@@ -21,10 +24,6 @@ use Modules\Classroom\Models\LiveSession;
 use Modules\Exam\Enums\ExamStatus;
 use Modules\Exam\Models\Exam;
 use Modules\Personalization\Models\Bookmark;
-use Modules\StudyPlan\Enums\TaskStatus;
-use Modules\StudyPlan\Enums\TaskType;
-use Modules\StudyPlan\Models\StudyPlan;
-use Modules\StudyPlan\Models\StudyPlanTask;
 use Modules\QuestionBank\Actions\FlagQuestionReviewAction;
 use Modules\QuestionBank\Actions\InstructorReviewQuestionAction;
 use Modules\QuestionBank\Enums\Difficulty;
@@ -43,6 +42,11 @@ use Modules\QuestionBank\Models\QuestionReviewRequest;
 use Modules\QuestionBank\Models\QuestionSession;
 use Modules\QuestionBank\Models\QuestionVersion;
 use Modules\QuestionBank\Models\Subject;
+use Modules\QuestionBank\Support\ServePublishedQuestion;
+use Modules\StudyPlan\Enums\TaskStatus;
+use Modules\StudyPlan\Enums\TaskType;
+use Modules\StudyPlan\Models\StudyPlan;
+use Modules\StudyPlan\Models\StudyPlanTask;
 use Tests\Support\CreatesMedicalTaxonomy;
 use Tests\TestCase;
 
@@ -783,13 +787,13 @@ final class AdminQuestionManagementTest extends TestCase
     {
         $editor = $this->staffUser(Role::ContentEditor);
         $role = \Spatie\Permission\Models\Role::findByName(Role::ContentEditor->value, 'web');
-        $role->revokePermissionTo(\App\Support\Enums\Permission::QuestionView->value);
+        $role->revokePermissionTo(Permission::QuestionView->value);
         $editor->unsetRelation('roles');
         $editor->unsetRelation('permissions');
         $editor->forgetCachedPermissions();
 
-        $this->assertFalse($editor->fresh()->can(\App\Support\Enums\Permission::QuestionView->value));
-        $this->assertTrue($editor->fresh()->can(\App\Support\Enums\Permission::QuestionUpdate->value));
+        $this->assertFalse($editor->fresh()->can(Permission::QuestionView->value));
+        $this->assertTrue($editor->fresh()->can(Permission::QuestionUpdate->value));
 
         $this->actingAsStaff($editor)
             ->post(route('admin.questions.store'), $this->payload())
@@ -880,8 +884,123 @@ final class AdminQuestionManagementTest extends TestCase
         ]);
 
         // Learner vẫn thấy bản cũ qua snapshot.
-        $served = \Modules\QuestionBank\Support\ServePublishedQuestion::overlay($question->fresh(['options']));
+        $served = ServePublishedQuestion::overlay($question->fresh(['options']));
         $this->assertSame($originalStem, strip_tags($served->stem));
+    }
+
+    public function test_editor_cancel_discards_unpublished_draft_and_stays_on_editor_portal(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+        $question = $this->makeDraftQuestion($editor);
+
+        $this->actingAsStaff($editor)
+            ->get(route('editor.questions.edit', $question))
+            ->assertOk()
+            ->assertSee('data-testid="editor-discard-draft"', false)
+            ->assertSee(route('editor.questions.discard-draft', $question), false)
+            ->assertSee('Gửi câu này cho giảng viên duyệt?', false)
+            ->assertSee('Câu hỏi chưa từng xuất bản sẽ bị xóa.', false)
+            ->assertDontSee(route('admin.questions.index'), false);
+
+        $this->actingAsStaff($editor)
+            ->post(route('editor.questions.discard-draft', $question))
+            ->assertRedirect(route('editor.questions.index'));
+
+        $this->assertSoftDeleted('questions', ['id' => $question->id]);
+    }
+
+    public function test_editor_cancel_restores_published_snapshot_when_working_copy_is_draft(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+        $question = $this->makePublishedQuestion(createdBy: $editor);
+        $originalStem = strip_tags((string) $question->stem);
+
+        $this->actingAsStaff($editor)
+            ->put(route('editor.questions.update', $question), array_merge($this->payload(), [
+                'stem' => 'Nội dung nháp cần hủy.',
+            ]))
+            ->assertRedirect();
+
+        $question->refresh();
+        $this->assertSame(QuestionStatus::Draft, $question->status);
+
+        $this->actingAsStaff($editor)
+            ->get(route('editor.questions.edit', $question))
+            ->assertOk()
+            ->assertSee('data-testid="editor-discard-draft"', false)
+            ->assertSee('data-testid="editor-confirm-modal"', false)
+            ->assertSee('Nội dung đang soạn sẽ bị bỏ, câu hỏi trở lại phiên bản đang xuất bản.', false);
+
+        $this->actingAsStaff($editor)
+            ->post(route('editor.questions.discard-draft', $question))
+            ->assertRedirect(route('editor.questions.edit', $question));
+
+        $question->refresh();
+        $this->assertSame(QuestionStatus::Published, $question->status);
+        $this->assertSame(1, (int) $question->version);
+        $this->assertSame(1, (int) $question->published_version);
+        $this->assertSame($originalStem, strip_tags((string) $question->stem));
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'admin.question.draft_discard',
+            'auditable_id' => $question->id,
+        ]);
+        $this->assertDatabaseMissing('question_versions', [
+            'question_id' => $question->id,
+            'version' => 2,
+        ]);
+    }
+
+    public function test_cancel_on_live_question_leaves_the_portal_list_without_discarding(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+        $question = $this->makePublishedQuestion(createdBy: $editor);
+
+        $this->actingAsStaff($editor)
+            ->get(route('editor.questions.edit', $question))
+            ->assertOk()
+            ->assertSee('data-testid="editor-cancel"', false)
+            ->assertSee(route('editor.questions.index'), false)
+            ->assertSee('data-testid="editor-confirm-modal"', false)
+            ->assertSee('Rời trang soạn thảo?', false)
+            ->assertSee('Thay đổi chưa lưu sẽ không được giữ.', false)
+            ->assertDontSee('id="editor-discard-draft-form"', false)
+            ->assertDontSee(route('admin.questions.index'), false);
+    }
+
+    public function test_discard_does_not_delete_a_draft_that_used_to_be_published(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+        $question = $this->makePublishedQuestion(createdBy: $editor);
+        $question->forceFill([
+            'status' => QuestionStatus::Draft,
+            'published_version' => null,
+        ])->save();
+
+        $this->actingAsStaff($editor)
+            ->get(route('editor.questions.edit', $question))
+            ->assertOk()
+            ->assertSee('data-testid="editor-cancel"', false)
+            ->assertDontSee('id="editor-discard-draft-form"', false);
+
+        $this->actingAsStaff($editor)
+            ->post(route('editor.questions.discard-draft', $question))
+            ->assertSessionHasErrors('status');
+
+        $this->assertNotSoftDeleted('questions', ['id' => $question->id]);
+        $this->assertSame(QuestionStatus::Draft, $question->fresh()->status);
+    }
+
+    public function test_locked_review_states_do_not_show_cancel(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+        $question = $this->makeDraftQuestion($editor);
+        $question->forceFill(['status' => QuestionStatus::InReview])->save();
+
+        $this->actingAsStaff($editor)
+            ->get(route('editor.questions.edit', $question))
+            ->assertOk()
+            ->assertDontSee('Hủy bỏ', false)
+            ->assertDontSee('id="editor-discard-draft-form"', false);
     }
 
     public function test_editor_retire_request_hides_the_question_only_after_admin_approves(): void
@@ -949,7 +1068,7 @@ final class AdminQuestionManagementTest extends TestCase
         $this->assertSame(QuestionStatus::Draft, $question->status);
         $this->assertNull($question->published_version);
         $this->assertSame(1, (int) $question->version);
-        $this->assertFalse(\Modules\QuestionBank\Support\ServePublishedQuestion::isAvailable($question));
+        $this->assertFalse(ServePublishedQuestion::isAvailable($question));
 
         $this->actingAsStaff($creator)
             ->get(route('editor.questions.edit', $question))
@@ -1739,7 +1858,7 @@ final class AdminQuestionManagementTest extends TestCase
         }
 
         $question = $question->fresh(['options', 'lessons']);
-        app(\Modules\Admin\Actions\CaptureQuestionVersionAction::class)->handle($question, $createdBy, 'publish');
+        app(CaptureQuestionVersionAction::class)->handle($question, $createdBy, 'publish');
 
         return $question;
     }
@@ -1774,7 +1893,7 @@ final class AdminQuestionManagementTest extends TestCase
     {
         $admin ??= $this->staffUser(Role::Admin);
 
-        return app(\Modules\Admin\Actions\TransitionQuestionStatusAction::class)
+        return app(TransitionQuestionStatusAction::class)
             ->handle($admin, $question->fresh(), QuestionStatus::Published);
     }
 
