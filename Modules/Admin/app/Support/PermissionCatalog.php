@@ -96,6 +96,7 @@ final class PermissionCatalog
         return match ($action) {
             'view_any' => 10,
             'view' => 11,
+            'lookup' => 12,
             'create' => 20,
             'update', 'edit' => 30,
             'delete' => 40,
@@ -146,11 +147,16 @@ final class PermissionCatalog
 
     public static function actionLabel(string $permission): string
     {
+        if ($permission === 'user.update') {
+            return 'Sửa học viên';
+        }
+
         $action = explode('.', $permission, 2)[1] ?? $permission;
 
         return match ($action) {
             'view_any' => 'Xem toàn bộ dữ liệu',
             'view' => 'Xem',
+            'lookup' => 'Tra cứu theo mã hoặc email',
             'create' => 'Tạo mới',
             'update', 'edit' => 'Chỉnh sửa',
             'delete' => 'Xóa',

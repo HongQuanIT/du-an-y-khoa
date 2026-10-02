@@ -18,6 +18,13 @@
 
 ## 2026-10-02
 
+### Feat — Tra cứu học viên theo email hoặc mã
+
+- Quyền tra cứu không mở danh sách. Chỉ tìm đúng email hoặc mã học viên. Trang chi tiết và các thao tác kèm chữ ký, không đoán được mã tài khoản.
+- Mỗi tài khoản có mã 6 ký tự (2 chữ Latin in hoa và 4 số), tạo lúc đăng ký hoặc khi quản trị tạo user, trùng thì tạo lại.
+- Quyền sửa học viên cho phép cập nhật hồ sơ, trạng thái, đặt lại mật khẩu và hỗ trợ kích hoạt 2FA mà không cần quyền xem cả danh sách.
+- Hồ sơ dùng ô tìm chọn: tỉnh/thành theo quốc gia, trường theo tỉnh/thành. Sau khi lưu, giá trị vừa chọn vẫn hiện đúng.
+
 ### Feat — Reviewer rà checklist trước khi gắn cờ
 
 - Không đạt phải đánh dấu ít nhất một mục. Ghi chú là tùy chọn. Mục không đạt được lưu trên lượt cờ.

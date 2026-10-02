@@ -93,9 +93,9 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
             Route::get('/learner-data/administrative-units', [LearnerCatalogController::class, 'index'])->middleware('permission:learner_catalog.view')->defaults('catalog', 'administrative-units')->name('administrative-units.index');
             Route::get('/learner-data/professions', [LearnerCatalogController::class, 'index'])->middleware('permission:learner_catalog.view')->defaults('catalog', 'professions')->name('professions.index');
             Route::get('/learner-data/education-stages', [LearnerCatalogController::class, 'index'])->middleware('permission:learner_catalog.view')->defaults('catalog', 'education-stages')->name('education-stages.index');
-            Route::get('/users', [UserController::class, 'index'])->middleware('permission:user.view')->name('users.index');
+            Route::get('/users', [UserController::class, 'index'])->middleware('permission:user.view|user.lookup')->name('users.index');
             Route::get('/users/{user}', [UserController::class, 'show'])->name('users.show')
-                ->middleware('permission:user.view')
+                ->middleware('permission:user.view|user.lookup')
                 ->whereNumber('user');
         });
 
@@ -120,9 +120,12 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
             Route::get('/users/create', [UserController::class, 'create'])->middleware('permission:user.create')->name('users.create');
             Route::post('/users', [UserController::class, 'store'])->middleware('permission:user.create')->name('users.store');
             Route::patch('/users/{user}/role', [UserController::class, 'updateRole'])->middleware('permission:user.role_assign')->name('users.role');
-            Route::patch('/users/{user}/status', [UserController::class, 'updateStatus'])->middleware('permission:user.status_update')->name('users.status');
-            Route::post('/users/{user}/reset-password', [UserController::class, 'resetPassword'])->middleware('permission:user.password_reset')->name('users.reset-password');
-            Route::post('/users/{user}/reset-2fa', [UserController::class, 'resetTwoFactor'])->middleware('permission:user.two_factor_manage')->name('users.reset-2fa');
+            Route::patch('/users/{user}/profile', [UserController::class, 'updateProfile'])->middleware('permission:user.update')->name('users.profile');
+            Route::patch('/users/{user}/status', [UserController::class, 'updateStatus'])->middleware('permission:user.status_update|user.update')->name('users.status');
+            Route::post('/users/{user}/reset-password', [UserController::class, 'resetPassword'])->middleware('permission:user.password_reset|user.update')->name('users.reset-password');
+            Route::post('/users/{user}/reset-2fa', [UserController::class, 'resetTwoFactor'])->middleware('permission:user.two_factor_manage|user.update')->name('users.reset-2fa');
+            Route::post('/users/{user}/enable-2fa', [UserController::class, 'beginTwoFactor'])->middleware('permission:user.two_factor_manage|user.update')->name('users.enable-2fa');
+            Route::post('/users/{user}/confirm-2fa', [UserController::class, 'confirmTwoFactor'])->middleware('permission:user.two_factor_manage|user.update')->name('users.confirm-2fa');
             Route::delete('/users/{user}', [UserController::class, 'destroy'])->middleware('permission:user.delete')->name('users.destroy');
             Route::patch('/users/{user}/subjects', [UserController::class, 'updateInstructorSubjects'])
                 ->middleware('permission:user.role_assign|user.status_update')
