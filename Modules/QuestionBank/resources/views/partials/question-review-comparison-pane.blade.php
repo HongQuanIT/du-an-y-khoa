@@ -4,6 +4,7 @@
     $chipKey = $isPublished ? 'published' : 'proposed';
     $keyInfoItems = $comparison['key_info'][$chipKey] ?? [];
     $preserveRichText = (bool) ($preserveRichText ?? false);
+    $highlightChanges = (bool) ($highlightChanges ?? true);
     $preserveRawRichText = $preserveRichText;
     $attendingHtml = $preserveRawRichText
         ? ($comparison['raw_attending_tip'][$textKey] ?? '')
@@ -18,7 +19,7 @@
     <div>
         <div class="mb-2 flex items-center gap-2">
             <h4 class="text-sm font-bold text-on-surface">Câu hỏi</h4>
-            @if ($comparison['stem']['changed'])
+            @if ($highlightChanges && $comparison['stem']['changed'])
                 <span class="rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-800">Sửa</span>
             @endif
         </div>
@@ -36,14 +37,14 @@
         <div>
             <div class="mb-2 flex items-center gap-2">
                 <h4 class="text-sm font-bold text-on-surface">Hình kèm câu hỏi</h4>
-                @if ($comparison['stem_image']['changed'])
+                @if ($highlightChanges && $comparison['stem_image']['changed'])
                     <span class="rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-800">Sửa</span>
                 @endif
             </div>
             @php $imageUrl = $comparison['stem_image'][$isPublished ? 'published_url' : 'proposed_url']; @endphp
             @if ($imageUrl)
                 <img src="{{ $imageUrl }}" alt="{{ $isPublished ? 'Hình bản đang xuất bản' : 'Hình bản cần duyệt' }}"
-                    class="max-h-72 rounded-xl border {{ $comparison['stem_image']['changed'] ? ($isPublished ? 'border-rose-300' : 'border-emerald-300') : 'border-outline-variant' }} object-contain">
+                    class="max-h-72 rounded-xl border {{ $highlightChanges && $comparison['stem_image']['changed'] ? ($isPublished ? 'border-rose-300' : 'border-emerald-300') : 'border-outline-variant' }} object-contain">
             @else
                 <p class="rounded-xl border border-dashed {{ $isPublished ? 'border-rose-300 bg-rose-50 text-rose-800' : 'border-emerald-300 bg-emerald-50 text-emerald-900' }} px-3 py-2 text-sm">
                     {{ $isPublished ? 'Hình đã bị gỡ ở bản gửi duyệt.' : 'Hình mới được thêm.' }}
@@ -55,7 +56,7 @@
     <div>
         <div class="mb-2 flex items-center gap-2">
             <h4 class="text-sm font-bold text-on-surface">Đáp án</h4>
-            @if (collect($comparison['options'])->contains(fn (array $row): bool => $row['change'] !== 'same'))
+            @if ($highlightChanges && collect($comparison['options'])->contains(fn (array $row): bool => $row['change'] !== 'same'))
                 <span class="rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-800">Sửa</span>
             @endif
         </div>
@@ -63,7 +64,9 @@
             @foreach ($comparison['options'] as $option)
                 @php
                     $sideOption = $option[$chipKey];
-                    $changeLabel = match ($option['change']) {
+                    $change = $highlightChanges ? $option['change'] : 'same';
+                    $correctChanged = $highlightChanges && $option['correct_changed'];
+                    $changeLabel = match ($change) {
                         'removed' => 'Xóa',
                         'added' => 'Thêm',
                         'modified' => 'Sửa',
@@ -78,19 +81,19 @@
                 @else
                     <div @class([
                         'rounded-xl border px-3 py-2 text-sm',
-                        'border-rose-300 bg-rose-50 text-rose-900' => $option['change'] === 'removed',
-                        'border-emerald-300 bg-emerald-50 text-emerald-950' => $option['change'] === 'added',
-                        'border-amber-300 bg-amber-50' => $option['change'] === 'modified',
-                        'border-emerald-300 bg-emerald-50 text-emerald-900' => $option['change'] === 'same' && $sideOption['is_correct'],
-                        'border-outline-variant bg-surface-container-lowest' => $option['change'] === 'same' && ! $sideOption['is_correct'],
+                        'border-rose-300 bg-rose-50 text-rose-900' => $change === 'removed',
+                        'border-emerald-300 bg-emerald-50 text-emerald-950' => $change === 'added',
+                        'border-amber-300 bg-amber-50' => $change === 'modified',
+                        'border-emerald-300 bg-emerald-50 text-emerald-900' => $change === 'same' && $sideOption['is_correct'],
+                        'border-outline-variant bg-surface-container-lowest' => $change === 'same' && ! $sideOption['is_correct'],
                     ])>
                         <div class="flex items-start gap-2">
                             @if ($changeLabel)
                                 <span @class([
                                     'mt-0.5 shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-bold',
-                                    'bg-rose-200 text-rose-800' => $option['change'] === 'removed',
-                                    'bg-amber-200 text-amber-900' => $option['change'] === 'modified',
-                                    'bg-emerald-200 text-emerald-900' => $option['change'] === 'added',
+                                    'bg-rose-200 text-rose-800' => $change === 'removed',
+                                    'bg-amber-200 text-amber-900' => $change === 'modified',
+                                    'bg-emerald-200 text-emerald-900' => $change === 'added',
                                 ])>{{ $changeLabel }}</span>
                             @endif
                             <span class="shrink-0 font-bold">{{ $sideOption['label'] }}.</span>
@@ -100,10 +103,10 @@
                             @if ($sideOption['is_correct'])
                                 <span @class([
                                     'shrink-0 text-xs font-bold',
-                                    'rounded bg-emerald-200 px-1.5 py-0.5 text-emerald-900' => $option['correct_changed'] && ! $isPublished,
-                                    'rounded bg-rose-200 px-1.5 py-0.5 text-rose-800 line-through' => $option['correct_changed'] && $isPublished,
+                                    'rounded bg-emerald-200 px-1.5 py-0.5 text-emerald-900' => $correctChanged && ! $isPublished,
+                                    'rounded bg-rose-200 px-1.5 py-0.5 text-rose-800 line-through' => $correctChanged && $isPublished,
                                 ])>Đáp án đúng</span>
-                            @elseif ($option['correct_changed'])
+                            @elseif ($correctChanged)
                                 <span class="shrink-0 text-xs font-bold {{ $isPublished ? 'text-rose-700' : 'text-emerald-800' }}">
                                     {{ $isPublished ? 'Không còn là đáp án đúng' : 'Được chọn làm đáp án đúng' }}
                                 </span>
@@ -126,16 +129,17 @@
     <div>
         <div class="mb-2 flex items-center gap-2">
             <h4 class="text-sm font-bold text-on-surface">Gợi ý</h4>
-            @if ($comparison['key_info']['changed'])
+            @if ($highlightChanges && $comparison['key_info']['changed'])
                 <span class="rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-800">Sửa</span>
             @endif
         </div>
         @foreach ($keyInfoItems as $item)
+            @php $itemChange = $highlightChanges ? $item['change'] : 'same'; @endphp
             <p @class([
                 'mt-1 text-sm',
-                'text-rose-800 line-through' => $item['change'] === 'removed',
-                'text-emerald-900' => $item['change'] === 'added',
-                'text-on-surface' => $item['change'] === 'same',
+                'text-rose-800 line-through' => $itemChange === 'removed',
+                'text-emerald-900' => $itemChange === 'added',
+                'text-on-surface' => $itemChange === 'same',
             ])>
                 • {!! $item['html'] !!}
             </p>
@@ -145,7 +149,7 @@
     <div>
         <div class="mb-2 flex items-center gap-2">
             <h4 class="text-sm font-bold text-on-surface">Kiến thức</h4>
-            @if ($comparison['attending_tip']['changed'])
+            @if ($highlightChanges && $comparison['attending_tip']['changed'])
                 <span class="rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-800">Sửa</span>
             @endif
         </div>
@@ -166,28 +170,30 @@
         ['title' => 'Kỳ thi', 'field' => 'blueprints'],
         ['title' => 'Truy cập', 'field' => 'access', 'scalar' => true],
     ] as $meta)
+        @continue(! $highlightChanges && ! ($meta['scalar'] ?? false) && ($comparison[$meta['field']][$chipKey] ?? []) === [])
         <div>
             <div class="mb-2 flex items-center gap-2">
                 <h4 class="text-sm font-bold text-on-surface">{{ $meta['title'] }}</h4>
-                @if ($comparison[$meta['field']]['changed'])
+                @if ($highlightChanges && $comparison[$meta['field']]['changed'])
                     <span class="rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-800">Sửa</span>
                 @endif
             </div>
             @if ($meta['scalar'] ?? false)
                 <span @class([
                     'inline-flex rounded-lg px-2.5 py-1 text-xs font-semibold',
-                    'bg-rose-100 text-rose-800 line-through' => $isPublished && $comparison[$meta['field']]['changed'],
-                    'bg-emerald-100 text-emerald-900' => ! $isPublished && $comparison[$meta['field']]['changed'],
-                    'bg-surface-container-high text-on-surface' => ! $comparison[$meta['field']]['changed'],
+                    'bg-rose-100 text-rose-800 line-through' => $highlightChanges && $isPublished && $comparison[$meta['field']]['changed'],
+                    'bg-emerald-100 text-emerald-900' => $highlightChanges && ! $isPublished && $comparison[$meta['field']]['changed'],
+                    'bg-surface-container-high text-on-surface' => ! $highlightChanges || ! $comparison[$meta['field']]['changed'],
                 ])>{{ $comparison[$meta['field']][$chipKey] }}</span>
             @else
                 <div class="flex flex-wrap gap-2">
                     @forelse ($comparison[$meta['field']][$chipKey] as $item)
+                        @php $chipChange = $highlightChanges ? $item['change'] : 'same'; @endphp
                         <span @class([
                             'inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold',
-                            'bg-rose-100 text-rose-800 line-through' => $item['change'] === 'removed',
-                            'bg-emerald-100 text-emerald-900' => $item['change'] === 'added',
-                            'bg-surface-container-high text-on-surface' => $item['change'] === 'same',
+                            'bg-rose-100 text-rose-800 line-through' => $chipChange === 'removed',
+                            'bg-emerald-100 text-emerald-900' => $chipChange === 'added',
+                            'bg-surface-container-high text-on-surface' => $chipChange === 'same',
                         ])>
                             {{ $item['label'] }}
                         </span>

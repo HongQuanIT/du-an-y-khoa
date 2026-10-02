@@ -9,14 +9,24 @@
     $preserveRichText = (bool) ($preserveRichText ?? false);
 @endphp
 
+@if (! $comparison['can_compare'])
+    <section class="rounded-2xl border border-outline-variant bg-surface p-5" aria-labelledby="question-content-title">
+        <h3 id="question-content-title" class="mb-4 font-label-lg font-bold text-on-surface">Nội dung câu hỏi</h3>
+        @include('questionbank::partials.question-review-comparison-pane', [
+            'side' => 'proposed',
+            'comparison' => $comparison,
+            'empty' => $empty,
+            'preserveRichText' => $preserveRichText,
+            'highlightChanges' => false,
+        ])
+    </section>
+@else
 <section class="mb-6 rounded-2xl border border-outline-variant bg-surface p-5">
     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
             <h3 class="font-label-lg font-bold text-on-surface">{{ $heading }}</h3>
             <p class="mt-1 text-sm text-on-surface-variant">
-                @if (! $comparison['can_compare'])
-                    {{ $newCopy }}
-                @elseif ($comparison['has_changes'])
+                @if ($comparison['has_changes'])
                     Có thay đổi ở
                     <span class="font-semibold text-on-surface">{{ implode(', ', $comparison['changed_labels']) }}</span>.
                     Chữ gạch đỏ = xóa, chữ nền xanh = thêm, khối vàng = sửa.
@@ -46,22 +56,14 @@
             <h3 id="published-review-title" class="font-label-lg font-bold text-on-surface">Bản đang dùng</h3>
             @if ($comparison['published_version'])
                 <span class="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800">v{{ $comparison['published_version'] }}</span>
-            @else
-                <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">Chưa có</span>
             @endif
         </div>
-        @if ($comparison['can_compare'])
-            @include('questionbank::partials.question-review-comparison-pane', [
-                'side' => 'published',
-                'comparison' => $comparison,
-                'empty' => $empty,
-                'preserveRichText' => $preserveRichText,
-            ])
-        @else
-            <div class="rounded-xl border border-dashed border-outline-variant bg-surface-container-low px-4 py-10 text-center text-sm text-on-surface-variant">
-                Chưa có bản đang dùng để so sánh.
-            </div>
-        @endif
+        @include('questionbank::partials.question-review-comparison-pane', [
+            'side' => 'published',
+            'comparison' => $comparison,
+            'empty' => $empty,
+            'preserveRichText' => $preserveRichText,
+        ])
     </section>
 
     <section class="rounded-2xl border border-primary/40 bg-primary/5 p-5" aria-labelledby="proposed-review-title">
@@ -77,3 +79,4 @@
         ])
     </section>
 </div>
+@endif

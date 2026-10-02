@@ -16,6 +16,13 @@
 - Phiên làm bài cho phép mở ảnh toàn màn hình, zoom 50–500%, kéo ảnh và đóng khi bấm ngoài ảnh.
 - Ảnh có con trỏ bàn tay khi rê chuột.
 
+## 2026-10-02
+
+### Feat — Chỉ so sánh khi bản làm việc đã khác bản đang dùng
+
+- Admin và editor ẩn So sánh khi câu chưa xuất bản, hoặc nội dung đang sửa trùng bản đang phát hành.
+- Câu chưa có bản phát hành trên màn duyệt của giảng viên hiện một cột nội dung, không còn cột trống bên trái.
+
 ## 2026-10-01
 
 ### Feat — Xem lại câu hiện gợi ý đã dùng và phần kiến thức
