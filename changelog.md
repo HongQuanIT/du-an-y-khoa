@@ -18,6 +18,13 @@
 
 ## 2026-10-02
 
+### Feat — Reviewer rà checklist trước khi gắn cờ
+
+- Không đạt phải đánh dấu ít nhất một mục. Ghi chú là tùy chọn. Mục không đạt được lưu trên lượt cờ.
+- Quyết định lệch với reviewer kia mở hộp thoại để giữ cờ hoặc đổi cờ, không lộ cờ của người còn lại.
+- Cập nhật mục không đạt không đòi xác nhận trách nhiệm. Đổi cờ vẫn phải xác nhận.
+- Trên màn hình lớn, form neo ngay dưới header. Trên điện thoại, form thành tấm ở đáy để vừa đọc đề vừa rà checklist.
+
 ### Feat — Chỉ so sánh khi bản làm việc đã khác bản đang dùng
 
 - Admin và editor ẩn So sánh khi câu chưa xuất bản, hoặc nội dung đang sửa trùng bản đang phát hành.

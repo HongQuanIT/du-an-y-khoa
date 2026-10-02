@@ -18,6 +18,7 @@ class QuestionReviewerFlag extends Model
         'reviewer_id',
         'flag',
         'note',
+        'failed_checks',
         'content_fingerprint',
         'reviewed_at',
         'reaffirmed_at',
@@ -30,6 +31,7 @@ class QuestionReviewerFlag extends Model
 
     protected $casts = [
         'flag' => ReviewerFlag::class,
+        'failed_checks' => 'array',
         'outcome' => ReviewFlagOutcome::class,
         'review_cycle' => 'integer',
         'reviewed_at' => 'datetime',

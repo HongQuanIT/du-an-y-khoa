@@ -154,7 +154,7 @@ final class ReviewerPortalTest extends TestCase
 
         $this->get(route('reviewer.questions.flags.show', $hidden))->assertForbidden();
         $this->post(route('reviewer.questions.flags.store', $pending), ['flag' => ReviewerFlag::Red->value])
-            ->assertSessionHasErrors('note');
+            ->assertSessionHasErrors('failed_checks');
         $this->post(route('reviewer.questions.flags.store', $pending), ['flag' => ReviewerFlag::Green->value])
             ->assertRedirect(route('reviewer.questions.flags.show', $pending));
         $this->get(route('reviewer.questions.flags.show', $pending->fresh()))
@@ -245,5 +245,113 @@ final class ReviewerPortalTest extends TestCase
             ->assertSee('Chưa có quyền xem câu hỏi')
             ->assertDontSee($pending->code)
             ->assertDontSee(route('reviewer.questions.flags.index'), false);
+    }
+
+    public function test_reviewer_checklist_stays_beside_the_decision_and_records_failed_items(): void
+    {
+        $reviewer = User::factory()->create();
+        $reviewer->assignRole(Role::Reviewer->value);
+        $question = Question::factory()->create(['status' => QuestionStatus::InFlagReview->value]);
+
+        $this->actingAs($reviewer)
+            ->get(route('reviewer.questions.flags.show', $question))
+            ->assertOk()
+            ->assertSee('Checklist kiểm tra', false)
+            ->assertSee('Câu có đủ 4 đáp án và đúng một đáp án đúng.', false)
+            ->assertSee('Có gợi ý, và từng gợi ý khớp một cụm từ trong câu hỏi.', false)
+            ->assertSee('Nếu có hình: rõ, đúng nội dung câu, không chứa chữ lộ đáp án.', false)
+            ->assertDontSee('đáp án ·', false)
+            ->assertSee('data-testid="reviewer-flag-panel"', false)
+            ->assertSee('xl:sticky xl:top-header-height', false)
+            ->assertSee('Thu gọn để đọc câu', false)
+            ->assertSee('--review-sheet: min(58dvh, 32rem)', false)
+            ->assertSee('overflow-x-clip', false);
+
+        $this->post(route('reviewer.questions.flags.store', $question), [
+            'flag' => ReviewerFlag::Red->value,
+            'note' => 'Sai chính tả ở đáp án B.',
+            'failed_checks' => ['spelling', 'terminology'],
+        ])->assertRedirect(route('reviewer.questions.flags.show', $question));
+
+        $stored = QuestionReviewerFlag::query()->where('question_id', $question->getKey())->first();
+        $this->assertSame(['spelling', 'terminology'], $stored?->failed_checks);
+
+        $this->get(route('reviewer.questions.flags.show', $question))
+            ->assertOk()
+            ->assertSee('2 mục không đạt', false)
+            ->assertSee('Câu hỏi và đáp án không sai chính tả.', false)
+            ->assertSee('Không dùng thuật ngữ sai, hoặc cách gọi gây khó hiểu.', false);
+    }
+
+    public function test_updating_failed_checks_does_not_require_a_flag_change_ack(): void
+    {
+        $first = User::factory()->create();
+        $first->assignRole(Role::Reviewer->value);
+        $second = User::factory()->create();
+        $second->assignRole(Role::Reviewer->value);
+        $question = Question::factory()->create(['status' => QuestionStatus::InFlagReview->value]);
+
+        $this->actingAs($first)
+            ->post(route('reviewer.questions.flags.store', $question), [
+                'flag' => ReviewerFlag::Green->value,
+            ])
+            ->assertRedirect();
+
+        $this->actingAs($second)
+            ->post(route('reviewer.questions.flags.store', $question), [
+                'flag' => ReviewerFlag::Red->value,
+                'failed_checks' => ['spelling'],
+            ])
+            ->assertRedirect();
+
+        $this->actingAs($second)
+            ->from(route('reviewer.questions.flags.show', $question))
+            ->put(route('reviewer.questions.flags.update', $question), [
+                'flag' => ReviewerFlag::Green->value,
+                'responsibility_acked' => '',
+            ])
+            ->assertSessionHasErrors('responsibility_acked');
+
+        $this->actingAs($second)
+            ->put(route('reviewer.questions.flags.update', $question), [
+                'flag' => ReviewerFlag::Red->value,
+                'failed_checks' => ['terminology'],
+                'responsibility_acked' => '',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $stored = QuestionReviewerFlag::query()
+            ->where('question_id', $question->getKey())
+            ->where('reviewer_id', $second->getKey())
+            ->first();
+
+        $this->assertSame(['terminology'], $stored?->failed_checks);
+        $this->assertSame(QuestionStatus::FlagConflict, $question->fresh()->status);
+    }
+
+    public function test_second_reviewer_page_warns_before_a_conflicting_decision(): void
+    {
+        $first = User::factory()->create();
+        $first->assignRole(Role::Reviewer->value);
+        $second = User::factory()->create();
+        $second->assignRole(Role::Reviewer->value);
+        $question = Question::factory()->create(['status' => QuestionStatus::InFlagReview->value]);
+
+        $this->actingAs($first)
+            ->post(route('reviewer.questions.flags.store', $question), [
+                'flag' => ReviewerFlag::Green->value,
+            ])
+            ->assertRedirect();
+
+        $this->actingAs($second)
+            ->get(route('reviewer.questions.flags.show', $question))
+            ->assertOk()
+            ->assertSee('Quyết định đang lệch', false)
+            ->assertSee('Giữ quyết định sẽ ghi nhận cờ đang chọn', false)
+            ->assertSee('form="reviewer-flag-form"', false)
+            ->assertSee('Giữ quyết định', false)
+            ->assertSee('Đổi cờ', false)
+            ->assertSee("peer: 'green'", false);
     }
 }

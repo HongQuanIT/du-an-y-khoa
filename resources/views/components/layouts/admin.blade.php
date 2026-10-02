@@ -293,7 +293,7 @@
         </div>
     </header>
 
-    <main class="min-h-screen min-w-0 overflow-x-hidden bg-surface-container-lowest pt-header-height xl:ml-sidebar-width xl:max-w-[calc(100vw-var(--spacing-sidebar-width))]">
+    <main class="min-h-screen min-w-0 overflow-x-clip bg-surface-container-lowest pt-header-height xl:ml-sidebar-width xl:max-w-[calc(100vw-var(--spacing-sidebar-width))]">
         <div class="min-w-0 max-w-full p-margin-mobile xl:p-margin-desktop">
             {{ $slot }}
         </div>

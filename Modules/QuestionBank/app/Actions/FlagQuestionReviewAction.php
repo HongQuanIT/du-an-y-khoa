@@ -17,6 +17,7 @@ use Modules\QuestionBank\Enums\QuestionWorkflowEventType;
 use Modules\QuestionBank\Enums\ReviewerFlag;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Support\QuestionReviewerFlagCycle;
+use Modules\QuestionBank\Support\ReviewerChecklist;
 use Modules\QuestionBank\Support\QuestionWorkflowRecorder;
 
 /**
@@ -31,7 +32,16 @@ final class FlagQuestionReviewAction
         private readonly QuestionWorkflowRecorder $workflowRecorder,
     ) {}
 
-    public function handle(User $reviewer, Question $question, ReviewerFlag $flag, ?string $note = null): Question
+    /**
+     * @param  list<string>  $failedChecks
+     */
+    public function handle(
+        User $reviewer,
+        Question $question,
+        ReviewerFlag $flag,
+        ?string $note = null,
+        array $failedChecks = [],
+    ): Question
     {
         abort_unless(
             $reviewer->can(Permission::QuestionFlag->value),
@@ -42,13 +52,15 @@ final class FlagQuestionReviewAction
         $note = trim(strip_tags((string) $note));
         $note = $note !== '' ? mb_substr($note, 0, 2000) : null;
 
-        if ($flag->requiresNote() && $note === null) {
+        $failedChecks = $flag->requiresFailedCheck() ? ReviewerChecklist::only($failedChecks) : [];
+
+        if ($flag->requiresFailedCheck() && $failedChecks === []) {
             throw ValidationException::withMessages([
-                'note' => 'Cờ đỏ bắt buộc phải ghi chú lý do.',
+                'failed_checks' => 'Không đạt cần đánh dấu ít nhất một mục checklist.',
             ]);
         }
 
-        return DB::transaction(function () use ($reviewer, $question, $flag, $note): Question {
+        return DB::transaction(function () use ($reviewer, $question, $flag, $note, $failedChecks): Question {
             $question = Question::query()->lockForUpdate()->findOrFail($question->getKey());
 
             if ($question->status !== QuestionStatus::InFlagReview) {
@@ -61,7 +73,7 @@ final class FlagQuestionReviewAction
             $versionBefore = (int) $question->version;
             $fromStatus = $question->status;
 
-            $count = $this->flagCycle->recordFlag($question, $reviewer, $flag, $note);
+            $count = $this->flagCycle->recordFlag($question, $reviewer, $flag, $note, $failedChecks);
             $question = $question->refresh();
 
             if ($count >= QuestionReviewerFlagCycle::REQUIRED_FLAGS) {
@@ -121,9 +133,17 @@ final class FlagQuestionReviewAction
             $this->flagCycle->setStickyPair($question);
             $question = $question->refresh();
 
+            $failedTitles = ReviewerChecklist::titles(
+                $question->reviewerFlags()
+                    ->where('review_cycle', (int) $question->instructor_review_cycle)
+                    ->get()
+                    ->flatMap(fn ($row): array => (array) ($row->failed_checks ?? []))
+                    ->all(),
+            );
             $notes = collect([
                 $question->reviewer_1_note,
                 $question->reviewer_2_note,
+                $failedTitles !== [] ? 'Mục không đạt: '.implode(', ', $failedTitles) : null,
             ])->filter()->implode("\n---\n");
 
             $question->forceFill([
