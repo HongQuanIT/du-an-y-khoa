@@ -725,6 +725,107 @@ mark[data-hl='#10b981'] {
     max-width: 100%;
     height: auto;
     border-radius: 0.5rem;
+    display: block;
+    margin-left: 0;
+    margin-right: auto;
+}
+.admin-rich-editor .ql-editor img[data-align='center'],
+.prose img[data-align='center'] {
+    margin-left: auto;
+    margin-right: auto;
+}
+.admin-rich-editor .ql-editor img[data-align='right'],
+.prose img[data-align='right'] {
+    margin-left: auto;
+    margin-right: 0;
+}
+.rich-editor-image-shell {
+    position: relative;
+}
+.admin-rich-editor .ql-editor.is-dragging-image {
+    background-color: color-mix(in srgb, var(--color-primary) 8%, transparent);
+    outline: 2px dashed var(--color-primary);
+    outline-offset: -6px;
+}
+.admin-rich-editor.is-uploading-image .ql-editor {
+    cursor: progress;
+    opacity: 0.75;
+}
+.admin-rich-editor .ql-editor img.is-selected-for-resize {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+.rich-editor-image-resizer {
+    position: absolute;
+    z-index: 20;
+    pointer-events: none;
+    border: 1px solid var(--color-primary);
+    border-radius: 0.5rem;
+}
+.rich-editor-image-resizer[hidden] {
+    display: none;
+}
+.rich-editor-image-size {
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + 6px);
+    border-radius: 0.375rem;
+    background: var(--color-primary);
+    padding: 2px 6px;
+    color: var(--color-on-primary);
+    font-size: 0.6875rem;
+    line-height: 1rem;
+    white-space: nowrap;
+}
+.rich-editor-image-actions {
+    position: absolute;
+    left: 0;
+    bottom: calc(100% + 6px);
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    white-space: nowrap;
+}
+.rich-editor-image-reset,
+.rich-editor-image-align {
+    border: 1px solid var(--color-outline-variant);
+    border-radius: 0.375rem;
+    background: var(--color-surface);
+    padding: 2px 7px;
+    color: var(--color-on-surface);
+    font-size: 0.6875rem;
+    line-height: 1rem;
+    cursor: pointer;
+}
+.rich-editor-image-align {
+    min-width: 24px;
+    padding-inline: 5px;
+    font-size: 0.875rem;
+}
+.rich-editor-image-align.is-active {
+    border-color: var(--color-primary);
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+}
+.rich-editor-image-handle {
+    position: absolute;
+    right: -7px;
+    bottom: -7px;
+    width: 16px;
+    height: 16px;
+    pointer-events: auto;
+    cursor: nwse-resize;
+    border: 2px solid var(--color-surface);
+    border-radius: 9999px;
+    background: var(--color-primary);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+}
+.rich-editor-image-handle:focus-visible,
+.rich-editor-image-reset:focus-visible,
+.rich-editor-image-align:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
 }
 
 .dark .admin-rich-editor .ql-container.ql-snow {
@@ -786,11 +887,14 @@ mark[data-hl='#10b981'] {
     font-size: 0.8125rem;
 }
 .admin-rich-editor.mini .ql-editor img {
-    max-width: 220px;
+    max-width: 100%;
     height: auto;
     border-radius: 6px;
     margin-top: 4px;
     display: block;
+}
+.admin-rich-editor.mini .ql-editor img:not([width]) {
+    max-width: 220px;
 }
 .admin-rich-editor.mini .ql-editor img + em,
 .admin-rich-editor.mini .ql-editor img ~ p:first-of-type {
@@ -800,8 +904,7 @@ mark[data-hl='#10b981'] {
 
 /* Student view explanation & prose images */
 .prose img {
-    max-width: 220px;
-    width: auto;
+    max-width: 100%;
     height: auto;
     border-radius: 0.5rem;
     margin-top: 0.75rem;
@@ -809,6 +912,152 @@ mark[data-hl='#10b981'] {
     margin-left: 0;
     margin-right: auto;
     display: block;
+}
+.prose img:not([width]) {
+    max-width: 220px;
+}
+
+/* Instructor review: keep editor dimensions/alignment and show rendered size. */
+.instructor-image-preview-wrap {
+    position: relative;
+    display: block;
+    width: fit-content;
+    max-width: 100%;
+}
+.reviewer-image-preview-wrap {
+    position: relative;
+    display: block;
+    width: fit-content;
+    max-width: 100%;
+}
+.instructor-image-preview-wrap.is-center {
+    margin-left: auto;
+    margin-right: auto;
+}
+.reviewer-image-preview-wrap.is-center {
+    margin-left: auto;
+    margin-right: auto;
+}
+.instructor-image-preview-wrap.is-right {
+    margin-left: auto;
+    margin-right: 0;
+}
+.reviewer-image-preview-wrap.is-right {
+    margin-left: auto;
+    margin-right: 0;
+}
+.instructor-image-preview img {
+    display: block;
+}
+[data-testid='reviewer-question-preview'] .question-rich-content img {
+    display: block;
+}
+.instructor-image-preview img[data-align='center'] {
+    margin-left: auto;
+    margin-right: auto;
+}
+[data-testid='reviewer-question-preview'] .question-rich-content img[data-align='center'] {
+    margin-left: auto;
+    margin-right: auto;
+}
+.instructor-image-preview img[data-align='right'] {
+    margin-left: auto;
+    margin-right: 0;
+}
+[data-testid='reviewer-question-preview'] .question-rich-content img[data-align='right'] {
+    margin-left: auto;
+    margin-right: 0;
+}
+.instructor-image-dimensions {
+    position: absolute;
+    top: 0.35rem;
+    right: 0.35rem;
+    z-index: 1;
+    border-radius: 0.375rem;
+    background: rgb(15 118 110 / 0.92);
+    padding: 0.125rem 0.4rem;
+    color: #fff;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 1rem;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.learner-image-viewer {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: none;
+}
+.learner-image-viewer.is-open {
+    display: block;
+}
+.learner-image-viewer__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgb(0 0 0 / 0.88);
+}
+.learner-image-viewer__viewport {
+    position: absolute;
+    inset: 4rem 1rem 1rem;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    touch-action: none;
+}
+.learner-image-viewer__image {
+    max-width: 100%;
+    max-height: 100%;
+    cursor: default;
+    transform-origin: center;
+    user-select: none;
+    will-change: transform;
+}
+.learner-image-viewer__image.is-zoomed {
+    cursor: grab;
+}
+.learner-image-viewer__image.is-zoomed:active {
+    cursor: grabbing;
+}
+.learner-image-viewer__toolbar {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    border: 1px solid rgb(255 255 255 / 0.2);
+    border-radius: 0.75rem;
+    background: rgb(15 23 42 / 0.9);
+    padding: 0.375rem;
+    color: #fff;
+}
+.learner-image-viewer__toolbar button,
+.learner-image-viewer__toolbar span {
+    min-width: 2rem;
+    border: 0;
+    border-radius: 0.375rem;
+    padding: 0.35rem 0.55rem;
+    color: inherit;
+    font-size: 0.8rem;
+    line-height: 1rem;
+    text-align: center;
+}
+.learner-image-viewer__toolbar button {
+    background: rgb(255 255 255 / 0.12);
+    cursor: pointer;
+}
+.learner-image-viewer__toolbar button:hover,
+.learner-image-viewer__toolbar button:focus-visible {
+    background: rgb(255 255 255 / 0.24);
+}
+body.learner-image-viewer-open {
+    overflow: hidden;
+}
+[data-learner-image-viewer] img {
+    cursor: pointer;
 }
 
 /* Medical Laboratory & Content Table Styling */

@@ -118,9 +118,30 @@ final class SafeHtml
                 }
 
                 $alt = self::extractAttr($attrs, 'alt') ?? '';
+                $width = self::extractAttr($attrs, 'width');
+                $safeWidth = $width !== null && preg_match('/^\d{2,4}$/', $width) === 1
+                    ? (int) $width
+                    : null;
+                if ($safeWidth !== null && ($safeWidth < 80 || $safeWidth > 2000)) {
+                    $safeWidth = null;
+                }
 
-                return '<img src="'.e($src).'" alt="'.e($alt).'" class="max-w-[220px] w-auto h-auto rounded-lg my-3 block ml-0 mr-auto">';
+                $widthAttr = $safeWidth !== null ? ' width="'.$safeWidth.'"' : '';
+                $alignment = self::extractAttr($attrs, 'data-align');
+                $alignAttr = in_array($alignment, ['center', 'right'], true)
+                    ? ' data-align="'.$alignment.'"'
+                    : '';
+
+                return '<img src="'.e($src).'" alt="'.e($alt).'"'.$widthAttr.$alignAttr.' class="max-w-full h-auto rounded-lg my-3 block">';
             },
+            $clean,
+        ) ?? $clean;
+
+        // Paragraph attributes are not needed for image positioning and must not
+        // be allowed to turn an image action into text/paragraph alignment.
+        $clean = preg_replace_callback(
+            '/<p\b([^>]*)>/i',
+            static fn (): string => '<p>',
             $clean,
         ) ?? $clean;
 

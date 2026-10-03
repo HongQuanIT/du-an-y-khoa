@@ -22,7 +22,7 @@
                 <span class="rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-800">Sửa</span>
             @endif
         </div>
-        <div class="question-rich-content prose prose-sm max-w-none text-sm leading-6 text-on-surface">
+        <div class="question-rich-content instructor-image-preview prose prose-sm max-w-none text-sm leading-6 text-on-surface">
             @if (filled($stemHtml))
                 {!! $stemHtml !!}
             @endif
@@ -94,7 +94,7 @@
                                 ])>{{ $changeLabel }}</span>
                             @endif
                             <span class="shrink-0 font-bold">{{ $sideOption['label'] }}.</span>
-                            <div class="min-w-0 flex-1 prose prose-sm max-w-none text-sm">
+                            <div class="instructor-image-preview min-w-0 flex-1 prose prose-sm max-w-none text-sm">
                                 {!! filled($sideOption['content_html']) ? $sideOption['content_html'] : e($empty) !!}
                             </div>
                             @if ($sideOption['is_correct'])
@@ -112,7 +112,7 @@
                         @if (filled($sideOption['explanation_html']))
                             <div class="mt-1 border-t border-current/10 pt-1 text-xs leading-5 text-on-surface-variant">
                                 <span class="font-semibold">Giải thích:</span>
-                                <div class="prose prose-sm mt-0.5 max-w-none">
+                                <div class="instructor-image-preview prose prose-sm mt-0.5 max-w-none">
                                     {!! $sideOption['explanation_html'] !!}
                                 </div>
                             </div>
@@ -150,7 +150,7 @@
             @endif
         </div>
         @if ($hasAttendingTip)
-            <div class="question-rich-content prose prose-sm max-w-none text-sm leading-6 text-on-surface">
+            <div class="question-rich-content instructor-image-preview prose prose-sm max-w-none text-sm leading-6 text-on-surface">
                 {!! $attendingHtml !!}
             </div>
             @if ($preserveRawRichText && $comparison['can_compare'] && filled($comparison['attending_tip'][$textKey] ?? null))

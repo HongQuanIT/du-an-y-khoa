@@ -106,7 +106,14 @@
             const ed = quill.root;
             ed.addEventListener('compositionstart', () => ed.classList.remove('ql-blank'));
             ed.addEventListener('compositionend', () => ed.classList.toggle('ql-blank', quill.getLength() <= 1));
-            quill.getModule('toolbar').addHandler('image', () => this.uploadImage());
+            if (typeof window.enhanceQuillImages === 'function') {
+                window.enhanceQuillImages(quill, {
+                    uploadUrl: this.uploadUrl,
+                    onChange: () => this.sync(),
+                });
+            } else {
+                quill.getModule('toolbar').addHandler('image', () => this.uploadImage());
+            }
             this.$el.closest('form')?.addEventListener('submit', () => this.sync());
         }
     }"

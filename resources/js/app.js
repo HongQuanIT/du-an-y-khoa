@@ -11,6 +11,7 @@ import { bootAdminSupportThread } from './admin/support-thread';
 import { bootUserSupportThread } from './support-user-thread';
 import { bootNotifications } from './notifications';
 import { bootActivityHeartbeat } from './activity-heartbeat';
+import './learner-image-viewer';
 
 bootstrapTheme();
 bootstrapCookieConsent();

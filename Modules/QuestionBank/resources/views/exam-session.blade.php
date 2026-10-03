@@ -397,13 +397,12 @@
                             <div class="space-y-5">
                                 <article class="max-w-none">
                                     <h2 class="mb-4 font-headline-md text-headline-md text-on-surface">Trường hợp lâm sàng</h2>
-                                    <div class="text-body-md leading-relaxed whitespace-pre-line text-on-surface">{!! $stemHtml !!}</div>
+                                    <div class="text-body-md leading-relaxed whitespace-pre-line text-on-surface" data-learner-image-viewer>{!! $stemHtml !!}</div>
                                 </article>
 
                                 @if ($stemImageUrl)
                                     <aside class="overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-sm">
-                                        <div class="group relative bg-white flex justify-center cursor-zoom-in"
-                                            @click="imageViewerOpen = true; imageViewerSrc = '{{ $stemImageUrl }}'">
+                                        <div class="group relative bg-white flex justify-center cursor-zoom-in" data-learner-image-viewer>
                                             <img src="{{ $stemImageUrl }}" alt="Ảnh minh họa câu hỏi"
                                                 class="w-full h-auto max-h-[600px] object-contain">
                                         </div>

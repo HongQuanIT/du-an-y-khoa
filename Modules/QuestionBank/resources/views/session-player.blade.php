@@ -284,11 +284,11 @@
                     </div>
                     
                     <div class="grid gap-5 {{ $stemImageUrl ? 'lg:grid-cols-[minmax(0,1fr)_minmax(280px,380px)] lg:items-start' : '' }}">
-                        <div class="prose prose-sm max-w-none font-body-lg text-body-lg leading-relaxed text-on-surface">{!! $stemHtml !!}</div>
+                        <div class="prose prose-sm max-w-none font-body-lg text-body-lg leading-relaxed text-on-surface" data-learner-image-viewer>{!! $stemHtml !!}</div>
                         
                         @if ($stemImageUrl)
                             <aside class="overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-sm">
-                                <div class="bg-white flex justify-center cursor-zoom-in" @click="imageViewerOpen = true; imageViewerSrc = '{{ $stemImageUrl }}'">
+                                <div class="bg-white flex justify-center cursor-zoom-in" data-learner-image-viewer>
                                     <img src="{{ $stemImageUrl }}" alt="Ảnh minh họa câu hỏi"
                                         class="w-full h-auto max-h-[600px] object-contain transition-transform hover:scale-[1.02]">
                                 </div>

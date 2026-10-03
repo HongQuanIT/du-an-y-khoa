@@ -419,7 +419,7 @@
                                           class="w-full resize-none rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                                           :placeholder="'Nội dung đáp án ' + String.fromCharCode(65 + index)"></textarea>
                                 {{-- Mini rich-editor for option explanation (supports images) --}}
-                                <div class="admin-rich-editor mini mt-2 overflow-hidden rounded-lg border border-outline-variant bg-surface"
+                                <div class="admin-rich-editor mini mt-2 rounded-lg border border-outline-variant bg-surface"
                                      x-init="
                                          (function(currentOpt) {
                                              const container = $el.querySelector('[data-mini-editor]');
@@ -444,27 +444,15 @@
                                              const ed = q.root;
                                              ed.addEventListener('compositionstart', function() { ed.classList.remove('ql-blank'); });
                                              ed.addEventListener('compositionend', function() { ed.classList.toggle('ql-blank', q.getLength() <= 1); });
-                                             // Image upload handler
-                                             q.getModule('toolbar').addHandler('image', function() {
-                                                 const inp = document.createElement('input');
-                                                 inp.type = 'file';
-                                                 inp.accept = 'image/png,image/jpeg,image/gif,image/webp';
-                                                 inp.click();
-                                                 inp.onchange = async function() {
-                                                     const file = inp.files?.[0];
-                                                     if (!file) return;
-                                                     const body = new FormData();
-                                                     body.append('image', file);
-                                                     const csrf = document.querySelector('meta[name=csrf-token]')?.content || '';
-                                                     try {
-                                                         const res = await fetch(uploadUrl, { method: 'POST', headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' }, body: body, credentials: 'same-origin' });
-                                                         const data = await res.json();
-                                                         const range = q.getSelection(true) || { index: q.getLength(), length: 0 };
-                                                         q.insertEmbed(range.index, 'image', data.url, 'user');
-                                                         q.setSelection(range.index + 1, 0, 'silent');
-                                                     } catch(e) { alert('Không tải được ảnh. Vui lòng thử lại.'); }
-                                                 };
-                                             });
+                                             if (typeof window.enhanceQuillImages === 'function') {
+                                                 window.enhanceQuillImages(q, {
+                                                     uploadUrl: uploadUrl,
+                                                     onChange: function() {
+                                                         const html = q.root.innerHTML.trim();
+                                                         currentOpt.explanation = (html === '<p><br></p>') ? '' : html;
+                                                     }
+                                                 });
+                                             }
                                          })(opt);
                                      ">
                                     <div data-mini-editor class="min-h-[64px] font-body-sm text-on-surface"></div>
@@ -518,7 +506,7 @@
                                         <input type="hidden" :name="'hints['+index+'][id]'" :value="hint.id || ''">
 
                                         {{-- Mini rich-editor for hint content (supports formatting & images, matching option explanation) --}}
-                                        <div class="admin-rich-editor mini overflow-hidden rounded-lg border border-outline-variant bg-surface"
+                                        <div class="admin-rich-editor mini rounded-lg border border-outline-variant bg-surface"
                                              x-init="
                                                  (function(currentHint) {
                                                      const container = $el.querySelector('[data-mini-hint-editor]');
@@ -542,26 +530,15 @@
                                                      const ed = q.root;
                                                      ed.addEventListener('compositionstart', function() { ed.classList.remove('ql-blank'); });
                                                      ed.addEventListener('compositionend', function() { ed.classList.toggle('ql-blank', q.getLength() <= 1); });
-                                                     q.getModule('toolbar').addHandler('image', function() {
-                                                         const inp = document.createElement('input');
-                                                         inp.type = 'file';
-                                                         inp.accept = 'image/png,image/jpeg,image/gif,image/webp';
-                                                         inp.click();
-                                                         inp.onchange = async function() {
-                                                             const file = inp.files?.[0];
-                                                             if (!file) return;
-                                                             const body = new FormData();
-                                                             body.append('image', file);
-                                                             const csrf = document.querySelector('meta[name=csrf-token]')?.content || '';
-                                                             try {
-                                                                 const res = await fetch(uploadUrl, { method: 'POST', headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' }, body: body, credentials: 'same-origin' });
-                                                                 const data = await res.json();
-                                                                 const range = q.getSelection(true) || { index: q.getLength(), length: 0 };
-                                                                 q.insertEmbed(range.index, 'image', data.url, 'user');
-                                                                 q.setSelection(range.index + 1, 0, 'silent');
-                                                             } catch(e) { alert('Không tải được ảnh. Vui lòng thử lại.'); }
-                                                         };
-                                                     });
+                                                     if (typeof window.enhanceQuillImages === 'function') {
+                                                         window.enhanceQuillImages(q, {
+                                                             uploadUrl: uploadUrl,
+                                                             onChange: function() {
+                                                                 const html = q.root.innerHTML.trim();
+                                                                 currentHint.content = (html === '<p><br></p>') ? '' : html;
+                                                             }
+                                                         });
+                                                     }
                                                  })(hint);
                                              ">
                                             <div data-mini-hint-editor class="min-h-[64px] font-body-sm text-on-surface"></div>

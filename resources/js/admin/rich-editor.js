@@ -2,6 +2,34 @@ import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
 
 const Delta = Quill.import('delta');
+const BaseImage = Quill.import('formats/image');
+
+class PositionedImage extends BaseImage {
+    static formats(domNode) {
+        const formats = super.formats(domNode);
+        const alignment = domNode.getAttribute('data-align');
+        if (['center', 'right'].includes(alignment)) {
+            formats.imageAlign = alignment;
+        }
+
+        return formats;
+    }
+
+    format(name, value) {
+        if (name === 'imageAlign') {
+            if (['center', 'right'].includes(value)) {
+                this.domNode.setAttribute('data-align', value);
+            } else {
+                this.domNode.removeAttribute('data-align');
+            }
+            return;
+        }
+
+        super.format(name, value);
+    }
+}
+
+Quill.register(PositionedImage, true);
 
 // Expose Quill globally so inline x-init scripts (e.g. inside x-for) can use it.
 window.Quill = Quill;
@@ -40,6 +68,319 @@ function pinQuillToolbarButtons(quill) {
 }
 
 window.pinQuillToolbarButtons = pinQuillToolbarButtons;
+
+const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
+async function uploadRichEditorImage(uploadUrl, file) {
+    if (! ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+        throw new Error('Chỉ chấp nhận ảnh JPG, PNG, GIF hoặc WebP.');
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+        throw new Error('Ảnh không được vượt quá 5MB.');
+    }
+
+    const body = new FormData();
+    body.append('image', file);
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    const response = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': csrf,
+            Accept: 'application/json',
+        },
+        body,
+        credentials: 'same-origin',
+    });
+
+    if (! response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.message || 'Không thể tải ảnh lên.');
+    }
+
+    const payload = await response.json();
+    if (! payload?.url) {
+        throw new Error('Máy chủ không trả về đường dẫn ảnh.');
+    }
+
+    return payload;
+}
+
+/**
+ * Add upload by picker/drop/paste and an accessible resize control to a Quill editor.
+ * Width is stored on the image element so it survives HTML save/restore and Quill reloads.
+ */
+function enhanceQuillImages(quill, { uploadUrl = '', onChange = () => {} } = {}) {
+    if (! quill?.root || quill.root.dataset.medlearnImagesEnhanced === '1') {
+        return;
+    }
+
+    const root = quill.root;
+    const shell = quill.container.closest('.admin-rich-editor') || quill.container.parentElement;
+    root.dataset.medlearnImagesEnhanced = '1';
+    shell?.classList.add('rich-editor-image-shell');
+
+    let selectedImage = null;
+    let lastRange = null;
+    let uploading = false;
+
+    const resizer = document.createElement('div');
+    resizer.className = 'rich-editor-image-resizer';
+    resizer.hidden = true;
+    resizer.innerHTML = `
+        <span class="rich-editor-image-size" aria-live="polite"></span>
+        <div class="rich-editor-image-actions" role="toolbar" aria-label="Căn chỉnh ảnh">
+            <button type="button" class="rich-editor-image-reset" title="Đặt lại kích thước ảnh">Đặt lại</button>
+            <button type="button" class="rich-editor-image-align" data-image-align="left" aria-label="Căn ảnh sang trái" title="Căn trái">⇤</button>
+            <button type="button" class="rich-editor-image-align" data-image-align="center" aria-label="Căn ảnh vào giữa" title="Căn giữa">↔</button>
+            <button type="button" class="rich-editor-image-align" data-image-align="right" aria-label="Căn ảnh sang phải" title="Căn phải">⇥</button>
+        </div>
+        <button type="button" class="rich-editor-image-handle" aria-label="Kéo để thay đổi kích thước ảnh" title="Kéo để thay đổi kích thước"></button>
+    `;
+    shell?.appendChild(resizer);
+
+    const sizeLabel = resizer.querySelector('.rich-editor-image-size');
+    const resetButton = resizer.querySelector('.rich-editor-image-reset');
+    const alignButtons = [...resizer.querySelectorAll('[data-image-align]')];
+    const handle = resizer.querySelector('.rich-editor-image-handle');
+
+    const sync = () => {
+        quill.update('user');
+        onChange();
+    };
+
+    const positionResizer = () => {
+        if (! selectedImage || ! selectedImage.isConnected || ! shell) {
+            resizer.hidden = true;
+            return;
+        }
+
+        const imageRect = selectedImage.getBoundingClientRect();
+        const shellRect = shell.getBoundingClientRect();
+        resizer.style.left = `${imageRect.left - shellRect.left + shell.scrollLeft}px`;
+        resizer.style.top = `${imageRect.top - shellRect.top + shell.scrollTop}px`;
+        resizer.style.width = `${imageRect.width}px`;
+        resizer.style.height = `${imageRect.height}px`;
+        const width = Math.round(imageRect.width);
+        const height = Math.round(imageRect.height);
+        sizeLabel.textContent = `${width} × ${height} px`;
+        sizeLabel.setAttribute('aria-label', `Rộng ${width} pixel, cao ${height} pixel`);
+        const currentAlign = selectedImage.dataset.align || 'left';
+        alignButtons.forEach((button) => {
+            const active = button.dataset.imageAlign === currentAlign;
+            button.classList.toggle('is-active', active);
+            button.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+        resizer.hidden = false;
+    };
+
+    const selectImage = (image) => {
+        if (selectedImage) {
+            selectedImage.classList.remove('is-selected-for-resize');
+        }
+        selectedImage = image instanceof HTMLImageElement ? image : null;
+        if (selectedImage) {
+            selectedImage.classList.add('is-selected-for-resize');
+            const imageBlot = Quill.find(selectedImage);
+            if (imageBlot) {
+                quill.setSelection(quill.getIndex(imageBlot), 1, 'silent');
+            }
+        }
+        positionResizer();
+    };
+
+    const applyAlignment = (alignment) => {
+        if (! selectedImage || ! ['left', 'center', 'right'].includes(alignment)) return;
+        const imageBlot = Quill.find(selectedImage);
+        if (! imageBlot) return;
+        const imageIndex = quill.getIndex(imageBlot);
+        quill.formatText(imageIndex, 1, 'imageAlign', alignment === 'left' ? false : alignment, 'user');
+        sync();
+        requestAnimationFrame(positionResizer);
+    };
+
+    alignButtons.forEach((button) => {
+        button.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            applyAlignment(button.dataset.imageAlign || 'left');
+        });
+    });
+
+    const applyWidth = (width, shouldSync = true) => {
+        if (! selectedImage) return;
+        const maxWidth = Math.max(80, root.clientWidth);
+        const nextWidth = Math.min(maxWidth, Math.max(80, Math.round(width)));
+        selectedImage.setAttribute('width', String(nextWidth));
+        selectedImage.removeAttribute('height');
+        selectedImage.style.width = '';
+        selectedImage.style.height = '';
+        positionResizer();
+        if (shouldSync) {
+            sync();
+        }
+    };
+
+    resetButton?.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (! selectedImage) return;
+        selectedImage.removeAttribute('width');
+        selectedImage.removeAttribute('height');
+        selectedImage.style.width = '';
+        selectedImage.style.height = '';
+        positionResizer();
+        sync();
+    });
+
+    handle?.addEventListener('pointerdown', (event) => {
+        if (! selectedImage) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const startX = event.clientX;
+        const startWidth = selectedImage.getBoundingClientRect().width;
+        handle.setPointerCapture?.(event.pointerId);
+
+        const move = (moveEvent) => applyWidth(startWidth + moveEvent.clientX - startX, false);
+        const finish = () => {
+            handle.removeEventListener('pointermove', move);
+            handle.removeEventListener('pointerup', finish);
+            handle.removeEventListener('pointercancel', finish);
+            sync();
+        };
+        handle.addEventListener('pointermove', move);
+        handle.addEventListener('pointerup', finish);
+        handle.addEventListener('pointercancel', finish);
+    });
+
+    handle?.addEventListener('keydown', (event) => {
+        if (! selectedImage || ! ['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+        event.preventDefault();
+        const direction = event.key === 'ArrowRight' ? 1 : -1;
+        applyWidth(selectedImage.getBoundingClientRect().width + (direction * (event.shiftKey ? 50 : 10)));
+    });
+
+    const insertionIndex = () => {
+        const range = quill.getSelection() || lastRange;
+        return range?.index ?? Math.max(0, quill.getLength() - 1);
+    };
+
+    const insertFile = async (file, index = insertionIndex()) => {
+        if (! uploadUrl || ! file || uploading) return;
+        uploading = true;
+        shell?.classList.add('is-uploading-image');
+        try {
+            const payload = await uploadRichEditorImage(uploadUrl, file);
+            quill.insertEmbed(index, 'image', payload.url, 'user');
+            quill.setSelection(index + 1, 0, 'silent');
+            sync();
+            requestAnimationFrame(() => {
+                const [leaf] = quill.getLeaf(index);
+                selectImage(leaf?.domNode instanceof HTMLImageElement ? leaf.domNode : null);
+            });
+        } catch (error) {
+            console.error(error);
+            window.alert(error?.message || 'Không tải được ảnh. Vui lòng thử lại.');
+        } finally {
+            uploading = false;
+            shell?.classList.remove('is-uploading-image');
+        }
+    };
+
+    const chooseImage = () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/png,image/jpeg,image/gif,image/webp';
+        input.addEventListener('change', () => insertFile(input.files?.[0]));
+        input.click();
+    };
+
+    quill.on('selection-change', (range) => {
+        if (range) lastRange = range;
+    });
+    quill.getModule('toolbar')?.addHandler('image', chooseImage);
+
+    root.addEventListener('click', (event) => {
+        selectImage(event.target instanceof HTMLImageElement ? event.target : null);
+    });
+    root.addEventListener('dragover', (event) => {
+        if ([...(event.dataTransfer?.items || [])].some((item) => item.type.startsWith('image/'))) {
+            event.preventDefault();
+            root.classList.add('is-dragging-image');
+        }
+    });
+    root.addEventListener('dragleave', () => root.classList.remove('is-dragging-image'));
+    root.addEventListener('drop', (event) => {
+        root.classList.remove('is-dragging-image');
+        const file = [...(event.dataTransfer?.files || [])].find((item) => item.type.startsWith('image/'));
+        if (! file) return;
+        event.preventDefault();
+        event.stopPropagation();
+        insertFile(file);
+    });
+    root.addEventListener('paste', (event) => {
+        const file = [...(event.clipboardData?.items || [])]
+            .find((item) => item.type.startsWith('image/'))
+            ?.getAsFile();
+        if (! file) return;
+        event.preventDefault();
+        insertFile(file);
+    });
+    root.addEventListener('scroll', positionResizer, { passive: true });
+    window.addEventListener('resize', positionResizer, { passive: true });
+}
+
+window.enhanceQuillImages = enhanceQuillImages;
+
+function annotateInstructorRichImages(root = document) {
+    const selector = [
+        '.instructor-image-preview img',
+        '[data-testid="reviewer-question-preview"] .question-rich-content img',
+    ].join(', ');
+
+    root.querySelectorAll?.(selector).forEach((image) => {
+        if (image.dataset.medlearnDimensions === '1') return;
+        image.dataset.medlearnDimensions = '1';
+
+        const wrapper = document.createElement('span');
+        const isReviewerPreview = image.closest('[data-testid="reviewer-question-preview"]');
+        wrapper.className = isReviewerPreview
+            ? 'reviewer-image-preview-wrap'
+            : 'instructor-image-preview-wrap';
+        if (['center', 'right'].includes(image.dataset.align)) {
+            wrapper.classList.add(`is-${image.dataset.align}`);
+        }
+        image.parentNode?.insertBefore(wrapper, image);
+        wrapper.appendChild(image);
+
+        const label = document.createElement('span');
+        label.className = 'instructor-image-dimensions';
+        label.setAttribute('aria-live', 'polite');
+        wrapper.appendChild(label);
+
+        const update = () => {
+            const rect = image.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) return;
+            const width = Math.round(rect.width);
+            const height = Math.round(rect.height);
+            label.textContent = `${width} × ${height} px`;
+            label.setAttribute('aria-label', `Kích thước ảnh: rộng ${width} pixel, cao ${height} pixel`);
+        };
+
+        image.addEventListener('load', update, { once: true });
+        if (image.complete) update();
+        if (typeof ResizeObserver === 'function') {
+            new ResizeObserver(update).observe(image);
+        }
+    });
+}
+
+window.annotateInstructorRichImages = annotateInstructorRichImages;
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => annotateInstructorRichImages(), { once: true });
+} else {
+    requestAnimationFrame(() => annotateInstructorRichImages());
+}
 
 /**
  * Register Alpine rich-text editors (Quill) used on admin / editor question forms.
@@ -216,7 +557,10 @@ export function registerRichEditor(Alpine) {
             }
 
             const toolbarModule = quill.getModule('toolbar');
-            toolbarModule.addHandler('image', () => this.uploadImage());
+            enhanceQuillImages(quill, {
+                uploadUrl,
+                onChange: () => this.syncInput(),
+            });
 
             this.$el.closest('form')?.addEventListener('submit', () => this.syncInput());
         },
