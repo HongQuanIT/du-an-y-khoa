@@ -23,6 +23,7 @@
     {{ $slot }}
 
     @livewireScriptConfig
+    <x-system-dialogs />
 </body>
 
 </html>

@@ -180,6 +180,7 @@
     </main>
 
     @stack('scripts')
+    <x-system-dialogs />
 </body>
 
 </html>

@@ -669,9 +669,10 @@ export function mountLivekitRoom(root) {
         }
 
         const who = String(displayName || identity || 'thành viên này').trim();
-        const confirmed = window.confirm(
-            `Kick “${who}” khỏi phòng live?\nHọ sẽ bị ngắt kết nối ngay và không thể ở lại buổi này.`,
-        );
+        const confirmed = await window.appConfirm({
+            title: 'Kick học viên khỏi phòng live?',
+            message: `“${who}” sẽ bị ngắt kết nối ngay và không thể ở lại buổi này.`,
+        });
         if (! confirmed) {
             return;
         }

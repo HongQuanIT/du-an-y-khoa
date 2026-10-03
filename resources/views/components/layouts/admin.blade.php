@@ -304,6 +304,7 @@
     @endunless
     @livewireScriptConfig
     @stack('scripts')
+    <x-system-dialogs />
 </body>
 
 </html>

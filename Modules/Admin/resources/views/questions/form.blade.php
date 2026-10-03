@@ -197,9 +197,11 @@
 @endif
                 @elseif ($canDelete && ! $pendingReview && ! $isReviewer && in_array($question->status, [\Modules\QuestionBank\Enums\QuestionStatus::Published, \Modules\QuestionBank\Enums\QuestionStatus::Private], true))
                 @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.questions.retire-request'))
-<form method="post" action="{{ route(\App\Support\Auth\PortalRoute::content('questions.retire-request'), $question) }}" aria-label="Yêu cầu ngừng dùng">
+<form id="question-retire-request-form" method="post" action="{{ route(\App\Support\Auth\PortalRoute::content('questions.retire-request'), $question) }}" aria-label="Yêu cầu ngừng dùng">
                     @csrf
-                    <button type="submit" onclick="return confirm('Gửi yêu cầu ngừng dùng để admin duyệt?')"
+                    <button type="button" data-question-confirm-form="question-retire-request-form"
+                        data-question-confirm-title="Gửi yêu cầu ngừng dùng?"
+                        data-question-confirm-message="Yêu cầu sẽ được gửi đến Admin để duyệt."
                         class="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-rose-300 px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50">
                         <span class="material-symbols-outlined text-[16px]" aria-hidden="true">block</span>
                         Yêu cầu ngừng dùng
@@ -583,16 +585,16 @@
                         </p>
                         <div class="flex flex-col gap-2">
                             @if ($canPublish)
-                            <button type="submit"
-                                form="question-publish-form"
-                                onclick="return confirm('Xuất bản câu hỏi này lên ngân hàng? Phiên bản sẽ tăng.')"
+                            <button type="button" data-question-confirm-form="question-publish-form"
+                                data-question-confirm-title="Xuất bản câu hỏi?"
+                                data-question-confirm-message="Câu hỏi sẽ được đưa vào ngân hàng và phiên bản sẽ tăng."
                                 class="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 font-label-md font-semibold text-on-primary hover:bg-primary/90">
                                 <span class="material-symbols-outlined text-[18px]">publish</span>
                                 Duyệt &amp; xuất bản
                             </button>
-                            <button type="submit"
-                                form="question-private-form"
-                                onclick="return confirm('Ẩn câu này khỏi ngân hàng? Học viên sẽ không thấy câu trong QBank và bài thi mới. Có thể xuất bản lại ngay.')"
+                            <button type="button" data-question-confirm-form="question-private-form"
+                                data-question-confirm-title="Ẩn khỏi ngân hàng?"
+                                data-question-confirm-message="Học viên sẽ không thấy câu trong QBank và bài thi mới. Có thể xuất bản lại ngay."
                                 class="flex w-full items-center justify-center gap-2 rounded-xl border border-violet-300 py-2.5 font-label-md font-semibold text-violet-800 hover:bg-violet-50">
                                 <span class="material-symbols-outlined text-[18px]">lock</span>
                                 Ẩn khỏi ngân hàng
@@ -647,25 +649,25 @@
                         </p>
                         <div class="flex flex-col gap-2">
                             @if ($question->status === \Modules\QuestionBank\Enums\QuestionStatus::Published)
-                                <button type="submit"
-                                    form="question-private-form"
-                                    onclick="return confirm('Ẩn câu đã xuất bản khỏi ngân hàng? Học viên sẽ không thấy câu trong QBank và bài thi mới. Có thể xuất bản lại ngay.')"
+                                <button type="button" data-question-confirm-form="question-private-form"
+                                    data-question-confirm-title="Ẩn khỏi ngân hàng?"
+                                    data-question-confirm-message="Học viên sẽ không thấy câu trong QBank và bài thi mới. Có thể xuất bản lại ngay."
                                     class="flex w-full items-center justify-center gap-2 rounded-xl border border-violet-300 py-2.5 font-label-md font-semibold text-violet-800 hover:bg-violet-50">
                                     <span class="material-symbols-outlined text-[18px]">lock</span>
                                     Ẩn khỏi ngân hàng
                                 </button>
                             @else
-                                <button type="submit"
-                                    form="question-publish-form"
-                                    onclick="return confirm('Đưa câu đang ẩn trở lại ngân hàng?')"
+                                <button type="button" data-question-confirm-form="question-publish-form"
+                                    data-question-confirm-title="Xuất bản công khai?"
+                                    data-question-confirm-message="Câu hỏi sẽ xuất hiện trở lại trong ngân hàng."
                                     class="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 font-label-md font-semibold text-on-primary hover:bg-primary/90">
                                     <span class="material-symbols-outlined text-[18px]">publish</span>
                                     Xuất bản công khai
                                 </button>
                             @endif
-                            <button type="submit"
-                                form="question-retire-form"
-                                onclick="return confirm('Ngừng dùng câu hỏi này?')"
+                            <button type="button" data-question-confirm-form="question-retire-form"
+                                data-question-confirm-title="Ngừng dùng câu hỏi?"
+                                data-question-confirm-message="Câu hỏi sẽ bị gỡ khỏi ngân hàng mới. Các phiên đang làm vẫn giữ nội dung đã chụp."
                                 class="flex w-full items-center justify-center gap-2 rounded-xl border border-rose-300 py-2.5 font-label-md font-semibold text-rose-700 hover:bg-rose-50">
                                 <span class="material-symbols-outlined text-[18px]">block</span>
                                 Ngừng dùng
@@ -678,9 +680,9 @@
                         <p class="mb-3 text-xs leading-5 text-on-surface-variant">
                             Câu hỏi đang ẩn khỏi ngân hàng. Đưa về editor ở trạng thái <span class="font-semibold">Nháp</span> để sửa và xuất bản lại. Ngân hàng không phát hành câu này cho đến phiên bản mới.
                         </p>
-                        <button type="submit"
-                            form="question-unretire-form"
-                            onclick="return confirm('Đưa câu về nháp cho editor sửa? Ngân hàng không phát hành lại cho đến khi xuất bản phiên bản mới. Lịch sử phiên bản được giữ.')"
+                        <button type="button" data-question-confirm-form="question-unretire-form"
+                            data-question-confirm-title="Đưa câu về Editor?"
+                            data-question-confirm-message="Câu sẽ về trạng thái Nháp để Editor sửa. Ngân hàng không phát hành lại cho đến khi có phiên bản mới."
                             class="flex w-full items-center justify-center gap-2 rounded-xl border border-outline-variant py-2.5 font-label-md font-semibold text-on-surface hover:bg-surface-container-low">
                             <span class="material-symbols-outlined text-[18px]">undo</span>
                             Đưa về Editor
@@ -790,9 +792,9 @@
                         <p class="mt-1 text-[11px] leading-4 text-on-surface-variant">
                             Nội dung bị khóa khi chờ GV. Vẫn có thể rút về nháp để chỉnh sửa rồi gửi duyệt lại (chỉ khi GV chưa approve/reject).
                         </p>
-                        <button type="submit"
-                            form="editor-return-draft-form"
-                            onclick="return confirm('Rút câu về nháp? Phiếu duyệt hiện tại sẽ bị hủy.')"
+                        <button type="button" data-question-confirm-form="editor-return-draft-form"
+                            data-question-confirm-title="Rút câu về nháp?"
+                            data-question-confirm-message="Phiếu duyệt hiện tại sẽ bị hủy."
                             class="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-outline-variant py-2.5 font-label-md font-semibold text-on-surface hover:bg-surface-container-low">
                             <span class="material-symbols-outlined text-[18px]">undo</span>
                             Rút về nháp
@@ -1001,5 +1003,56 @@
         </form>
         @endif
     @endif
+
+    <div x-data="{ open: false, formId: '', title: '', message: '' }"
+        @question-confirm.window="
+            formId = $event.detail.formId;
+            title = $event.detail.title;
+            message = $event.detail.message;
+            open = true;
+        ">
+        <template x-teleport="body">
+            <div x-show="open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4"
+                @keydown.escape.window="open = false">
+                <div class="absolute inset-0 bg-on-surface/40" @click="open = false"></div>
+                <div class="relative w-full max-w-md rounded-2xl border border-outline-variant bg-surface p-5 shadow-2xl"
+                    role="alertdialog" aria-modal="true" aria-labelledby="question-action-confirm-title">
+                    <h2 id="question-action-confirm-title" class="font-headline-sm font-bold text-on-surface" x-text="title"></h2>
+                    <p class="mt-2 text-sm leading-6 text-on-surface-variant" x-text="message"></p>
+                    <div class="mt-5 flex justify-end gap-2">
+                        <button type="button" @click="open = false"
+                            class="inline-flex h-10 items-center justify-center rounded-xl border border-outline-variant px-4 font-semibold text-on-surface-variant hover:bg-surface-container-low">
+                            Hủy
+                        </button>
+                        <button type="button"
+                            @click="document.getElementById(formId)?.requestSubmit()"
+                            class="inline-flex h-10 items-center justify-center rounded-xl bg-primary px-4 font-semibold text-on-primary hover:bg-primary/90">
+                            Xác nhận
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </div>
+
+    <script>
+        if (! window.__questionActionConfirmBound) {
+            window.__questionActionConfirmBound = true;
+
+            document.addEventListener('click', (event) => {
+                const button = event.target.closest('[data-question-confirm-form]');
+                if (! button) return;
+
+                event.preventDefault();
+                window.dispatchEvent(new CustomEvent('question-confirm', {
+                    detail: {
+                        formId: button.dataset.questionConfirmForm,
+                        title: button.dataset.questionConfirmTitle,
+                        message: button.dataset.questionConfirmMessage,
+                    },
+                }));
+            });
+        }
+    </script>
 
 </x-layouts.admin>

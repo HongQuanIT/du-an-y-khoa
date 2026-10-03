@@ -742,8 +742,13 @@ export function registerRichEditor(Alpine) {
             this.syncInput();
         },
 
-        promptCreateTable() {
-            const input = window.prompt('Nhập số hàng và số cột (ví dụ: 3x2, 4x3, 5x2):', '3x2');
+        async promptCreateTable() {
+            const input = await window.appPrompt({
+                title: 'Tạo bảng',
+                message: 'Nhập số hàng và số cột cho bảng mới.',
+                label: 'Định dạng (ví dụ: 3x2, 4x3, 5x2)',
+                value: '3x2',
+            });
             if (! input) return;
 
             const parts = input.toLowerCase().split('x').map(s => parseInt(s.trim(), 10));

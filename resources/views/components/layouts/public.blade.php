@@ -73,6 +73,7 @@
     <x-public.cookie-banner />
 
     @livewireScriptConfig
+    <x-system-dialogs />
 </body>
 
 </html>

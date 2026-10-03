@@ -76,8 +76,11 @@
             <form id="reject-review-form" method="post" action="{{ route('teach.questions.reviews.reject', $question) }}">
                 @csrf
                 <input type="hidden" name="review_note" id="reject-review-note">
-                <button type="submit"
-                    onclick="document.getElementById('reject-review-note').value = document.getElementById('review_note').value; return confirm('Từ chối câu hỏi này?')"
+                <button type="button" data-question-confirm-form="reject-review-form"
+                    data-question-confirm-title="Từ chối câu hỏi?"
+                    data-question-confirm-message="Câu hỏi sẽ được trả về để Content Editor chỉnh sửa."
+                    data-question-confirm-copy-from="review_note"
+                    data-question-confirm-copy-to="reject-review-note"
                     class="inline-flex items-center gap-1 rounded-xl border border-rose-300 px-4 py-2.5 font-semibold text-rose-700 hover:bg-rose-50">
                     <span class="material-symbols-outlined text-[18px]">close</span>Từ chối
                 </button>
@@ -86,7 +89,9 @@
             @if ($canApprove)
             <form id="approve-review-form" method="post" action="{{ route('teach.questions.reviews.approve', $question) }}">
                 @csrf
-                <button type="submit" onclick="return confirm('Xác nhận duyệt chuyên môn câu hỏi này?')"
+                <button type="button" data-question-confirm-form="approve-review-form"
+                    data-question-confirm-title="Duyệt chuyên môn câu hỏi?"
+                    data-question-confirm-message="Xác nhận nội dung đã đạt yêu cầu chuyên môn."
                     class="inline-flex items-center gap-1 rounded-xl bg-primary px-4 py-2.5 font-semibold text-on-primary hover:bg-primary/90">
                     <span class="material-symbols-outlined text-[18px]">check</span>Duyệt chuyên môn
                 </button>
@@ -149,4 +154,58 @@
             ])
         </section>
     </div>
+
+    <div x-data="{ open: false, formId: '', title: '', message: '' }"
+        @question-confirm.window="
+            formId = $event.detail.formId;
+            title = $event.detail.title;
+            message = $event.detail.message;
+            open = true;
+        ">
+        <template x-teleport="body">
+            <div x-show="open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4"
+                @keydown.escape.window="open = false">
+                <div class="absolute inset-0 bg-on-surface/40" @click="open = false"></div>
+                <div class="relative w-full max-w-md rounded-2xl border border-outline-variant bg-surface p-5 shadow-2xl"
+                    role="alertdialog" aria-modal="true" aria-labelledby="question-action-confirm-title">
+                    <h2 id="question-action-confirm-title" class="font-headline-sm font-bold text-on-surface" x-text="title"></h2>
+                    <p class="mt-2 text-sm leading-6 text-on-surface-variant" x-text="message"></p>
+                    <div class="mt-5 flex justify-end gap-2">
+                        <button type="button" @click="open = false"
+                            class="inline-flex h-10 items-center justify-center rounded-xl border border-outline-variant px-4 font-semibold text-on-surface-variant hover:bg-surface-container-low">
+                            Hủy
+                        </button>
+                        <button type="button" @click="document.getElementById(formId)?.requestSubmit()"
+                            class="inline-flex h-10 items-center justify-center rounded-xl bg-primary px-4 font-semibold text-on-primary hover:bg-primary/90">
+                            Xác nhận
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </div>
+
+    <script>
+        if (! window.__questionActionConfirmBound) {
+            window.__questionActionConfirmBound = true;
+
+            document.addEventListener('click', (event) => {
+                const button = event.target.closest('[data-question-confirm-form]');
+                if (! button) return;
+
+                const source = document.getElementById(button.dataset.questionConfirmCopyFrom);
+                const target = document.getElementById(button.dataset.questionConfirmCopyTo);
+                if (source && target) target.value = source.value;
+
+                event.preventDefault();
+                window.dispatchEvent(new CustomEvent('question-confirm', {
+                    detail: {
+                        formId: button.dataset.questionConfirmForm,
+                        title: button.dataset.questionConfirmTitle,
+                        message: button.dataset.questionConfirmMessage,
+                    },
+                }));
+            });
+        }
+    </script>
 </x-layouts.teach>
