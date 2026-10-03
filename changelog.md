@@ -2,6 +2,13 @@
 
 ## 2026-10-03
 
+### Fix — Kích thước mặc định và nhãn resize ảnh
+
+- Ảnh mới tải lên trong Content Editor mặc định rộng 50% vùng soạn thảo.
+- Ẩn nhãn kích thước khi không resize, chỉ hiển thị cạnh con trỏ lúc đang kéo.
+
+## 2026-10-03
+
 ### Fix — Kéo đổi kích thước ảnh từ đủ bốn góc
 
 - Thêm tay kéo ở góc trên trái, trên phải, dưới trái và dưới phải trong Content Editor.

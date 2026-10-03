@@ -177,6 +177,18 @@ function enhanceQuillImages(quill, { uploadUrl = '', onChange = () => {} } = {})
         resizer.hidden = false;
     };
 
+    const positionSizeLabelNearPointer = (event) => {
+        sizeLabel.classList.add('is-following-pointer');
+        sizeLabel.style.left = `${event.clientX + 12}px`;
+        sizeLabel.style.top = `${event.clientY + 12}px`;
+    };
+
+    const resetSizeLabelPosition = () => {
+        sizeLabel.classList.remove('is-following-pointer');
+        sizeLabel.style.left = '';
+        sizeLabel.style.top = '';
+    };
+
     const selectImage = (image) => {
         if (selectedImage) {
             selectedImage.classList.remove('is-selected-for-resize');
@@ -245,11 +257,15 @@ function enhanceQuillImages(quill, { uploadUrl = '', onChange = () => {} } = {})
         const direction = handle.dataset.resizeDirection === 'left' ? -1 : 1;
         handle.setPointerCapture?.(event.pointerId);
 
-        const move = (moveEvent) => applyWidth(startWidth + ((moveEvent.clientX - startX) * direction), false);
+        const move = (moveEvent) => {
+            applyWidth(startWidth + ((moveEvent.clientX - startX) * direction), false);
+            positionSizeLabelNearPointer(moveEvent);
+        };
         const finish = () => {
             handle.removeEventListener('pointermove', move);
             handle.removeEventListener('pointerup', finish);
             handle.removeEventListener('pointercancel', finish);
+            resetSizeLabelPosition();
             sync();
         };
         handle.addEventListener('pointermove', move);
@@ -277,10 +293,16 @@ function enhanceQuillImages(quill, { uploadUrl = '', onChange = () => {} } = {})
             const payload = await uploadRichEditorImage(uploadUrl, file);
             quill.insertEmbed(index, 'image', payload.url, 'user');
             quill.setSelection(index + 1, 0, 'silent');
-            sync();
             requestAnimationFrame(() => {
                 const [leaf] = quill.getLeaf(index);
-                selectImage(leaf?.domNode instanceof HTMLImageElement ? leaf.domNode : null);
+                const image = leaf?.domNode instanceof HTMLImageElement ? leaf.domNode : null;
+                selectImage(image);
+                if (image) {
+                    // New uploads start at half of the editor width; users can
+                    // resize them freely afterwards from any corner.
+                    applyWidth(root.clientWidth * 0.5, false);
+                }
+                sync();
             });
         } catch (error) {
             console.error(error);
