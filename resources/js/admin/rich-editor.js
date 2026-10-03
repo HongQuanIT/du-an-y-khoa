@@ -135,14 +135,17 @@ function enhanceQuillImages(quill, { uploadUrl = '', onChange = () => {} } = {})
             <button type="button" class="rich-editor-image-align" data-image-align="center" aria-label="Căn ảnh vào giữa" title="Căn giữa">↔</button>
             <button type="button" class="rich-editor-image-align" data-image-align="right" aria-label="Căn ảnh sang phải" title="Căn phải">⇥</button>
         </div>
-        <button type="button" class="rich-editor-image-handle" aria-label="Kéo để thay đổi kích thước ảnh" title="Kéo để thay đổi kích thước"></button>
+        <button type="button" class="rich-editor-image-handle is-top-left" data-resize-direction="left" aria-label="Kéo góc trên trái để thay đổi kích thước ảnh" title="Kéo để thay đổi kích thước"></button>
+        <button type="button" class="rich-editor-image-handle is-top-right" data-resize-direction="right" aria-label="Kéo góc trên phải để thay đổi kích thước ảnh" title="Kéo để thay đổi kích thước"></button>
+        <button type="button" class="rich-editor-image-handle is-bottom-left" data-resize-direction="left" aria-label="Kéo góc dưới trái để thay đổi kích thước ảnh" title="Kéo để thay đổi kích thước"></button>
+        <button type="button" class="rich-editor-image-handle is-bottom-right" data-resize-direction="right" aria-label="Kéo góc dưới phải để thay đổi kích thước ảnh" title="Kéo để thay đổi kích thước"></button>
     `;
     shell?.appendChild(resizer);
 
     const sizeLabel = resizer.querySelector('.rich-editor-image-size');
     const resetButton = resizer.querySelector('.rich-editor-image-reset');
     const alignButtons = [...resizer.querySelectorAll('[data-image-align]')];
-    const handle = resizer.querySelector('.rich-editor-image-handle');
+    const handles = [...resizer.querySelectorAll('.rich-editor-image-handle')];
 
     const sync = () => {
         quill.update('user');
@@ -233,15 +236,16 @@ function enhanceQuillImages(quill, { uploadUrl = '', onChange = () => {} } = {})
         sync();
     });
 
-    handle?.addEventListener('pointerdown', (event) => {
+    handles.forEach((handle) => handle.addEventListener('pointerdown', (event) => {
         if (! selectedImage) return;
         event.preventDefault();
         event.stopPropagation();
         const startX = event.clientX;
         const startWidth = selectedImage.getBoundingClientRect().width;
+        const direction = handle.dataset.resizeDirection === 'left' ? -1 : 1;
         handle.setPointerCapture?.(event.pointerId);
 
-        const move = (moveEvent) => applyWidth(startWidth + moveEvent.clientX - startX, false);
+        const move = (moveEvent) => applyWidth(startWidth + ((moveEvent.clientX - startX) * direction), false);
         const finish = () => {
             handle.removeEventListener('pointermove', move);
             handle.removeEventListener('pointerup', finish);
@@ -251,14 +255,14 @@ function enhanceQuillImages(quill, { uploadUrl = '', onChange = () => {} } = {})
         handle.addEventListener('pointermove', move);
         handle.addEventListener('pointerup', finish);
         handle.addEventListener('pointercancel', finish);
-    });
+    }));
 
-    handle?.addEventListener('keydown', (event) => {
+    handles.forEach((handle) => handle.addEventListener('keydown', (event) => {
         if (! selectedImage || ! ['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
         event.preventDefault();
         const direction = event.key === 'ArrowRight' ? 1 : -1;
         applyWidth(selectedImage.getBoundingClientRect().width + (direction * (event.shiftKey ? 50 : 10)));
-    });
+    }));
 
     const insertionIndex = () => {
         const range = quill.getSelection() || lastRange;

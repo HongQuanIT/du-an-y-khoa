@@ -2,6 +2,13 @@
 
 ## 2026-10-03
 
+### Fix — Kéo đổi kích thước ảnh từ đủ bốn góc
+
+- Thêm tay kéo ở góc trên trái, trên phải, dưới trái và dưới phải trong Content Editor.
+- Giữ nguyên tỉ lệ ảnh khi thay đổi kích thước từ các góc.
+
+## 2026-10-03
+
 ### Feat — Chỉnh sửa và xem ảnh trong câu hỏi
 
 - Content Editor hỗ trợ kéo thả, đổi kích thước và căn trái/giữa/phải cho ảnh.
