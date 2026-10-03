@@ -2,6 +2,13 @@
 
 ## 2026-10-03
 
+### Fix — Popup xác nhận submit form cũ
+
+- Popup xác nhận dùng chung nhận đúng form từ inline onsubmit cũ.
+- Bấm xác nhận ở form kết thúc buổi live sẽ submit tiếp thao tác.
+
+## 2026-10-03
+
 ### Fix — Đồng bộ popup xác nhận hệ thống
 
 - Thêm dialog dùng chung cho confirm, alert và prompt trên các layout chính.

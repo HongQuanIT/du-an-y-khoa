@@ -105,7 +105,11 @@
 
         window.confirm = (messageText) => {
             const active = document.activeElement;
-            const form = pendingSubmit?.form || active?.form || active?.closest?.('form');
+            const legacyTarget = window.event?.target instanceof HTMLElement ? window.event.target : null;
+            const legacyForm = legacyTarget instanceof HTMLFormElement
+                ? legacyTarget
+                : legacyTarget?.closest?.('form');
+            const form = pendingSubmit?.form || active?.form || active?.closest?.('form') || legacyForm;
             const submitter = pendingSubmit?.submitter || (active?.form === form ? active : null);
 
             if (! form) {
