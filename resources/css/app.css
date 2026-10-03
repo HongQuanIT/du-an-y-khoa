@@ -821,6 +821,38 @@ mark[data-hl='#10b981'] {
     background: var(--color-primary);
     box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
 }
+.rich-editor-image-handle.is-top-left,
+.rich-editor-image-handle.is-bottom-right {
+    cursor: nwse-resize;
+}
+.rich-editor-image-handle.is-top-right,
+.rich-editor-image-handle.is-bottom-left {
+    cursor: nesw-resize;
+}
+.rich-editor-image-handle.is-top-left {
+    top: -7px;
+    left: -7px;
+    right: auto;
+    bottom: auto;
+}
+.rich-editor-image-handle.is-top-right {
+    top: -7px;
+    right: -7px;
+    left: auto;
+    bottom: auto;
+}
+.rich-editor-image-handle.is-bottom-left {
+    bottom: -7px;
+    left: -7px;
+    top: auto;
+    right: auto;
+}
+.rich-editor-image-handle.is-bottom-right {
+    right: -7px;
+    bottom: -7px;
+    top: auto;
+    left: auto;
+}
 .rich-editor-image-handle:focus-visible,
 .rich-editor-image-reset:focus-visible,
 .rich-editor-image-align:focus-visible {
