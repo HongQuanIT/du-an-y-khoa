@@ -136,9 +136,10 @@
 
                     event.preventDefault();
                     const handler = link.dataset.handlerName || 'một quản trị viên khác';
-                    const accepted = window.confirm(
-                        `Phiên chat này đang được xử lý bởi ${handler}.\nBạn có muốn tiếp nhận và xử lý không?`
-                    );
+                    const accepted = await window.appConfirm({
+                        title: 'Tiếp nhận phiên chat?',
+                        message: `Phiên chat này đang được xử lý bởi ${handler}. Bạn có muốn tiếp nhận và xử lý không?`,
+                    });
                     if (!accepted) {
                         return;
                     }

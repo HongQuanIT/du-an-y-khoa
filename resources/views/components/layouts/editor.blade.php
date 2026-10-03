@@ -68,5 +68,6 @@
     </header>
     <main class="min-h-screen bg-surface-container-lowest pt-header-height md:ml-sidebar-width"><div class="p-margin-mobile md:p-margin-desktop">{{ $slot }}</div></main>
     @stack('scripts')
+    <x-system-dialogs />
 </body>
 </html>

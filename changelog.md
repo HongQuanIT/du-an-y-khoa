@@ -2,6 +2,21 @@
 
 ## 2026-10-03
 
+### Fix — Popup xác nhận submit form cũ
+
+- Popup xác nhận dùng chung nhận đúng form từ inline onsubmit cũ.
+- Bấm xác nhận ở form kết thúc buổi live sẽ submit tiếp thao tác.
+
+## 2026-10-03
+
+### Fix — Đồng bộ popup xác nhận hệ thống
+
+- Thêm dialog dùng chung cho confirm, alert và prompt trên các layout chính.
+- Đồng bộ popup duyệt, từ chối, xuất bản, ngừng dùng, hỗ trợ live chat và phòng live.
+- Thay prompt tạo bảng trong trình soạn thảo bằng popup nội bộ cùng giao diện.
+
+## 2026-10-03
+
 ### Feat — Đồng bộ giao diện Review và xem ảnh
 
 - Giảng viên hiển thị hai khung bản đang dùng và bản cần duyệt theo phong cách Reviewer.

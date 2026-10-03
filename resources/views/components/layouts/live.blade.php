@@ -60,6 +60,7 @@
     </main>
 
     @livewireScriptConfig
+    <x-system-dialogs />
 </body>
 
 </html>
