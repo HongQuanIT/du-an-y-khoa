@@ -106,8 +106,47 @@
     </div>
     @endif
 
-    @include('questionbank::partials.question-review-comparison', [
-        'comparison' => $comparison,
-        'preserveRichText' => true,
-    ])
+    <div class="grid grid-cols-1 items-start gap-4 xl:grid-cols-2" data-testid="instructor-review-two-pane">
+        <section class="min-w-0 rounded-2xl border border-outline-variant bg-surface p-5 shadow-sm xl:sticky xl:top-4"
+            aria-labelledby="instructor-published-title">
+            <div class="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant pb-4">
+                <h3 id="instructor-published-title" class="font-label-lg font-bold text-on-surface">Bản đang dùng</h3>
+                @if ($comparison['published_version'])
+                    <span class="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800">
+                        v{{ $comparison['published_version'] }}
+                    </span>
+                @endif
+            </div>
+
+            @if ($comparison['can_compare'])
+                @include('questionbank::partials.question-review-comparison-pane', [
+                    'side' => 'published',
+                    'comparison' => $comparison,
+                    'empty' => 'Chưa nhập.',
+                    'preserveRichText' => true,
+                    'reviewerStyle' => true,
+                ])
+            @else
+                <div class="rounded-xl border border-dashed border-outline-variant bg-surface-container-low px-4 py-6 text-center text-sm text-on-surface-variant">
+                    Câu mới — chưa có bản đang dùng.
+                </div>
+            @endif
+        </section>
+
+        <section class="min-w-0 rounded-2xl border border-primary/40 bg-primary/5 p-5 shadow-sm"
+            aria-labelledby="instructor-proposed-title">
+            <div class="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-primary/20 pb-4">
+                <h3 id="instructor-proposed-title" class="font-label-lg font-bold text-on-surface">Bản cần duyệt</h3>
+                <span class="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800">Hiện tại</span>
+            </div>
+
+            @include('questionbank::partials.question-review-comparison-pane', [
+                'side' => 'proposed',
+                'comparison' => $comparison,
+                'empty' => 'Chưa nhập.',
+                'preserveRichText' => true,
+                'reviewerStyle' => true,
+            ])
+        </section>
+    </div>
 </x-layouts.teach>

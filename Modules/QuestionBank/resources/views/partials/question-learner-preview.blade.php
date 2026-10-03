@@ -1,6 +1,9 @@
 @php
     /** @var \Modules\QuestionBank\Models\Question $question */
     $revealAnswers = $revealAnswers ?? true;
+    $supplementalAfterOptions = (bool) ($supplementalAfterOptions ?? false);
+    $showReviewerMetadata = (bool) ($showReviewerMetadata ?? false);
+    $enableImageViewer = (bool) ($enableImageViewer ?? false);
     $keyInfoRenderer = app(\Modules\QuestionBank\Services\QuestionKeyInfoRenderer::class);
     $keyInfo = $keyInfoRenderer->resolvePhrases(
         (string) $question->stem,
@@ -24,6 +27,7 @@
 
 <div class="overflow-hidden rounded-2xl border border-outline-variant bg-white"
     data-testid="reviewer-question-preview"
+    @if ($enableImageViewer) data-learner-image-viewer @endif
     x-data="{
         keyInfoEnabled: {{ $hasKeyInfo && $revealAnswers ? 'true' : 'false' }},
         attendingTipOpen: {{ $hasAttendingTip && $revealAnswers ? 'true' : 'false' }},
@@ -37,7 +41,7 @@
             this.attendingTipOpen = !this.attendingTipOpen;
         },
     }">
-    <div class="space-y-6 px-4 py-6 md:px-8" :class="{ 'key-info-active': keyInfoEnabled }">
+    <div class="flex flex-col gap-6 px-4 py-6 md:px-8" :class="{ 'key-info-active': keyInfoEnabled }">
         <div class="flex min-w-0 flex-wrap items-center gap-2">
             <span class="inline-flex max-w-[min(100%,16rem)] items-center gap-1.5 truncate rounded-full bg-surface-container-highest px-3 py-1 font-label-sm text-label-sm font-bold text-on-surface-variant"
                 title="{{ $categoryBadge['category'] }}">
@@ -73,7 +77,10 @@
             @endif
         </article>
 
-        <div class="flex min-h-12 flex-wrap items-center border-y border-outline-variant bg-surface-container-lowest px-1"
+        <div @class([
+                'flex min-h-12 flex-wrap items-center border-y border-outline-variant bg-surface-container-lowest px-1',
+                'order-20' => $supplementalAfterOptions,
+            ])
             data-testid="reviewer-knowledge-toolbar">
             <button type="button" @click="toggleKeyInfo()"
                 class="inline-flex h-12 items-center gap-2 border-b-2 px-3 text-label-sm font-bold transition-colors"
@@ -98,7 +105,7 @@
         </div>
 
         @if ($hasAttendingTip)
-            <div x-show="attendingTipOpen" class="space-y-3"
+            <div x-show="attendingTipOpen" @class(['space-y-3', 'order-20' => $supplementalAfterOptions])
                 data-testid="reviewer-attending-tip">
                 <div class="rounded-xl border border-amber-200 bg-amber-50/70 p-4 text-on-surface">
                     <div class="flex items-start gap-3">
@@ -113,7 +120,10 @@
         @endif
 
         @if ($hints->isNotEmpty())
-            <div class="space-y-2 rounded-xl border border-outline-variant bg-surface-container-lowest p-4"
+            <div @class([
+                    'space-y-2 rounded-xl border border-outline-variant bg-surface-container-lowest p-4',
+                    'order-20' => $supplementalAfterOptions,
+                ])
                 data-testid="reviewer-hints">
                 <p class="text-[11px] font-bold uppercase tracking-wide text-on-surface-variant">Gợi ý</p>
                 <ul class="list-disc space-y-1 pl-5 text-sm text-on-surface">
@@ -124,7 +134,7 @@
             </div>
         @endif
 
-        <section class="space-y-3" data-testid="reviewer-options">
+        <section @class(['space-y-3', 'order-10' => $supplementalAfterOptions]) data-testid="reviewer-options">
             @foreach ($question->options as $option)
                 @php
                     $optionContent = \App\Support\Html\SafeHtml::forDisplay((string) $option->content);
@@ -169,6 +179,12 @@
                 </div>
             @endforeach
         </section>
+
+        @if ($showReviewerMetadata)
+            @include('questionbank::partials.question-reviewer-metadata', [
+                'question' => $question,
+            ])
+        @endif
     </div>
 </div>
 
