@@ -73,6 +73,8 @@ final class ReviewerFlagController extends Controller
             'options' => fn ($query) => $query->orderBy('order'),
             'hints' => fn ($query) => $query->orderBy('sort_order'),
             'lessons:id,name',
+            'professions:id,name',
+            'blueprints:id,name',
             'creator:id,name',
             'assignedInstructor:id,name',
             'reviewerSlot1:id,name',

@@ -2,6 +2,14 @@
 
 ## 2026-10-03
 
+### Feat — Đồng bộ giao diện Review và xem ảnh
+
+- Giảng viên hiển thị hai khung bản đang dùng và bản cần duyệt theo phong cách Reviewer.
+- Đưa Gợi ý, Kiến thức và thông tin phân loại xuống cùng luồng nội dung.
+- Thêm gạch chân Gợi ý, tab Gợi ý/Kiến thức và zoom ảnh cho Giảng viên và Reviewer.
+
+## 2026-10-03
+
 ### Fix — Kích thước mặc định và nhãn resize ảnh
 
 - Ảnh mới tải lên trong Content Editor mặc định rộng 50% vùng soạn thảo.
