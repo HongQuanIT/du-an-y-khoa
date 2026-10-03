@@ -664,6 +664,7 @@ final class QuestionController extends Controller
                     ->where('version', (int) $question->published_version)
                     ->value('created_at')
                 : null,
+            'showCompare' => $this->showCompare($question),
             'classificationProfessions' => Profession::query()
                 ->where('is_active', true)
                 ->orderBy('sort_order')
@@ -676,6 +677,20 @@ final class QuestionController extends Controller
                 ->orderBy('name')
                 ->get(['id', 'name']),
         ];
+    }
+
+    /**
+     * So sánh chỉ có ý nghĩa khi bản làm việc đã lệch khỏi snapshot đang phát hành.
+     */
+    private function showCompare(Question $question): bool
+    {
+        if (! $question->exists || (int) $question->published_version < 1) {
+            return false;
+        }
+
+        $comparison = app(QuestionReviewComparison::class)->compare($question);
+
+        return $comparison['can_compare'] && $comparison['has_changes'];
     }
 
     private function questionRoute(string $action): string

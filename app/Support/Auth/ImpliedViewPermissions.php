@@ -13,6 +13,9 @@ final class ImpliedViewPermissions
     /** @var list<string> */
     private const EXEMPT = [
         Permission::QuestionFlag->value,
+        // Lookup is the narrow alternative to user.view, not an extra action on top of it.
+        'user.lookup',
+        'user.update',
     ];
 
     /** @var array<string, string|null>|null */
@@ -27,6 +30,12 @@ final class ImpliedViewPermissions
         $view = self::viewPermissionFor($permission);
 
         if ($view === null || $permission === $view || ! $user->can($permission)) {
+            return null;
+        }
+
+        // Lookup replaces the full user directory, so account actions do not
+        // also require user.view.
+        if ($view === 'user.view' && ($user->can('user.lookup') || $user->can('user.update'))) {
             return null;
         }
 

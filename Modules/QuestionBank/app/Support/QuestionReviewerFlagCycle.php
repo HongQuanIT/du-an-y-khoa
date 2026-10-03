@@ -47,8 +47,16 @@ final class QuestionReviewerFlagCycle
         ])->save();
     }
 
-    public function recordFlag(Question $question, User $reviewer, ReviewerFlag $flag, ?string $note = null): int
-    {
+    /**
+     * @param  list<string>  $failedChecks
+     */
+    public function recordFlag(
+        Question $question,
+        User $reviewer,
+        ReviewerFlag $flag,
+        ?string $note = null,
+        array $failedChecks = [],
+    ): int {
         $this->assertCanFlag($question, $reviewer);
 
         QuestionReviewerFlag::query()->create([
@@ -57,6 +65,7 @@ final class QuestionReviewerFlagCycle
             'reviewer_id' => $reviewer->getKey(),
             'flag' => $flag,
             'note' => $note,
+            'failed_checks' => $flag === ReviewerFlag::Red ? ReviewerChecklist::only($failedChecks) : null,
             'content_fingerprint' => $question->content_fingerprint,
             'reviewed_at' => now(),
         ]);
@@ -75,6 +84,7 @@ final class QuestionReviewerFlagCycle
         ReviewerFlag $toFlag,
         ?string $note,
         bool $responsibilityAcked,
+        array $failedChecks = [],
     ): void {
         $fromFlag = $this->actorFlag($question, $reviewer);
         if ($fromFlag === null) {
@@ -91,25 +101,31 @@ final class QuestionReviewerFlagCycle
             ]);
         }
 
-        if ($toFlag->requiresNote() && ($note === null || trim($note) === '')) {
+        $failedChecks = $toFlag->requiresFailedCheck() ? ReviewerChecklist::only($failedChecks) : [];
+
+        if ($toFlag->requiresFailedCheck() && $failedChecks === []) {
             throw ValidationException::withMessages([
-                'note' => 'Cờ đỏ bắt buộc phải ghi chú lý do.',
+                'failed_checks' => 'Không đạt cần đánh dấu ít nhất một mục checklist.',
             ]);
         }
 
         $this->writeSlotFlag($question, $reviewer, $toFlag, $note);
 
-        QuestionReviewerFlag::query()
+        $record = QuestionReviewerFlag::query()
             ->where('question_id', $question->getKey())
             ->where('review_cycle', (int) $question->instructor_review_cycle)
             ->where('reviewer_id', $reviewer->getKey())
-            ->update([
-                'flag' => $toFlag->value,
+            ->first();
+
+        if ($record !== null) {
+            $record->forceFill([
+                'flag' => $toFlag,
                 'note' => $note,
+                'failed_checks' => $toFlag === ReviewerFlag::Red ? ReviewerChecklist::only($failedChecks) : null,
                 'reviewed_at' => now(),
                 'reaffirmed_at' => $reaffirmed ? now() : null,
-                'updated_at' => now(),
-            ]);
+            ])->save();
+        }
 
         QuestionFlagChangeEvent::query()->create([
             'question_id' => $question->getKey(),
@@ -230,6 +246,22 @@ final class QuestionReviewerFlagCycle
         return null;
     }
 
+    public function peerFlag(Question $question, User $actor): ?ReviewerFlag
+    {
+        $actorId = (int) $actor->getKey();
+
+        foreach ([1, 2] as $slot) {
+            $reviewerId = (int) $question->{"reviewer_{$slot}_id"};
+            if ($reviewerId === 0 || $reviewerId === $actorId) {
+                continue;
+            }
+
+            return $this->slotFlag($question, $slot);
+        }
+
+        return null;
+    }
+
     public function actorNote(Question $question, User $actor): ?string
     {
         $actorId = (int) $actor->getKey();
@@ -245,6 +277,25 @@ final class QuestionReviewerFlagCycle
         }
 
         return null;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function actorFailedChecks(Question $question, User $actor): array
+    {
+        $stored = QuestionReviewerFlag::query()
+            ->where('question_id', $question->getKey())
+            ->where('review_cycle', (int) $question->instructor_review_cycle)
+            ->where('reviewer_id', $actor->getKey())
+            ->value('failed_checks');
+
+        if (is_string($stored)) {
+            $decoded = json_decode($stored, true);
+            $stored = is_array($decoded) ? $decoded : [];
+        }
+
+        return ReviewerChecklist::only(is_array($stored) ? $stored : []);
     }
 
     public function actorIsStickyReviewer(Question $question, User $actor): bool

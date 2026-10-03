@@ -56,7 +56,7 @@ enum ReviewerFlag: string
         };
     }
 
-    public function requiresNote(): bool
+    public function requiresFailedCheck(): bool
     {
         return $this === self::Red;
     }

@@ -205,6 +205,7 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
             $question->fresh(),
             ReviewerFlag::Red,
             'Sai kiến thức cơ chế bệnh',
+            ['spelling'],
         );
 
         $question->refresh();
@@ -226,8 +227,8 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
         ]);
 
         app(InstructorReviewQuestionAction::class)->approve($instructor, $question);
-        app(FlagQuestionReviewAction::class)->handle($reviewerA, $question->fresh(), ReviewerFlag::Red, 'Lỗi A');
-        app(FlagQuestionReviewAction::class)->handle($reviewerB, $question->fresh(), ReviewerFlag::Red, 'Lỗi B');
+        app(FlagQuestionReviewAction::class)->handle($reviewerA, $question->fresh(), ReviewerFlag::Red, 'Lỗi A', ['spelling']);
+        app(FlagQuestionReviewAction::class)->handle($reviewerB, $question->fresh(), ReviewerFlag::Red, 'Lỗi B', ['terminology']);
 
         $question->refresh();
         $this->assertSame(QuestionStatus::Rejected, $question->status);
@@ -308,7 +309,7 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
 
         app(InstructorReviewQuestionAction::class)->approve($instructor, $question);
         app(FlagQuestionReviewAction::class)->handle($reviewerA, $question->fresh(), ReviewerFlag::Green);
-        app(FlagQuestionReviewAction::class)->handle($reviewerB, $question->fresh(), ReviewerFlag::Red, 'Sai kiến thức');
+        app(FlagQuestionReviewAction::class)->handle($reviewerB, $question->fresh(), ReviewerFlag::Red, 'Sai kiến thức', ['spelling']);
 
         $question->refresh();
         $this->assertSame(QuestionStatus::FlagConflict, $question->status);
@@ -330,6 +331,7 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
             ->put(route('reviewer.questions.flags.update', $question), [
                 'flag' => ReviewerFlag::Red->value,
                 'note' => 'Đổi sang đỏ sau khi rà lại',
+                'failed_checks' => ['spelling'],
             ])
             ->assertSessionHasErrors('responsibility_acked');
 
@@ -337,6 +339,7 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
             ->put(route('reviewer.questions.flags.update', $question->fresh()), [
                 'flag' => ReviewerFlag::Red->value,
                 'note' => 'Đổi sang đỏ sau khi rà lại',
+                'failed_checks' => ['spelling'],
                 'responsibility_acked' => '1',
             ])
             ->assertRedirect();
@@ -425,7 +428,7 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
                 'flag' => ReviewerFlag::Red->value,
                 'note' => '',
             ])
-            ->assertSessionHasErrors('note');
+            ->assertSessionHasErrors('failed_checks');
 
         $this->assertSame(QuestionStatus::InFlagReview, $question->fresh()->status);
     }
@@ -441,7 +444,7 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
         ]);
         app(InstructorReviewQuestionAction::class)->approve($instructor, $conflict);
         app(FlagQuestionReviewAction::class)->handle($reviewerA, $conflict->fresh(), ReviewerFlag::Green);
-        app(FlagQuestionReviewAction::class)->handle($reviewerB, $conflict->fresh(), ReviewerFlag::Red, 'Sai');
+        app(FlagQuestionReviewAction::class)->handle($reviewerB, $conflict->fresh(), ReviewerFlag::Red, 'Sai', ['spelling']);
 
         app(ChangeReviewerFlagInConflictAction::class)->handle(
             $reviewerA,
@@ -456,6 +459,7 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
             ReviewerFlag::Red,
             'Giữ đỏ',
             false,
+            ['spelling'],
         );
 
         $this->assertSame(QuestionStatus::FlagConflict, $conflict->fresh()->status);
@@ -682,7 +686,7 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
                 'flag' => ReviewerFlag::Red->value,
                 'note' => '',
             ])
-            ->assertSessionHasErrors('note');
+            ->assertSessionHasErrors('failed_checks');
 
         $this->assertSame(QuestionStatus::InFlagReview, $question->fresh()->status);
     }
@@ -700,7 +704,7 @@ final class QuestionThreeLayerWorkflowTest extends TestCase
 
         app(InstructorReviewQuestionAction::class)->approve($instructor, $question);
         app(FlagQuestionReviewAction::class)->handle($reviewerA, $question->fresh(), ReviewerFlag::Green);
-        app(FlagQuestionReviewAction::class)->handle($reviewerB, $question->fresh(), ReviewerFlag::Red, 'Sai kiến thức');
+        app(FlagQuestionReviewAction::class)->handle($reviewerB, $question->fresh(), ReviewerFlag::Red, 'Sai kiến thức', ['spelling']);
 
         $this->actingAsStaff($admin)
             ->from(route('admin.questions.edit', $question->fresh()))

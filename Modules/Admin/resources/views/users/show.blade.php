@@ -10,6 +10,18 @@
 
     <x-admin.flash />
 
+    @if ($recoveryCodes !== [])
+        <div class="mb-5 rounded-xl border border-primary/30 bg-primary/5 p-5">
+            <h2 class="font-label-lg font-semibold text-on-surface">Mã khôi phục 2FA</h2>
+            <p class="mt-1 text-sm text-on-surface-variant">Gửi các mã này cho học viên. Chúng chỉ hiện một lần và dùng khi học viên không mở được ứng dụng Authenticator.</p>
+            <ul class="mt-3 grid gap-2 sm:grid-cols-2">
+                @foreach ($recoveryCodes as $code)
+                    <li class="rounded-lg bg-surface px-3 py-2 font-mono text-sm text-on-surface">{{ $code }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     @php
         $linkedGoogleAccount = $user->socialAccounts->firstWhere('provider', \Modules\Auth\Enums\SocialProvider::Google->value);
         $linkedFacebookAccount = $user->socialAccounts->firstWhere('provider', \Modules\Auth\Enums\SocialProvider::Facebook->value);
@@ -68,7 +80,7 @@
                 </div>
                 <p class="mt-1 break-all font-body-md text-body-md text-on-surface-variant">{{ $user->email }}</p>
                 <div class="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-body-sm text-on-surface-variant">
-                    <span class="inline-flex items-center gap-1.5"><span class="material-symbols-outlined text-[17px]" aria-hidden="true">badge</span>Mã #{{ $user->id }}</span>
+                    <span class="inline-flex items-center gap-1.5"><span class="material-symbols-outlined text-[17px]" aria-hidden="true">badge</span>Mã {{ $user->learner_code }}</span>
                     <span class="inline-flex items-center gap-1.5"><span class="material-symbols-outlined text-[17px]" aria-hidden="true">school</span>{{ $roleLabel }}</span>
                     <span class="inline-flex items-center gap-1.5"><span class="material-symbols-outlined text-[17px]" aria-hidden="true">login</span>{{ $user->last_login_method?->label() ?? 'Chưa ghi nhận đăng nhập' }}</span>
                 </div>
@@ -110,8 +122,8 @@
                     <dd class="mt-1 break-all font-medium text-on-surface">{{ $user->email }}</dd>
                 </div>
                 <div>
-                    <dt class="font-label-sm text-on-surface-variant">Mã người dùng</dt>
-                    <dd class="mt-1 font-medium text-on-surface">#{{ $user->id }}</dd>
+                    <dt class="font-label-sm text-on-surface-variant">Mã học viên</dt>
+                    <dd class="mt-1 font-medium text-on-surface">{{ $user->learner_code }}</dd>
                 </div>
                 <div>
                     <dt class="font-label-sm text-on-surface-variant">Cổng truy cập</dt>
@@ -201,7 +213,7 @@
             @else
                 @if ($canAssignRole)
                 @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.users.role'))
-<form method="post" action="{{ route('admin.users.role', $user) }}" class="space-y-4 rounded-xl border border-outline-variant bg-surface p-5 shadow-sm">
+<form method="post" action="{{ \Modules\Admin\Support\UserDetailLink::to(auth()->user(), 'admin.users.role', $user) }}" class="space-y-4 rounded-xl border border-outline-variant bg-surface p-5 shadow-sm">
                     @csrf
                     @method('PATCH')
                     <div>
@@ -221,7 +233,7 @@
                 @endif
 
                 @if (($canManageInstructorSubjects ?? false) && ($isInstructor ?? false))
-                    <form method="post" action="{{ route('admin.users.subjects', $user) }}" class="space-y-4 rounded-xl border border-outline-variant bg-surface p-5 shadow-sm">
+                    <form method="post" action="{{ \Modules\Admin\Support\UserDetailLink::to(auth()->user(), 'admin.users.subjects', $user) }}" class="space-y-4 rounded-xl border border-outline-variant bg-surface p-5 shadow-sm">
                         @csrf
                         @method('PATCH')
                         <div>
@@ -248,7 +260,7 @@
 
                 @if ($canUpdateStatus)
                 @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.users.status'))
-<form method="post" action="{{ route('admin.users.status', $user) }}" class="space-y-4 rounded-xl border border-outline-variant bg-surface p-5 shadow-sm">
+<form method="post" action="{{ \Modules\Admin\Support\UserDetailLink::to(auth()->user(), 'admin.users.status', $user) }}" class="space-y-4 rounded-xl border border-outline-variant bg-surface p-5 shadow-sm">
                     @csrf
                     @method('PATCH')
                     <div>
@@ -282,7 +294,7 @@
                     <div class="flex flex-col gap-3">
                     @if ($canResetPassword)
                     @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.users.reset-password'))
-<form method="post" action="{{ route('admin.users.reset-password', $user) }}">
+<form method="post" action="{{ \Modules\Admin\Support\UserDetailLink::to(auth()->user(), 'admin.users.reset-password', $user) }}">
                         @csrf
                         <button type="submit" class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-outline-variant px-4 font-label-md font-medium text-on-surface transition hover:bg-surface-container-low"
                             onclick="return confirm('Gửi email đặt lại mật khẩu?')">
@@ -294,9 +306,9 @@
                     @endif
 
                     @if ($canTwoFactorManage)
-                    @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.users.reset-2fa'))
                         @if ($user->hasTwoFactorEnabled())
-<form method="post" action="{{ route('admin.users.reset-2fa', $user) }}">
+                            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.users.reset-2fa'))
+<form method="post" action="{{ \Modules\Admin\Support\UserDetailLink::to(auth()->user(), 'admin.users.reset-2fa', $user) }}">
                             @csrf
                             <button type="submit" class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-error/40 bg-error/5 px-4 font-label-md font-medium text-error transition hover:bg-error/10"
                                 onclick="return confirm('Bạn có chắc chắn muốn TẮT / ĐẶT LẠI 2FA cho tài khoản này? Người dùng sẽ không còn bị hỏi OTP khi đăng nhập.')">
@@ -304,20 +316,40 @@
                                 Đặt lại / Tắt 2FA
                             </button>
                         </form>
-                        @else
-                            <div class="flex items-center gap-2 rounded-lg border border-outline-variant/60 bg-surface-container-low p-3 text-body-sm text-on-surface-variant">
-                                <span class="material-symbols-outlined text-[18px]" aria-hidden="true">info</span>
-                                <span>Tài khoản hiện chưa bật 2FA.</span>
+                            @endif
+                        @elseif ($twoFactorSetup)
+                            <div class="rounded-lg border border-outline-variant bg-surface-container-low p-3">
+                                <p class="text-sm text-on-surface-variant">Học viên quét mã này bằng ứng dụng Authenticator, rồi đọc mã 6 số để bạn nhập xác nhận.</p>
+                                <img src="{{ $twoFactorSetup['qr'] }}" alt="Mã QR kích hoạt 2FA của {{ $user->name }}" class="mx-auto mt-3 size-48 rounded-lg bg-white p-2" width="192" height="192">
+                                <p class="mt-2 text-center text-xs text-on-surface-variant">Khóa thủ công</p>
+                                <code class="mt-1 block break-all text-center font-mono text-sm text-on-surface">{{ $twoFactorSetup['secret'] }}</code>
                             </div>
+                            @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.users.confirm-2fa'))
+<form method="post" action="{{ \Modules\Admin\Support\UserDetailLink::to(auth()->user(), 'admin.users.confirm-2fa', $user) }}" class="space-y-3">
+                                @csrf
+                                <label class="block font-label-sm font-medium text-on-surface-variant" for="two-factor-code">Mã xác thực học viên đọc</label>
+                                <input id="two-factor-code" name="code" inputmode="numeric" maxlength="6" required autocomplete="one-time-code"
+                                    class="h-11 w-full rounded-lg border border-outline-variant bg-surface px-3 font-body-sm tracking-widest text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                                @error('code')<p class="text-sm text-error">{{ $message }}</p>@enderror
+                                <button type="submit" class="inline-flex h-11 w-full items-center justify-center rounded-lg bg-primary px-4 font-label-md font-medium text-on-primary">Xác nhận kích hoạt 2FA</button>
+                            </form>
+                            @endif
+                        @elseif (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.users.enable-2fa'))
+<form method="post" action="{{ \Modules\Admin\Support\UserDetailLink::to(auth()->user(), 'admin.users.enable-2fa', $user) }}">
+                            @csrf
+                            <button type="submit" class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-outline-variant px-4 font-label-md font-medium text-on-surface transition hover:bg-surface-container-low">
+                                <span class="material-symbols-outlined text-[18px]" aria-hidden="true">verified_user</span>
+                                Hỗ trợ kích hoạt 2FA
+                            </button>
+                        </form>
                         @endif
-                    @endif
                     @endif
                     </div>
                 </section>
                 @endif
 
                 @if ($canDelete ?? false)
-                    <form method="post" action="{{ route('admin.users.destroy', $user) }}" class="rounded-xl border border-error/40 bg-error/5 p-5 shadow-sm">
+                    <form method="post" action="{{ \Modules\Admin\Support\UserDetailLink::to(auth()->user(), 'admin.users.destroy', $user) }}" class="rounded-xl border border-error/40 bg-error/5 p-5 shadow-sm">
                         @csrf
                         @method('DELETE')
                         <h3 class="font-label-lg font-semibold text-error">Xóa tài khoản</h3>
@@ -334,7 +366,226 @@
             <div><h2 class="font-headline-sm text-on-surface">Hồ sơ học viên</h2><p class="mt-0.5 text-body-sm text-on-surface-variant">Thông tin phân khúc được thu thập khi onboarding.</p></div>
             @if ($user->learnerProfile?->onboarding_completed_at)<span class="rounded-full bg-primary/10 px-3 py-1 text-label-sm font-semibold text-primary">Đã hoàn thiện</span>@elseif($user->learnerProfile)<span class="rounded-full bg-warning/10 px-3 py-1 text-label-sm font-semibold text-warning">Chưa hoàn thiện</span>@else<span class="rounded-full bg-surface-container px-3 py-1 text-label-sm text-on-surface-variant">Tài khoản cũ</span>@endif
         </div>
-        @if ($user->learnerProfile)
+        @if ($canEditLearner)
+            @php
+                $selectedCountryId = (string) old('country_id', $user->learnerProfile?->country_id);
+                $selectedUnitId = (string) old('administrative_unit_id', $user->learnerProfile?->administrative_unit_id);
+                $selectedInstitutionId = (string) old('institution_id', $user->learnerProfile?->institution_id);
+                $selectedProfessionId = (string) old('profession_id', $user->learnerProfile?->profession_id);
+                $selectedStageId = (string) old('education_stage_id', $user->learnerProfile?->education_stage_id);
+                $profileFieldClass = 'h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 text-sm text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60';
+            @endphp
+            <form method="post" action="{{ \Modules\Admin\Support\UserDetailLink::to(auth()->user(), 'admin.users.profile', $user) }}"
+                class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+                x-data="adminLearnerProfile({
+                    countries: @js($profileCountries->map(fn ($country) => ['id' => (string) $country->id, 'name' => $country->name])->values()),
+                    units: @js($profileUnits->map(fn ($unit) => ['id' => (string) $unit->id, 'country_id' => (string) $unit->country_id, 'name' => $unit->name])->values()),
+                    institutions: @js($profileInstitutions->map(fn ($institution) => ['id' => (string) $institution->id, 'country_id' => (string) $institution->country_id, 'unit_id' => (string) $institution->administrative_unit_id, 'name' => $institution->name])->values()),
+                    professions: @js($profileProfessions->map(fn ($profession) => ['id' => (string) $profession->id, 'name' => $profession->name, 'requires_stage' => (bool) $profession->requires_education_stage, 'graduated' => (bool) $profession->defaults_to_graduated])->values()),
+                    stages: @js($profileStages->map(fn ($stage) => ['id' => (string) $stage->id, 'name' => $stage->name])->values()),
+                    countryId: @js($selectedCountryId),
+                    unitId: @js($selectedUnitId),
+                    institutionId: @js($selectedInstitutionId),
+                    professionId: @js($selectedProfessionId),
+                    stageId: @js($selectedStageId),
+                    countryQuery: @js($profileCountries->firstWhere('id', (int) $selectedCountryId)?->name ?? ''),
+                    unitQuery: @js($profileUnits->firstWhere('id', (int) $selectedUnitId)?->name ?? ''),
+                    institutionQuery: @js($profileInstitutions->firstWhere('id', (int) $selectedInstitutionId)?->name ?? ''),
+                    professionQuery: @js($profileProfessions->firstWhere('id', (int) $selectedProfessionId)?->name ?? ''),
+                    stageQuery: @js($profileStages->firstWhere('id', (int) $selectedStageId)?->name ?? ''),
+                })">
+                @csrf
+                @method('PATCH')
+                <div class="relative" @click.outside="countryOpen = false">
+                    <label class="mb-1.5 block text-label-sm text-on-surface-variant" for="learner-country-search">Quốc gia</label>
+                    <input type="hidden" name="country_id" :value="countryId">
+                    <input id="learner-country-search" type="search" x-model="countryQuery" @input="countryTyped()" @focus="countryOpen = true" @keydown.escape="countryOpen = false" autocomplete="off" placeholder="Tìm quốc gia" role="combobox" :aria-expanded="countryOpen" class="{{ $profileFieldClass }}" value="{{ $profileCountries->firstWhere('id', (int) $selectedCountryId)?->name }}">
+                    <div x-show="countryOpen" x-cloak class="absolute inset-x-0 top-full z-30 mt-1 max-h-60 overflow-auto rounded-lg border border-outline-variant bg-surface p-1 shadow-xl">
+                        <template x-for="item in matchingCountries" :key="item.id">
+                            <button type="button" class="w-full rounded-md px-3 py-2 text-left text-sm hover:bg-surface-container-low" @click="chooseCountry(item)" x-text="item.name"></button>
+                        </template>
+                        <p x-show="matchingCountries.length === 0" class="px-3 py-3 text-sm text-on-surface-variant">Không tìm thấy quốc gia.</p>
+                    </div>
+                    @error('country_id')<p class="mt-1 text-sm text-error">{{ $message }}</p>@enderror
+                </div>
+                <div class="relative" @click.outside="unitOpen = false">
+                    <label class="mb-1.5 block text-label-sm text-on-surface-variant" for="learner-unit-search">Tỉnh/Thành phố</label>
+                    <input type="hidden" name="administrative_unit_id" :value="unitId">
+                    <input id="learner-unit-search" type="search" x-model="unitQuery" @input="unitTyped()" @focus="unitOpen = true" @keydown.escape="unitOpen = false" :disabled="countryId === ''" autocomplete="off" placeholder="Tìm tỉnh/thành phố" role="combobox" :aria-expanded="unitOpen" class="{{ $profileFieldClass }}" value="{{ $profileUnits->firstWhere('id', (int) $selectedUnitId)?->name }}">
+                    <div x-show="unitOpen && countryId !== ''" x-cloak class="absolute inset-x-0 top-full z-30 mt-1 max-h-60 overflow-auto rounded-lg border border-outline-variant bg-surface p-1 shadow-xl">
+                        <template x-for="item in matchingUnits" :key="item.id">
+                            <button type="button" class="w-full rounded-md px-3 py-2 text-left text-sm hover:bg-surface-container-low" @click="chooseUnit(item)" x-text="item.name"></button>
+                        </template>
+                        <p x-show="matchingUnits.length === 0" class="px-3 py-3 text-sm text-on-surface-variant">Không có tỉnh/thành phố thuộc quốc gia này.</p>
+                    </div>
+                    @error('administrative_unit_id')<p class="mt-1 text-sm text-error">{{ $message }}</p>@enderror
+                </div>
+                <div class="relative" @click.outside="institutionOpen = false">
+                    <label class="mb-1.5 block text-label-sm text-on-surface-variant" for="learner-institution-search">Trường</label>
+                    <input type="hidden" name="institution_id" :value="institutionId">
+                    <input id="learner-institution-search" type="search" x-model="institutionQuery" @input="institutionTyped()" @focus="institutionOpen = true" @keydown.escape="institutionOpen = false" :disabled="unitId === ''" autocomplete="off" placeholder="Tìm trường thuộc tỉnh/thành đã chọn" role="combobox" :aria-expanded="institutionOpen" class="{{ $profileFieldClass }}" value="{{ $profileInstitutions->firstWhere('id', (int) $selectedInstitutionId)?->name }}">
+                    <div x-show="institutionOpen && unitId !== ''" x-cloak class="absolute inset-x-0 top-full z-30 mt-1 max-h-60 overflow-auto rounded-lg border border-outline-variant bg-surface p-1 shadow-xl">
+                        <template x-for="item in matchingInstitutions" :key="item.id">
+                            <button type="button" class="w-full rounded-md px-3 py-2 text-left text-sm hover:bg-surface-container-low" @click="chooseInstitution(item)" x-text="item.name"></button>
+                        </template>
+                        <p x-show="matchingInstitutions.length === 0" class="px-3 py-3 text-sm text-on-surface-variant">Không có trường thuộc tỉnh/thành này.</p>
+                    </div>
+                    @error('institution_id')<p class="mt-1 text-sm text-error">{{ $message }}</p>@enderror
+                </div>
+                <div class="relative" @click.outside="professionOpen = false">
+                    <label class="mb-1.5 block text-label-sm text-on-surface-variant" for="learner-profession-search">Chức danh</label>
+                    <input type="hidden" name="profession_id" :value="professionId">
+                    <input id="learner-profession-search" type="search" x-model="professionQuery" @input="professionTyped()" @focus="professionOpen = true" @keydown.escape="professionOpen = false" autocomplete="off" placeholder="Tìm chức danh" role="combobox" :aria-expanded="professionOpen" class="{{ $profileFieldClass }}" value="{{ $profileProfessions->firstWhere('id', (int) $selectedProfessionId)?->name }}">
+                    <div x-show="professionOpen" x-cloak class="absolute inset-x-0 top-full z-30 mt-1 max-h-60 overflow-auto rounded-lg border border-outline-variant bg-surface p-1 shadow-xl">
+                        <template x-for="item in matchingProfessions" :key="item.id">
+                            <button type="button" class="w-full rounded-md px-3 py-2 text-left text-sm hover:bg-surface-container-low" @click="chooseProfession(item)" x-text="item.name"></button>
+                        </template>
+                        <p x-show="matchingProfessions.length === 0" class="px-3 py-3 text-sm text-on-surface-variant">Không tìm thấy chức danh.</p>
+                    </div>
+                    @error('profession_id')<p class="mt-1 text-sm text-error">{{ $message }}</p>@enderror
+                </div>
+                <div class="relative" x-show="showEducationStage" x-cloak @click.outside="stageOpen = false">
+                    <label class="mb-1.5 block text-label-sm text-on-surface-variant" for="learner-stage-search">Năm học</label>
+                    <input type="hidden" name="education_stage_id" :value="showEducationStage ? stageId : ''">
+                    <input id="learner-stage-search" type="search" x-model="stageQuery" @input="stageTyped()" @focus="stageOpen = true" @keydown.escape="stageOpen = false" autocomplete="off" placeholder="Tìm năm học" role="combobox" :aria-expanded="stageOpen" class="{{ $profileFieldClass }}" value="{{ $profileStages->firstWhere('id', (int) $selectedStageId)?->name }}">
+                    <div x-show="stageOpen" x-cloak class="absolute inset-x-0 top-full z-30 mt-1 max-h-60 overflow-auto rounded-lg border border-outline-variant bg-surface p-1 shadow-xl">
+                        <template x-for="item in matchingStages" :key="item.id">
+                            <button type="button" class="w-full rounded-md px-3 py-2 text-left text-sm hover:bg-surface-container-low" @click="chooseStage(item)" x-text="item.name"></button>
+                        </template>
+                        <p x-show="matchingStages.length === 0" class="px-3 py-3 text-sm text-on-surface-variant">Không tìm thấy năm học.</p>
+                    </div>
+                    @error('education_stage_id')<p class="mt-1 text-sm text-error">{{ $message }}</p>@enderror
+                </div>
+                <div class="flex items-end">
+                    <button type="submit" class="inline-flex h-11 w-full items-center justify-center rounded-lg bg-primary px-4 font-label-md font-medium text-on-primary">Lưu hồ sơ học viên</button>
+                </div>
+            </form>
+            @once
+                <script>
+                    function adminLearnerProfile(config) {
+                        return {
+                            ...config,
+                            countryOpen: false,
+                            unitOpen: false,
+                            institutionOpen: false,
+                            professionOpen: false,
+                            stageOpen: false,
+                            get filteredUnits() {
+                                return this.units.filter((unit) => unit.country_id === this.countryId);
+                            },
+                            get filteredInstitutions() {
+                                return this.institutions.filter((school) => school.country_id === this.countryId && school.unit_id === this.unitId);
+                            },
+                            get selectedProfession() {
+                                return this.professions.find((item) => item.id === this.professionId);
+                            },
+                            get showEducationStage() {
+                                return Boolean(this.selectedProfession?.requires_stage) && !this.selectedProfession?.graduated;
+                            },
+                            get matchingCountries() {
+                                return this.searchList(this.countries, this.countryQuery, this.countryId);
+                            },
+                            get matchingUnits() {
+                                return this.searchList(this.filteredUnits, this.unitQuery, this.unitId);
+                            },
+                            get matchingInstitutions() {
+                                return this.searchList(this.filteredInstitutions, this.institutionQuery, this.institutionId);
+                            },
+                            get matchingProfessions() {
+                                return this.searchList(this.professions, this.professionQuery, this.professionId);
+                            },
+                            get matchingStages() {
+                                return this.searchList(this.stages, this.stageQuery, this.stageId);
+                            },
+                            searchList(options, query, selectedId) {
+                                const selectedName = this.labelFor(options, selectedId);
+                                const needle = query === selectedName ? '' : this.normalize(query);
+                                const matched = needle === ''
+                                    ? options
+                                    : options.filter((item) => this.normalize(item.name).includes(needle));
+
+                                return matched.slice(0, 40);
+                            },
+                            normalize(value) {
+                                return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('vi');
+                            },
+                            labelFor(options, id) {
+                                return options.find((item) => item.id === id)?.name || '';
+                            },
+                            countryTyped() {
+                                this.countryId = '';
+                                this.unitId = '';
+                                this.unitQuery = '';
+                                this.institutionId = '';
+                                this.institutionQuery = '';
+                                this.countryOpen = true;
+                            },
+                            chooseCountry(item) {
+                                const changed = this.countryId !== item.id;
+                                this.countryId = item.id;
+                                this.countryQuery = item.name;
+                                this.countryOpen = false;
+                                if (changed) {
+                                    this.unitId = '';
+                                    this.unitQuery = '';
+                                    this.institutionId = '';
+                                    this.institutionQuery = '';
+                                }
+                            },
+                            unitTyped() {
+                                this.unitId = '';
+                                this.institutionId = '';
+                                this.institutionQuery = '';
+                                this.unitOpen = true;
+                            },
+                            chooseUnit(item) {
+                                const changed = this.unitId !== item.id;
+                                this.unitId = item.id;
+                                this.unitQuery = item.name;
+                                this.unitOpen = false;
+                                if (changed) {
+                                    this.institutionId = '';
+                                    this.institutionQuery = '';
+                                }
+                            },
+                            institutionTyped() {
+                                this.institutionId = '';
+                                this.institutionOpen = true;
+                            },
+                            chooseInstitution(item) {
+                                this.institutionId = item.id;
+                                this.institutionQuery = item.name;
+                                this.institutionOpen = false;
+                            },
+                            professionTyped() {
+                                this.professionId = '';
+                                this.stageId = '';
+                                this.stageQuery = '';
+                                this.professionOpen = true;
+                            },
+                            chooseProfession(item) {
+                                this.professionId = item.id;
+                                this.professionQuery = item.name;
+                                this.professionOpen = false;
+                                if (!this.showEducationStage) {
+                                    this.stageId = '';
+                                    this.stageQuery = '';
+                                }
+                            },
+                            stageTyped() {
+                                this.stageId = '';
+                                this.stageOpen = true;
+                            },
+                            chooseStage(item) {
+                                this.stageId = item.id;
+                                this.stageQuery = item.name;
+                                this.stageOpen = false;
+                            },
+                        };
+                    }
+                </script>
+            @endonce
+        @elseif ($user->learnerProfile)
             <dl class="grid gap-x-8 gap-y-4 text-body-sm sm:grid-cols-2 lg:grid-cols-3">
                 <div><dt class="text-label-sm text-on-surface-variant">Quốc gia</dt><dd class="mt-1 font-medium">{{ $user->learnerProfile->country?->name ?? '—' }}</dd></div>
                 <div><dt class="text-label-sm text-on-surface-variant">Tỉnh/Thành phố</dt><dd class="mt-1 font-medium">{{ $user->learnerProfile->administrativeUnit?->name ?? '—' }}</dd></div>

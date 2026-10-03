@@ -8,6 +8,7 @@ namespace App\Models;
 use App\Support\Auth\Instructor;
 use App\Support\Auth\Staff;
 use App\Support\Enums\Entitlement;
+use App\Support\LearnerCode;
 use App\Support\Enums\UserStatus;
 use App\Support\TargetExams;
 use Database\Factories\UserFactory;
@@ -64,6 +65,15 @@ class User extends Authenticatable implements CanResetPasswordContract
 {
     /** @use HasFactory<UserFactory> */
     use CanResetPassword, HasApiTokens, HasFactory, HasRoles, Notifiable, SoftDeletes;
+
+    protected static function booted(): void
+    {
+        static::creating(function (User $user): void {
+            if (! is_string($user->learner_code) || $user->learner_code === '') {
+                $user->learner_code = LearnerCode::generate();
+            }
+        });
+    }
 
     public function sendPasswordResetNotification(#[\SensitiveParameter] $token): void
     {

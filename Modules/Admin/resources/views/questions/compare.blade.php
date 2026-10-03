@@ -14,7 +14,7 @@
                         Bên trái là bản đang dùng (v{{ $comparison['published_version'] }}).
                         Bên phải là {{ $proposedTitle }} — chưa thay thế bản live cho đến khi xuất bản lại.
                     @else
-                        Câu này chưa có bản live. Cột phải là nội dung đang lưu.
+                        Câu này chưa có bản đang phát hành. Bên dưới là nội dung đang lưu.
                     @endif
                 </p>
             </div>
@@ -42,7 +42,7 @@
         'heading' => 'Đối chiếu nội dung',
         'proposedTitle' => $proposedTitle,
         'proposedBadge' => $proposedBadge,
-        'newCopy' => 'Câu này chưa từng xuất bản — bên trái trống, bên phải là nội dung đang lưu.',
+        'newCopy' => 'Câu này chưa từng xuất bản.',
         'sameCopy' => 'Bản làm việc trùng với bản đang dùng.',
     ])
 </x-layouts.admin>

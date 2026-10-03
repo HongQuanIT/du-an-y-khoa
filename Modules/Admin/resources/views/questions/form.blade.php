@@ -69,6 +69,7 @@
         ];
     }
 
+    $showCompare = (bool) ($showCompare ?? false);
     $isRejected = ! $isNew && $question->status === \Modules\QuestionBank\Enums\QuestionStatus::Rejected;
     $isInstructorRejection = $isRejected && $question->isInstructorRejection();
     $isPublisherRejection = $isRejected && $question->isPublisherRejection();
@@ -132,7 +133,7 @@
                         @else
                             <span title="Phiên bản chỉ được tạo khi Admin xuất bản cấp cuối">Chưa có phiên bản</span>
                         @endif
-                        @if ($question->published_version)
+                        @if ($showCompare)
                             <span>·</span>
                             <a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.compare'), $question) }}"
                                 class="inline-flex items-center gap-0.5 font-semibold text-primary hover:underline"
@@ -170,9 +171,9 @@
             </div>
         </div>
 
-        @if (! $isNew && ($question->published_version || ($canDelete && ! $pendingReview)))
+        @if (! $isNew && ($showCompare || ($canDelete && ! $pendingReview)))
             <div class="flex shrink-0 flex-wrap items-center gap-2 lg:justify-end lg:pt-0.5">
-                @if ($question->published_version)
+                @if ($showCompare)
                     <a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.compare'), $question) }}"
                         class="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-outline-variant px-3 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low">
                         <span class="material-symbols-outlined text-[16px]" aria-hidden="true">difference</span>
@@ -574,7 +575,9 @@
                             @if ($question->published_version)
                                 <span class="mt-2 block">
                                     QBank đang phục vụ phiên bản {{ $question->published_version }}.
-                                    <a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.compare'), $question) }}" class="font-semibold text-primary hover:underline">So sánh</a>
+                                    @if ($showCompare)
+                                        <a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.compare'), $question) }}" class="font-semibold text-primary hover:underline">So sánh</a>
+                                    @endif
                                 </span>
                             @endif
                         </p>
@@ -701,7 +704,9 @@
                             @endif
                             @if ($question->published_version)
                                 Ngân hàng vẫn phục vụ phiên bản {{ $question->published_version }}.
-                                <a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.compare'), $question) }}" class="font-semibold text-primary hover:underline">So sánh</a>
+                                @if ($showCompare)
+                                    <a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.compare'), $question) }}" class="font-semibold text-primary hover:underline">So sánh</a>
+                                @endif
                             @endif
                         </p>
                     </div>
@@ -710,7 +715,9 @@
                         <p class="font-semibold">Đã ngừng dùng — không còn trên ngân hàng</p>
                         <p class="mt-1 text-xs leading-5">
                             Phiên bản {{ $question->published_version }} là phiên bản gần nhất. Học viên không nhận được câu này trong ngân hàng, bài luyện mới hay đề thi mới.
-                            <a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.compare'), $question) }}" class="font-semibold text-primary hover:underline">Xem bản đã xuất bản</a>
+                            @if ($showCompare)
+                                <a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.compare'), $question) }}" class="font-semibold text-primary hover:underline">Xem bản đã xuất bản</a>
+                            @endif
                         </p>
                     </div>
                 @elseif (! $isNew && $question->published_version && ! $canEditContent)
@@ -718,7 +725,9 @@
                         <p class="font-semibold">Ngân hàng đang phục vụ phiên bản {{ $question->published_version }}</p>
                         <p class="mt-1 text-xs leading-5">
                             Bản đang soạn: {{ $question->status->label() }}.
-                            <a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.compare'), $question) }}" class="font-semibold text-primary hover:underline">So sánh</a>
+                            @if ($showCompare)
+                                <a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.compare'), $question) }}" class="font-semibold text-primary hover:underline">So sánh</a>
+                            @endif
                         </p>
                     </div>
                 @endif
@@ -812,7 +821,9 @@
                         <p class="font-semibold">QBank đang phục vụ phiên bản {{ $question->published_version }}</p>
                         <p class="mt-1 text-xs leading-5">
                             Working copy: {{ $question->status->label() }}. Nội dung mới chỉ lên ngân hàng sau khi GV duyệt và admin xuất bản.
-                            <a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.compare'), $question) }}" class="mt-1 block font-semibold text-primary hover:underline">So sánh</a>
+                            @if ($showCompare)
+                                <a href="{{ route(\App\Support\Auth\PortalRoute::content('questions.compare'), $question) }}" class="mt-1 block font-semibold text-primary hover:underline">So sánh</a>
+                            @endif
                         </p>
                     </div>
                 @endif

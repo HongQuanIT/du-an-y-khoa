@@ -49,7 +49,7 @@ final class AdminMenu
                 'label' => 'Người dùng',
                 'icon' => 'group',
                 'route' => 'admin.users.index',
-                'permission' => 'user.view',
+                'permission' => ['user.view', 'user.lookup'],
                 'match' => 'admin.users.*',
             ],
             [

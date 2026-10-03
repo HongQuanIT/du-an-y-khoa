@@ -15,7 +15,9 @@
 <x-layouts.admin title="Người dùng">
     <div x-data="adminUserFilter(@js($hasActiveFilters))" class="space-y-6">
     <x-admin.page-header title="Người dùng"
-        description="Tìm kiếm, lọc và quản lý tài khoản trên hệ thống.">
+        :description="$lookupOnly
+            ? 'Tra cứu hồ sơ bằng email hoặc mã.'
+            : 'Tìm kiếm, lọc và quản lý tài khoản trên hệ thống.'">
         <x-slot:actions>
             @if ($canCreate)
                 @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.users.create'))
@@ -34,16 +36,17 @@
         @submit.prevent="applyFilters()"
         class="mb-6 space-y-4 rounded-xl border border-outline-variant bg-surface p-4">
         <div class="grid grid-cols-1 items-end gap-4 md:grid-cols-12">
-            <div class="md:col-span-3">
-                <label for="q" class="mb-1.5 block text-sm font-medium text-on-surface-variant">Tìm kiếm</label>
+            <div class="{{ $lookupOnly ? 'md:col-span-12' : 'md:col-span-3' }}">
+                <label for="q" class="mb-1.5 block text-sm font-medium text-on-surface-variant">{{ $lookupOnly ? 'Email hoặc mã học viên' : 'Tìm kiếm' }}</label>
                 <div class="relative">
                     <input id="q" name="q" value="{{ $filters['q'] }}" type="search"
-                        placeholder="Tên hoặc địa chỉ email" autocomplete="off"
+                        placeholder="{{ $lookupOnly ? 'Email hoặc mã, ví dụ ten@domain.com hoặc AB1234' : 'Tên hoặc địa chỉ email' }}" autocomplete="off"
                         class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 pl-9 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
                     <span class="material-symbols-outlined pointer-events-none absolute top-2.5 left-2.5 text-[20px] text-on-surface-variant/70" aria-hidden="true">search</span>
                 </div>
             </div>
 
+            @unless ($lookupOnly)
             <div class="min-w-0 md:col-span-2">
                 <x-admin.multi-select-filter
                     name="portal"
@@ -86,8 +89,10 @@
                     :selected="$filters['two_factor'] ?? []"
                 />
             </div>
+            @endunless
         </div>
 
+        @unless ($lookupOnly)
         <details @if(collect($filters)->only(['country_id', 'institution_id', 'administrative_unit_id', 'profession_id', 'education_stage_id', 'onboarding'])->filter()->isNotEmpty()) open @endif>
             <summary class="cursor-pointer rounded-lg py-1 text-sm font-medium text-primary outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
                 Bộ lọc hồ sơ học viên
@@ -128,6 +133,7 @@
                 </div>
             </div>
         </details>
+        @endunless
 
         <div class="flex justify-start border-t border-outline-variant pt-4">
             <x-admin.filter-action-buttons
@@ -147,6 +153,11 @@
 @endif
 
     <div id="users-results-region">
+    @if ($lookupOnly && $users->isEmpty())
+        <div class="rounded-xl border border-outline-variant bg-surface px-5 py-10 text-center text-sm text-on-surface-variant">
+            {{ $lookupNotice }}
+        </div>
+    @else
     <div class="overflow-hidden rounded-xl border border-outline-variant bg-surface">
         <div class="w-full overflow-x-auto">
             <table class="w-full min-w-[1120px] table-fixed border-collapse text-left font-body-sm text-on-surface">
@@ -195,7 +206,7 @@
                                     @endif
                                     <div class="min-w-0">
                                         <div class="truncate text-sm font-medium text-on-surface" title="{{ $user->name }}">{{ $user->name }}</div>
-                                        <div class="truncate text-xs text-on-surface-variant">Mã #{{ $user->id }}</div>
+                                        <div class="truncate text-xs text-on-surface-variant">Mã {{ $user->learner_code }}</div>
                                     </div>
                                 </div>
                             </td>
@@ -260,7 +271,7 @@
                             </td>
                             <td class="px-5 py-3.5 align-middle text-end">
                                 @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.users.show'))
-<a href="{{ route('admin.users.show', $user) }}"
+<a href="{{ \Modules\Admin\Support\UserDetailLink::to(auth()->user(), 'admin.users.show', $user) }}"
                                     class="inline-flex h-8 items-center justify-center whitespace-nowrap rounded-lg border border-outline-variant px-2.5 text-xs font-medium text-on-surface transition hover:bg-surface-container-low">
                                     Chi tiết
                                 </a>
@@ -277,7 +288,10 @@
         </div>
     </div>
 
-    <div class="mt-4" id="users-pagination">{{ $users->links() }}</div>
+    @unless ($lookupOnly)
+        <div class="mt-4" id="users-pagination">{{ $users->links() }}</div>
+    @endunless
+    @endif
     </div>
 
     <script>

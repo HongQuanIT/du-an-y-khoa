@@ -1761,6 +1761,38 @@ final class AdminQuestionManagementTest extends TestCase
         $this->assertSame($path, $question->stem_image_path);
     }
 
+    public function test_compare_link_appears_only_after_the_working_copy_changes_on_admin_and_editor(): void
+    {
+        $editor = $this->staffUser(Role::ContentEditor);
+        $admin = $this->staffUser(Role::Admin);
+        $question = $this->makePublishedQuestion(createdBy: $editor);
+
+        $this->actingAsStaff($admin)
+            ->get(route('admin.questions.edit', $question))
+            ->assertOk()
+            ->assertDontSee(route('admin.questions.compare', $question), false);
+
+        $this->actingAsStaff($editor)
+            ->get(route('editor.questions.edit', $question))
+            ->assertOk()
+            ->assertDontSee(route('editor.questions.compare', $question), false);
+
+        $question->forceFill([
+            'stem' => '<p>Nội dung đã chỉnh sửa so với bản xuất bản.</p>',
+            'status' => QuestionStatus::Draft,
+        ])->save();
+
+        $this->actingAsStaff($admin)
+            ->get(route('admin.questions.edit', $question))
+            ->assertOk()
+            ->assertSee(route('admin.questions.compare', $question), false);
+
+        $this->actingAsStaff($editor)
+            ->get(route('editor.questions.edit', $question))
+            ->assertOk()
+            ->assertSee(route('editor.questions.compare', $question), false);
+    }
+
     /**
      * @return array<string, mixed>
      */

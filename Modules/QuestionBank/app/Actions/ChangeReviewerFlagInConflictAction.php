@@ -18,6 +18,7 @@ use Modules\QuestionBank\Enums\ReviewerFlag;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionFlagChangeEvent;
 use Modules\QuestionBank\Support\QuestionReviewerFlagCycle;
+use Modules\QuestionBank\Support\ReviewerChecklist;
 use Modules\QuestionBank\Support\QuestionWorkflowRecorder;
 
 /**
@@ -37,6 +38,7 @@ final class ChangeReviewerFlagInConflictAction
         ReviewerFlag $flag,
         ?string $note = null,
         bool $responsibilityAcked = false,
+        array $failedChecks = [],
     ): Question {
         abort_unless(
             $reviewer->can(Permission::QuestionFlag->value),
@@ -47,7 +49,9 @@ final class ChangeReviewerFlagInConflictAction
         $note = trim(strip_tags((string) $note));
         $note = $note !== '' ? mb_substr($note, 0, 2000) : null;
 
-        return DB::transaction(function () use ($reviewer, $question, $flag, $note, $responsibilityAcked): Question {
+        $failedChecks = $flag === ReviewerFlag::Red ? ReviewerChecklist::only($failedChecks) : [];
+
+        return DB::transaction(function () use ($reviewer, $question, $flag, $note, $responsibilityAcked, $failedChecks): Question {
             $question = Question::query()->lockForUpdate()->findOrFail($question->getKey());
 
             if ($question->status !== QuestionStatus::FlagConflict) {
@@ -72,6 +76,7 @@ final class ChangeReviewerFlagInConflictAction
                 $flag,
                 $note,
                 $responsibilityAcked,
+                $failedChecks,
             );
 
             $question = $question->refresh();
@@ -126,9 +131,17 @@ final class ChangeReviewerFlagInConflictAction
             $this->flagCycle->setStickyPair($question);
             $question = $question->refresh();
 
+            $failedTitles = ReviewerChecklist::titles(
+                $question->reviewerFlags()
+                    ->where('review_cycle', (int) $question->instructor_review_cycle)
+                    ->get()
+                    ->flatMap(fn ($row): array => (array) ($row->failed_checks ?? []))
+                    ->all(),
+            );
             $notes = collect([
                 $question->reviewer_1_note,
                 $question->reviewer_2_note,
+                $failedTitles !== [] ? 'Mục không đạt: '.implode(', ', $failedTitles) : null,
             ])->filter()->implode("\n---\n");
 
             $question->forceFill([

@@ -37,7 +37,7 @@ return [
                 'profile' => ['view', 'update', 'password_update', 'avatar_update', 'two_factor_toggle'],
             ],
             'user_management' => [
-                'user' => ['view', 'create', 'delete', 'status_update', 'role_assign', 'password_reset', 'two_factor_manage'],
+                'user' => ['view', 'lookup', 'update', 'create', 'delete', 'status_update', 'role_assign', 'password_reset', 'two_factor_manage'],
                 'learner_catalog' => ['view', 'create', 'update'],
             ],
             'rbac' => [
@@ -196,6 +196,7 @@ return [
     ],
 
     'sensitive' => [
+        'user.update',
         'user.status_update',
         'user.password_reset',
         'user.two_factor_manage',

@@ -16,6 +16,27 @@
 - Phiên làm bài cho phép mở ảnh toàn màn hình, zoom 50–500%, kéo ảnh và đóng khi bấm ngoài ảnh.
 - Ảnh có con trỏ bàn tay khi rê chuột.
 
+## 2026-10-02
+
+### Feat — Tra cứu học viên theo email hoặc mã
+
+- Quyền tra cứu không mở danh sách. Chỉ tìm đúng email hoặc mã học viên. Trang chi tiết và các thao tác kèm chữ ký, không đoán được mã tài khoản.
+- Mỗi tài khoản có mã 6 ký tự (2 chữ Latin in hoa và 4 số), tạo lúc đăng ký hoặc khi quản trị tạo user, trùng thì tạo lại.
+- Quyền sửa học viên cho phép cập nhật hồ sơ, trạng thái, đặt lại mật khẩu và hỗ trợ kích hoạt 2FA mà không cần quyền xem cả danh sách.
+- Hồ sơ dùng ô tìm chọn: tỉnh/thành theo quốc gia, trường theo tỉnh/thành. Sau khi lưu, giá trị vừa chọn vẫn hiện đúng.
+
+### Feat — Reviewer rà checklist trước khi gắn cờ
+
+- Không đạt phải đánh dấu ít nhất một mục. Ghi chú là tùy chọn. Mục không đạt được lưu trên lượt cờ.
+- Quyết định lệch với reviewer kia mở hộp thoại để giữ cờ hoặc đổi cờ, không lộ cờ của người còn lại.
+- Cập nhật mục không đạt không đòi xác nhận trách nhiệm. Đổi cờ vẫn phải xác nhận.
+- Trên màn hình lớn, form neo ngay dưới header. Trên điện thoại, form thành tấm ở đáy để vừa đọc đề vừa rà checklist.
+
+### Feat — Chỉ so sánh khi bản làm việc đã khác bản đang dùng
+
+- Admin và editor ẩn So sánh khi câu chưa xuất bản, hoặc nội dung đang sửa trùng bản đang phát hành.
+- Câu chưa có bản phát hành trên màn duyệt của giảng viên hiện một cột nội dung, không còn cột trống bên trái.
+
 ## 2026-10-01
 
 ### Feat — Xem lại câu hiện gợi ý đã dùng và phần kiến thức

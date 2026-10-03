@@ -18,6 +18,7 @@ use Modules\QuestionBank\Enums\ReviewerFlag;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionFlagChangeEvent;
 use Modules\QuestionBank\Support\QuestionReviewerFlagCycle;
+use Modules\QuestionBank\Support\ReviewerChecklist;
 
 final class ReviewerFlagController extends Controller
 {
@@ -91,6 +92,8 @@ final class ReviewerFlagController extends Controller
             'flags' => ReviewerFlag::cases(),
             'ownFlag' => $ownFlag,
             'ownNote' => $this->flagCycle->actorNote($question, $actor),
+            'ownFailedChecks' => $this->flagCycle->actorFailedChecks($question, $actor),
+            'peerFlag' => $this->flagCycle->peerFlag($question, $actor)?->value,
             'ackText' => QuestionFlagChangeEvent::ACK_TEXT,
         ]);
     }
@@ -102,12 +105,28 @@ final class ReviewerFlagController extends Controller
 
         $data = $request->validate([
             'flag' => ['required', 'string', Rule::in(ReviewerFlag::values())],
-            'note' => [Rule::requiredIf(fn (): bool => $request->input('flag') === ReviewerFlag::Red->value), 'nullable', 'string', 'max:2000'],
+            'note' => ['nullable', 'string', 'max:2000'],
+            'failed_checks' => [
+                Rule::excludeIf(fn (): bool => $request->input('flag') !== ReviewerFlag::Red->value),
+                'required',
+                'array',
+                'min:1',
+                'max:20',
+            ],
+            'failed_checks.*' => ['string', Rule::in(ReviewerChecklist::keys())],
         ], [
-            'note.required' => 'Cờ đỏ bắt buộc phải ghi chú lý do.',
+            'failed_checks.required' => 'Không đạt cần đánh dấu ít nhất một mục checklist.',
+            'failed_checks.min' => 'Không đạt cần đánh dấu ít nhất một mục checklist.',
+            'failed_checks.*.in' => 'Mục checklist không hợp lệ.',
         ]);
 
-        $action->handle($actor, $question, ReviewerFlag::from($data['flag']), $data['note'] ?? null);
+        $action->handle(
+            $actor,
+            $question,
+            ReviewerFlag::from($data['flag']),
+            $data['note'] ?? null,
+            ReviewerChecklist::only((array) ($data['failed_checks'] ?? [])),
+        );
 
         return redirect()->route('reviewer.questions.flags.show', $question->fresh())
             ->with('status', 'Đã ghi nhận cờ của bạn.');
@@ -123,16 +142,24 @@ final class ReviewerFlagController extends Controller
 
         $data = $request->validate([
             'flag' => ['required', 'string', Rule::in(ReviewerFlag::values())],
-            'note' => [
-                Rule::requiredIf(fn (): bool => $request->input('flag') === ReviewerFlag::Red->value),
-                'nullable',
-                'string',
-                'max:2000',
+            'note' => ['nullable', 'string', 'max:2000'],
+            'responsibility_acked' => [
+                Rule::excludeIf(fn (): bool => ! $this->submittedFlagDiffers($request, $question)),
+                'accepted',
             ],
-            'responsibility_acked' => ['sometimes', 'accepted'],
+            'failed_checks' => [
+                Rule::excludeIf(fn (): bool => $request->input('flag') !== ReviewerFlag::Red->value),
+                'required',
+                'array',
+                'min:1',
+                'max:20',
+            ],
+            'failed_checks.*' => ['string', Rule::in(ReviewerChecklist::keys())],
         ], [
-            'note.required' => 'Cờ đỏ bắt buộc phải ghi chú lý do.',
             'responsibility_acked.accepted' => 'Bạn phải xác nhận chịu trách nhiệm trước khi đổi cờ.',
+            'failed_checks.required' => 'Không đạt cần đánh dấu ít nhất một mục checklist.',
+            'failed_checks.min' => 'Không đạt cần đánh dấu ít nhất một mục checklist.',
+            'failed_checks.*.in' => 'Mục checklist không hợp lệ.',
         ]);
 
         $toFlag = ReviewerFlag::from($data['flag']);
@@ -145,6 +172,7 @@ final class ReviewerFlagController extends Controller
             $toFlag,
             $data['note'] ?? null,
             $isChange && $request->boolean('responsibility_acked'),
+            ReviewerChecklist::only((array) ($data['failed_checks'] ?? [])),
         );
 
         $message = match ($result->status) {
@@ -156,6 +184,14 @@ final class ReviewerFlagController extends Controller
         return redirect()
             ->route('reviewer.questions.flags.show', $question->fresh())
             ->with('status', $message);
+    }
+
+    private function submittedFlagDiffers(Request $request, Question $question): bool
+    {
+        $own = $this->flagCycle->actorFlag($question, $request->user());
+        $submitted = ReviewerFlag::tryFrom((string) $request->input('flag'));
+
+        return $own !== null && $submitted !== null && $own !== $submitted;
     }
 
     private function visibleTo(Question $question, User $actor): bool

@@ -227,7 +227,7 @@ final class TeachQuestionReviewTest extends TestCase
             ->assertDontSee('Chưa có bản đang dùng để so sánh', false);
     }
 
-    public function test_new_question_review_shows_empty_published_pane(): void
+    public function test_new_question_review_shows_a_single_content_screen(): void
     {
         $instructor = $this->instructor();
         $question = $this->makeInReviewQuestion($instructor);
@@ -235,11 +235,13 @@ final class TeachQuestionReviewTest extends TestCase
         $this->actingAsWithWebSession($instructor, 'web')
             ->get(route('teach.questions.reviews.show', $question))
             ->assertOk()
-            ->assertSee('So sánh với bản đang dùng', false)
-            ->assertSee('Bản đang dùng', false)
-            ->assertSee('Bản cần duyệt', false)
-            ->assertSee('Chưa có bản đang dùng để so sánh', false)
+            ->assertSee('Nội dung câu hỏi', false)
+            ->assertSee('Câu mới — chưa có bản xuất bản', false)
             ->assertSee(strip_tags((string) $question->stem), false)
+            ->assertDontSee('Bản đang dùng', false)
+            ->assertDontSee('Bản cần duyệt', false)
+            ->assertDontSee('So sánh với bản đang dùng', false)
+            ->assertDontSee('Chưa có bản đang dùng để so sánh', false)
             ->assertDontSee('Giải thích chung', false)
             ->assertDontSee('Chưa nhập.', false)
             ->assertSee('Gợi ý', false)
