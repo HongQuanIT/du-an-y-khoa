@@ -732,19 +732,18 @@
                                     <span>Đã dùng gợi ý</span>
                                 </div>
                                 <template x-if="!keyInfoEnabled">
-                                    <div id="session-stem"
+                                    <div id="session-stem" data-learner-image-viewer
                                         class="prose prose-sm max-w-none font-body-lg text-body-lg leading-relaxed text-on-surface select-text">{!! $stemHtml !!}</div>
                                 </template>
                                 <template x-if="keyInfoEnabled">
-                                    <div class="prose prose-sm max-w-none font-body-lg text-body-lg leading-relaxed text-on-surface select-text"
+                                    <div data-learner-image-viewer class="prose prose-sm max-w-none font-body-lg text-body-lg leading-relaxed text-on-surface select-text"
                                         data-testid="key-info-stem">{!! $keyInfoHtml !!}</div>
                                 </template>
                             </article>
 
                             @if ($stemImageUrl)
                                 <aside class="overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-sm">
-                                    <div class="group relative bg-white flex justify-center cursor-zoom-in"
-                                        @click="imageViewerOpen = true; imageViewerSrc = '{{ $stemImageUrl }}'">
+                                    <div class="group relative bg-white flex justify-center cursor-zoom-in" data-learner-image-viewer>
                                         <img src="{{ $stemImageUrl }}" alt="Ảnh minh họa câu hỏi"
                                             class="w-full h-auto max-h-[600px] object-contain">
                                     </div>
@@ -943,7 +942,7 @@
                                         <p class="text-label-sm font-bold tracking-wide uppercase"
                                             :class="option.correct ? 'text-[#16A34A]' : 'text-error'"
                                             x-text="option.correct ? 'Đáp án đúng' : 'Vì sao sai'"></p>
-                                        <div class="prose prose-sm max-w-none text-body-sm leading-relaxed text-on-surface-variant"
+                                        <div class="prose prose-sm max-w-none text-body-sm leading-relaxed text-on-surface-variant" data-learner-image-viewer
                                             x-html="detailText(option)"></div>
                                         <button type="button" @click.stop="openFeedback('answer', option.id)"
                                             class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-label-sm font-semibold text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-primary"

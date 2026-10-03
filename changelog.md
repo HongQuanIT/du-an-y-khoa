@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-03
+
+### Feat — Chỉnh sửa và xem ảnh trong câu hỏi
+
+- Content Editor hỗ trợ kéo thả, đổi kích thước và căn trái/giữa/phải cho ảnh.
+- Review hiển thị kích thước ảnh đã render.
+- Phiên làm bài cho phép mở ảnh toàn màn hình, zoom 50–500%, kéo ảnh và đóng khi bấm ngoài ảnh.
+- Ảnh có con trỏ bàn tay khi rê chuột.
+
 ## 2026-10-01
 
 ### Feat — Xem lại câu hiện gợi ý đã dùng và phần kiến thức
