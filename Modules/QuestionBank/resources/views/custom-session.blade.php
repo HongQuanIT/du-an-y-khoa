@@ -25,6 +25,7 @@
     $initialStatuses = array_values((array) old('question_statuses', request('question_statuses', [])));
     $initialStatusMode = old('question_status_mode', request('question_status_mode', 'latest'));
     $initialSavedOnly = (bool) old('saved_only', request()->boolean('saved_only'));
+    $initialFolderIds = array_values(array_unique(array_map('intval', (array) old('folder_ids', request('folder_ids', [])))));
     $initialBlueprintId = old('exam_catalog_id', request('exam_catalog_id'));
     $initialOrganSystemIds = array_map('intval', (array) old('organ_system_ids', request('organ_system_ids', [])));
     $initialSubjectIds = array_map('intval', (array) old('subject_ids', request('subject_ids', [])));
@@ -79,8 +80,8 @@
                 lessons: {{ Illuminate\Support\Js::from(route('qbank.taxonomy.lookups.lessons', absolute: false))->toHtml() }},
             },
             folderId: null,
+            folderIds: {{ Illuminate\Support\Js::from($initialFolderIds)->toHtml() }},
             folderName: '',
-            foldersModalOpen: false,
             folders: {{ Illuminate\Support\Js::from($bookmarkFolders)->toHtml() }},
             activeFilter: null,
             filterSearch: '',
@@ -100,6 +101,7 @@
                     this.lessonLabels = {};
                     this.savedOnly = false;
                     this.folderId = null;
+                    this.folderIds = [];
                     this.folderName = '';
                     if (!this.countTouched) this.count = 0;
                 }
@@ -135,6 +137,7 @@
                     this.lessonLabels = {};
                     this.savedOnly = false;
                     this.folderId = null;
+                    this.folderIds = [];
                     this.folderName = '';
                     if (!this.adaptiveFocus) this.adaptiveFocus = 'balanced';
                     // Adaptive: user must choose size — default 0 disables start.
@@ -150,6 +153,7 @@
                 this.subjectIds = [];
                 this.savedOnly = false;
                 this.folderId = null;
+                this.folderIds = [];
                 this.folderName = '';
                 this.lessonIds = [];
                 this.lessonLabels = {};
@@ -160,6 +164,38 @@
                 this.subjectIds = [];
                 this.lessonIds = [];
                 this.lessonLabels = {};
+            },
+            selectAllSavedQuestions() {
+                this.savedOnly = true;
+                this.folderId = null;
+                this.folderIds = [];
+                this.folderName = 'Tất cả câu đã lưu';
+                this.clearTaxonomySelection();
+                this.blueprintId = null;
+                this.blueprintName = '';
+                this.refreshCount();
+            },
+            toggleSavedFolder(folder) {
+                const id = Number(folder.id);
+                const selected = this.folderIds.map(Number);
+                this.folderIds = selected.includes(id)
+                    ? selected.filter((folderId) => folderId !== id)
+                    : [...selected, id];
+                this.savedOnly = this.folderIds.length > 0;
+                this.folderId = this.folderIds[0] || null;
+                this.folderName = this.folderIds.length === 1
+                    ? this.folders.find((item) => Number(item.id) === Number(this.folderIds[0]))?.name || ''
+                    : '';
+                this.clearTaxonomySelection();
+                this.blueprintId = null;
+                this.blueprintName = '';
+                this.refreshCount();
+            },
+            savedFolderLabel() {
+                if (!this.savedOnly) return 'Tất cả';
+                if (this.folderIds.length === 0) return 'Tất cả câu đã lưu';
+                if (this.folderIds.length === 1) return this.folderName || '1 bộ sưu tập';
+                return `${this.folderIds.length} bộ sưu tập`;
             },
             canStart() {
                 if (this.matching === null || this.matching === 0 || this.counting || this.submitting) return false;
@@ -177,7 +213,9 @@
                     body.set('count', String(Math.max(1, Number(this.count) || 1)));
                     body.set('source', this.source);
                     body.set('saved_only', this.savedOnly ? '1' : '0');
-                    body.set('folder_id', this.folderId ? String(this.folderId) : '');
+                    body.delete('folder_id');
+                    body.delete('folder_ids[]');
+                    this.folderIds.forEach((id) => body.append('folder_ids[]', String(id)));
                     if (this.blueprintId) {
                         body.set('exam_catalog_id', String(this.blueprintId));
                     } else {
@@ -410,6 +448,7 @@
                 this.subjectIds = [];
                 this.savedOnly = false;
                 this.folderId = null;
+                this.folderIds = [];
                 this.folderName = '';
                 this.blueprintId = null;
                 this.blueprintName = '';
@@ -438,7 +477,9 @@
         <input type="hidden" name="exam_catalog_id" :value="blueprintId ?? ''" :disabled="!blueprintId">
         <input type="hidden" name="question_status_mode" value="{{ $initialStatusMode }}">
         <input type="hidden" name="saved_only" :value="savedOnly ? '1' : '0'" :disabled="isAdaptive()">
-        <input type="hidden" name="folder_id" :value="folderId ?? ''" :disabled="isAdaptive()">
+        <template x-for="folderId in folderIds" :key="folderId">
+            <input type="hidden" name="folder_ids[]" :value="folderId" :disabled="isAdaptive()">
+        </template>
         <template x-for="id in lessonIds" :key="'lesson-' + id">
             <input type="hidden" name="lesson_ids[]" :value="id" :disabled="isAdaptive()">
         </template>
@@ -598,85 +639,19 @@
                                 </div>
 
                                 @can('bookmark.view')
-                                <button type="button" x-show="!isAdaptive() && matchesFilterSearch('câu hỏi đã lưu')" @click="foldersModalOpen = true"
+                                <button type="button" x-show="!isAdaptive() && matchesFilterSearch('câu hỏi đã lưu')" @click="openFilter('saved')"
                                     class="group flex w-full items-center justify-between border-b border-outline-variant px-6 py-4 text-left transition-colors hover:bg-surface-container-lowest">
                                     <span class="flex items-center gap-4">
                                         <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">add</span>
                                         <span class="font-medium">Câu hỏi đã lưu</span>
                                     </span>
-                                    <span class="flex items-center gap-2">
-                                        <span class="text-sm font-semibold"
-                                            :class="savedOnly ? 'text-primary' : 'text-on-surface-variant'"
-                                            x-text="folderId ? folderName : (savedOnly ? 'Chỉ câu đã lưu' : 'Tất cả')"></span>
-                                        <span class="material-symbols-outlined text-[18px] text-on-surface-variant">chevron_right</span>
-                                    </span>
+                                    <span class="text-sm text-on-surface-variant" x-text="savedFolderLabel()"></span>
                                 </button>
                                 @endcan
                             </div>
                         </div>
                     </div>
 
-                    <div x-show="foldersModalOpen" x-cloak
-                        class="fixed inset-0 z-50 flex items-center justify-center p-4"
-                        @keydown.escape.window="foldersModalOpen = false">
-                        <div class="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
-                            @click="foldersModalOpen = false"></div>
-
-                        <div class="relative w-full max-w-md rounded-2xl border border-outline-variant bg-white p-6 shadow-2xl transition-all"
-                            @click.stop>
-                            <div class="mb-4 flex items-center justify-between">
-                                <h3 class="text-headline-sm font-bold text-on-surface">Chọn bộ sưu tập câu hỏi đã lưu</h3>
-                                <button type="button" @click="foldersModalOpen = false"
-                                    class="flex size-8 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface">
-                                    <span class="material-symbols-outlined text-[20px]">close</span>
-                                </button>
-                            </div>
-
-                            <div class="max-h-80 space-y-2.5 overflow-y-auto pr-1">
-                                <button type="button"
-                                    @click="savedOnly = true; folderId = null; folderName = 'Tất cả câu đã lưu'; clearTaxonomySelection(); blueprintId = null; blueprintName = ''; foldersModalOpen = false; refreshCount()"
-                                    :class="savedOnly && !folderId ? 'border-primary bg-primary/5 text-primary font-bold' : 'border-outline-variant hover:bg-surface-container-low text-on-surface'"
-                                    class="flex w-full items-center justify-between rounded-xl border p-4 text-left transition-all">
-                                    <div class="flex items-center gap-3">
-                                        <span class="material-symbols-outlined text-[22px]">grid_view</span>
-                                        <div>
-                                            <p class="text-sm font-bold">Tất cả câu đã lưu</p>
-                                            <p class="text-xs text-on-surface-variant">Bao gồm câu hỏi từ tất cả bộ sưu tập</p>
-                                        </div>
-                                    </div>
-                                    <span x-show="savedOnly && !folderId" class="material-symbols-outlined text-[20px] text-primary">check</span>
-                                </button>
-
-                                <template x-for="f in folders" :key="f.id">
-                                    <button type="button"
-                                        @click="savedOnly = true; folderId = f.id; folderName = f.name; clearTaxonomySelection(); blueprintId = null; blueprintName = ''; foldersModalOpen = false; refreshCount()"
-                                        :class="folderId == f.id ? 'border-primary bg-primary/5 text-primary font-bold' : 'border-outline-variant hover:bg-surface-container-low text-on-surface'"
-                                        class="flex w-full items-center justify-between rounded-xl border p-4 text-left transition-all">
-                                        <div class="flex items-center gap-3">
-                                            <span class="material-symbols-outlined text-[22px]">folder_managed</span>
-                                            <div>
-                                                <p class="text-sm font-bold" x-text="f.name"></p>
-                                                <p class="text-xs text-on-surface-variant" x-text="f.items_count + ' câu hỏi'"></p>
-                                            </div>
-                                        </div>
-                                        <span x-show="folderId == f.id" class="material-symbols-outlined text-[20px] text-primary">check</span>
-                                    </button>
-                                </template>
-                            </div>
-
-                            <div class="mt-4 flex items-center justify-between border-t border-outline-variant/60 pt-4">
-                                <button type="button"
-                                    @click="savedOnly = false; folderId = null; folderName = ''; foldersModalOpen = false; refreshCount()"
-                                    class="text-xs font-bold text-on-surface-variant hover:text-error">
-                                    Bỏ chọn lọc câu lưu
-                                </button>
-                                <button type="button" @click="foldersModalOpen = false"
-                                    class="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white hover:bg-primary/90">
-                                    Đóng
-                                </button>
-                            </div>
-                        </div>
-                    </div>
                 </section>
 
                 <aside class="col-span-12 lg:col-span-5">
@@ -833,6 +808,7 @@
                             difficulty: 'Độ khó',
                             statuses: 'Trạng thái',
                             lessons: 'Bài học',
+                            saved: 'Câu hỏi đã lưu',
                         })[activeFilter] || 'Bộ lọc'"></h3>
                     <button type="button" @click="activeFilter = null"
                         class="rounded-full p-2 transition-colors hover:bg-surface-container" aria-label="Đóng">
@@ -961,12 +937,42 @@
                         @endforeach
                     </div>
 
+                    <div x-show="activeFilter === 'saved'" class="space-y-4">
+                        <button type="button" @click="selectAllSavedQuestions()"
+                            class="flex w-full items-start gap-3 rounded-lg bg-surface-container-low p-3 text-left">
+                            <span class="material-symbols-outlined mt-0.5 text-primary">select_all</span>
+                            <span>
+                                <span class="block text-sm font-bold">Tất cả câu đã lưu</span>
+                                <span class="block text-xs text-on-surface-variant">Bao gồm câu hỏi từ tất cả bộ sưu tập</span>
+                            </span>
+                        </button>
+
+                        <div class="max-h-72 space-y-1 overflow-y-auto">
+                            <template x-for="folder in folders" :key="folder.id">
+                                <label class="flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-surface-container-low">
+                                    <input type="checkbox"
+                                        :checked="folderIds.map(Number).includes(Number(folder.id))"
+                                        @change="toggleSavedFolder(folder)"
+                                        class="size-5 rounded border-outline-variant text-primary focus:ring-primary">
+                                    <span class="min-w-0 flex-1">
+                                        <span class="block truncate text-sm" x-text="folder.name"></span>
+                                        <span class="block text-xs text-on-surface-variant" x-text="folder.items_count + ' câu hỏi'"></span>
+                                    </span>
+                                </label>
+                            </template>
+                            <p x-show="folders.length === 0"
+                                class="rounded-lg bg-surface-container-low p-3 text-sm text-on-surface-variant">
+                                Chưa có bộ sưu tập câu hỏi đã lưu.
+                            </p>
+                        </div>
+                    </div>
+
                     @include('questionbank::partials.taxonomy-session-filter-modals')
                 </div>
 
                 <div class="flex items-center justify-between border-t border-outline-variant bg-surface-container-lowest p-4">
                     <button type="button"
-                        @click="activeFilter === 'exams' ? clearExam() : activeFilter === 'systems' ? clearOrganSystems() : activeFilter === 'subjects' ? clearSubjects() : activeFilter === 'difficulty' ? difficulties = [] : activeFilter === 'lessons' ? (lessonIds = [], lessonLabels = {}) : statuses = []; $nextTick(() => refreshCount())"
+                        @click="activeFilter === 'exams' ? clearExam() : activeFilter === 'systems' ? clearOrganSystems() : activeFilter === 'subjects' ? clearSubjects() : activeFilter === 'difficulty' ? difficulties = [] : activeFilter === 'lessons' ? (lessonIds = [], lessonLabels = {}) : activeFilter === 'saved' ? (savedOnly = false, folderId = null, folderIds = [], folderName = '') : statuses = []; $nextTick(() => refreshCount())"
                         class="text-sm font-bold text-primary hover:underline">Đặt lại</button>
                     <button type="button" @click="activeFilter = null"
                         class="rounded-lg bg-primary px-8 py-2 font-bold text-white transition-opacity hover:opacity-90">Xong</button>

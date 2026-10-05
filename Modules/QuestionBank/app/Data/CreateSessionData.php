@@ -19,6 +19,7 @@ use Modules\QuestionBank\Enums\SessionSource;
  * @property-read array<int, string> $questionStatuses
  * @property-read array<int, string> $articles
  * @property-read array<int, string> $symptoms
+ * @property-read array<int, int> $folderIds
  */
 final class CreateSessionData
 {
@@ -50,6 +51,7 @@ final class CreateSessionData
         public readonly string $questionStatusMode = 'latest',
         public readonly bool $savedOnly = false,
         public readonly ?int $folderId = null,
+        public readonly array $folderIds = [],
         public readonly ?string $examKey = null,
         public readonly ?int $examId = null,
         public readonly array $articles = [],
@@ -83,6 +85,7 @@ final class CreateSessionData
             'question_status_mode' => $this->questionStatusMode,
             'saved_only' => $this->savedOnly,
             'folder_id' => $this->folderId,
+            'folder_ids' => array_values($this->folderIds),
             'exam_key' => $this->examKey,
             'exam_id' => $this->examId,
             'articles' => array_values($this->articles),

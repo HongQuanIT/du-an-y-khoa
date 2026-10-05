@@ -209,13 +209,6 @@
                 </nav>
             </div>
             <div class="flex flex-wrap gap-2">
-                @can('bookmark.view')
-                <a href="{{ route('qbank.bookmarks') }}"
-                    class="inline-flex items-center justify-center gap-2 rounded-xl border border-outline-variant px-5 py-3 text-label-md font-bold text-on-surface transition-colors hover:bg-surface-container-low">
-                    <span class="material-symbols-outlined text-[20px]">folder_managed</span>
-                    Câu hỏi đã lưu
-                </a>
-                @endcan
                 @can('session.create')
                 <a href="{{ route('qbank.create') }}"
                     class="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 text-label-md font-bold text-white shadow-md transition-all hover:bg-primary/90 active:scale-95">

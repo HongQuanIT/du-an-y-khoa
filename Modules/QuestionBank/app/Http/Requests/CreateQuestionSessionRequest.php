@@ -14,6 +14,7 @@ use Modules\QuestionBank\Enums\SessionMode;
 use Modules\QuestionBank\Enums\SessionSource;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
 use Modules\QuestionBank\Models\ExamCatalog;
+use Modules\Personalization\Models\BookmarkFolder;
 
 /**
  * Validates the custom-session builder before a question snapshot is drawn.
@@ -37,6 +38,13 @@ final class CreateQuestionSessionRequest extends FormRequest
 
         $folderId = $this->input('folder_id');
         $folderId = is_numeric($folderId) && (int) $folderId > 0 ? (int) $folderId : null;
+        $folderIds = array_values(array_unique(array_filter(
+            array_map('intval', (array) $this->input('folder_ids', [])),
+            static fn (int $id): bool => $id > 0,
+        )));
+        if ($folderIds === [] && $folderId !== null) {
+            $folderIds = [$folderId];
+        }
 
         // Adaptive: keep exam + optional hệ/môn; drop lesson / difficulty / status / saved.
         if ($isAdaptive) {
@@ -58,6 +66,7 @@ final class CreateQuestionSessionRequest extends FormRequest
                 'symptoms' => [],
                 'saved_only' => false,
                 'folder_id' => null,
+                'folder_ids' => [],
             ]);
 
             return;
@@ -68,8 +77,9 @@ final class CreateQuestionSessionRequest extends FormRequest
                 (array) $difficulties,
                 static fn (mixed $value): bool => is_string($value) && $value !== '',
             )),
-            'saved_only' => $this->boolean('saved_only') || $folderId !== null,
-            'folder_id' => $folderId,
+            'saved_only' => $this->boolean('saved_only') || $folderIds !== [],
+            'folder_id' => $folderIds[0] ?? null,
+            'folder_ids' => $folderIds,
             'source' => SessionSource::Custom->value,
             'question_status_mode' => $this->input('question_status_mode', 'latest'),
         ]);
@@ -83,6 +93,14 @@ final class CreateQuestionSessionRequest extends FormRequest
                 $validator->errors()->add('profession', 'Hãy chọn chức danh trên hồ sơ trước khi tạo phiên luyện.');
 
                 return;
+            }
+
+            $folderIds = $this->input('folder_ids', []);
+            if ($folderIds !== [] && BookmarkFolder::query()
+                ->where('user_id', (int) $this->user()->getKey())
+                ->whereIn('id', $folderIds)
+                ->count() !== count($folderIds)) {
+                $validator->errors()->add('folder_ids', 'Bộ sưu tập câu hỏi đã lưu không hợp lệ.');
             }
 
             if (! $this->filled('exam_catalog_id')) {
@@ -152,6 +170,8 @@ final class CreateQuestionSessionRequest extends FormRequest
             'question_status_mode' => ['nullable', 'string', 'in:all,latest'],
             'saved_only' => ['nullable', 'boolean'],
             'folder_id' => ['nullable', 'integer', 'exists:bookmark_folders,id'],
+            'folder_ids' => ['nullable', 'array'],
+            'folder_ids.*' => ['integer', 'distinct', 'exists:bookmark_folders,id'],
             'exam_key' => ['nullable', 'string', Rule::in(TargetExams::keys())],
             'articles' => ['nullable', 'array'],
             'articles.*' => ['string', 'distinct', Rule::in(array_column(ScopeFilters::articles(), 'id'))],
@@ -189,8 +209,9 @@ final class CreateQuestionSessionRequest extends FormRequest
             difficulties: array_values(array_unique(array_map('strval', $this->input('difficulties', [])))),
             questionStatuses: array_values(array_unique(array_map('strval', $this->input('question_statuses', [])))),
             questionStatusMode: (string) $this->input('question_status_mode', 'latest'),
-            savedOnly: $this->boolean('saved_only') || $this->filled('folder_id'),
+            savedOnly: $this->boolean('saved_only') || $this->input('folder_ids', []) !== [],
             folderId: $this->filled('folder_id') ? $this->integer('folder_id') : null,
+            folderIds: array_values(array_unique(array_map('intval', $this->input('folder_ids', [])))),
             examKey: $this->filled('exam_key') ? (string) $this->input('exam_key') : null,
             articles: array_values(array_unique(array_map('strval', $this->input('articles', [])))),
             symptoms: array_values(array_unique(array_map('strval', $this->input('symptoms', [])))),

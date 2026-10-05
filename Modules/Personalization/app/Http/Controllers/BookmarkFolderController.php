@@ -112,7 +112,7 @@ final class BookmarkFolderController extends Controller
         $deleteFolder->handle($user, $folder);
 
         return redirect()
-            ->route('qbank.bookmarks')
+            ->route('qbank.index')
             ->with('status', 'Đã xóa bộ sưu tập "' . $name . '".');
     }
 }
