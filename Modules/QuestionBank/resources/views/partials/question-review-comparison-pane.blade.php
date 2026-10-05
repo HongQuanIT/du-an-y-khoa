@@ -70,6 +70,43 @@
         </div>
     @endif
 
+    @if ($reviewerStyle)
+        <div class="flex min-h-12 items-center border-y border-outline-variant bg-surface-container-lowest px-1">
+            <button type="button" @click="hintOpen = !hintOpen"
+                class="inline-flex h-12 items-center gap-2 border-b-2 px-3 text-label-sm font-bold transition-colors"
+                :class="hintOpen ? 'border-amber-600 text-amber-700' : 'border-transparent text-on-surface-variant hover:bg-surface-container-high hover:text-primary'"
+                :aria-pressed="hintOpen">
+                <span class="material-symbols-outlined text-[20px]">format_align_left</span>
+                <span>Gợi ý</span>
+            </button>
+            <button type="button" @click="knowledgeOpen = !knowledgeOpen" @disabled(! $hasAttendingTip)
+                class="inline-flex h-12 items-center gap-2 border-b-2 px-3 text-label-sm font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+                :class="knowledgeOpen ? 'border-amber-600 text-amber-700' : 'border-transparent text-on-surface-variant hover:bg-surface-container-high hover:text-primary'"
+                :aria-pressed="knowledgeOpen">
+                <span class="material-symbols-outlined text-[20px]">help</span>
+                <span>Kiến thức</span>
+            </button>
+        </div>
+
+        <div class="rounded-xl border border-amber-200 bg-amber-50/70 p-4" x-show="knowledgeOpen">
+            <div class="mb-2 flex items-center gap-2">
+                <span class="material-symbols-outlined text-[20px] text-amber-700">stethoscope</span>
+                <h4 class="text-sm font-bold uppercase text-amber-700">Kiến thức</h4>
+                @if ($highlightChanges && $comparison['attending_tip']['changed'])
+                    <span class="rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-800">Sửa</span>
+                @endif
+            </div>
+            @if ($hasAttendingTip)
+                <div class="question-rich-content instructor-image-preview prose prose-sm max-w-none text-sm leading-6 text-on-surface">
+                    {!! $attendingHtml !!}
+                </div>
+                @if ($preserveRawRichText && $comparison['can_compare'] && filled($comparison['attending_tip'][$textKey] ?? null))
+                    <span class="sr-only" aria-hidden="true">{!! $comparison['attending_tip'][$textKey] !!}</span>
+                @endif
+            @endif
+        </div>
+    @endif
+
     <div>
         <div class="mb-2 flex items-center gap-2">
             <h4 class="text-sm font-bold text-on-surface">Đáp án</h4>
@@ -168,6 +205,7 @@
         </div>
     </div>
 
+    @if (! $reviewerStyle)
     <div>
         @if ($reviewerStyle)
             <div class="flex min-h-12 items-center border-y border-outline-variant bg-surface-container-lowest px-1">
@@ -228,6 +266,29 @@
             @endif
         </div>
     </div>
+    @endif
+
+    @if ($reviewerStyle)
+        <div class="space-y-2" x-show="hintOpen">
+            <div class="flex items-center gap-2">
+                <h4 class="text-sm font-bold text-on-surface">Gợi ý</h4>
+                @if ($highlightChanges && $comparison['key_info']['changed'])
+                    <span class="rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-800">Sửa</span>
+                @endif
+            </div>
+            <div class="flex flex-wrap gap-2">
+                @foreach ($keyInfoItems as $item)
+                    @php $itemChange = $highlightChanges ? $item['change'] : 'same'; @endphp
+                    <div @class([
+                        'question-rich-content inline-flex rounded-lg px-2.5 py-1 text-xs font-semibold [&_p]:m-0',
+                        'bg-rose-100 text-rose-800 line-through' => $itemChange === 'removed',
+                        'bg-emerald-100 text-emerald-900' => $itemChange === 'added',
+                        'bg-surface-container-high text-on-surface' => $itemChange === 'same',
+                    ])>{!! $item['html'] !!}</div>
+                @endforeach
+            </div>
+        </div>
+    @endif
 
     @foreach ([
         ['title' => 'Bài học', 'field' => 'lessons'],
