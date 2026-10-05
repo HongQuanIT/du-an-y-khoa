@@ -10,14 +10,13 @@ use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use Modules\QuestionBank\Data\QuestionSessionProgressed;
 use Modules\QuestionBank\Enums\SessionMode;
+use Modules\QuestionBank\Enums\SessionSource;
 use Modules\QuestionBank\Enums\SessionStatus;
-use Modules\QuestionBank\Enums\UserQuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionSession;
-use Modules\QuestionBank\Models\QuestionStatus as UserQuestionStatusModel;
 use Modules\QuestionBank\Services\QuestionGrader;
-use Modules\QuestionBank\Support\MemoryStability;
+use Modules\QuestionBank\Support\SyncUserQuestionLearningState;
 use RuntimeException;
 
 /**
@@ -34,6 +33,7 @@ final class AnswerQuestionAction
     public function __construct(
         private readonly CompleteQuestionSessionAction $completeSession,
         private readonly QuestionGrader $grader,
+        private readonly SyncUserQuestionLearningState $learningState,
     ) {}
 
     /**
@@ -109,13 +109,22 @@ final class AnswerQuestionAction
             );
 
             if ($isStudy && $this->liveQuestionExists($question)) {
-                $this->syncQuestionStatus(
+                $gradeReport = $this->learningState->applyGraded(
                     (int) $currentSession->user_id,
                     $question,
                     (bool) $isCorrect,
                     $now,
+                    $timeSpentSeconds,
                     true,
                 );
+
+                if ($currentSession->source === SessionSource::WeakTopics) {
+                    $filters = is_array($currentSession->filters) ? $currentSession->filters : [];
+                    $grades = is_array($filters['adaptive_grades'] ?? null) ? $filters['adaptive_grades'] : [];
+                    $grades[(string) $question->getKey()] = $gradeReport;
+                    $filters['adaptive_grades'] = $grades;
+                    $currentSession->forceFill(['filters' => $filters])->save();
+                }
             }
 
             $this->syncSessionCounters($currentSession);
@@ -186,67 +195,6 @@ final class AnswerQuestionAction
     private function normalizeOptionIds(array $selectedOptionIds): array
     {
         return array_values(array_unique($selectedOptionIds));
-    }
-
-    private function syncQuestionStatus(
-        int $userId,
-        Question $question,
-        bool $isCorrect,
-        Carbon $answeredAt,
-        bool $incrementAttempts,
-    ): void {
-        $status = UserQuestionStatusModel::firstOrNew([
-            'user_id' => $userId,
-            'question_id' => $question->getKey(),
-        ]);
-        $attemptsCount = (int) ($status->attempts_count ?? 0);
-
-        if ($incrementAttempts) {
-            $attemptsCount++;
-        } elseif (! $status->exists) {
-            // Repair a missing rollup without double-counting the updated
-            // attempt that already existed in this session.
-            $attemptsCount = 1;
-        }
-
-        $answerStatus = $isCorrect ? UserQuestionStatus::Correct : UserQuestionStatus::Incorrect;
-        $correctCount = (int) ($status->correct_count ?? 0);
-        $wrongCount = (int) ($status->wrong_count ?? 0);
-
-        if ($incrementAttempts) {
-            if ($isCorrect) {
-                $correctCount++;
-            } else {
-                $wrongCount++;
-            }
-        } elseif (! $status->exists) {
-            $correctCount = $isCorrect ? 1 : 0;
-            $wrongCount = $isCorrect ? 0 : 1;
-        }
-
-        $attributes = [
-            // `marked` is the temporary bookmark fallback and therefore has
-            // priority over the derived answer state until explicitly removed.
-            'status' => $status->exists && $status->status === UserQuestionStatus::Marked
-                ? UserQuestionStatus::Marked
-                : $answerStatus,
-            'attempts_count' => $attemptsCount,
-            'correct_count' => $correctCount,
-            'wrong_count' => $wrongCount,
-            'last_attempt_at' => $answeredAt,
-            'last_seen_at' => $answeredAt,
-            'last_correct_at' => $isCorrect ? $answeredAt : $status->last_correct_at,
-        ];
-
-        if ($incrementAttempts || ! $status->exists) {
-            $attributes['memory_stability_days'] = MemoryStability::afterGrade(
-                $status->memory_stability_days !== null ? (float) $status->memory_stability_days : null,
-                $isCorrect,
-            );
-            $attributes['last_graded_at'] = $answeredAt;
-        }
-
-        $status->fill($attributes)->save();
     }
 
     private function liveQuestionExists(Question $question): bool

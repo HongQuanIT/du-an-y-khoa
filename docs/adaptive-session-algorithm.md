@@ -6,7 +6,12 @@
 | **SRS** | `srs/modules/05-question-bank.md` |
 | **UI** | `/qbank` · source `weak_topics` · focus `weak_focus` \| `balanced` \| `retention` |
 | **Bản giải thích ngắn** | [`adaptive-session-explained.md`](./adaptive-session-explained.md) |
-| **Trạng thái** | Selector dùng forgetting curve: `R = exp(−t/S)`, đúng ×2, sai ×0.3, kẹp `[0.5, 365]` |
+| **Trạng thái** | **V2 ship:** Lọc → Phân nhóm → Phân suất (`filter_group_quota_v2`). Độ bền thang **1·3·7·14·30·60**, `R = 0,9^(t/S)`. Đặc tả: `mophong/khung-ly-thuyet-loc-phan-nhom-phan-suat.md` |
+| **Tham chiếu thuần** | `mophong/adaptiveSession.ts` · kế hoạch: `mophong/ke-hoach-trien-khai.md` |
+
+> **V2 (đang chạy):** pool → **Lọc** (thrash, cooldown 20h, content version) → **Phân nhóm** (Yếu W≥0.5 cửa sổ 5 / Sắp quên t≥S / Mới) → **Phân suất** câu mới 30%/20%/10% theo due (mọi mode giống nhau) → chia suất ôn theo mode → câu mới ưu tiên bài học dang dở → lấp. Độ bền: ladder + `0,9^(t/S)`. Log: `/admin/adaptive-briefing`.
+>
+> Phần dưới giữ mô tả **V1** (soft-score + `exp`/×2/×0.3) để đối chiếu lịch sử; không còn là production.
 
 ---
 
@@ -126,7 +131,7 @@ Thứ tự: nhân hệ số trước, kẹp sau. Lần sai đầu: `1 × 0.3 = 0
 
 | Sự kiện | `last_seen_at` | `last_graded_at` | `S` |
 |---------|----------------|------------------|-----|
-| Trả lời đúng / sai | Có | Có (`now`) | ×2 hoặc ×0.3, rồi kẹp |
+| Trả lời đúng / sai | Có | Có (`now`) | **V2:** đổi bậc trên thang 1·3·7·14·30·60 (sai→1; đúng đúng hạn→lên; đúng sớm→giữ). *V1 lịch sử: ×2/×0.3* |
 | Bỏ qua / omit (`is_correct = null`) | Có | Không | Không đổi |
 | Chỉ nằm trong session nhưng chưa mở | Không | Không | Không |
 | Mở câu trên player (optional V2) | Có thể | Không | Không |
@@ -349,7 +354,7 @@ Hằng số V1: `S` khởi tạo `1`, đúng `× 2`, sai `× 0.3`, kẹp `[0.5, 
 | **A** | Migration `question_status` + backfill + write-path | ✅ Done |
 | **B** | Persist + validate `adaptive_focus` | ✅ UI nối backend |
 | **C–E** | Selector V3: Weakness + cooldown + weighted random | ✅ Đang chạy |
-| **G** | Forgetting curve: `M = 1 − exp(−t/S)`, đúng ×2, sai ×0.3 | ✅ Đang chạy |
+| **G** | Forgetting curve: ladder 1·3·7·14·30·60, `R = 0,9^(t/S)` | ✅ V2 đang chạy |
 | **F** | Simulation + metrics | Chỉnh hệ số `S`, trọng số mode, cửa sổ cooldown |
 
 **Hiện tại:** UI 3 mode và selector dùng forgetting curve theo độ bền riêng từng câu.
@@ -361,7 +366,7 @@ Hằng số V1: `S` khởi tạo `1`, đúng `× 2`, sai `× 0.3`, kẹp `[0.5, 
 - % session có ≥1 câu urgency cao (ví dụ `memory_urgency ≥ 0.8`)
 - Mean Weakness của câu được chọn vs random baseline (theo từng mode)
 - Tỷ lệ trùng câu giữa 2 session liền kề (cooldown hiệu lực)
-- Unit: smoothing, `R(t)`, cập nhật `S` (đúng ×2, sai ×0.3, kẹp, omit không đổi `S`), mode ranking, cooldown factor
+- Unit: ladder `S`, `R = 0,9^(t/S)`, lên/giữ bậc, omit không đổi `S`, mode quota, thrash/cooldown
 - Feature: adaptive bắt buộc blueprint; focus ảnh hưởng thứ tự ưu tiên (seed cố định trong test)
 
 ---
@@ -375,7 +380,7 @@ Hằng số V1: `S` khởi tạo `1`, đúng `× 2`, sai `× 0.3`, kẹp `[0.5, 
 | Omit có tính Weakness? | Không |
 | Omit có cập nhật `last_seen_at`? | Có — đánh dấu đã gặp |
 | Omit có đổi `S` hoặc `last_graded_at`? | Không — đồng hồ quên giữ nguyên |
-| Memory Engine của adaptive practice | Forgetting curve `R = exp(−t/S)`, urgency `1 − R`. Flashcard giữ SM-2 ở module 18 |
-| Hệ số `S` | V1: khởi tạo 1, đúng ×2, sai ×0.3, kẹp [0.5, 365]. Chưa khóa cứng |
+| Memory Engine của adaptive practice | V2: `R = 0,9^(t/S)`, đến hạn `t ≥ S`. Flashcard giữ SM-2 ở module 18 |
+| Hệ số `S` | V2: thang **1·3·7·14·30·60**. Sai → 1; đúng đúng hạn → lên bậc; đúng sớm → giữ. V1 (×2/×0.3/`exp`) chỉ còn tài liệu lịch sử |
 | Elo / IRT sớm? | Không |
 | Nơi lưu stats? | Mở rộng `question_status` (`memory_stability_days`, `last_graded_at`) |

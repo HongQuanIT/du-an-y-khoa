@@ -9,6 +9,70 @@ use PHPUnit\Framework\TestCase;
 
 final class AdaptiveSessionBriefingTest extends TestCase
 {
+    public function test_brief_v2_shows_buckets_and_due_band(): void
+    {
+        $log = <<<'LOG'
+[2026-10-04 10:00:00] testing.DEBUG: [adaptive] start {"user_id":7,"limit":3,"focus":"balanced","pipeline":"filter_group_quota_v2","blueprint_id":3,"trace_id":"v2"}
+[2026-10-04 10:00:00] testing.DEBUG: [adaptive] pool {"pool_size":10,"blueprint_id":3,"trace_id":"v2"}
+[2026-10-04 10:00:00] testing.DEBUG: [adaptive] filter {"active_count":10,"eligible_count":6,"unseen_count":4,"excluded":{"thrash":1,"cooldown":2,"version_mismatch":0},"resting":[{"question_id":"q-rest","reason":"cooldown","detail":"Vừa đưa vào phiên thích ứng 1.0 giờ trước — nghỉ serve 20 giờ","rest_until":"2026-10-04T05:00:00+00:00","due_at":"2026-10-05T00:00:00+00:00","is_due":false,"stability":3,"retention":0.85},{"question_id":"q-thrash","reason":"thrash","detail":"Sai liên tiếp 5 — tạm không đưa vào phiên 7 ngày","rest_until":"2026-10-11T00:00:00+00:00","due_at":"2026-09-30T00:00:00+00:00","is_due":true,"stability":1,"retention":0.5}],"trace_id":"v2"}
+[2026-10-04 10:00:00] testing.DEBUG: [adaptive] group {"weak_pool":3,"due_pool":4,"unseen_count":4,"overlap_weak_due":2,"trace_id":"v2"}
+[2026-10-04 10:00:00] testing.DEBUG: [adaptive] quota {"due_band":"mid","new_share":0.2,"new_count":1,"review_slots":2,"weak_quota":1,"due_quota":1,"focus":"balanced","trace_id":"v2"}
+[2026-10-04 10:00:00] testing.DEBUG: [adaptive] result {"pipeline":"filter_group_quota_v2","picked_count":3,"bucket_counts":{"yeu":1,"sap_quen":1,"moi":1,"lap_day":0},"shortfall":0,"items":[{"question_id":"q1","position":1,"bucket":"yeu","reason":"Sai 3/5 lần gần nhất (độ yếu 67%)","weakness":0.67,"days_since":2,"retention":0.8,"stability":3,"is_due":false,"due_at":"2026-10-05T00:00:00+00:00"},{"question_id":"q2","position":2,"bucket":"sap_quen","reason":"Đã 10 ngày chưa ôn","weakness":0.3,"days_since":10,"retention":0.4,"stability":7,"is_due":true,"due_at":"2026-09-24T00:00:00+00:00"},{"question_id":"q3","position":3,"bucket":"moi","reason":"Câu mới — bài học mới: Viêm phổi cộng đồng","weakness":null,"days_since":null,"retention":null,"stability":null,"is_due":null,"due_at":null}],"trace_id":"v2"}
+[2026-10-04 10:00:00] testing.DEBUG: [adaptive] served {"session_id":"s1","user_id":7,"count":3,"question_ids":["q1","q2","q3"],"trace_id":"v2"}
+[2026-10-04 10:20:00] testing.DEBUG: [adaptive] graded {"session_id":"s1","user_id":7,"total":3,"correct_count":2,"incorrect_count":1,"omitted_count":0,"items":[{"position":1,"question_id":"q1","result":"incorrect","valid":true,"s_before":3,"s_after":1,"t_days":2,"was_due":false,"weakness_after":0.67,"wrong_streak":1,"recent_results":[true,false],"due_at":"2026-10-05T10:20:00+00:00","time_spent_seconds":40,"note":"Sai → về bậc 1"},{"position":2,"question_id":"q2","result":"correct","valid":true,"s_before":7,"s_after":14,"t_days":10,"was_due":true,"weakness_after":0.3,"wrong_streak":0,"recent_results":[true,true],"due_at":"2026-10-18T10:20:00+00:00","time_spent_seconds":55,"note":"Đúng đúng hạn → lên bậc"},{"position":3,"question_id":"q3","result":"correct","valid":true,"s_before":null,"s_after":3,"t_days":null,"was_due":null,"weakness_after":0.33,"wrong_streak":0,"recent_results":[true],"due_at":"2026-10-07T10:20:00+00:00","time_spent_seconds":30,"note":"Lần đầu đúng → S = 3"}],"trace_id":"v2"}
+LOG;
+
+        $briefing = new AdaptiveSessionBriefing(
+            learners: [7 => 'Mai Anh'],
+            blueprints: [3 => 'Nội tổng quát'],
+            questions: [
+                'q1' => 'Q1042',
+                'q2' => 'Q2201',
+                'q3' => 'Q3001',
+                'q-rest' => 'Q4001',
+                'q-thrash' => 'Q4002',
+            ],
+        );
+        $card = $briefing->brief($briefing->runs($log)[0]);
+
+        $this->assertSame('v2', $card['pipeline']);
+        $this->assertSame('Lọc → Phân nhóm → Phân suất', $card['pipeline_label']);
+        $this->assertSame('Cân bằng', $card['focus']);
+        $this->assertStringContainsString('① Lọc', $card['summary']);
+        $this->assertStringContainsString('② Phân nhóm', $card['summary']);
+        $this->assertStringContainsString('③ Phân suất', $card['summary']);
+        $this->assertStringContainsString('Due vừa', $card['summary']);
+        $this->assertStringContainsString('1×N', $card['summary']);
+        $this->assertSame(['Lọc', 'Phân nhóm', 'Phân suất'], array_column($card['stages'], 'name'));
+        $filterItems = implode(' ', $card['stages'][0]['items']);
+        $quotaItems = implode(' ', $card['stages'][2]['items']);
+        $this->assertStringContainsString('sai ≥3', $filterItems);
+        $this->assertStringContainsString('≥5', $filterItems);
+        $this->assertStringContainsString('Không gồm tỉ lệ câu mới', $filterItems);
+        $this->assertStringContainsString('duePool < 1×N', $quotaItems);
+        $this->assertStringContainsString('duePool ≥ 3×N', $quotaItems);
+        $formulas = array_column($card['formulas'], 'expr', 'name');
+        $this->assertStringContainsString('duePool < 1×N', $formulas['③ Phân suất — câu mới']);
+        $this->assertSame(['Yếu', 'Sắp quên', 'Mới'], array_column($card['table'], 'bucket'));
+        $this->assertStringContainsString('Đến hạn', $card['table'][0]['due']);
+        $this->assertStringContainsString('Đã đến hạn', $card['table'][1]['due']);
+        $this->assertSame('—', $card['table'][2]['due']);
+        $this->assertSame(['Q4001', 'Q4002'], array_column($card['resting'], 'code'));
+        $this->assertSame(['Nghỉ serve', 'Thrash'], array_column($card['resting'], 'reason'));
+        $this->assertStringContainsString('Đến hạn', $card['resting'][0]['due']);
+        $this->assertStringContainsString('Đã đến hạn', $card['resting'][1]['due']);
+        $this->assertSame(['Sai', 'Đúng', 'Đúng'], array_column($card['graded'], 'result'));
+        $this->assertSame(['3,00', '7,00', '—'], array_column($card['graded'], 's_before'));
+        $this->assertSame(['1,00', '14,00', '3,00'], array_column($card['graded'], 's_after'));
+        $this->assertStringContainsString('Sai → về bậc 1', $card['graded'][0]['note']);
+        $this->assertStringContainsString('bảng chấm điểm', $card['closing']);
+        $formulaNames = array_column($card['formulas'], 'name');
+        $this->assertSame('Thứ tự pipeline', $formulaNames[0]);
+        $this->assertStringStartsWith('① Lọc', $formulaNames[1]);
+        $this->assertStringStartsWith('②', $formulaNames[2]);
+        $this->assertStringStartsWith('③', $formulaNames[4]);
+    }
+
     public function test_brief_tells_a_balanced_session_in_business_language(): void
     {
         $log = <<<'LOG'

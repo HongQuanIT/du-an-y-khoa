@@ -1,5 +1,43 @@
 # Changelog
 
+## 2026-10-05
+
+### Fix — Thrash: giữ ≥3 (72h+2 phiên), nặng từ ≥5 → 7 ngày
+
+- Tầng vừa giữ như cũ: sai ≥3 → 72h + 2 phiên.
+- Tầng nặng: ngưỡng từ ≥6 xuống **≥5** → nghỉ 7 ngày.
+
+### Fix — Adaptive briefing ghi pipeline đúng thứ tự
+
+- Log/UI V2 trình bày rõ **① Lọc → ② Phân nhóm → ③ Phân suất** (summary, 3 thẻ stage, công thức).
+- Lọc: thrash / cooldown thích ứng / version. Tỉ lệ câu mới thuộc **Phân suất** (30/20/10), không phải Lọc.
+
+### Fix — Cooldown 20h chỉ sau phiên thích ứng
+
+- `last_served_at` chỉ ghi khi tạo phiên `weak_topics`. Luyện theo bài / custom không kích hoạt nghỉ serve.
+- Độ bền S, thrash, weakness vẫn cập nhật khi chấm ở mọi loại phiên.
+
+### Feat — Adaptive briefing: bảng chấm điểm sau phiên
+
+- Sau khi hoàn thành phiên thích ứng, ghi bước `graded` vào `adaptive.log` (cùng `trace_id`).
+- `/admin/adaptive-briefing`: bảng **Chấm điểm sau phiên** — đúng/sai, S trước→sau, t/hạn, Due mới, W, streak, 5 lần gần, ghi chú quy tắc bậc.
+
+### Feat — Adaptive briefing: bảng câu nghỉ + cột Due
+
+- `/admin/adaptive-briefing` (V2): bảng chọn câu có cột **Due** (`last_graded + S`).
+- Thêm bảng **Câu đang nghỉ** (thrash / nghỉ serve 20h) kèm hết nghỉ, due, R, S.
+- Selector ghi `filter.resting[]` vào `adaptive.log` (cần tạo phiên mới để thấy; log cũ không có danh sách nghỉ).
+
+## 2026-10-04
+
+### Feat — Phiên thích ứng V2: Lọc → Phân nhóm → Phân suất
+
+- Selector chọn câu theo khung mới: lọc (thrash / nghỉ 20 giờ / phiên bản nội dung), nhóm Yếu·Sắp quên·Mới, suất câu mới 30%/20%/10% theo tồn đọng due (chung mọi mode).
+- Câu mới ưu tiên bài học dang dở; weakness dùng cửa sổ 5 lần gần nhất; thrash: ≥3 → 72h+2 phiên, ≥5 → 7 ngày.
+- Độ bền thang bậc **1·3·7·14·30·60** ngày; `R = 0,9^(t/S)`; sai → bậc 1; đúng đúng hạn → lên bậc; đúng sớm → giữ bậc.
+- Log `adaptive.log` + `/admin/adaptive-briefing` kể theo bucket/suất/due band (pipeline `filter_group_quota_v2`). Nên xóa log cũ sau deploy.
+- Tham chiếu: `mophong/` (TS + đặc tả + kế hoạch triển khai).
+
 ## 2026-10-03
 
 ### Fix — Popup xác nhận submit form cũ

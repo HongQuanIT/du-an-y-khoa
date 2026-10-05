@@ -25,6 +25,11 @@ final class AdaptiveTrace
         self::$runId = null;
     }
 
+    public static function id(): ?string
+    {
+        return self::$runId;
+    }
+
     /**
      * @param  array<string, mixed>  $context
      */
@@ -34,7 +39,17 @@ final class AdaptiveTrace
             self::begin();
         }
 
-        $context['trace_id'] = self::$runId;
+        self::writeWithTrace(self::$runId, $step, $context);
+    }
+
+    /**
+     * Ghi thêm bước vào cùng lần chọn câu (vd. bảng chấm sau khi hoàn thành phiên).
+     *
+     * @param  array<string, mixed>  $context
+     */
+    public static function writeWithTrace(string $traceId, string $step, array $context = []): void
+    {
+        $context['trace_id'] = $traceId;
 
         Log::channel('adaptive')->debug('[adaptive] '.$step, $context);
     }

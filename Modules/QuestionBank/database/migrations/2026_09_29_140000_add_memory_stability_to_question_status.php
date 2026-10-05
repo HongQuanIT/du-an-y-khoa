@@ -94,11 +94,14 @@ return new class extends Migration
                 $lastGraded = null;
             }
 
+            $answeredAt = $attempt->answered_at;
             $stability = MemoryStability::afterGrade(
                 $stability,
                 (int) $attempt->is_correct === 1,
+                $lastGraded,
+                $answeredAt,
             );
-            $lastGraded = $attempt->answered_at ?? $lastGraded;
+            $lastGraded = $answeredAt ?? $lastGraded;
         }
 
         $flush();

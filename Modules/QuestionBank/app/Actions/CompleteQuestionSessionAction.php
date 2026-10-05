@@ -13,15 +13,15 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Modules\QuestionBank\Data\QuestionSessionProgressed;
 use Modules\QuestionBank\Enums\SessionMode;
+use Modules\QuestionBank\Enums\SessionSource;
 use Modules\QuestionBank\Enums\SessionStatus;
-use Modules\QuestionBank\Enums\UserQuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionSession;
-use Modules\QuestionBank\Models\QuestionStatus as UserQuestionStatusModel;
 use Modules\QuestionBank\Services\QuestionGrader;
 use Modules\QuestionBank\Services\QuestionSessionSnapshots;
-use Modules\QuestionBank\Support\MemoryStability;
+use Modules\QuestionBank\Support\AdaptiveTrace;
+use Modules\QuestionBank\Support\SyncUserQuestionLearningState;
 use RuntimeException;
 
 /**
@@ -38,6 +38,7 @@ final class CompleteQuestionSessionAction
     public function __construct(
         private readonly QuestionGrader $grader,
         private readonly QuestionSessionSnapshots $snapshots,
+        private readonly SyncUserQuestionLearningState $learningState,
     ) {}
 
     public function handle(QuestionSession $session): QuestionSession
@@ -71,6 +72,9 @@ final class CompleteQuestionSessionAction
                 ->get()
                 ->keyBy(fn (QuestionAttempt $attempt): string => (string) $attempt->question_id);
             $now = Carbon::now();
+            $filters = is_array($currentSession->filters) ? $currentSession->filters : [];
+            /** @var array<string, array<string, mixed>> $gradeReports */
+            $gradeReports = is_array($filters['adaptive_grades'] ?? null) ? $filters['adaptive_grades'] : [];
 
             foreach ($questionIds as $questionId) {
                 $question = $questions[$questionId] ?? null;
@@ -92,15 +96,15 @@ final class CompleteQuestionSessionAction
                         ])->save();
                     }
 
-                    if ($this->liveQuestionExists($question)) {
-                        $this->syncQuestionStatus(
+                    $shouldSyncLearning = $currentSession->mode === SessionMode::Exam || ! $wasGraded;
+                    if ($shouldSyncLearning && $this->liveQuestionExists($question)) {
+                        $gradeReports[$questionId] = $this->learningState->applyGraded(
                             (int) $currentSession->user_id,
                             $question,
-                            $attempt->is_correct
-                                ? UserQuestionStatus::Correct
-                                : UserQuestionStatus::Incorrect,
+                            (bool) $attempt->is_correct,
                             $attempt->answered_at ?? $now,
-                            $currentSession->mode === SessionMode::Exam || ! $wasGraded,
+                            (int) ($attempt->time_spent_seconds ?? 60),
+                            true,
                         );
                     }
 
@@ -112,12 +116,10 @@ final class CompleteQuestionSessionAction
                 }
 
                 if ($this->liveQuestionExists($question)) {
-                    $this->syncQuestionStatus(
+                    $gradeReports[$questionId] = $this->learningState->applyOmitted(
                         (int) $currentSession->user_id,
                         $question,
-                        UserQuestionStatus::Omitted,
                         $now,
-                        true,
                     );
                 }
             }
@@ -125,11 +127,14 @@ final class CompleteQuestionSessionAction
             $attempts = QuestionAttempt::query()
                 ->where('session_id', $currentSession->getKey())
                 ->whereIn('question_id', $questionIds)
-                ->get(['selected_option_ids', 'is_correct']);
+                ->get(['question_id', 'selected_option_ids', 'is_correct', 'time_spent_seconds']);
+
+            $filters['adaptive_grades'] = $gradeReports;
 
             $currentSession->forceFill([
                 'status' => SessionStatus::Completed,
                 'paused_state' => null,
+                'filters' => $filters,
                 'total' => count($questionIds),
                 'answered_count' => $attempts
                     ->filter(fn (QuestionAttempt $attempt): bool => ($attempt->selected_option_ids ?? []) !== [])
@@ -169,9 +174,85 @@ final class CompleteQuestionSessionAction
                 ],
                 context: new AuditContext(sessionId: (string) $completedSession->getKey()),
             );
+
+            $this->logAdaptiveGradedTable($completedSession);
         }
 
         return $completedSession;
+    }
+
+    private function logAdaptiveGradedTable(QuestionSession $session): void
+    {
+        if ($session->source !== SessionSource::WeakTopics) {
+            return;
+        }
+
+        $filters = is_array($session->filters) ? $session->filters : [];
+        $traceId = isset($filters['adaptive_trace_id']) ? (string) $filters['adaptive_trace_id'] : '';
+        if ($traceId === '') {
+            return;
+        }
+
+        /** @var array<string, array<string, mixed>> $grades */
+        $grades = is_array($filters['adaptive_grades'] ?? null) ? $filters['adaptive_grades'] : [];
+        $questionIds = array_values(array_unique(array_map('strval', $session->question_ids ?? [])));
+        $items = [];
+        foreach ($questionIds as $index => $questionId) {
+            $row = $grades[$questionId] ?? null;
+            if (! is_array($row)) {
+                $items[] = [
+                    'position' => $index + 1,
+                    'question_id' => $questionId,
+                    'result' => 'unknown',
+                    'valid' => null,
+                    's_before' => null,
+                    's_after' => null,
+                    't_days' => null,
+                    'was_due' => null,
+                    'weakness_after' => null,
+                    'wrong_streak' => null,
+                    'due_at' => null,
+                    'time_spent_seconds' => null,
+                    'note' => 'Không có báo cáo chấm',
+                ];
+
+                continue;
+            }
+
+            $items[] = [
+                'position' => $index + 1,
+                'question_id' => $questionId,
+                'result' => (string) ($row['result'] ?? 'unknown'),
+                'valid' => $row['valid'] ?? null,
+                'learning_updated' => $row['learning_updated'] ?? null,
+                's_before' => $row['s_before'] ?? null,
+                's_after' => $row['s_after'] ?? null,
+                't_days' => $row['t_days'] ?? null,
+                'was_due' => $row['was_due'] ?? null,
+                'weakness_after' => $row['weakness_after'] ?? null,
+                'wrong_streak' => $row['wrong_streak'] ?? null,
+                'recent_results' => $row['recent_results'] ?? [],
+                'due_at' => $row['due_at'] ?? null,
+                'thrash_blocked_until' => $row['thrash_blocked_until'] ?? null,
+                'time_spent_seconds' => $row['time_spent_seconds'] ?? null,
+                'version_reset' => $row['version_reset'] ?? false,
+                'note' => $row['note'] ?? null,
+            ];
+        }
+
+        $correct = count(array_filter($items, static fn (array $i): bool => ($i['result'] ?? '') === 'correct'));
+        $incorrect = count(array_filter($items, static fn (array $i): bool => ($i['result'] ?? '') === 'incorrect'));
+        $omitted = count(array_filter($items, static fn (array $i): bool => ($i['result'] ?? '') === 'omitted'));
+
+        AdaptiveTrace::writeWithTrace($traceId, 'graded', [
+            'session_id' => (string) $session->getKey(),
+            'user_id' => (int) $session->user_id,
+            'total' => count($items),
+            'correct_count' => $correct,
+            'incorrect_count' => $incorrect,
+            'omitted_count' => $omitted,
+            'items' => $items,
+        ]);
     }
 
     /**
@@ -187,65 +268,6 @@ final class CompleteQuestionSessionAction
             'intval',
             $attempt->selected_option_ids ?? [],
         )));
-    }
-
-    private function syncQuestionStatus(
-        int $userId,
-        Question $question,
-        UserQuestionStatus $nextStatus,
-        Carbon $attemptedAt,
-        bool $incrementAttempts,
-    ): void {
-        $status = UserQuestionStatusModel::firstOrNew([
-            'user_id' => $userId,
-            'question_id' => $question->getKey(),
-        ]);
-        $attemptsCount = (int) ($status->attempts_count ?? 0);
-        $correctCount = (int) ($status->correct_count ?? 0);
-        $wrongCount = (int) ($status->wrong_count ?? 0);
-        $omittedCount = (int) ($status->omitted_count ?? 0);
-
-        if ($incrementAttempts) {
-            $attemptsCount++;
-            match ($nextStatus) {
-                UserQuestionStatus::Correct => $correctCount++,
-                UserQuestionStatus::Incorrect => $wrongCount++,
-                UserQuestionStatus::Omitted => $omittedCount++,
-                default => null,
-            };
-        } elseif (! $status->exists) {
-            $attemptsCount = 1;
-            match ($nextStatus) {
-                UserQuestionStatus::Correct => $correctCount = 1,
-                UserQuestionStatus::Incorrect => $wrongCount = 1,
-                UserQuestionStatus::Omitted => $omittedCount = 1,
-                default => null,
-            };
-        }
-
-        $attributes = [
-            'status' => $nextStatus,
-            'attempts_count' => $attemptsCount,
-            'correct_count' => $correctCount,
-            'wrong_count' => $wrongCount,
-            'omitted_count' => $omittedCount,
-            'last_attempt_at' => $attemptedAt,
-            'last_seen_at' => $attemptedAt,
-            'last_correct_at' => $nextStatus === UserQuestionStatus::Correct
-                ? $attemptedAt
-                : $status->last_correct_at,
-        ];
-
-        $graded = in_array($nextStatus, [UserQuestionStatus::Correct, UserQuestionStatus::Incorrect], true);
-        if ($graded && ($incrementAttempts || ! $status->exists)) {
-            $attributes['memory_stability_days'] = MemoryStability::afterGrade(
-                $status->memory_stability_days !== null ? (float) $status->memory_stability_days : null,
-                $nextStatus === UserQuestionStatus::Correct,
-            );
-            $attributes['last_graded_at'] = $attemptedAt;
-        }
-
-        $status->fill($attributes)->save();
     }
 
     private function liveQuestionExists(Question $question): bool

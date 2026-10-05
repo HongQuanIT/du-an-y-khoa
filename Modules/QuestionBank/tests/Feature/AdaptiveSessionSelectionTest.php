@@ -37,7 +37,7 @@ use Tests\Support\CreatesMedicalTaxonomy;
 use Tests\TestCase;
 
 /**
- * Adaptive picker: Weakness + Memory × mode + cooldown (see docs/adaptive-session-algorithm.md).
+ * Adaptive V2: filter → group → quota (mophong khung).
  */
 final class AdaptiveSessionSelectionTest extends TestCase
 {
@@ -100,41 +100,45 @@ final class AdaptiveSessionSelectionTest extends TestCase
         $cct->lessons()->sync([$this->lesson->id]);
     }
 
-    public function test_weak_focus_prefers_high_weakness_over_long_unseen_strong(): void
+    public function test_weak_focus_picks_from_weak_pool(): void
     {
         $weakRecent = $this->seedQuestion('Weak recent');
         $strongStale = $this->seedQuestion('Strong stale');
 
-        // Weak + vừa gặp: W≈0.75, M thấp
         QuestionStatus::query()->create([
             'user_id' => $this->user->id,
             'question_id' => $weakRecent->getKey(),
             'status' => UserQuestionStatus::Incorrect,
-            'attempts_count' => 10,
-            'correct_count' => 2,
-            'wrong_count' => 8,
+            'attempts_count' => 5,
+            'correct_count' => 1,
+            'wrong_count' => 4,
             'omitted_count' => 0,
-            'last_attempt_at' => now()->subHour(),
-            'last_seen_at' => now()->subHour(),
-            'last_graded_at' => now()->subHour(),
-            'memory_stability_days' => 0.5,
+            'recent_results' => [false, false, false, false, true],
+            'wrong_streak' => 0,
+            'last_attempt_at' => now()->subDays(2),
+            'last_seen_at' => now()->subDays(2),
+            'last_graded_at' => now()->subDays(2),
+            'memory_stability_days' => 1,
             'last_served_at' => now()->subDays(10),
+            'content_version' => 1,
         ]);
 
-        // Mạnh + lâu chưa gặp: W thấp, M cao
         QuestionStatus::query()->create([
             'user_id' => $this->user->id,
             'question_id' => $strongStale->getKey(),
             'status' => UserQuestionStatus::Correct,
-            'attempts_count' => 10,
-            'correct_count' => 9,
-            'wrong_count' => 1,
+            'attempts_count' => 5,
+            'correct_count' => 5,
+            'wrong_count' => 0,
             'omitted_count' => 0,
+            'recent_results' => [true, true, true, true, true],
+            'wrong_streak' => 0,
             'last_attempt_at' => now()->subDays(40),
             'last_seen_at' => now()->subDays(40),
             'last_graded_at' => now()->subDays(40),
             'memory_stability_days' => 20,
             'last_served_at' => now()->subDays(40),
+            'content_version' => 1,
         ]);
 
         $selector = app(AdaptiveQuestionSelector::class);
@@ -146,110 +150,91 @@ final class AdaptiveSessionSelectionTest extends TestCase
             adaptiveFocus: 'weak_focus',
         );
 
-        $weakWins = 0;
-        for ($i = 0; $i < 80; $i++) {
-            $picked = $selector->pick((int) $this->user->id, 1, true, $data);
-            if (($picked[0] ?? null) === (string) $weakRecent->getKey()) {
-                $weakWins++;
-            }
-        }
-
-        // weak_focus: câu yếu phải thắng rõ trong multi-trial (không cần 100%).
-        $this->assertGreaterThanOrEqual(48, $weakWins, "weak_focus should prefer weak question (wins={$weakWins}/80)");
+        $picked = $selector->pick((int) $this->user->id, 1, true, $data);
+        $this->assertSame([(string) $weakRecent->getKey()], $picked);
     }
 
-    public function test_retention_prefers_long_unseen_strong_over_weak_recent(): void
+    public function test_retention_picks_due_over_weak_not_due(): void
     {
         $weakRecent = $this->seedQuestion('Weak recent retention');
         $strongStale = $this->seedQuestion('Strong stale retention');
 
+        // Yếu nhưng chưa đến hạn (t < S)
         QuestionStatus::query()->create([
             'user_id' => $this->user->id,
             'question_id' => $weakRecent->getKey(),
             'status' => UserQuestionStatus::Incorrect,
-            'attempts_count' => 10,
-            'correct_count' => 1,
-            'wrong_count' => 9,
+            'attempts_count' => 5,
+            'correct_count' => 0,
+            'wrong_count' => 5,
             'omitted_count' => 0,
-            'last_attempt_at' => now()->subHour(),
-            'last_seen_at' => now()->subHour(),
-            'last_graded_at' => now()->subHour(),
-            'memory_stability_days' => 0.5,
+            'recent_results' => [false, false, false, false, false],
+            'wrong_streak' => 2,
+            'last_attempt_at' => now()->subHours(2),
+            'last_seen_at' => now()->subHours(2),
+            'last_graded_at' => now()->subHours(2),
+            'memory_stability_days' => 3,
             'last_served_at' => now()->subDays(10),
+            'content_version' => 1,
         ]);
 
         QuestionStatus::query()->create([
             'user_id' => $this->user->id,
             'question_id' => $strongStale->getKey(),
             'status' => UserQuestionStatus::Correct,
-            'attempts_count' => 10,
-            'correct_count' => 8,
-            'wrong_count' => 2,
+            'attempts_count' => 5,
+            'correct_count' => 5,
+            'wrong_count' => 0,
             'omitted_count' => 0,
+            'recent_results' => [true, true, true, true, true],
+            'wrong_streak' => 0,
             'last_attempt_at' => now()->subDays(40),
             'last_seen_at' => now()->subDays(40),
             'last_graded_at' => now()->subDays(40),
             'memory_stability_days' => 20,
             'last_served_at' => now()->subDays(40),
+            'content_version' => 1,
         ]);
 
-        $selector = app(AdaptiveQuestionSelector::class);
-        $data = new CreateSessionData(
-            mode: SessionMode::Study,
-            source: SessionSource::WeakTopics,
-            count: 1,
-            blueprintId: $this->blueprint->id,
-            adaptiveFocus: 'retention',
+        $picked = app(AdaptiveQuestionSelector::class)->pick(
+            (int) $this->user->id,
+            1,
+            true,
+            new CreateSessionData(
+                mode: SessionMode::Study,
+                source: SessionSource::WeakTopics,
+                count: 1,
+                blueprintId: $this->blueprint->id,
+                adaptiveFocus: 'retention',
+            ),
         );
 
-        $staleWins = 0;
-        for ($i = 0; $i < 40; $i++) {
-            $picked = $selector->pick((int) $this->user->id, 1, true, $data);
-            if (($picked[0] ?? null) === (string) $strongStale->getKey()) {
-                $staleWins++;
-            }
-        }
-
-        $this->assertGreaterThanOrEqual(24, $staleWins, "retention should prefer stale strong (wins={$staleWins}/40)");
+        $this->assertSame([(string) $strongStale->getKey()], $picked);
     }
 
-    public function test_repeat_penalty_depends_on_the_newest_session_inside_two_days(): void
+    public function test_lesson_session_does_not_set_adaptive_serve_cooldown(): void
     {
-        $newest = $this->seedQuestion('Newest session');
-        $previous = $this->seedQuestion('Previous session');
-        $aged = $this->seedQuestion('Older than two days');
-        $released = $this->seedQuestion('Two later sessions');
+        $question = $this->seedQuestion('Practiced in lesson session');
 
-        $this->recordServe($newest, now()->subHour());
-        $this->recordServe($previous, now()->subHours(20));
-        $this->recordServe($aged, now()->subDays(10));
-        $this->recordServe($released, now()->subHours(26));
+        app(\Modules\QuestionBank\Actions\CreateQuestionSessionAction::class)->handle(
+            $this->user,
+            new CreateSessionData(
+                mode: SessionMode::Study,
+                source: SessionSource::Custom,
+                count: 1,
+                blueprintId: $this->blueprint->id,
+                lessonIds: [$this->lesson->id],
+            ),
+        );
 
-        QuestionSession::factory()->create([
-            'user_id' => $this->user->id,
-            'total' => 1,
-            'question_ids' => [],
-            'created_at' => now()->subHours(25),
-        ]);
-        QuestionSession::factory()->create([
-            'user_id' => $this->user->id,
-            'total' => 1,
-            'question_ids' => [],
-            'created_at' => now()->subHours(5),
-        ]);
+        $status = QuestionStatus::query()
+            ->where('user_id', $this->user->id)
+            ->where('question_id', $question->getKey())
+            ->first();
 
-        $cooldowns = [];
-        Log::listen(function (MessageLogged $event) use (&$cooldowns): void {
-            if ($event->message !== '[adaptive] review_scores') {
-                return;
-            }
+        $this->assertTrue($status === null || $status->last_served_at === null);
 
-            foreach ($event->context['top'] ?? [] as $row) {
-                $cooldowns[(string) $row['question_id']] = $row['cooldown'];
-            }
-        });
-
-        app(AdaptiveQuestionSelector::class)->pick(
+        $picked = app(AdaptiveQuestionSelector::class)->pick(
             (int) $this->user->id,
             1,
             true,
@@ -262,13 +247,52 @@ final class AdaptiveSessionSelectionTest extends TestCase
             ),
         );
 
-        $this->assertSame(0.1, $cooldowns[(string) $newest->getKey()]);
-        $this->assertSame(0.3, $cooldowns[(string) $previous->getKey()]);
-        $this->assertSame(1.0, $cooldowns[(string) $aged->getKey()]);
-        $this->assertSame(1.0, $cooldowns[(string) $released->getKey()]);
+        $this->assertSame([(string) $question->getKey()], $picked);
     }
 
-    public function test_same_elapsed_time_lower_stability_has_higher_urgency(): void
+    public function test_cooldown_excludes_recently_served_questions(): void
+    {
+        $fresh = $this->seedQuestion('Served one hour ago');
+        $ok = $this->seedQuestion('Served long ago');
+
+        $this->recordServe($fresh, now()->subHour());
+        $this->recordServe($ok, now()->subDays(10));
+
+        $excluded = null;
+        $resting = null;
+        Log::listen(function (MessageLogged $event) use (&$excluded, &$resting): void {
+            if ($event->message === '[adaptive] filter') {
+                $excluded = $event->context['excluded'] ?? null;
+                $resting = $event->context['resting'] ?? null;
+            }
+        });
+
+        $picked = app(AdaptiveQuestionSelector::class)->pick(
+            (int) $this->user->id,
+            1,
+            true,
+            new CreateSessionData(
+                mode: SessionMode::Study,
+                source: SessionSource::WeakTopics,
+                count: 1,
+                blueprintId: $this->blueprint->id,
+                adaptiveFocus: 'balanced',
+            ),
+        );
+
+        $this->assertSame([(string) $ok->getKey()], $picked);
+        $this->assertIsArray($excluded);
+        $this->assertGreaterThanOrEqual(1, (int) ($excluded['cooldown'] ?? 0));
+        $this->assertIsArray($resting);
+        $restIds = array_column($resting, 'question_id');
+        $this->assertContains((string) $fresh->getKey(), $restIds);
+        $cooldownRow = collect($resting)->firstWhere('question_id', (string) $fresh->getKey());
+        $this->assertSame('cooldown', $cooldownRow['reason'] ?? null);
+        $this->assertNotEmpty($cooldownRow['due_at'] ?? null);
+        $this->assertNotEmpty($cooldownRow['rest_until'] ?? null);
+    }
+
+    public function test_due_pool_orders_lower_retention_first_for_retention_mode(): void
     {
         $fragile = $this->seedQuestion('Fragile');
         $durable = $this->seedQuestion('Durable');
@@ -283,26 +307,18 @@ final class AdaptiveSessionSelectionTest extends TestCase
                 'correct_count' => 3,
                 'wrong_count' => 1,
                 'omitted_count' => 0,
+                'recent_results' => [true, true, true, false],
+                'wrong_streak' => 0,
                 'last_attempt_at' => $gradedAt,
                 'last_seen_at' => $gradedAt,
                 'last_graded_at' => $gradedAt,
                 'memory_stability_days' => $stability,
                 'last_served_at' => now()->subDays(30),
+                'content_version' => 1,
             ]);
         }
 
-        $memory = [];
-        Log::listen(function (MessageLogged $event) use (&$memory): void {
-            if ($event->message !== '[adaptive] review_scores') {
-                return;
-            }
-
-            foreach ($event->context['top'] ?? [] as $row) {
-                $memory[(string) $row['question_id']] = $row['memory'];
-            }
-        });
-
-        app(AdaptiveQuestionSelector::class)->pick(
+        $picked = app(AdaptiveQuestionSelector::class)->pick(
             (int) $this->user->id,
             1,
             true,
@@ -315,8 +331,7 @@ final class AdaptiveSessionSelectionTest extends TestCase
             ),
         );
 
-        $this->assertGreaterThan(0.9, $memory[(string) $fragile->getKey()]);
-        $this->assertLessThan(0.4, $memory[(string) $durable->getKey()]);
+        $this->assertSame([(string) $fragile->getKey()], $picked);
     }
 
     public function test_correct_doubles_stability_and_omit_does_not_move_the_clock(): void
@@ -340,16 +355,18 @@ final class AdaptiveSessionSelectionTest extends TestCase
             ->where('is_correct', true)
             ->value('id');
 
-        app(AnswerQuestionAction::class)->handle($session, $graded, [$correctId], autoComplete: false);
+        app(AnswerQuestionAction::class)->handle($session, $graded, [$correctId], timeSpentSeconds: 30, autoComplete: false);
 
         $status = QuestionStatus::query()->where('question_id', $graded->getKey())->firstOrFail();
-        $this->assertEquals(2.0, (float) $status->memory_stability_days);
+        // Lần đầu đúng → bậc 2 (S = 3 ngày)
+        $this->assertEquals(3.0, (float) $status->memory_stability_days);
         $this->assertNotNull($status->last_graded_at);
+        $this->assertSame([true], $status->recent_results);
 
         app(CompleteQuestionSessionAction::class)->handle($session->fresh());
 
         $status->refresh();
-        $this->assertEquals(2.0, (float) $status->memory_stability_days);
+        $this->assertEquals(3.0, (float) $status->memory_stability_days);
 
         $omitted = QuestionStatus::query()->where('question_id', $skipped->getKey())->firstOrFail();
         $this->assertSame(UserQuestionStatus::Omitted, $omitted->status);
@@ -357,6 +374,7 @@ final class AdaptiveSessionSelectionTest extends TestCase
         $this->assertNull($omitted->last_graded_at);
         $this->assertNotNull($omitted->last_seen_at);
 
+        // Đúng sớm (t < S): giữ bậc 2 / S = 3
         $again = QuestionSession::factory()->create([
             'user_id' => $this->user->id,
             'mode' => SessionMode::Study,
@@ -366,13 +384,166 @@ final class AdaptiveSessionSelectionTest extends TestCase
             'answered_count' => 0,
             'correct_count' => 0,
         ]);
+        app(QuestionSessionSnapshots::class)->capture($again);
 
-        app(AnswerQuestionAction::class)->handle($again, $graded, [$correctId], autoComplete: false);
+        app(AnswerQuestionAction::class)->handle($again, $graded, [$correctId], timeSpentSeconds: 30, autoComplete: false);
 
-        $this->assertEquals(4.0, (float) $status->fresh()->memory_stability_days);
+        $this->assertEquals(3.0, (float) $status->fresh()->memory_stability_days);
+
+        // Đúng đúng hạn → lên bậc 3 / S = 7
+        $status->forceFill(['last_graded_at' => now()->subDays(4)])->save();
+        $dueSession = QuestionSession::factory()->create([
+            'user_id' => $this->user->id,
+            'mode' => SessionMode::Study,
+            'status' => SessionStatus::Active,
+            'question_ids' => [(string) $graded->getKey()],
+            'total' => 1,
+            'answered_count' => 0,
+            'correct_count' => 0,
+        ]);
+        app(QuestionSessionSnapshots::class)->capture($dueSession);
+        app(AnswerQuestionAction::class)->handle($dueSession, $graded, [$correctId], timeSpentSeconds: 30, autoComplete: false);
+        $this->assertEquals(7.0, (float) $status->fresh()->memory_stability_days);
     }
 
-    public function test_adaptive_session_store_logs_and_returns_requested_count(): void
+    public function test_new_question_reason_includes_lesson_name(): void
+    {
+        $oldLesson = $this->lesson;
+        $newLesson = $this->makeLesson([
+            'name' => 'Bài học mới tim mạch',
+            'slug' => 'bai-hoc-moi-tim-mach',
+        ]);
+        CoreClinicalTopic::query()->firstOrFail()->lessons()->syncWithoutDetaching([$newLesson->id]);
+
+        // Một câu đã chấm thuộc bài cũ → bài đang học; câu unseen thuộc cùng bài + bài mới.
+        $gradedOld = $this->seedQuestion('Graded in old lesson');
+        $newInOld = $this->seedQuestion('New in old lesson');
+        $newInNew = Question::factory()->create([
+            'stem' => 'New in brand-new lesson',
+            'status' => PublicationStatus::Published,
+            'is_free' => true,
+            'difficulty' => Difficulty::Medium,
+            'published_version' => 1,
+        ]);
+        $newInNew->lessons()->sync([$newLesson->id]);
+        $newInNew->blueprints()->sync([$this->blueprint->id]);
+        $newInNew->professions()->sync([$this->profession->id]);
+        QuestionOption::factory()->create([
+            'question_id' => $newInNew->getKey(),
+            'is_correct' => true,
+            'order' => 1,
+        ]);
+
+        QuestionStatus::query()->create([
+            'user_id' => $this->user->id,
+            'question_id' => $gradedOld->getKey(),
+            'status' => UserQuestionStatus::Correct,
+            'attempts_count' => 2,
+            'correct_count' => 2,
+            'wrong_count' => 0,
+            'omitted_count' => 0,
+            'recent_results' => [true, true],
+            'wrong_streak' => 0,
+            'last_attempt_at' => now()->subDays(10),
+            'last_seen_at' => now()->subDays(10),
+            'last_graded_at' => now()->subDays(10),
+            'memory_stability_days' => 30,
+            'last_served_at' => now()->subDays(30),
+            'content_version' => 1,
+        ]);
+
+        $reasons = [];
+        Log::listen(function (MessageLogged $event) use (&$reasons): void {
+            if ($event->message === '[adaptive] result') {
+                foreach ((array) ($event->context['items'] ?? []) as $item) {
+                    if (($item['bucket'] ?? null) === 'moi') {
+                        $reasons[(string) $item['question_id']] = (string) ($item['reason'] ?? '');
+                    }
+                }
+            }
+        });
+
+        app(AdaptiveQuestionSelector::class)->pick(
+            (int) $this->user->id,
+            2,
+            true,
+            new CreateSessionData(
+                mode: SessionMode::Study,
+                source: SessionSource::WeakTopics,
+                count: 2,
+                blueprintId: $this->blueprint->id,
+                adaptiveFocus: 'balanced',
+            ),
+        );
+
+        $this->assertArrayHasKey((string) $newInOld->getKey(), $reasons);
+        $this->assertStringContainsString('Câu mới — tiếp tục bài đang học:', $reasons[(string) $newInOld->getKey()]);
+        $this->assertStringContainsString($oldLesson->name, $reasons[(string) $newInOld->getKey()]);
+
+        // Chỉ còn unseen ở bài mới → nhãn "bài học mới".
+        $reasons = [];
+        $newInOld->delete();
+        app(AdaptiveQuestionSelector::class)->pick(
+            (int) $this->user->id,
+            1,
+            true,
+            new CreateSessionData(
+                mode: SessionMode::Study,
+                source: SessionSource::WeakTopics,
+                count: 1,
+                blueprintId: $this->blueprint->id,
+                adaptiveFocus: 'balanced',
+            ),
+        );
+        $this->assertArrayHasKey((string) $newInNew->getKey(), $reasons);
+        $this->assertStringContainsString('Câu mới — bài học mới:', $reasons[(string) $newInNew->getKey()]);
+        $this->assertStringContainsString($newLesson->name, $reasons[(string) $newInNew->getKey()]);
+    }
+
+    public function test_completing_adaptive_session_logs_graded_table(): void
+    {
+        $question = $this->seedQuestion('Grade log question');
+        $graded = null;
+        Log::listen(function (MessageLogged $event) use (&$graded): void {
+            if ($event->message === '[adaptive] graded') {
+                $graded = $event->context;
+            }
+        });
+
+        $this->actingAs($this->user)
+            ->post(route('qbank.store'), [
+                'mode' => SessionMode::Study->value,
+                'source' => 'weak_topics',
+                'adaptive_focus' => 'balanced',
+                'count' => 1,
+                'blueprint_id' => $this->blueprint->id,
+            ])
+            ->assertRedirect();
+
+        $session = QuestionSession::query()->latest('id')->firstOrFail();
+        $this->assertNotEmpty($session->filters['adaptive_trace_id'] ?? null);
+        $pickedId = (string) ($session->question_ids[0] ?? '');
+        $this->assertSame((string) $question->getKey(), $pickedId);
+        $picked = Question::query()->findOrFail($pickedId);
+
+        $correctId = (int) QuestionOption::query()
+            ->where('question_id', $picked->getKey())
+            ->where('is_correct', true)
+            ->value('id');
+
+        app(AnswerQuestionAction::class)->handle($session, $picked, [$correctId], timeSpentSeconds: 30, autoComplete: true);
+
+        $this->assertIsArray($graded);
+        $this->assertSame(1, (int) ($graded['total'] ?? 0));
+        $this->assertSame(1, (int) ($graded['correct_count'] ?? 0));
+        $item = $graded['items'][0] ?? [];
+        $this->assertSame('correct', $item['result'] ?? null);
+        $this->assertSame(3.0, (float) ($item['s_after'] ?? 0));
+        $this->assertStringContainsString('Lần đầu đúng', (string) ($item['note'] ?? ''));
+        $this->assertSame($session->filters['adaptive_trace_id'], $graded['trace_id'] ?? null);
+    }
+
+    public function test_adaptive_session_store_logs_v2_steps(): void
     {
         $steps = [];
         Log::listen(function (MessageLogged $event) use (&$steps): void {
@@ -400,10 +571,12 @@ final class AdaptiveSessionSelectionTest extends TestCase
         $this->assertSame('balanced', $session->filters['adaptive_focus']);
         $this->assertCount(2, $session->question_ids);
 
-        $this->assertSame(
-            ['path', 'start', 'pool', 'coverage_split', 'result', 'served'],
-            $steps,
-        );
+        $this->assertContains('start', $steps);
+        $this->assertContains('filter', $steps);
+        $this->assertContains('group', $steps);
+        $this->assertContains('quota', $steps);
+        $this->assertContains('result', $steps);
+        $this->assertContains('served', $steps);
     }
 
     private function seedQuestion(string $stem): Question
@@ -413,6 +586,7 @@ final class AdaptiveSessionSelectionTest extends TestCase
             'status' => PublicationStatus::Published,
             'is_free' => true,
             'difficulty' => Difficulty::Medium,
+            'published_version' => 1,
         ]);
         $question->lessons()->sync([$this->lesson->id]);
         $question->blueprints()->sync([$this->blueprint->id]);
@@ -441,11 +615,14 @@ final class AdaptiveSessionSelectionTest extends TestCase
             'correct_count' => 1,
             'wrong_count' => 3,
             'omitted_count' => 0,
+            'recent_results' => [false, false, false, true],
+            'wrong_streak' => 0,
             'last_attempt_at' => $servedAt,
             'last_seen_at' => $servedAt,
-            'last_graded_at' => $servedAt,
-            'memory_stability_days' => 4,
+            'last_graded_at' => now()->subDays(5),
+            'memory_stability_days' => 1,
             'last_served_at' => $servedAt,
+            'content_version' => 1,
         ]);
     }
 }
