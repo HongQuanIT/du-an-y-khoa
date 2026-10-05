@@ -16,6 +16,7 @@ use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionOption;
 use Modules\QuestionBank\Models\QuestionSession;
+use Modules\QuestionBank\Models\QuestionStatus as UserQuestionStatusModel;
 use Modules\StudyPlan\Actions\CompletePlanTaskAction;
 use Modules\StudyPlan\Enums\PlanStatus;
 use Modules\StudyPlan\Enums\TaskStatus;
@@ -457,7 +458,12 @@ final class StudyPlanFlowTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.flagged', true);
 
-        $this->assertTrue((bool) ($session->refresh()->annotations[$questionId]['flagged'] ?? false));
+        $this->assertTrue(
+            (bool) UserQuestionStatusModel::query()
+                ->where('user_id', $this->user->getKey())
+                ->where('question_id', $questionId)
+                ->value('flagged')
+        );
 
         foreach ($session->question_ids as $index => $id) {
             $q = Question::with('options')->findOrFail($id);
@@ -469,8 +475,8 @@ final class StudyPlanFlowTest extends TestCase
         }
 
         $this->assertTrue(
-            (bool) QuestionAttempt::query()
-                ->where('session_id', $session->getKey())
+            (bool) UserQuestionStatusModel::query()
+                ->where('user_id', $this->user->getKey())
                 ->where('question_id', $questionId)
                 ->value('flagged')
         );

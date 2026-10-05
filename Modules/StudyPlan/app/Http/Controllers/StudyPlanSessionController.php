@@ -16,6 +16,7 @@ use Modules\Personalization\Models\Bookmark;
 use Modules\Personalization\Models\Note;
 use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionSession;
+use Modules\QuestionBank\Models\QuestionStatus as UserQuestionStatusModel;
 use Modules\QuestionBank\Services\QuestionSessionInsights;
 use Modules\QuestionBank\Services\QuestionSessionSnapshots;
 use Modules\StudyPlan\Actions\AnswerPlanQuestionAction;
@@ -74,15 +75,11 @@ final class StudyPlanSessionController extends Controller
             (int) $request->user()->getAuthIdentifier(),
             $questionKey,
         );
-        $flagged = (bool) ($annotation['flagged'] ?? $attempts->get($question->getKey())?->flagged ?? false);
-        $flaggedIds = collect($session->annotations ?? [])
-            ->filter(fn (array $item): bool => (bool) ($item['flagged'] ?? false))
-            ->keys()
-            ->merge(
-                $attempts->filter(fn (QuestionAttempt $attempt): bool => $attempt->flagged)->keys()
-            )
-            ->unique()
-            ->values()
+        $flaggedIds = UserQuestionStatusModel::query()
+            ->where('user_id', $request->user()->getAuthIdentifier())
+            ->where('flagged', true)
+            ->pluck('question_id')
+            ->map(static fn (mixed $id): string => (string) $id)
             ->all();
 
         return view('studyplan::session', [
@@ -104,7 +101,10 @@ final class StudyPlanSessionController extends Controller
                     : ($notePayload['note'] !== '' ? nl2br(e($notePayload['note'])) : ''))
                 : '',
             'stemHtml' => (string) ($annotation['stem_html'] ?? SafeHtml::forDisplay((string) $question->stem)),
-            'flagged' => $flagged,
+            'flagged' => (bool) UserQuestionStatusModel::query()
+                ->where('user_id', $request->user()->getAuthIdentifier())
+                ->where('question_id', $questionKey)
+                ->value('flagged'),
             'flaggedIds' => $flaggedIds,
             'keyInfoUsed' => (bool) ($annotation['key_info_used'] ?? false),
             'attendingTipUsed' => (bool) ($annotation['attending_tip_used'] ?? false),
@@ -281,6 +281,14 @@ final class StudyPlanSessionController extends Controller
         $timeSpent = 0;
         /** @var array<string, array{name: string, correct: int, wrong: int, skipped: int, total: int}> $byTopic */
         $byTopic = [];
+        $flaggedQuestionIds = UserQuestionStatusModel::query()
+            ->where('user_id', $session->user_id)
+            ->where('flagged', true)
+            ->whereIn('question_id', $questionIds)
+            ->pluck('question_id')
+            ->map(static fn (mixed $id): string => (string) $id)
+            ->all();
+        $flaggedQuestionIdSet = array_fill_keys($flaggedQuestionIds, true);
 
         foreach ($questionIds as $questionId) {
             $question = $questions[$questionId] ?? null;
@@ -303,10 +311,7 @@ final class StudyPlanSessionController extends Controller
                 $byTopic[$topicName]['total']++;
             }
 
-            $annotation = ($session->annotations ?? [])[(string) $questionId] ?? [];
-            $flagged = (bool) ($annotation['flagged'] ?? $attempt?->flagged ?? false);
-
-            if ($flagged) {
+            if (isset($flaggedQuestionIdSet[(string) $questionId])) {
                 $flaggedCount++;
             }
 

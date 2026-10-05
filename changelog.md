@@ -2,6 +2,11 @@
 
 ## 2026-10-05
 
+### Fix — Đọc gắn cờ từ tiến độ câu hỏi
+
+- StudyPlan session/summary và session insights lấy trạng thái cờ từ `user_question_statuses`, không còn từ annotations/attempt.
+- Cập nhật test gắn cờ persist vào review cho khớp nguồn mới.
+
 ### Feat — Ghi chú học viên (Module 15)
 
 - Sidebar **Ghi chú** → `/notes`: tìm kiếm (nội dung / môn / bài) + 3 chế độ xem (**Theo môn** · **Theo bài** · **Sổ tay**).

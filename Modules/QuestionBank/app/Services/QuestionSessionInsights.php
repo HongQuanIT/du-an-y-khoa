@@ -48,6 +48,16 @@ final class QuestionSessionInsights
         $timeSpent = 0;
         /** @var array<string, array{name: string, correct: int, wrong: int, skipped: int, total: int}> $byTopic */
         $byTopic = [];
+        $flaggedQuestionIdSet = array_fill_keys(
+            UserQuestionStatusModel::query()
+                ->where('user_id', $session->user_id)
+                ->where('flagged', true)
+                ->whereIn('question_id', $questionIds)
+                ->pluck('question_id')
+                ->map(static fn (mixed $id): string => (string) $id)
+                ->all(),
+            true,
+        );
 
         foreach ($questionIds as $questionId) {
             $question = $questions[(string) $questionId] ?? null;
@@ -69,9 +79,7 @@ final class QuestionSessionInsights
                 $byTopic[$topicName]['total']++;
             }
 
-            $annotation = ($session->annotations ?? [])[(string) $questionId] ?? [];
-            if ((bool) ($annotation['flagged']
-                ?? ($attempt instanceof QuestionAttempt && $attempt->flagged))) {
+            if (isset($flaggedQuestionIdSet[(string) $questionId])) {
                 $flagged++;
             }
 
@@ -150,6 +158,16 @@ final class QuestionSessionInsights
             (int) $session->user_id,
             array_map('strval', $questionIds),
         );
+        $flaggedQuestionIdSet = array_fill_keys(
+            UserQuestionStatusModel::query()
+                ->where('user_id', $session->user_id)
+                ->where('flagged', true)
+                ->whereIn('question_id', $questionIds)
+                ->pluck('question_id')
+                ->map(static fn (mixed $id): string => (string) $id)
+                ->all(),
+            true,
+        );
         $items = [];
         $fallbackStemImages = null;
 
@@ -214,8 +232,7 @@ final class QuestionSessionInsights
                 'note_html' => $notePayload['note_html'] !== ''
                     ? $notePayload['note_html']
                     : ($notePayload['note'] !== '' ? nl2br(e($notePayload['note'])) : ''),
-                'flagged' => (bool) ($annotation['flagged']
-                    ?? ($attempt instanceof QuestionAttempt && $attempt->flagged)),
+                'flagged' => isset($flaggedQuestionIdSet[(string) $questionId]),
                 'options' => $options->map(function ($option) use ($selectedIds): array {
                     $selected = in_array((int) $option->id, $selectedIds, true);
                     $correct = (bool) $option->is_correct;
