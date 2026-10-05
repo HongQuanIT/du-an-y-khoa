@@ -13,8 +13,10 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Modules\Personalization\Models\Bookmark;
+use Modules\Personalization\Models\Note;
 use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionSession;
+use Modules\QuestionBank\Models\QuestionStatus as UserQuestionStatusModel;
 use Modules\QuestionBank\Services\QuestionSessionInsights;
 use Modules\QuestionBank\Services\QuestionSessionSnapshots;
 use Modules\StudyPlan\Actions\AnswerPlanQuestionAction;
@@ -67,16 +69,17 @@ final class StudyPlanSessionController extends Controller
         $question = $this->snapshots->question($session, (string) $questionIds[$index]);
         abort_if($question === null, 410, 'Nội dung câu hỏi của phiên này không còn khả dụng.');
 
-        $annotation = ($session->annotations ?? [])[(string) $question->getKey()] ?? [];
-        $flagged = (bool) ($annotation['flagged'] ?? $attempts->get($question->getKey())?->flagged ?? false);
-        $flaggedIds = collect($session->annotations ?? [])
-            ->filter(fn (array $item): bool => (bool) ($item['flagged'] ?? false))
-            ->keys()
-            ->merge(
-                $attempts->filter(fn (QuestionAttempt $attempt): bool => $attempt->flagged)->keys()
-            )
-            ->unique()
-            ->values()
+        $questionKey = (string) $question->getKey();
+        $annotation = ($session->annotations ?? [])[$questionKey] ?? [];
+        $notePayload = Note::questionPayload(
+            (int) $request->user()->getAuthIdentifier(),
+            $questionKey,
+        );
+        $flaggedIds = UserQuestionStatusModel::query()
+            ->where('user_id', $request->user()->getAuthIdentifier())
+            ->where('flagged', true)
+            ->pluck('question_id')
+            ->map(static fn (mixed $id): string => (string) $id)
             ->all();
 
         return view('studyplan::session', [
@@ -89,16 +92,25 @@ final class StudyPlanSessionController extends Controller
             'total' => count($questionIds),
             'answeredIds' => $attempts->keys()->all(),
             'questionIds' => $questionIds,
-            'note' => (string) ($annotation['note'] ?? ''),
-            'noteHtml' => (string) ($annotation['note_html'] ?? nl2br(e((string) ($annotation['note'] ?? '')))),
+            'hasNote' => $notePayload['note'] !== '' || $notePayload['note_html'] !== '',
+            // Chỉ gửi nội dung ghi chú sau khi đã trả lời — tránh spoil trước khi chọn đáp án.
+            'note' => $attempts->get($question->getKey()) ? $notePayload['note'] : '',
+            'noteHtml' => $attempts->get($question->getKey())
+                ? ($notePayload['note_html'] !== ''
+                    ? $notePayload['note_html']
+                    : ($notePayload['note'] !== '' ? nl2br(e($notePayload['note'])) : ''))
+                : '',
             'stemHtml' => (string) ($annotation['stem_html'] ?? SafeHtml::forDisplay((string) $question->stem)),
-            'flagged' => $flagged,
+            'flagged' => (bool) UserQuestionStatusModel::query()
+                ->where('user_id', $request->user()->getAuthIdentifier())
+                ->where('question_id', $questionKey)
+                ->value('flagged'),
             'flaggedIds' => $flaggedIds,
             'keyInfoUsed' => (bool) ($annotation['key_info_used'] ?? false),
             'attendingTipUsed' => (bool) ($annotation['attending_tip_used'] ?? false),
             'bookmarked' => Bookmark::hasQuestion(
                 (int) $request->user()->getAuthIdentifier(),
-                (string) $question->getKey(),
+                $questionKey,
             ),
             'bookmarkUrl' => route('bookmarks.questions.set', $question),
         ]);
@@ -202,6 +214,11 @@ final class StudyPlanSessionController extends Controller
         );
 
         if ($request->expectsJson()) {
+            $notePayload = Note::questionPayload(
+                (int) $request->user()->getAuthIdentifier(),
+                (string) $question->getKey(),
+            );
+
             return ApiResponse::item([
                 'is_correct' => (bool) $attempt->is_correct,
                 'task_done' => $task->refresh()->done,
@@ -209,6 +226,11 @@ final class StudyPlanSessionController extends Controller
                 'all_done' => $allDone,
                 'summary_url' => route('study-plan.session.summary', [$plan, $task]),
                 'review_url' => route('study-plan.session.review', [$plan, $task]),
+                'has_note' => $notePayload['note'] !== '' || $notePayload['note_html'] !== '',
+                'note' => $notePayload['note'],
+                'note_html' => $notePayload['note_html'] !== ''
+                    ? $notePayload['note_html']
+                    : ($notePayload['note'] !== '' ? nl2br(e($notePayload['note'])) : ''),
             ]);
         }
 
@@ -259,6 +281,14 @@ final class StudyPlanSessionController extends Controller
         $timeSpent = 0;
         /** @var array<string, array{name: string, correct: int, wrong: int, skipped: int, total: int}> $byTopic */
         $byTopic = [];
+        $flaggedQuestionIds = UserQuestionStatusModel::query()
+            ->where('user_id', $session->user_id)
+            ->where('flagged', true)
+            ->whereIn('question_id', $questionIds)
+            ->pluck('question_id')
+            ->map(static fn (mixed $id): string => (string) $id)
+            ->all();
+        $flaggedQuestionIdSet = array_fill_keys($flaggedQuestionIds, true);
 
         foreach ($questionIds as $questionId) {
             $question = $questions[$questionId] ?? null;
@@ -281,10 +311,7 @@ final class StudyPlanSessionController extends Controller
                 $byTopic[$topicName]['total']++;
             }
 
-            $annotation = ($session->annotations ?? [])[(string) $questionId] ?? [];
-            $flagged = (bool) ($annotation['flagged'] ?? $attempt?->flagged ?? false);
-
-            if ($flagged) {
+            if (isset($flaggedQuestionIdSet[(string) $questionId])) {
                 $flaggedCount++;
             }
 

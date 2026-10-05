@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
 use Modules\Personalization\Http\Controllers\BookmarkFolderController;
+use Modules\Personalization\Http\Controllers\NoteController;
 use Modules\Personalization\Http\Controllers\QuestionBookmarkController;
 
 /*
@@ -27,4 +28,11 @@ Route::middleware(['auth', 'learner'])->group(function (): void {
     Route::delete('/bookmarks/folders/{folder}', [BookmarkFolderController::class, 'destroy'])
         ->middleware('permission:bookmark.delete')
         ->name('bookmarks.folders.destroy');
+
+    Route::middleware(['permission:learning_tool.note', 'throttle:60,1'])->group(function (): void {
+        Route::get('/notes', [NoteController::class, 'index'])->name('notes.index');
+        Route::post('/notes', [NoteController::class, 'store'])->name('notes.store');
+        Route::patch('/notes/{note}', [NoteController::class, 'update'])->name('notes.update');
+        Route::delete('/notes/{note}', [NoteController::class, 'destroy'])->name('notes.destroy');
+    });
 });

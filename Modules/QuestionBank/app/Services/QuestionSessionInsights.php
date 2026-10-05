@@ -8,6 +8,7 @@ use App\Support\Html\SafeHtml;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Modules\Personalization\Models\Note;
 use Modules\QuestionBank\Enums\UserQuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
@@ -47,6 +48,16 @@ final class QuestionSessionInsights
         $timeSpent = 0;
         /** @var array<string, array{name: string, correct: int, wrong: int, skipped: int, total: int}> $byTopic */
         $byTopic = [];
+        $flaggedQuestionIdSet = array_fill_keys(
+            UserQuestionStatusModel::query()
+                ->where('user_id', $session->user_id)
+                ->where('flagged', true)
+                ->whereIn('question_id', $questionIds)
+                ->pluck('question_id')
+                ->map(static fn (mixed $id): string => (string) $id)
+                ->all(),
+            true,
+        );
 
         foreach ($questionIds as $questionId) {
             $question = $questions[(string) $questionId] ?? null;
@@ -68,9 +79,7 @@ final class QuestionSessionInsights
                 $byTopic[$topicName]['total']++;
             }
 
-            $annotation = ($session->annotations ?? [])[(string) $questionId] ?? [];
-            if ((bool) ($annotation['flagged']
-                ?? ($attempt instanceof QuestionAttempt && $attempt->flagged))) {
+            if (isset($flaggedQuestionIdSet[(string) $questionId])) {
                 $flagged++;
             }
 
@@ -145,6 +154,20 @@ final class QuestionSessionInsights
         $attempts = $this->attempts($session);
         $questions = $this->snapshots->questionMap($session);
         $keyInfo = app(QuestionKeyInfoRenderer::class);
+        $noteMap = Note::questionPayloadMap(
+            (int) $session->user_id,
+            array_map('strval', $questionIds),
+        );
+        $flaggedQuestionIdSet = array_fill_keys(
+            UserQuestionStatusModel::query()
+                ->where('user_id', $session->user_id)
+                ->where('flagged', true)
+                ->whereIn('question_id', $questionIds)
+                ->pluck('question_id')
+                ->map(static fn (mixed $id): string => (string) $id)
+                ->all(),
+            true,
+        );
         $items = [];
         $fallbackStemImages = null;
 
@@ -188,6 +211,7 @@ final class QuestionSessionInsights
             $hints = $keyInfo->resolvePhrases($stem, (array) ($question->key_info ?? []));
             $hasKeyInfo = $hints !== [] || str_contains($stem, 'data-hint');
             $knowledgeHtml = SafeHtml::forDisplay((string) ($question->attending_tip ?? ''));
+            $notePayload = $noteMap[(string) $questionId] ?? ['note' => '', 'note_html' => ''];
 
             $items[] = [
                 'id' => 'Q'.($position + 1),
@@ -204,10 +228,11 @@ final class QuestionSessionInsights
                 'has_key_info' => $hasKeyInfo,
                 'knowledge_used' => $knowledgeUsed,
                 'knowledge_html' => $knowledgeHtml,
-                'note' => (string) ($annotation['note'] ?? ''),
-                'note_html' => (string) ($annotation['note_html'] ?? nl2br(e((string) ($annotation['note'] ?? '')))),
-                'flagged' => (bool) ($annotation['flagged']
-                    ?? ($attempt instanceof QuestionAttempt && $attempt->flagged)),
+                'note' => $notePayload['note'],
+                'note_html' => $notePayload['note_html'] !== ''
+                    ? $notePayload['note_html']
+                    : ($notePayload['note'] !== '' ? nl2br(e($notePayload['note'])) : ''),
+                'flagged' => isset($flaggedQuestionIdSet[(string) $questionId]),
                 'options' => $options->map(function ($option) use ($selectedIds): array {
                     $selected = in_array((int) $option->id, $selectedIds, true);
                     $correct = (bool) $option->is_correct;

@@ -2,20 +2,28 @@
 
 ## 2026-10-05
 
+### Fix — Đọc gắn cờ từ tiến độ câu hỏi
+
+- StudyPlan session/summary và session insights lấy trạng thái cờ từ `user_question_statuses`, không còn từ annotations/attempt.
+- Cập nhật test gắn cờ persist vào review cho khớp nguồn mới.
+
+### Feat — Ghi chú học viên (Module 15)
+
+- Sidebar **Ghi chú** → `/notes`: tìm kiếm (nội dung / môn / bài) + 3 chế độ xem (**Theo môn** · **Theo bài** · **Sổ tay**).
+- Card + modal editor; ghi chú trong phiên gắn **user + câu hỏi** (không theo session JSON).
+- Trong phiên làm bài: badge khi câu đã có ghi chú; nội dung chỉ mở sau khi chọn đáp án.
+- `question_sessions.annotations` chỉ còn highlight / tip; không migrate note cũ.
+
 ### Feat — Ghi nhớ thiết lập tạo phiên luyện tập
 
 - Lưu lựa chọn tạo phiên theo học viên trên trình duyệt và khôi phục khi quay lại trang.
 - Chuyển thiết lập cũ từ phiên đăng nhập, đồng thời ưu tiên dữ liệu biểu mẫu khi có tham số hoặc lỗi nhập.
 - Bổ sung tiêu đề, mô tả và nội dung mở đầu rõ ràng cho trang tạo phiên.
 
-## 2026-10-05
-
 ### Feat — Lọc nhiều chế độ và trạng thái phiên luyện
 
 - Danh sách phiên cho phép chọn nhiều chế độ và trạng thái cùng lúc.
 - Giữ các lựa chọn lọc khi chuyển trang và cập nhật thông báo khi không có kết quả.
-
-## 2026-10-05
 
 ### Feat — Lưu trạng thái gắn cờ theo câu hỏi
 

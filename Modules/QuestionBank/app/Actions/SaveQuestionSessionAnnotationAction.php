@@ -7,19 +7,22 @@ namespace Modules\QuestionBank\Actions;
 use App\Support\Concerns\AsAction;
 use App\Support\Html\SafeHtml;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use InvalidArgumentException;
+use Modules\Personalization\Actions\UpsertNoteAction;
+use Modules\Personalization\Models\Note;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionSession;
 use Modules\QuestionBank\Models\QuestionStatus as UserQuestionStatusModel;
 
-/** Persist sanitized per-question notes, stem highlights, key-info use and review flags. */
+/** Persist sanitized stem highlights, flags, tips — and durable user notes. */
 final class SaveQuestionSessionAnnotationAction
 {
     use AsAction;
 
     /** @var list<string> */
     private const HIGHLIGHT_COLORS = ['#EF4444', '#F59E0B', '#10B981'];
+
+    public function __construct(private readonly UpsertNoteAction $upsertNote) {}
 
     /**
      * @return array{note: string, note_html: string, stem_html: string, flagged: bool, key_info_used: bool, attending_tip_used: bool}
@@ -50,18 +53,9 @@ final class SaveQuestionSessionAnnotationAction
             $this->assertQuestionBelongsToSession($currentSession, $question);
 
             $key = (string) $question->getKey();
-            /** @var array<string, array{note?: string, stem_html?: string, flagged?: bool, key_info_used?: bool, attending_tip_used?: bool}> $annotations */
+            /** @var array<string, array{stem_html?: string, flagged?: bool, key_info_used?: bool, attending_tip_used?: bool}> $annotations */
             $annotations = $currentSession->annotations ?? [];
             $current = $annotations[$key] ?? [];
-
-            if ($note !== null) {
-                $current['note'] = Str::limit(trim(strip_tags($note)), 5000, '');
-            }
-
-            if ($noteHtml !== null) {
-                $current['note_html'] = $this->sanitizeNoteHtml($noteHtml);
-                $current['note'] = Str::limit(SafeHtml::plainText($current['note_html']), 5000, '');
-            }
 
             if ($stemHtml !== null) {
                 $current['stem_html'] = $this->sanitizeStemHtml($stemHtml, (string) $question->stem);
@@ -75,18 +69,14 @@ final class SaveQuestionSessionAnnotationAction
             }
 
             if ($keyInfoUsed === true) {
-                // Once revealed, it remains part of this attempt's learning history.
                 $current['key_info_used'] = true;
             }
 
             if ($attendingTipUsed === true) {
-                // Once revealed, it remains part of this attempt's learning history.
                 $current['attending_tip_used'] = true;
             }
 
             $annotations[$key] = [
-                'note' => (string) ($current['note'] ?? ''),
-                'note_html' => (string) ($current['note_html'] ?? nl2br(e((string) ($current['note'] ?? '')))),
                 'stem_html' => (string) ($current['stem_html'] ?? SafeHtml::forDisplay((string) $question->stem)),
                 'key_info_used' => (bool) ($current['key_info_used'] ?? false),
                 'attending_tip_used' => (bool) ($current['attending_tip_used'] ?? false),
@@ -94,12 +84,34 @@ final class SaveQuestionSessionAnnotationAction
 
             $currentSession->forceFill(['annotations' => $annotations])->save();
 
+            $notePayload = Note::questionPayload((int) $currentSession->user_id, $key);
+
+            if ($note !== null || $noteHtml !== null) {
+                $result = $this->upsertNote->handle(
+                    $currentSession->user,
+                    $noteHtml,
+                    $note,
+                    Note::TYPE_QUESTION,
+                    $key,
+                );
+
+                $notePayload = $result['note'] instanceof Note
+                    ? ['note' => (string) $result['note']->body, 'note_html' => (string) $result['note']->body_html]
+                    : ['note' => '', 'note_html' => ''];
+            }
+
             return [
-                ...$annotations[$key],
+                'note' => $notePayload['note'],
+                'note_html' => $notePayload['note_html'] !== ''
+                    ? $notePayload['note_html']
+                    : ($notePayload['note'] !== '' ? nl2br(e($notePayload['note'])) : ''),
+                'stem_html' => $annotations[$key]['stem_html'],
                 'flagged' => (bool) UserQuestionStatusModel::query()
                     ->where('user_id', $currentSession->user_id)
                     ->where('question_id', $key)
                     ->value('flagged'),
+                'key_info_used' => $annotations[$key]['key_info_used'],
+                'attending_tip_used' => $annotations[$key]['attending_tip_used'],
             ];
         });
     }
@@ -145,32 +157,6 @@ final class SaveQuestionSessionAnnotationAction
         }
 
         return $allowed;
-    }
-
-    private function sanitizeNoteHtml(string $html): string
-    {
-        $allowedTags = '<p><br><strong><b><em><i><u><s><ul><ol><li><h3><blockquote><mark><a>';
-        $html = preg_replace('/<\s*(script|style)\b[^>]*>.*?<\s*\/\s*\1\s*>/is', '', $html) ?? $html;
-        $allowed = strip_tags($html, $allowedTags);
-        $allowed = preg_replace('/\s+on\w+\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)/i', '', $allowed) ?? $allowed;
-        $allowed = preg_replace('/javascript\s*:/i', '', $allowed) ?? $allowed;
-        $allowed = preg_replace('/\s+style\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)/i', '', $allowed) ?? $allowed;
-        $allowed = preg_replace('/<a\b(?![^>]*\shref=)([^>]*)>/i', '<a$1>', $allowed) ?? $allowed;
-        $allowed = preg_replace_callback('/<a\b([^>]*)>/i', function (array $matches): string {
-            $attrs = $matches[1];
-            if (preg_match('/href\s*=\s*["\']([^"\']+)["\']/i', $attrs, $href) !== 1) {
-                return '<a>';
-            }
-
-            $url = $href[1];
-            if (! str_starts_with($url, 'https://') && ! str_starts_with($url, 'http://') && ! str_starts_with($url, 'mailto:')) {
-                return '<a>';
-            }
-
-            return '<a href="'.e($url).'" target="_blank" rel="noopener noreferrer">';
-        }, $allowed) ?? $allowed;
-
-        return Str::limit(trim($allowed), 20000, '');
     }
 
     private function resolveHighlightHex(string $attrs): ?string
