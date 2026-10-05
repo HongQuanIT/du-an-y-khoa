@@ -2,6 +2,12 @@
 
 ## 2026-10-05
 
+### Feat — Lưu trạng thái gắn cờ theo câu hỏi
+
+- Lưu cờ độc lập với phiên trong tiến độ từng câu của học viên.
+- Bộ lọc và giao diện đọc trạng thái cờ theo học viên + câu hỏi.
+- Migration chuyển cờ hiện có khỏi dữ liệu phiên/lượt làm.
+
 ### Feat — Admin: sửa và xoá ma trận trên danh sách
 
 - `/admin/blueprints`: thêm nút **Sửa** / **Xoá** (theo quyền), xác nhận trước khi xoá.
@@ -10,6 +16,8 @@
 ### Chore — Adaptive briefing: rút gọn nhãn pipeline
 
 - Công thức V2 chỉ còn **① Lọc → ② Phân nhóm → ③ Phân suất**, bỏ mã nội bộ `filter_group_quota_v2`.
+
+## 2026-10-05
 
 ### Feat — Chọn nhiều bộ sưu tập câu hỏi đã lưu
 

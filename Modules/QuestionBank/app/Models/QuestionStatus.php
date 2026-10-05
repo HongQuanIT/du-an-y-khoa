@@ -17,6 +17,7 @@ use Modules\QuestionBank\Enums\UserQuestionStatus;
  * @property int $user_id
  * @property string $question_id
  * @property UserQuestionStatus $status
+ * @property bool $flagged
  * @property int $attempts_count
  * @property int $correct_count
  * @property int $wrong_count
@@ -43,6 +44,7 @@ class QuestionStatus extends Model
         'user_id',
         'question_id',
         'status',
+        'flagged',
         'attempts_count',
         'correct_count',
         'wrong_count',
@@ -62,6 +64,7 @@ class QuestionStatus extends Model
 
     protected $casts = [
         'status' => UserQuestionStatus::class,
+        'flagged' => 'boolean',
         'attempts_count' => 'integer',
         'correct_count' => 'integer',
         'wrong_count' => 'integer',

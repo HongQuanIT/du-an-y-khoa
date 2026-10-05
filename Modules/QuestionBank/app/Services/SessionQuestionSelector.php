@@ -660,30 +660,12 @@ final class SessionQuestionSelector
      */
     private function flaggedQuestionIds(int $userId): array
     {
-        $ids = QuestionAttempt::query()
+        return UserQuestionStatusModel::query()
             ->where('user_id', $userId)
             ->where('flagged', true)
             ->pluck('question_id')
-            ->map(static fn (mixed $id): string => (string) $id);
-
-        $annotations = QuestionSession::query()
-            ->where('user_id', $userId)
-            ->whereNotNull('annotations')
-            ->pluck('annotations');
-
-        foreach ($annotations as $annotationSet) {
-            if (! is_array($annotationSet)) {
-                continue;
-            }
-
-            foreach ($annotationSet as $questionId => $annotation) {
-                if (is_array($annotation) && ($annotation['flagged'] ?? false)) {
-                    $ids->push((string) $questionId);
-                }
-            }
-        }
-
-        return $ids->unique()->values()->all();
+            ->map(static fn (mixed $id): string => (string) $id)
+            ->all();
     }
 
     /**

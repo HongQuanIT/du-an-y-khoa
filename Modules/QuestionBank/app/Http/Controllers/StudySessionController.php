@@ -22,6 +22,7 @@ use Modules\QuestionBank\Enums\SessionMode;
 use Modules\QuestionBank\Enums\SessionStatus;
 use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionSession;
+use Modules\QuestionBank\Models\QuestionStatus as UserQuestionStatusModel;
 use Modules\QuestionBank\Services\QuestionSessionSnapshots;
 use Modules\QuestionBank\Services\QuestionSessionTimer;
 
@@ -75,12 +76,11 @@ final class StudySessionController extends Controller
             fn (QuestionAttempt $item): bool => (string) $item->question_id === $questionKey,
         );
         $annotation = ($session->annotations ?? [])[$questionKey] ?? [];
-        $flaggedIds = collect($session->annotations ?? [])
-            ->filter(fn (array $item): bool => (bool) ($item['flagged'] ?? false))
-            ->keys()
-            ->merge($attempts->filter(fn (QuestionAttempt $item): bool => $item->flagged)->keys())
-            ->unique()
-            ->values()
+        $flaggedIds = UserQuestionStatusModel::query()
+            ->where('user_id', $request->user()->getAuthIdentifier())
+            ->where('flagged', true)
+            ->pluck('question_id')
+            ->map(static fn (mixed $id): string => (string) $id)
             ->all();
 
         $viewData = [
@@ -95,8 +95,10 @@ final class StudySessionController extends Controller
             'note' => (string) ($annotation['note'] ?? ''),
             'noteHtml' => (string) ($annotation['note_html'] ?? nl2br(e((string) ($annotation['note'] ?? '')))),
             'stemHtml' => (string) ($annotation['stem_html'] ?? SafeHtml::forDisplay((string) $question->stem)),
-            'flagged' => (bool) ($annotation['flagged']
-                ?? ($attempt instanceof QuestionAttempt && $attempt->flagged)),
+            'flagged' => (bool) UserQuestionStatusModel::query()
+                ->where('user_id', $request->user()->getAuthIdentifier())
+                ->where('question_id', $questionKey)
+                ->value('flagged'),
             'keyInfoUsed' => (bool) ($annotation['key_info_used'] ?? false),
             'attendingTipUsed' => (bool) ($annotation['attending_tip_used'] ?? false),
             'bookmarked' => Bookmark::hasQuestion(

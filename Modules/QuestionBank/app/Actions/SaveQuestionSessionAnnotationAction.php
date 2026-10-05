@@ -10,8 +10,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use Modules\QuestionBank\Models\Question;
-use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionSession;
+use Modules\QuestionBank\Models\QuestionStatus as UserQuestionStatusModel;
 
 /** Persist sanitized per-question notes, stem highlights, key-info use and review flags. */
 final class SaveQuestionSessionAnnotationAction
@@ -68,7 +68,10 @@ final class SaveQuestionSessionAnnotationAction
             }
 
             if ($flagged !== null) {
-                $current['flagged'] = $flagged;
+                UserQuestionStatusModel::query()->firstOrCreate(
+                    ['user_id' => (int) $currentSession->user_id, 'question_id' => $key],
+                    ['status' => \Modules\QuestionBank\Enums\UserQuestionStatus::Unseen->value, 'flagged' => false],
+                )->forceFill(['flagged' => $flagged])->save();
             }
 
             if ($keyInfoUsed === true) {
@@ -85,21 +88,19 @@ final class SaveQuestionSessionAnnotationAction
                 'note' => (string) ($current['note'] ?? ''),
                 'note_html' => (string) ($current['note_html'] ?? nl2br(e((string) ($current['note'] ?? '')))),
                 'stem_html' => (string) ($current['stem_html'] ?? SafeHtml::forDisplay((string) $question->stem)),
-                'flagged' => (bool) ($current['flagged'] ?? false),
                 'key_info_used' => (bool) ($current['key_info_used'] ?? false),
                 'attending_tip_used' => (bool) ($current['attending_tip_used'] ?? false),
             ];
 
             $currentSession->forceFill(['annotations' => $annotations])->save();
 
-            if ($flagged !== null) {
-                QuestionAttempt::query()
-                    ->where('session_id', $currentSession->getKey())
-                    ->where('question_id', $question->getKey())
-                    ->update(['flagged' => $flagged]);
-            }
-
-            return $annotations[$key];
+            return [
+                ...$annotations[$key],
+                'flagged' => (bool) UserQuestionStatusModel::query()
+                    ->where('user_id', $currentSession->user_id)
+                    ->where('question_id', $key)
+                    ->value('flagged'),
+            ];
         });
     }
 
