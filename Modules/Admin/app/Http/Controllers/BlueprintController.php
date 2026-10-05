@@ -42,6 +42,8 @@ final class BlueprintController extends Controller
             'blueprints' => $blueprints,
             'coreTopicCounts' => $coreTopicCounts,
             'canCreate' => $this->actor()->can('blueprint.create'),
+            'canUpdate' => $this->actor()->can('blueprint.update'),
+            'canDelete' => $this->actor()->can('blueprint.delete'),
         ]);
     }
 
@@ -172,9 +174,12 @@ final class BlueprintController extends Controller
     public function destroy(Blueprint $blueprint): RedirectResponse
     {
         $this->authorizePermission('blueprint.delete');
-        $blueprint->update(['status' => TaxonomyStatus::Inactive]);
 
-        return redirect()->route(PortalRoute::content('blueprints.index'))->with('status', 'Đã vô hiệu hóa ma trận đề thi.');
+        $name = $blueprint->name;
+        $blueprint->delete();
+
+        return redirect()->route(PortalRoute::content('blueprints.index'))
+            ->with('status', 'Đã xoá ma trận «'.$name.'».');
     }
 
     public function storeSection(Request $request, Blueprint $blueprint): RedirectResponse
