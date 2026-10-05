@@ -845,9 +845,9 @@
                                 </div>
 
                                 <div x-show="!foldersLoading" class="max-h-64 space-y-4 overflow-y-auto pr-1">
-                                    <!-- IN FOLDERS SECTION -->
+                                    <!-- CÁC BỘ SƯU TẬP ĐÃ CHỌN -->
                                     <div x-show="inFolders.length > 0">
-                                        <p class="mb-2 text-[11px] font-bold tracking-wider text-on-surface-variant/80 uppercase">IN FOLDERS</p>
+                                        <p class="mb-2 text-[11px] font-bold tracking-wider text-on-surface-variant/80 uppercase">Trong bộ sưu tập</p>
                                         <div class="space-y-1">
                                             <template x-for="folder in inFolders" :key="'in-' + folder.id">
                                                 <div class="flex items-center justify-between rounded-lg py-1.5 px-2 hover:bg-surface-container-lowest">
@@ -862,9 +862,9 @@
                                         </div>
                                     </div>
 
-                                    <!-- NOT IN FOLDERS SECTION -->
+                                    <!-- CÁC BỘ SƯU TẬP CHƯA CHỌN -->
                                     <div x-show="notInFolders.length > 0">
-                                        <p class="mb-2 text-[11px] font-bold tracking-wider text-on-surface-variant/80 uppercase">NOT IN FOLDERS</p>
+                                        <p class="mb-2 text-[11px] font-bold tracking-wider text-on-surface-variant/80 uppercase">Chưa thuộc bộ sưu tập</p>
                                         <div class="space-y-1">
                                             <template x-for="folder in notInFolders" :key="'not-' + folder.id">
                                                 <div class="flex items-center justify-between rounded-lg py-1.5 px-2 hover:bg-surface-container-lowest">

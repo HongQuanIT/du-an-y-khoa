@@ -532,10 +532,11 @@ final class SessionQuestionSelector
             examCatalogId: $data->examCatalogId,
         );
 
-        // Apply saved-only or specific folder filtering
-        if ($data->folderId !== null && $userId !== null) {
+        // Apply saved-only or the union of selected learner-owned folders.
+        if ($data->folderIds !== [] && $userId !== null) {
             $itemQuestionIds = BookmarkFolderItem::query()
-                ->where('folder_id', $data->folderId)
+                ->whereIn('folder_id', $data->folderIds)
+                ->whereHas('folder', fn ($folder) => $folder->where('user_id', $userId))
                 ->pluck('question_id')
                 ->map(fn ($id) => (string) $id)
                 ->all();

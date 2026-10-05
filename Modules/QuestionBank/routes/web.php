@@ -5,7 +5,6 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Route;
 use Modules\QuestionBank\Http\Controllers\CustomSessionController;
 use Modules\QuestionBank\Http\Controllers\QuestionBankPageController;
-use Modules\QuestionBank\Http\Controllers\QuestionBookmarkPageController;
 use Modules\QuestionBank\Http\Controllers\QuestionFeedbackController;
 use Modules\QuestionBank\Http\Controllers\QuestionReviewController;
 use Modules\QuestionBank\Http\Controllers\SessionHistoryController;
@@ -23,14 +22,6 @@ Route::middleware(['auth', 'learner'])->group(function (): void {
     Route::get('/qbank', QuestionBankPageController::class)
         ->middleware('permission:question.view')
         ->name('qbank.index');
-    Route::get('/qbank/bookmarks', [QuestionBookmarkPageController::class, 'index'])
-        ->middleware('permission:bookmark.view')->name('qbank.bookmarks');
-    Route::delete('/qbank/bookmarks/{question}', [QuestionBookmarkPageController::class, 'destroy'])
-        ->middleware('permission:bookmark.delete')
-        ->name('qbank.bookmarks.destroy');
-    Route::post('/qbank/bookmarks/session', [QuestionBookmarkPageController::class, 'startSession'])
-        ->middleware('permission:session.create')
-        ->name('qbank.bookmarks.session');
     Route::get('/qbank/create', [CustomSessionController::class, 'create'])->middleware('permission:session.create')->name('qbank.create');
     Route::post('/qbank/create', [CustomSessionController::class, 'store'])->middleware('permission:session.create')->name('qbank.store');
     Route::post('/qbank/create/count', [CustomSessionController::class, 'count'])->middleware('permission:session.create')->name('qbank.count');

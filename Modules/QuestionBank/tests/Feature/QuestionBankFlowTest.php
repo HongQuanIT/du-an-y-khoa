@@ -516,6 +516,35 @@ final class QuestionBankFlowTest extends TestCase
         $this->assertSame(1, $session->total);
     }
 
+    public function test_can_count_and_create_session_for_multiple_folders(): void
+    {
+        $firstFolder = BookmarkFolder::query()->create(['user_id' => $this->user->id, 'name' => 'Tim mạch']);
+        $secondFolder = BookmarkFolder::query()->create(['user_id' => $this->user->id, 'name' => 'Hô hấp']);
+        $firstQuestion = $this->createQuestion($this->topic, true, Difficulty::Easy, 'Câu tim mạch');
+        $secondQuestion = $this->createQuestion($this->topic, true, Difficulty::Easy, 'Câu hô hấp');
+
+        BookmarkFolderItem::query()->create(['folder_id' => $firstFolder->id, 'question_id' => (string) $firstQuestion->id]);
+        BookmarkFolderItem::query()->create(['folder_id' => $secondFolder->id, 'question_id' => (string) $secondQuestion->id]);
+
+        $payload = array_merge($this->sessionPayload(count: 10), [
+            'folder_ids' => [$firstFolder->id, $secondFolder->id],
+            'saved_only' => 1,
+        ]);
+
+        $this->actingAs($this->user)
+            ->postJson(route('qbank.count'), $payload)
+            ->assertOk()
+            ->assertJsonPath('data.count', 2);
+
+        $this->actingAs($this->user)
+            ->post(route('qbank.store'), $payload)
+            ->assertRedirect();
+
+        $session = QuestionSession::latest('id')->firstOrFail();
+        $this->assertSame(2, $session->total);
+        $this->assertEqualsCanonicalizing([$firstFolder->id, $secondFolder->id], $session->filters['folder_ids']);
+    }
+
     public function test_key_info_underlines_only_hint_phrases_that_match_the_stem(): void
     {
         $stem = '[Amboss] Ca lâm sàng #064 – Skin & Subcutaneous Tissue. '

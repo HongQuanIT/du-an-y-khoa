@@ -2,6 +2,21 @@
 
 ## 2026-10-05
 
+### Feat — Chọn nhiều bộ sưu tập câu hỏi đã lưu
+
+- Gỡ trang riêng “Câu hỏi đã lưu”, chuyển thao tác vào bộ lọc khi tạo phiên.
+- Cho phép chọn một hoặc nhiều bộ sưu tập, hoặc toàn bộ câu đã lưu.
+- Popup dùng chung cấu trúc với bộ lọc Bài học và hỗ trợ kiểm tra folder đúng chủ sở hữu.
+
+### Chore — Đồng bộ câu hỏi xuất bản và đối tượng
+
+- Seeder chuyển toàn bộ câu hỏi hiện có sang trạng thái đã xuất bản.
+- Gán toàn bộ đối tượng đang hoạt động cho các câu hỏi.
+
+### Fix — Việt hóa nhãn bộ sưu tập
+
+- Đổi “IN FOLDERS” và “NOT IN FOLDERS” sang tiếng Việt ở phiên học và kế hoạch học.
+
 ### Fix — Sắp xếp lại Gợi ý và Kiến thức trong Review
 
 - Hiển thị Gợi ý dạng thẻ trong phần xem trước câu hỏi.
