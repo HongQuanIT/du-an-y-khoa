@@ -673,7 +673,7 @@ final class AdaptiveSessionBriefing
         $restingCount = count((array) ($filter['resting'] ?? []));
 
         return [
-            ['name' => 'Thứ tự pipeline', 'expr' => 'Luôn chạy **① Lọc → ② Phân nhóm → ③ Phân suất** (`filter_group_quota_v2`), đúng thứ tự log.'],
+            ['name' => 'Thứ tự pipeline', 'expr' => 'Luôn chạy **① Lọc → ② Phân nhóm → ③ Phân suất**'],
             ['name' => '① Lọc', 'expr' => 'Loại thrash (**sai ≥3 → 72h + 2 phiên**; **≥5 → nghỉ 7 ngày**), nghỉ serve **20 giờ chỉ sau phiên thích ứng**, lệch phiên bản nội dung. **Không** quyết định tỉ lệ câu mới. Đã loại: thrash **'.((string) ($excluded['thrash'] ?? 0)).'**, cooldown **'.((string) ($excluded['cooldown'] ?? 0)).'**, version **'.((string) ($excluded['version_mismatch'] ?? 0)).'**. Nghỉ liệt kê **'.$restingCount.'** câu.'],
             ['name' => '② Phân nhóm — Yếu', 'expr' => 'Độ yếu = **(sai + 1) / (số lần + 2)** trên tối đa 5 lần gần nhất. Vào nhóm khi **≥ 50%**. Pool: **'.((string) ($group['weak_pool'] ?? '—')).'**.'],
             ['name' => '② Phân nhóm — Sắp quên', 'expr' => 'Đến hạn khi **t ≥ S**. S ∈ **1 · 3 · 7 · 14 · 30 · 60**; R = **0,9^(t/S)**. Pool: **'.((string) ($group['due_pool'] ?? '—')).'**. Due = **last_graded_at + S**.'],

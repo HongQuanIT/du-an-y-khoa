@@ -2,6 +2,15 @@
 
 ## 2026-10-05
 
+### Feat — Admin: sửa và xoá ma trận trên danh sách
+
+- `/admin/blueprints`: thêm nút **Sửa** / **Xoá** (theo quyền), xác nhận trước khi xoá.
+- Xoá ma trận là xoá hẳn (kèm phần / chủ đề); kỳ thi đã gắn sẽ bỏ liên kết ma trận.
+
+### Chore — Adaptive briefing: rút gọn nhãn pipeline
+
+- Công thức V2 chỉ còn **① Lọc → ② Phân nhóm → ③ Phân suất**, bỏ mã nội bộ `filter_group_quota_v2`.
+
 ### Feat — Chọn nhiều bộ sưu tập câu hỏi đã lưu
 
 - Gỡ trang riêng “Câu hỏi đã lưu”, chuyển thao tác vào bộ lọc khi tạo phiên.
