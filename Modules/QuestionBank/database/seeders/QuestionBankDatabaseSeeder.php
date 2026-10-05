@@ -19,6 +19,7 @@ class QuestionBankDatabaseSeeder extends Seeder
             QuestionReviewWorkflowSeeder::class,
             DemoLearningSeeder::class,
             VolumeLearningSeeder::class, // no-op unless SEED_VOLUME=true
+            PublishedQuestionAudienceSeeder::class,
         ]);
     }
 }
