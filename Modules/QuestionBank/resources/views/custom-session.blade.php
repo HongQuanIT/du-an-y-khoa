@@ -22,7 +22,9 @@
         request('difficulties', old('difficulty', request('difficulty', []))),
     );
     $initialDifficulties = array_values(array_filter((array) $initialDifficultyInput));
-    $initialStatuses = array_values((array) old('question_statuses', request('question_statuses', [])));
+    $initialStatusValues = array_values((array) old('question_statuses', request('question_statuses', [])));
+    $initialFlaggedOnly = in_array('flagged', $initialStatusValues, true);
+    $initialStatuses = array_values(array_filter($initialStatusValues, fn ($status) => $status !== 'flagged'));
     $initialStatusMode = old('question_status_mode', request('question_status_mode', 'latest'));
     $initialSavedOnly = (bool) old('saved_only', request()->boolean('saved_only'));
     $initialFolderIds = array_values(array_unique(array_map('intval', (array) old('folder_ids', request('folder_ids', [])))));
@@ -37,8 +39,6 @@
         ['value' => 'incorrect', 'label' => 'Làm sai', 'icon' => 'cancel'],
         ['value' => 'correct', 'label' => 'Làm đúng', 'icon' => 'check_circle'],
         ['value' => 'correct_with_hints', 'label' => 'Đúng có gợi ý', 'icon' => 'lightbulb'],
-        ['value' => 'omitted', 'label' => 'Bỏ qua', 'icon' => 'remove_circle'],
-        ['value' => 'flagged', 'label' => 'Đã gắn cờ', 'icon' => 'flag'],
     ];
     $difficultyOptions = \App\Support\ScopeFilters::difficulties();
 
@@ -62,6 +62,7 @@
             difficultyLabels: {{ Illuminate\Support\Js::from(collect($difficultyOptions)->pluck('name', 'id')->all())->toHtml() }},
             difficultyOptionCount: {{ count($difficultyOptions) }},
             statuses: {{ Illuminate\Support\Js::from($initialStatuses)->toHtml() }},
+            flaggedOnly: {{ Illuminate\Support\Js::from($initialFlaggedOnly)->toHtml() }},
             organSystemIds: {{ Illuminate\Support\Js::from($selectedOrganSystemIds)->toHtml() }},
             subjectIds: {{ Illuminate\Support\Js::from($selectedSubjectIds)->toHtml() }},
             organSystemNames: {{ Illuminate\Support\Js::from($organSystems->pluck('name')->all())->toHtml() }},
@@ -97,6 +98,7 @@
                 if (this.source === 'weak_topics') {
                     this.difficulties = [];
                     this.statuses = [];
+                    this.flaggedOnly = false;
                     this.lessonIds = [];
                     this.lessonLabels = {};
                     this.savedOnly = false;
@@ -133,6 +135,7 @@
                     // Adaptive keeps exam / hệ / môn; drops lesson + manual difficulty/status + saved.
                     this.difficulties = [];
                     this.statuses = [];
+                    this.flaggedOnly = false;
                     this.lessonIds = [];
                     this.lessonLabels = {};
                     this.savedOnly = false;
@@ -149,6 +152,7 @@
             clearCustomFilters(refresh = true) {
                 this.difficulties = [];
                 this.statuses = [];
+                this.flaggedOnly = false;
                 this.organSystemIds = [];
                 this.subjectIds = [];
                 this.savedOnly = false;
@@ -213,6 +217,11 @@
                     body.set('count', String(Math.max(1, Number(this.count) || 1)));
                     body.set('source', this.source);
                     body.set('saved_only', this.savedOnly ? '1' : '0');
+                    body.delete('question_statuses[]');
+                    this.statuses.forEach((status) => body.append('question_statuses[]', status));
+                    if (!this.isAdaptive() && this.flaggedOnly) {
+                        body.append('question_statuses[]', 'flagged');
+                    }
                     body.delete('folder_id');
                     body.delete('folder_ids[]');
                     this.folderIds.forEach((id) => body.append('folder_ids[]', String(id)));
@@ -238,6 +247,9 @@
                         throw new Error(details[0] || payload?.error?.message || 'Không thể đếm câu hỏi.');
                     }
                     this.matching = Number(payload?.data?.count ?? 0);
+                    if (this.matching === 0) {
+                        this.count = 0;
+                    }
                     this.syncQuestionCount();
                 } catch (error) {
                     if (requestId !== this.countRequest) return;
@@ -444,6 +456,7 @@
                 this.count = 0;
                 this.difficulties = [];
                 this.statuses = [];
+                this.flaggedOnly = false;
                 this.organSystemIds = [];
                 this.subjectIds = [];
                 this.savedOnly = false;
@@ -477,6 +490,7 @@
         <input type="hidden" name="exam_catalog_id" :value="blueprintId ?? ''" :disabled="!blueprintId">
         <input type="hidden" name="question_status_mode" value="{{ $initialStatusMode }}">
         <input type="hidden" name="saved_only" :value="savedOnly ? '1' : '0'" :disabled="isAdaptive()">
+        <input type="hidden" name="question_statuses[]" value="flagged" :disabled="isAdaptive() || !flaggedOnly">
         <template x-for="folderId in folderIds" :key="folderId">
             <input type="hidden" name="folder_ids[]" :value="folderId" :disabled="isAdaptive()">
         </template>
@@ -681,7 +695,7 @@
                                         x-text="difficultyLabel()"></span>
                                 </button>
                                 <button type="button" @click="openFilter('statuses')"
-                                    class="group flex w-full items-center justify-between px-6 py-4 text-left hover:bg-surface-container-lowest">
+                                    class="group flex w-full items-center justify-between border-b border-outline-variant px-6 py-4 text-left hover:bg-surface-container-lowest">
                                     <span class="flex items-center gap-4">
                                         <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">add</span>
                                         <span class="font-medium">Trạng thái</span>
@@ -689,6 +703,17 @@
                                     <span class="rounded bg-secondary-fixed px-3 py-1 text-[12px] font-medium text-on-secondary-fixed"
                                         x-text="statuses.length ? statuses.length + ' đã chọn' : 'Tất cả'"></span>
                                 </button>
+                                <label class="flex cursor-pointer items-center justify-between px-6 py-4 text-left transition-colors hover:bg-surface-container-lowest">
+                                    <span class="font-medium">Chỉ câu hỏi đã gắn cờ</span>
+                                    <span class="relative inline-flex h-6 w-12 shrink-0 items-center rounded-full transition-colors"
+                                        :class="flaggedOnly ? 'bg-[#087f8c]' : 'bg-outline-variant'">
+                                        <input type="checkbox" role="switch" aria-label="Chỉ câu hỏi đã gắn cờ"
+                                            x-model="flaggedOnly" @change="refreshCount()"
+                                            class="peer sr-only">
+                                        <span class="absolute left-0.5 size-5 rounded-full bg-white shadow transition-transform"
+                                            :class="flaggedOnly ? 'translate-x-6' : 'translate-x-0'"></span>
+                                    </span>
+                                </label>
                             </div>
 
                             {{-- Adaptive: 3 hướng luyện thay độ khó / trạng thái --}}
@@ -743,7 +768,7 @@
                                 <div class="flex items-center gap-3">
                                     <input id="question-count" type="number" name="count" min="0" step="1"
                                         :max="Math.max(0, questionLimit())" x-model.number="count"
-                                        :disabled="matching === 0"
+                                        :disabled="matching === 0 && !flaggedOnly"
                                         @input="countTouched = true; clampQuestionCount()"
                                         @change="countTouched = true; clampQuestionCount()"
                                         @blur="clampQuestionCount()"

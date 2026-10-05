@@ -15,6 +15,7 @@ use Modules\QuestionBank\Enums\SessionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
 use Modules\QuestionBank\Models\QuestionSession;
+use Modules\QuestionBank\Models\QuestionStatus as UserQuestionStatusModel;
 use Modules\QuestionBank\Services\QuestionGrader;
 use Modules\QuestionBank\Support\SyncUserQuestionLearningState;
 use RuntimeException;
@@ -80,9 +81,6 @@ final class AnswerQuestionAction
                 throw new RuntimeException('Câu hỏi này đã được chấm trong chế độ học tập.');
             }
 
-            $flagged = $existing instanceof QuestionAttempt
-                ? $existing->flagged
-                : (bool) (($currentSession->annotations ?? [])[(string) $question->getKey()]['flagged'] ?? false);
             $questionAnnotation = ($currentSession->annotations ?? [])[(string) $question->getKey()] ?? [];
             $usedHint = (bool) ($questionAnnotation['key_info_used'] ?? false)
                 || (bool) ($questionAnnotation['attending_tip_used'] ?? false);
@@ -103,7 +101,6 @@ final class AnswerQuestionAction
                     'is_correct' => $isCorrect,
                     'used_hint' => $usedHint,
                     'time_spent_seconds' => $timeSpentSeconds,
-                    'flagged' => $flagged,
                     'answered_at' => $now,
                 ],
             );
