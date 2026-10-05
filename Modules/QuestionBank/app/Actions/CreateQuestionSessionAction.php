@@ -131,10 +131,18 @@ final class CreateQuestionSessionAction
     }
 
     /**
+     * Cooldown 20h chỉ gắn với phiên thích ứng: chỉ khi source = weak_topics mới ghi
+     * last_served_at. Phiên luyện theo bài / custom không chặn adaptive sau đó.
+     * Độ bền S / thrash vẫn cập nhật lúc chấm (mọi nguồn phiên).
+     *
      * @param  array<int, string>  $questionIds
      */
     private function markQuestionsServed(QuestionSession $session, array $questionIds): void
     {
+        if ($session->source !== SessionSource::WeakTopics) {
+            return;
+        }
+
         $now = now();
         $userId = (int) $session->user_id;
         $sessionId = (string) $session->getKey();
@@ -159,16 +167,20 @@ final class CreateQuestionSessionAction
             ])->save();
         }
 
-        if ($session->source !== SessionSource::WeakTopics) {
-            return;
-        }
-
+        $traceId = AdaptiveTrace::id();
         AdaptiveTrace::write('served', [
             'session_id' => $sessionId,
             'user_id' => $userId,
             'count' => count($questionIds),
             'question_ids' => array_values($questionIds),
         ]);
+
+        if ($traceId !== null) {
+            $filters = is_array($session->filters) ? $session->filters : [];
+            $filters['adaptive_trace_id'] = $traceId;
+            $session->forceFill(['filters' => $filters])->save();
+        }
+
         AdaptiveTrace::finish();
     }
 }

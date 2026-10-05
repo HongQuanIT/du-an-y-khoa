@@ -20,6 +20,10 @@ use Modules\QuestionBank\Enums\UserQuestionStatus;
  * @property int $attempts_count
  * @property int $correct_count
  * @property int $wrong_count
+ * @property list<bool>|null $recent_results
+ * @property int $wrong_streak
+ * @property Carbon|null $thrash_blocked_until
+ * @property int|null $content_version
  * @property int $omitted_count
  * @property Carbon|null $last_attempt_at
  * @property Carbon|null $last_seen_at
@@ -42,6 +46,10 @@ class QuestionStatus extends Model
         'attempts_count',
         'correct_count',
         'wrong_count',
+        'recent_results',
+        'wrong_streak',
+        'thrash_blocked_until',
+        'content_version',
         'omitted_count',
         'last_attempt_at',
         'last_seen_at',
@@ -57,6 +65,10 @@ class QuestionStatus extends Model
         'attempts_count' => 'integer',
         'correct_count' => 'integer',
         'wrong_count' => 'integer',
+        'recent_results' => 'array',
+        'wrong_streak' => 'integer',
+        'thrash_blocked_until' => 'datetime',
+        'content_version' => 'integer',
         'omitted_count' => 'integer',
         'last_attempt_at' => 'datetime',
         'last_seen_at' => 'datetime',

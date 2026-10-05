@@ -176,10 +176,10 @@ Index: `(user_id, question_id)`, `session_id`, `answered_at`. Bảng lớn → c
 `id, user_id, question_id, status(unseen/incorrect/correct/omitted/marked), attempts_count, correct_count, wrong_count, omitted_count, last_attempt_at, last_seen_at, last_graded_at, memory_stability_days, last_served_at, last_served_session_id, last_correct_at`. Unique `(user_id, question_id)`.
 
 - Filter QBank: `status`, `last_attempt_at`.
-- Adaptive Memory (forgetting curve): lưu `memory_stability_days` (`S`) và `last_graded_at`. Lúc chọn câu tính `R = exp(−t/S)` với `t` từ `last_graded_at`, nhu cầu ôn = `1 − R`. `S` khởi tạo 1 ngày ở lần chấm đầu, đúng thì `×2`, sai thì `×0.3`, kẹp `[0.5, 365]`. Không lưu `R`.
+- Adaptive Memory (forgetting curve): lưu `memory_stability_days` (`S`) và `last_graded_at`. `S` thuộc thang bậc **1 · 3 · 7 · 14 · 30 · 60** ngày. Còn nhớ `R = 0,9^(t/S)` với `t` từ `last_graded_at`; đến hạn khi `t ≥ S` (còn nhớ ~90%). Sai → bậc 1; đúng đúng hạn → lên 1 bậc; đúng sớm → giữ bậc; lần đầu đúng → 3 ngày. Giá trị S cũ (liên tục) map về bậc gần nhất. Không lưu `R`.
 - `last_seen_at` = lần gần nhất **làm đúng/sai hoặc bỏ qua**. Omit không đổi `S` và không đổi `last_graded_at`.
 - Adaptive Weakness: `correct_count` / `wrong_count` (omit không cộng).
-- Adaptive Cooldown: `last_served_at` / `last_served_session_id` khi câu được đưa vào session.
+- Adaptive Cooldown: `last_served_at` / `last_served_session_id` chỉ khi câu được đưa vào **phiên thích ứng** (`source = weak_topics`). Phiên luyện theo bài / custom không ghi các cột này → không kích hoạt nghỉ serve 20 giờ.
 - Flashcard SRS vẫn dùng bảng `flashcard_reviews` (SM-2), không dùng chung hai cột `memory_stability_days` / `last_graded_at`.
 
 ## 5. Nhóm Cá nhân hóa

@@ -207,6 +207,12 @@ final class AdaptiveSessionBriefing
         $steps = $run['steps'];
         $path = $steps['path']['context'] ?? [];
         $start = $steps['start']['context'] ?? [];
+        $pipeline = (string) ($start['pipeline'] ?? $steps['result']['context']['pipeline'] ?? '');
+
+        if ($pipeline === 'filter_group_quota_v2' || isset($steps['filter'], $steps['group'], $steps['quota'])) {
+            return $this->briefV2($run);
+        }
+
         $pool = $steps['pool']['context'] ?? [];
         $split = $steps['coverage_split']['context'] ?? [];
         $scores = $steps['review_scores']['context'] ?? [];
@@ -233,8 +239,11 @@ final class AdaptiveSessionBriefing
             'learner' => $learner,
             'focus' => $focusMeta['label'],
             'focus_tone' => $focusMeta['tone'],
+            'pipeline' => 'v1',
+            'pipeline_label' => 'Điểm ưu tiên (cũ)',
             'headline' => $this->headline($isLegacy, $empty, $learner, $focusMeta['label'], $blueprint, $picked, $poolSize),
-            'summary' => $this->summary($isLegacy, $empty, $focusMeta['intent'], $start, $pool, $split, $topUp),
+            'summary' => 'Log thuật toán cũ (điểm ưu tiên). '.$this->summary($isLegacy, $empty, $focusMeta['intent'], $start, $pool, $split, $topUp),
+            'stages' => [],
             'stats' => $empty ? [] : [
                 ['label' => 'Câu được chọn', 'value' => (string) max($picked, $newCount + $reviewCount)],
                 ['label' => 'Câu chưa chấm', 'value' => (string) $newCount],
@@ -244,12 +253,432 @@ final class AdaptiveSessionBriefing
             'reasons' => $isLegacy || $empty ? [] : $this->reasons($sampled, $scores),
             'fresh' => $isLegacy || $empty ? [] : $this->freshQuestions($result, $sampled),
             'table' => $isLegacy || $empty ? [] : $this->sessionTable($result, $scores, $sampled),
+            'resting' => [],
+            'graded' => [],
             'formulas' => $isLegacy || $empty ? [] : $this->formulas($focusMeta, [
                 ...$scores,
                 'w_weakness' => $scores['w_weakness'] ?? $start['w_weakness'] ?? null,
                 'w_memory' => $scores['w_memory'] ?? $start['w_memory'] ?? null,
             ], $split),
             'closing' => $this->closing($isLegacy, $empty, isset($steps['served'])),
+        ];
+    }
+
+    /**
+     * @param  array{at: string, steps: array<string, array{at: string, step: string, context: array<string, mixed>}>}  $run
+     * @return array<string, mixed>
+     */
+    private function briefV2(array $run): array
+    {
+        $steps = $run['steps'];
+        $start = $steps['start']['context'] ?? [];
+        $pool = $steps['pool']['context'] ?? [];
+        $filter = $steps['filter']['context'] ?? [];
+        $group = $steps['group']['context'] ?? [];
+        $quota = $steps['quota']['context'] ?? [];
+        $result = $steps['result']['context'] ?? [];
+        $served = $steps['served']['context'] ?? [];
+
+        $focus = (string) ($start['focus'] ?? 'balanced');
+        $learnerId = $start['user_id'] ?? $served['user_id'] ?? null;
+        $blueprintId = $start['blueprint_id'] ?? $pool['blueprint_id'] ?? null;
+        $learner = $this->label($this->learners, $learnerId, 'Học viên');
+        $blueprint = $this->label($this->blueprints, $blueprintId, 'đề đã chọn');
+        $focusMeta = $this->focus($focus);
+        $empty = isset($steps['empty_pool']) || (int) ($pool['pool_size'] ?? -1) === 0;
+
+        $picked = (int) ($result['picked_count'] ?? $served['count'] ?? 0);
+        $poolSize = (int) ($pool['pool_size'] ?? 0);
+        $buckets = (array) ($result['bucket_counts'] ?? []);
+        $band = (string) ($quota['due_band'] ?? 'low');
+        $sessionSize = (int) ($start['limit'] ?? $picked);
+        if ($sessionSize <= 0) {
+            $sessionSize = max(1, (int) ($quota['new_count'] ?? 0) + (int) ($quota['review_slots'] ?? 0));
+        }
+        $duePoolSize = (int) ($group['due_pool'] ?? 0);
+        $bandLabel = $this->dueBandLabel($band, $duePoolSize, $sessionSize);
+
+        $excluded = (array) ($filter['excluded'] ?? []);
+        $stages = $empty ? [] : $this->pipelineStagesV2($filter, $group, $quota, $focusMeta, $bandLabel, $buckets);
+
+        $summary = $empty
+            ? 'Không còn câu phù hợp trong phạm vi đề.'
+            : sprintf(
+                '%s chọn hướng %s trên %s theo pipeline Lọc → Phân nhóm → Phân suất. ① Lọc: còn %d câu ôn + %d câu mới (loại thrash %d · cooldown %d · version %d). ② Phân nhóm: %d yếu · %d sắp quên · %d mới. ③ Phân suất: %s → %s câu mới / %s suất ôn (yếu %s · due %s). Kết quả chọn: %d yếu · %d sắp quên · %d mới · %d lấp.',
+                $learner,
+                $focusMeta['label'],
+                $blueprint,
+                (int) ($filter['eligible_count'] ?? 0),
+                (int) ($filter['unseen_count'] ?? 0),
+                (int) ($excluded['thrash'] ?? 0),
+                (int) ($excluded['cooldown'] ?? 0),
+                (int) ($excluded['version_mismatch'] ?? 0),
+                (int) ($group['weak_pool'] ?? 0),
+                (int) ($group['due_pool'] ?? 0),
+                (int) ($group['unseen_count'] ?? $filter['unseen_count'] ?? 0),
+                $bandLabel,
+                (string) ($quota['new_count'] ?? 0),
+                (string) ($quota['review_slots'] ?? 0),
+                (string) ($quota['weak_quota'] ?? 0),
+                (string) ($quota['due_quota'] ?? 0),
+                (int) ($buckets['yeu'] ?? 0),
+                (int) ($buckets['sap_quen'] ?? 0),
+                (int) ($buckets['moi'] ?? 0),
+                (int) ($buckets['lap_day'] ?? 0),
+            );
+
+        if ((int) ($result['shortfall'] ?? 0) > 0) {
+            $summary .= ' '.((string) ($result['message'] ?? 'Thiếu câu sau phân suất.'));
+        }
+
+        return [
+            'when' => $this->when($run['at']),
+            'learner' => $learner,
+            'focus' => $focusMeta['label'],
+            'focus_tone' => $focusMeta['tone'],
+            'pipeline' => 'v2',
+            'pipeline_label' => 'Lọc → Phân nhóm → Phân suất',
+            'headline' => $this->headline(false, $empty, $learner, $focusMeta['label'], $blueprint, $picked, $poolSize),
+            'summary' => $summary,
+            'stages' => $stages,
+            'stats' => $empty ? [] : [
+                ['label' => 'Câu được chọn', 'value' => (string) $picked],
+                ['label' => 'Yếu / Sắp quên', 'value' => ((int) ($buckets['yeu'] ?? 0)).' / '.((int) ($buckets['sap_quen'] ?? 0))],
+                ['label' => 'Mới / Lấp', 'value' => ((int) ($buckets['moi'] ?? 0)).' / '.((int) ($buckets['lap_day'] ?? 0))],
+                ['label' => 'Tồn đọng due', 'value' => $bandLabel],
+            ],
+            'reasons' => [],
+            'fresh' => [],
+            'table' => $empty ? [] : $this->sessionTableV2($result),
+            'resting' => $empty ? [] : $this->restingTableV2($filter),
+            'graded' => $this->gradedTableV2($steps['graded']['context'] ?? []),
+            'formulas' => $empty ? [] : $this->formulasV2($focusMeta, $quota, $group, $filter),
+            'closing' => $this->closingV2($empty, isset($steps['served']), isset($steps['graded'])),
+        ];
+    }
+
+    /**
+     * Ba trụ theo đúng thứ tự thực thi / log: Lọc → Phân nhóm → Phân suất.
+     *
+     * @param  array<string, mixed>  $filter
+     * @param  array<string, mixed>  $group
+     * @param  array<string, mixed>  $quota
+     * @param  array{label: string, intent: string, tone: string}  $focus
+     * @param  array<string, int>  $buckets
+     * @return list<array{order: int, name: string, title: string, body: string, items: list<string>}>
+     */
+    private function pipelineStagesV2(
+        array $filter,
+        array $group,
+        array $quota,
+        array $focus,
+        string $bandLabel,
+        array $buckets,
+    ): array {
+        $excluded = (array) ($filter['excluded'] ?? []);
+        $restingCount = count((array) ($filter['resting'] ?? []));
+        $newSharePct = isset($quota['new_share'])
+            ? ((int) round(((float) $quota['new_share']) * 100)).'%'
+            : '—';
+
+        return [
+            [
+                'order' => 1,
+                'name' => 'Lọc',
+                'title' => '① Lọc — câu nào được phép vào phiên',
+                'body' => sprintf(
+                    'Pool %d → còn %d câu ôn + %d câu mới. Loại: thrash %d · cooldown thích ứng %d · lệch phiên bản %d. Đang nghỉ liệt kê: %d câu.',
+                    (int) ($filter['active_count'] ?? 0),
+                    (int) ($filter['eligible_count'] ?? 0),
+                    (int) ($filter['unseen_count'] ?? 0),
+                    (int) ($excluded['thrash'] ?? 0),
+                    (int) ($excluded['cooldown'] ?? 0),
+                    (int) ($excluded['version_mismatch'] ?? 0),
+                    $restingCount,
+                ),
+                'items' => [
+                    'Thrash: sai ≥3 → 72h + 2 phiên; ≥5 → tạm không đưa vào phiên 7 ngày',
+                    'Cooldown: nghỉ serve 20 giờ — chỉ sau phiên thích ứng',
+                    'Phiên bản nội dung lệch → coi như câu mới',
+                    'Không gồm tỉ lệ câu mới (đó là bước Phân suất)',
+                ],
+            ],
+            [
+                'order' => 2,
+                'name' => 'Phân nhóm',
+                'title' => '② Phân nhóm — xếp vào giỏ học tập',
+                'body' => sprintf(
+                    'Yếu %d · Sắp quên %d · Mới %d · chồng yếu∩due %d.',
+                    (int) ($group['weak_pool'] ?? 0),
+                    (int) ($group['due_pool'] ?? 0),
+                    (int) ($group['unseen_count'] ?? $filter['unseen_count'] ?? 0),
+                    (int) ($group['overlap_weak_due'] ?? 0),
+                ),
+                'items' => [
+                    'Yếu: W ≥ 50% trên tối đa 5 lần gần nhất',
+                    'Sắp quên: đến hạn t ≥ S (R = 0,9^(t/S))',
+                    'Mới: chưa chấm đúng phiên bản hiện tại',
+                ],
+            ],
+            [
+                'order' => 3,
+                'name' => 'Phân suất',
+                'title' => '③ Phân suất — lấy bao nhiêu từ mỗi giỏ',
+                'body' => sprintf(
+                    'Tồn đọng %s → tỉ lệ câu mới %s (%s câu) · suất ôn %s (yếu %s · sắp quên %s) theo hướng %s. Đã chọn: %d yếu · %d sắp quên · %d mới · %d lấp.',
+                    $bandLabel,
+                    $newSharePct,
+                    (string) ($quota['new_count'] ?? 0),
+                    (string) ($quota['review_slots'] ?? 0),
+                    (string) ($quota['weak_quota'] ?? 0),
+                    (string) ($quota['due_quota'] ?? 0),
+                    $focus['label'],
+                    (int) ($buckets['yeu'] ?? 0),
+                    (int) ($buckets['sap_quen'] ?? 0),
+                    (int) ($buckets['moi'] ?? 0),
+                    (int) ($buckets['lap_day'] ?? 0),
+                ),
+                'items' => [
+                    'So sánh số câu đến hạn (duePool) với N = số câu phiên',
+                    'Due thấp: duePool < 1×N → ~30% câu mới',
+                    'Due vừa: 1×N ≤ duePool < 3×N → ~20% câu mới',
+                    'Due cao: duePool ≥ 3×N → ~10% câu mới (ưu tiên ôn tồn đọng)',
+                    'Học viên mới (chưa có câu đã chấm): 100% câu mới',
+                    'Mode chỉ chia suất ôn (Yếu vs Sắp quên), không đổi % câu mới',
+                ],
+            ],
+        ];
+    }
+
+    private function dueBandLabel(string $band, int $duePool, int $sessionSize): string
+    {
+        $n = max(1, $sessionSize);
+
+        return match ($band) {
+            'new' => 'Học viên mới → 100% câu mới',
+            'high' => sprintf('Due cao: %d ≥ 3×N (N=%d) → 10%% mới', $duePool, $n),
+            'mid' => sprintf('Due vừa: %d ∈ [1×N, 3×N) (N=%d) → 20%% mới', $duePool, $n),
+            default => sprintf('Due thấp: %d < 1×N (N=%d) → 30%% mới', $duePool, $n),
+        };
+    }
+
+    /**
+     * @param  array<string, mixed>  $result
+     * @return list<array<string, string>>
+     */
+    private function sessionTableV2(array $result): array
+    {
+        $rows = [];
+        foreach ((array) ($result['items'] ?? []) as $item) {
+            if (! is_array($item) || ! isset($item['question_id'])) {
+                continue;
+            }
+            $bucket = (string) ($item['bucket'] ?? '');
+            $bucketLabel = match ($bucket) {
+                'yeu' => 'Yếu',
+                'sap_quen' => 'Sắp quên',
+                'moi' => 'Mới',
+                'lap_day' => 'Lấp',
+                default => $bucket !== '' ? $bucket : '—',
+            };
+            $rows[] = [
+                'rank' => (string) ($item['position'] ?? count($rows) + 1),
+                'code' => $this->label($this->questions, $item['question_id'], 'Một câu'),
+                'bucket' => $bucketLabel,
+                'reason' => (string) ($item['reason'] ?? '—'),
+                'weakness' => isset($item['weakness']) && $item['weakness'] !== null
+                    ? $this->percent((float) $item['weakness'])
+                    : '—',
+                'days' => isset($item['days_since']) && $item['days_since'] !== null
+                    ? $this->decimal($item['days_since'])
+                    : '—',
+                'retention' => isset($item['retention']) && $item['retention'] !== null
+                    ? $this->percent((float) $item['retention'])
+                    : '—',
+                'stability' => isset($item['stability']) && $item['stability'] !== null
+                    ? $this->decimal($item['stability']).' ngày'
+                    : '—',
+                'due' => $this->dueLabel(
+                    isset($item['due_at']) ? (string) $item['due_at'] : null,
+                    isset($item['is_due']) ? (bool) $item['is_due'] : null,
+                ),
+            ];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @param  array<string, mixed>  $filter
+     * @return list<array<string, string>>
+     */
+    /**
+     * @param  array<string, mixed>  $graded
+     * @return list<array<string, string>>
+     */
+    private function gradedTableV2(array $graded): array
+    {
+        if ($graded === []) {
+            return [];
+        }
+
+        $rows = [];
+        foreach ((array) ($graded['items'] ?? []) as $item) {
+            if (! is_array($item) || ! isset($item['question_id'])) {
+                continue;
+            }
+            $result = (string) ($item['result'] ?? '');
+            $resultLabel = match ($result) {
+                'correct' => 'Đúng',
+                'incorrect' => 'Sai',
+                'omitted' => 'Bỏ qua',
+                default => '—',
+            };
+            $valid = $item['valid'] ?? null;
+            $validLabel = match (true) {
+                $valid === true => 'Có',
+                $valid === false => 'Không (quá nhanh)',
+                default => '—',
+            };
+            $wasDue = $item['was_due'] ?? null;
+            $dueState = match (true) {
+                $wasDue === true => 'Đúng hạn',
+                $wasDue === false => 'Sớm',
+                default => '—',
+            };
+            $recent = (array) ($item['recent_results'] ?? []);
+            $recentLabel = $recent === []
+                ? '—'
+                : implode('', array_map(static fn ($v): string => $v ? 'Đ' : 'S', $recent));
+
+            $rows[] = [
+                'rank' => (string) ($item['position'] ?? count($rows) + 1),
+                'code' => $this->label($this->questions, $item['question_id'], 'Một câu'),
+                'result' => $resultLabel,
+                'valid' => $validLabel,
+                's_before' => isset($item['s_before']) && $item['s_before'] !== null
+                    ? $this->decimal($item['s_before'])
+                    : '—',
+                's_after' => isset($item['s_after']) && $item['s_after'] !== null
+                    ? $this->decimal($item['s_after'])
+                    : '—',
+                't_days' => isset($item['t_days']) && $item['t_days'] !== null
+                    ? $this->decimal($item['t_days'])
+                    : '—',
+                'due_state' => $dueState,
+                'due' => $this->dueLabel(
+                    isset($item['due_at']) ? (string) $item['due_at'] : null,
+                    null,
+                ),
+                'weakness' => isset($item['weakness_after']) && $item['weakness_after'] !== null
+                    ? $this->percent((float) $item['weakness_after'])
+                    : '—',
+                'streak' => isset($item['wrong_streak']) && $item['wrong_streak'] !== null
+                    ? (string) (int) $item['wrong_streak']
+                    : '—',
+                'recent' => $recentLabel,
+                'time' => isset($item['time_spent_seconds']) && $item['time_spent_seconds'] !== null
+                    ? ((string) (int) $item['time_spent_seconds']).'s'
+                    : '—',
+                'note' => (string) ($item['note'] ?? '—'),
+            ];
+        }
+
+        return $rows;
+    }
+
+    private function restingTableV2(array $filter): array
+    {
+        $rows = [];
+        foreach ((array) ($filter['resting'] ?? []) as $item) {
+            if (! is_array($item) || ! isset($item['question_id'])) {
+                continue;
+            }
+            $reason = (string) ($item['reason'] ?? '');
+            $reasonLabel = match ($reason) {
+                'thrash' => 'Thrash',
+                'cooldown' => 'Nghỉ serve',
+                default => $reason !== '' ? $reason : '—',
+            };
+            $rows[] = [
+                'code' => $this->label($this->questions, $item['question_id'], 'Một câu'),
+                'reason' => $reasonLabel,
+                'detail' => (string) ($item['detail'] ?? '—'),
+                'rest_until' => $this->timestampLabel(
+                    isset($item['rest_until']) ? (string) $item['rest_until'] : null,
+                ),
+                'due' => $this->dueLabel(
+                    isset($item['due_at']) ? (string) $item['due_at'] : null,
+                    isset($item['is_due']) ? (bool) $item['is_due'] : null,
+                ),
+                'stability' => isset($item['stability']) && $item['stability'] !== null
+                    ? $this->decimal($item['stability']).' ngày'
+                    : '—',
+                'retention' => isset($item['retention']) && $item['retention'] !== null
+                    ? $this->percent((float) $item['retention'])
+                    : '—',
+            ];
+        }
+
+        return $rows;
+    }
+
+    private function dueLabel(?string $dueAt, ?bool $isDue): string
+    {
+        if ($dueAt === null || $dueAt === '') {
+            return '—';
+        }
+
+        $label = $this->timestampLabel($dueAt);
+        if ($label === '—') {
+            return '—';
+        }
+
+        if ($isDue === true) {
+            return 'Đã đến hạn ('.$label.')';
+        }
+
+        if ($isDue === false) {
+            return 'Đến hạn '.$label;
+        }
+
+        return $label;
+    }
+
+    private function timestampLabel(?string $value): string
+    {
+        if ($value === null || $value === '') {
+            return '—';
+        }
+
+        try {
+            $parsed = new DateTimeImmutable($value);
+        } catch (\Exception) {
+            return '—';
+        }
+
+        return $parsed->setTimezone(new DateTimeZone('Asia/Ho_Chi_Minh'))->format('H:i, d/m/Y');
+    }
+
+    /**
+     * @param  array{label: string, intent: string, tone: string}  $focus
+     * @param  array<string, mixed>  $quota
+     * @param  array<string, mixed>  $group
+     * @param  array<string, mixed>  $filter
+     * @return list<array{name: string, expr: string}>
+     */
+    private function formulasV2(array $focus, array $quota, array $group, array $filter): array
+    {
+        $excluded = (array) ($filter['excluded'] ?? []);
+        $restingCount = count((array) ($filter['resting'] ?? []));
+
+        return [
+            ['name' => 'Thứ tự pipeline', 'expr' => 'Luôn chạy **① Lọc → ② Phân nhóm → ③ Phân suất** (`filter_group_quota_v2`), đúng thứ tự log.'],
+            ['name' => '① Lọc', 'expr' => 'Loại thrash (**sai ≥3 → 72h + 2 phiên**; **≥5 → nghỉ 7 ngày**), nghỉ serve **20 giờ chỉ sau phiên thích ứng**, lệch phiên bản nội dung. **Không** quyết định tỉ lệ câu mới. Đã loại: thrash **'.((string) ($excluded['thrash'] ?? 0)).'**, cooldown **'.((string) ($excluded['cooldown'] ?? 0)).'**, version **'.((string) ($excluded['version_mismatch'] ?? 0)).'**. Nghỉ liệt kê **'.$restingCount.'** câu.'],
+            ['name' => '② Phân nhóm — Yếu', 'expr' => 'Độ yếu = **(sai + 1) / (số lần + 2)** trên tối đa 5 lần gần nhất. Vào nhóm khi **≥ 50%**. Pool: **'.((string) ($group['weak_pool'] ?? '—')).'**.'],
+            ['name' => '② Phân nhóm — Sắp quên', 'expr' => 'Đến hạn khi **t ≥ S**. S ∈ **1 · 3 · 7 · 14 · 30 · 60**; R = **0,9^(t/S)**. Pool: **'.((string) ($group['due_pool'] ?? '—')).'**. Due = **last_graded_at + S**.'],
+            ['name' => '③ Phân suất — câu mới', 'expr' => 'Gọi **N** = số câu phiên, **duePool** = số câu đến hạn sau lọc (`t ≥ S`). **Due thấp** nếu duePool < 1×N → **30%** mới; **due vừa** nếu 1×N ≤ duePool < 3×N → **20%**; **due cao** nếu duePool ≥ 3×N → **10%**. Học viên mới (chưa chấm câu nào): **100%** mới. Phiên này: **'.$this->dueBandLabel((string) ($quota['due_band'] ?? 'low'), (int) ($group['due_pool'] ?? 0), max(1, (int) ($quota['new_count'] ?? 0) + (int) ($quota['review_slots'] ?? 0))).'** → **'.((string) ($quota['new_count'] ?? '—')).'** mới / **'.((string) ($quota['review_slots'] ?? '—')).'** ôn.'],
+            ['name' => '③ Phân suất — mode '.$focus['label'], 'expr' => 'Chỉ chia suất ôn: Điểm yếu ≈ 100% Yếu; Củng cố ≈ 100% Sắp quên; Cân bằng ≈ 50/50. Suất yếu/due: **'.((string) ($quota['weak_quota'] ?? '—')).' / '.((string) ($quota['due_quota'] ?? '—')).'**. Câu mới ưu tiên **bài dang dở**.'],
         ];
     }
 
@@ -280,7 +709,7 @@ final class AdaptiveSessionBriefing
                         }
                     }
                 }
-                foreach (['top', 'sheet', 'ranking'] as $list) {
+                foreach (['top', 'sheet', 'ranking', 'items', 'resting'] as $list) {
                     foreach ((array) ($context[$list] ?? []) as $row) {
                         if (is_array($row)) {
                             $this->collect($questionIds, $row['question_id'] ?? null);
@@ -457,6 +886,21 @@ final class AdaptiveSessionBriefing
         }
 
         return $fresh;
+    }
+
+    private function closingV2(bool $empty, bool $served, bool $graded): string
+    {
+        if ($empty) {
+            return 'Không có câu để chọn trong phạm vi này.';
+        }
+        if ($graded) {
+            return 'Phiên đã hoàn thành — bảng chấm điểm ở dưới để đối chiếu S / W / đúng-sai.';
+        }
+        if ($served) {
+            return 'Đã tạo phiên. Làm xong và nộp bài để thấy bảng chấm điểm (S trước → sau).';
+        }
+
+        return 'Log chọn câu chưa ghi bước served.';
     }
 
     private function closing(bool $isLegacy, bool $empty, bool $served): string
@@ -830,6 +1274,11 @@ final class AdaptiveSessionBriefing
         }
 
         return number_format((float) $value, 2, ',', '.');
+    }
+
+    private function percent(float $value): string
+    {
+        return ((int) round($value * 100)).'%';
     }
 
     private function holdLabel(mixed $cooldown): string
