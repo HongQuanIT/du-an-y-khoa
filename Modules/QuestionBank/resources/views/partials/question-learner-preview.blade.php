@@ -121,14 +121,16 @@
 
         @if ($hints->isNotEmpty())
             <div @class([
-                    'space-y-2 rounded-xl border border-outline-variant bg-surface-container-lowest p-4',
-                    'order-20' => $supplementalAfterOptions,
+                    'space-y-2',
+                    'order-25',
                 ])
                 data-testid="reviewer-hints">
-                <p class="text-[11px] font-bold uppercase tracking-wide text-on-surface-variant">Gợi ý</p>
-                <ul class="list-disc space-y-1 pl-5 text-sm text-on-surface">
+                <h4 class="text-sm font-bold text-on-surface">Gợi ý</h4>
+                <ul class="flex flex-wrap gap-2">
                     @foreach ($hints as $hint)
-                        <li class="question-rich-content">{!! \App\Support\Html\SafeHtml::forDisplay((string) $hint->content) !!}</li>
+                        <li class="question-rich-content inline-flex rounded-lg bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary [&_p]:m-0">
+                            {!! \App\Support\Html\SafeHtml::forDisplay((string) $hint->content) !!}
+                        </li>
                     @endforeach
                 </ul>
             </div>

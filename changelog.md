@@ -2,6 +2,12 @@
 
 ## 2026-10-05
 
+### Fix — Sắp xếp lại Gợi ý và Kiến thức trong Review
+
+- Hiển thị Gợi ý dạng thẻ trong phần xem trước câu hỏi.
+- Thêm tab Gợi ý/Kiến thức cho khung so sánh của Reviewer.
+- Đưa nội dung bổ sung xuống đúng vị trí trong luồng hiển thị.
+
 ### Fix — Thrash: giữ ≥3 (72h+2 phiên), nặng từ ≥5 → 7 ngày
 
 - Tầng vừa giữ như cũ: sai ≥3 → 72h + 2 phiên.

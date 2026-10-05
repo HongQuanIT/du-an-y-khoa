@@ -39,7 +39,7 @@
             @include('questionbank::partials.question-learner-preview', [
                 'question' => $question,
                 'revealAnswers' => true,
-                'supplementalAfterOptions' => true,
+                'supplementalAfterOptions' => false,
                 'showReviewerMetadata' => true,
                 'enableImageViewer' => true,
             ])
