@@ -8,6 +8,7 @@ use App\Support\Html\SafeHtml;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Modules\Personalization\Models\Note;
 use Modules\QuestionBank\Enums\UserQuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
@@ -145,6 +146,10 @@ final class QuestionSessionInsights
         $attempts = $this->attempts($session);
         $questions = $this->snapshots->questionMap($session);
         $keyInfo = app(QuestionKeyInfoRenderer::class);
+        $noteMap = Note::questionPayloadMap(
+            (int) $session->user_id,
+            array_map('strval', $questionIds),
+        );
         $items = [];
         $fallbackStemImages = null;
 
@@ -188,6 +193,7 @@ final class QuestionSessionInsights
             $hints = $keyInfo->resolvePhrases($stem, (array) ($question->key_info ?? []));
             $hasKeyInfo = $hints !== [] || str_contains($stem, 'data-hint');
             $knowledgeHtml = SafeHtml::forDisplay((string) ($question->attending_tip ?? ''));
+            $notePayload = $noteMap[(string) $questionId] ?? ['note' => '', 'note_html' => ''];
 
             $items[] = [
                 'id' => 'Q'.($position + 1),
@@ -204,8 +210,10 @@ final class QuestionSessionInsights
                 'has_key_info' => $hasKeyInfo,
                 'knowledge_used' => $knowledgeUsed,
                 'knowledge_html' => $knowledgeHtml,
-                'note' => (string) ($annotation['note'] ?? ''),
-                'note_html' => (string) ($annotation['note_html'] ?? nl2br(e((string) ($annotation['note'] ?? '')))),
+                'note' => $notePayload['note'],
+                'note_html' => $notePayload['note_html'] !== ''
+                    ? $notePayload['note_html']
+                    : ($notePayload['note'] !== '' ? nl2br(e($notePayload['note'])) : ''),
                 'flagged' => (bool) ($annotation['flagged']
                     ?? ($attempt instanceof QuestionAttempt && $attempt->flagged)),
                 'options' => $options->map(function ($option) use ($selectedIds): array {

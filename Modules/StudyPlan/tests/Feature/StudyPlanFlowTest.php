@@ -507,12 +507,14 @@ final class StudyPlanFlowTest extends TestCase
 
         $this->assertSame(
             'Cơ chếNhớ cơ chế adenosine cắt vòng vào lại.',
-            $session->refresh()->annotations[$questionId]['note'] ?? null,
+            \Modules\Personalization\Models\Note::forUserQuestion((int) $this->user->id, (string) $questionId)->value('body'),
         );
         $this->assertSame(
             '<h3>Cơ chế</h3><p><strong>Nhớ cơ chế adenosine</strong> cắt vòng vào lại.</p>',
-            $session->refresh()->annotations[$questionId]['note_html'] ?? null,
+            \Modules\Personalization\Models\Note::forUserQuestion((int) $this->user->id, (string) $questionId)->value('body_html'),
         );
+        $this->assertArrayNotHasKey('note', $session->refresh()->annotations[$questionId] ?? []);
+        $this->assertArrayNotHasKey('note_html', $session->refresh()->annotations[$questionId] ?? []);
 
         foreach ($session->question_ids as $index => $id) {
             $q = Question::with('options')->findOrFail($id);

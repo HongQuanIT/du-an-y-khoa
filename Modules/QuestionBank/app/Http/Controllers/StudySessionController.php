@@ -13,6 +13,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Modules\Personalization\Models\Bookmark;
+use Modules\Personalization\Models\Note;
 use Modules\QuestionBank\Actions\AnswerQuestionAction;
 use Modules\QuestionBank\Actions\CompleteQuestionSessionAction;
 use Modules\QuestionBank\Actions\PauseQuestionSessionAction;
@@ -76,6 +77,10 @@ final class StudySessionController extends Controller
             fn (QuestionAttempt $item): bool => (string) $item->question_id === $questionKey,
         );
         $annotation = ($session->annotations ?? [])[$questionKey] ?? [];
+        $notePayload = Note::questionPayload(
+            (int) $request->user()->getAuthIdentifier(),
+            $questionKey,
+        );
         $flaggedIds = UserQuestionStatusModel::query()
             ->where('user_id', $request->user()->getAuthIdentifier())
             ->where('flagged', true)
@@ -92,8 +97,14 @@ final class StudySessionController extends Controller
             'questionIds' => $questionIds,
             'answeredIds' => $attempts->keys()->all(),
             'flaggedIds' => $flaggedIds,
-            'note' => (string) ($annotation['note'] ?? ''),
-            'noteHtml' => (string) ($annotation['note_html'] ?? nl2br(e((string) ($annotation['note'] ?? '')))),
+            'hasNote' => $notePayload['note'] !== '' || $notePayload['note_html'] !== '',
+            // Chỉ gửi nội dung ghi chú sau khi đã trả lời — tránh spoil trước khi chọn đáp án.
+            'note' => $attempt instanceof QuestionAttempt ? $notePayload['note'] : '',
+            'noteHtml' => $attempt instanceof QuestionAttempt
+                ? ($notePayload['note_html'] !== ''
+                    ? $notePayload['note_html']
+                    : ($notePayload['note'] !== '' ? nl2br(e($notePayload['note'])) : ''))
+                : '',
             'stemHtml' => (string) ($annotation['stem_html'] ?? SafeHtml::forDisplay((string) $question->stem)),
             'flagged' => (bool) UserQuestionStatusModel::query()
                 ->where('user_id', $request->user()->getAuthIdentifier())
@@ -208,6 +219,15 @@ final class StudySessionController extends Controller
 
             if (! $isExam) {
                 $payload['is_correct'] = (bool) $attempt->is_correct;
+                $notePayload = Note::questionPayload(
+                    (int) $request->user()->getAuthIdentifier(),
+                    (string) $question->getKey(),
+                );
+                $payload['has_note'] = $notePayload['note'] !== '' || $notePayload['note_html'] !== '';
+                $payload['note'] = $notePayload['note'];
+                $payload['note_html'] = $notePayload['note_html'] !== ''
+                    ? $notePayload['note_html']
+                    : ($notePayload['note'] !== '' ? nl2br(e($notePayload['note'])) : '');
             }
 
             return ApiResponse::item($payload);

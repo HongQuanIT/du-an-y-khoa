@@ -68,6 +68,7 @@
         ['hex' => '#10B981', 'title' => 'Xanh lá'],
     ];
     $note = $note ?? '';
+    $hasNote = (bool) ($hasNote ?? ($note !== '' || (($noteHtml ?? '') !== '')));
     $stemHtml = $stemHtml ?? \App\Support\Html\SafeHtml::forDisplay((string) $question->stem);
     $flagged = (bool) ($flagged ?? false);
     $flaggedIds = $flaggedIds ?? [];
@@ -84,6 +85,9 @@
 <x-layouts.auth :title="$playerConfig['page_title']">
     <div x-data="{
         notesOpen: false,
+        notesLocked: false,
+        hasNote: @js($hasNote),
+        questionAnswered: @js($isAnswered),
         navigatorOpen: false,
         exitOpen: false,
         labQuery: '',
@@ -200,9 +204,42 @@
         exitUrl: @js($exitUrl),
         selectionBar: { show: false, x: 0, y: 0 },
         noteText: @js($note),
-        noteHtml: @js($noteHtml ?? nl2br(e($note))),
+        noteHtml: @js($noteHtml ?? ''),
         noteSaving: false,
         noteSaved: false,
+        openNotes() {
+            // Có ghi chú sẵn + chưa trả lời → khóa nội dung (tránh spoil).
+            if (this.hasNote && !this.questionAnswered && !this.noteHtml) {
+                this.notesLocked = true;
+                this.notesOpen = true;
+                return;
+            }
+            this.notesLocked = false;
+            this.notesOpen = true;
+            this.$nextTick(() => {
+                if (this.$refs.noteEditor) {
+                    this.$refs.noteEditor.innerHTML = this.noteHtml || '';
+                }
+            });
+        },
+        unlockNotesFromAnswer(payload = {}) {
+            this.questionAnswered = true;
+            if (payload.has_note !== undefined) {
+                this.hasNote = Boolean(payload.has_note);
+            }
+            if (payload.note_html !== undefined || payload.note !== undefined) {
+                this.noteHtml = payload.note_html || '';
+                this.noteText = payload.note || '';
+            }
+            if (this.notesOpen && this.notesLocked && this.noteHtml) {
+                this.notesLocked = false;
+                this.$nextTick(() => {
+                    if (this.$refs.noteEditor) {
+                        this.$refs.noteEditor.innerHTML = this.noteHtml || '';
+                    }
+                });
+            }
+        },
         stemHtml: @js($stemHtml),
         annotateUrl: @js($playerConfig['annotate_url']),
         csrf: @js(csrf_token()),
@@ -459,6 +496,7 @@
             this.noteHtml = editor ? editor.innerHTML : this.noteHtml;
             this.noteText = editor ? editor.innerText.trim() : this.noteText;
             await this.persistAnnotation({ note: this.noteText, note_html: this.noteHtml });
+            this.hasNote = Boolean(this.noteText || this.noteHtml);
             this.noteSaving = false;
             this.noteSaved = true;
             this.notesOpen = false;
@@ -472,7 +510,8 @@
             this.noteText = editor.innerText.trim();
         },
     }" @keydown.escape.window="notesOpen = false; navigatorOpen = false; exitOpen = false; researchOpen = false; selectionBar.show = false"
-        @mouseup.window="onTextSelect()">
+        @mouseup.window="onTextSelect()"
+        @@session-question-answered.window="unlockNotesFromAnswer($event.detail || {})">
 
         <div class="flex h-dvh flex-col overflow-hidden bg-white">
             <header
@@ -518,7 +557,7 @@
                         @foreach ($tools as $tool)
                             <button type="button"
                                 data-testid="learning-tool-{{ $tool['action'] }}"
-                                @if (($tool['action'] ?? null) === 'notes') @click="notesOpen = true"
+                                @if (($tool['action'] ?? null) === 'notes') @click="openNotes()"
                                 @elseif (($tool['action'] ?? null) === 'research') @click="openResearch()"
                                 @elseif (($tool['action'] ?? null) === 'highlight') @click="toggleHighlight()"
                                 @elseif (($tool['action'] ?? null) === 'flag') @click="toggleFlag()"
@@ -534,15 +573,27 @@
                                 @elseif (($tool['action'] ?? null) === 'flag')
                                     class="flex w-full items-center justify-center gap-3 rounded-lg px-0 py-2.5 transition-colors group-hover:justify-start group-hover:px-3"
                                     :class="flagged ? 'bg-amber-50 text-amber-600' : 'text-on-surface-variant hover:bg-surface-container-high hover:text-primary'"
+                                @elseif (($tool['action'] ?? null) === 'notes')
+                                    class="flex w-full items-center justify-center gap-3 rounded-lg px-0 py-2.5 text-on-surface-variant transition-colors group-hover:justify-start group-hover:px-3 hover:bg-surface-container-high hover:text-primary"
+                                    :class="hasNote && 'text-primary'"
                                 @elseif (($tool['action'] ?? null) === 'ai')
                                     class="flex w-full items-center justify-center gap-3 rounded-lg px-0 py-2.5 text-[#0F766E] transition-colors group-hover:justify-start group-hover:px-3 hover:bg-teal-50"
                                 @else
                                     class="flex w-full items-center justify-center gap-3 rounded-lg px-0 py-2.5 text-on-surface-variant transition-colors group-hover:justify-start group-hover:px-3 hover:bg-surface-container-high hover:text-primary"
                                 @endif>
-                                <span class="material-symbols-outlined text-[20px]"
-                                    @if (($tool['action'] ?? null) === 'flag')
-                                        :class="flagged && 'fill-1'"
-                                    @endif>{{ $tool['icon'] }}</span>
+                                <span class="relative inline-flex">
+                                    <span class="material-symbols-outlined text-[20px]"
+                                        @if (($tool['action'] ?? null) === 'flag')
+                                            :class="flagged && 'fill-1'"
+                                        @elseif (($tool['action'] ?? null) === 'notes')
+                                            :class="hasNote && 'fill-1'"
+                                        @endif>{{ $tool['icon'] }}</span>
+                                    @if (($tool['action'] ?? null) === 'notes')
+                                        <span x-show="hasNote" x-cloak
+                                            class="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-primary ring-2 ring-white"
+                                            title="Đã có ghi chú"></span>
+                                    @endif
+                                </span>
                                 <span
                                     class="overflow-hidden text-label-md font-medium whitespace-nowrap opacity-0 transition-opacity duration-300 group-hover:opacity-100"
                                     @if (($tool['action'] ?? null) === 'flag')
@@ -618,6 +669,7 @@
                             this.revealed = true;
                             if (this.hasKeyInfo) this.keyInfoEnabled = true;
                             if (this.hasAttendingTip) this.attendingTipOpen = true;
+                            this.$dispatch('session-question-answered', {});
                             this.persist(id);
                         },
                         isCorrect() {
@@ -651,7 +703,7 @@
                             if (this.saving) return;
                             this.saving = true;
                             try {
-                                await fetch(this.saveUrl, {
+                                const response = await fetch(this.saveUrl, {
                                     method: 'POST',
                                     headers: {
                                         'Content-Type': 'application/json',
@@ -666,6 +718,10 @@
                                         index: this.index,
                                     }),
                                 });
+                                if (response.ok) {
+                                    const payload = await response.json().catch(() => null);
+                                    this.$dispatch('session-question-answered', payload?.data || {});
+                                }
                             } catch (e) {
                                 // UI đã hiện giải thích; lưu lại không chặn học.
                             } finally {
@@ -1019,7 +1075,25 @@
                         <span class="material-symbols-outlined text-outline">close</span>
                     </button>
                 </div>
-                <div class="space-y-4 p-6">
+
+                {{-- Locked: có ghi chú sẵn nhưng chưa chọn đáp án --}}
+                <div x-show="notesLocked" x-cloak class="space-y-4 p-6 text-center">
+                    <div class="mx-auto flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <span class="material-symbols-outlined text-[28px]">lock</span>
+                    </div>
+                    <div class="space-y-1">
+                        <p class="font-label-md text-label-md font-semibold text-on-surface">Bạn đã có ghi chú cho câu này</p>
+                        <p class="text-body-sm text-on-surface-variant">
+                            Chọn đáp án để xem lại ghi chú — tránh spoil trước khi trả lời.
+                        </p>
+                    </div>
+                    <button type="button" @click="notesOpen = false"
+                        class="rounded-lg bg-primary/10 px-4 py-2 font-label-md text-primary hover:bg-primary/15">
+                        Đã hiểu
+                    </button>
+                </div>
+
+                <div x-show="!notesLocked" class="space-y-4 p-6">
                     <div class="overflow-hidden rounded-lg border border-outline-variant bg-white focus-within:border-primary focus-within:ring-1 focus-within:ring-primary">
                         <div class="flex flex-wrap items-center gap-1 border-b border-outline-variant bg-surface-container-lowest p-2">
                             <button type="button" @mousedown.prevent @click="formatNote('bold')" class="flex size-8 items-center justify-center rounded hover:bg-surface-container-high" title="In đậm">
@@ -1049,7 +1123,7 @@
                             </button>
                         </div>
                         <div x-ref="noteEditor" contenteditable="true"
-                            x-init="$el.innerHTML = noteHtml"
+                            x-init="if (!notesLocked) $el.innerHTML = noteHtml"
                             @input="noteHtml = $event.target.innerHTML; noteText = $event.target.innerText.trim()"
                             class="prose prose-sm min-h-[190px] max-w-none overflow-y-auto p-4 text-body-md outline-none"
                             data-placeholder="Nhập nội dung ghi chú của bạn tại đây..."></div>
