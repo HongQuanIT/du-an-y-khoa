@@ -4,6 +4,7 @@
      * @var \Illuminate\Support\Collection<int, \Modules\QuestionBank\Models\OrganSystem> $organSystems
      * @var list<array{id: int, title: string, icon: string, hint: string}> $exams
      */
+    $legacyBuilderPreferences = is_array($legacyBuilderPreferences ?? null) ? $legacyBuilderPreferences : [];
     $initialMode = old('mode', request('mode', 'study'));
     $initialSource = old('source', request('source', 'custom'));
     if (! in_array($initialSource, ['custom', 'weak_topics'], true)) {
@@ -14,9 +15,9 @@
         $initialAdaptiveFocus = 'balanced';
     }
     $initialCountDefault = 0;
-    $initialCount = old('count') !== null
-        ? max(0, (int) old('count'))
-        : $initialCountDefault;
+    $initialCountInput = old('count', request('count', $initialCountDefault));
+    $initialCount = max(0, (int) $initialCountInput);
+    $initialCountTouched = old('count') !== null || request()->has('count');
     $initialDifficultyInput = old(
         'difficulties',
         request('difficulties', old('difficulty', request('difficulty', []))),
@@ -50,7 +51,9 @@
         : '';
 @endphp
 
-<x-layouts.app title="Tạo phiên luyện tập">
+<x-layouts.app
+    title="Tạo phiên luyện tập câu hỏi y khoa"
+    description="Tạo phiên luyện tập câu hỏi y khoa theo kỳ thi, chủ đề, bài học và độ khó; chọn câu thủ công hoặc ôn tập theo tiến độ học của bạn.">
     <form method="POST" action="{{ route('qbank.store', absolute: false) }}" x-ref="builderForm"
         class="flex min-h-[calc(100vh-var(--spacing-header-height))] flex-col pb-24"
         x-data="{
@@ -90,11 +93,16 @@
             matching: null,
             counting: false,
             countRequest: 0,
-            countTouched: {{ old('count') !== null ? 'true' : 'false' }},
+            countTouched: {{ $initialCountTouched ? 'true' : 'false' }},
+            questionStatusMode: {{ Illuminate\Support\Js::from($initialStatusMode)->toHtml() }},
             submitting: false,
+            preferenceStorageKey: {{ Illuminate\Support\Js::from('qbank.session-builder.'.(int) auth()->id())->toHtml() }},
+            restoreStoredPreferences: {{ ($restoreBuilderPreferences ?? true) ? 'true' : 'false' }},
+            legacyBuilderPreferences: {{ Illuminate\Support\Js::from($legacyBuilderPreferences)->toHtml() }},
             countUrl: {{ Illuminate\Support\Js::from(route('qbank.count', absolute: false))->toHtml() }},
             csrf: {{ Illuminate\Support\Js::from(csrf_token())->toHtml() }},
             init() {
+                this.restoreBuilderPreferences();
                 if (this.source === 'weak_topics') {
                     this.difficulties = [];
                     this.statuses = [];
@@ -110,6 +118,78 @@
                 if (this.blueprintId) this.pruneFiltersToBlueprint();
                 this.$nextTick(() => this.refreshCount());
             },
+            restoreBuilderPreferences() {
+                if (!this.restoreStoredPreferences) return;
+
+                let preferences = null;
+                try {
+                    const stored = localStorage.getItem(this.preferenceStorageKey);
+                    preferences = stored ? JSON.parse(stored) : null;
+                } catch (error) {
+                    preferences = null;
+                }
+
+                const restoredFromBrowser = preferences && typeof preferences === 'object';
+                if (!restoredFromBrowser) preferences = this.legacyBuilderPreferences;
+                if (!preferences || typeof preferences !== 'object') return;
+
+                if (['study', 'exam'].includes(preferences.mode)) this.mode = preferences.mode;
+                if (['custom', 'weak_topics'].includes(preferences.source)) this.source = preferences.source;
+                if (['weak_focus', 'balanced', 'retention'].includes(preferences.adaptive_focus)) {
+                    this.adaptiveFocus = preferences.adaptive_focus;
+                }
+                if (Number.isFinite(Number(preferences.count))) {
+                    this.count = Math.max(0, Number(preferences.count));
+                    this.countTouched = true;
+                }
+
+                const statuses = Array.isArray(preferences.question_statuses) ? preferences.question_statuses : [];
+                this.statuses = statuses.filter((status) => status !== 'flagged');
+                this.flaggedOnly = statuses.includes('flagged');
+                if (['all', 'latest'].includes(preferences.question_status_mode)) {
+                    this.questionStatusMode = preferences.question_status_mode;
+                }
+                this.difficulties = Array.isArray(preferences.difficulties) ? preferences.difficulties : [];
+                this.organSystemIds = Array.isArray(preferences.organ_system_ids) ? preferences.organ_system_ids.map(Number) : [];
+                this.subjectIds = Array.isArray(preferences.subject_ids) ? preferences.subject_ids.map(Number) : [];
+                this.lessonIds = Array.isArray(preferences.lesson_ids) ? preferences.lesson_ids.map(Number) : [];
+                this.savedOnly = Boolean(preferences.saved_only);
+                const availableFolderIds = new Set(this.folders.map((folder) => Number(folder.id)));
+                this.folderIds = (Array.isArray(preferences.folder_ids) ? preferences.folder_ids : [])
+                    .map(Number)
+                    .filter((id) => availableFolderIds.has(id));
+                this.savedOnly = this.savedOnly || this.folderIds.length > 0;
+                this.folderId = this.folderIds[0] || null;
+                this.folderName = this.folderIds.length === 1
+                    ? this.folders.find((folder) => Number(folder.id) === this.folderId)?.name || ''
+                    : (this.savedOnly ? 'Tất cả câu đã lưu' : '');
+                this.blueprintId = preferences.exam_catalog_id ? Number(preferences.exam_catalog_id) : null;
+                this.blueprintName = this.blueprintId ? this.examTitles[this.blueprintId] || '' : '';
+                this.lessonLabels = {};
+
+                if (!restoredFromBrowser) this.saveBuilderPreferences();
+            },
+            saveBuilderPreferences() {
+                try {
+                    localStorage.setItem(this.preferenceStorageKey, JSON.stringify({
+                        mode: this.mode,
+                        source: this.source,
+                        adaptive_focus: this.adaptiveFocus,
+                        count: Number(this.count) || 0,
+                        exam_catalog_id: this.blueprintId,
+                        organ_system_ids: this.organSystemIds,
+                        subject_ids: this.subjectIds,
+                        lesson_ids: this.lessonIds,
+                        difficulties: this.difficulties,
+                        question_statuses: [...this.statuses, ...(this.flaggedOnly ? ['flagged'] : [])],
+                        question_status_mode: this.questionStatusMode,
+                        saved_only: this.savedOnly,
+                        folder_ids: this.folderIds,
+                    }));
+                } catch (error) {
+                    // Browser storage may be unavailable; session creation still works.
+                }
+            },
             isAdaptive() {
                 return this.source === 'weak_topics';
             },
@@ -119,6 +199,7 @@
             setAdaptiveFocus(next) {
                 if (!['weak_focus', 'balanced', 'retention'].includes(next)) return;
                 this.adaptiveFocus = next;
+                this.saveBuilderPreferences();
             },
             adaptiveFocusLabel() {
                 return ({
@@ -147,6 +228,7 @@
                     this.count = 0;
                 }
                 this.countTouched = false;
+                this.saveBuilderPreferences();
                 this.$nextTick(() => this.refreshCount());
             },
             clearCustomFilters(refresh = true) {
@@ -161,6 +243,7 @@
                 this.folderName = '';
                 this.lessonIds = [];
                 this.lessonLabels = {};
+                this.saveBuilderPreferences();
                 if (refresh) this.$nextTick(() => this.refreshCount());
             },
             clearTaxonomySelection() {
@@ -177,6 +260,7 @@
                 this.clearTaxonomySelection();
                 this.blueprintId = null;
                 this.blueprintName = '';
+                this.saveBuilderPreferences();
                 this.refreshCount();
             },
             toggleSavedFolder(folder) {
@@ -193,6 +277,7 @@
                 this.clearTaxonomySelection();
                 this.blueprintId = null;
                 this.blueprintName = '';
+                this.saveBuilderPreferences();
                 this.refreshCount();
             },
             savedFolderLabel() {
@@ -292,6 +377,7 @@
                 }
                 if (this.activeFilter === 'lessons') await this.fetchLessons();
                 await this.$nextTick();
+                this.saveBuilderPreferences();
                 this.refreshCount();
             },
             async pruneLessonsToCascade() {
@@ -319,6 +405,7 @@
                     this.lessonIds.push(item.id);
                     this.lessonLabels[item.id] = item.name;
                 }
+                this.saveBuilderPreferences();
                 this.$nextTick(() => this.refreshCount());
             },
             lessonLabel() {
@@ -438,11 +525,13 @@
                 this.blueprintId = id;
                 this.blueprintName = title;
                 this.pruneFiltersToBlueprint();
+                this.saveBuilderPreferences();
                 this.$nextTick(() => this.refreshCount());
             },
             clearExam() {
                 this.blueprintId = null;
                 this.blueprintName = '';
+                this.saveBuilderPreferences();
                 this.$nextTick(() => this.refreshCount());
             },
             resetBuilder() {
@@ -470,25 +559,32 @@
                 this.sessionName = {{ Illuminate\Support\Js::from('Phiên luyện từ ' . now()->translatedFormat('j M, H:i'))->toHtml() }};
                 this.filterSearch = '';
                 this.activeFilter = null;
+                try {
+                    localStorage.removeItem(this.preferenceStorageKey);
+                } catch (error) {
+                    // Browser storage may be unavailable; reset the form anyway.
+                }
                 this.$nextTick(() => this.refreshCount());
             },
         }"
         @change.debounce.350ms="
-            if (!$event.target.name || $event.target.name === 'count' || $event.target.name === 'name') return;
+            if (!$event.target.name || $event.target.name === 'name') return;
+            saveBuilderPreferences();
+            if ($event.target.name === 'count') return;
             if ($event.target.name === 'organ_system_ids[]' || $event.target.name === 'subject_ids[]') {
                 onTaxonomyAxisChange();
                 return;
             }
             refreshCount();
         "
-        @input.debounce.500ms="if ($event.target.name && $event.target.name !== 'count' && $event.target.name !== 'name') refreshCount()"
+        @input.debounce.500ms="if ($event.target.name && $event.target.name !== 'name') { saveBuilderPreferences(); if ($event.target.name !== 'count') refreshCount(); }"
         @keydown.escape.window="activeFilter = null"
-        @submit="if (!canStart()) { $event.preventDefault(); return; } submitting = true">
+        @submit="saveBuilderPreferences(); if (!canStart()) { $event.preventDefault(); return; } submitting = true">
         @csrf
         <input type="hidden" name="source" :value="source">
         <input type="hidden" name="adaptive_focus" :value="adaptiveFocus" :disabled="!isAdaptive()">
         <input type="hidden" name="exam_catalog_id" :value="blueprintId ?? ''" :disabled="!blueprintId">
-        <input type="hidden" name="question_status_mode" value="{{ $initialStatusMode }}">
+        <input type="hidden" name="question_status_mode" :value="questionStatusMode">
         <input type="hidden" name="saved_only" :value="savedOnly ? '1' : '0'" :disabled="isAdaptive()">
         <input type="hidden" name="question_statuses[]" value="flagged" :disabled="isAdaptive() || !flaggedOnly">
         <template x-for="folderId in folderIds" :key="folderId">
@@ -521,9 +617,9 @@
             @endif
 
             <div class="mb-8">
-                <h1 class="font-headline-sm text-on-surface">Chọn loại phiên luyện</h1>
+                <h1 class="font-headline-sm text-on-surface">Tạo phiên luyện tập câu hỏi y khoa</h1>
                 <p class="mt-1 max-w-2xl text-sm text-on-surface-variant">
-                    Tuỳ chỉnh bộ lọc thủ công, hoặc để hệ thống chọn câu theo ma trận đề thi và sức học của bạn.
+                    Chọn kỳ thi, chủ đề, bài học và độ khó để tạo phiên luyện theo nhu cầu, hoặc để hệ thống chọn câu theo ma trận đề thi và tiến độ học của bạn.
                 </p>
                 <div class="mt-5 grid gap-4 sm:grid-cols-2" role="radiogroup" aria-label="Loại phiên luyện tập">
                     <button type="button" @click="setSource('custom')"
@@ -769,8 +865,8 @@
                                     <input id="question-count" type="number" name="count" min="0" step="1"
                                         :max="Math.max(0, questionLimit())" x-model.number="count"
                                         :disabled="matching === 0 && !flaggedOnly"
-                                        @input="countTouched = true; clampQuestionCount()"
-                                        @change="countTouched = true; clampQuestionCount()"
+                                        @input="countTouched = true; clampQuestionCount(); saveBuilderPreferences()"
+                                        @change="countTouched = true; clampQuestionCount(); saveBuilderPreferences()"
                                         @blur="clampQuestionCount()"
                                         required
                                         class="w-20 rounded-lg border border-outline-variant py-2.5 text-center text-lg font-bold focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60">
@@ -997,7 +1093,7 @@
 
                 <div class="flex items-center justify-between border-t border-outline-variant bg-surface-container-lowest p-4">
                     <button type="button"
-                        @click="activeFilter === 'exams' ? clearExam() : activeFilter === 'systems' ? clearOrganSystems() : activeFilter === 'subjects' ? clearSubjects() : activeFilter === 'difficulty' ? difficulties = [] : activeFilter === 'lessons' ? (lessonIds = [], lessonLabels = {}) : activeFilter === 'saved' ? (savedOnly = false, folderId = null, folderIds = [], folderName = '') : statuses = []; $nextTick(() => refreshCount())"
+                        @click="activeFilter === 'exams' ? clearExam() : activeFilter === 'systems' ? clearOrganSystems() : activeFilter === 'subjects' ? clearSubjects() : activeFilter === 'difficulty' ? difficulties = [] : activeFilter === 'lessons' ? (lessonIds = [], lessonLabels = {}) : activeFilter === 'saved' ? (savedOnly = false, folderId = null, folderIds = [], folderName = '') : statuses = []; saveBuilderPreferences(); $nextTick(() => refreshCount())"
                         class="text-sm font-bold text-primary hover:underline">Đặt lại</button>
                     <button type="button" @click="activeFilter = null"
                         class="rounded-lg bg-primary px-8 py-2 font-bold text-white transition-opacity hover:opacity-90">Xong</button>

@@ -39,6 +39,12 @@ final class CustomSessionController extends Controller
                 ->orderByDesc('id')
                 ->get()
             : collect();
+        $restoreBuilderPreferences = $request->query->count() === 0
+            && ! $request->session()->has('_old_input');
+        $legacyBuilderPreferences = $restoreBuilderPreferences
+            ? $request->session()->pull("qbank.session_builder_preferences.{$userId}", [])
+            : [];
+        $legacyBuilderPreferences = is_array($legacyBuilderPreferences) ? $legacyBuilderPreferences : [];
 
         $professionId = $request->user()?->learnerProfile?->profession_id;
         $professionId = $professionId !== null ? (int) $professionId : null;
@@ -72,6 +78,8 @@ final class CustomSessionController extends Controller
                 ->all(),
             'blueprintScopes' => [],
             'bookmarkFolders' => $bookmarkFolders,
+            'legacyBuilderPreferences' => $legacyBuilderPreferences,
+            'restoreBuilderPreferences' => $restoreBuilderPreferences,
         ]);
     }
 

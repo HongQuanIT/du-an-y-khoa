@@ -2,6 +2,21 @@
 
 ## 2026-10-05
 
+### Feat — Ghi nhớ thiết lập tạo phiên luyện tập
+
+- Lưu lựa chọn tạo phiên theo học viên trên trình duyệt và khôi phục khi quay lại trang.
+- Chuyển thiết lập cũ từ phiên đăng nhập, đồng thời ưu tiên dữ liệu biểu mẫu khi có tham số hoặc lỗi nhập.
+- Bổ sung tiêu đề, mô tả và nội dung mở đầu rõ ràng cho trang tạo phiên.
+
+## 2026-10-05
+
+### Feat — Lọc nhiều chế độ và trạng thái phiên luyện
+
+- Danh sách phiên cho phép chọn nhiều chế độ và trạng thái cùng lúc.
+- Giữ các lựa chọn lọc khi chuyển trang và cập nhật thông báo khi không có kết quả.
+
+## 2026-10-05
+
 ### Feat — Lưu trạng thái gắn cờ theo câu hỏi
 
 - Lưu cờ độc lập với phiên trong tiến độ từng câu của học viên.

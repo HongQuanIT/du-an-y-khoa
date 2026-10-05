@@ -247,35 +247,23 @@
                 <form method="GET" action="{{ route('qbank.index') }}"
                     class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                     <div class="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-2 md:max-w-xl">
-                        <label class="block">
-                            <span class="mb-1.5 block text-xs font-bold text-on-surface-variant">Chế độ</span>
-                            <select name="mode"
-                                class="w-full rounded-xl border border-outline-variant bg-white px-4 py-2.5 text-body-sm focus:border-primary focus:ring-1 focus:ring-primary">
-                                <option value="">Tất cả</option>
-                                @foreach ($modeOptions as $option)
-                                    <option value="{{ $option->value }}" @selected($filters['mode'] === $option->value)>
-                                        {{ $modeLabels[$option->value] ?? ucfirst($option->value) }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </label>
+                        <x-admin.multi-select-filter
+                            name="mode"
+                            label="Chế độ"
+                            :options="collect($modeOptions)->map(fn ($option) => ['id' => $option->value, 'label' => $modeLabels[$option->value] ?? ucfirst($option->value)])->all()"
+                            :selected="$filters['mode'] ?? []"
+                        />
 
-                        <label class="block">
-                            <span class="mb-1.5 block text-xs font-bold text-on-surface-variant">Trạng thái</span>
-                            <select name="status"
-                                class="w-full rounded-xl border border-outline-variant bg-white px-4 py-2.5 text-body-sm focus:border-primary focus:ring-1 focus:ring-primary">
-                                <option value="">Tất cả</option>
-                                @foreach ($statusOptions as $option)
-                                    <option value="{{ $option->value }}" @selected($filters['status'] === $option->value)>
-                                        {{ $statusMeta[$option->value]['label'] ?? ucfirst($option->value) }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </label>
+                        <x-admin.multi-select-filter
+                            name="status"
+                            label="Trạng thái"
+                            :options="collect($statusOptions)->map(fn ($option) => ['id' => $option->value, 'label' => $statusMeta[$option->value]['label'] ?? ucfirst($option->value)])->all()"
+                            :selected="$filters['status'] ?? []"
+                        />
                     </div>
 
                     <div class="flex gap-2">
-                        @if ($filters['mode'] !== null || $filters['status'] !== null)
+                        @if ($filters['mode'] !== [] || $filters['status'] !== [])
                             <a href="{{ route('qbank.index') }}"
                                 class="inline-flex flex-1 items-center justify-center rounded-xl border border-outline-variant px-4 py-2.5 text-sm font-bold text-on-surface-variant transition-colors hover:bg-surface-container-low md:flex-none">
                                 Xóa lọc
@@ -296,15 +284,15 @@
                         <span class="material-symbols-outlined text-[34px]">history</span>
                     </span>
                     <h2 class="mb-2 text-lg font-bold text-on-surface">
-                        {{ $filters['mode'] !== null || $filters['status'] !== null ? 'Không có phiên phù hợp' : 'Bạn chưa có phiên luyện tập nào' }}
+                        {{ $filters['mode'] !== [] || $filters['status'] !== [] ? 'Không có phiên phù hợp' : 'Bạn chưa có phiên luyện tập nào' }}
                     </h2>
                     <p class="mb-6 max-w-md text-sm leading-6 text-on-surface-variant">
-                        {{ $filters['mode'] !== null || $filters['status'] !== null
+                        {{ $filters['mode'] !== [] || $filters['status'] !== []
                             ? 'Thử thay đổi bộ lọc để xem các phiên luyện tập khác.'
                             : 'Tạo phiên đầu tiên để bắt đầu luyện câu hỏi và theo dõi tiến độ của bạn.' }}
                     </p>
                     <div class="flex flex-col gap-2 sm:flex-row">
-                        @if ($filters['mode'] !== null || $filters['status'] !== null)
+                        @if ($filters['mode'] !== [] || $filters['status'] !== [])
                             <a href="{{ route('qbank.index') }}"
                                 class="rounded-xl border border-outline-variant px-5 py-2.5 text-sm font-bold text-on-surface-variant hover:bg-surface-container-low">
                                 Xem tất cả phiên
