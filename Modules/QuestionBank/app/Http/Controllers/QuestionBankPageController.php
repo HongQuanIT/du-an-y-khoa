@@ -33,8 +33,8 @@ final class QuestionBankPageController extends Controller
         }
 
         $userId = (int) $request->user()->getKey();
-        $mode = $this->modeFilter($request);
-        $status = $this->statusFilter($request);
+        $modes = $this->modeFilters($request);
+        $statuses = $this->statusFilters($request);
 
         $aggregate = QuestionSession::query()
             ->where('user_id', $userId)
@@ -62,8 +62,8 @@ final class QuestionBankPageController extends Controller
         $history = QuestionSession::query()
             ->where('user_id', $userId)
             ->with(['attempts:id,session_id,question_id,is_correct,used_hint'])
-            ->when($mode !== null, fn ($query) => $query->where('mode', $mode))
-            ->when($status !== null, fn ($query) => $query->where('status', $status))
+            ->when($modes !== [], fn ($query) => $query->whereIn('mode', $modes))
+            ->when($statuses !== [], fn ($query) => $query->whereIn('status', $statuses))
             ->latest('created_at')
             ->paginate(10)
             ->withQueryString();
@@ -79,8 +79,8 @@ final class QuestionBankPageController extends Controller
                 'answered_questions' => $answeredQuestions,
             ],
             'filters' => [
-                'mode' => $mode?->value,
-                'status' => $status?->value,
+                'mode' => $modes,
+                'status' => $statuses,
             ],
             'modeOptions' => collect(SessionMode::cases())
                 ->filter(fn ($m) => $m !== SessionMode::Exam || $request->user()->can('exam.take'))
@@ -166,17 +166,35 @@ final class QuestionBankPageController extends Controller
         ]);
     }
 
-    private function modeFilter(Request $request): ?SessionMode
+    /** @return list<string> */
+    private function modeFilters(Request $request): array
     {
-        $value = $request->query('mode');
+        $values = $request->query('mode', []);
+        $values = is_array($values) ? $values : [$values];
 
-        return is_string($value) ? SessionMode::tryFrom($value) : null;
+        return collect($values)
+            ->filter(static fn (mixed $value): bool => is_string($value))
+            ->map(static fn (string $value): ?SessionMode => SessionMode::tryFrom($value))
+            ->filter()
+            ->map(static fn (SessionMode $mode): string => $mode->value)
+            ->unique()
+            ->values()
+            ->all();
     }
 
-    private function statusFilter(Request $request): ?SessionStatus
+    /** @return list<string> */
+    private function statusFilters(Request $request): array
     {
-        $value = $request->query('status');
+        $values = $request->query('status', []);
+        $values = is_array($values) ? $values : [$values];
 
-        return is_string($value) ? SessionStatus::tryFrom($value) : null;
+        return collect($values)
+            ->filter(static fn (mixed $value): bool => is_string($value))
+            ->map(static fn (string $value): ?SessionStatus => SessionStatus::tryFrom($value))
+            ->filter()
+            ->map(static fn (SessionStatus $status): string => $status->value)
+            ->unique()
+            ->values()
+            ->all();
     }
 }
