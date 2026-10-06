@@ -158,6 +158,66 @@ final class QuestionBankFlowTest extends TestCase
             ->assertJsonPath('data.count', 2);
     }
 
+    public function test_builder_topic_options_are_sorted_alphabetically_by_name(): void
+    {
+        $alphaExam = ExamCatalog::query()->create([
+            'name' => 'Kỳ thi Alpha',
+            'slug' => 'ky-thi-alpha',
+            'code' => 'KY-ALPHA',
+            'status' => TaxonomyStatus::Active,
+            'sort_order' => 99,
+        ]);
+        $zuluExam = ExamCatalog::query()->create([
+            'name' => 'Kỳ thi Zulu',
+            'slug' => 'ky-thi-zulu',
+            'code' => 'KY-ZULU',
+            'status' => TaxonomyStatus::Active,
+            'sort_order' => 1,
+        ]);
+        $alphaExam->professions()->sync([$this->profession->id]);
+        $zuluExam->professions()->sync([$this->profession->id]);
+
+        $this->makeOrganSystem(['name' => 'Hệ Alpha', 'sort_order' => 99]);
+        $this->makeOrganSystem(['name' => 'Hệ Zulu', 'sort_order' => 1]);
+        $this->makeSubject(['name' => 'Môn Alpha', 'sort_order' => 99]);
+        $this->makeSubject(['name' => 'Môn Zulu', 'sort_order' => 1]);
+        BookmarkFolder::query()->create(['user_id' => $this->user->id, 'name' => 'Bộ Alpha']);
+        BookmarkFolder::query()->create(['user_id' => $this->user->id, 'name' => 'Bộ Zulu']);
+
+        $this->actingAs($this->user)
+            ->get(route('qbank.create'))
+            ->assertOk()
+            ->assertViewHas('exams', fn (array $items): bool => collect($items)->pluck('title')->all() === [
+                'Kỳ thi Alpha',
+                'Kỳ thi Zulu',
+            ])
+            ->assertViewHas('organSystems', fn ($items): bool => $items->pluck('name')->all() === [
+                'Hệ Alpha',
+                'Hệ Zulu',
+            ])
+            ->assertViewHas('subjects', fn ($items): bool => $items->pluck('name')->all() === [
+                'Môn Alpha',
+                'Môn Zulu',
+            ])
+            ->assertViewHas('bookmarkFolders', fn ($items): bool => $items->pluck('name')->all() === [
+                'Bộ Alpha',
+                'Bộ Zulu',
+            ]);
+    }
+
+    public function test_builder_lesson_lookup_is_sorted_alphabetically_by_name(): void
+    {
+        $this->makeLesson(['name' => 'Bài Alpha', 'sort_order' => 99]);
+        $this->makeLesson(['name' => 'Bài Zulu', 'sort_order' => 1]);
+
+        $this->actingAs($this->user)
+            ->getJson(route('qbank.taxonomy.lookups.lessons'))
+            ->assertOk()
+            ->assertJsonPath('data.0.name', 'Bài Alpha')
+            ->assertJsonPath('data.1.name', 'Bài Zulu')
+            ->assertJsonPath('data.2.name', 'Tim mạch');
+    }
+
     public function test_adaptive_session_defaults_to_all_exams_and_ignores_difficulty_status_filters(): void
     {
         $this->createQuestion($this->topic, true, Difficulty::Easy, 'Câu adaptive 1');
