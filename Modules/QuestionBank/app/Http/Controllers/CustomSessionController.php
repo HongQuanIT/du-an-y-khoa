@@ -36,7 +36,7 @@ final class CustomSessionController extends Controller
             ? BookmarkFolder::query()
                 ->where('user_id', $userId)
                 ->withCount('items')
-                ->orderByDesc('id')
+                ->orderBy('name')
                 ->get()
             : collect();
         $restoreBuilderPreferences = $request->query->count() === 0
@@ -57,13 +57,12 @@ final class CustomSessionController extends Controller
                     'professions',
                     fn ($professions) => $professions->where('professions.id', $professionId),
                 )
-                ->orderBy('sort_order')
                 ->orderBy('name')
                 ->get(['id', 'name', 'code', 'description', 'blueprint_id']);
 
         return view('questionbank::custom-session', [
-            'subjects' => Subject::query()->where('status', TaxonomyStatus::Active)->orderBy('sort_order')->orderBy('name')->get(),
-            'organSystems' => OrganSystem::query()->where('status', TaxonomyStatus::Active)->orderBy('sort_order')->orderBy('name')->get(),
+            'subjects' => Subject::query()->where('status', TaxonomyStatus::Active)->orderBy('name')->get(),
+            'organSystems' => OrganSystem::query()->where('status', TaxonomyStatus::Active)->orderBy('name')->get(),
             'needsProfession' => $professionId === null,
             'exams' => $exams
                 ->map(fn (ExamCatalog $catalog): array => [

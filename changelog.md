@@ -2,6 +2,11 @@
 
 ## 2026-10-06
 
+### Fix — Sắp xếp bảng chữ cái trong thiết lập chủ đề
+
+- Sắp xếp kỳ thi, hệ cơ quan, môn học và bài học theo tên chữ cái.
+- Bổ sung kiểm thử thứ tự hiển thị và dữ liệu tra cứu bài học.
+
 ### Refactor — Dùng ảnh trong trình soạn thảo câu hỏi
 
 - Gỡ trường tải ảnh câu hỏi riêng khỏi luồng tạo, lưu, phiên bản, so sánh và các màn hiển thị cho Admin, giảng viên, reviewer, học viên.

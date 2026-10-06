@@ -186,7 +186,6 @@ final class TaxonomyLookupController extends Controller
                 'subjects:id,name',
                 'organSystems:id,name',
             ])
-            ->orderBy('sort_order')
             ->orderBy('name')
             ->limit($limit)
             ->get(['id', 'name', 'slug'])
