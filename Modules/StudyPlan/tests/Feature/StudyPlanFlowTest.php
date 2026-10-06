@@ -309,10 +309,6 @@ final class StudyPlanFlowTest extends TestCase
         $this->actingAs($this->user)->post(route('study-plan.tasks.start', [$plan, $task]));
 
         $session = QuestionSession::firstOrFail();
-        $firstSessionQuestionId = $session->question_ids[0] ?? null;
-        if ($firstSessionQuestionId) {
-            Question::where('id', $firstSessionQuestionId)->update(['stem_image_path' => 'questions/study-plan-image.png']);
-        }
 
         foreach ($session->question_ids as $index => $questionId) {
             $question = Question::with('options')->findOrFail($questionId);
@@ -350,8 +346,7 @@ final class StudyPlanFlowTest extends TestCase
             ->assertOk()
             ->assertSee('Xem lại câu hỏi')
             ->assertSee('Q1')
-            ->assertSee('study-plan-image.png')
-            ->assertSee('imageViewerOpen');
+            ->assertDontSee('imageViewerOpen');
     }
 
     public function test_question_map_can_open_earlier_questions_after_finishing(): void

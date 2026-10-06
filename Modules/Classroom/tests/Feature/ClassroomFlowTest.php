@@ -321,7 +321,6 @@ final class ClassroomFlowTest extends TestCase
 
         $question = Question::factory()->withOptions(2)->create([
             'stem' => '<p>Câu hỏi <mark data-hint="true">test live</mark></p>',
-            'stem_image_path' => 'question-images/live-ecg.png',
             'attending_tip' => '<p>Kiến thức hiển thị khi chọn đáp án.</p>',
             'key_info' => ['test live'],
             'is_free' => true,
@@ -448,8 +447,7 @@ final class ClassroomFlowTest extends TestCase
             ->assertJsonPath('data.question.attending_tip', null)
             ->assertJsonPath('data.question.hints_revealed', false);
 
-        $imageUrl = (string) $response->json('data.question.stem_image_url');
-        $this->assertStringContainsString('question-images/live-ecg.png', $imageUrl);
+        $this->assertArrayNotHasKey('stem_image_url', (array) $response->json('data.question'));
 
         $this->actingAs($host)
             ->patchJson(route('classroom.live.api.marks', [$classroom, $session]), [

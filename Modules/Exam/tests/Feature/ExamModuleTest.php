@@ -233,7 +233,7 @@ final class ExamModuleTest extends TestCase
             ->assertSee(route('exam.start', $exam->getKey()), false);
     }
 
-    public function test_exam_review_displays_question_stem_image(): void
+    public function test_exam_review_ignores_legacy_question_stem_image(): void
     {
         $question = Question::factory()
             ->free()
@@ -274,8 +274,8 @@ final class ExamModuleTest extends TestCase
             ->get(route('exam.review', $session))
             ->assertOk()
             ->assertSee('Xem lại kỳ thi')
-            ->assertSee('test-chest-xray.jpg')
-            ->assertSee('imageViewerOpen');
+            ->assertDontSee('test-chest-xray.jpg')
+            ->assertDontSee('imageViewerOpen');
     }
 
     private function examPoolQuestion(string $stem): Question

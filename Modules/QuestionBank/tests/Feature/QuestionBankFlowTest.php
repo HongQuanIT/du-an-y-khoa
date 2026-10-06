@@ -1073,7 +1073,7 @@ final class QuestionBankFlowTest extends TestCase
             ->assertSee('STEMI cần PCI cấp cứu', false);
     }
 
-    public function test_qbank_review_displays_question_stem_image(): void
+    public function test_qbank_review_ignores_legacy_question_stem_image(): void
     {
         $question = $this->createQuestion(
             $this->topic,
@@ -1100,8 +1100,8 @@ final class QuestionBankFlowTest extends TestCase
             ->get(route('qbank.review', $session))
             ->assertOk()
             ->assertSee('Xem lại câu hỏi')
-            ->assertSee('test-ecg.png')
-            ->assertSee('imageViewerOpen');
+            ->assertDontSee('test-ecg.png')
+            ->assertDontSee('imageViewerOpen');
     }
 
     public function test_question_overview_paginates_after_five_rows(): void

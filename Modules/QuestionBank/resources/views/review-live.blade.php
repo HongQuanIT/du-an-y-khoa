@@ -23,8 +23,6 @@
             activeKey: @js($items[0]['question_id'] ?? null),
             detailOpen: false,
             notesOpen: false,
-            imageViewerOpen: false,
-            imageViewerSrc: null,
             hintReveal: {},
             knowledgeReveal: {},
             get filtered() {
@@ -177,9 +175,6 @@
                         <div class="mt-2 flex items-center justify-between gap-2">
                             <span class="truncate text-[11px] font-semibold text-on-surface-variant" x-text="item.topic"></span>
                             <div class="flex items-center gap-2 shrink-0">
-                                <span x-show="item.stem_image_url" class="inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-semibold bg-primary/10 text-primary" title="Có hình ảnh minh họa">
-                                    <span class="material-symbols-outlined text-[13px]">image</span> Ảnh
-                                </span>
                                 <span x-show="item.note" class="inline-flex items-center gap-1 text-[11px] text-primary">
                                     <span class="material-symbols-outlined text-[14px]">description</span> Có ghi chú
                                 </span>
@@ -222,7 +217,7 @@
                             </div>
 
                             <div class="grid gap-5"
-                                :class="[current.stem_image_url ? 'lg:grid-cols-[minmax(0,1fr)_minmax(280px,380px)] lg:items-start' : '', isKeyInfoOn() ? 'key-info-active' : '']">
+                                :class="isKeyInfoOn() ? 'key-info-active' : ''">
                                 <div class="space-y-3 rounded-2xl border border-outline-variant bg-surface p-5 shadow-sm md:p-6">
                                     <div x-show="current.hint_used" x-cloak
                                         class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-bold tracking-wide text-amber-700 uppercase"
@@ -240,22 +235,6 @@
                                         x-html="current.stem_key_info_html"></div>
                                 </div>
 
-                                <template x-if="current.stem_image_url">
-                                    <aside class="overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-sm">
-                                        <div class="flex cursor-zoom-in justify-center bg-white p-3"
-                                            @click="imageViewerOpen = true; imageViewerSrc = current.stem_image_url">
-                                            <img :src="current.stem_image_url" alt="Ảnh minh họa câu hỏi"
-                                                class="h-auto max-h-[460px] w-full object-contain transition-transform hover:scale-[1.02]">
-                                        </div>
-                                        <div class="flex items-center justify-between border-t border-outline-variant/60 bg-surface-container-low px-3.5 py-2 text-[11px] font-medium text-on-surface-variant">
-                                            <span class="inline-flex items-center gap-1">
-                                                <span class="material-symbols-outlined text-[15px]">zoom_in</span>
-                                                Nhấp để phóng to ảnh
-                                            </span>
-                                            <span class="rounded bg-surface px-1.5 py-0.5 text-[10px] font-semibold text-primary border border-outline-variant">Hình ảnh</span>
-                                        </div>
-                                    </aside>
-                                </template>
                             </div>
 
                             <div class="flex min-h-12 items-center border-y border-outline-variant bg-surface-container-lowest px-1"
@@ -398,18 +377,6 @@
             </div>
         </div>
 
-        <div x-show="imageViewerOpen" x-cloak x-transition.opacity
-            class="fixed inset-0 z-[150] flex items-center justify-center bg-black/90 p-4"
-            @click="imageViewerOpen = false">
-            <button type="button"
-                class="absolute right-4 top-4 flex size-12 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
-                @click="imageViewerOpen = false" aria-label="Đóng ảnh">
-                <span class="material-symbols-outlined text-[24px]">close</span>
-            </button>
-            <img :src="imageViewerSrc" alt="Ảnh phóng to"
-                class="max-h-full max-w-full cursor-zoom-out object-contain"
-                @click.stop="imageViewerOpen = false">
-        </div>
     </div>
     <style>
         [data-testid="review-stem"] mark[data-hint],

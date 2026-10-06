@@ -24,7 +24,6 @@
 
 <div class="min-h-0 flex-1 overflow-y-auto p-4">
     <div data-q-stem class="prose prose-sm max-w-none select-text text-on-surface"></div>
-    <div data-q-stem-image class="mt-3 hidden"></div>
     <div data-q-knowledge class="mt-4 hidden rounded-lg border border-amber-200 bg-amber-50/70 p-3 text-sm text-on-surface">
         <div class="flex items-start gap-2">
             <span class="material-symbols-outlined mt-0.5 shrink-0 text-[18px] text-amber-700">stethoscope</span>

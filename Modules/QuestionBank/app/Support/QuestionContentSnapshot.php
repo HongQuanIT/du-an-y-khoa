@@ -29,7 +29,6 @@ final class QuestionContentSnapshot
         return [
             'code' => $question->code,
             'stem' => $question->stem,
-            'stem_image_path' => $question->stem_image_path,
             'key_info' => $question->key_info,
             'hints' => $question->hints->map(fn (QuestionHint $hint): array => [
                 'id' => $hint->id,

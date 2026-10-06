@@ -68,7 +68,6 @@ final class CloneQuestionAction
             $clone->updated_by = $actor->getKey();
             $clone->fill([
                 'stem' => (string) ($snapshot['stem'] ?? $source->stem),
-                'stem_image_path' => $snapshot['stem_image_path'] ?? $source->stem_image_path,
                 'key_info' => array_values((array) ($snapshot['key_info'] ?? $source->key_info ?? [])),
                 'attending_tip' => $snapshot['attending_tip'] ?? $source->attending_tip,
                 'difficulty' => Difficulty::from((string) ($snapshot['difficulty'] ?? $source->difficulty->value)),

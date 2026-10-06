@@ -6,7 +6,6 @@ namespace Modules\QuestionBank\Support;
 
 use App\Support\Html\SafeHtml;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Storage;
 use Modules\Auth\Models\Profession;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Models\Blueprint;
@@ -21,7 +20,7 @@ use Modules\QuestionBank\Models\QuestionVersion;
  *
  * @phpstan-type TextField array{changed: bool, published_html: string, proposed_html: string}
  * @phpstan-type Chip array{label: string, change: 'same'|'added'|'removed'}
- * @phpstan-type OptionSide array{label: string, content_html: string, explanation_html: string, is_correct: bool}
+ * @phpstan-type OptionSide array{label: string, content_html: string, explanation_html: string, raw_content_html: string, raw_explanation_html: string, is_correct: bool}
  * @phpstan-type OptionRow array{change: 'same'|'modified'|'added'|'removed', published: ?OptionSide, proposed: ?OptionSide, correct_changed: bool}
  */
 final class QuestionReviewComparison
@@ -39,7 +38,6 @@ final class QuestionReviewComparison
      *     stem: TextField,
      *     attending_tip: TextField,
      *     difficulty: array{changed: bool, published: string, proposed: string},
-     *     stem_image: array{changed: bool, published_url: string|null, proposed_url: string|null},
      *     lessons: array{changed: bool, published: list<Chip>, proposed: list<Chip>},
      *     professions: array{changed: bool, published: list<Chip>, proposed: list<Chip>},
      *     blueprints: array{changed: bool, published: list<Chip>, proposed: list<Chip>},
@@ -79,12 +77,6 @@ final class QuestionReviewComparison
         $publishedDifficulty = Difficulty::tryFrom((string) ($snapshot['difficulty'] ?? ''));
         $difficultyChanged = ($publishedDifficulty?->value ?? '') !== $question->difficulty->value;
 
-        $publishedImage = is_string($snapshot['stem_image_path'] ?? null)
-            ? $snapshot['stem_image_path']
-            : null;
-        $proposedImage = $question->stem_image_path;
-        $imageChanged = (string) $publishedImage !== (string) $proposedImage;
-
         $lessons = $this->compareLessons($snapshot, $question);
         if (! array_key_exists('exam_catalog_ids', $snapshot) && array_key_exists('blueprint_ids', $snapshot)) {
             $snapshot['exam_catalog_ids'] = ExamCatalog::idsForSnapshot($snapshot);
@@ -105,9 +97,6 @@ final class QuestionReviewComparison
         $changedLabels = [];
         if ($stem['changed']) {
             $changedLabels[] = 'Câu hỏi';
-        }
-        if ($imageChanged) {
-            $changedLabels[] = 'Hình ảnh';
         }
         if ($lessons['changed']) {
             $changedLabels[] = 'Bài học';
@@ -157,11 +146,6 @@ final class QuestionReviewComparison
                 'changed' => $difficultyChanged,
                 'published' => $publishedDifficulty?->label() ?? '—',
                 'proposed' => $question->difficulty->label(),
-            ],
-            'stem_image' => [
-                'changed' => $imageChanged,
-                'published_url' => $this->imageUrl($publishedImage),
-                'proposed_url' => $this->imageUrl($proposedImage),
             ],
             'lessons' => $lessons,
             'professions' => $professions,
@@ -474,27 +458,19 @@ final class QuestionReviewComparison
                 'label' => $label,
                 'content_html' => $content['published_html'],
                 'explanation_html' => $explanation['published_html'],
+                'raw_content_html' => SafeHtml::forDisplay($publishedContent),
+                'raw_explanation_html' => SafeHtml::forDisplay($publishedExplanation),
                 'is_correct' => $publishedCorrect,
             ],
             'proposed' => $proposed === null ? null : [
                 'label' => $label,
                 'content_html' => $content['proposed_html'],
                 'explanation_html' => $explanation['proposed_html'],
+                'raw_content_html' => SafeHtml::forDisplay($proposedContent),
+                'raw_explanation_html' => SafeHtml::forDisplay($proposedExplanation),
                 'is_correct' => $proposedCorrect,
             ],
         ];
     }
 
-    private function imageUrl(?string $path): ?string
-    {
-        if (! is_string($path) || $path === '') {
-            return null;
-        }
-
-        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://') || str_starts_with($path, '/storage/')) {
-            return $path;
-        }
-
-        return Storage::disk('public')->url($path);
-    }
 }

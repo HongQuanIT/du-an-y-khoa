@@ -34,7 +34,6 @@
         <p data-q-index-label style="font-size:0.875rem;color:#6b7280;margin:0.5rem 0 0;">Đang tải…</p>
     </header>
     <div data-q-stem style="font-size:1rem;line-height:1.6;margin-bottom:1rem;user-select:text;"></div>
-    <div data-q-stem-image style="display:none;margin-bottom:1rem;"></div>
     <div data-q-knowledge style="display:none;margin:0 0 1rem;padding:0.75rem;border:1px solid #fde68a;border-radius:0.5rem;background:#fffbeb;">
         <p style="margin:0 0 0.25rem;font-size:0.75rem;font-weight:700;color:#b45309;text-transform:uppercase;letter-spacing:.04em;">Kiến thức</p>
         <div data-q-knowledge-content style="font-size:0.875rem;line-height:1.5;font-style:italic;"></div>

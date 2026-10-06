@@ -58,7 +58,6 @@ final class AuditSnapshot
             'id' => (string) $question->getKey(),
             'code' => $question->code,
             'stem' => self::safeContent($question->stem, 8000),
-            'stem_image_path' => $question->stem_image_path,
             'key_info' => array_values((array) $question->key_info),
             'attending_tip' => self::safeContent($question->attending_tip, 8000),
             'difficulty' => $question->difficulty->value,
@@ -142,7 +141,6 @@ final class AuditSnapshot
     {
         return [
             'stem' => self::safeContent((string) ($payload['stem'] ?? ''), 8000),
-            'stem_image_path' => $payload['stem_image_path'] ?? null,
             'key_info' => collect((array) ($payload['key_info'] ?? []))
                 ->map(fn (mixed $value): ?string => self::safeContent((string) $value, 4000))
                 ->filter()
