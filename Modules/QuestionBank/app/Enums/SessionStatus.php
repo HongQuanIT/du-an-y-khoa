@@ -13,6 +13,4 @@ enum SessionStatus: string
     case Active = 'active';
     case Paused = 'paused';
     case Completed = 'completed';
-    case Expired = 'expired';
-    case Abandoned = 'abandoned';
 }
