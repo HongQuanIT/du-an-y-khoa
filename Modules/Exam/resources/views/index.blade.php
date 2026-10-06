@@ -5,8 +5,6 @@
         'active' => 'Đang làm',
         'paused' => 'Tạm dừng',
         'completed' => 'Đã xong',
-        'expired' => 'Hết giờ',
-        'abandoned' => 'Đã bỏ',
     ];
 @endphp
 

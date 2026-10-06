@@ -68,9 +68,9 @@
             flaggedOnly: {{ Illuminate\Support\Js::from($initialFlaggedOnly)->toHtml() }},
             organSystemIds: {{ Illuminate\Support\Js::from($selectedOrganSystemIds)->toHtml() }},
             subjectIds: {{ Illuminate\Support\Js::from($selectedSubjectIds)->toHtml() }},
-            organSystemNames: {{ Illuminate\Support\Js::from($organSystems->pluck('name')->all())->toHtml() }},
-            subjectNames: {{ Illuminate\Support\Js::from($subjects->pluck('name')->all())->toHtml() }},
-            examNames: {{ Illuminate\Support\Js::from(collect($exams)->pluck('title')->all())->toHtml() }},
+            searchExams: {{ Illuminate\Support\Js::from(collect($exams)->map(fn (array $exam): array => ['id' => (int) $exam['id'], 'name' => $exam['title']])->values()->all())->toHtml() }},
+            searchOrganSystems: {{ Illuminate\Support\Js::from($organSystems->map(fn ($item): array => ['id' => (int) $item->id, 'name' => $item->name])->values()->all())->toHtml() }},
+            searchSubjects: {{ Illuminate\Support\Js::from($subjects->map(fn ($item): array => ['id' => (int) $item->id, 'name' => $item->name])->values()->all())->toHtml() }},
             savedOnly: {{ Illuminate\Support\Js::from($initialSavedOnly)->toHtml() }},
             blueprintId: {{ Illuminate\Support\Js::from($initialBlueprintId ? (int) $initialBlueprintId : null)->toHtml() }},
             blueprintName: {{ Illuminate\Support\Js::from($initialBlueprintName)->toHtml() }},
@@ -89,6 +89,10 @@
             folders: {{ Illuminate\Support\Js::from($bookmarkFolders)->toHtml() }},
             activeFilter: null,
             filterSearch: '',
+            filterSuggestionsOpen: false,
+            filterSearchLessons: [],
+            filterSearchLoading: false,
+            filterSearchRequest: 0,
             sessionName: {{ Illuminate\Support\Js::from($sessionName)->toHtml() }},
             matching: null,
             counting: false,
@@ -351,11 +355,108 @@
                 this.taxonomySearch = '';
                 if (filter === 'lessons') this.fetchLessons();
             },
-            matchesFilterSearch(label, extras = []) {
-                const q = (this.filterSearch || '').trim().toLocaleLowerCase();
-                if (!q) return true;
-                if (String(label).toLocaleLowerCase().includes(q)) return true;
-                return (extras || []).some((name) => String(name).toLocaleLowerCase().includes(q));
+            normalizedSearch(value) {
+                return String(value || '')
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .toLocaleLowerCase();
+            },
+            filterSearchItems(items) {
+                const query = this.normalizedSearch(this.filterSearch.trim());
+                if (!query) return [];
+                return (items || []).filter((item) => this.normalizedSearch(item.name).includes(query));
+            },
+            filterSearchGroups() {
+                return [
+                    { id: 'exams', label: 'Kỳ thi', items: this.filterSearchItems(this.searchExams) },
+                    { id: 'systems', label: 'Hệ cơ quan', items: this.filterSearchItems(this.searchOrganSystems) },
+                    { id: 'subjects', label: 'Môn học', items: this.filterSearchItems(this.searchSubjects) },
+                    { id: 'lessons', label: 'Bài học', items: this.filterSearchLessons },
+                    { id: 'saved', label: 'Câu hỏi đã lưu', items: this.filterSearchItems(this.folders.map((folder) => ({ id: Number(folder.id), name: folder.name, items_count: folder.items_count }))) },
+                ].filter((group) => group.items.length > 0 && !this.filterSuggestionDisabled(group.id));
+            },
+            filterSuggestionDisabled(type) {
+                if (this.isAdaptive() && ['lessons', 'saved'].includes(type)) return true;
+                if (this.taxonomyLocked() && ['exams', 'systems', 'subjects', 'lessons'].includes(type)) return true;
+                return false;
+            },
+            filterSuggestionSelected(type, item) {
+                const id = Number(item.id);
+                if (type === 'exams') return Number(this.blueprintId) === id;
+                if (type === 'systems') return this.organSystemIds.map(Number).includes(id);
+                if (type === 'subjects') return this.subjectIds.map(Number).includes(id);
+                if (type === 'lessons') return this.lessonIds.map(Number).includes(id);
+                if (type === 'saved') return this.folderIds.map(Number).includes(id);
+                return false;
+            },
+            filterSuggestionCount() {
+                return (this.blueprintId ? 1 : 0)
+                    + this.organSystemIds.length
+                    + this.subjectIds.length
+                    + this.lessonIds.length
+                    + this.folderIds.length;
+            },
+            async updateFilterSuggestions() {
+                const query = this.filterSearch.trim();
+                const requestId = ++this.filterSearchRequest;
+                this.filterSuggestionsOpen = query.length > 0;
+                this.filterSearchLessons = [];
+                if (query.length < 2 || this.filterSuggestionDisabled('lessons')) return;
+
+                this.filterSearchLoading = true;
+                try {
+                    const params = new URLSearchParams({ q: query });
+                    const response = await fetch(`${this.taxonomyUrls.lessons}?${params}`, {
+                        headers: { Accept: 'application/json' },
+                    });
+                    const payload = await response.json();
+                    if (requestId !== this.filterSearchRequest) return;
+                    this.filterSearchLessons = (payload.data || []).map((item) => ({
+                        id: Number(item.id),
+                        name: item.name,
+                        context: [...(item.organ_system_names || []), ...(item.subject_names || [])].join(' · '),
+                    }));
+                } catch (error) {
+                    if (requestId === this.filterSearchRequest) this.filterSearchLessons = [];
+                } finally {
+                    if (requestId === this.filterSearchRequest) this.filterSearchLoading = false;
+                }
+            },
+            toggleFilterSuggestion(type, item) {
+                const id = Number(item.id);
+                if (type === 'exams') {
+                    if (Number(this.blueprintId) === id) this.clearExam();
+                    else this.selectExam(id, item.name);
+                    return;
+                }
+                if (type === 'systems') {
+                    this.organSystemIds = this.organSystemIds.map(Number).includes(id)
+                        ? this.organSystemIds.map(Number).filter((value) => value !== id)
+                        : [...this.organSystemIds.map(Number), id];
+                    this.onTaxonomyAxisChange();
+                    return;
+                }
+                if (type === 'subjects') {
+                    this.subjectIds = this.subjectIds.map(Number).includes(id)
+                        ? this.subjectIds.map(Number).filter((value) => value !== id)
+                        : [...this.subjectIds.map(Number), id];
+                    this.onTaxonomyAxisChange();
+                    return;
+                }
+                if (type === 'lessons') {
+                    this.toggleLesson({ id, name: item.name });
+                    return;
+                }
+                if (type === 'saved') {
+                    const folder = this.folders.find((candidate) => Number(candidate.id) === id);
+                    if (folder) this.toggleSavedFolder(folder);
+                }
+            },
+            clearFilterSearch() {
+                this.filterSearch = '';
+                this.filterSearchLessons = [];
+                this.filterSuggestionsOpen = false;
+                this.filterSearchRequest++;
             },
             async fetchLessons() {
                 const q = this.taxonomySearch.trim();
@@ -698,17 +799,80 @@
                                 <p class="mb-3 text-[11px] font-bold tracking-widest text-on-surface-variant uppercase">
                                     Tìm kiếm bộ lọc
                                 </p>
-                                <div class="relative">
+                                <div class="relative" @click.outside="filterSuggestionsOpen = false">
                                     <span class="material-symbols-outlined absolute top-1/2 left-3 -translate-y-1/2 text-[20px] text-on-surface-variant">search</span>
                                     <input type="search" x-model="filterSearch"
-                                        class="w-full rounded-lg border-none bg-surface-container-low py-2.5 pr-4 pl-10 text-sm placeholder:italic focus:ring-2 focus:ring-primary"
+                                        @focus="if (filterSearch.trim()) filterSuggestionsOpen = true"
+                                        @input.debounce.250ms="updateFilterSuggestions()"
+                                        @keydown.escape.stop="filterSuggestionsOpen = false"
+                                        @keydown.down.prevent="$refs.filterSuggestionList?.querySelector('button:not([disabled])')?.focus()"
+                                        class="w-full rounded-lg border-none bg-surface-container-low py-2.5 pr-11 pl-10 text-sm placeholder:italic focus:ring-2 focus:ring-primary"
                                         placeholder="Ví dụ: hệ cơ quan, chuyên khoa">
+                                    <button type="button" x-show="filterSearch.length" x-cloak
+                                        @click="clearFilterSearch(); $nextTick(() => $el.previousElementSibling.focus())"
+                                        class="absolute top-1/2 right-3 flex size-7 -translate-y-1/2 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
+                                        aria-label="Xóa nội dung tìm kiếm">
+                                        <span class="material-symbols-outlined text-[20px]">close</span>
+                                    </button>
+
+                                    <div x-show="filterSuggestionsOpen && filterSearch.trim().length" x-cloak
+                                        class="absolute top-[calc(100%+0.5rem)] right-0 left-0 z-40 overflow-hidden rounded-xl border border-outline-variant bg-white shadow-xl">
+                                        <div class="flex items-center justify-between border-b border-outline-variant bg-surface-container-low px-4 py-3">
+                                            <span class="text-xs font-bold tracking-wide text-on-surface-variant uppercase">Kết quả phù hợp</span>
+                                            <span class="text-xs font-bold text-primary" x-text="filterSuggestionCount() + ' đã chọn'"></span>
+                                        </div>
+
+                                        <div x-ref="filterSuggestionList" class="custom-scrollbar max-h-80 overflow-y-auto p-2">
+                                            <template x-for="group in filterSearchGroups()" :key="group.id">
+                                                <section>
+                                                    <h4 class="border-b border-outline-variant px-3 py-2 text-[11px] font-bold tracking-wider text-on-surface-variant uppercase"
+                                                        x-text="group.label"></h4>
+                                                    <template x-for="item in group.items" :key="group.id + '-' + item.id">
+                                                        <button type="button"
+                                                            @click="toggleFilterSuggestion(group.id, item)"
+                                                            :aria-pressed="filterSuggestionSelected(group.id, item)"
+                                                            class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-surface-container-low focus:bg-surface-container-low focus:outline-none">
+                                                            <span class="flex size-5 shrink-0 items-center justify-center rounded border-2 transition-colors"
+                                                                :class="filterSuggestionSelected(group.id, item)
+                                                                    ? 'border-primary bg-primary text-white'
+                                                                    : 'border-outline bg-white text-transparent'">
+                                                                <span class="material-symbols-outlined text-[15px] font-bold">check</span>
+                                                            </span>
+                                                            <span class="min-w-0 flex-1">
+                                                                <span class="block truncate text-sm text-on-surface"
+                                                                    :class="filterSuggestionSelected(group.id, item) && 'font-bold'"
+                                                                    x-text="item.name"></span>
+                                                                <span x-show="item.context || item.items_count !== undefined" x-cloak
+                                                                    class="mt-0.5 block truncate text-[11px] text-on-surface-variant"
+                                                                    x-text="item.context || (item.items_count + ' câu hỏi')"></span>
+                                                            </span>
+                                                        </button>
+                                                    </template>
+                                                </section>
+                                            </template>
+
+                                            <div x-show="filterSearchLoading" class="flex items-center justify-center gap-2 px-3 py-5 text-sm text-on-surface-variant">
+                                                <span class="size-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></span>
+                                                Đang tìm bài học…
+                                            </div>
+                                            <p x-show="!filterSearchLoading && filterSearchGroups().length === 0"
+                                                class="px-3 py-8 text-center text-sm text-on-surface-variant">
+                                                Không tìm thấy bộ lọc phù hợp.
+                                            </p>
+                                        </div>
+
+                                        <div class="flex justify-end border-t border-outline-variant bg-surface-container-lowest px-4 py-3">
+                                            <button type="button" @click="filterSuggestionsOpen = false"
+                                                class="text-sm font-bold text-primary hover:underline">
+                                                Xong (<span x-text="filterSuggestionCount()"></span>)
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
                             <div class="-mx-6 space-y-0 border-t border-outline-variant">
                                 <button type="button" @click="openFilter('exams')"
-                                    x-show="matchesFilterSearch('kỳ thi', examNames)"
                                     :disabled="!isAdaptive() && savedOnly"
                                     :class="(!isAdaptive() && savedOnly) && 'opacity-50 pointer-events-none'"
                                     class="group flex w-full items-center justify-between border-b border-outline-variant px-6 py-4 text-left transition-colors hover:bg-surface-container-lowest">
@@ -721,7 +885,6 @@
                                 </button>
 
                                 <button type="button" @click="openFilter('systems')"
-                                    x-show="matchesFilterSearch('hệ cơ quan', organSystemNames)"
                                     :disabled="taxonomyLocked()"
                                     :class="taxonomyLocked() && 'opacity-50 pointer-events-none'"
                                     class="group flex w-full items-center justify-between border-b border-outline-variant px-6 py-4 text-left transition-colors hover:bg-surface-container-lowest">
@@ -733,7 +896,6 @@
                                 </button>
 
                                 <button type="button" @click="openFilter('subjects')"
-                                    x-show="matchesFilterSearch('môn học', subjectNames)"
                                     :disabled="taxonomyLocked()"
                                     :class="taxonomyLocked() && 'opacity-50 pointer-events-none'"
                                     class="group flex w-full items-center justify-between border-b border-outline-variant px-6 py-4 text-left transition-colors hover:bg-surface-container-lowest">
@@ -744,12 +906,12 @@
                                     <span class="text-sm text-on-surface-variant" x-text="subjectLabel()"></span>
                                 </button>
 
-                                <div x-show="!isAdaptive() && matchesFilterSearch('bài học')">
+                                <div x-show="!isAdaptive()">
                                     @include('questionbank::partials.taxonomy-session-filter-rows')
                                 </div>
 
                                 @can('bookmark.view')
-                                <button type="button" x-show="!isAdaptive() && matchesFilterSearch('câu hỏi đã lưu')" @click="openFilter('saved')"
+                                <button type="button" x-show="!isAdaptive()" @click="openFilter('saved')"
                                     class="group flex w-full items-center justify-between border-b border-outline-variant px-6 py-4 text-left transition-colors hover:bg-surface-container-lowest">
                                     <span class="flex items-center gap-4">
                                         <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">add</span>

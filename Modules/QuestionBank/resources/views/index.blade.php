@@ -11,31 +11,29 @@
         'exam' => 'Thi thử',
     ];
 
+    $modeTones = [
+        'study' => 'border-primary/20 bg-primary/10 text-primary',
+        'exam' => 'border-secondary/20 bg-secondary/10 text-secondary',
+    ];
+
     $statusMeta = [
         'active' => [
             'label' => 'Đang làm',
             'textClass' => 'text-primary',
             'dotClass' => 'bg-primary animate-pulse',
+            'tone' => 'border-primary/20 bg-primary/10 text-primary',
         ],
         'paused' => [
             'label' => 'Tạm dừng',
             'textClass' => 'text-amber-600',
             'dotClass' => 'bg-amber-500',
+            'tone' => 'border-amber-200 bg-amber-50 text-amber-800',
         ],
         'completed' => [
             'label' => 'Hoàn thành',
             'textClass' => 'text-green-700',
             'dotClass' => 'bg-green-600',
-        ],
-        'expired' => [
-            'label' => 'Hết hạn',
-            'textClass' => 'text-error',
-            'dotClass' => 'bg-error',
-        ],
-        'abandoned' => [
-            'label' => 'Đã bỏ',
-            'textClass' => 'text-on-surface-variant',
-            'dotClass' => 'bg-outline',
+            'tone' => 'border-emerald-200 bg-emerald-50 text-emerald-800',
         ],
     ];
 
@@ -250,14 +248,22 @@
                         <x-admin.multi-select-filter
                             name="mode"
                             label="Chế độ"
-                            :options="collect($modeOptions)->map(fn ($option) => ['id' => $option->value, 'label' => $modeLabels[$option->value] ?? ucfirst($option->value)])->all()"
+                            :options="collect($modeOptions)->map(fn ($option) => [
+                                'id' => $option->value,
+                                'label' => $modeLabels[$option->value] ?? ucfirst($option->value),
+                                'tone' => $modeTones[$option->value] ?? null,
+                            ])->all()"
                             :selected="$filters['mode'] ?? []"
                         />
 
                         <x-admin.multi-select-filter
                             name="status"
                             label="Trạng thái"
-                            :options="collect($statusOptions)->map(fn ($option) => ['id' => $option->value, 'label' => $statusMeta[$option->value]['label'] ?? ucfirst($option->value)])->all()"
+                            :options="collect($statusOptions)->map(fn ($option) => [
+                                'id' => $option->value,
+                                'label' => $statusMeta[$option->value]['label'] ?? ucfirst($option->value),
+                                'tone' => $statusMeta[$option->value]['tone'] ?? null,
+                            ])->all()"
                             :selected="$filters['status'] ?? []"
                         />
                     </div>

@@ -2,6 +2,13 @@
 
 ## 2026-10-06
 
+### Feat — Cải thiện bộ lọc QBank cho học viên
+
+- Thêm màu nhận diện cho bộ lọc chế độ và trạng thái trong lịch sử phiên luyện.
+- Loại bỏ hai trạng thái phiên không được sử dụng: hết hạn và đã bỏ.
+- Thêm dropdown tìm kiếm bộ lọc theo nhóm kỳ thi, hệ cơ quan, môn học, bài học và câu hỏi đã lưu.
+- Giữ nguyên các hàng thiết lập chủ đề khi nhập từ khóa tìm kiếm.
+
 ### Fix — Sắp xếp bảng chữ cái trong thiết lập chủ đề
 
 - Sắp xếp kỳ thi, hệ cơ quan, môn học và bài học theo tên chữ cái.
