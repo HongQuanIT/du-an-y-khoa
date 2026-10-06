@@ -313,7 +313,6 @@ final class PrepareQuestionImportPreviewAction
             'existing_id' => $existing?->getKey(),
             'code' => $existing === null ? ($code !== '' ? $code : null) : null,
             'stem' => $values['stem'],
-            'stem_image_path' => null,
             'key_info' => QuestionImportSchema::splitList(str_replace(["\r\n", "\n"], '|', $values['hints'])),
             'attending_tip' => $values['attending_tip'] !== '' ? $values['attending_tip'] : null,
             'difficulty' => $difficulty->value,

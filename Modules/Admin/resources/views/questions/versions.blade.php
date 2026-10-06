@@ -48,10 +48,6 @@
         @forelse ($versions as $version)
             @php
                 $snapshot = $version->snapshot;
-                $stemImagePath = (string) ($snapshot['stem_image_path'] ?? '');
-                $stemImageUrl = filled($stemImagePath)
-                    ? \Illuminate\Support\Facades\Storage::disk('public')->url($stemImagePath)
-                    : null;
                 $status = QuestionStatus::tryFrom((string) ($snapshot['status'] ?? ''));
                 $difficulty = Difficulty::tryFrom((string) ($snapshot['difficulty'] ?? ''));
                 $versionLessonNames = collect((array) ($snapshot['lesson_ids'] ?? $snapshot['medical_taxonomy_node_ids'] ?? []))
@@ -151,9 +147,6 @@
                         <span class="rounded-lg bg-surface-container px-2 py-1">
                             {{ count((array) ($snapshot['options'] ?? [])) }} đáp án
                         </span>
-                        @if ($stemImageUrl)
-                            <span class="rounded-lg bg-surface-container px-2 py-1">Có hình ảnh</span>
-                        @endif
                         @foreach ($versionLessonNames as $lessonName)
                             <span class="rounded-lg bg-primary/10 px-2 py-1 text-primary">{{ $lessonName }}</span>
                         @endforeach
@@ -167,15 +160,6 @@
                             <p class="mb-1 text-xs font-semibold uppercase text-on-surface-variant">Đề bài</p>
                             <div class="prose prose-sm max-w-none text-on-surface">{!! SafeHtml::forDisplay((string) ($snapshot['stem'] ?? '')) !!}</div>
                         </div>
-                        @if ($stemImageUrl)
-                            <div>
-                                <p class="mb-1 text-xs font-semibold uppercase text-on-surface-variant">Hình ảnh</p>
-                                <div class="overflow-hidden rounded-lg border border-outline-variant bg-white">
-                                    <img src="{{ $stemImageUrl }}" alt="Hình ảnh câu hỏi phiên bản {{ $version->version }}"
-                                        class="max-h-[420px] w-full object-contain">
-                                </div>
-                            </div>
-                        @endif
                         @if (filled($snapshot['attending_tip'] ?? null))
                             <div>
                                 <p class="mb-1 text-xs font-semibold uppercase text-on-surface-variant">Kiến thức / Gợi ý</p>

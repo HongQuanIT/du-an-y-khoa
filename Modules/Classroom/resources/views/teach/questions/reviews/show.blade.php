@@ -130,6 +130,7 @@
                     'empty' => 'Chưa nhập.',
                     'preserveRichText' => true,
                     'reviewerStyle' => true,
+                    'highlightOptionChanges' => false,
                 ])
             @else
                 <div class="rounded-xl border border-dashed border-outline-variant bg-surface-container-low px-4 py-6 text-center text-sm text-on-surface-variant">
@@ -151,6 +152,7 @@
                 'empty' => 'Chưa nhập.',
                 'preserveRichText' => true,
                 'reviewerStyle' => true,
+                'highlightOptionChanges' => false,
             ])
         </section>
     </div>

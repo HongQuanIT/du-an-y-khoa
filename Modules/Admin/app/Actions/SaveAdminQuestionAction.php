@@ -39,7 +39,6 @@ final class SaveAdminQuestionAction
     /**
      * @param  array{
      *     stem: string,
-     *     stem_image_path: ?string,
      *     key_info: array<int, string>,
      *     attending_tip: ?string,
      *     difficulty: string,
@@ -116,7 +115,6 @@ final class SaveAdminQuestionAction
 
             $question->fill([
                 'stem' => SafeHtml::fromEditor($data['stem']),
-                'stem_image_path' => $this->sanitizeStemImagePath($data['stem_image_path'] ?? null),
                 'key_info' => $keyInfo,
                 'attending_tip' => SafeHtml::fromEditor($data['attending_tip'] ?? null) ?: null,
                 'difficulty' => Difficulty::from($data['difficulty']),
@@ -202,25 +200,6 @@ final class SaveAdminQuestionAction
                 'lesson_ids' => 'Vui lòng chọn ít nhất một bài học.',
             ]);
         }
-    }
-
-    private function sanitizeStemImagePath(?string $path): ?string
-    {
-        $path = trim((string) $path);
-
-        if ($path === '') {
-            return null;
-        }
-
-        $parsed = parse_url($path, PHP_URL_PATH) ?: $path;
-
-        if (str_starts_with($parsed, '/storage/')) {
-            $parsed = substr($parsed, 9);
-        } elseif (str_starts_with($parsed, 'storage/')) {
-            $parsed = substr($parsed, 8);
-        }
-
-        return $parsed !== '' ? $parsed : null;
     }
 
     /**

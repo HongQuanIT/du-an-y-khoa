@@ -18,7 +18,6 @@
     $hints = $question->relationLoaded('hints')
         ? $question->hints
         : $question->hints()->orderBy('sort_order')->get();
-    $stemImageUrl = $question->stemImageUrl();
     $categoryBadge = \Modules\QuestionBank\Support\QuestionCategoryBadge::resolve(
         $question->lessons,
         $question->difficulty,
@@ -67,14 +66,6 @@
                     data-testid="reviewer-key-info-stem">{!! $keyInfoHtml !!}</div>
             </div>
 
-            @if ($stemImageUrl)
-                <aside class="overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-sm">
-                    <div class="flex justify-center bg-white">
-                        <img src="{{ $stemImageUrl }}" alt="Ảnh minh họa câu hỏi"
-                            class="h-auto max-h-[480px] w-full object-contain">
-                    </div>
-                </aside>
-            @endif
         </article>
 
         <div @class([

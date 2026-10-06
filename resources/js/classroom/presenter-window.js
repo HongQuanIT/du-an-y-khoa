@@ -35,30 +35,6 @@ if (root instanceof HTMLElement) {
 
     const csrf = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 
-    const renderStemImage = (container, url) => {
-        if (! (container instanceof HTMLElement)) {
-            return;
-        }
-
-        container.innerHTML = '';
-        container.style.display = 'none';
-
-        if (! url) {
-            return;
-        }
-
-        const img = document.createElement('img');
-        img.src = String(url);
-        img.alt = 'Ảnh minh họa câu hỏi';
-        img.style.width = '100%';
-        img.style.maxHeight = '480px';
-        img.style.objectFit = 'contain';
-        img.style.borderRadius = '0.75rem';
-        img.style.border = '1px solid #e5e7eb';
-        container.appendChild(img);
-        container.style.display = 'block';
-    };
-
     const render = (panel) => {
         panelState = panel;
         if (Array.isArray(panel.revealed_option_ids)) {
@@ -69,7 +45,6 @@ if (root instanceof HTMLElement) {
 
         const questionId = panel.question ? String(panel.question.id) : null;
         const stem = root.querySelector('[data-q-stem]');
-        const stemImage = root.querySelector('[data-q-stem-image]');
         const knowledge = root.querySelector('[data-q-knowledge]');
         const knowledgeContent = root.querySelector('[data-q-knowledge-content]');
         const options = root.querySelector('[data-q-options]');
@@ -82,7 +57,6 @@ if (root instanceof HTMLElement) {
             if (stem) {
                 stem.textContent = 'Chưa có câu hỏi.';
             }
-            renderStemImage(stemImage, null);
             if (knowledge) {
                 knowledge.style.display = 'none';
             }
@@ -97,7 +71,6 @@ if (root instanceof HTMLElement) {
                 applyMarksToElement(stem, marksForTarget(textMarks, questionId, 'stem'));
             }
         }
-        renderStemImage(stemImage, panel.question.stem_image_url ?? null);
         if (knowledge && knowledgeContent) {
             if (panel.question.attending_tip) {
                 knowledgeContent.innerHTML = panel.question.attending_tip;

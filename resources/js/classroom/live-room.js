@@ -297,29 +297,6 @@ export function mountLiveRoom(root) {
         paintMessages();
     };
 
-    const renderStemImage = (container, url) => {
-        if (! (container instanceof HTMLElement)) {
-            return;
-        }
-
-        container.innerHTML = '';
-        container.classList.add('hidden');
-
-        if (! url) {
-            return;
-        }
-
-        const aside = document.createElement('aside');
-        aside.className = 'overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest';
-        const img = document.createElement('img');
-        img.src = String(url);
-        img.alt = 'Ảnh minh họa câu hỏi';
-        img.className = 'mx-auto w-full max-h-[480px] object-contain';
-        aside.appendChild(img);
-        container.appendChild(aside);
-        container.classList.remove('hidden');
-    };
-
     const renderQuestionPanel = (panel) => {
         if (! panel || questionPanels.length === 0) {
             return;
@@ -335,7 +312,6 @@ export function mountLiveRoom(root) {
 
         questionPanels.forEach((questionPanel) => {
             const stem = questionPanel.querySelector('[data-q-stem]');
-            const stemImage = questionPanel.querySelector('[data-q-stem-image]');
             const knowledge = questionPanel.querySelector('[data-q-knowledge]');
             const knowledgeContent = questionPanel.querySelector('[data-q-knowledge-content]');
             const options = questionPanel.querySelector('[data-q-options]');
@@ -352,7 +328,6 @@ export function mountLiveRoom(root) {
                 if (stem) {
                     stem.textContent = 'Chưa có câu hỏi.';
                 }
-                renderStemImage(stemImage, null);
                 if (options) {
                     options.innerHTML = '';
                 }
@@ -371,7 +346,6 @@ export function mountLiveRoom(root) {
                     applyMarksToElement(stem, marksForTarget(textMarks, questionId, 'stem'));
                 }
             }
-            renderStemImage(stemImage, panel.question.stem_image_url ?? null);
 
             if (knowledge && knowledgeContent) {
                 if (panel.question.attending_tip) {

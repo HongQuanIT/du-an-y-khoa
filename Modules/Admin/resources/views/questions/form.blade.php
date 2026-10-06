@@ -87,10 +87,6 @@
         $question->status === \Modules\QuestionBank\Enums\QuestionStatus::Retired => ['label' => 'Ngừng dùng', 'class' => 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'],
         default => ['label' => 'Bản nháp', 'class' => 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'],
     } : null;
-    $stemImagePath = old('stem_image_path', $question->stem_image_path);
-    $stemImageUrl = filled($stemImagePath)
-        ? \Illuminate\Support\Facades\Storage::disk('public')->url($stemImagePath)
-        : null;
 @endphp
 
 <x-layouts.admin :title="$isNew ? 'Tạo câu hỏi mới' : ($canEditContent ? 'Chỉnh sửa câu hỏi' : 'Chi tiết câu hỏi')">
@@ -737,51 +733,6 @@
                 @if (! $isNew)
                     @include('admin::questions.partials.similarity-panel')
                 @endif
-
-                <div @class([
-                    'space-y-4',
-                    'pointer-events-none select-none opacity-70' => ! $canEditContent,
-                ])>
-                <div class="rounded-2xl border border-outline-variant bg-surface p-4"
-                    x-data="questionImageUploader(@js($stemImagePath), @js($stemImageUrl), @js(route(request()->routeIs('editor.*') ? 'editor.rich-editor.images' : 'admin.editor.images')), @js(csrf_token()))">
-                    <h2 class="mb-3 font-label-md font-semibold text-on-surface-variant">Ảnh câu hỏi</h2>
-                    <input type="hidden" name="stem_image_path" x-ref="pathInput" :value="imagePath">
-                    <input type="file" x-ref="fileInput" class="hidden" accept="image/png,image/jpeg,image/gif,image/webp" @change="upload($event)">
-
-                    <div class="overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
-                         tabindex="0"
-                         @dragover.prevent="isDragging = true"
-                         @dragleave.prevent="isDragging = false"
-                         @drop.prevent="isDragging = false; handleDrop($event)"
-                         @paste="handlePaste($event)"
-                         :class="isDragging ? 'border-primary ring-2 ring-primary/20 bg-primary/5' : ''">
-                        <div x-show="imageUrl" class="bg-white flex justify-center">
-                            <img :src="imageUrl" alt="Ảnh minh họa câu hỏi" class="w-full h-auto max-h-[600px] object-contain">
-                        </div>
-                        <div x-show="!imageUrl" class="flex flex-col aspect-[4/3] items-center justify-center px-4 text-center text-sm text-on-surface-variant">
-                            <span class="material-symbols-outlined mb-2 text-[32px] text-on-surface-variant/50">image</span>
-                            Kéo thả ảnh vào đây, nhấn Ctrl+V<br>hoặc bấm nút tải ảnh bên dưới
-                        </div>
-                    </div>
-
-                    <div class="mt-3 flex flex-wrap gap-2">
-                        <button type="button" @click="chooseFile()" :disabled="uploading"
-                            class="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-on-primary disabled:opacity-60">
-                            <span class="material-symbols-outlined text-[18px]">upload</span>
-                            <span x-text="uploading ? 'Đang tải...' : 'Tải ảnh'"></span>
-                        </button>
-                        <button type="button" @click="remove()" :disabled="!imagePath || uploading"
-                            class="inline-flex items-center gap-1 rounded-lg border border-outline-variant px-3 py-2 text-sm font-semibold text-on-surface-variant disabled:opacity-40">
-                            <span class="material-symbols-outlined text-[18px]">delete</span>
-                            Xóa ảnh
-                        </button>
-                    </div>
-                    <p class="mt-2 text-[11px] leading-4 text-on-surface-variant">
-                        Khuyến nghị: ảnh ngang 4:3 hoặc 1:1, dung lượng tối đa 5MB.
-                    </p>
-                    <p x-show="error" x-cloak class="mt-2 text-xs font-medium text-error" x-text="error"></p>
-                </div>
-                </div>{{-- /locked sidebar media --}}
 
                 {{-- Gửi duyệt + chọn GV — CTA rõ ràng, không dùng dropdown trạng thái --}}
                 @include('admin::questions.partials.editor-submit-panel')

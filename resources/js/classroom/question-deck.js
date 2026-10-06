@@ -57,7 +57,6 @@ export function panelFromDeck(deck, index, revealedOptionIds, map = null) {
         question: {
             id: String(full.id),
             stem: optionRevealed ? (full.hint_stem ?? full.stem ?? '') : (full.stem ?? ''),
-            stem_image_url: full.stem_image_url ?? null,
             attending_tip: optionRevealed ? (full.attending_tip ?? null) : null,
             hints_revealed: optionRevealed,
             difficulty: full.difficulty,

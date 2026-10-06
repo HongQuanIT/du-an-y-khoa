@@ -5,6 +5,7 @@
     $keyInfoItems = $comparison['key_info'][$chipKey] ?? [];
     $preserveRichText = (bool) ($preserveRichText ?? false);
     $highlightChanges = (bool) ($highlightChanges ?? true);
+    $highlightOptionChanges = (bool) ($highlightOptionChanges ?? $highlightChanges);
     $reviewerStyle = (bool) ($reviewerStyle ?? false);
     $preserveRawRichText = $preserveRichText;
     $attendingHtml = $preserveRawRichText
@@ -50,26 +51,6 @@
         </div>
     </div>
 
-    @if ($comparison['stem_image']['published_url'] || $comparison['stem_image']['proposed_url'])
-        <div>
-            <div class="mb-2 flex items-center gap-2">
-                <h4 class="text-sm font-bold text-on-surface">Hình kèm câu hỏi</h4>
-                @if ($highlightChanges && $comparison['stem_image']['changed'])
-                    <span class="rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-800">Sửa</span>
-                @endif
-            </div>
-            @php $imageUrl = $comparison['stem_image'][$isPublished ? 'published_url' : 'proposed_url']; @endphp
-            @if ($imageUrl)
-                <img src="{{ $imageUrl }}" alt="{{ $isPublished ? 'Hình bản đang xuất bản' : 'Hình bản cần duyệt' }}"
-                    class="max-h-72 rounded-xl border {{ $highlightChanges && $comparison['stem_image']['changed'] ? ($isPublished ? 'border-rose-300' : 'border-emerald-300') : 'border-outline-variant' }} object-contain">
-            @else
-                <p class="rounded-xl border border-dashed {{ $isPublished ? 'border-rose-300 bg-rose-50 text-rose-800' : 'border-emerald-300 bg-emerald-50 text-emerald-900' }} px-3 py-2 text-sm">
-                    {{ $isPublished ? 'Hình đã bị gỡ ở bản gửi duyệt.' : 'Hình mới được thêm.' }}
-                </p>
-            @endif
-        </div>
-    @endif
-
     @if ($reviewerStyle)
         <div class="flex min-h-12 items-center border-y border-outline-variant bg-surface-container-lowest px-1">
             <button type="button" @click="hintOpen = !hintOpen"
@@ -110,7 +91,7 @@
     <div>
         <div class="mb-2 flex items-center gap-2">
             <h4 class="text-sm font-bold text-on-surface">Đáp án</h4>
-            @if ($highlightChanges && collect($comparison['options'])->contains(fn (array $row): bool => $row['change'] !== 'same'))
+            @if ($highlightOptionChanges && collect($comparison['options'])->contains(fn (array $row): bool => $row['change'] !== 'same'))
                 <span class="rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-800">Sửa</span>
             @endif
         </div>
@@ -118,8 +99,8 @@
             @foreach ($comparison['options'] as $option)
                 @php
                     $sideOption = $option[$chipKey];
-                    $change = $highlightChanges ? $option['change'] : 'same';
-                    $correctChanged = $highlightChanges && $option['correct_changed'];
+                    $change = $highlightOptionChanges ? $option['change'] : 'same';
+                    $correctChanged = $highlightOptionChanges && $option['correct_changed'];
                     $changeLabel = match ($change) {
                         'removed' => 'Xóa',
                         'added' => 'Thêm',
@@ -133,6 +114,10 @@
                         {{ $isPublished ? 'Đáp án mới — không có ở bản xuất bản.' : 'Đáp án đã bị xóa ở bản gửi duyệt.' }}
                     </div>
                 @else
+                    @php
+                        $contentHtml = $highlightOptionChanges ? $sideOption['content_html'] : $sideOption['raw_content_html'];
+                        $explanationHtml = $highlightOptionChanges ? $sideOption['explanation_html'] : $sideOption['raw_explanation_html'];
+                    @endphp
                     <div @class([
                         'rounded-xl border text-sm',
                         'flex w-full flex-col overflow-hidden text-left' => $reviewerStyle,
@@ -163,7 +148,7 @@
                                 'pt-1 text-body-md text-on-surface' => $reviewerStyle,
                                 'text-sm' => ! $reviewerStyle,
                             ])>
-                                {!! filled($sideOption['content_html']) ? $sideOption['content_html'] : e($empty) !!}
+                                {!! filled($contentHtml) ? $contentHtml : e($empty) !!}
                             </div>
                             @if ($sideOption['is_correct'])
                                 @if ($reviewerStyle)
@@ -182,7 +167,7 @@
                                 </span>
                             @endif
                         </div>
-                        @if (filled($sideOption['explanation_html']))
+                        @if (filled($explanationHtml))
                             <div @class([
                                 'border-t border-current/10 text-on-surface-variant',
                                 'space-y-2 px-4 pb-4 pl-16 pt-2 text-body-sm leading-relaxed' => $reviewerStyle,
@@ -195,7 +180,7 @@
                                     'text-error' => $reviewerStyle && ! $sideOption['is_correct'],
                                 ])>{{ $reviewerStyle ? ($sideOption['is_correct'] ? 'Đáp án đúng' : 'Vì sao sai') : 'Giải thích:' }}</span>
                                 <div class="instructor-image-preview prose prose-sm mt-0.5 max-w-none">
-                                    {!! $sideOption['explanation_html'] !!}
+                                    {!! $explanationHtml !!}
                                 </div>
                             </div>
                         @endif

@@ -21,7 +21,6 @@
     $flaggedLookup = array_fill_keys(array_map('strval', $flaggedIds), true);
     $answeredCount = count($answeredIds);
     $flaggedCount = count($flaggedIds);
-    $stemImageUrl = $question->stemImageUrl();
     $categoryBadge = \Modules\QuestionBank\Support\QuestionCategoryBadge::resolve(
         $question->lessons,
         $question->difficulty,
@@ -42,8 +41,6 @@
         mobileNav: false,
         warningVisible: false,
         warningLabel: '',
-        imageViewerOpen: false,
-        imageViewerSrc: '',
         flagged: @js((bool) $flagged),
         noteText: @js($note),
         noteHtml: @js($noteHtml ?? nl2br(e($note))),
@@ -337,7 +334,7 @@
             event.preventDefault();
         },
     }" @keydown.window="handleCalculatorKey($event)"
-        @keydown.escape.window="exitOpen = false; finishOpen = false; notesOpen = false; calculatorOpen = false; mobileNav = false; imageViewerOpen = false">
+        @keydown.escape.window="exitOpen = false; finishOpen = false; notesOpen = false; calculatorOpen = false; mobileNav = false">
         <header
             class="fixed inset-x-0 top-0 z-50 flex h-16 items-center justify-between border-b border-outline-variant bg-surface px-4 md:px-8">
             <div class="flex items-center gap-3 md:gap-6">
@@ -394,21 +391,10 @@
                                     {{ $categoryBadge['difficulty'] }}
                                 </span>
                             </div>
-                            <div class="space-y-5">
-                                <article class="max-w-none">
-                                    <h2 class="mb-4 font-headline-md text-headline-md text-on-surface">Trường hợp lâm sàng</h2>
-                                    <div class="text-body-md leading-relaxed whitespace-pre-line text-on-surface" data-learner-image-viewer>{!! $stemHtml !!}</div>
-                                </article>
-
-                                @if ($stemImageUrl)
-                                    <aside class="overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-sm">
-                                        <div class="group relative bg-white flex justify-center cursor-zoom-in" data-learner-image-viewer>
-                                            <img src="{{ $stemImageUrl }}" alt="Ảnh minh họa câu hỏi"
-                                                class="w-full h-auto max-h-[600px] object-contain">
-                                        </div>
-                                    </aside>
-                                @endif
-                            </div>
+                            <article class="max-w-none">
+                                <h2 class="mb-4 font-headline-md text-headline-md text-on-surface">Trường hợp lâm sàng</h2>
+                                <div class="text-body-md leading-relaxed whitespace-pre-line text-on-surface" data-learner-image-viewer>{!! $stemHtml !!}</div>
+                            </article>
                         </section>
 
                         <section class="space-y-4">
@@ -735,15 +721,5 @@
             </section>
         </div>
         
-        <div x-show="imageViewerOpen" x-cloak x-transition.opacity
-            class="fixed inset-0 z-[150] flex items-center justify-center bg-black/90 p-4"
-            @click="imageViewerOpen = false">
-            <button type="button" class="absolute right-4 top-4 flex size-12 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20">
-                <span class="material-symbols-outlined text-[24px]">close</span>
-            </button>
-            <img :src="imageViewerSrc" alt="Ảnh phóng to"
-                class="max-h-full max-w-full cursor-zoom-out object-contain"
-                @click.stop="imageViewerOpen = false">
-        </div>
     </div>
 </x-layouts.auth>

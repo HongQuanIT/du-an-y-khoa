@@ -159,7 +159,6 @@ final class LiveQuestionPanelService
             // highlighted variant is selected client-side after an option click.
             'stem' => $optionRevealed && ! $revealAll ? $hintStem : $rawStem,
             'hint_stem' => $optionRevealed ? $hintStem : null,
-            'stem_image_url' => $question->stemImageUrl(),
             // Mở hỗ trợ học tập ngay khi giảng viên chọn một đáp án.
             // The moderator deck retains this so optimistic UI updates match the server panel.
             'attending_tip' => $optionRevealed

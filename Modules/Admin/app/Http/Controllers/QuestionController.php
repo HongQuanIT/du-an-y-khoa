@@ -744,7 +744,6 @@ final class QuestionController extends Controller
     /**
      * @return array{
      *     stem: string,
-     *     stem_image_path: ?string,
      *     key_info: array<int, string>,
      *     attending_tip: ?string,
      *     difficulty: string,
@@ -758,7 +757,6 @@ final class QuestionController extends Controller
     {
         $data = $request->validate([
             'stem' => ['required', 'string'],
-            'stem_image_path' => ['nullable', 'string', 'max:1024'],
             'key_info' => ['nullable', 'string'],
             'attending_tip' => ['nullable', 'string'],
             'difficulty' => ['required', Rule::in(Difficulty::values())],
@@ -814,7 +812,6 @@ final class QuestionController extends Controller
 
         $payload = [
             'stem' => $data['stem'],
-            'stem_image_path' => $data['stem_image_path'] ?? null,
             'key_info' => $this->parseKeyInfo($data['key_info'] ?? null),
             'attending_tip' => $data['attending_tip'] ?? null,
             'difficulty' => $data['difficulty'],

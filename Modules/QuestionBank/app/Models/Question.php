@@ -18,7 +18,6 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Storage;
 use Laravel\Scout\Searchable;
 use Modules\Auth\Models\Profession;
 use Modules\QuestionBank\Database\Factories\QuestionFactory;
@@ -39,7 +38,6 @@ use Modules\QuestionBank\Support\ServePublishedQuestion;
  * @property string $id
  * @property string $code
  * @property string $stem
- * @property string|null $stem_image_path
  * @property array<int, string>|null $key_info
  * @property string|null $attending_tip
  * @property Difficulty $difficulty
@@ -103,7 +101,6 @@ class Question extends Model
      */
     protected $fillable = [
         'stem',
-        'stem_image_path',
         'key_info',
         'attending_tip',
         'difficulty',
@@ -855,24 +852,6 @@ class Question extends Model
         return $this->hasOne(QuestionReviewRequest::class)
             ->where('status', QuestionReviewStatus::Rejected->value)
             ->latestOfMany('reviewed_at');
-    }
-
-    public function stemImageUrl(): ?string
-    {
-        $path = $this->getAttributes()['stem_image_path'] ?? null;
-        if (! is_string($path) || $path === '') {
-            return null;
-        }
-
-        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
-            return $path;
-        }
-
-        if (str_starts_with($path, '/storage/')) {
-            return $path;
-        }
-
-        return Storage::disk('public')->url($path);
     }
 
     /** @return HasMany<QuestionScope, $this> */

@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-06
+
+### Refactor — Dùng ảnh trong trình soạn thảo câu hỏi
+
+- Gỡ trường tải ảnh câu hỏi riêng khỏi luồng tạo, lưu, phiên bản, so sánh và các màn hiển thị cho Admin, giảng viên, reviewer, học viên.
+- Giữ ảnh chèn trực tiếp trong nội dung rich editor làm nguồn hiển thị thống nhất.
+- Đồng bộ phần đáp án ở màn duyệt của giảng viên với giao diện reviewer/học viên, không hiện nhãn thay đổi trên từng đáp án.
+
 ## 2026-10-05
 
 ### Fix — Đọc gắn cờ từ tiến độ câu hỏi
