@@ -21,6 +21,19 @@ final class ExamController extends Controller
     public function index(Request $request): View
     {
         $exams = Exam::query()
+            ->select([
+                'exams.id',
+                'exams.kind',
+                'exams.user_id',
+                'exams.blueprint_id',
+                'exams.exam_catalog_id',
+                'exams.title',
+                'exams.description',
+                'exams.duration_minutes',
+                'exams.status',
+                'exams.is_published',
+                'exams.created_at',
+            ])
             ->with(['user:id,name,email', 'blueprint:id,name,code'])
             ->withCount('questions')
             ->when($request->filled('q'), function ($query) use ($request): void {
@@ -35,7 +48,7 @@ final class ExamController extends Controller
                             ->orWhere('code', 'like', $term));
                 });
             })
-            ->latest()
+            ->latest('exams.created_at')
             ->paginate(20)
             ->withQueryString();
 

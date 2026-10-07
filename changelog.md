@@ -2,6 +2,12 @@
 
 ## 2026-10-07
 
+### Feat — Hoàn thiện đề thi theo ma trận
+
+- Tách thao tác tạo đề Premium khỏi thao tác bắt đầu phiên thi; phân trang đề cá nhân và kiểm tra entitlement phía server.
+- Ưu tiên câu mới khi sinh đề, cho phép dùng lại có thông báo khi kho thiếu và rút gọn lỗi thiếu câu theo ma trận.
+- Hoàn thiện giao diện quản lý bài mẫu, trọng số mặc định cho ma trận cấp phép và seeder 600 câu demo cho kỳ thi `abcd`.
+
 ### Feat — Bài thi mẫu cố định và đề Premium theo ma trận
 
 - Thêm tạo bản nháp, xem trước và xuất bản bài mẫu ngay trong luồng Kỳ thi Admin hiện có; mỗi kỳ thi có một bản mẫu hiện hành.

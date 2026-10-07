@@ -43,7 +43,18 @@ final class BuildFixedExamPaper
             if (! $professionIds || in_array(0, $professionIds, true)) {
                 throw ValidationException::withMessages(['blueprint' => 'Cần cấu hình chức danh cho kỳ thi và học viên.']);
             }
-            $topics = $questions = $names = [];
+            $sampleQuestionIds = $learner !== null && $catalog->sample_exam_id !== null
+                ? array_fill_keys(DB::table('exam_question')->where('exam_id', $catalog->sample_exam_id)->pluck('question_id')->all(), true)
+                : [];
+            $previousQuestionIds = $learner !== null
+                ? array_fill_keys(DB::table('exam_question')
+                    ->join('exams', 'exams.id', '=', 'exam_question.exam_id')
+                    ->where('exams.kind', 'personal')
+                    ->where('exams.user_id', $learner->id)
+                    ->where('exams.exam_catalog_id', $catalog->id)
+                    ->pluck('exam_question.question_id')->all(), true)
+                : [];
+            $topics = $freshTopics = $withoutSampleTopics = $questions = $names = [];
             foreach ($matrix['sections'] as $section) {
                 foreach ($section['topics'] as $topic) {
                     if ($topic['question_count'] <= 0) {
@@ -60,30 +71,51 @@ final class BuildFixedExamPaper
                     $priorityIds = array_fill_keys($priorityQuery->pluck('id')->all(), true);
                     $pool = $query->with('options', 'lessons')->get();
                     ServePublishedQuestion::overlayMany($pool);
-                    $candidates = [];
+                    $fresh = $previous = $sample = [];
                     foreach ($pool->shuffle()->sortByDesc(fn (Question $question): bool => isset($priorityIds[$question->id])) as $question) {
                         $id = (string) $question->id;
                         $questions[$id] = $question;
-                        $candidates[$id] = match ($question->difficulty->value) {
+                        $group = match ($question->difficulty->value) {
                             'very_easy', 'easy' => 'easy',
                             'medium' => 'medium',
                             default => 'hard',
                         };
+                        if (isset($sampleQuestionIds[$id])) {
+                            $sample[$id] = $group;
+                        } elseif (isset($previousQuestionIds[$id])) {
+                            $previous[$id] = $group;
+                        } else {
+                            $fresh[$id] = $group;
+                        }
                     }
-                    $topics[$topic['id']] = ['count' => $topic['question_count'], 'candidates' => $candidates];
+                    $count = $topic['question_count'];
+                    $freshTopics[$topic['id']] = ['count' => $count, 'candidates' => $fresh];
+                    $withoutSampleTopics[$topic['id']] = ['count' => $count, 'candidates' => $fresh + $previous];
+                    $topics[$topic['id']] = ['count' => $count, 'candidates' => $fresh + $previous + $sample];
                     $names[$topic['id']] = $topic['name'];
                 }
             }
-            $result = $this->matcher->match($topics);
+            $result = $this->matcher->match($freshTopics);
+            if (! $result['complete']) {
+                $result = $this->matcher->match($withoutSampleTopics);
+            }
+            if (! $result['complete']) {
+                $result = $this->matcher->match($topics);
+            }
             if (! $result['complete']) {
                 $details = [];
                 foreach ($topics as $id => $topic) {
+                    if (count($details) >= 3) {
+                        break;
+                    }
                     $counts = array_count_values($topic['candidates']);
                     $details[] = sprintf('%s cần %d câu; có %d dễ, %d trung bình, %d khó.', $names[$id], $topic['count'], $counts['easy'] ?? 0, $counts['medium'] ?? 0, $counts['hard'] ?? 0);
                 }
                 $quotas = $result['quotas'];
-                throw ValidationException::withMessages(['blueprint' => sprintf('Không đủ câu không trùng để đáp ứng ma trận và tỷ lệ 40/30/30 (cần %d dễ, %d trung bình, %d khó). ', $quotas['easy'], $quotas['medium'], $quotas['hard']).implode(' ', $details)]);
+                throw ValidationException::withMessages(['blueprint' => sprintf('Ngân hàng câu hỏi chưa đủ để tạo đề đúng ma trận 40/30/30 (cần %d dễ, %d trung bình, %d khó), kể cả khi dùng lại câu cũ. Ví dụ: ', $quotas['easy'], $quotas['medium'], $quotas['hard']).implode(' ', $details)]);
             }
+            $reusedCount = count(array_intersect_key($result['selected'], $sampleQuestionIds + $previousQuestionIds));
+            $sampleOverlapCount = count(array_intersect_key($result['selected'], $sampleQuestionIds));
             $exam = Exam::query()->create([
                 'kind' => $learner ? 'personal' : 'sample',
                 'user_id' => $learner?->id,
@@ -94,7 +126,13 @@ final class BuildFixedExamPaper
                 'duration_minutes' => $matrix['suggested_duration_minutes'],
                 'status' => $learner ? ExamStatus::Published : ExamStatus::Draft,
                 'is_published' => $learner !== null,
-                'matrix_snapshot' => array_merge($matrix, ['difficulty_quotas' => $result['quotas'], 'profession_ids' => $professionIds]),
+                'matrix_snapshot' => array_merge($matrix, [
+                    'difficulty_quotas' => $result['quotas'],
+                    'profession_ids' => $professionIds,
+                ], $learner !== null ? [
+                    'reused_question_count' => $reusedCount,
+                    'sample_overlap_count' => $sampleOverlapCount,
+                ] : []),
             ]);
             $pivot = $paper = [];
             foreach ($topics as $topicId => $topic) {

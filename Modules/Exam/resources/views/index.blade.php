@@ -27,7 +27,7 @@
                 <p class="mb-2 text-sm font-bold uppercase tracking-wide text-primary">Mô phỏng kỳ thi</p>
                 <h1 class="font-headline-lg text-headline-lg font-bold text-on-surface">Kỳ thi</h1>
                 <p class="mt-3 text-sm leading-6 text-on-surface-variant sm:text-base">
-                    Làm bài thi mẫu cố định miễn phí. Học viên Premium có thể tạo thêm đề mới theo ma trận kỳ thi.
+                    Làm bài thi mẫu cố định miễn phí. Học viên Premium có thể tạo đề riêng theo ma trận kỳ thi và bắt đầu làm khi sẵn sàng.
                 </p>
             </div>
             @unless ($canStartExam)
@@ -112,7 +112,7 @@
                             <a href="{{ route('billing.plans') }}"
                                 class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-primary/30 px-4 text-sm font-bold text-primary hover:bg-primary/5">
                                 <span class="material-symbols-outlined text-[18px]">lock</span>
-                                Nâng cấp để tạo bài thi
+                                Nâng cấp để tạo đề mới
                             </a>
                         @elseif (! $ready)
                             <button type="button" disabled
@@ -148,8 +148,8 @@
         @if ($recentExams->isNotEmpty())
             <section class="mt-10">
                 <div class="mb-4">
-                    <h2 class="text-xl font-bold text-on-surface">Bài thi của bạn</h2>
-                    <p class="mt-1 text-sm text-on-surface-variant">Các bài thi đã tạo từ ma trận — có thể làm lại cùng đề.</p>
+                    <h2 class="text-xl font-bold text-on-surface">Đề thi của bạn</h2>
+                    <p class="mt-1 text-sm text-on-surface-variant">Chọn “Làm” để bắt đầu một phiên thi với đề đã tạo. Bạn có thể làm lại cùng đề.</p>
                 </div>
                 <div class="grid gap-3 md:grid-cols-2">
                     @foreach ($recentExams as $exam)
@@ -174,6 +174,9 @@
                         </div>
                     @endforeach
                 </div>
+                @if ($recentExams->hasPages())
+                    <div class="mt-6">{{ $recentExams->links() }}</div>
+                @endif
             </section>
         @endif
 
@@ -189,7 +192,7 @@
                 <div class="rounded-2xl border border-dashed border-outline-variant bg-white px-6 py-12 text-center">
                     <span class="material-symbols-outlined mb-3 text-5xl text-outline">assignment</span>
                     <p class="font-bold text-on-surface">Chưa có phiên thi nào</p>
-                    <p class="mt-2 text-sm text-on-surface-variant">Tạo bài thi từ kỳ thi ở trên để bắt đầu.</p>
+                        <p class="mt-2 text-sm text-on-surface-variant">Tạo đề ở trên, rồi bấm “Làm” trong mục “Đề thi của bạn” để bắt đầu.</p>
                 </div>
             @else
                 <div class="overflow-hidden rounded-2xl border border-outline-variant bg-white shadow-sm">

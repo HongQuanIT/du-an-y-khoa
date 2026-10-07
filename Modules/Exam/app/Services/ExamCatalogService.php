@@ -93,17 +93,22 @@ final class ExamCatalogService
             ->get();
     }
 
-    /**
-     * @return Collection<int, Exam>
-     */
-    public function recentExams(User $user): Collection
+    /** @return LengthAwarePaginator<int, Exam> */
+    public function recentExams(User $user): LengthAwarePaginator
     {
         return Exam::query()
+            ->select([
+                'exams.id',
+                'exams.blueprint_id',
+                'exams.title',
+                'exams.duration_minutes',
+                'exams.created_at',
+            ])
             ->withCount('questions')
             ->with('blueprint:id,name,code')
             ->where('user_id', $user->getKey())
-            ->latest()
-            ->limit(6)
-            ->get();
+            ->where('kind', 'personal')
+            ->latest('exams.created_at')
+            ->paginate(6, ['*'], 'exam_page');
     }
 }

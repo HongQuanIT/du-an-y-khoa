@@ -7,26 +7,17 @@ namespace Modules\Exam\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Modules\Exam\Actions\CreateLearnerExamFromBlueprintAction;
-use Modules\QuestionBank\Actions\CreateQuestionSessionAction;
-use Modules\QuestionBank\Data\CreateSessionData;
-use Modules\QuestionBank\Enums\SessionMode;
-use Modules\QuestionBank\Enums\SessionSource;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
 use Modules\QuestionBank\Models\ExamCatalog;
-use RuntimeException;
 
 /**
- * Học viên chọn kỳ thi đã gắn ma trận → tạo bài thi cá nhân → vào phòng thi.
+ * Học viên chọn kỳ thi đã gắn ma trận → tạo đề cá nhân để làm sau.
  */
 final class CreateExamFromBlueprintController extends Controller
 {
-    public function __construct(
-        private readonly CreateLearnerExamFromBlueprintAction $createExam,
-        private readonly CreateQuestionSessionAction $createSession,
-    ) {}
+    public function __construct(private readonly CreateLearnerExamFromBlueprintAction $createExam) {}
 
     public function __invoke(ExamCatalog $examCatalog): RedirectResponse
     {
@@ -48,29 +39,18 @@ final class CreateExamFromBlueprintController extends Controller
         abort_unless($allowed, 404);
 
         try {
-            $session = DB::transaction(function () use ($user, $examCatalog) {
-                $exam = $this->createExam->handle($user, $examCatalog);
-                $session = $this->createSession->handle($user, new CreateSessionData(
-                    mode: SessionMode::Exam,
-                    source: SessionSource::Exam,
-                    count: $exam->questionCount(),
-                    examId: $exam->id,
-                ));
-
-                $session->update([
-                    'time_limit_seconds' => $exam->duration_minutes * 60,
-                ]);
-
-                return $session;
-            });
+            $exam = $this->createExam->handle($user, $examCatalog);
         } catch (ValidationException $exception) {
             return back()->withErrors($exception->errors());
-        } catch (RuntimeException $exception) {
-            throw ValidationException::withMessages(['blueprint' => $exception->getMessage()]);
         }
 
+        $reusedCount = (int) ($exam->matrix_snapshot['reused_question_count'] ?? 0);
+        $notice = $reusedCount > 0
+            ? " Có {$reusedCount}/{$exam->questionCount()} câu đã xuất hiện trong bài mẫu hoặc các đề bạn đã tạo vì ngân hàng chưa đủ câu mới."
+            : '';
+
         return redirect()
-            ->route('exam.session', $session)
-            ->with('status', 'Đã tạo bài thi từ kỳ thi «'.$examCatalog->name.'».');
+            ->route('exam.index')
+            ->with('status', 'Đã tạo đề từ kỳ thi «'.$examCatalog->name.'».'.$notice.' Bấm “Làm” trong mục “Đề thi của bạn” khi bạn muốn bắt đầu.');
     }
 }

@@ -383,6 +383,13 @@ final class TaxonomyArchitectureTest extends TestCase
         $this->assertSame(1, Blueprint::query()->where('code', 'medical_practice_licensing_exam')->count());
         $this->assertSame(17, BlueprintSection::query()->count());
         $this->assertSame(128, CoreClinicalTopic::query()->count());
+        $blueprint = Blueprint::query()->where('code', 'medical_practice_licensing_exam')->firstOrFail();
+        $this->assertSame(200, $blueprint->total_questions);
+        $this->assertEqualsWithDelta(100, $blueprint->sections()->sum('weight_min'), 0.001);
+        $this->assertEqualsWithDelta(100, $blueprint->sections()->sum('weight_max'), 0.001);
+        foreach ($blueprint->sections as $section) {
+            $this->assertEqualsWithDelta(100, $section->coreClinicalTopics()->sum('weight'), 0.001);
+        }
         $this->assertSame(
             'Chủng ngừa (Tiêm ngừa/Tiêm phòng) trẻ em và người lớn',
             CoreClinicalTopic::query()->where('slug', 'chung-ngua-tiem-nguatiem-phong-tre-em-va-nguoi-lon')->value('name'),
