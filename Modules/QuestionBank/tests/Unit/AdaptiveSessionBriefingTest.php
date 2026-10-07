@@ -49,6 +49,7 @@ LOG;
         $this->assertStringContainsString('sai ≥3', $filterItems);
         $this->assertStringContainsString('≥5', $filterItems);
         $this->assertStringContainsString('Không gồm tỉ lệ câu mới', $filterItems);
+        $this->assertStringContainsString('dưới 5s', $filterItems);
         $this->assertStringContainsString('duePool < 1×N', $quotaItems);
         $this->assertStringContainsString('duePool ≥ 3×N', $quotaItems);
         $formulas = array_column($card['formulas'], 'expr', 'name');

@@ -106,6 +106,7 @@ final class AnswerQuestionAction
             );
 
             if ($isStudy && $this->liveQuestionExists($question)) {
+                $sessionFilters = is_array($currentSession->filters) ? $currentSession->filters : [];
                 $gradeReport = $this->learningState->applyGraded(
                     (int) $currentSession->user_id,
                     $question,
@@ -113,6 +114,7 @@ final class AnswerQuestionAction
                     $now,
                     $timeSpentSeconds,
                     true,
+                    (bool) ($sessionFilters['extra_practice'] ?? false),
                 );
 
                 if ($currentSession->source === SessionSource::WeakTopics) {

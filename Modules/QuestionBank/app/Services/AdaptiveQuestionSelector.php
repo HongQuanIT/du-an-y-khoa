@@ -25,6 +25,8 @@ use Modules\QuestionBank\Support\ServePublishedQuestion;
  */
 final class AdaptiveQuestionSelector
 {
+    private bool $tracing = true;
+
     public function __construct(
         private readonly QuestionFilterBuilder $filters,
     ) {}
@@ -34,6 +36,25 @@ final class AdaptiveQuestionSelector
      */
     public function pick(int $userId, int $limit, bool $canUsePremium, CreateSessionData $data): array
     {
+        return $this->inspect($userId, $limit, $canUsePremium, $data)['question_ids'];
+    }
+
+    /**
+     * @return array{
+     *     question_ids: list<string>,
+     *     can_start: bool,
+     *     needs_extra_confirm: bool,
+     *     message: string|null,
+     *     next_ready_at: string|null,
+     *     blocked_reason: string|null,
+     *     available_weak: int,
+     *     pickable_count: int,
+     *     pool_count: int
+     * }
+     */
+    public function inspect(int $userId, int $limit, bool $canUsePremium, CreateSessionData $data, bool $trace = true): array
+    {
+        $this->tracing = $trace;
         $focus = $this->normalizeFocus($data->adaptiveFocus);
         $now = CarbonImmutable::now();
 
@@ -52,7 +73,7 @@ final class AdaptiveQuestionSelector
         if ($poolIds === []) {
             $this->trace('empty_pool', ['user_id' => $userId]);
 
-            return [];
+            return $this->emptyInspect('Không còn câu hỏi phù hợp với bộ lọc đã chọn.', 0);
         }
 
         $limit = max(1, min($limit, count($poolIds)));
@@ -78,9 +99,11 @@ final class AdaptiveQuestionSelector
             'version_mismatch' => 0,
             'ungraded_status' => 0,
         ];
-        $eligible = []; // graded + pass filter
-        $unseen = [];   // no valid graded state for current content version
+        $eligible = []; // graded hợp lệ + pass filter
+        $unseen = [];   // chưa trả lời đúng/sai cho đúng content_version
         $resting = [];  // thrash / cooldown — liệt kê cho admin briefing
+        $cooldownWeak = []; // câu yếu đang nghỉ serve — ứng viên luyện thêm (weak_focus)
+        $cooldownDue = [];  // câu đến hạn đang nghỉ serve — ứng viên luyện thêm (retention)
 
         foreach ($poolIds as $questionId) {
             $meta = $metaById[$questionId] ?? null;
@@ -92,18 +115,27 @@ final class AdaptiveQuestionSelector
             $row = $stats->get($questionId);
             $contentVersion = (int) ($meta['content_version'] ?? 0);
 
+            $versionMismatch = $row !== null
+                && $row->content_version !== null
+                && (int) $row->content_version !== $contentVersion;
+
             $hasGraded = $row !== null
                 && $row->last_graded_at !== null
                 && $row->memory_stability_days !== null
-                && ($row->content_version === null || (int) $row->content_version === $contentVersion);
+                && ! $versionMismatch;
 
-            if ($row !== null && $row->content_version !== null && (int) $row->content_version !== $contentVersion) {
+            if ($versionMismatch) {
                 $excluded['version_mismatch']++;
-                $hasGraded = false;
             }
 
             if (! $hasGraded) {
-                $unseen[] = $questionId;
+                $answeredTooFast = ! $versionMismatch
+                    && AdaptiveLearning::hasAnsweredAttempt($row?->status, $row?->last_attempt_at);
+                if ($answeredTooFast) {
+                    $excluded['ungraded_status']++;
+                } else {
+                    $unseen[] = $questionId;
+                }
 
                 continue;
             }
@@ -120,6 +152,9 @@ final class AdaptiveQuestionSelector
 
             $wrongStreak = (int) ($row->wrong_streak ?? 0);
             $sessionsAfterGraded = $this->sessionsAfter($sessionTimes, $row->last_graded_at);
+            $recentForResting = $this->recentResultsForRow($row);
+            $restingWeakness = AdaptiveLearning::weakness($recentForResting);
+
             if (AdaptiveLearning::isThrashBlocked(
                 $row->thrash_blocked_until,
                 $wrongStreak,
@@ -149,49 +184,51 @@ final class AdaptiveQuestionSelector
                     'rest_until' => $timeUntil?->toIso8601String(),
                     'wrong_streak' => $wrongStreak,
                     'sessions_since_graded' => $sessionsAfterGraded,
+                    'weakness' => $restingWeakness,
                     ...$memorySnapshot,
                 ];
 
                 continue;
             }
 
-            if ($row->last_served_at !== null) {
-                $servedAt = CarbonImmutable::parse($row->last_served_at);
-                $hours = abs((float) $now->diffInHours($servedAt));
-                if ($hours < AdaptiveLearning::COOLDOWN_HOURS) {
-                    $excluded['cooldown']++;
-                    $restUntil = $servedAt->addHours(AdaptiveLearning::COOLDOWN_HOURS);
-                    $resting[] = [
-                        'question_id' => $questionId,
-                        'reason' => 'cooldown',
-                        'detail' => sprintf(
-                            'Vừa đưa vào phiên thích ứng %.1f giờ trước — nghỉ serve %d giờ',
-                            $hours,
-                            AdaptiveLearning::COOLDOWN_HOURS,
-                        ),
-                        'rest_until' => $restUntil->toIso8601String(),
-                        'wrong_streak' => $wrongStreak,
-                        'sessions_since_graded' => $sessionsAfterGraded,
-                        ...$memorySnapshot,
-                    ];
+            if (AdaptiveLearning::isServeBlocked($row->last_served_at, $now)) {
+                $excluded['cooldown']++;
+                $restUntil = AdaptiveLearning::serveReadyAt($row->last_served_at);
+                $resting[] = [
+                    'question_id' => $questionId,
+                    'reason' => 'cooldown',
+                    'detail' => 'Đã đưa vào phiên thích ứng trong ngày học này — nghỉ đến ngày học kế tiếp (tối thiểu 8 giờ)',
+                    'rest_until' => $restUntil->toIso8601String(),
+                    'wrong_streak' => $wrongStreak,
+                    'sessions_since_graded' => $sessionsAfterGraded,
+                    'weakness' => $restingWeakness,
+                    ...$memorySnapshot,
+                ];
 
-                    continue;
+                $recent = $this->recentResultsForRow($row);
+                $restingEligible = [
+                    'question_id' => $questionId,
+                    'lesson_id' => $meta['lesson_id'],
+                    'recent_results' => $recent,
+                    'weakness' => AdaptiveLearning::weakness($recent),
+                    'stability' => $stability,
+                    'last_graded_at' => CarbonImmutable::parse($row->last_graded_at),
+                    'retention' => $memorySnapshot['retention'],
+                    'is_due' => $memorySnapshot['is_due'],
+                    'due_at' => $memorySnapshot['due_at'],
+                    'days_since' => $memorySnapshot['days_since'],
+                ];
+                if ($restingWeakness >= AdaptiveLearning::WEAK_THRESHOLD) {
+                    $cooldownWeak[$questionId] = $restingEligible;
                 }
+                if ($memorySnapshot['is_due']) {
+                    $cooldownDue[$questionId] = $restingEligible;
+                }
+
+                continue;
             }
 
-            $recent = is_array($row->recent_results) ? array_values($row->recent_results) : [];
-            $recent = array_map(static fn ($v): bool => (bool) $v, $recent);
-            if ($recent === []) {
-                // Fallback Laplace từ counters lifetime nếu chưa có cửa sổ.
-                $correct = (int) ($row->correct_count ?? 0);
-                $wrong = (int) ($row->wrong_count ?? 0);
-                for ($i = 0; $i < min(AdaptiveLearning::WEAK_WINDOW, $correct); $i++) {
-                    $recent[] = true;
-                }
-                for ($i = 0; $i < min(AdaptiveLearning::WEAK_WINDOW - count($recent), $wrong); $i++) {
-                    $recent[] = false;
-                }
-            }
+            $recent = $this->recentResultsForRow($row);
 
             $eligible[$questionId] = [
                 'question_id' => $questionId,
@@ -219,8 +256,9 @@ final class AdaptiveQuestionSelector
             'resting' => $resting,
             'rules' => [
                 'thrash',
-                'cooldown_adaptive_20h',
+                'cooldown_study_day',
                 'content_version',
+                'too_fast_seen_not_new',
             ],
         ]);
 
@@ -264,15 +302,84 @@ final class AdaptiveQuestionSelector
             ],
         ]);
 
+        $weakResting = 0;
+        $nextWeakReady = null;
+        $dueResting = 0;
+        $nextDueReady = null;
+        foreach ($resting as $row) {
+            $untilRaw = $row['rest_until'] ?? null;
+            $until = is_string($untilRaw) && $untilRaw !== ''
+                ? CarbonImmutable::parse($untilRaw)
+                : null;
+
+            if ((float) ($row['weakness'] ?? 0) >= AdaptiveLearning::WEAK_THRESHOLD) {
+                $weakResting++;
+                if ($until !== null && ($nextWeakReady === null || $until->lessThan($nextWeakReady))) {
+                    $nextWeakReady = $until;
+                }
+            }
+            if (($row['is_due'] ?? false) === true) {
+                $dueResting++;
+                if ($until !== null && ($nextDueReady === null || $until->lessThan($nextDueReady))) {
+                    $nextDueReady = $until;
+                }
+            }
+        }
+
+        if ($focus === 'weak_focus' && $weakPool === []) {
+            return $this->blockedFocusResult(
+                focus: $focus,
+                blocked: AdaptiveLearning::weakFocusBlocked($weakResting, $nextWeakReady, $now),
+                extraCandidates: array_values($cooldownWeak),
+                nextReady: $nextWeakReady,
+                limit: $limit,
+                poolCount: count($poolIds),
+                extraPractice: $data->extraPractice,
+                bucket: 'yeu',
+                sort: static function (array $a, array $b): int {
+                    return $b['weakness'] <=> $a['weakness']
+                        ?: ($a['retention'] ?? 1) <=> ($b['retention'] ?? 1)
+                        ?: strcmp($a['question_id'], $b['question_id']);
+                },
+                reason: static fn (array $row): string => sprintf(
+                    'Luyện thêm — câu yếu đang nghỉ (độ yếu %d%%; độ bền không đổi)',
+                    (int) round($row['weakness'] * 100),
+                ),
+            );
+        }
+
+        if ($focus === 'retention' && $duePool === []) {
+            return $this->blockedFocusResult(
+                focus: $focus,
+                blocked: AdaptiveLearning::retentionFocusBlocked($dueResting, $nextDueReady, $now),
+                extraCandidates: array_values($cooldownDue),
+                nextReady: $nextDueReady,
+                limit: $limit,
+                poolCount: count($poolIds),
+                extraPractice: $data->extraPractice,
+                bucket: 'sap_quen',
+                sort: static function (array $a, array $b): int {
+                    return ($a['retention'] ?? 1) <=> ($b['retention'] ?? 1)
+                        ?: $b['weakness'] <=> $a['weakness']
+                        ?: strcmp($a['question_id'], $b['question_id']);
+                },
+                reason: static fn (array $row): string => sprintf(
+                    'Luyện thêm — câu đến hạn đang nghỉ (ghi nhớ còn %d%%; độ bền không đổi)',
+                    (int) round(($row['retention'] ?? 0) * 100),
+                ),
+            );
+        }
+
         // ─── 3. Phân suất ──────────────────────────────────────
         $quota = AdaptiveLearning::newQuestionQuota(
             count($duePool),
             count($unseen),
-            count($eligible),
+            count($eligible) + $excluded['ungraded_status'],
             $limit,
         );
         $newCount = $quota['count'];
         $reviewSlots = $limit - $newCount;
+        $share = (float) $quota['share'];
 
         $weakQuota = match ($focus) {
             'weak_focus' => $reviewSlots,
@@ -280,6 +387,32 @@ final class AdaptiveQuestionSelector
             default => (int) ceil($reviewSlots / 2),
         };
         $dueQuota = $reviewSlots - $weakQuota;
+        $strictPrimary = in_array($focus, ['weak_focus', 'retention'], true);
+        $allowFill = ! $strictPrimary;
+
+        if ($focus === 'weak_focus') {
+            $weakAvailable = count($weakPool);
+            $weakQuota = min($weakAvailable, $reviewSlots);
+            $dueQuota = 0;
+            if ($weakQuota < $reviewSlots && $share > 0.0 && $share < 1.0) {
+                $newCount = min(count($unseen), max(0, (int) round($share * $weakQuota / (1.0 - $share))));
+                $reviewSlots = $weakQuota;
+            } else {
+                $reviewSlots = $weakQuota;
+            }
+        }
+
+        if ($focus === 'retention') {
+            $dueAvailable = count($duePool);
+            $dueQuota = min($dueAvailable, $reviewSlots);
+            $weakQuota = 0;
+            if ($dueQuota < $reviewSlots && $share > 0.0 && $share < 1.0) {
+                $newCount = min(count($unseen), max(0, (int) round($share * $dueQuota / (1.0 - $share))));
+                $reviewSlots = $dueQuota;
+            } else {
+                $reviewSlots = $dueQuota;
+            }
+        }
 
         $this->trace('quota', [
             'stage' => 3,
@@ -294,6 +427,8 @@ final class AdaptiveQuestionSelector
             'rules' => [
                 'new_share_30_20_10_by_due',
                 'mode_splits_review_only',
+                'weak_focus_no_due_fill',
+                'retention_no_weak_fill',
             ],
         ]);
 
@@ -339,11 +474,10 @@ final class AdaptiveQuestionSelector
 
         if ($focus === 'retention') {
             $takeReview($duePool, $dueQuota, 'sap_quen');
-            $takeReview($weakPool, $reviewSlots - count($items), 'yeu');
+        } elseif ($focus === 'weak_focus') {
+            $takeReview($weakPool, $weakQuota, 'yeu');
         } else {
             $takeReview($weakPool, $weakQuota, 'yeu');
-            $weakShort = $weakQuota - count(array_filter($items, static fn (array $i): bool => $i['bucket'] === 'yeu'));
-            // weakShort already reflected if takeReview got fewer; use remaining review slots.
             $takeReview($duePool, $dueQuota + max(0, $weakQuota - count($items)), 'sap_quen');
             $takeReview($weakPool, $reviewSlots - count($items), 'yeu');
         }
@@ -378,7 +512,9 @@ final class AdaptiveQuestionSelector
             }
         }
 
-        $newSlots = $limit - count($items);
+        $newSlots = $strictPrimary
+            ? $newCount
+            : $limit - count($items);
         $pickedNew = [];
         for ($i = 0; $i < $newSlots && $unseenByLesson !== []; $i++) {
             $bestLesson = null;
@@ -429,7 +565,7 @@ final class AdaptiveQuestionSelector
         $this->trace('pick_new', ['taken' => $pickedNew]);
 
         // ─── Lấp đầy ───────────────────────────────────────────
-        if (count($items) < $limit) {
+        if ($allowFill && count($items) < $limit) {
             $rest = array_values(array_filter(
                 $eligible,
                 static fn (array $r): bool => ! isset($taken[$r['question_id']]),
@@ -483,27 +619,283 @@ final class AdaptiveQuestionSelector
             $bucketCounts[$item['bucket']] = ($bucketCounts[$item['bucket']] ?? 0) + 1;
         }
 
+        $questionIds = array_column($resultItems, 'question_id');
+        $resultMessage = (! $strictPrimary && $shortfall > 0)
+            ? sprintf(
+                'Hôm nay bạn đã ôn hết %d câu phù hợp. Hãy quay lại vào ngày mai, hoặc mở rộng chủ đề để luyện thêm.',
+                count($resultItems),
+            )
+            : null;
+
         $this->trace('result', [
             'focus' => $focus,
             'pipeline' => AdaptiveLearning::PIPELINE,
             'picked_count' => count($resultItems),
             'bucket_counts' => $bucketCounts,
-            'shortfall' => $shortfall,
-            'message' => $shortfall > 0
-                ? sprintf(
-                    'Hôm nay bạn đã ôn hết %d câu phù hợp. Quay lại sau %d giờ, hoặc mở rộng chủ đề để luyện thêm.',
-                    count($resultItems),
-                    AdaptiveLearning::COOLDOWN_HOURS,
-                )
-                : null,
+            'shortfall' => $strictPrimary ? 0 : $shortfall,
+            'message' => $resultMessage,
+            'available_weak' => count($weakPool),
             'items' => $resultItems,
-            'question_ids' => array_column($resultItems, 'question_id'),
-            // Tương thích briefing cũ một phần
+            'question_ids' => $questionIds,
             'picked_unseen' => $bucketCounts['moi'],
             'picked_review' => $bucketCounts['yeu'] + $bucketCounts['sap_quen'] + $bucketCounts['lap_day'],
         ]);
 
-        return array_column($resultItems, 'question_id');
+        return [
+            'question_ids' => $questionIds,
+            'can_start' => $questionIds !== [],
+            'needs_extra_confirm' => false,
+            'message' => $resultMessage,
+            'next_ready_at' => null,
+            'blocked_reason' => null,
+            'available_weak' => count($weakPool),
+            'pickable_count' => count($questionIds),
+            'pool_count' => count($poolIds),
+        ];
+    }
+
+    /**
+     * Hết nhóm chính (yếu / đến hạn): popup luyện thêm hoặc khoá khởi tạo.
+     *
+     * @param  list<array<string, mixed>>  $extraCandidates
+     * @param  array{message: string, reason: string}  $blocked
+     * @param  callable(array, array): int  $sort
+     * @param  callable(array): string  $reason
+     * @return array{
+     *     question_ids: list<string>,
+     *     can_start: bool,
+     *     needs_extra_confirm: bool,
+     *     message: string|null,
+     *     next_ready_at: string|null,
+     *     blocked_reason: string|null,
+     *     available_weak: int,
+     *     pickable_count: int,
+     *     pool_count: int
+     * }
+     */
+    private function blockedFocusResult(
+        string $focus,
+        array $blocked,
+        array $extraCandidates,
+        ?CarbonImmutable $nextReady,
+        int $limit,
+        int $poolCount,
+        bool $extraPractice,
+        string $bucket,
+        callable $sort,
+        callable $reason,
+    ): array {
+        if ($extraPractice && $extraCandidates !== []) {
+            return $this->finishExtraFocusPractice(
+                $extraCandidates,
+                $limit,
+                $poolCount,
+                $nextReady,
+                $blocked,
+                $focus,
+                $bucket,
+                $sort,
+                $reason,
+            );
+        }
+
+        $canOfferExtra = $extraCandidates !== [];
+        $this->trace('result', [
+            'focus' => $focus,
+            'pipeline' => AdaptiveLearning::PIPELINE,
+            'picked_count' => 0,
+            'bucket_counts' => ['yeu' => 0, 'sap_quen' => 0, 'moi' => 0, 'lap_day' => 0],
+            'shortfall' => $limit,
+            'message' => $blocked['message'],
+            'blocked_reason' => $blocked['reason'],
+            'needs_extra_confirm' => $canOfferExtra,
+            'available_weak' => 0,
+            'resting_extra_cooldown' => count($extraCandidates),
+            'next_ready_at' => $nextReady?->toIso8601String(),
+            'question_ids' => [],
+            'picked_unseen' => 0,
+            'picked_review' => 0,
+        ]);
+
+        return [
+            'question_ids' => [],
+            'can_start' => $canOfferExtra,
+            'needs_extra_confirm' => $canOfferExtra,
+            'message' => $blocked['message'],
+            'next_ready_at' => $nextReady?->toIso8601String(),
+            'blocked_reason' => $blocked['reason'],
+            'available_weak' => 0,
+            'pickable_count' => count($extraCandidates),
+            'pool_count' => $poolCount,
+        ];
+    }
+
+    /**
+     * Luyện thêm: lấy ứng viên đang nghỉ cooldown (không thrash); giữ S.
+     *
+     * @param  list<array<string, mixed>>  $candidates
+     * @param  array{message: string, reason: string}  $blocked
+     * @param  callable(array, array): int  $sort
+     * @param  callable(array): string  $reason
+     * @return array{
+     *     question_ids: list<string>,
+     *     can_start: bool,
+     *     needs_extra_confirm: bool,
+     *     message: string|null,
+     *     next_ready_at: string|null,
+     *     blocked_reason: string|null,
+     *     available_weak: int,
+     *     pickable_count: int,
+     *     pool_count: int
+     * }
+     */
+    private function finishExtraFocusPractice(
+        array $candidates,
+        int $limit,
+        int $poolCount,
+        ?CarbonImmutable $nextReady,
+        array $blocked,
+        string $focus,
+        string $bucket,
+        callable $sort,
+        callable $reason,
+    ): array {
+        usort($candidates, $sort);
+
+        $take = min(max(1, $limit), count($candidates));
+        $picked = $this->pickTop($candidates, $take);
+        $items = [];
+        foreach ($picked as $row) {
+            $items[] = [
+                'question_id' => $row['question_id'],
+                'bucket' => $bucket,
+                'reason' => $reason($row),
+                'lesson_id' => $row['lesson_id'],
+                'weakness' => $row['weakness'],
+                'retention' => $row['retention'],
+                'days_since' => $row['days_since'],
+                'stability' => $row['stability'],
+                'is_due' => $row['is_due'],
+                'due_at' => $row['due_at'],
+            ];
+        }
+
+        shuffle($items);
+        $resultItems = [];
+        foreach (array_values($items) as $index => $item) {
+            $resultItems[] = [
+                'question_id' => $item['question_id'],
+                'position' => $index + 1,
+                'bucket' => $item['bucket'],
+                'reason' => $item['reason'],
+                'lesson_id' => $item['lesson_id'],
+                'lesson_name' => null,
+                'weakness' => $item['weakness'],
+                'retention' => $item['retention'],
+                'days_since' => $item['days_since'],
+                'stability' => $item['stability'],
+                'is_due' => $item['is_due'],
+                'due_at' => $item['due_at'],
+            ];
+        }
+
+        $questionIds = array_column($resultItems, 'question_id');
+        $bucketCounts = ['yeu' => 0, 'sap_quen' => 0, 'moi' => 0, 'lap_day' => 0];
+        $bucketCounts[$bucket] = count($resultItems);
+
+        $this->trace('quota', [
+            'stage' => 3,
+            'stage_name' => 'Phân suất',
+            'due_band' => 'extra',
+            'new_share' => 0.0,
+            'new_count' => 0,
+            'review_slots' => count($questionIds),
+            'weak_quota' => $bucket === 'yeu' ? count($questionIds) : 0,
+            'due_quota' => $bucket === 'sap_quen' ? count($questionIds) : 0,
+            'focus' => $focus,
+            'extra_practice' => true,
+            'rules' => ['extra_practice_cooldown_primary_only'],
+        ]);
+        $this->trace('result', [
+            'focus' => $focus,
+            'pipeline' => AdaptiveLearning::PIPELINE,
+            'extra_practice' => true,
+            'picked_count' => count($resultItems),
+            'bucket_counts' => $bucketCounts,
+            'shortfall' => 0,
+            'message' => $blocked['message'],
+            'blocked_reason' => $blocked['reason'],
+            'needs_extra_confirm' => false,
+            'available_weak' => $bucket === 'yeu' ? count($candidates) : 0,
+            'items' => $resultItems,
+            'question_ids' => $questionIds,
+            'picked_unseen' => 0,
+            'picked_review' => count($resultItems),
+            'next_ready_at' => $nextReady?->toIso8601String(),
+        ]);
+
+        return [
+            'question_ids' => $questionIds,
+            'can_start' => $questionIds !== [],
+            'needs_extra_confirm' => false,
+            'message' => null,
+            'next_ready_at' => $nextReady?->toIso8601String(),
+            'blocked_reason' => null,
+            'available_weak' => $bucket === 'yeu' ? count($candidates) : 0,
+            'pickable_count' => count($questionIds),
+            'pool_count' => $poolCount,
+        ];
+    }
+
+    /**
+     * @return array{
+     *     question_ids: list<string>,
+     *     can_start: bool,
+     *     needs_extra_confirm: bool,
+     *     message: string|null,
+     *     next_ready_at: string|null,
+     *     blocked_reason: string|null,
+     *     available_weak: int,
+     *     pickable_count: int,
+     *     pool_count: int
+     * }
+     */
+    private function emptyInspect(string $message, int $poolCount = 0): array
+    {
+        return [
+            'question_ids' => [],
+            'can_start' => false,
+            'needs_extra_confirm' => false,
+            'message' => $message,
+            'next_ready_at' => null,
+            'blocked_reason' => 'empty_pool',
+            'available_weak' => 0,
+            'pickable_count' => 0,
+            'pool_count' => $poolCount,
+        ];
+    }
+
+    /**
+     * @return list<bool>
+     */
+    private function recentResultsForRow(UserQuestionStatusModel $row): array
+    {
+        $recent = is_array($row->recent_results) ? array_values($row->recent_results) : [];
+        $recent = array_map(static fn ($v): bool => (bool) $v, $recent);
+        if ($recent !== []) {
+            return $recent;
+        }
+
+        $correct = (int) ($row->correct_count ?? 0);
+        $wrong = (int) ($row->wrong_count ?? 0);
+        for ($i = 0; $i < min(AdaptiveLearning::WEAK_WINDOW, $correct); $i++) {
+            $recent[] = true;
+        }
+        for ($i = 0; $i < min(AdaptiveLearning::WEAK_WINDOW - count($recent), $wrong); $i++) {
+            $recent[] = false;
+        }
+
+        return $recent;
     }
 
     public function countPool(int $userId, bool $canUsePremium, CreateSessionData $data): int
@@ -662,6 +1054,9 @@ final class AdaptiveQuestionSelector
      */
     private function trace(string $step, array $context = []): void
     {
+        if (! $this->tracing) {
+            return;
+        }
         AdaptiveTrace::write($step, $context);
     }
 

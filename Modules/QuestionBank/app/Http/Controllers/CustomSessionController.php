@@ -97,8 +97,16 @@ final class CustomSessionController extends Controller
 
     public function count(CreateQuestionSessionRequest $request): JsonResponse
     {
-        $count = $this->selector->countForSession($request->user(), $request->toData());
+        $preview = $this->selector->previewForSession($request->user(), $request->toData());
 
-        return ApiResponse::item(['count' => $count]);
+        return ApiResponse::item([
+            'count' => (int) $preview['count'],
+            'pickable_count' => (int) $preview['pickable_count'],
+            'can_start' => (bool) $preview['can_start'],
+            'needs_extra_confirm' => (bool) ($preview['needs_extra_confirm'] ?? false),
+            'message' => $preview['message'],
+            'next_ready_at' => $preview['next_ready_at'],
+            'blocked_reason' => $preview['blocked_reason'],
+        ]);
     }
 }

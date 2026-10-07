@@ -304,7 +304,7 @@ final class AdaptiveSessionBriefing
         $summary = $empty
             ? 'Không còn câu phù hợp trong phạm vi đề.'
             : sprintf(
-                '%s chọn hướng %s trên %s theo pipeline Lọc → Phân nhóm → Phân suất. ① Lọc: còn %d câu ôn + %d câu mới (loại thrash %d · cooldown %d · version %d). ② Phân nhóm: %d yếu · %d sắp quên · %d mới. ③ Phân suất: %s → %s câu mới / %s suất ôn (yếu %s · due %s). Kết quả chọn: %d yếu · %d sắp quên · %d mới · %d lấp.',
+                '%s chọn hướng %s trên %s theo pipeline Lọc → Phân nhóm → Phân suất. ① Lọc: còn %d câu ôn + %d câu mới (loại thrash %d · cooldown %d · version %d · làm nhanh chưa S/W %d). ② Phân nhóm: %d yếu · %d sắp quên · %d mới. ③ Phân suất: %s → %s câu mới / %s suất ôn (yếu %s · due %s). Kết quả chọn: %d yếu · %d sắp quên · %d mới · %d lấp.',
                 $learner,
                 $focusMeta['label'],
                 $blueprint,
@@ -313,6 +313,7 @@ final class AdaptiveSessionBriefing
                 (int) ($excluded['thrash'] ?? 0),
                 (int) ($excluded['cooldown'] ?? 0),
                 (int) ($excluded['version_mismatch'] ?? 0),
+                (int) ($excluded['ungraded_status'] ?? 0),
                 (int) ($group['weak_pool'] ?? 0),
                 (int) ($group['due_pool'] ?? 0),
                 (int) ($group['unseen_count'] ?? $filter['unseen_count'] ?? 0),
@@ -387,19 +388,21 @@ final class AdaptiveSessionBriefing
                 'name' => 'Lọc',
                 'title' => '① Lọc — câu nào được phép vào phiên',
                 'body' => sprintf(
-                    'Pool %d → còn %d câu ôn + %d câu mới. Loại: thrash %d · cooldown thích ứng %d · lệch phiên bản %d. Đang nghỉ liệt kê: %d câu.',
+                    'Pool %d → còn %d câu ôn + %d câu mới. Loại: thrash %d · cooldown thích ứng %d · lệch phiên bản %d · làm nhanh chưa S/W %d. Đang nghỉ liệt kê: %d câu.',
                     (int) ($filter['active_count'] ?? 0),
                     (int) ($filter['eligible_count'] ?? 0),
                     (int) ($filter['unseen_count'] ?? 0),
                     (int) ($excluded['thrash'] ?? 0),
                     (int) ($excluded['cooldown'] ?? 0),
                     (int) ($excluded['version_mismatch'] ?? 0),
+                    (int) ($excluded['ungraded_status'] ?? 0),
                     $restingCount,
                 ),
                 'items' => [
                     'Thrash: sai ≥3 → 72h + 2 phiên; ≥5 → tạm không đưa vào phiên 7 ngày',
-                    'Cooldown: nghỉ serve 20 giờ — chỉ sau phiên thích ứng',
+                    'Cooldown: nghỉ đến ngày học kế tiếp (04:00, tối thiểu 8 giờ) — chỉ sau phiên thích ứng',
                     'Phiên bản nội dung lệch → coi như câu mới',
+                    'Đã trả lời dưới 5s: vẫn là đã làm, không vào câu mới, chưa có S/W nên không ôn',
                     'Không gồm tỉ lệ câu mới (đó là bước Phân suất)',
                 ],
             ],
@@ -416,8 +419,8 @@ final class AdaptiveSessionBriefing
                 ),
                 'items' => [
                     'Yếu: W ≥ 50% trên tối đa 5 lần gần nhất',
-                    'Sắp quên: đến hạn t ≥ S (R = 0,9^(t/S))',
-                    'Mới: chưa chấm đúng phiên bản hiện tại',
+                    'Sắp quên: đến hạn theo ngày học (study_day + S)',
+                    'Mới: chưa trả lời đúng/sai trên phiên bản hiện tại (lượt dưới 5s vẫn là đã làm; omit chưa tính)',
                 ],
             ],
             [
@@ -674,9 +677,9 @@ final class AdaptiveSessionBriefing
 
         return [
             ['name' => 'Thứ tự pipeline', 'expr' => 'Luôn chạy **① Lọc → ② Phân nhóm → ③ Phân suất**'],
-            ['name' => '① Lọc', 'expr' => 'Loại thrash (**sai ≥3 → 72h + 2 phiên**; **≥5 → nghỉ 7 ngày**), nghỉ serve **20 giờ chỉ sau phiên thích ứng**, lệch phiên bản nội dung. **Không** quyết định tỉ lệ câu mới. Đã loại: thrash **'.((string) ($excluded['thrash'] ?? 0)).'**, cooldown **'.((string) ($excluded['cooldown'] ?? 0)).'**, version **'.((string) ($excluded['version_mismatch'] ?? 0)).'**. Nghỉ liệt kê **'.$restingCount.'** câu.'],
+            ['name' => '① Lọc', 'expr' => 'Loại thrash (**sai ≥3 → 72h + 2 phiên**; **≥5 → nghỉ 7 ngày**), nghỉ serve **đến ngày học kế tiếp (04:00, tối thiểu 8 giờ) chỉ sau phiên thích ứng**, lệch phiên bản nội dung, **đã làm nhưng dưới 5s** (không câu mới, chưa S/W). **Không** quyết định tỉ lệ câu mới. Đã loại: thrash **'.((string) ($excluded['thrash'] ?? 0)).'**, cooldown **'.((string) ($excluded['cooldown'] ?? 0)).'**, version **'.((string) ($excluded['version_mismatch'] ?? 0)).'**, làm nhanh **'.((string) ($excluded['ungraded_status'] ?? 0)).'**. Nghỉ liệt kê **'.$restingCount.'** câu.'],
             ['name' => '② Phân nhóm — Yếu', 'expr' => 'Độ yếu = **(sai + 1) / (số lần + 2)** trên tối đa 5 lần gần nhất. Vào nhóm khi **≥ 50%**. Pool: **'.((string) ($group['weak_pool'] ?? '—')).'**.'],
-            ['name' => '② Phân nhóm — Sắp quên', 'expr' => 'Đến hạn khi **t ≥ S**. S ∈ **1 · 3 · 7 · 14 · 30 · 60**; R = **0,9^(t/S)**. Pool: **'.((string) ($group['due_pool'] ?? '—')).'**. Due = **last_graded_at + S**.'],
+            ['name' => '② Phân nhóm — Sắp quên', 'expr' => 'Đến hạn khi **ngày học ≥ ngày học lần chấm + S**. S ∈ **1 · 3 · 7 · 14 · 30 · 60**; R = **0,9^(t/S)**. Pool: **'.((string) ($group['due_pool'] ?? '—')).'**. Due = **04:00 ngày học đến hạn**.'],
             ['name' => '③ Phân suất — câu mới', 'expr' => 'Gọi **N** = số câu phiên, **duePool** = số câu đến hạn sau lọc (`t ≥ S`). **Due thấp** nếu duePool < 1×N → **30%** mới; **due vừa** nếu 1×N ≤ duePool < 3×N → **20%**; **due cao** nếu duePool ≥ 3×N → **10%**. Học viên mới (chưa chấm câu nào): **100%** mới. Phiên này: **'.$this->dueBandLabel((string) ($quota['due_band'] ?? 'low'), (int) ($group['due_pool'] ?? 0), max(1, (int) ($quota['new_count'] ?? 0) + (int) ($quota['review_slots'] ?? 0))).'** → **'.((string) ($quota['new_count'] ?? '—')).'** mới / **'.((string) ($quota['review_slots'] ?? '—')).'** ôn.'],
             ['name' => '③ Phân suất — mode '.$focus['label'], 'expr' => 'Chỉ chia suất ôn: Điểm yếu ≈ 100% Yếu; Củng cố ≈ 100% Sắp quên; Cân bằng ≈ 50/50. Suất yếu/due: **'.((string) ($quota['weak_quota'] ?? '—')).' / '.((string) ($quota['due_quota'] ?? '—')).'**. Câu mới ưu tiên **bài dang dở**.'],
         ];

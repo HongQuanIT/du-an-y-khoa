@@ -137,6 +137,7 @@ final class CreateQuestionSessionRequest extends FormRequest
                 'string',
                 'in:weak_focus,balanced,retention',
             ],
+            'extra_practice' => ['nullable', 'boolean'],
             'count' => ['required', 'integer', 'min:1', 'max:10000'],
             'blueprint_id' => [
                 'nullable',
@@ -218,6 +219,7 @@ final class CreateQuestionSessionRequest extends FormRequest
             adaptiveFocus: $isAdaptive
                 ? (string) $this->input('adaptive_focus', 'balanced')
                 : null,
+            extraPractice: $isAdaptive && $this->boolean('extra_practice'),
             name: $name !== '' ? $name : null,
         );
     }

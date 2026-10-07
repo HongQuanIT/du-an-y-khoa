@@ -43,12 +43,25 @@ final class MemoryStabilityTest extends TestCase
         $this->assertFalse(MemoryStability::isDue(3.0, $now->subDays(2), $now));
     }
 
-    public function test_due_at_is_last_graded_plus_stability(): void
+    public function test_due_at_is_start_of_due_study_day(): void
     {
-        $graded = now()->startOfDay();
+        $graded = CarbonImmutable::parse('2026-01-01 09:00:00', MemoryStability::timezone());
         $due = MemoryStability::dueAt(7.0, $graded);
 
         $this->assertNotNull($due);
-        $this->assertTrue($due->equalTo($graded->copy()->addDays(7)));
+        $this->assertTrue($due->equalTo(
+            $graded->startOfDay()->addDays(7)->setTime(MemoryStability::STUDY_DAY_HOUR, 0, 0),
+        ));
+    }
+
+    public function test_due_and_promote_use_study_day_not_elapsed_hours(): void
+    {
+        $tz = MemoryStability::timezone();
+        $last = CarbonImmutable::parse('2026-01-01 21:00:00', $tz);
+
+        $this->assertFalse(MemoryStability::isDue(1.0, $last, CarbonImmutable::parse('2026-01-02 03:00:00', $tz)));
+        $this->assertTrue(MemoryStability::isDue(1.0, $last, CarbonImmutable::parse('2026-01-02 08:00:00', $tz)));
+        $this->assertSame(1.0, MemoryStability::afterGrade(1.0, true, $last, CarbonImmutable::parse('2026-01-02 03:00:00', $tz)));
+        $this->assertSame(3.0, MemoryStability::afterGrade(1.0, true, $last, CarbonImmutable::parse('2026-01-02 08:00:00', $tz)));
     }
 }

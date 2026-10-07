@@ -25,6 +25,7 @@ use Modules\QuestionBank\Models\QuestionStatus as UserQuestionStatusModel;
 use Modules\QuestionBank\Support\AdaptiveTrace;
 use Modules\QuestionBank\Support\QuestionFilterBuilder;
 use Modules\QuestionBank\Support\ServePublishedQuestion;
+use RuntimeException;
 
 /**
  * Picks published questions for a custom / exam / weak-topics session.
@@ -98,15 +99,55 @@ final class SessionQuestionSelector
     /** Count the full accessible pool using the exact creation filters. */
     public function countForSession(User $user, CreateSessionData $data): int
     {
+        return (int) $this->previewForSession($user, $data)['count'];
+    }
+
+    /**
+     * @return array{
+     *     count: int,
+     *     pickable_count: int,
+     *     can_start: bool,
+     *     needs_extra_confirm: bool,
+     *     message: string|null,
+     *     next_ready_at: string|null,
+     *     blocked_reason: string|null
+     * }
+     */
+    public function previewForSession(User $user, CreateSessionData $data): array
+    {
         $userId = (int) $user->getKey();
         $canUsePremium = $user->hasEntitlement(Entitlement::QbankFull->value);
 
-        if ($data->source === SessionSource::WeakTopics) {
-            // Adaptive count = full blueprint (± hệ/môn) pool — not weak-lesson subset.
-            if ($data->lessonIds === []) {
-                return $this->adaptive->countPool($userId, $canUsePremium, $data);
-            }
+        if ($data->source === SessionSource::WeakTopics && $data->lessonIds === []) {
+            $preview = $this->adaptive->inspect($userId, max(1, $data->count), $canUsePremium, $data, trace: false);
 
+            return [
+                'count' => (int) ($preview['pool_count'] ?? 0),
+                'pickable_count' => (int) ($preview['pickable_count'] ?? 0),
+                'can_start' => (bool) ($preview['can_start'] ?? false),
+                'needs_extra_confirm' => (bool) ($preview['needs_extra_confirm'] ?? false),
+                'message' => $preview['message'] ?? null,
+                'next_ready_at' => $preview['next_ready_at'] ?? null,
+                'blocked_reason' => $preview['blocked_reason'] ?? null,
+            ];
+        }
+
+        $count = $this->countPoolForSession($userId, $canUsePremium, $data);
+
+        return [
+            'count' => $count,
+            'pickable_count' => $count,
+            'can_start' => $count > 0,
+            'needs_extra_confirm' => false,
+            'message' => null,
+            'next_ready_at' => null,
+            'blocked_reason' => null,
+        ];
+    }
+
+    private function countPoolForSession(int $userId, bool $canUsePremium, CreateSessionData $data): int
+    {
+        if ($data->source === SessionSource::WeakTopics) {
             $lessonIds = $this->adaptiveLessonIds($userId, $data);
 
             if ($lessonIds === []) {
@@ -211,7 +252,16 @@ final class SessionQuestionSelector
             'blueprint_id' => $data->blueprintId,
         ]);
 
-        return $this->adaptive->pick($userId, $limit, $canUsePremium, $data);
+        $preview = $this->adaptive->inspect($userId, $limit, $canUsePremium, $data);
+        if ($preview['question_ids'] === []) {
+            throw new RuntimeException(
+                is_string($preview['message']) && $preview['message'] !== ''
+                    ? $preview['message']
+                    : 'Không còn câu hỏi phù hợp với bộ lọc đã chọn.',
+            );
+        }
+
+        return $preview['question_ids'];
     }
 
     /**

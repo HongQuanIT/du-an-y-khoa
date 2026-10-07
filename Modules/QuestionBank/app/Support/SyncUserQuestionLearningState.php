@@ -24,6 +24,7 @@ final class SyncUserQuestionLearningState
         Carbon $answeredAt,
         int $timeSpentSeconds = 60,
         bool $incrementAttempts = true,
+        bool $freezeStability = false,
     ): array {
         $status = UserQuestionStatusModel::firstOrNew([
             'user_id' => $userId,
@@ -145,24 +146,32 @@ final class SyncUserQuestionLearningState
             $attributes['thrash_blocked_until'] = $isCorrect
                 ? null
                 : $learning['thrash_blocked_until'];
-            $attributes['memory_stability_days'] = MemoryStability::afterGrade(
-                $sBefore,
-                $isCorrect,
-                $lastGradedBefore,
-                $answeredAt,
-            );
-            $attributes['last_graded_at'] = $answeredAt;
-            $sAfter = (float) $attributes['memory_stability_days'];
             $recentAfter = $learning['recent_results'];
             $streakAfter = $learning['wrong_streak'];
             $thrashUntil = $learning['thrash_blocked_until'];
             $learningUpdated = true;
+
+            if ($freezeStability && $sBefore !== null && $lastGradedBefore !== null) {
+                // Luyện thêm: cập nhật W/streak, giữ S và mốc last_graded_at.
+                $sAfter = $sBefore;
+            } else {
+                $attributes['memory_stability_days'] = MemoryStability::afterGrade(
+                    $sBefore,
+                    $isCorrect,
+                    $lastGradedBefore,
+                    $answeredAt,
+                );
+                $attributes['last_graded_at'] = $answeredAt;
+                $sAfter = (float) $attributes['memory_stability_days'];
+            }
         }
 
         $status->fill($attributes)->save();
 
         $note = null;
-        if ($learningUpdated && $sBefore === null) {
+        if ($learningUpdated && $freezeStability && $sBefore !== null) {
+            $note = 'Luyện thêm — cập nhật W, giữ độ bền';
+        } elseif ($learningUpdated && $sBefore === null) {
             $note = $isCorrect ? 'Lần đầu đúng → S = 3' : 'Lần đầu sai → S = 1';
         } elseif ($learningUpdated && ! $isCorrect) {
             $note = 'Sai → về bậc 1';
@@ -171,6 +180,10 @@ final class SyncUserQuestionLearningState
         } elseif ($learningUpdated && $wasDue === false) {
             $note = 'Đúng sớm → giữ bậc';
         }
+
+        $dueAnchor = $freezeStability && $lastGradedBefore !== null
+            ? $lastGradedBefore
+            : ($learningUpdated && ! $freezeStability ? $answeredAt : ($status->last_graded_at ?? $lastGradedBefore));
 
         return $this->report(
             questionId: (string) $question->getKey(),
@@ -187,7 +200,7 @@ final class SyncUserQuestionLearningState
             )),
             wrongStreak: $streakAfter,
             recentResults: array_map(static fn ($v): bool => (bool) $v, $recentAfter),
-            dueAt: AdaptiveLearning::dueAt($sAfter, $answeredAt)?->toIso8601String(),
+            dueAt: AdaptiveLearning::dueAt($sAfter, $dueAnchor)?->toIso8601String(),
             thrashBlockedUntil: $thrashUntil?->toIso8601String(),
             versionReset: $versionMismatch,
             timeSpentSeconds: $timeSpentSeconds,

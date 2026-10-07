@@ -105,6 +105,7 @@ final class CompleteQuestionSessionAction
                             $attempt->answered_at ?? $now,
                             (int) ($attempt->time_spent_seconds ?? 60),
                             true,
+                            (bool) ($filters['extra_practice'] ?? false),
                         );
                     }
 

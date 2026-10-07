@@ -60,6 +60,7 @@ final class CreateQuestionSessionAction
             articles: $data->articles,
             symptoms: $data->symptoms,
             adaptiveFocus: $data->adaptiveFocus,
+            extraPractice: $data->extraPractice,
             name: $data->name,
         );
 
@@ -93,6 +94,7 @@ final class CreateQuestionSessionAction
             articles: $data->articles,
             symptoms: $data->symptoms,
             adaptiveFocus: $data->adaptiveFocus,
+            extraPractice: $data->extraPractice,
             name: $data->name,
         );
         $timeLimit = $data->mode === SessionMode::Exam ? $actualCount * 90 : null;
@@ -135,7 +137,7 @@ final class CreateQuestionSessionAction
     }
 
     /**
-     * Cooldown 20h chỉ gắn với phiên thích ứng: chỉ khi source = weak_topics mới ghi
+     * Cooldown theo ngày học chỉ gắn với phiên thích ứng: chỉ khi source = weak_topics mới ghi
      * last_served_at. Phiên luyện theo bài / custom không chặn adaptive sau đó.
      * Độ bền S / thrash vẫn cập nhật lúc chấm (mọi nguồn phiên).
      *
@@ -150,25 +152,30 @@ final class CreateQuestionSessionAction
         $now = now();
         $userId = (int) $session->user_id;
         $sessionId = (string) $session->getKey();
+        $filters = is_array($session->filters) ? $session->filters : [];
+        $extraPractice = (bool) ($filters['extra_practice'] ?? false);
 
-        foreach ($questionIds as $questionId) {
-            $status = UserQuestionStatusModel::firstOrNew([
-                'user_id' => $userId,
-                'question_id' => (string) $questionId,
-            ]);
+        // Luyện thêm không ghi last_served_at — giữ cooldown ngày học gốc.
+        if (! $extraPractice) {
+            foreach ($questionIds as $questionId) {
+                $status = UserQuestionStatusModel::firstOrNew([
+                    'user_id' => $userId,
+                    'question_id' => (string) $questionId,
+                ]);
 
-            if (! $status->exists) {
-                $status->status = UserQuestionStatus::Unseen;
-                $status->attempts_count = 0;
-                $status->correct_count = 0;
-                $status->wrong_count = 0;
-                $status->omitted_count = 0;
+                if (! $status->exists) {
+                    $status->status = UserQuestionStatus::Unseen;
+                    $status->attempts_count = 0;
+                    $status->correct_count = 0;
+                    $status->wrong_count = 0;
+                    $status->omitted_count = 0;
+                }
+
+                $status->fill([
+                    'last_served_at' => $now,
+                    'last_served_session_id' => $sessionId,
+                ])->save();
             }
-
-            $status->fill([
-                'last_served_at' => $now,
-                'last_served_session_id' => $sessionId,
-            ])->save();
         }
 
         $traceId = AdaptiveTrace::id();
@@ -177,6 +184,7 @@ final class CreateQuestionSessionAction
             'user_id' => $userId,
             'count' => count($questionIds),
             'question_ids' => array_values($questionIds),
+            'extra_practice' => $extraPractice,
         ]);
 
         if ($traceId !== null) {

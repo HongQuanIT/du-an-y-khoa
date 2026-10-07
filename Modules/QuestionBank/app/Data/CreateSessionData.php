@@ -57,6 +57,7 @@ final class CreateSessionData
         public readonly array $articles = [],
         public readonly array $symptoms = [],
         public readonly ?string $adaptiveFocus = null,
+        public readonly bool $extraPractice = false,
         public readonly ?string $name = null,
     ) {}
 
@@ -91,6 +92,7 @@ final class CreateSessionData
             'articles' => array_values($this->articles),
             'symptoms' => array_values($this->symptoms),
             'adaptive_focus' => $this->adaptiveFocus,
+            'extra_practice' => $this->extraPractice,
             'count' => $this->count,
         ];
     }

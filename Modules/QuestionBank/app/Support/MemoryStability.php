@@ -8,15 +8,18 @@ use Carbon\CarbonImmutable;
 use DateTimeInterface;
 
 /**
- * Thang độ bền adaptive V2 (mophong):
+ * Thang độ bền adaptive V2:
  * S ∈ {1, 3, 7, 14, 30, 60} ngày.
  * R = 0,9 ^ (t / S) — tại t = S còn nhớ 90%.
+ *
+ * Ngày học: ngày lịch tại timezone app, lùi 1 ngày nếu giờ < 04:00.
+ * Đến hạn / lên bậc theo ngày học, không theo số giờ t ≥ S.
  *
  * Quy tắc đổi bậc:
  * - Lần đầu: đúng → bậc 2 (3 ngày); sai → bậc 1 (1 ngày)
  * - Sai: về bậc 1
- * - Đúng khi đã đến hạn (t ≥ S): lên 1 bậc (trần bậc 6)
- * - Đúng khi chưa đến hạn (t < S): giữ bậc
+ * - Đúng khi đã đến hạn (ngày học): lên 1 bậc (trần bậc 6)
+ * - Đúng khi chưa đến hạn: giữ bậc
  */
 final class MemoryStability
 {
@@ -24,6 +27,8 @@ final class MemoryStability
     public const array LADDER_DAYS = [1, 3, 7, 14, 30, 60];
 
     public const float RETENTION_BASE = 0.9;
+
+    public const int STUDY_DAY_HOUR = 4;
 
     public static function stabilityForStep(int $step): float
     {
@@ -71,13 +76,42 @@ final class MemoryStability
         }
 
         $s = self::stabilityForStep($prevStep);
-        $t = self::elapsedDays($lastGradedAt, $answeredAt);
 
-        if ($t >= $s) {
+        if (self::isDue((float) $s, $lastGradedAt, $answeredAt)) {
             return self::stabilityForStep(min($prevStep + 1, count(self::LADDER_DAYS)));
         }
 
         return $s;
+    }
+
+    public static function timezone(): string
+    {
+        $tz = config('app.timezone');
+
+        return is_string($tz) && $tz !== '' ? $tz : 'Asia/Ho_Chi_Minh';
+    }
+
+    /**
+     * Calendar date of the study day (startOfDay, app timezone).
+     */
+    public static function studyDayOf(DateTimeInterface $at): CarbonImmutable
+    {
+        $local = CarbonImmutable::parse($at)->timezone(self::timezone());
+        if ($local->hour < self::STUDY_DAY_HOUR) {
+            $local = $local->subDay();
+        }
+
+        return $local->startOfDay();
+    }
+
+    public static function studyDayStart(DateTimeInterface $at): CarbonImmutable
+    {
+        return self::studyDayOf($at)->setTime(self::STUDY_DAY_HOUR, 0, 0);
+    }
+
+    public static function nextStudyDayStart(DateTimeInterface $at): CarbonImmutable
+    {
+        return self::studyDayStart($at)->addDay();
     }
 
     public static function elapsedDays(DateTimeInterface $lastGradedAt, DateTimeInterface $now): float
@@ -107,12 +141,13 @@ final class MemoryStability
         }
 
         $step = self::stepFromDays($stabilityDays) ?? 1;
-        $s = self::stabilityForStep($step);
+        $s = (int) self::stabilityForStep($step);
+        $dueDay = self::studyDayOf($lastGradedAt)->addDays($s);
 
-        return self::elapsedDays($lastGradedAt, $now) >= $s;
+        return ! self::studyDayOf($now)->lessThan($dueDay);
     }
 
-    /** Mốc đến hạn ôn: last_graded_at + S (thang bậc). */
+    /** Mốc đến hạn ôn: 04:00 ngày học (last_graded study day + S). */
     public static function dueAt(?float $stabilityDays, ?DateTimeInterface $lastGradedAt): ?CarbonImmutable
     {
         if ($stabilityDays === null || $lastGradedAt === null) {
@@ -120,8 +155,8 @@ final class MemoryStability
         }
 
         $step = self::stepFromDays($stabilityDays) ?? 1;
-        $s = self::stabilityForStep($step);
+        $s = (int) self::stabilityForStep($step);
 
-        return CarbonImmutable::parse($lastGradedAt)->addSeconds((int) round($s * 86400));
+        return self::studyDayOf($lastGradedAt)->addDays($s)->setTime(self::STUDY_DAY_HOUR, 0, 0);
     }
 }

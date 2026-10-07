@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-07
+
+### Feat — Phiên thích ứng: ngày học, luyện thêm, câu làm nhanh
+
+- Due / lên bậc / cooldown serve theo ngày học (04:00, tối thiểu 8 giờ); gộp tài liệu thành `docs/adaptive-session.md`.
+- Lượt dưới 5s vẫn là đã làm (không vào câu mới); chỉ không cập nhật S/W.
+- Mode Điểm yếu / Củng cố hết nhóm chính hôm nay → popup luyện tiếp; cập nhật W, giữ S, không ghi lại `last_served_at`; không bù toàn câu mới.
+
 ## 2026-10-06
 
 ### Feat — Cải thiện bộ lọc QBank cho học viên

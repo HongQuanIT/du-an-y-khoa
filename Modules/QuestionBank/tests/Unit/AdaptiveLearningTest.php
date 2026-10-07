@@ -10,6 +10,22 @@ use Tests\TestCase;
 
 final class AdaptiveLearningTest extends TestCase
 {
+    public function test_is_valid_graded_response_requires_five_seconds(): void
+    {
+        $this->assertFalse(AdaptiveLearning::isValidGradedResponse(0));
+        $this->assertFalse(AdaptiveLearning::isValidGradedResponse(4));
+        $this->assertTrue(AdaptiveLearning::isValidGradedResponse(5));
+    }
+
+    public function test_has_answered_attempt_ignores_omit_and_too_fast_still_counts(): void
+    {
+        $this->assertFalse(AdaptiveLearning::hasAnsweredAttempt('correct', null));
+        $this->assertFalse(AdaptiveLearning::hasAnsweredAttempt('omitted', now()));
+        $this->assertFalse(AdaptiveLearning::hasAnsweredAttempt('unseen', now()));
+        $this->assertTrue(AdaptiveLearning::hasAnsweredAttempt('correct', now()));
+        $this->assertTrue(AdaptiveLearning::hasAnsweredAttempt('incorrect', now()));
+    }
+
     public function test_new_question_quota_bands(): void
     {
         $this->assertSame(10, AdaptiveLearning::newQuestionQuota(0, 50, 0, 10)['count']);
@@ -50,4 +66,53 @@ final class AdaptiveLearningTest extends TestCase
         $this->assertNotNull($severe['thrash_blocked_until']);
         $this->assertTrue($severe['thrash_blocked_until']->equalTo($at->addDays(7)));
     }
+
+    public function test_serve_ready_at_is_next_study_day_or_min_eight_hours(): void
+    {
+        $tz = \Modules\QuestionBank\Support\MemoryStability::timezone();
+        $format = static fn (CarbonImmutable $at): string => $at->timezone($tz)->format('Y-m-d H:i:s');
+
+        $morning = CarbonImmutable::parse('2026-10-07 08:00:00', $tz);
+        $this->assertSame('2026-10-08 04:00:00', $format(AdaptiveLearning::serveReadyAt($morning)));
+
+        $late = CarbonImmutable::parse('2026-10-07 22:00:00', $tz);
+        $this->assertSame('2026-10-08 06:00:00', $format(AdaptiveLearning::serveReadyAt($late)));
+
+        $night = CarbonImmutable::parse('2026-10-07 23:30:00', $tz);
+        $this->assertSame('2026-10-08 07:30:00', $format(AdaptiveLearning::serveReadyAt($night)));
+
+        $this->assertTrue(AdaptiveLearning::isServeBlocked($morning, CarbonImmutable::parse('2026-10-07 20:00:00', $tz)));
+        $this->assertFalse(AdaptiveLearning::isServeBlocked($morning, CarbonImmutable::parse('2026-10-08 05:00:00', $tz)));
+    }
+
+    public function test_weak_focus_blocked_copy(): void
+    {
+        $tz = \Modules\QuestionBank\Support\MemoryStability::timezone();
+        $now = CarbonImmutable::parse('2026-10-07 20:00:00', $tz);
+        $none = AdaptiveLearning::weakFocusBlocked(0, null, $now);
+        $this->assertSame('none_in_scope', $none['reason']);
+
+        $tomorrow = AdaptiveLearning::weakFocusBlocked(2, CarbonImmutable::parse('2026-10-08 04:00:00', $tz), $now);
+        $this->assertSame('resting_until_tomorrow', $tomorrow['reason']);
+        $this->assertStringContainsString('ngày mai', $tomorrow['message']);
+
+        $later = AdaptiveLearning::weakFocusBlocked(1, CarbonImmutable::parse('2026-10-11 04:00:00', $tz), $now);
+        $this->assertSame('resting_later', $later['reason']);
+        $this->assertStringContainsString('11/10', $later['message']);
+    }
+
+    public function test_retention_focus_blocked_copy(): void
+    {
+        $tz = \Modules\QuestionBank\Support\MemoryStability::timezone();
+        $now = CarbonImmutable::parse('2026-10-07 20:00:00', $tz);
+
+        $none = AdaptiveLearning::retentionFocusBlocked(0, null, $now);
+        $this->assertSame('none_in_scope', $none['reason']);
+        $this->assertStringContainsString('củng cố', $none['message']);
+
+        $tomorrow = AdaptiveLearning::retentionFocusBlocked(2, CarbonImmutable::parse('2026-10-08 04:00:00', $tz), $now);
+        $this->assertSame('resting_until_tomorrow', $tomorrow['reason']);
+        $this->assertStringContainsString('ngày mai', $tomorrow['message']);
+    }
+
 }

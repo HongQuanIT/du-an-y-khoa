@@ -169,7 +169,7 @@
 
                             @if (count($session['resting'] ?? []) > 0)
                                 <h3 class="mt-6 font-label-md text-on-surface">Câu đang nghỉ (không vào phiên)</h3>
-                                <p class="mt-1 font-body-sm text-on-surface-variant">Thrash hoặc nghỉ serve 20 giờ. Due = mốc ôn theo độ bền S.</p>
+                                <p class="mt-1 font-body-sm text-on-surface-variant">Thrash hoặc nghỉ đến ngày học kế tiếp (04:00, tối thiểu 8 giờ). Due = mốc ôn theo ngày học + S.</p>
                                 <div class="mt-3 overflow-x-auto rounded-lg border border-outline-variant">
                                     <table class="w-full min-w-[1040px] border-collapse text-left">
                                         <thead>

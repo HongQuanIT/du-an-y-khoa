@@ -97,6 +97,12 @@
             matching: null,
             counting: false,
             countRequest: 0,
+            adaptiveCanStart: true,
+            adaptiveNeedsExtraConfirm: false,
+            adaptiveBlockedReason: '',
+            adaptiveMessage: '',
+            extraPractice: false,
+            extraPracticeModal: false,
             countTouched: {{ $initialCountTouched ? 'true' : 'false' }},
             questionStatusMode: {{ Illuminate\Support\Js::from($initialStatusMode)->toHtml() }},
             submitting: false,
@@ -204,6 +210,7 @@
                 if (!['weak_focus', 'balanced', 'retention'].includes(next)) return;
                 this.adaptiveFocus = next;
                 this.saveBuilderPreferences();
+                this.$nextTick(() => this.refreshCount());
             },
             adaptiveFocusLabel() {
                 return ({
@@ -292,8 +299,35 @@
             },
             canStart() {
                 if (this.matching === null || this.matching === 0 || this.counting || this.submitting) return false;
+                // Hết câu yếu hôm nay vẫn cho bấm → popup luyện thêm; chỉ khoá khi không còn câu yếu trong phạm vi.
+                if (this.isAdaptive() && this.adaptiveBlockedReason === 'none_in_scope') return false;
+                if (this.isAdaptive() && this.adaptiveCanStart === false && !this.adaptiveNeedsExtraConfirm) return false;
                 if (this.count < 1 || this.count > this.questionLimit()) return false;
                 return true;
+            },
+            handleSubmit(event) {
+                this.saveBuilderPreferences();
+                if (!this.canStart()) {
+                    event.preventDefault();
+                    return;
+                }
+                if (this.isAdaptive() && this.adaptiveNeedsExtraConfirm && !this.extraPractice) {
+                    event.preventDefault();
+                    this.extraPracticeModal = true;
+                    return;
+                }
+                this.submitting = true;
+            },
+            confirmExtraPractice() {
+                // Không set submitting trước requestSubmit — canStart() sẽ chặn submit nếu submitting=true.
+                this.extraPractice = true;
+                this.extraPracticeModal = false;
+                this.$nextTick(() => this.$refs.builderForm?.requestSubmit());
+            },
+            dismissExtraPractice() {
+                this.extraPracticeModal = false;
+                this.extraPractice = false;
+                this.submitting = false;
             },
             async refreshCount() {
                 if (!this.$refs.builderForm) return;
@@ -336,6 +370,11 @@
                         throw new Error(details[0] || payload?.error?.message || 'Không thể đếm câu hỏi.');
                     }
                     this.matching = Number(payload?.data?.count ?? 0);
+                    this.adaptiveCanStart = payload?.data?.can_start !== false;
+                    this.adaptiveNeedsExtraConfirm = payload?.data?.needs_extra_confirm === true;
+                    this.adaptiveBlockedReason = payload?.data?.blocked_reason || '';
+                    this.adaptiveMessage = payload?.data?.message || '';
+                    this.extraPractice = false;
                     if (this.matching === 0) {
                         this.count = 0;
                     }
@@ -343,6 +382,11 @@
                 } catch (error) {
                     if (requestId !== this.countRequest) return;
                     this.matching = 0;
+                    this.adaptiveCanStart = false;
+                    this.adaptiveNeedsExtraConfirm = false;
+                    this.adaptiveBlockedReason = '';
+                    this.adaptiveMessage = '';
+                    this.extraPractice = false;
                 } finally {
                     if (requestId === this.countRequest) this.counting = false;
                 }
@@ -680,10 +724,11 @@
         "
         @input.debounce.500ms="if ($event.target.name && $event.target.name !== 'name') { saveBuilderPreferences(); if ($event.target.name !== 'count') refreshCount(); }"
         @keydown.escape.window="activeFilter = null"
-        @submit="saveBuilderPreferences(); if (!canStart()) { $event.preventDefault(); return; } submitting = true">
+        @submit="handleSubmit($event)">
         @csrf
         <input type="hidden" name="source" :value="source">
         <input type="hidden" name="adaptive_focus" :value="adaptiveFocus" :disabled="!isAdaptive()">
+        <input type="hidden" name="extra_practice" :value="extraPractice ? '1' : '0'" :disabled="!isAdaptive()">
         <input type="hidden" name="exam_catalog_id" :value="blueprintId ?? ''" :disabled="!blueprintId">
         <input type="hidden" name="question_status_mode" :value="questionStatusMode">
         <input type="hidden" name="saved_only" :value="savedOnly ? '1' : '0'" :disabled="isAdaptive()">
@@ -1040,6 +1085,10 @@
                                     Hệ thống lấy câu trong phạm vi đã chọn theo hướng
                                     <span class="font-semibold text-on-surface" x-text="adaptiveFocusLabel().toLowerCase()"></span>.
                                 </p>
+                                <p x-show="isAdaptive() && adaptiveMessage && adaptiveBlockedReason === 'none_in_scope'" x-cloak
+                                    class="mt-2 rounded-lg border border-outline-variant bg-surface-container-low px-3 py-2 text-xs text-on-surface">
+                                    <span x-text="adaptiveMessage"></span>
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -1075,6 +1124,38 @@
                 <span x-text="submitting ? 'Đang tạo…' : 'Bắt đầu'"></span>
             </button>
             @endcan
+        </div>
+
+        <div x-show="extraPracticeModal" x-cloak
+            class="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 p-4"
+            @keydown.escape.window="if (extraPracticeModal) dismissExtraPractice()"
+            @click.self="dismissExtraPractice()">
+            <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl" role="dialog" aria-modal="true"
+                aria-labelledby="extra-practice-title">
+                <h3 id="extra-practice-title" class="font-headline-sm text-on-surface"
+                    x-text="adaptiveFocus === 'retention'
+                        ? 'Đã củng cố hết câu đến hạn hôm nay'
+                        : 'Đã luyện hết câu điểm yếu hôm nay'"></h3>
+                <p class="mt-3 text-sm leading-6 text-on-surface-variant"
+                    x-text="adaptiveMessage || (adaptiveFocus === 'retention'
+                        ? 'Bạn đã củng cố hết câu đến hạn hôm nay, hãy quay lại vào ngày mai.'
+                        : 'Bạn đã làm hết câu điểm yếu hôm nay, hãy quay lại vào ngày mai.')"></p>
+                <p class="mt-2 text-xs leading-5 text-on-surface-variant">
+                    Nếu luyện tiếp, hệ thống vẫn ghi nhận đúng/sai
+                    <span x-text="adaptiveFocus === 'retention' ? '' : ' và độ yếu'"></span>,
+                    nhưng <span class="font-semibold text-on-surface">độ bền không đổi</span> cho đến ngày học sau.
+                </p>
+                <div class="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <button type="button" @click="dismissExtraPractice()"
+                        class="rounded-lg border border-outline-variant px-4 py-2.5 text-sm font-bold text-on-surface transition-colors hover:bg-surface-container-low">
+                        Để ngày mai
+                    </button>
+                    <button type="button" @click="confirmExtraPractice()"
+                        class="rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-md transition-colors hover:bg-primary/90">
+                        Luyện tiếp
+                    </button>
+                </div>
+            </div>
         </div>
 
         <div x-show="activeFilter" x-cloak

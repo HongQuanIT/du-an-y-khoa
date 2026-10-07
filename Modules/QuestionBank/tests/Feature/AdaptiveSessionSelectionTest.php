@@ -14,6 +14,7 @@ use Modules\Auth\Models\LearnerProfile;
 use Modules\Auth\Models\Profession;
 use Modules\QuestionBank\Actions\AnswerQuestionAction;
 use Modules\QuestionBank\Actions\CompleteQuestionSessionAction;
+use Modules\QuestionBank\Actions\CreateQuestionSessionAction;
 use Modules\QuestionBank\Data\CreateSessionData;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionStatus as PublicationStatus;
@@ -406,6 +407,69 @@ final class AdaptiveSessionSelectionTest extends TestCase
         $this->assertEquals(7.0, (float) $status->fresh()->memory_stability_days);
     }
 
+    public function test_too_fast_answer_is_seen_but_does_not_enter_new_or_update_stability(): void
+    {
+        $fast = $this->seedQuestion('Answered too fast');
+        $fresh = $this->seedQuestion('Never answered');
+
+        $session = QuestionSession::factory()->create([
+            'user_id' => $this->user->id,
+            'mode' => SessionMode::Study,
+            'status' => SessionStatus::Active,
+            'question_ids' => [(string) $fast->getKey()],
+            'total' => 1,
+            'answered_count' => 0,
+            'correct_count' => 0,
+        ]);
+        app(QuestionSessionSnapshots::class)->capture($session);
+
+        $correctId = (int) QuestionOption::query()
+            ->where('question_id', $fast->getKey())
+            ->where('is_correct', true)
+            ->value('id');
+
+        app(AnswerQuestionAction::class)->handle($session, $fast, [$correctId], timeSpentSeconds: 3, autoComplete: false);
+
+        $status = QuestionStatus::query()->where('question_id', $fast->getKey())->firstOrFail();
+        $this->assertSame(UserQuestionStatus::Correct, $status->status);
+        $this->assertNull($status->last_graded_at);
+        $this->assertNull($status->memory_stability_days);
+
+        $filter = null;
+        $pickedNew = [];
+        Log::listen(function (MessageLogged $event) use (&$filter, &$pickedNew): void {
+            if ($event->message === '[adaptive] filter') {
+                $filter = $event->context;
+            }
+            if ($event->message === '[adaptive] result') {
+                foreach ((array) ($event->context['items'] ?? []) as $item) {
+                    if (($item['bucket'] ?? null) === 'moi') {
+                        $pickedNew[] = (string) $item['question_id'];
+                    }
+                }
+            }
+        });
+
+        $picked = app(AdaptiveQuestionSelector::class)->pick(
+            (int) $this->user->id,
+            2,
+            true,
+            new CreateSessionData(
+                mode: SessionMode::Study,
+                source: SessionSource::WeakTopics,
+                count: 2,
+                blueprintId: $this->blueprint->id,
+                adaptiveFocus: 'balanced',
+            ),
+        );
+
+        $this->assertSame([(string) $fresh->getKey()], $picked);
+        $this->assertSame([(string) $fresh->getKey()], $pickedNew);
+        $this->assertSame(1, (int) ($filter['unseen_count'] ?? -1));
+        $this->assertSame(1, (int) (($filter['excluded'] ?? [])['ungraded_status'] ?? -1));
+        $this->assertNotContains((string) $fast->getKey(), $pickedNew);
+    }
+
     public function test_new_question_reason_includes_lesson_name(): void
     {
         $oldLesson = $this->lesson;
@@ -577,6 +641,271 @@ final class AdaptiveSessionSelectionTest extends TestCase
         $this->assertContains('quota', $steps);
         $this->assertContains('result', $steps);
         $this->assertContains('served', $steps);
+    }
+
+    public function test_weak_focus_does_not_fill_with_due_when_few_weak(): void
+    {
+        $weak = $this->seedQuestion('Only weak');
+        $dueStrong = $this->seedQuestion('Due but strong');
+
+        QuestionStatus::query()->create([
+            'user_id' => $this->user->id,
+            'question_id' => $weak->getKey(),
+            'status' => UserQuestionStatus::Incorrect,
+            'attempts_count' => 5,
+            'correct_count' => 1,
+            'wrong_count' => 4,
+            'omitted_count' => 0,
+            'recent_results' => [false, false, false, false, true],
+            'wrong_streak' => 0,
+            'last_attempt_at' => now()->subDays(2),
+            'last_seen_at' => now()->subDays(2),
+            'last_graded_at' => now()->subDays(2),
+            'memory_stability_days' => 1,
+            'last_served_at' => now()->subDays(10),
+            'content_version' => 1,
+        ]);
+
+        QuestionStatus::query()->create([
+            'user_id' => $this->user->id,
+            'question_id' => $dueStrong->getKey(),
+            'status' => UserQuestionStatus::Correct,
+            'attempts_count' => 5,
+            'correct_count' => 5,
+            'wrong_count' => 0,
+            'omitted_count' => 0,
+            'recent_results' => [true, true, true, true, true],
+            'wrong_streak' => 0,
+            'last_attempt_at' => now()->subDays(40),
+            'last_seen_at' => now()->subDays(40),
+            'last_graded_at' => now()->subDays(40),
+            'memory_stability_days' => 7,
+            'last_served_at' => now()->subDays(40),
+            'content_version' => 1,
+        ]);
+
+        $picked = app(AdaptiveQuestionSelector::class)->pick(
+            (int) $this->user->id,
+            10,
+            true,
+            new CreateSessionData(
+                mode: SessionMode::Study,
+                source: SessionSource::WeakTopics,
+                count: 10,
+                blueprintId: $this->blueprint->id,
+                adaptiveFocus: 'weak_focus',
+            ),
+        );
+
+        $this->assertSame([(string) $weak->getKey()], $picked);
+    }
+
+    public function test_weak_focus_exhausted_returns_empty_with_message(): void
+    {
+        $weak = $this->seedQuestion('Weak but cooling down');
+        $this->recordServe($weak, now()->subHour());
+
+        $preview = app(AdaptiveQuestionSelector::class)->inspect(
+            (int) $this->user->id,
+            10,
+            true,
+            new CreateSessionData(
+                mode: SessionMode::Study,
+                source: SessionSource::WeakTopics,
+                count: 10,
+                blueprintId: $this->blueprint->id,
+                adaptiveFocus: 'weak_focus',
+            ),
+        );
+
+        $this->assertSame([], $preview['question_ids']);
+        $this->assertTrue($preview['can_start']);
+        $this->assertTrue($preview['needs_extra_confirm']);
+        $this->assertSame('resting_until_tomorrow', $preview['blocked_reason']);
+        $this->assertStringContainsString('ngày mai', (string) $preview['message']);
+        $this->assertSame(1, $preview['pickable_count']);
+    }
+
+    public function test_weak_focus_extra_practice_picks_resting_weak_and_freezes_stability(): void
+    {
+        $weak = $this->seedQuestion('Weak cooling for extra');
+        $servedAt = now()->subHour();
+        $this->recordServe($weak, $servedAt);
+        $statusBefore = QuestionStatus::query()->where('question_id', $weak->getKey())->firstOrFail();
+        $sBefore = (float) $statusBefore->memory_stability_days;
+        $gradedBefore = $statusBefore->last_graded_at?->toIso8601String();
+        $servedBefore = $statusBefore->last_served_at?->toIso8601String();
+
+        $session = app(CreateQuestionSessionAction::class)->handle(
+            $this->user,
+            new CreateSessionData(
+                mode: SessionMode::Study,
+                source: SessionSource::WeakTopics,
+                count: 5,
+                blueprintId: $this->blueprint->id,
+                adaptiveFocus: 'weak_focus',
+                extraPractice: true,
+            ),
+        );
+
+        $this->assertSame([(string) $weak->getKey()], $session->question_ids);
+        $this->assertTrue((bool) ($session->filters['extra_practice'] ?? false));
+        $this->assertSame($servedBefore, $statusBefore->fresh()->last_served_at?->toIso8601String());
+
+        $wrongId = (int) QuestionOption::query()
+            ->where('question_id', $weak->getKey())
+            ->where('is_correct', false)
+            ->value('id');
+
+        app(AnswerQuestionAction::class)->handle($session, $weak, [$wrongId], timeSpentSeconds: 30, autoComplete: false);
+
+        $status = $statusBefore->fresh();
+        $this->assertSame($sBefore, (float) $status->memory_stability_days);
+        $this->assertSame($gradedBefore, $status->last_graded_at?->toIso8601String());
+        $this->assertSame($servedBefore, $status->last_served_at?->toIso8601String());
+        $this->assertContains(false, $status->recent_results ?? []);
+        $this->assertSame(UserQuestionStatus::Incorrect, $status->status);
+    }
+
+    public function test_weak_focus_none_in_scope_message(): void
+    {
+        $strong = $this->seedQuestion('Never weak');
+        QuestionStatus::query()->create([
+            'user_id' => $this->user->id,
+            'question_id' => $strong->getKey(),
+            'status' => UserQuestionStatus::Correct,
+            'attempts_count' => 5,
+            'correct_count' => 5,
+            'wrong_count' => 0,
+            'omitted_count' => 0,
+            'recent_results' => [true, true, true, true, true],
+            'wrong_streak' => 0,
+            'last_attempt_at' => now()->subDays(2),
+            'last_seen_at' => now()->subDays(2),
+            'last_graded_at' => now()->subDays(2),
+            'memory_stability_days' => 7,
+            'last_served_at' => now()->subDays(10),
+            'content_version' => 1,
+        ]);
+
+        $preview = app(AdaptiveQuestionSelector::class)->inspect(
+            (int) $this->user->id,
+            5,
+            true,
+            new CreateSessionData(
+                mode: SessionMode::Study,
+                source: SessionSource::WeakTopics,
+                count: 5,
+                blueprintId: $this->blueprint->id,
+                adaptiveFocus: 'weak_focus',
+            ),
+        );
+
+        $this->assertSame([], $preview['question_ids']);
+        $this->assertFalse($preview['can_start']);
+        $this->assertFalse($preview['needs_extra_confirm']);
+        $this->assertSame('none_in_scope', $preview['blocked_reason']);
+        $this->assertStringContainsString('Cân bằng', (string) $preview['message']);
+    }
+
+    public function test_retention_with_no_due_does_not_fill_with_new_questions(): void
+    {
+        $fresh = $this->seedQuestion('Brand new retention filler');
+        $strongNotDue = $this->seedQuestion('Strong not due yet');
+
+        QuestionStatus::query()->create([
+            'user_id' => $this->user->id,
+            'question_id' => $strongNotDue->getKey(),
+            'status' => UserQuestionStatus::Correct,
+            'attempts_count' => 3,
+            'correct_count' => 3,
+            'wrong_count' => 0,
+            'omitted_count' => 0,
+            'recent_results' => [true, true, true],
+            'wrong_streak' => 0,
+            'last_attempt_at' => now()->subHours(2),
+            'last_seen_at' => now()->subHours(2),
+            'last_graded_at' => now()->subHours(2),
+            'memory_stability_days' => 14,
+            'last_served_at' => now()->subDays(10),
+            'content_version' => 1,
+        ]);
+
+        $preview = app(AdaptiveQuestionSelector::class)->inspect(
+            (int) $this->user->id,
+            10,
+            true,
+            new CreateSessionData(
+                mode: SessionMode::Study,
+                source: SessionSource::WeakTopics,
+                count: 10,
+                blueprintId: $this->blueprint->id,
+                adaptiveFocus: 'retention',
+            ),
+        );
+
+        $this->assertSame([], $preview['question_ids']);
+        $this->assertFalse($preview['can_start']);
+        $this->assertFalse($preview['needs_extra_confirm']);
+        $this->assertSame('none_in_scope', $preview['blocked_reason']);
+        $this->assertStringContainsString('củng cố', (string) $preview['message']);
+        $this->assertNotContains((string) $fresh->getKey(), $preview['question_ids']);
+    }
+
+    public function test_retention_exhausted_offers_extra_practice_from_due_cooldown(): void
+    {
+        $due = $this->seedQuestion('Due but cooling down');
+        QuestionStatus::query()->create([
+            'user_id' => $this->user->id,
+            'question_id' => $due->getKey(),
+            'status' => UserQuestionStatus::Correct,
+            'attempts_count' => 4,
+            'correct_count' => 3,
+            'wrong_count' => 1,
+            'omitted_count' => 0,
+            'recent_results' => [true, true, true, false],
+            'wrong_streak' => 0,
+            'last_attempt_at' => now()->subDays(20),
+            'last_seen_at' => now()->subDays(20),
+            'last_graded_at' => now()->subDays(20),
+            'memory_stability_days' => 7,
+            'last_served_at' => now()->subHour(),
+            'content_version' => 1,
+        ]);
+
+        $preview = app(AdaptiveQuestionSelector::class)->inspect(
+            (int) $this->user->id,
+            5,
+            true,
+            new CreateSessionData(
+                mode: SessionMode::Study,
+                source: SessionSource::WeakTopics,
+                count: 5,
+                blueprintId: $this->blueprint->id,
+                adaptiveFocus: 'retention',
+            ),
+        );
+
+        $this->assertSame([], $preview['question_ids']);
+        $this->assertTrue($preview['can_start']);
+        $this->assertTrue($preview['needs_extra_confirm']);
+        $this->assertSame('resting_until_tomorrow', $preview['blocked_reason']);
+
+        $picked = app(AdaptiveQuestionSelector::class)->pick(
+            (int) $this->user->id,
+            5,
+            true,
+            new CreateSessionData(
+                mode: SessionMode::Study,
+                source: SessionSource::WeakTopics,
+                count: 5,
+                blueprintId: $this->blueprint->id,
+                adaptiveFocus: 'retention',
+                extraPractice: true,
+            ),
+        );
+
+        $this->assertSame([(string) $due->getKey()], $picked);
     }
 
     private function seedQuestion(string $stem): Question

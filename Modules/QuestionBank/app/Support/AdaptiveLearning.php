@@ -9,7 +9,7 @@ use DateTimeInterface;
 
 /**
  * Adaptive V2 constants + pure helpers (mophong khung Lọc → Phân nhóm → Phân suất).
- * Độ bền S vẫn dùng {@see MemoryStability}; “đến hạn” = t ≥ S.
+ * Độ bền S vẫn dùng {@see MemoryStability}; đến hạn theo ngày học.
  */
 final class AdaptiveLearning
 {
@@ -19,7 +19,7 @@ final class AdaptiveLearning
 
     public const float WEAK_THRESHOLD = 0.5;
 
-    public const int COOLDOWN_HOURS = 20;
+    public const int COOLDOWN_MIN_HOURS = 8;
 
     public const int MIN_RESPONSE_MS = 5000;
 
@@ -111,6 +111,20 @@ final class AdaptiveLearning
     }
 
     /**
+     * Đã trả lời đúng/sai trên bản hiện tại (kể cả lượt dưới 5s). Omit không tính.
+     */
+    public static function hasAnsweredAttempt(mixed $status, mixed $lastAttemptAt): bool
+    {
+        if ($lastAttemptAt === null) {
+            return false;
+        }
+
+        $value = $status instanceof \BackedEnum ? (string) $status->value : (string) $status;
+
+        return in_array($value, ['correct', 'incorrect', 'marked'], true);
+    }
+
+    /**
      * @param  list<bool>  $previousRecent
      * @return array{recent_results: list<bool>, wrong_streak: int, thrash_blocked_until: CarbonImmutable|null}
      */
@@ -167,5 +181,91 @@ final class AdaptiveLearning
         $sessionBlocked = $sessionsSinceLastGraded < self::THRASH_MILD_SESSIONS;
 
         return $timeBlocked || $sessionBlocked;
+    }
+
+    public static function serveReadyAt(DateTimeInterface $lastServedAt): CarbonImmutable
+    {
+        $served = CarbonImmutable::parse($lastServedAt);
+        $nextDay = MemoryStability::nextStudyDayStart($served);
+        $minRest = $served->addHours(self::COOLDOWN_MIN_HOURS);
+
+        return $nextDay->greaterThan($minRest) ? $nextDay : $minRest;
+    }
+
+    public static function isServeBlocked(?DateTimeInterface $lastServedAt, DateTimeInterface $now): bool
+    {
+        if ($lastServedAt === null) {
+            return false;
+        }
+
+        return CarbonImmutable::parse($now)->lessThan(self::serveReadyAt($lastServedAt));
+    }
+
+    /**
+     * @return array{message: string, reason: 'none_in_scope'|'resting_until_tomorrow'|'resting_later'}
+     */
+    public static function weakFocusBlocked(
+        int $weakResting,
+        ?DateTimeInterface $nextReadyAt,
+        DateTimeInterface $now,
+    ): array {
+        if ($weakResting <= 0 || $nextReadyAt === null) {
+            return [
+                'reason' => 'none_in_scope',
+                'message' => 'Bạn không còn câu yếu nào trong phạm vi này. Hãy thử Cân bằng hoặc mở rộng hệ/môn.',
+            ];
+        }
+
+        $ready = CarbonImmutable::parse($nextReadyAt);
+        $readyStudyStart = MemoryStability::studyDayStart($ready);
+        $tomorrowStart = MemoryStability::nextStudyDayStart($now);
+
+        if (! $readyStudyStart->greaterThan($tomorrowStart)) {
+            return [
+                'reason' => 'resting_until_tomorrow',
+                'message' => 'Bạn đã làm hết câu điểm yếu hôm nay, hãy quay lại vào ngày mai.',
+            ];
+        }
+
+        $date = $ready->timezone(MemoryStability::timezone())->format('d/m');
+
+        return [
+            'reason' => 'resting_later',
+            'message' => 'Bạn đã làm hết câu điểm yếu hiện có. Câu tiếp theo sẵn sàng từ ngày '.$date.'.',
+        ];
+    }
+
+    /**
+     * @return array{message: string, reason: 'none_in_scope'|'resting_until_tomorrow'|'resting_later'}
+     */
+    public static function retentionFocusBlocked(
+        int $dueResting,
+        ?DateTimeInterface $nextReadyAt,
+        DateTimeInterface $now,
+    ): array {
+        if ($dueResting <= 0 || $nextReadyAt === null) {
+            return [
+                'reason' => 'none_in_scope',
+                'message' => 'Bạn không còn câu cần củng cố trong phạm vi này. Hãy thử Cân bằng hoặc Điểm yếu, hoặc mở rộng hệ/môn.',
+            ];
+        }
+
+        $ready = CarbonImmutable::parse($nextReadyAt);
+        $readyStudyStart = MemoryStability::studyDayStart($ready);
+        $tomorrowStart = MemoryStability::nextStudyDayStart($now);
+
+        if (! $readyStudyStart->greaterThan($tomorrowStart)) {
+            return [
+                'reason' => 'resting_until_tomorrow',
+                'message' => 'Bạn đã củng cố hết câu đến hạn hôm nay, hãy quay lại vào ngày mai.',
+            ];
+        }
+
+        $date = $ready->timezone(MemoryStability::timezone())->format('d/m');
+
+        return [
+            'reason' => 'resting_later',
+            'message' => 'Bạn đã củng cố hết câu đến hạn hiện có. Câu tiếp theo sẵn sàng từ ngày '.$date.'.',
+        ];
     }
 }
