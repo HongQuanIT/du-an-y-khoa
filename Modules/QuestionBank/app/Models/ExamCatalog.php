@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Modules\Auth\Models\Profession;
+use Modules\Exam\Models\Exam;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
 
 /**
@@ -44,6 +45,11 @@ class ExamCatalog extends Model
     public function blueprint(): BelongsTo
     {
         return $this->belongsTo(Blueprint::class);
+    }
+
+    public function sampleExam(): BelongsTo
+    {
+        return $this->belongsTo(Exam::class, 'sample_exam_id');
     }
 
     /** @return BelongsToMany<Profession, $this> */
@@ -84,4 +90,4 @@ class ExamCatalog extends Model
             ->map(fn ($id): int => (int) $id)
             ->all();
     }
-};
+}

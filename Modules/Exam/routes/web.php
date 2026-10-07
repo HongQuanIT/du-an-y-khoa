@@ -23,7 +23,7 @@ Route::middleware(['auth', 'learner', 'permission:exam.view'])
             ->middleware(['permission:exam.take', 'subscription:exam.simulation'])
             ->name('from-blueprint');
         Route::post('/{exam}/start', StartExamController::class)
-            ->middleware(['permission:exam.take', 'subscription:exam.simulation'])
+            ->middleware(['permission:exam.take'])
             ->name('start');
         Route::get('/{session}/summary', ExamSessionSummaryController::class)->middleware('permission:exam.view|exam.take|exam.review')->name('summary');
         Route::get('/{session}/review', ExamSessionReviewController::class)->middleware('permission:exam.review')->name('review');

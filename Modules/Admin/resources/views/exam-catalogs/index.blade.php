@@ -92,7 +92,7 @@
                             </th>
                             <th scope="col" class="px-4 py-3">Đối tượng</th>
                             <th scope="col" class="px-4 py-3">Ma trận</th>
-                            <th scope="col" class="w-[100px] px-4 py-3 text-right">Câu hỏi</th>
+                            <th scope="col" class="w-[120px] px-4 py-3 text-right" title="Số câu của mỗi đề theo ma trận">Câu / đề</th>
                             <th scope="col" class="w-[130px] px-4 py-3">Trạng thái</th>
                             <th scope="col" class="w-[160px] px-5 py-3 text-right">Thao tác</th>
                         </tr>
@@ -112,7 +112,10 @@
                                     <span class="line-clamp-2" x-text="(item.profession_names || []).join(', ') || '—'"></span>
                                 </td>
                                 <td class="px-4 py-3.5 align-middle text-on-surface" x-text="item.blueprint_name || 'Chưa gắn'"></td>
-                                <td class="px-4 py-3.5 text-right align-middle tabular-nums text-on-surface" x-text="item.questions_count"></td>
+                                <td class="px-4 py-3.5 text-right align-middle tabular-nums text-on-surface">
+                                    <span x-text="item.questions_count"></span>
+                                    <span x-show="item.blueprint_id && item.bank_questions_count !== item.questions_count" class="block text-[10px] text-on-surface-variant" title="Số câu đang gắn trong ngân hàng">Kho: <span x-text="item.bank_questions_count"></span></span>
+                                </td>
                                 <td class="px-4 py-3.5 align-middle">
                                     <span class="inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
                                         :class="item.status === 'active'
@@ -122,6 +125,15 @@
                                 </td>
                                 <td class="px-5 py-3.5 text-right align-middle">
                                     <div class="inline-flex items-center justify-end gap-1.5">
+                                        @if (request()->routeIs('admin.*'))
+                                        <a x-show="item.sample_exam_id" :href="@js(url('/admin/exams')) + '/' + item.sample_exam_id" class="text-xs text-primary hover:underline">Xem bài mẫu</a>
+                                        @can('blueprint.update')
+                                        <form x-show="canUpdate && item.blueprint_id" method="POST" :action="@js(url('/admin/exam-catalogs')) + '/' + item.id + '/sample'">
+                                            @csrf
+                                            <button class="rounded-lg border border-primary/30 px-2.5 py-1.5 text-xs text-primary" x-text="item.sample_exam_id ? 'Tạo phiên bản mẫu mới' : 'Tạo bài mẫu'"></button>
+                                        </form>
+                                        @endcan
+                                        @endif
                                         <button type="button" x-show="canUpdate" @click="openEdit(item)"
                                             class="inline-flex h-8 items-center rounded-lg border border-outline-variant px-2.5 text-xs font-medium text-on-surface hover:bg-surface-container-low">
                                             Sửa

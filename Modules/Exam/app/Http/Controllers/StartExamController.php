@@ -6,6 +6,7 @@ namespace Modules\Exam\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\Enums\Entitlement;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Validation\ValidationException;
 use Modules\Exam\Enums\ExamStatus;
@@ -15,6 +16,8 @@ use Modules\QuestionBank\Actions\CreateQuestionSessionAction;
 use Modules\QuestionBank\Data\CreateSessionData;
 use Modules\QuestionBank\Enums\SessionMode;
 use Modules\QuestionBank\Enums\SessionSource;
+use Modules\QuestionBank\Enums\TaxonomyStatus;
+use Modules\QuestionBank\Models\QuestionSession;
 use RuntimeException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -34,12 +37,23 @@ final class StartExamController extends Controller
         $user = $request->user();
         abort_unless($user instanceof User, 403);
 
+        if ($exam->kind === 'sample') {
+            $catalog = $exam->examCatalog;
+            $hasAttempt = QuestionSession::where('exam_id', $exam->id)->where('user_id', $user->id)->exists();
+            abort_unless($catalog && ((int) $catalog->sample_exam_id === (int) $exam->id || $hasAttempt)
+                && $catalog->status === TaxonomyStatus::Active, 404);
+            abort_unless($catalog->professions()->where('professions.id', $user->learnerProfile?->profession_id)->exists(), 403);
+            abort_unless(in_array((int) $user->learnerProfile?->profession_id, $exam->matrix_snapshot['profession_ids'] ?? [], true), 403);
+        } elseif (! $user->hasEntitlement(Entitlement::ExamSimulation->value)) {
+            return redirect()->route('subscription.upgrade');
+        }
+
         // Chỉ chủ bài thi (hoặc bài thi hệ thống cũ không có user) mới được làm lại.
         if ($exam->user_id !== null && (int) $exam->user_id !== (int) $user->id) {
             abort(403);
         }
 
-        $questionCount = $exam->questions()->count();
+        $questionCount = $exam->paper_snapshot ? count($exam->paper_snapshot) : $exam->questions()->count();
         if ($questionCount === 0) {
             return back()->with('error', 'Bài thi này chưa có câu hỏi nào.');
         }

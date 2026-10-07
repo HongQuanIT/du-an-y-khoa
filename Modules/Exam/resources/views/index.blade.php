@@ -27,7 +27,7 @@
                 <p class="mb-2 text-sm font-bold uppercase tracking-wide text-primary">Mô phỏng kỳ thi</p>
                 <h1 class="font-headline-lg text-headline-lg font-bold text-on-surface">Kỳ thi</h1>
                 <p class="mt-3 text-sm leading-6 text-on-surface-variant sm:text-base">
-                    Chọn kỳ thi đã gắn ma trận đề. Hệ thống tạo bài thi riêng theo phân bổ và thời gian của ma trận.
+                    Làm bài thi mẫu cố định miễn phí. Học viên Premium có thể tạo thêm đề mới theo ma trận kỳ thi.
                 </p>
             </div>
             @unless ($canStartExam)
@@ -41,7 +41,7 @@
 
         <div class="mb-4">
             <h2 class="text-lg font-bold text-on-surface">Chọn kỳ thi</h2>
-            <p class="mt-1 text-sm text-on-surface-variant">Chỉ hiện kỳ thi đã gắn ma trận và đúng chức danh. Mỗi lần tạo sinh một bài thi mới.</p>
+            <p class="mt-1 text-sm text-on-surface-variant">Kỳ thi theo chức danh của bạn · 40% câu dễ, 30% trung bình, 30% khó (làm tròn theo số câu).</p>
         </div>
 
         <div class="grid gap-4 lg:grid-cols-3">
@@ -68,7 +68,7 @@
                                 </div>
                             </div>
                         </div>
-                        @if ($locked)
+                        @if ($locked && empty($card['sample_exam_id']))
                             <span class="shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800">Premium</span>
                         @elseif (! $ready)
                             <span class="shrink-0 rounded-full bg-surface-container-high px-2.5 py-1 text-xs font-bold text-on-surface-variant">Chưa sẵn sàng</span>
@@ -89,12 +89,25 @@
                     <p class="mt-3 text-xs text-on-surface-variant">
                         {{ $card['sections_count'] }} phần · {{ $card['topic_count'] }} chủ đề
                     </p>
+                    @if ($ready)
+                        <p class="mt-2 text-xs text-on-surface-variant">Đề mới sau làm tròn: {{ $card['difficulty_quotas']['easy'] }} dễ · {{ $card['difficulty_quotas']['medium'] }} trung bình · {{ $card['difficulty_quotas']['hard'] }} khó.</p>
+                    @endif
 
                     @if (! $ready && $card['reason'])
                         <p class="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900">{{ $card['reason'] }}</p>
                     @endif
 
                     <div class="mt-5 mt-auto">
+                        @if ($card['sample_exam_id'])
+                            <p class="mb-2 text-sm text-on-surface-variant">Bài mẫu: {{ $card['sample_question_count'] }} câu · {{ $card['sample_duration_minutes'] }} phút · Miễn phí</p>
+                            <p class="mb-2 text-xs text-on-surface-variant">{{ $card['sample_difficulty_quotas']['easy'] ?? 0 }} dễ · {{ $card['sample_difficulty_quotas']['medium'] ?? 0 }} trung bình · {{ $card['sample_difficulty_quotas']['hard'] ?? 0 }} khó.</p>
+                            <form method="POST" action="{{ route('exam.start', $card['sample_exam_id']) }}" class="mb-3">
+                                @csrf
+                                <button class="h-11 w-full rounded-xl bg-primary px-4 text-sm font-bold text-white">Làm bài thi mẫu</button>
+                            </form>
+                        @else
+                            <p class="mb-3 text-sm text-on-surface-variant">Chưa có bài thi mẫu được xuất bản.</p>
+                        @endif
                         @if ($locked)
                             <a href="{{ route('billing.plans') }}"
                                 class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-primary/30 px-4 text-sm font-bold text-primary hover:bg-primary/5">
@@ -112,7 +125,7 @@
                                 <button type="submit"
                                     class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-white transition-colors hover:bg-primary/90">
                                     <span class="material-symbols-outlined text-[18px]">add_circle</span>
-                                    Tạo bài thi
+                                    Tạo đề mới · Premium
                                 </button>
                             </form>
                         @endif

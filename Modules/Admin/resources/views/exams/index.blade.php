@@ -1,7 +1,7 @@
 <x-layouts.admin title="Bài thi">
     <x-admin.page-header
         title="Bài thi"
-        description="Danh sách bài thi do học viên tạo từ ma trận kỳ thi. Admin chỉ giám sát — không tạo đề tại đây.">
+        description="Bài thi mẫu của kỳ thi và các đề cá nhân do học viên tạo từ ma trận.">
     </x-admin.page-header>
 
     <x-admin.flash />
@@ -42,7 +42,7 @@
                                 <p class="font-label-md text-on-surface">{{ $exam->user->name }}</p>
                                 <p class="mt-0.5 font-label-sm text-on-surface-variant">{{ $exam->user->email }}</p>
                             @else
-                                <span class="font-body-sm text-on-surface-variant">Hệ thống / cũ</span>
+                                <span class="font-body-sm text-on-surface-variant">{{ $exam->kind === 'sample' ? 'Bài thi mẫu dùng chung' : 'Hệ thống / cũ' }}</span>
                             @endif
                         </td>
                         <td class="px-5 py-4">

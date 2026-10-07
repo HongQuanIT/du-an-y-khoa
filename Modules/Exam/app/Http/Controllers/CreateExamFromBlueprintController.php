@@ -7,6 +7,7 @@ namespace Modules\Exam\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Modules\Exam\Actions\CreateLearnerExamFromBlueprintAction;
 use Modules\QuestionBank\Actions\CreateQuestionSessionAction;
@@ -47,24 +48,23 @@ final class CreateExamFromBlueprintController extends Controller
         abort_unless($allowed, 404);
 
         try {
-            $exam = $this->createExam->handle($user, $examCatalog);
+            $session = DB::transaction(function () use ($user, $examCatalog) {
+                $exam = $this->createExam->handle($user, $examCatalog);
+                $session = $this->createSession->handle($user, new CreateSessionData(
+                    mode: SessionMode::Exam,
+                    source: SessionSource::Exam,
+                    count: $exam->questionCount(),
+                    examId: $exam->id,
+                ));
+
+                $session->update([
+                    'time_limit_seconds' => $exam->duration_minutes * 60,
+                ]);
+
+                return $session;
+            });
         } catch (ValidationException $exception) {
             return back()->withErrors($exception->errors());
-        }
-
-        $questionCount = $exam->questions()->count();
-
-        try {
-            $session = $this->createSession->handle($user, new CreateSessionData(
-                mode: SessionMode::Exam,
-                source: SessionSource::Exam,
-                count: $questionCount,
-                examId: $exam->id,
-            ));
-
-            $session->update([
-                'time_limit_seconds' => $exam->duration_minutes * 60,
-            ]);
         } catch (RuntimeException $exception) {
             throw ValidationException::withMessages(['blueprint' => $exception->getMessage()]);
         }

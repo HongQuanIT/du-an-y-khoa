@@ -10,16 +10,25 @@ use App\Support\Enums\Role;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Modules\Auth\Models\Profession;
 use Modules\Auth\Models\TwoFactorSecret;
 use Modules\Auth\Services\TotpService;
 use Modules\Exam\Enums\ExamStatus;
 use Modules\Exam\Models\Exam;
+use Modules\QuestionBank\Enums\Difficulty;
+use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
 use Modules\QuestionBank\Models\Blueprint;
+use Modules\QuestionBank\Models\BlueprintSection;
+use Modules\QuestionBank\Models\CoreClinicalTopic;
+use Modules\QuestionBank\Models\ExamCatalog;
+use Modules\QuestionBank\Models\Question;
+use Tests\Support\CreatesMedicalTaxonomy;
 use Tests\TestCase;
 
 final class AdminExamManagementTest extends TestCase
 {
+    use CreatesMedicalTaxonomy;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -106,6 +115,36 @@ final class AdminExamManagementTest extends TestCase
             ->assertRedirect(route('admin.exams.index'));
 
         $this->assertSame(0, Exam::query()->count());
+    }
+
+    public function test_admin_can_publish_sample_and_replace_pointer_without_deleting_old_paper(): void
+    {
+        $admin = $this->staffUser(Role::Admin);
+        $blueprint = Blueprint::create(['name' => 'Sample matrix', 'slug' => 'sample-matrix', 'status' => TaxonomyStatus::Active, 'total_questions' => 1]);
+        $catalog = ExamCatalog::create(['name' => 'Sample catalog', 'slug' => 'sample-catalog', 'status' => TaxonomyStatus::Active, 'blueprint_id' => $blueprint->id]);
+        $profession = Profession::create(['code' => 'sample-test', 'name' => 'Bác sĩ', 'is_active' => true]);
+        $catalog->professions()->attach($profession);
+        $section = BlueprintSection::create(['blueprint_id' => $blueprint->id, 'name' => 'Nội', 'slug' => 'noi', 'status' => TaxonomyStatus::Active, 'weight_min' => 100, 'weight_max' => 100]);
+        $topic = CoreClinicalTopic::create(['blueprint_section_id' => $section->id, 'name' => 'Tim', 'slug' => 'tim', 'status' => TaxonomyStatus::Active, 'weight' => 100]);
+        $lesson = $this->makeLesson();
+        $topic->lessons()->attach($lesson);
+        $question = Question::factory()->withOptions()->create(['difficulty' => Difficulty::Easy, 'status' => QuestionStatus::Published]);
+        $question->lessons()->attach($lesson);
+        $question->professions()->attach($profession);
+        $question->examCatalogs()->attach($catalog);
+        $this->actingAsStaff($admin)->post(route('admin.exam-catalogs.sample', $catalog))->assertRedirect();
+        $paper = Exam::where('kind', 'sample')->firstOrFail();
+        $this->actingAsStaff($admin)->get(route('admin.exams.show', $paper))->assertOk()->assertSee('Xuất bản bài thi mẫu');
+        $this->actingAsStaff($admin)->post(route('admin.exams.publish-sample', $paper))->assertRedirect();
+        $this->assertSame($paper->id, (int) $catalog->fresh()->sample_exam_id);
+        $this->actingAsStaff($admin)->post(route('admin.exam-catalogs.sample', $catalog))->assertRedirect();
+        $next = Exam::latest('id')->firstOrFail();
+        $this->actingAsStaff($admin)->post(route('admin.exams.publish-sample', $next))->assertRedirect();
+        $this->assertSame($next->id, (int) $catalog->fresh()->sample_exam_id);
+        $this->assertDatabaseHas('exams', ['id' => $paper->id, 'status' => 'published']);
+        $blueprint->update(['total_questions' => 2]);
+        $this->actingAsStaff($admin)->post(route('admin.exams.publish-sample', $paper))->assertStatus(422);
+        $this->assertSame($next->id, (int) $catalog->fresh()->sample_exam_id);
     }
 
     private function staffUser(Role $role): User

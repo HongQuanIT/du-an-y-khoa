@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-10-07
+
+### Feat — Bài thi mẫu cố định và đề Premium theo ma trận
+
+- Thêm tạo bản nháp, xem trước và xuất bản bài mẫu ngay trong luồng Kỳ thi Admin hiện có; mỗi kỳ thi có một bản mẫu hiện hành.
+- Dùng chung bộ chọn câu theo quota chủ đề và tỷ lệ 40% dễ, 30% trung bình, 30% khó; làm tròn bảo toàn tổng, không trùng câu và báo lỗi khi ngân hàng thiếu.
+- Lưu nội dung, đáp án và thứ tự câu tại thời điểm tạo đề; học viên miễn phí làm mẫu, Premium tạo thêm đề cá nhân. Mỗi lượt làm có tiến độ riêng.
+- Giữ phiên bản mẫu và kết quả cũ khi xuất bản bản mới; chặn xóa đề đã có lượt làm.
+- Bổ sung migration thêm trường, không reset/seed dữ liệu; chặn kiểm thử nếu kết nối thực tế khác SQLite `:memory:` và bỏ qua config cache local.
+
 ## 2026-10-06
 
 ### Feat — Cải thiện bộ lọc QBank cho học viên

@@ -19,8 +19,8 @@ use Modules\Admin\Http\Controllers\Cms\PageController;
 use Modules\Admin\Http\Controllers\ContactInquiryController;
 use Modules\Admin\Http\Controllers\CurriculumTaxonomyController;
 use Modules\Admin\Http\Controllers\DashboardController;
-use Modules\Admin\Http\Controllers\ExamCatalogController;
 use Modules\Admin\Http\Controllers\EditorImageUploadController;
+use Modules\Admin\Http\Controllers\ExamCatalogController;
 use Modules\Admin\Http\Controllers\ExamController;
 use Modules\Admin\Http\Controllers\InstitutionController;
 use Modules\Admin\Http\Controllers\LearnerCatalogController;
@@ -33,6 +33,7 @@ use Modules\Admin\Http\Controllers\QuestionReviewController;
 use Modules\Admin\Http\Controllers\QuestionVersionController;
 use Modules\Admin\Http\Controllers\ReportController;
 use Modules\Admin\Http\Controllers\RoleController;
+use Modules\Admin\Http\Controllers\SampleExamController;
 use Modules\Admin\Http\Controllers\SettingController;
 use Modules\Admin\Http\Controllers\SupportConversationController;
 use Modules\Admin\Http\Controllers\TagController;
@@ -450,6 +451,10 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
         });
 
         // --- Exams (bài thi do học viên tạo — admin chỉ xem/xóa) ---
+        Route::post('/exam-catalogs/{examCatalog}/sample', [SampleExamController::class, 'store'])
+            ->middleware('permission:blueprint.update')->name('exam-catalogs.sample');
+        Route::post('/exams/{exam}/publish-sample', [SampleExamController::class, 'publish'])
+            ->middleware('permission:blueprint.update')->name('exams.publish-sample');
         Route::get('/exams', [ExamController::class, 'index'])
             ->middleware('permission:exam.view')
             ->name('exams.index');

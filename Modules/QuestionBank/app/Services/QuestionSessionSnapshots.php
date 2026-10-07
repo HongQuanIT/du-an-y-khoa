@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\QuestionBank\Services;
 
+use Modules\Exam\Models\Exam;
 use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionOption;
@@ -20,6 +21,21 @@ final class QuestionSessionSnapshots
 
     public function capture(QuestionSession $session): void
     {
+        if ($session->exam_id) {
+            $paper = Exam::find($session->exam_id)?->paper_snapshot;
+            if ($paper) {
+                foreach ($paper as $row) {
+                    QuestionSessionSnapshot::firstOrCreate(
+                        ['session_id' => $session->getKey(), 'question_id' => $row['question_id']],
+                        $row,
+                    );
+                }
+                unset($this->maps[(string) $session->getKey()]);
+                $session->unsetRelation('snapshots');
+
+                return;
+            }
+        }
         $questionIds = array_values(array_map('strval', $session->question_ids ?? []));
         $questions = Question::query()
             ->with([
@@ -162,7 +178,7 @@ final class QuestionSessionSnapshots
     }
 
     /** @return array<string, mixed> */
-    private function payload(Question $question, string $sessionKey): array
+    public function payload(Question $question, string $sessionKey): array
     {
         $lessons = $question->lessons;
         $options = $question->optionsForSession($sessionKey);
