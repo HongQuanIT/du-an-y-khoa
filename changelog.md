@@ -2,6 +2,13 @@
 
 ## 2026-10-08
 
+### Chore — Dữ liệu câu hỏi QBank để kiểm thử
+
+- Bổ sung seeder 1.000 câu đã xuất bản, phân bổ năm mức độ và gắn vào các đối tượng, kỳ thi, ma trận hiện có.
+- Mỗi câu liên kết với 1–3 bài học; seeder chỉ chạy trong môi trường local hoặc testing và có thể chạy lại.
+
+## 2026-10-08
+
 ### Feat — Cấu hình tỷ trọng độ khó theo ma trận
 
 - Cho phép quản trị cấu hình tỷ lệ nhóm dễ, trung bình và khó trực tiếp trên ma trận đề thi.
