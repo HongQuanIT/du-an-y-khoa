@@ -11,7 +11,7 @@
 <x-layouts.app title="Kỳ thi">
     <section class="mx-auto max-w-container-max p-4 sm:p-6 md:p-10">
         @if (session('status'))
-            <div class="mb-6 rounded-xl border border-primary/20 bg-primary-container/30 px-4 py-3 text-sm font-semibold text-on-primary-container">
+            <div class="mb-6 rounded-xl border border-primary/20 bg-primary-container/30 px-4 py-3 text-sm font-semibold text-white">
                 {{ session('status') }}
             </div>
         @endif

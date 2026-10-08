@@ -128,6 +128,11 @@ final class ExamModuleTest extends TestCase
         $this->assertSame(2, $session->total);
         $this->assertSame($exam->duration_minutes * 60, $session->time_limit_seconds);
         $this->assertSame(2, QuestionSessionSnapshot::query()->where('session_id', $session->getKey())->count());
+
+        $this->actingAs($this->user)
+            ->post(route('qbank.session.pause', $session), ['current_index' => 0])
+            ->assertRedirect(route('exam.index'))
+            ->assertSessionHas('status', 'Đã lưu và tạm dừng phiên thi.');
     }
 
     public function test_creating_exam_requires_exam_simulation_entitlement(): void

@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-08
+
+### Fix — Điều hướng khi thoát phiên thi
+
+- Khi học viên tạm dừng và thoát phiên thi, chuyển về trang Kỳ thi thay vì QBank.
+- Giữ nguyên điều hướng về QBank cho các phiên luyện tập thông thường.
+- Đổi chữ thông báo trạng thái trên trang Kỳ thi sang màu trắng và bổ sung kiểm thử.
+
 ## 2026-10-07
 
 ### Feat — Hoàn thiện đề thi theo ma trận
