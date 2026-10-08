@@ -2,6 +2,14 @@
 
 ## 2026-10-08
 
+### Refactor — Đồng bộ giao diện quản trị bài thi
+
+- Làm mới trang danh sách và chi tiết bài thi theo cùng hệ thống phân cấp, màu sắc và khoảng cách.
+- Cải thiện bảng dữ liệu, thẻ thống kê, vùng bấm, trạng thái focus và cách hiển thị trên màn hình hẹp.
+- Bổ sung cấu trúc ngữ nghĩa cho tiêu đề, điều hướng, số liệu và bảng phân bổ câu hỏi.
+
+## 2026-10-08
+
 ### Feat — Tạo đề Premium và vào phiên thi ngay
 
 - Tạo đề Premium ngẫu nhiên rồi mở trực tiếp phiên làm bài; đánh số đề Q1, Q2, Q3 theo học viên và kỳ thi.
