@@ -9,7 +9,7 @@
 @endphp
 
 <x-layouts.admin title="Bài thi — Quản trị nội dung">
-    <div class="space-y-6">
+    <div x-data="examFilterForm({ hasActiveFilters: @js($hasActiveFilters) })" class="space-y-6">
         <header class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <h1 class="font-headline-md text-headline-md font-bold tracking-tight text-on-surface">Bài thi</h1>
@@ -21,7 +21,7 @@
 
         <x-admin.flash />
 
-        <section aria-labelledby="heading-exam-stats">
+        <section id="exam-stats" aria-labelledby="heading-exam-stats">
             <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <h2 id="heading-exam-stats" class="font-label-lg font-semibold text-on-surface">Tổng quan</h2>
                 <p class="text-sm text-on-surface-variant">Số liệu toàn bộ bài thi</p>
@@ -43,9 +43,10 @@
 
         <section aria-labelledby="heading-exam-filters">
             <h2 id="heading-exam-filters" class="sr-only">Tìm kiếm bài thi</h2>
-            <form method="get" action="{{ route('admin.exams.index') }}" role="search"
+            <form method="get" action="{{ route('admin.exams.index') }}" id="exam-filter-form" role="search"
                 aria-label="Tìm kiếm và lọc bài thi"
-                class="space-y-4 rounded-2xl border border-outline-variant bg-surface p-4 shadow-sm sm:p-5">
+                @submit.prevent="applyExamFilters()"
+                class="space-y-4 rounded-xl border border-outline-variant bg-surface p-4">
                 <div class="grid grid-cols-1 items-end gap-4 sm:grid-cols-2 xl:grid-cols-[minmax(280px,1.5fr)_minmax(180px,1fr)_minmax(180px,1fr)]">
                     <div class="sm:col-span-2 xl:col-auto">
                         <label for="exam-search" class="mb-1.5 block text-sm font-medium text-on-surface-variant">Tìm kiếm</label>
@@ -53,12 +54,12 @@
                             <span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant" aria-hidden="true">search</span>
                             <input id="exam-search" type="search" name="q" value="{{ $search }}"
                                 autocomplete="off" placeholder="Tên bài, học viên hoặc ma trận..."
-                                class="h-11 w-full rounded-xl border border-outline-variant bg-surface-container-low px-3 pl-10 text-sm text-on-surface outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-on-surface-variant/70 focus:border-primary focus:ring-2 focus:ring-primary/20">
+                                class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 pl-9 text-sm text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary">
                         </div>
                     </div>
                     <div class="min-w-0">
                         <label for="exam-kind" class="mb-1.5 block text-sm font-medium text-on-surface-variant">Loại bài</label>
-                        <select id="exam-kind" name="kind" class="h-11 w-full rounded-xl border border-outline-variant bg-surface-container-low px-3 text-sm text-on-surface outline-none transition-[border-color,box-shadow] duration-150 focus:border-primary focus:ring-2 focus:ring-primary/20">
+                        <select id="exam-kind" name="kind" class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 text-sm text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary">
                             <option value="">Tất cả</option>
                             <option value="sample" @selected($kind === 'sample')>Bài mẫu</option>
                             <option value="personal" @selected($kind === 'personal')>Đề cá nhân</option>
@@ -67,7 +68,7 @@
                     </div>
                     <div class="min-w-0">
                         <label for="exam-status" class="mb-1.5 block text-sm font-medium text-on-surface-variant">Trạng thái</label>
-                        <select id="exam-status" name="status" class="h-11 w-full rounded-xl border border-outline-variant bg-surface-container-low px-3 text-sm text-on-surface outline-none transition-[border-color,box-shadow] duration-150 focus:border-primary focus:ring-2 focus:ring-primary/20">
+                        <select id="exam-status" name="status" class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 text-sm text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary">
                             <option value="">Tất cả</option>
                             <option value="published" @selected($status === 'published')>Đã xuất bản</option>
                             <option value="draft" @selected($status === 'draft')>Bản nháp</option>
@@ -75,21 +76,15 @@
                     </div>
                 </div>
 
-                <div class="flex flex-wrap items-center gap-2 border-t border-outline-variant pt-4">
-                    <button type="submit" class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-on-primary shadow-sm transition-[background-color,box-shadow,transform] duration-150 hover:bg-primary/90 hover:shadow-md active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
-                        <span class="material-symbols-outlined text-[18px]" aria-hidden="true">search</span>
-                        Tìm kiếm
-                    </button>
-                    @if ($hasActiveFilters)
-                        <a href="{{ route('admin.exams.index') }}" class="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-4 text-sm font-semibold text-on-surface-variant transition-colors duration-150 hover:bg-surface-container-low hover:text-on-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40" aria-label="Xoá bộ lọc bài thi">
-                            <span class="material-symbols-outlined text-[18px]" aria-hidden="true">restart_alt</span>
-                            Xoá bộ lọc
-                        </a>
-                    @endif
-                </div>
+                <x-admin.filter-action-buttons class="justify-start border-t border-outline-variant pt-4" loading-expression="ajaxLoading"
+                    reset-method="resetExamFilters" :reset-url="route('admin.exams.index')"
+                    search-aria-label="Tìm kiếm bài thi" reset-aria-label="Xoá bộ lọc bài thi"
+                    reset-label="Xoá bộ lọc" reset-icon="restart_alt" reset-title="Xoá bộ lọc"
+                    show-reset-expression="hasAppliedFilters" reset-variant="text-danger" />
             </form>
         </section>
 
+        <div id="exam-results-region">
         <section aria-labelledby="heading-exams-list" class="overflow-hidden rounded-2xl border border-outline-variant bg-surface shadow-sm">
             <div class="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant px-5 py-4 sm:px-6">
                 <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -216,5 +211,95 @@
                 {{ $exams->links() }}
             </nav>
         @endif
+        </div>
     </div>
+
+    <script>
+        function examFilterForm({ hasActiveFilters }) {
+            return {
+                ajaxLoading: false,
+                hasAppliedFilters: Boolean(hasActiveFilters),
+                hasCurrentExamFilters() {
+                    const form = document.getElementById('exam-filter-form');
+
+                    return form
+                        ? [...new FormData(form).entries()].some(([key, value]) => key !== 'page' && String(value).trim() !== '')
+                        : false;
+                },
+                async applyExamFilters() {
+                    const form = document.getElementById('exam-filter-form');
+                    if (!form) return;
+
+                    const url = new URL(form.action, window.location.origin);
+                    const params = new URLSearchParams(new FormData(form));
+                    params.delete('page');
+                    url.search = params.toString();
+                    await this.fetchExamResults(url.toString());
+                    this.hasAppliedFilters = this.hasCurrentExamFilters();
+                },
+                async resetExamFilters(url) {
+                    const form = document.getElementById('exam-filter-form');
+                    if (form) {
+                        form.querySelectorAll('input[name], select[name]').forEach((field) => {
+                            if (field.type === 'checkbox' || field.type === 'radio') {
+                                field.checked = false;
+                            } else {
+                                field.value = '';
+                            }
+                        });
+                    }
+
+                    this.hasAppliedFilters = false;
+                    await this.fetchExamResults(url);
+                },
+                async fetchExamResults(url) {
+                    this.ajaxLoading = true;
+                    try {
+                        const response = await fetch(url, {
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Accept': 'text/html',
+                            },
+                        });
+                        if (!response.ok) throw new Error('Lỗi tải danh sách bài thi');
+
+                        const html = await response.text();
+                        const documentHtml = new DOMParser().parseFromString(html, 'text/html');
+                        const nextStats = documentHtml.getElementById('exam-stats');
+                        const nextResults = documentHtml.getElementById('exam-results-region');
+                        const currentStats = document.getElementById('exam-stats');
+                        const currentResults = document.getElementById('exam-results-region');
+
+                        if (!nextStats || !nextResults || !currentStats || !currentResults) {
+                            throw new Error('Không tìm thấy vùng kết quả bài thi');
+                        }
+
+                        currentStats.replaceWith(nextStats);
+                        currentResults.replaceWith(nextResults);
+                        window.history.pushState({}, '', url);
+                        this.$nextTick(() => this.bindExamPagination());
+                    } catch (error) {
+                        console.error(error);
+                        alert('Có lỗi xảy ra khi tải danh sách bài thi. Vui lòng thử lại.');
+                    } finally {
+                        this.ajaxLoading = false;
+                    }
+                },
+                bindExamPagination() {
+                    const container = document.getElementById('exam-results-region');
+                    if (!container) return;
+
+                    container.querySelectorAll('nav a').forEach((link) => {
+                        link.addEventListener('click', (event) => {
+                            event.preventDefault();
+                            if (link.href) this.fetchExamResults(link.href);
+                        });
+                    });
+                },
+                init() {
+                    this.$nextTick(() => this.bindExamPagination());
+                },
+            };
+        }
+    </script>
 </x-layouts.admin>

@@ -2,6 +2,19 @@
 
 ## 2026-10-08
 
+### Refactor — Rút gọn mô tả kỳ thi học viên
+
+- Bỏ dòng mô tả tỷ trọng độ khó mặc định khỏi trang kỳ thi của học viên.
+
+## 2026-10-08
+
+### Feat — Bộ lọc bài thi cập nhật không tải lại trang
+
+- Đồng bộ giao diện, component thao tác và trạng thái tải của bộ lọc bài thi với trang câu hỏi.
+- Cập nhật thống kê, danh sách và phân trang bài thi bằng AJAX; giữ URL theo trạng thái bộ lọc.
+
+## 2026-10-08
+
 ### Refactor — Đồng bộ giao diện quản trị bài thi
 
 - Làm mới trang danh sách và chi tiết bài thi theo cùng hệ thống phân cấp, màu sắc và khoảng cách.
