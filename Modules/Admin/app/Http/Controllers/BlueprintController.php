@@ -20,6 +20,8 @@ use Modules\QuestionBank\Models\Blueprint;
 use Modules\QuestionBank\Models\BlueprintSection;
 use Modules\QuestionBank\Models\CoreClinicalTopic;
 use Modules\QuestionBank\Models\Lesson;
+use Modules\QuestionBank\Models\Question;
+use Modules\QuestionBank\Support\ServePublishedQuestion;
 
 final class BlueprintController extends Controller
 {
@@ -280,6 +282,8 @@ final class BlueprintController extends Controller
 
         if ($request->expectsJson()) {
             $topic->load('lessons');
+            $topic->load('section.blueprint');
+            $availability = $this->topicDifficultyAvailability($topic->section->blueprint);
 
             return response()->json([
                 'message' => 'Đã cập nhật liên kết bài học và tag cho chủ đề lâm sàng.',
@@ -294,11 +298,37 @@ final class BlueprintController extends Controller
                         ->map(fn ($id): int => (int) $id)
                         ->values()
                         ->all(),
+                    'availability' => $availability,
                 ],
             ]);
         }
 
         return back()->with('status', 'Đã cập nhật liên kết bài học và tag cho chủ đề lâm sàng.');
+    }
+
+    public function previewCoreTopicMedicalNodes(Request $request, CoreClinicalTopic $topic): JsonResponse
+    {
+        $this->authorizePermission('blueprint.view');
+
+        $data = $request->validate([
+            'lesson_ids' => ['present', 'array'],
+            'lesson_ids.*' => ['integer', 'distinct', 'exists:lessons,id'],
+            'tag_ids' => ['present', 'array'],
+            'tag_ids.*' => ['integer', 'distinct', 'exists:tags,id'],
+        ]);
+
+        $topic->load('section.blueprint');
+
+        return response()->json([
+            'data' => [
+                'availability' => $this->topicDifficultyAvailability(
+                    $topic->section->blueprint,
+                    (int) $topic->id,
+                    array_map('intval', $data['lesson_ids']),
+                    array_map('intval', $data['tag_ids']),
+                ),
+            ],
+        ]);
     }
 
     /**
@@ -353,12 +383,92 @@ final class BlueprintController extends Controller
     {
         return [
             'blueprint' => $blueprint,
+            'topicDifficultyAvailability' => $blueprint->exists
+                ? $this->topicDifficultyAvailability($blueprint)
+                : ['sections' => [], 'topics' => []],
             'statuses' => TaxonomyStatus::cases(),
             'canUpdate' => $blueprint->exists
                 ? $this->actor()->can('blueprint.update')
                 : $this->actor()->can('blueprint.create'),
             'canDelete' => $blueprint->exists && $this->actor()->can('blueprint.delete'),
         ];
+    }
+
+    /** @return array{sections: array<int, array{easy: int, medium: int, hard: int}>, topics: array<int, array{easy: int, medium: int, hard: int}>} */
+    private function topicDifficultyAvailability(
+        Blueprint $blueprint,
+        ?int $overrideTopicId = null,
+        array $overrideLessonIds = [],
+        array $overrideTagIds = [],
+    ): array
+    {
+        $blueprint->loadMissing('sections.coreClinicalTopics.lessons', 'sections.coreClinicalTopics.tags');
+        $result = ['sections' => [], 'topics' => []];
+        $lessonTopics = $tagTopics = $topicSections = [];
+
+        foreach ($blueprint->sections as $section) {
+            $result['sections'][(int) $section->id] = ['easy' => 0, 'medium' => 0, 'hard' => 0];
+            foreach ($section->coreClinicalTopics as $topic) {
+                $topicId = (int) $topic->id;
+                $result['topics'][$topicId] = ['easy' => 0, 'medium' => 0, 'hard' => 0];
+                $topicSections[$topicId] = (int) $section->id;
+                $topicLessonIds = $topicId === $overrideTopicId ? $overrideLessonIds : $topic->lessons->modelKeys();
+                $topicTagIds = $topicId === $overrideTopicId ? $overrideTagIds : $topic->tags->modelKeys();
+                foreach ($topicLessonIds as $lessonId) {
+                    $lessonTopics[(int) $lessonId][] = $topicId;
+                }
+                foreach ($topicTagIds as $tagId) {
+                    $tagTopics[(int) $tagId][] = $topicId;
+                }
+            }
+        }
+
+        $lessonIds = array_keys($lessonTopics);
+        $tagIds = array_keys($tagTopics);
+        if ($lessonIds === [] && $tagIds === []) {
+            return $result;
+        }
+
+        $questions = ServePublishedQuestion::scopeAvailable(Question::query())
+            ->where(function ($query) use ($lessonIds, $tagIds): void {
+                if ($lessonIds !== []) {
+                    $query->whereHas('lessons', fn ($lessons) => $lessons->whereIn('lessons.id', $lessonIds));
+                }
+                if ($tagIds !== []) {
+                    $method = $lessonIds !== [] ? 'orWhereHas' : 'whereHas';
+                    $query->{$method}('tags', fn ($tags) => $tags->whereIn('tags.id', $tagIds));
+                }
+            })
+            ->with('lessons:id', 'tags:id')
+            ->get();
+        foreach (ServePublishedQuestion::overlayMany($questions) as $question) {
+            $topicIds = [];
+            foreach ($question->lessons->modelKeys() as $lessonId) {
+                array_push($topicIds, ...($lessonTopics[(int) $lessonId] ?? []));
+            }
+            foreach ($question->tags->modelKeys() as $tagId) {
+                array_push($topicIds, ...($tagTopics[(int) $tagId] ?? []));
+            }
+            $topicIds = array_values(array_unique($topicIds));
+            $group = $this->difficultyGroup($question);
+            foreach ($topicIds as $topicId) {
+                $result['topics'][$topicId][$group]++;
+            }
+            foreach (array_unique(array_map(fn (int $topicId): int => $topicSections[$topicId], $topicIds)) as $sectionId) {
+                $result['sections'][$sectionId][$group]++;
+            }
+        }
+
+        return $result;
+    }
+
+    private function difficultyGroup(Question $question): string
+    {
+        return match ($question->difficulty->value) {
+            'very_easy', 'easy' => 'easy',
+            'medium' => 'medium',
+            default => 'hard',
+        };
     }
 
     /** @return array<string, mixed> */

@@ -1,10 +1,10 @@
 @php
     $hasActiveFilters = filled($search) || filled($kind) || filled($status);
     $statCards = [
-        ['label' => 'Tổng bài thi', 'value' => $stats['total'], 'icon' => 'quiz'],
-        ['label' => 'Bài mẫu', 'value' => $stats['sample'], 'icon' => 'description'],
-        ['label' => 'Đề cá nhân', 'value' => $stats['personal'], 'icon' => 'person'],
-        ['label' => 'Bản nháp', 'value' => $stats['draft'], 'icon' => 'draft'],
+        ['label' => 'Tổng bài thi', 'value' => $stats['total'], 'icon' => 'quiz', 'tone' => 'bg-primary/10 text-primary'],
+        ['label' => 'Bài mẫu', 'value' => $stats['sample'], 'icon' => 'description', 'tone' => 'bg-emerald-50 text-emerald-700'],
+        ['label' => 'Đề cá nhân', 'value' => $stats['personal'], 'icon' => 'person', 'tone' => 'bg-indigo-50 text-indigo-700'],
+        ['label' => 'Bản nháp', 'value' => $stats['draft'], 'icon' => 'draft', 'tone' => 'bg-amber-50 text-amber-700'],
     ];
 @endphp
 
@@ -22,22 +22,20 @@
         <x-admin.flash />
 
         <section aria-labelledby="heading-exam-stats">
-            <div class="mb-3 flex items-center justify-between gap-3">
+            <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <h2 id="heading-exam-stats" class="font-label-lg font-semibold text-on-surface">Tổng quan</h2>
-                <p class="font-body-sm text-on-surface-variant">Tình trạng danh sách bài thi</p>
+                <p class="text-sm text-on-surface-variant">Số liệu toàn bộ bài thi</p>
             </div>
-            <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 @foreach ($statCards as $card)
-                    <div class="rounded-xl border border-outline-variant bg-surface p-4">
-                        <div class="flex items-center gap-3">
-                            <div class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-surface-container-low text-on-surface-variant">
+                    <div class="rounded-2xl border border-outline-variant bg-surface p-4 shadow-sm sm:p-5">
+                        <div class="flex items-start justify-between gap-3">
+                            <p class="text-sm font-medium text-on-surface-variant">{{ $card['label'] }}</p>
+                            <span @class(['flex size-10 shrink-0 items-center justify-center rounded-xl', $card['tone']])>
                                 <span class="material-symbols-outlined text-[22px]" aria-hidden="true">{{ $card['icon'] }}</span>
-                            </div>
-                            <div class="min-w-0">
-                                <p class="truncate text-label-sm font-medium text-on-surface-variant">{{ $card['label'] }}</p>
-                                <p class="text-headline-sm font-bold tabular-nums text-on-surface">{{ number_format($card['value']) }}</p>
-                            </div>
+                            </span>
                         </div>
+                        <p class="mt-2 text-3xl font-bold leading-none tabular-nums text-on-surface">{{ number_format($card['value']) }}</p>
                     </div>
                 @endforeach
             </div>
@@ -47,7 +45,7 @@
             <h2 id="heading-exam-filters" class="sr-only">Tìm kiếm bài thi</h2>
             <form method="get" action="{{ route('admin.exams.index') }}" role="search"
                 aria-label="Tìm kiếm và lọc bài thi"
-                class="space-y-4 rounded-xl border border-outline-variant bg-surface p-4">
+                class="space-y-4 rounded-2xl border border-outline-variant bg-surface p-4 shadow-sm sm:p-5">
                 <div class="grid grid-cols-1 items-end gap-4 sm:grid-cols-2 xl:grid-cols-[minmax(280px,1.5fr)_minmax(180px,1fr)_minmax(180px,1fr)]">
                     <div class="sm:col-span-2 xl:col-auto">
                         <label for="exam-search" class="mb-1.5 block text-sm font-medium text-on-surface-variant">Tìm kiếm</label>
@@ -55,12 +53,12 @@
                             <span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant" aria-hidden="true">search</span>
                             <input id="exam-search" type="search" name="q" value="{{ $search }}"
                                 autocomplete="off" placeholder="Tên bài, học viên hoặc ma trận..."
-                                class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 pl-9 text-sm text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+                                class="h-11 w-full rounded-xl border border-outline-variant bg-surface-container-low px-3 pl-10 text-sm text-on-surface outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-on-surface-variant/70 focus:border-primary focus:ring-2 focus:ring-primary/20">
                         </div>
                     </div>
                     <div class="min-w-0">
                         <label for="exam-kind" class="mb-1.5 block text-sm font-medium text-on-surface-variant">Loại bài</label>
-                        <select id="exam-kind" name="kind" class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 text-sm text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+                        <select id="exam-kind" name="kind" class="h-11 w-full rounded-xl border border-outline-variant bg-surface-container-low px-3 text-sm text-on-surface outline-none transition-[border-color,box-shadow] duration-150 focus:border-primary focus:ring-2 focus:ring-primary/20">
                             <option value="">Tất cả</option>
                             <option value="sample" @selected($kind === 'sample')>Bài mẫu</option>
                             <option value="personal" @selected($kind === 'personal')>Đề cá nhân</option>
@@ -69,7 +67,7 @@
                     </div>
                     <div class="min-w-0">
                         <label for="exam-status" class="mb-1.5 block text-sm font-medium text-on-surface-variant">Trạng thái</label>
-                        <select id="exam-status" name="status" class="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 text-sm text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+                        <select id="exam-status" name="status" class="h-11 w-full rounded-xl border border-outline-variant bg-surface-container-low px-3 text-sm text-on-surface outline-none transition-[border-color,box-shadow] duration-150 focus:border-primary focus:ring-2 focus:ring-primary/20">
                             <option value="">Tất cả</option>
                             <option value="published" @selected($status === 'published')>Đã xuất bản</option>
                             <option value="draft" @selected($status === 'draft')>Bản nháp</option>
@@ -77,13 +75,13 @@
                     </div>
                 </div>
 
-                <div class="flex items-center gap-2 border-t border-outline-variant pt-4">
-                    <button type="submit" class="inline-flex h-11 w-36 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-semibold text-on-primary shadow-xs transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary/40">
+                <div class="flex flex-wrap items-center gap-2 border-t border-outline-variant pt-4">
+                    <button type="submit" class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-on-primary shadow-sm transition-[background-color,box-shadow,transform] duration-150 hover:bg-primary/90 hover:shadow-md active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
                         <span class="material-symbols-outlined text-[18px]" aria-hidden="true">search</span>
                         Tìm kiếm
                     </button>
                     @if ($hasActiveFilters)
-                        <a href="{{ route('admin.exams.index') }}" class="inline-flex h-11 items-center justify-center gap-1.5 whitespace-nowrap px-3 text-sm font-semibold text-error focus:outline-none" aria-label="Xoá bộ lọc bài thi">
+                        <a href="{{ route('admin.exams.index') }}" class="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-4 text-sm font-semibold text-on-surface-variant transition-colors duration-150 hover:bg-surface-container-low hover:text-on-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40" aria-label="Xoá bộ lọc bài thi">
                             <span class="material-symbols-outlined text-[18px]" aria-hidden="true">restart_alt</span>
                             Xoá bộ lọc
                         </a>
@@ -92,41 +90,41 @@
             </form>
         </section>
 
-        <section aria-labelledby="heading-exams-list" class="overflow-hidden rounded-xl border border-outline-variant bg-surface">
-            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant px-5 py-4">
-                <div class="flex flex-wrap items-center gap-2 font-medium">
+        <section aria-labelledby="heading-exams-list" class="overflow-hidden rounded-2xl border border-outline-variant bg-surface shadow-sm">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant px-5 py-4 sm:px-6">
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
                     <h2 id="heading-exams-list" class="font-label-lg font-semibold text-on-surface">Danh sách bài thi</h2>
-                    <span>Hiển thị <strong>{{ number_format($exams->count()) }}</strong> / <strong>{{ number_format($exams->total()) }}</strong> bài thi</span>
+                    <span class="rounded-full bg-surface-container-low px-3 py-1 text-xs font-medium tabular-nums text-on-surface-variant">{{ number_format($exams->firstItem() ?? 0) }}–{{ number_format($exams->lastItem() ?? 0) }} / {{ number_format($exams->total()) }} bài</span>
                     @if ($exams->hasPages())
-                        <span>· Trang {{ $exams->currentPage() }} / {{ $exams->lastPage() }}</span>
+                        <span class="text-xs tabular-nums text-on-surface-variant">Trang {{ $exams->currentPage() }} / {{ $exams->lastPage() }}</span>
                     @endif
                 </div>
-                <span class="hidden items-center gap-1 text-[11px] text-on-surface-variant/80 lg:inline-flex">
+                <span class="inline-flex items-center gap-1 text-xs text-on-surface-variant xl:hidden">
                     <span class="material-symbols-outlined text-[14px]" aria-hidden="true">swap_horiz</span>
-                    Cuộn ngang để xem đầy đủ các cột
+                    Vuốt ngang để xem bảng
                 </span>
             </div>
 
             <div class="relative w-full overflow-x-auto" tabindex="0" aria-label="Vùng cuộn bảng dữ liệu bài thi">
-                <table aria-label="Bảng danh sách bài thi" class="w-full min-w-[1240px] table-fixed border-collapse text-left font-body-sm text-on-surface">
+                <table aria-label="Bảng danh sách bài thi" class="w-full min-w-[1180px] table-fixed border-collapse text-left font-body-sm text-on-surface">
                     <caption class="sr-only">Danh sách bài thi, học viên, ma trận, quy mô và trạng thái</caption>
                     <thead class="border-b border-outline-variant bg-surface-container-low text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
                         <tr>
-                            <th scope="col" class="w-[300px] px-5 py-3.5">Bài thi</th>
-                            <th scope="col" class="w-[220px] px-4 py-3.5">Học viên</th>
-                            <th scope="col" class="w-[260px] px-4 py-3.5">Kỳ thi · ma trận</th>
-                            <th scope="col" class="w-[120px] px-4 py-3.5 text-center">Số câu</th>
-                            <th scope="col" class="w-[120px] px-4 py-3.5 text-center">Thời gian</th>
-                            <th scope="col" class="w-[140px] px-4 py-3.5">Trạng thái</th>
-                            <th scope="col" class="w-[140px] px-4 py-3.5">Tạo lúc</th>
-                            <th scope="col" class="w-[160px] px-5 py-3.5 text-end">Thao tác</th>
+                            <th scope="col" class="w-[245px] px-5 py-3.5 sm:px-6">Bài thi</th>
+                            <th scope="col" class="w-[175px] px-4 py-3.5">Học viên</th>
+                            <th scope="col" class="w-[210px] px-4 py-3.5">Kỳ thi · ma trận</th>
+                            <th scope="col" class="w-[90px] px-3 py-3.5 text-center">Số câu</th>
+                            <th scope="col" class="w-[95px] px-3 py-3.5 text-center">Thời gian</th>
+                            <th scope="col" class="w-[125px] px-4 py-3.5">Trạng thái</th>
+                            <th scope="col" class="w-[105px] px-4 py-3.5">Tạo lúc</th>
+                            <th scope="col" class="w-[135px] px-5 py-3.5 text-end sm:px-6">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-outline-variant/60">
                         @forelse ($exams as $exam)
-                            <tr class="transition-colors hover:bg-surface-container-low">
-                                <td class="px-5 py-4 align-top">
-                                    <div class="mb-1.5 flex flex-wrap items-center gap-1.5">
+                            <tr class="transition-colors duration-150 hover:bg-surface-container-low/70 focus-within:bg-surface-container-low/70">
+                                <td class="px-5 py-4 align-middle sm:px-6">
+                                    <div class="mb-2 flex flex-wrap items-center gap-1.5">
                                         @if ($exam->kind === 'sample')
                                             <span class="inline-flex rounded-full border border-primary/20 bg-primary/5 px-2.5 py-0.5 text-xs font-semibold text-primary">Bài mẫu</span>
                                         @elseif ($exam->kind === 'personal')
@@ -135,12 +133,12 @@
                                             <span class="inline-flex rounded-full border border-outline-variant px-2.5 py-0.5 text-xs font-semibold text-on-surface-variant">Đề cũ</span>
                                         @endif
                                     </div>
-                                    <p class="line-clamp-2 font-medium leading-snug text-on-surface" title="{{ $exam->title }}">{{ $exam->title }}</p>
+                                    <p class="line-clamp-2 font-semibold leading-snug text-on-surface [text-wrap:pretty]" title="{{ $exam->title }}">{{ $exam->title }}</p>
                                     @if ($exam->description)
                                         <p class="mt-1 line-clamp-1 text-xs text-on-surface-variant" title="{{ $exam->description }}">{{ $exam->description }}</p>
                                     @endif
                                 </td>
-                                <td class="px-4 py-4 align-top">
+                                <td class="px-4 py-4 align-middle">
                                     @if ($exam->user)
                                         <p class="truncate font-medium text-on-surface" title="{{ $exam->user->name }}">{{ $exam->user->name }}</p>
                                         <p class="mt-1 truncate text-xs text-on-surface-variant" title="{{ $exam->user->email }}">{{ $exam->user->email }}</p>
@@ -148,7 +146,7 @@
                                         <span class="text-on-surface-variant">{{ $exam->kind === 'sample' ? 'Bài thi mẫu dùng chung' : 'Hệ thống' }}</span>
                                     @endif
                                 </td>
-                                <td class="px-4 py-4 align-top">
+                                <td class="px-4 py-4 align-middle">
                                     @if ($exam->blueprint)
                                         <p class="line-clamp-2 font-medium text-on-surface" title="{{ $exam->blueprint->name }}">{{ $exam->blueprint->name }}</p>
                                         @if ($exam->blueprint->code)
@@ -158,30 +156,30 @@
                                         <span class="text-on-surface-variant/60">Chưa gắn ma trận</span>
                                     @endif
                                 </td>
-                                <td class="px-4 py-4 text-center align-top tabular-nums">
+                                <td class="px-3 py-4 text-center align-middle tabular-nums">
                                     <span class="font-semibold text-on-surface">{{ number_format($exam->questions_count) }}</span>
                                     <span class="block text-xs text-on-surface-variant">câu</span>
                                 </td>
-                                <td class="px-4 py-4 text-center align-top tabular-nums">
+                                <td class="px-3 py-4 text-center align-middle tabular-nums">
                                     <span class="font-semibold text-on-surface">{{ number_format($exam->duration_minutes) }}</span>
                                     <span class="block text-xs text-on-surface-variant">phút</span>
                                 </td>
-                                <td class="px-4 py-4 align-top whitespace-nowrap">
+                                <td class="px-4 py-4 align-middle whitespace-nowrap">
                                     <span @class([
                                         'inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold',
                                         'border-emerald-200 bg-emerald-50 text-emerald-800' => $exam->status->value === 'published',
                                         'border-amber-200 bg-amber-50 text-amber-800' => $exam->status->value !== 'published',
                                     ])>{{ $exam->status->label() }}</span>
                                 </td>
-                                <td class="px-4 py-4 align-top tabular-nums whitespace-nowrap">
+                                <td class="px-4 py-4 align-middle tabular-nums whitespace-nowrap">
                                     <p>{{ $exam->created_at?->format('d/m/Y') }}</p>
                                     <p class="mt-1 text-xs text-on-surface-variant">{{ $exam->created_at?->format('H:i') }}</p>
                                 </td>
-                                <td class="px-5 py-4 text-end align-top whitespace-nowrap">
-                                    <div class="inline-flex items-center justify-end gap-2.5">
+                                <td class="px-5 py-4 text-end align-middle whitespace-nowrap sm:px-6">
+                                    <div class="inline-flex items-center justify-end gap-1">
                                         @if (\Modules\Admin\Support\AdminRouteAccess::allows(auth()->user(), 'admin.exams.show'))
-                                            <a href="{{ route('admin.exams.show', $exam) }}" class="inline-flex items-center gap-1 rounded-md border border-outline-variant px-2 py-1 text-xs font-medium text-on-surface hover:bg-surface-container-low" title="Xem chi tiết bài thi">
-                                                <span class="material-symbols-outlined text-[15px]" aria-hidden="true">visibility</span>
+                                            <a href="{{ route('admin.exams.show', $exam) }}" class="inline-flex min-h-10 items-center justify-center gap-1 rounded-lg border border-outline-variant px-2.5 text-xs font-semibold text-primary transition-[background-color,border-color,transform] duration-150 hover:border-primary/30 hover:bg-primary/5 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40" title="Xem chi tiết bài thi" aria-label="Xem bài thi {{ $exam->title }}">
+                                                <span class="material-symbols-outlined text-[18px]" aria-hidden="true">visibility</span>
                                                 Xem
                                             </a>
                                         @endif
@@ -189,9 +187,8 @@
                                             <form action="{{ route('admin.exams.destroy', $exam) }}" method="post" class="inline" onsubmit="return confirm('Xoá bài thi này?');">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="inline-flex items-center gap-1 text-xs font-medium text-error hover:underline" title="Xóa bài thi">
-                                                    <span class="material-symbols-outlined text-[15px]" aria-hidden="true">delete</span>
-                                                    Xoá
+                                                <button type="submit" class="inline-flex size-10 items-center justify-center rounded-lg text-error transition-[background-color,transform] duration-150 hover:bg-error/10 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error/40" title="Xoá bài thi" aria-label="Xoá bài thi {{ $exam->title }}">
+                                                    <span class="material-symbols-outlined text-[20px]" aria-hidden="true">delete</span>
                                                 </button>
                                             </form>
                                         @endif

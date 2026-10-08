@@ -182,6 +182,7 @@ Route::middleware(['auth', 'portal:editor'])->group(function (): void {
             Route::put('/exam-catalogs/{examCatalog}', [ExamCatalogController::class, 'update'])->middleware('permission:editor_blueprint.update')->name('exam-catalogs.update');
             Route::put('/blueprints/{blueprint}/weights', [BlueprintController::class, 'updateWeights'])->middleware('permission:editor_blueprint.update')->name('blueprints.weights.update');
             Route::put('/core-clinical-topics/{topic}/medical-nodes', [BlueprintController::class, 'syncCoreTopicMedicalNodes'])->middleware('permission:editor_blueprint.update')->name('core-clinical-topics.medical-nodes.sync');
+            Route::post('/core-clinical-topics/{topic}/medical-nodes/preview', [BlueprintController::class, 'previewCoreTopicMedicalNodes'])->middleware('permission:editor_blueprint.update')->name('core-clinical-topics.medical-nodes.preview');
             Route::delete('/blueprints/{blueprint}', [BlueprintController::class, 'destroy'])->middleware('permission:editor_blueprint.delete')->name('blueprints.destroy');
             Route::delete('/exam-catalogs/{examCatalog}', [ExamCatalogController::class, 'destroy'])->middleware('permission:editor_blueprint.delete')->name('exam-catalogs.destroy');
             Route::delete('/blueprint-sections/{section}', [BlueprintController::class, 'destroySection'])->middleware('permission:editor_blueprint.delete')->name('blueprint-sections.destroy');

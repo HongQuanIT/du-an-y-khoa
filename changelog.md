@@ -2,6 +2,49 @@
 
 ## 2026-10-08
 
+### Refactor — Đồng bộ giao diện quản trị bài thi
+
+- Làm mới trang danh sách và chi tiết bài thi theo cùng hệ thống phân cấp, màu sắc và khoảng cách.
+- Cải thiện bảng dữ liệu, thẻ thống kê, vùng bấm, trạng thái focus và cách hiển thị trên màn hình hẹp.
+- Bổ sung cấu trúc ngữ nghĩa cho tiêu đề, điều hướng, số liệu và bảng phân bổ câu hỏi.
+
+## 2026-10-08
+
+### Feat — Tạo đề Premium và vào phiên thi ngay
+
+- Tạo đề Premium ngẫu nhiên rồi mở trực tiếp phiên làm bài; đánh số đề Q1, Q2, Q3 theo học viên và kỳ thi.
+- Thiết kế lại danh sách phiên thi gần đây, hiển thị thời gian đã làm, nút xem lại bài và phân trang mỗi 4 phiên.
+- Bỏ danh sách đề cá nhân riêng trên trang bài thi.
+
+## 2026-10-08
+
+### Fix — Bỏ qua chủ đề chưa nhập tỷ trọng
+
+- Chủ đề để trống tỷ trọng được xem là không sử dụng khi phân bổ câu hỏi.
+- Làm rõ hướng dẫn nhập tỷ trọng trên biểu mẫu ma trận.
+
+## 2026-10-08
+
+### Fix — Cảnh báo thiếu câu theo tỷ trọng
+
+- Cảnh báo số câu thiếu theo từng nhóm độ khó và tỷ trọng của chủ đề hoặc phần.
+- Cập nhật cảnh báo ngay khi chọn, gỡ hoặc lưu liên kết bài học và tag, không cần tải lại trang.
+
+## 2026-10-08
+
+### Fix — Danh sách kỳ thi
+
+- Bỏ nhãn “Dùng được” gây nhầm lẫn; giữ số câu đã gắn trong kho.
+
+## 2026-10-08
+
+### Chore — Dữ liệu câu hỏi QBank để kiểm thử
+
+- Bổ sung seeder 1.000 câu đã xuất bản, phân bổ năm mức độ và gắn vào các đối tượng, kỳ thi, ma trận hiện có.
+- Mỗi câu liên kết với 1–3 bài học; seeder chỉ chạy trong môi trường local hoặc testing và có thể chạy lại.
+
+## 2026-10-08
+
 ### Feat — Cấu hình tỷ trọng độ khó theo ma trận
 
 - Cho phép quản trị cấu hình tỷ lệ nhóm dễ, trung bình và khó trực tiếp trên ma trận đề thi.

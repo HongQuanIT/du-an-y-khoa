@@ -6,7 +6,6 @@ namespace Modules\Exam\Services;
 
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Collection;
 use Modules\Exam\Models\Exam;
 use Modules\QuestionBank\Enums\SessionMode;
 use Modules\QuestionBank\Enums\SessionSource;
@@ -42,7 +41,8 @@ final class ExamCatalogService
             ->with(['blueprint' => fn ($query) => $query->withCount('sections'), 'sampleExam'])
             ->orderBy('sort_order')
             ->orderBy('name')
-            ->paginate(9);
+            ->paginate(9)
+            ->withQueryString();
 
         $catalogs->getCollection()->transform(function (ExamCatalog $catalog) use ($professionId): array {
             $blueprint = $catalog->blueprint;
@@ -95,36 +95,44 @@ final class ExamCatalogService
     }
 
     /**
-     * @return Collection<int, QuestionSession>
+     * @return LengthAwarePaginator<int, QuestionSession>
      */
-    public function recentSessions(User $user): Collection
+    public function recentSessions(User $user): LengthAwarePaginator
     {
-        return QuestionSession::query()
+        $sessions = QuestionSession::query()
             ->where('user_id', $user->getKey())
             ->where('mode', SessionMode::Exam)
             ->where('source', SessionSource::Exam)
             ->whereNotNull('exam_id')
+            ->with('exam:id,title,kind,duration_minutes,matrix_snapshot')
+            ->withSum('attempts as time_spent_seconds', 'time_spent_seconds')
             ->latest('updated_at')
-            ->limit(8)
-            ->get();
-    }
+            ->paginate(4, ['*'], 'session_page')
+            ->withQueryString();
 
-    /** @return LengthAwarePaginator<int, Exam> */
-    public function recentExams(User $user): LengthAwarePaginator
-    {
-        return Exam::query()
-            ->select([
-                'exams.id',
-                'exams.blueprint_id',
-                'exams.title',
-                'exams.duration_minutes',
-                'exams.created_at',
-            ])
-            ->withCount('questions')
-            ->with('blueprint:id,name,code')
-            ->where('user_id', $user->getKey())
-            ->where('kind', 'personal')
-            ->latest('exams.created_at')
-            ->paginate(6, ['*'], 'exam_page');
+        if ($sessions->getCollection()->contains(fn (QuestionSession $session): bool => $session->exam?->kind === 'personal')) {
+            $numbersByCatalog = $numbersByExam = [];
+            foreach (Exam::query()
+                ->where('user_id', $user->getKey())
+                ->where('kind', 'personal')
+                ->orderBy('id')
+                ->get(['id', 'exam_catalog_id']) as $exam) {
+                $catalogId = (int) $exam->exam_catalog_id;
+                $numbersByCatalog[$catalogId] = ($numbersByCatalog[$catalogId] ?? 0) + 1;
+                $numbersByExam[(int) $exam->id] = $numbersByCatalog[$catalogId];
+            }
+
+            $sessions->getCollection()->each(function (QuestionSession $session) use ($numbersByExam): void {
+                $snapshot = $session->exam?->matrix_snapshot ?? [];
+                $session->setAttribute(
+                    'premium_exam_number',
+                    $snapshot['premium_sequence']
+                        ?? $numbersByExam[(int) $session->exam_id]
+                        ?? null,
+                );
+            });
+        }
+
+        return $sessions;
     }
 }

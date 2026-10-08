@@ -80,7 +80,8 @@ final class BlueprintExamAllocator
             'difficulty_weights' => $blueprint->difficultyWeights(),
             'suggested_duration_minutes' => $this->suggestedDurationMinutes($total),
             'section_count' => $sections->count(),
-            'topic_count' => $sections->sum(fn ($section) => $section->coreClinicalTopics->count()),
+            'topic_count' => $sections->sum(fn ($section) => $section->coreClinicalTopics
+                ->filter(fn ($topic) => $topic->weight !== null)->count()),
             'sections' => [],
         ];
 
@@ -142,10 +143,7 @@ final class BlueprintExamAllocator
             $topicShares = [];
             foreach ($topics as $topic) {
                 if ($topic->weight === null) {
-                    return array_merge($base, [
-                        'ready' => false,
-                        'reason' => sprintf('Chủ đề «%s» chưa có tỉ trọng.', $topic->name),
-                    ]);
+                    continue;
                 }
                 $topicShares[] = [
                     'topic' => $topic,
@@ -153,7 +151,21 @@ final class BlueprintExamAllocator
                 ];
             }
 
-            $unrestrictedTopics = array_sum(array_column($topicShares, 'share')) === 0.0;
+            if ($topicShares === []) {
+                return array_merge($base, [
+                    'ready' => false,
+                    'reason' => sprintf('Phần «%s» chưa chọn chủ đề để lấy câu.', $section->name),
+                ]);
+            }
+
+            $unrestrictedTopics = count($topicShares) === $topics->count()
+                && array_sum(array_column($topicShares, 'share')) === 0.0;
+            if (! $unrestrictedTopics && array_sum(array_column($topicShares, 'share')) === 0.0) {
+                return array_merge($base, [
+                    'ready' => false,
+                    'reason' => sprintf('Phần «%s» cần chủ đề có tỉ trọng lớn hơn 0%% để lấy câu.', $section->name),
+                ]);
+            }
             $topicCounts = $unrestrictedTopics
                 ? array_fill(0, count($topicShares), 0)
                 : $this->distributeByShare($sectionQuota, array_map(fn (array $item): float => $item['share'], $topicShares));
