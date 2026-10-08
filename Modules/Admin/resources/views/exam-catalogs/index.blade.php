@@ -116,7 +116,8 @@
                                 </td>
                                 <td class="px-4 py-3.5 text-right align-middle tabular-nums text-on-surface">
                                     <span x-text="item.questions_count"></span>
-                                    <span x-show="item.blueprint_id" class="block whitespace-nowrap text-[10px] text-on-surface-variant" title="Số câu đã xuất bản có thể dùng để tạo đề, chưa tính điều kiện chủ đề, độ khó và đối tượng">Kho dùng được: <span x-text="item.bank_questions_count"></span></span>
+                                    <span x-show="item.blueprint_id" class="block whitespace-nowrap text-[10px] text-on-surface-variant" title="Tổng số câu đã gắn với kỳ thi, gồm cả câu chưa thể đưa vào đề">Kho đã gắn: <span x-text="item.attached_questions_count"></span></span>
+                                    <span x-show="item.blueprint_id" class="block whitespace-nowrap text-[10px] text-on-surface-variant" title="Câu đã xuất bản, không phải câu giả lập; khi tạo đề còn lọc theo chủ đề, độ khó và đối tượng">Dùng được: <span x-text="item.bank_questions_count"></span></span>
                                 </td>
                                 <td class="px-4 py-3.5 align-middle">
                                     <span class="inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold"

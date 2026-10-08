@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace Modules\Exam\Actions;
 
 use App\Models\User;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Modules\Exam\Enums\ExamStatus;
 use Modules\Exam\Models\Exam;
 use Modules\Exam\Services\ExamQuotaMatcher;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
+use Modules\QuestionBank\Models\CoreClinicalTopic;
 use Modules\QuestionBank\Models\ExamCatalog;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Services\QuestionSessionSnapshots;
@@ -56,27 +58,43 @@ final class BuildFixedExamPaper
                     ->where('exams.exam_catalog_id', $catalog->id)
                     ->pluck('exam_question.question_id')->all(), true)
                 : [];
-            $topics = $freshTopics = $withoutSampleTopics = $questions = $names = [];
+            $topics = $freshTopics = $withoutSampleTopics = $questions = $names = $candidateTopicIds = [];
             foreach ($matrix['sections'] as $section) {
-                foreach ($section['topics'] as $topic) {
+                $unrestricted = $section['unrestricted_topics'] ?? false;
+                $groups = $unrestricted
+                    ? [['id' => 'section:'.$section['id'], 'name' => $section['name'], 'question_count' => $section['question_count']]]
+                    : $section['topics'];
+                $sectionTopics = $unrestricted
+                    ? CoreClinicalTopic::query()->whereIn('id', array_column($section['topics'], 'id'))->with('lessons:id', 'tags:id')->get()->keyBy('id')
+                    : collect();
+                foreach ($groups as $topic) {
                     if ($topic['question_count'] <= 0) {
                         continue;
                     }
+                    $groupId = $topic['id'];
                     $query = ServePublishedQuestion::scopeAvailable(Question::query())
                         ->whereHas('examCatalogs', fn ($q) => $q->where('exam_catalogs.id', $catalog->id));
                     foreach ($professionIds as $professionId) {
                         $this->filters->applyProfession($query, $professionId);
                     }
-                    $this->filters->whereMatchesCoreClinicalTopic($query, $topic['id']);
-                    $priorityQuery = clone $query;
-                    $this->filters->whereMatchesCoreClinicalTopicPriorityLessons($priorityQuery, $topic['id']);
-                    $priorityIds = array_fill_keys($priorityQuery->pluck('id')->all(), true);
-                    $pool = $query->with('options', 'lessons')->get();
+                    if ($unrestricted) {
+                        $this->filters->whereMatchesBlueprintSection($query, $section['id'], array_column($section['topics'], 'id'));
+                        $priorityIds = [];
+                    } else {
+                        $this->filters->whereMatchesCoreClinicalTopic($query, $topic['id']);
+                        $priorityQuery = clone $query;
+                        $this->filters->whereMatchesCoreClinicalTopicPriorityLessons($priorityQuery, $topic['id']);
+                        $priorityIds = array_fill_keys($priorityQuery->pluck('id')->all(), true);
+                    }
+                    $pool = $query->with($unrestricted ? ['options', 'lessons', 'tags'] : ['options', 'lessons'])->get();
                     ServePublishedQuestion::overlayMany($pool);
                     $fresh = $previous = $sample = [];
                     foreach ($pool->shuffle()->sortByDesc(fn (Question $question): bool => isset($priorityIds[$question->id])) as $question) {
                         $id = (string) $question->id;
                         $questions[$id] = $question;
+                        $candidateTopicIds[$groupId][$id] = $unrestricted
+                            ? $this->matchingTopicId($question, $section['topics'], $sectionTopics)
+                            : $topic['id'];
                         $group = match ($question->difficulty->value) {
                             'very_easy', 'easy' => 'easy',
                             'medium' => 'medium',
@@ -91,10 +109,10 @@ final class BuildFixedExamPaper
                         }
                     }
                     $count = $topic['question_count'];
-                    $freshTopics[$topic['id']] = ['count' => $count, 'candidates' => $fresh];
-                    $withoutSampleTopics[$topic['id']] = ['count' => $count, 'candidates' => $fresh + $previous];
-                    $topics[$topic['id']] = ['count' => $count, 'candidates' => $fresh + $previous + $sample];
-                    $names[$topic['id']] = $topic['name'];
+                    $freshTopics[$groupId] = ['count' => $count, 'candidates' => $fresh];
+                    $withoutSampleTopics[$groupId] = ['count' => $count, 'candidates' => $fresh + $previous];
+                    $topics[$groupId] = ['count' => $count, 'candidates' => $fresh + $previous + $sample];
+                    $names[$groupId] = $topic['name'];
                 }
             }
             $result = $this->matcher->match($freshTopics);
@@ -136,25 +154,49 @@ final class BuildFixedExamPaper
                     'sample_overlap_count' => $sampleOverlapCount,
                 ] : []),
             ]);
-            $pivot = $paper = [];
-            foreach ($topics as $topicId => $topic) {
-                $difficultyCounts = [];
+            $pivot = $paper = $actualTopics = [];
+            foreach ($topics as $groupId => $topic) {
                 foreach ($result['selected'] as $id => $selectedTopic) {
-                    if ($selectedTopic !== $topicId) {
+                    if ($selectedTopic !== $groupId) {
                         continue;
                     }
                     $question = $questions[$id];
+                    $topicId = $candidateTopicIds[$groupId][$id];
                     $position = count($paper);
                     $pivot[$id] = ['order' => $position + 1, 'core_clinical_topic_id' => $topicId];
                     $paper[] = ['question_id' => $id, 'position' => $position, 'question_version' => (int) ($question->published_version ?: $question->version), 'payload' => $this->snapshots->payload($question, 'exam-'.$exam->id)];
-                    $difficultyCounts[$question->difficulty->value] = ($difficultyCounts[$question->difficulty->value] ?? 0) + 1;
+                    $actualTopics[$topicId]['question_count'] = ($actualTopics[$topicId]['question_count'] ?? 0) + 1;
+                    $difficulty = $question->difficulty->value;
+                    $actualTopics[$topicId]['difficulty_counts'][$difficulty] = ($actualTopics[$topicId]['difficulty_counts'][$difficulty] ?? 0) + 1;
                 }
-                $exam->examTopics()->create(['core_clinical_topic_id' => $topicId, 'question_count' => $topic['count'], 'difficulty_counts' => $difficultyCounts, 'sort_order' => count($pivot)]);
+            }
+            $sortOrder = 0;
+            foreach ($actualTopics as $topicId => $counts) {
+                $exam->examTopics()->create(['core_clinical_topic_id' => $topicId, 'question_count' => $counts['question_count'], 'difficulty_counts' => $counts['difficulty_counts'], 'sort_order' => ++$sortOrder]);
             }
             $exam->questions()->sync($pivot);
             $exam->update(['paper_snapshot' => $paper]);
 
             return $exam;
         });
+    }
+
+    /**
+     * @param  list<array{id: int}>  $topics
+     * @param  Collection<int, CoreClinicalTopic>  $sectionTopics
+     */
+    private function matchingTopicId(Question $question, array $topics, Collection $sectionTopics): int
+    {
+        $lessonIds = $question->lessons->modelKeys();
+        $tagIds = $question->tags->modelKeys();
+        foreach ($topics as $topic) {
+            $mapped = $sectionTopics->get($topic['id']);
+            if ($mapped && (array_intersect($lessonIds, $mapped->lessons->modelKeys())
+                || array_intersect($tagIds, $mapped->tags->modelKeys()))) {
+                return (int) $topic['id'];
+            }
+        }
+
+        throw ValidationException::withMessages(['blueprint' => 'Câu hỏi không còn liên kết với chủ đề trong phần.']);
     }
 }

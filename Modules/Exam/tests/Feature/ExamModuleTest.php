@@ -387,7 +387,41 @@ final class ExamModuleTest extends TestCase
         $this->assertSame(0, Exam::count());
     }
 
-    public function test_abcd_catalog_seeds_600_matching_questions_without_duplicates(): void
+    public function test_zero_weight_topics_draw_from_the_whole_section_without_topic_quotas(): void
+    {
+        [, $section, $firstTopic, $catalog] = $this->seedWeightedBlueprint('Whole section', 10);
+        $firstTopic->update(['weight' => 0]);
+        $lesson = $this->makeLesson(['name' => 'Ngoại tổng quát', 'slug' => 'ngoai-exam-zero-weight']);
+        $secondTopic = CoreClinicalTopic::query()->create([
+            'blueprint_section_id' => $section->id,
+            'name' => 'Ngoại',
+            'slug' => 'ngoai-exam-zero-weight',
+            'status' => TaxonomyStatus::Active,
+            'sort_order' => 2,
+            'weight' => 0,
+        ]);
+        $secondTopic->lessons()->sync([$lesson->id]);
+
+        foreach (['easy' => 4, 'medium' => 3, 'hard' => 3] as $difficulty => $count) {
+            for ($index = 0; $index < $count; $index++) {
+                $question = $this->examPoolQuestion($difficulty.' whole section '.$index);
+                $question->update(['difficulty' => Difficulty::from($difficulty)]);
+                $question->lessons()->sync([$lesson->id]);
+                $question->professions()->sync([$this->professionId]);
+                $question->examCatalogs()->sync([$catalog->id]);
+            }
+        }
+
+        $paper = app(BuildFixedExamPaper::class)->handle($catalog);
+
+        $this->assertSame(10, $paper->questionCount());
+        $this->assertTrue($paper->matrix_snapshot['sections'][0]['unrestricted_topics']);
+        $this->assertSame([0, 0], array_column($paper->matrix_snapshot['sections'][0]['topics'], 'question_count'));
+        $this->assertSame([$secondTopic->id], $paper->examTopics()->pluck('core_clinical_topic_id')->all());
+        $this->assertSame(10, $paper->examTopics()->sum('question_count'));
+    }
+
+    public function test_abcd_catalog_seeded_placeholders_cannot_be_used_to_build_a_paper(): void
     {
         [, , , $catalog] = $this->seedWeightedBlueprint('ABCD matrix', 40);
         $catalog->update(['code' => 'abcd']);
@@ -397,9 +431,8 @@ final class ExamModuleTest extends TestCase
 
         $this->assertSame(600, $catalog->questions()->count());
         $this->assertSame(600, $catalog->questions()->distinct('questions.id')->count('questions.id'));
-        $paper = app(BuildFixedExamPaper::class)->handle($catalog);
-        $this->assertSame(40, $paper->questionCount());
-        $this->assertSame(['easy' => 16, 'medium' => 12, 'hard' => 12], $paper->matrix_snapshot['difficulty_quotas']);
+        $this->expectException(ValidationException::class);
+        app(BuildFixedExamPaper::class)->handle($catalog);
     }
 
     private function examPoolQuestion(string $stem): Question

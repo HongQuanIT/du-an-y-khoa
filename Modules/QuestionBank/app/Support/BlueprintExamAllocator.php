@@ -151,10 +151,10 @@ final class BlueprintExamAllocator
                 ];
             }
 
-            $topicCounts = $this->distributeByShare(
-                $sectionQuota,
-                array_map(fn (array $item): float => $item['share'], $topicShares),
-            );
+            $unrestrictedTopics = array_sum(array_column($topicShares, 'share')) === 0.0;
+            $topicCounts = $unrestrictedTopics
+                ? array_fill(0, count($topicShares), 0)
+                : $this->distributeByShare($sectionQuota, array_map(fn (array $item): float => $item['share'], $topicShares));
 
             $topicPayload = [];
             foreach ($topicShares as $topicIndex => $topicRow) {
@@ -166,7 +166,13 @@ final class BlueprintExamAllocator
                     'question_count' => $count,
                     'sort_order' => (int) $topicRow['topic']->sort_order,
                 ];
-                $allocatedTotal += $count;
+                if (! $unrestrictedTopics) {
+                    $allocatedTotal += $count;
+                }
+            }
+
+            if ($unrestrictedTopics) {
+                $allocatedTotal += $sectionQuota;
             }
 
             $payloadSections[] = [
@@ -175,6 +181,7 @@ final class BlueprintExamAllocator
                 'weight_min' => $section->weight_min !== null ? (float) $section->weight_min : null,
                 'weight_max' => $section->weight_max !== null ? (float) $section->weight_max : null,
                 'question_count' => $sectionQuota,
+                ...($unrestrictedTopics ? ['unrestricted_topics' => true] : []),
                 'topics' => $topicPayload,
             ];
         }

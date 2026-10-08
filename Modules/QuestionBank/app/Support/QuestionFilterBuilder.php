@@ -122,6 +122,17 @@ final class QuestionFilterBuilder
         );
     }
 
+    /** @param list<int> $coreClinicalTopicIds */
+    public function whereMatchesBlueprintSection(Builder $query, int $blueprintSectionId, array $coreClinicalTopicIds): Builder
+    {
+        return $this->applyBlueprintViaMapping(
+            $query,
+            blueprintId: null,
+            blueprintSectionId: $blueprintSectionId,
+            coreClinicalTopicIds: $coreClinicalTopicIds,
+        );
+    }
+
     /**
      * Lesson ids matching content filters.
      *

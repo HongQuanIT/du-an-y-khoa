@@ -307,7 +307,7 @@
                                                     </tfoot>
                                                 </table>
                                             </div>
-                                            <p class="text-xs text-on-surface-variant">Tỉ trọng chủ đề tính trên 100% của phần này — tổng các chủ đề phải đúng 100%.</p>
+                                            <p class="text-xs text-on-surface-variant">Tỉ trọng chủ đề tính trên 100% của phần này. Để tất cả chủ đề là 0% nếu muốn lấy câu từ cả phần mà không chia quota theo chủ đề.</p>
                                         </div>
                                     </td>
                                 </tr>
@@ -1136,12 +1136,15 @@
                             return total + (this.parseWeight(topic.weight) ?? 0);
                         }, 0) * 100) / 100;
 
-                        const ok = Math.abs(sum - 100) < 0.005;
+                        const unrestricted = configured.length === topics.length && configured.every((topic) => this.parseWeight(topic.weight) === 0);
+                        const ok = unrestricted || Math.abs(sum - 100) < 0.005;
 
                         return {
                             ok,
                             sum,
-                            message: ok
+                            message: unrestricted
+                                ? 'Lấy câu từ cả phần, không bắt buộc đủ câu theo từng chủ đề.'
+                                : ok
                                 ? 'Chủ đề trong phần đủ 100%.'
                                 : `Σ chủ đề = ${this.formatPct(sum)} — cần đúng 100%.`,
                         };
@@ -1203,6 +1206,9 @@
                     topicEstimateLabel(section, topic) {
                         const sectionRange = this.estimateRange(section.weight_min, section.weight_max, this.totalQuestions);
                         const topicWeight = this.parseWeight(topic.weight);
+                        if (section.topics.length > 0 && section.topics.every((item) => this.parseWeight(item.weight) === 0)) {
+                            return 'Theo phần';
+                        }
                         if (topicWeight === null) {
                             return '—';
                         }

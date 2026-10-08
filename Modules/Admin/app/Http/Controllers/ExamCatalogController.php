@@ -127,7 +127,10 @@ final class ExamCatalogController extends Controller
 
         return ExamCatalog::query()
             ->with(['blueprint:id,name,slug,code,description,status,total_questions', 'professions:id,name'])
-            ->withCount(['questions as bank_questions_count' => fn ($query) => ServePublishedQuestion::scopeAvailable($query)])
+            ->withCount([
+                'questions as attached_questions_count',
+                'questions as bank_questions_count' => fn ($query) => ServePublishedQuestion::scopeAvailable($query),
+            ])
             ->when($q !== '', function ($query) use ($like): void {
                 $query->where(function ($inner) use ($like): void {
                     $inner->where('name', 'like', $like)
@@ -163,6 +166,7 @@ final class ExamCatalogController extends Controller
                     'profession_ids' => $catalog->professions->pluck('id')->map(fn ($id): int => (int) $id)->values()->all(),
                     'profession_names' => $catalog->professions->pluck('name')->values()->all(),
                     'questions_count' => ($matrix['ready'] ?? false) ? (int) $matrix['total_questions'] : 0,
+                    'attached_questions_count' => (int) $catalog->attached_questions_count,
                     'bank_questions_count' => (int) $catalog->bank_questions_count,
                     'sample_exam_id' => $catalog->sample_exam_id,
                     'update_url' => route(PortalRoute::content('exam-catalogs.update'), $catalog),
