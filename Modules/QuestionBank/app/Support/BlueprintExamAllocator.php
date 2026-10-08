@@ -42,6 +42,16 @@ final class BlueprintExamAllocator
      */
     public function allocate(Blueprint $blueprint): array
     {
+        return $this->build($blueprint, false);
+    }
+
+    public function allocateRandom(Blueprint $blueprint): array
+    {
+        return $this->build($blueprint, true);
+    }
+
+    private function build(Blueprint $blueprint, bool $random): array
+    {
         $blueprint->loadMissing([
             'sections' => fn ($query) => $query
                 ->where('status', TaxonomyStatus::Active)
@@ -101,10 +111,16 @@ final class BlueprintExamAllocator
             ];
         }
 
-        $sectionCounts = $this->distributeByShare(
-            $total,
-            array_map(fn (array $row): float => $row['share'], $sectionShares),
-        );
+        $sectionCounts = $random
+            ? $this->randomSectionCounts($total, $sectionShares)
+            : $this->distributeByShare($total, array_map(fn (array $row): float => $row['share'], $sectionShares));
+
+        if ($sectionCounts === null) {
+            return array_merge($base, [
+                'ready' => false,
+                'reason' => 'Khoảng tỉ trọng min/max của các phần không thể phân bổ đủ tổng số câu. Hãy chỉnh lại ma trận.',
+            ]);
+        }
 
         $payloadSections = [];
         $allocatedTotal = 0;
@@ -200,6 +216,40 @@ final class BlueprintExamAllocator
         }
 
         return ($minVal + $maxVal) / 2;
+    }
+
+    /**
+     * @param  list<array{section: mixed, share: float}>  $sections
+     * @return list<int>|null
+     */
+    private function randomSectionCounts(int $total, array $sections): ?array
+    {
+        $minimums = $maximums = [];
+        foreach ($sections as $row) {
+            $section = $row['section'];
+            $min = $section->weight_min ?? $section->weight_max;
+            $max = $section->weight_max ?? $section->weight_min;
+            if ($min === null || $max === null || (float) $min > (float) $max) {
+                return null;
+            }
+            $minimums[] = (int) ceil($total * (float) $min / 100 - 0.0000001);
+            $maximums[] = (int) floor($total * (float) $max / 100 + 0.0000001);
+        }
+
+        if (array_sum($minimums) > $total || array_sum($maximums) < $total) {
+            return null;
+        }
+
+        $counts = $minimums;
+        $remaining = $total - array_sum($counts);
+        while ($remaining > 0) {
+            $eligible = array_keys(array_filter($counts, fn (int $count, int $index): bool => $count < $maximums[$index], ARRAY_FILTER_USE_BOTH));
+            $index = $eligible[random_int(0, count($eligible) - 1)];
+            $counts[$index]++;
+            $remaining--;
+        }
+
+        return $counts;
     }
 
     /**

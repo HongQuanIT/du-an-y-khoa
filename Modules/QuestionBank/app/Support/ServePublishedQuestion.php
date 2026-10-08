@@ -21,6 +21,8 @@ final class ServePublishedQuestion
     public static function scopeAvailable(Builder $query): Builder
     {
         return $query->where(function (Builder $builder): void {
+            $builder->whereNull('code')->orWhere('code', 'not like', 'EXAM-BP%');
+        })->where(function (Builder $builder): void {
             $builder->where('status', QuestionStatus::Published)
                 ->orWhere(function (Builder $revision): void {
                     $revision->whereNotNull('published_version')
@@ -35,6 +37,10 @@ final class ServePublishedQuestion
 
     public static function isAvailable(Question $question): bool
     {
+        if (str_starts_with((string) $question->code, 'EXAM-BP')) {
+            return false;
+        }
+
         if ($question->status === QuestionStatus::Published) {
             return true;
         }

@@ -72,6 +72,9 @@ final class StudySessionController extends Controller
 
         $question = $this->snapshots->question($session, (string) $questionIds[$index]);
         abort_if($question === null, 410, 'Nội dung câu hỏi của phiên này không còn khả dụng.');
+        if ($session->mode === SessionMode::Exam && str_starts_with((string) $question->code, 'EXAM-BP')) {
+            return redirect()->route('exam.index')->with('status', 'Phiên thi này chứa câu hỏi giả lập cũ và cần được tạo lại.');
+        }
         $questionKey = (string) $question->getKey();
         $attempt = $attempts->first(
             fn (QuestionAttempt $item): bool => (string) $item->question_id === $questionKey,

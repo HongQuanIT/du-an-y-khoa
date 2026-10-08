@@ -35,7 +35,9 @@ final class BuildFixedExamPaper
             if ($catalog->status !== TaxonomyStatus::Active || $catalog->blueprint?->status !== TaxonomyStatus::Active) {
                 throw ValidationException::withMessages(['blueprint' => 'Kỳ thi và ma trận phải đang hoạt động.']);
             }
-            $matrix = $this->allocator->allocate($catalog->blueprint);
+            $matrix = $learner === null
+                ? $this->allocator->allocate($catalog->blueprint)
+                : $this->allocator->allocateRandom($catalog->blueprint);
             if (! $matrix['ready']) {
                 throw ValidationException::withMessages(['blueprint' => $matrix['reason']]);
             }

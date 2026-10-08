@@ -50,7 +50,7 @@
                     $locked = ! $canStartExam;
                     $ready = (bool) ($card['ready'] ?? false);
                 @endphp
-                <article class="flex h-full flex-col rounded-2xl border border-outline-variant bg-white p-5 shadow-sm">
+                <article x-data="{ confirming: false }" class="flex h-full flex-col rounded-2xl border border-outline-variant bg-white p-5 shadow-sm">
                     <div class="flex min-h-[92px] items-start justify-between gap-4">
                         <div class="min-w-0 flex-1">
                             <div class="flex items-start gap-3">
@@ -95,6 +95,8 @@
 
                     @if (! $ready && $card['reason'])
                         <p class="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900">{{ $card['reason'] }}</p>
+                    @elseif (! $card['premium_ready'] && $card['premium_reason'])
+                        <p class="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900">{{ $card['premium_reason'] }}</p>
                     @endif
 
                     <div class="mt-5 mt-auto">
@@ -114,22 +116,46 @@
                                 <span class="material-symbols-outlined text-[18px]">lock</span>
                                 Nâng cấp để tạo đề mới
                             </a>
-                        @elseif (! $ready)
+                        @elseif (! $card['premium_ready'])
                             <button type="button" disabled
                                 class="inline-flex h-11 w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-outline px-4 text-sm font-bold text-white">
                                 Kỳ thi chưa sẵn sàng
                             </button>
                         @else
-                            <form method="POST" action="{{ route('exam.from-blueprint', $card['id']) }}" class="w-full">
-                                @csrf
-                                <button type="submit"
+                            <div class="w-full">
+                                <button type="button" @click="confirming = true"
                                     class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-white transition-colors hover:bg-primary/90">
                                     <span class="material-symbols-outlined text-[18px]">add_circle</span>
                                     Tạo đề mới · Premium
                                 </button>
-                            </form>
+                            </div>
                         @endif
                     </div>
+                    @if (! $locked && $card['premium_ready'])
+                        <div x-show="confirming" x-cloak @keydown.escape.window="confirming = false"
+                            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true"
+                            aria-labelledby="create-exam-title-{{ $card['id'] }}" @click.self="confirming = false">
+                            <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+                                <h3 id="create-exam-title-{{ $card['id'] }}" class="text-lg font-bold text-on-surface">Tạo đề thi mới</h3>
+                                <p class="mt-3 text-sm leading-6 text-on-surface-variant">
+                                    Kỳ thi này có bài mẫu cố định. Đề Premium mới sẽ chọn ngẫu nhiên số câu ở từng phần trong khoảng tỉ trọng min/max của ma trận, rồi chia cho các chủ đề theo tỉ trọng đã cấu hình.
+                                </p>
+                                <p class="mt-2 text-sm font-semibold text-on-surface">Tổng đề: {{ $card['question_count'] }} câu. Bộ câu được lưu riêng để bạn làm sau.</p>
+                                <ul class="mt-3 max-h-40 space-y-1 overflow-y-auto text-sm text-on-surface-variant">
+                                    @foreach ($card['section_ranges'] as $range)
+                                        <li class="flex justify-between gap-3"><span>{{ $range['name'] }}</span><strong class="shrink-0 text-on-surface">{{ $range['min'] }}–{{ $range['max'] }} câu</strong></li>
+                                    @endforeach
+                                </ul>
+                                <div class="mt-6 flex justify-end gap-3">
+                                    <button type="button" @click="confirming = false" class="rounded-xl border border-outline-variant px-4 py-2 text-sm font-bold text-on-surface">Hủy</button>
+                                    <form method="POST" action="{{ route('exam.from-blueprint', $card['id']) }}">
+                                        @csrf
+                                        <button type="submit" class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white">Tạo đề</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
                 </article>
             @empty
                 <div class="col-span-full rounded-2xl border border-dashed border-outline-variant bg-white px-6 py-12 text-center">

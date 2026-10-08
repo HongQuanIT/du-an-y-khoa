@@ -2,6 +2,23 @@
 
 ## 2026-10-08
 
+### Feat — Tạo đề Premium ngẫu nhiên theo ma trận
+
+- Thêm popup xác nhận, hiển thị khoảng câu theo phần và random quota phần trong barem min/max cho từng đề Premium.
+- Giữ phân bổ bài mẫu cố định; lưu snapshot ma trận của đề được tạo.
+
+### Fix — Loại câu hỏi giả lập khỏi đề thi
+
+- Không phục vụ câu có mã `EXAM-BP*` trong phiên thi mới; chặn tiếp tục đề cũ chứa câu giả lập và báo cần tạo lại.
+- Hiển thị số câu đã xuất bản có thể dùng trong danh mục kỳ thi.
+- Bỏ nhãn lâm sàng cố định và đánh số câu theo vị trí phân trang.
+
+### Fix — Cải thiện bảng danh mục kỳ thi
+
+- Điều chỉnh độ rộng các cột và giới hạn tên đối tượng, ma trận dài ở hai dòng để tránh vỡ hàng.
+
+## 2026-10-08
+
 ### Fix — Điều hướng khi thoát phiên thi
 
 - Khi học viên tạm dừng và thoát phiên thi, chuyển về trang Kỳ thi thay vì QBank.
