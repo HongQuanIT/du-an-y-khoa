@@ -41,7 +41,6 @@
 
         <div class="mb-4">
             <h2 class="text-lg font-bold text-on-surface">Chọn kỳ thi</h2>
-            <p class="mt-1 text-sm text-on-surface-variant">Kỳ thi theo chức danh của bạn · 40% câu dễ, 30% trung bình, 30% khó (làm tròn theo số câu).</p>
         </div>
 
         <div class="grid gap-4 lg:grid-cols-3">
