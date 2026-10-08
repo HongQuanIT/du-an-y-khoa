@@ -55,6 +55,9 @@ final class ExamCatalogService
                     'suggested_duration_minutes' => 0,
                     'topic_count' => 0,
                 ];
+            $premiumMatrix = $blueprint !== null && $matrix['ready']
+                ? $this->allocator->allocateRandom($blueprint)
+                : $matrix;
 
             return [
                 'id' => $catalog->id,
@@ -69,6 +72,19 @@ final class ExamCatalogService
                 'sections_count' => (int) ($blueprint->sections_count ?? 0),
                 'ready' => $matrix['ready'],
                 'reason' => $matrix['reason'],
+                'premium_ready' => $premiumMatrix['ready'],
+                'premium_reason' => $premiumMatrix['reason'],
+                'section_ranges' => collect($matrix['sections'] ?? [])->map(function (array $section) use ($matrix): array {
+                    $total = $matrix['total_questions'];
+                    $min = $section['weight_min'] ?? $section['weight_max'];
+                    $max = $section['weight_max'] ?? $section['weight_min'];
+
+                    return [
+                        'name' => $section['name'],
+                        'min' => (int) ceil($total * $min / 100 - 0.0000001),
+                        'max' => (int) floor($total * $max / 100 + 0.0000001),
+                    ];
+                })->all(),
                 'question_count' => $matrix['total_questions'],
                 'duration_minutes' => $matrix['suggested_duration_minutes'],
                 'topic_count' => $matrix['topic_count'],
