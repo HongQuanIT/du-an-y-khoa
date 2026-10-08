@@ -9,6 +9,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\View\View;
+use Modules\Exam\Enums\ExamStatus;
 use Modules\Exam\Models\Exam;
 use Modules\QuestionBank\Models\QuestionSession;
 use Modules\QuestionBank\Support\BlueprintExamAllocator;
@@ -20,6 +21,20 @@ final class ExamController extends Controller
 {
     public function index(Request $request): View
     {
+        $search = trim((string) $request->query('q', ''));
+        $kind = in_array($request->query('kind'), ['sample', 'personal', 'legacy'], true)
+            ? (string) $request->query('kind')
+            : '';
+        $status = in_array($request->query('status'), [ExamStatus::Draft->value, ExamStatus::Published->value], true)
+            ? (string) $request->query('status')
+            : '';
+        $stats = [
+            'total' => Exam::query()->count(),
+            'sample' => Exam::query()->where('kind', 'sample')->count(),
+            'personal' => Exam::query()->where('kind', 'personal')->count(),
+            'draft' => Exam::query()->where('status', ExamStatus::Draft)->count(),
+        ];
+
         $exams = Exam::query()
             ->select([
                 'exams.id',
@@ -36,8 +51,10 @@ final class ExamController extends Controller
             ])
             ->with(['user:id,name,email', 'blueprint:id,name,code'])
             ->withCount('questions')
-            ->when($request->filled('q'), function ($query) use ($request): void {
-                $term = '%'.trim((string) $request->query('q')).'%';
+            ->when($kind !== '', fn ($query) => $query->where('kind', $kind))
+            ->when($status !== '', fn ($query) => $query->where('status', $status))
+            ->when($search !== '', function ($query) use ($search): void {
+                $term = '%'.addcslashes($search, '%_\\').'%';
                 $query->where(function ($builder) use ($term): void {
                     $builder->where('title', 'like', $term)
                         ->orWhereHas('user', fn ($userQuery) => $userQuery
@@ -52,7 +69,7 @@ final class ExamController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        return view('admin::exams.index', compact('exams'));
+        return view('admin::exams.index', compact('exams', 'stats', 'search', 'kind', 'status'));
     }
 
     public function show(Exam $exam): View
