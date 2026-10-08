@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Support\Enums\Entitlement;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Modules\Exam\Enums\ExamStatus;
 use Modules\Exam\Http\Requests\StartExamRequest;
@@ -51,6 +52,16 @@ final class StartExamController extends Controller
         // Chỉ chủ bài thi (hoặc bài thi hệ thống cũ không có user) mới được làm lại.
         if ($exam->user_id !== null && (int) $exam->user_id !== (int) $user->id) {
             abort(403);
+        }
+
+        if (DB::table('exam_question')
+            ->join('questions', 'questions.id', '=', 'exam_question.question_id')
+            ->where('exam_question.exam_id', $exam->id)
+            ->where('questions.code', 'like', 'EXAM-BP%')
+            ->exists()) {
+            throw ValidationException::withMessages([
+                'exam' => 'Đề này chứa câu hỏi giả lập cũ. Quản trị viên cần tạo lại bài mẫu hoặc bạn hãy tạo đề Premium mới.',
+            ]);
         }
 
         $questionCount = $exam->paper_snapshot ? count($exam->paper_snapshot) : $exam->questions()->count();

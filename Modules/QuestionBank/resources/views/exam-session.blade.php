@@ -381,7 +381,6 @@
 
                         <section class="space-y-6">
                             <div class="flex flex-wrap items-center gap-2">
-                                <span class="rounded bg-primary px-3 py-1 text-label-sm tracking-wider text-white uppercase">Lâm sàng</span>
                                 <span
                                     class="inline-flex max-w-[min(100%,16rem)] truncate rounded-full bg-surface-container-highest px-3 py-1 font-label-sm text-label-sm font-bold text-on-surface-variant"
                                     title="{{ $categoryBadge['category'] }}">
@@ -392,7 +391,7 @@
                                 </span>
                             </div>
                             <article class="max-w-none">
-                                <h2 class="mb-4 font-headline-md text-headline-md text-on-surface">Trường hợp lâm sàng</h2>
+                                <h2 class="mb-4 font-headline-md text-headline-md font-bold text-on-surface">Câu {{ $index + 1 }}</h2>
                                 <div class="text-body-md leading-relaxed whitespace-pre-line text-on-surface" data-learner-image-viewer>{!! $stemHtml !!}</div>
                             </article>
                         </section>
