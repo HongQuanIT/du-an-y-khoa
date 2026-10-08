@@ -78,7 +78,7 @@
 
         <div class="overflow-hidden rounded-xl border border-outline-variant bg-surface" :class="loading && 'opacity-70'">
             <div class="w-full overflow-x-auto">
-                <table class="w-full min-w-[760px] border-collapse text-left text-sm">
+                <table class="w-full min-w-[1080px] border-collapse text-left text-sm">
                     <caption class="sr-only">Danh sách kỳ thi</caption>
                     <thead class="border-b border-outline-variant bg-surface-container-low text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
                         <tr>
@@ -92,9 +92,9 @@
                             </th>
                             <th scope="col" class="px-4 py-3">Đối tượng</th>
                             <th scope="col" class="px-4 py-3">Ma trận</th>
-                            <th scope="col" class="w-[100px] px-4 py-3 text-right">Câu hỏi</th>
+                            <th scope="col" class="w-[120px] px-4 py-3 text-right" title="Số câu của mỗi đề theo ma trận">Câu / đề</th>
                             <th scope="col" class="w-[130px] px-4 py-3">Trạng thái</th>
-                            <th scope="col" class="w-[160px] px-5 py-3 text-right">Thao tác</th>
+                            <th scope="col" class="w-[360px] min-w-[360px] px-5 py-3 text-right">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-outline-variant/60">
@@ -112,7 +112,10 @@
                                     <span class="line-clamp-2" x-text="(item.profession_names || []).join(', ') || '—'"></span>
                                 </td>
                                 <td class="px-4 py-3.5 align-middle text-on-surface" x-text="item.blueprint_name || 'Chưa gắn'"></td>
-                                <td class="px-4 py-3.5 text-right align-middle tabular-nums text-on-surface" x-text="item.questions_count"></td>
+                                <td class="px-4 py-3.5 text-right align-middle tabular-nums text-on-surface">
+                                    <span x-text="item.questions_count"></span>
+                                    <span x-show="item.blueprint_id && item.bank_questions_count !== item.questions_count" class="block text-[10px] text-on-surface-variant" title="Số câu đang gắn trong ngân hàng">Kho: <span x-text="item.bank_questions_count"></span></span>
+                                </td>
                                 <td class="px-4 py-3.5 align-middle">
                                     <span class="inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
                                         :class="item.status === 'active'
@@ -120,14 +123,40 @@
                                             : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'"
                                         x-text="item.status === 'active' ? 'Đang dùng' : 'Ngừng dùng'"></span>
                                 </td>
-                                <td class="px-5 py-3.5 text-right align-middle">
-                                    <div class="inline-flex items-center justify-end gap-1.5">
+                                <td class="min-w-[360px] px-5 py-3.5 text-right align-middle">
+                                    <div class="flex flex-nowrap items-center justify-end gap-2 whitespace-nowrap">
+                                        @if (request()->routeIs('admin.*'))
+                                        <a x-show="item.sample_exam_id" x-cloak
+                                            :href="@js(url('/admin/exams')) + '/' + item.sample_exam_id"
+                                            class="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-primary/20 bg-primary/5 px-3 text-xs font-semibold text-primary transition-colors hover:border-primary/40 hover:bg-primary/10"
+                                            title="Xem bài thi mẫu hiện tại">
+                                            <span class="material-symbols-outlined text-[17px]">visibility</span>
+                                            Xem mẫu
+                                        </a>
+                                        @can('blueprint.update')
+                                        <form x-show="canUpdate && item.blueprint_id" x-cloak method="POST"
+                                            :action="@js(url('/admin/exam-catalogs')) + '/' + item.id + '/sample'"
+                                            class="inline-flex shrink-0">
+                                            @csrf
+                                            <button type="submit"
+                                                class="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-primary/30 bg-surface px-3 text-xs font-semibold text-primary transition-colors hover:bg-primary/5"
+                                                :title="item.sample_exam_id ? 'Tạo phiên bản bài thi mẫu mới' : 'Tạo bài thi mẫu'">
+                                                <span class="material-symbols-outlined text-[17px]" x-text="item.sample_exam_id ? 'refresh' : 'add_circle'"></span>
+                                                <span x-text="item.sample_exam_id ? 'Tạo bản mới' : 'Tạo bài mẫu'"></span>
+                                            </button>
+                                        </form>
+                                        @endcan
+                                        @endif
                                         <button type="button" x-show="canUpdate" @click="openEdit(item)"
-                                            class="inline-flex h-8 items-center rounded-lg border border-outline-variant px-2.5 text-xs font-medium text-on-surface hover:bg-surface-container-low">
+                                            class="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-outline-variant bg-surface px-3 text-xs font-medium text-on-surface transition-colors hover:bg-surface-container-low"
+                                            title="Sửa kỳ thi">
+                                            <span class="material-symbols-outlined text-[17px]">edit</span>
                                             Sửa
                                         </button>
                                         <button type="button" x-show="canDelete" @click="confirming = item"
-                                            class="inline-flex h-8 items-center rounded-lg px-2.5 text-xs font-medium text-error hover:bg-error/10">
+                                            class="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-error transition-colors hover:bg-error/10"
+                                            title="Xoá kỳ thi">
+                                            <span class="material-symbols-outlined text-[17px]">delete</span>
                                             Xoá
                                         </button>
                                     </div>

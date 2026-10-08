@@ -18,6 +18,7 @@ use Modules\Auth\Models\Profession;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
 use Modules\QuestionBank\Models\Blueprint;
 use Modules\QuestionBank\Models\ExamCatalog;
+use Modules\QuestionBank\Support\BlueprintExamAllocator;
 
 final class ExamCatalogController extends Controller
 {
@@ -29,7 +30,7 @@ final class ExamCatalogController extends Controller
         'inactive' => 'Ngừng dùng',
     ];
 
-    public function index(Request $request): View|JsonResponse
+    public function index(Request $request, BlueprintExamAllocator $allocator): View|JsonResponse
     {
         $this->authorizePermission('blueprint.view');
 
@@ -38,13 +39,13 @@ final class ExamCatalogController extends Controller
 
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
-                'data' => $this->presentItems($paginator),
+                'data' => $this->presentItems($paginator, $allocator),
                 'meta' => $this->presentMeta($paginator),
             ]);
         }
 
         return view('admin::exam-catalogs.index', [
-            'catalogItems' => $this->presentItems($paginator),
+            'catalogItems' => $this->presentItems($paginator, $allocator),
             'catalogMeta' => $this->presentMeta($paginator),
             'filters' => $filters,
             'focusId' => $request->filled('focus') ? (int) $request->query('focus') : null,
@@ -124,7 +125,7 @@ final class ExamCatalogController extends Controller
         $like = '%'.addcslashes($q, '%_\\').'%';
 
         return ExamCatalog::query()
-            ->with(['blueprint:id,name', 'professions:id,name'])
+            ->with(['blueprint:id,name,slug,code,description,status,total_questions', 'professions:id,name'])
             ->withCount('questions')
             ->when($q !== '', function ($query) use ($like): void {
                 $query->where(function ($inner) use ($like): void {
@@ -142,10 +143,12 @@ final class ExamCatalogController extends Controller
     /**
      * @return list<array<string, mixed>>
      */
-    private function presentItems(LengthAwarePaginator $paginator): array
+    private function presentItems(LengthAwarePaginator $paginator, BlueprintExamAllocator $allocator): array
     {
         return $paginator->getCollection()
-            ->map(function (ExamCatalog $catalog): array {
+            ->map(function (ExamCatalog $catalog) use ($allocator): array {
+                $matrix = $catalog->blueprint !== null ? $allocator->allocate($catalog->blueprint) : null;
+
                 return [
                     'id' => (int) $catalog->id,
                     'name' => $catalog->name,
@@ -158,7 +161,9 @@ final class ExamCatalogController extends Controller
                     'blueprint_name' => $catalog->blueprint?->name,
                     'profession_ids' => $catalog->professions->pluck('id')->map(fn ($id): int => (int) $id)->values()->all(),
                     'profession_names' => $catalog->professions->pluck('name')->values()->all(),
-                    'questions_count' => (int) $catalog->questions_count,
+                    'questions_count' => ($matrix['ready'] ?? false) ? (int) $matrix['total_questions'] : 0,
+                    'bank_questions_count' => (int) $catalog->questions_count,
+                    'sample_exam_id' => $catalog->sample_exam_id,
                     'update_url' => route(PortalRoute::content('exam-catalogs.update'), $catalog),
                     'destroy_url' => route(PortalRoute::content('exam-catalogs.destroy'), $catalog),
                 ];

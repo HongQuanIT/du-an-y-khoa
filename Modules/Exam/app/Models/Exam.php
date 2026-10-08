@@ -15,6 +15,9 @@ use Modules\QuestionBank\Models\Question;
 class Exam extends Model
 {
     protected $fillable = [
+        'kind',
+        'paper_snapshot',
+        'matrix_snapshot',
         'user_id',
         'blueprint_id',
         'exam_catalog_id',
@@ -27,6 +30,8 @@ class Exam extends Model
     ];
 
     protected $casts = [
+        'paper_snapshot' => 'array',
+        'matrix_snapshot' => 'array',
         'user_id' => 'integer',
         'blueprint_id' => 'integer',
         'exam_catalog_id' => 'integer',
@@ -76,6 +81,10 @@ class Exam extends Model
 
     public function questionCount(): int
     {
+        if ($this->paper_snapshot) {
+            return count($this->paper_snapshot);
+        }
+
         return (int) ($this->questions_count ?? $this->questions()->count());
     }
 

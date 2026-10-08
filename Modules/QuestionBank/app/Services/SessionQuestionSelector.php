@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Modules\Auth\Models\LearnerProfile;
+use Modules\Exam\Models\Exam;
 use Modules\Personalization\Models\Bookmark;
 use Modules\Personalization\Models\BookmarkFolderItem;
 use Modules\QuestionBank\Data\CreateSessionData;
@@ -20,7 +21,6 @@ use Modules\QuestionBank\Enums\SessionSource;
 use Modules\QuestionBank\Enums\UserQuestionStatus;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionAttempt;
-use Modules\QuestionBank\Models\QuestionSession;
 use Modules\QuestionBank\Models\QuestionStatus as UserQuestionStatusModel;
 use Modules\QuestionBank\Support\AdaptiveTrace;
 use Modules\QuestionBank\Support\QuestionFilterBuilder;
@@ -49,6 +49,11 @@ final class SessionQuestionSelector
         }
 
         if ($data->examId !== null) {
+            $paper = Exam::find($data->examId)?->paper_snapshot;
+            if ($paper) {
+                return array_column($paper, 'question_id');
+            }
+
             return DB::table('exam_question')
                 ->where('exam_id', $data->examId)
                 ->orderBy('order')
@@ -125,7 +130,7 @@ final class SessionQuestionSelector
         }
 
         if ($data->examId !== null) {
-            return DB::table('exam_question')->where('exam_id', $data->examId)->count();
+            return Exam::find($data->examId)?->questionCount() ?? 0;
         }
 
         $lessonIds = $this->filters->resolveContentLessonIds(

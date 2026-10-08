@@ -6,27 +6,33 @@ namespace Modules\Exam\Tests\Feature;
 
 use App\Models\User;
 use App\Support\Enums\Role;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
+use Modules\Auth\Models\LearnerProfile;
+use Modules\Auth\Models\Profession;
 use Modules\Billing\Database\Seeders\BillingDatabaseSeeder;
 use Modules\Billing\Models\Plan;
 use Modules\Billing\Models\Subscription;
+use Modules\Exam\Actions\BuildFixedExamPaper;
+use Modules\Exam\Database\Seeders\AbcdExamQuestionSeeder;
 use Modules\Exam\Enums\ExamStatus;
 use Modules\Exam\Models\Exam;
 use Modules\QuestionBank\Enums\Difficulty;
 use Modules\QuestionBank\Enums\QuestionStatus;
 use Modules\QuestionBank\Enums\SessionMode;
 use Modules\QuestionBank\Enums\SessionSource;
+use Modules\QuestionBank\Enums\SessionStatus;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
-use Modules\Auth\Models\LearnerProfile;
-use Modules\Auth\Models\Profession;
-use Modules\QuestionBank\Models\ExamCatalog;
 use Modules\QuestionBank\Models\Blueprint;
 use Modules\QuestionBank\Models\BlueprintSection;
 use Modules\QuestionBank\Models\CoreClinicalTopic;
+use Modules\QuestionBank\Models\ExamCatalog;
 use Modules\QuestionBank\Models\Lesson;
 use Modules\QuestionBank\Models\Question;
 use Modules\QuestionBank\Models\QuestionSession;
 use Modules\QuestionBank\Models\QuestionSessionSnapshot;
+use Modules\QuestionBank\Services\QuestionSessionSnapshots;
 use Spatie\Permission\Models\Role as RoleModel;
 use Tests\Support\CreatesMedicalTaxonomy;
 use Tests\TestCase;
@@ -48,7 +54,7 @@ final class ExamModuleTest extends TestCase
 
         RoleModel::findOrCreate(Role::Student->value, 'web');
         $this->seed(BillingDatabaseSeeder::class);
-        $this->seed(\Database\Seeders\RolePermissionSeeder::class);
+        $this->seed(RolePermissionSeeder::class);
 
         $this->user = User::factory()->create();
         $this->user->assignRole(Role::Student->value);
@@ -80,13 +86,14 @@ final class ExamModuleTest extends TestCase
             ->assertOk()
             ->assertSee('Chọn kỳ thi')
             ->assertSee('Kỳ thi TNLS')
-            ->assertSee('Nâng cấp để tạo bài thi');
+            ->assertSee('Nâng cấp để tạo đề mới');
     }
 
     public function test_premium_user_can_create_bai_thi_from_blueprint_and_start(): void
     {
         [$blueprint, , $coreTopic, $catalog] = $this->seedWeightedBlueprint('Resident Matrix', 2);
         $q1 = $this->examPoolQuestion('Resident first');
+        $q1->update(['difficulty' => Difficulty::Easy]);
         $q1->lessons()->sync([$this->topic->id]);
         $q1->examCatalogs()->sync([$catalog->id]);
         $q1->professions()->sync([$this->professionId]);
@@ -99,7 +106,7 @@ final class ExamModuleTest extends TestCase
 
         $this->actingAs($this->user)
             ->post(route('exam.from-blueprint', $catalog))
-            ->assertRedirect();
+            ->assertRedirect(route('exam.index'));
 
         $exam = Exam::query()->where('user_id', $this->user->id)->firstOrFail();
         $this->assertSame($blueprint->id, $exam->blueprint_id);
@@ -108,6 +115,12 @@ final class ExamModuleTest extends TestCase
         $this->assertSame(1, $exam->examTopics()->count());
         $this->assertSame($coreTopic->id, $exam->examTopics()->firstOrFail()->core_clinical_topic_id);
 
+        $this->assertSame(0, QuestionSession::query()->count());
+
+        $this->actingAs($this->user)
+            ->post(route('exam.start', $exam))
+            ->assertRedirect();
+
         $session = QuestionSession::query()->firstOrFail();
         $this->assertSame(SessionMode::Exam, $session->mode);
         $this->assertSame(SessionSource::Exam, $session->source);
@@ -115,6 +128,11 @@ final class ExamModuleTest extends TestCase
         $this->assertSame(2, $session->total);
         $this->assertSame($exam->duration_minutes * 60, $session->time_limit_seconds);
         $this->assertSame(2, QuestionSessionSnapshot::query()->where('session_id', $session->getKey())->count());
+
+        $this->actingAs($this->user)
+            ->post(route('qbank.session.pause', $session), ['current_index' => 0])
+            ->assertRedirect(route('exam.index'))
+            ->assertSessionHas('status', 'Đã lưu và tạm dừng phiên thi.');
     }
 
     public function test_creating_exam_requires_exam_simulation_entitlement(): void
@@ -183,7 +201,7 @@ final class ExamModuleTest extends TestCase
             'user_id' => $this->user->getKey(),
             'mode' => SessionMode::Exam,
             'source' => SessionSource::Exam,
-            'status' => \Modules\QuestionBank\Enums\SessionStatus::Completed,
+            'status' => SessionStatus::Completed,
             'exam_id' => null,
             'filters' => ['exam_id' => null],
             'question_ids' => [$question->getKey()],
@@ -192,7 +210,7 @@ final class ExamModuleTest extends TestCase
             'correct_count' => 1,
         ]);
 
-        app(\Modules\QuestionBank\Services\QuestionSessionSnapshots::class)->capture($session);
+        app(QuestionSessionSnapshots::class)->capture($session);
 
         $this->actingAs($this->user)
             ->get(route('exam.summary', $session))
@@ -216,7 +234,7 @@ final class ExamModuleTest extends TestCase
             'user_id' => $this->user->getKey(),
             'mode' => SessionMode::Exam,
             'source' => SessionSource::Exam,
-            'status' => \Modules\QuestionBank\Enums\SessionStatus::Completed,
+            'status' => SessionStatus::Completed,
             'exam_id' => $exam->getKey(),
             'question_ids' => [$question->getKey()],
             'total' => 1,
@@ -224,7 +242,7 @@ final class ExamModuleTest extends TestCase
             'correct_count' => 1,
         ]);
 
-        app(\Modules\QuestionBank\Services\QuestionSessionSnapshots::class)->capture($session);
+        app(QuestionSessionSnapshots::class)->capture($session);
 
         $this->actingAs($this->user)
             ->get(route('exam.summary', $session))
@@ -260,7 +278,7 @@ final class ExamModuleTest extends TestCase
             'user_id' => $this->user->getKey(),
             'mode' => SessionMode::Exam,
             'source' => SessionSource::Exam,
-            'status' => \Modules\QuestionBank\Enums\SessionStatus::Completed,
+            'status' => SessionStatus::Completed,
             'exam_id' => $exam->getKey(),
             'question_ids' => [$question->getKey()],
             'total' => 1,
@@ -268,7 +286,7 @@ final class ExamModuleTest extends TestCase
             'correct_count' => 1,
         ]);
 
-        app(\Modules\QuestionBank\Services\QuestionSessionSnapshots::class)->capture($session);
+        app(QuestionSessionSnapshots::class)->capture($session);
 
         $this->actingAs($this->user)
             ->get(route('exam.review', $session))
@@ -276,6 +294,112 @@ final class ExamModuleTest extends TestCase
             ->assertSee('Xem lại kỳ thi')
             ->assertDontSee('test-chest-xray.jpg')
             ->assertDontSee('imageViewerOpen');
+    }
+
+    public function test_sample_paper_is_fixed_and_available_to_free_learners(): void
+    {
+        [$blueprint, , , $catalog] = $this->seedWeightedBlueprint('Sample', 10);
+        foreach ([Difficulty::VeryEasy, Difficulty::Easy, Difficulty::Easy, Difficulty::Easy,
+            Difficulty::Medium, Difficulty::Medium, Difficulty::Medium,
+            Difficulty::Hard, Difficulty::Hard, Difficulty::VeryHard] as $index => $difficulty) {
+            $question = $this->examPoolQuestion('Fixed '.$index);
+            $question->update(['difficulty' => $difficulty, 'is_free' => false]);
+            $question->lessons()->sync([$this->topic->id]);
+            $question->professions()->sync([$this->professionId]);
+            $question->examCatalogs()->sync([$catalog->id]);
+        }
+        $paper = app(BuildFixedExamPaper::class)->handle($catalog);
+        $this->actingAsWithWebSession($this->user)->post(route('exam.start', $paper))->assertNotFound();
+        $this->assertSame(['easy' => 4, 'medium' => 3, 'hard' => 3], $paper->matrix_snapshot['difficulty_quotas']);
+        $this->assertSame(10, count($paper->paper_snapshot));
+        $paper->update(['status' => ExamStatus::Published, 'is_published' => true]);
+        $catalog->forceFill(['sample_exam_id' => $paper->id])->save();
+        $first = $paper->paper_snapshot[0];
+        Question::findOrFail($first['question_id'])->update(['stem' => 'Changed source']);
+        $this->actingAsWithWebSession($this->user)->post(route('exam.start', $paper))->assertRedirect();
+        $one = QuestionSession::query()->latest()->firstOrFail();
+        $this->actingAsWithWebSession($this->user)->get(route('exam.session', $one))->assertOk()->assertSee($first['payload']['stem']);
+        $this->assertSame(array_column($paper->paper_snapshot, 'question_id'), $one->question_ids);
+        $this->assertSame($first['payload'], $one->snapshots()->where('question_id', $first['question_id'])->firstOrFail()->payload);
+        $other = User::factory()->create();
+        $other->assignRole(Role::Student->value);
+        LearnerProfile::create(['user_id' => $other->id, 'profession_id' => $this->professionId, 'onboarding_completed_at' => now()]);
+        $this->actingAsWithWebSession($other)->post(route('exam.start', $paper))->assertRedirect();
+        $two = QuestionSession::where('user_id', $other->id)->firstOrFail();
+        $this->assertSame($one->question_ids, $two->question_ids);
+        $this->assertNotSame($one->id, $two->id);
+        $this->assertSame(1, Exam::where('kind', 'sample')->count());
+        $this->actingAsWithWebSession($other)->post(route('admin.exams.publish-sample', $paper))->assertForbidden();
+        $this->actingAsWithWebSession($other)->get(route('exam.session', $one))->assertForbidden();
+    }
+
+    public function test_premium_papers_use_new_questions_then_reuse_when_the_catalog_pool_is_exhausted(): void
+    {
+        [, , , $catalog] = $this->seedWeightedBlueprint('Three papers', 10);
+        foreach (['easy' => 12, 'medium' => 9, 'hard' => 9] as $difficulty => $count) {
+            for ($index = 0; $index < $count; $index++) {
+                $question = $this->examPoolQuestion($difficulty.' '.$index);
+                $question->update(['difficulty' => Difficulty::from($difficulty)]);
+                $question->lessons()->sync([$this->topic->id]);
+                $question->professions()->sync([$this->professionId]);
+                $question->examCatalogs()->sync([$catalog->id]);
+            }
+        }
+
+        $sample = app(BuildFixedExamPaper::class)->handle($catalog);
+        $sample->update(['status' => ExamStatus::Published, 'is_published' => true]);
+        $catalog->forceFill(['sample_exam_id' => $sample->id])->save();
+        $this->grantPremium($this->user);
+
+        for ($index = 0; $index < 2; $index++) {
+            $this->actingAsWithWebSession($this->user)
+                ->post(route('exam.from-blueprint', $catalog))
+                ->assertRedirect();
+        }
+
+        $papers = Exam::query()->where('kind', 'personal')->where('user_id', $this->user->id)->get();
+        $this->assertCount(2, $papers);
+        $questionIds = collect([$sample, ...$papers->all()])
+            ->flatMap(fn (Exam $exam) => array_column($exam->paper_snapshot, 'question_id'));
+        $this->assertCount(30, $questionIds->unique());
+        $this->assertSame(0, QuestionSession::query()->where('user_id', $this->user->id)->count());
+
+        $this->actingAsWithWebSession($this->user)
+            ->from(route('exam.index'))
+            ->post(route('exam.from-blueprint', $catalog))
+            ->assertRedirect(route('exam.index'))
+            ->assertSessionHas('status', fn (string $message): bool => str_contains($message, '10/10 câu'));
+        $third = Exam::query()->where('kind', 'personal')->latest('id')->firstOrFail();
+        $this->assertSame(10, $third->matrix_snapshot['reused_question_count']);
+        $this->assertSame(3, Exam::query()->where('kind', 'personal')->count());
+        $this->assertSame(0, QuestionSession::query()->where('user_id', $this->user->id)->count());
+    }
+
+    public function test_fixed_paper_shortage_rolls_back(): void
+    {
+        [, , , $catalog] = $this->seedWeightedBlueprint('Shortage', 10);
+        try {
+            app(BuildFixedExamPaper::class)->handle($catalog);
+            $this->fail('Expected shortage');
+        } catch (ValidationException $exception) {
+            $this->assertStringContainsString('40/30/30', $exception->getMessage());
+        }
+        $this->assertSame(0, Exam::count());
+    }
+
+    public function test_abcd_catalog_seeds_600_matching_questions_without_duplicates(): void
+    {
+        [, , , $catalog] = $this->seedWeightedBlueprint('ABCD matrix', 40);
+        $catalog->update(['code' => 'abcd']);
+
+        $this->seed(AbcdExamQuestionSeeder::class);
+        $this->seed(AbcdExamQuestionSeeder::class);
+
+        $this->assertSame(600, $catalog->questions()->count());
+        $this->assertSame(600, $catalog->questions()->distinct('questions.id')->count('questions.id'));
+        $paper = app(BuildFixedExamPaper::class)->handle($catalog);
+        $this->assertSame(40, $paper->questionCount());
+        $this->assertSame(['easy' => 16, 'medium' => 12, 'hard' => 12], $paper->matrix_snapshot['difficulty_quotas']);
     }
 
     private function examPoolQuestion(string $stem): Question

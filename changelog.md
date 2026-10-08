@@ -1,5 +1,29 @@
 # Changelog
 
+## 2026-10-08
+
+### Fix — Điều hướng khi thoát phiên thi
+
+- Khi học viên tạm dừng và thoát phiên thi, chuyển về trang Kỳ thi thay vì QBank.
+- Giữ nguyên điều hướng về QBank cho các phiên luyện tập thông thường.
+- Đổi chữ thông báo trạng thái trên trang Kỳ thi sang màu trắng và bổ sung kiểm thử.
+
+## 2026-10-07
+
+### Feat — Hoàn thiện đề thi theo ma trận
+
+- Tách thao tác tạo đề Premium khỏi thao tác bắt đầu phiên thi; phân trang đề cá nhân và kiểm tra entitlement phía server.
+- Ưu tiên câu mới khi sinh đề, cho phép dùng lại có thông báo khi kho thiếu và rút gọn lỗi thiếu câu theo ma trận.
+- Hoàn thiện giao diện quản lý bài mẫu, trọng số mặc định cho ma trận cấp phép và seeder 600 câu demo cho kỳ thi `abcd`.
+
+### Feat — Bài thi mẫu cố định và đề Premium theo ma trận
+
+- Thêm tạo bản nháp, xem trước và xuất bản bài mẫu ngay trong luồng Kỳ thi Admin hiện có; mỗi kỳ thi có một bản mẫu hiện hành.
+- Dùng chung bộ chọn câu theo quota chủ đề và tỷ lệ 40% dễ, 30% trung bình, 30% khó; làm tròn bảo toàn tổng, không trùng câu và báo lỗi khi ngân hàng thiếu.
+- Lưu nội dung, đáp án và thứ tự câu tại thời điểm tạo đề; học viên miễn phí làm mẫu, Premium tạo thêm đề cá nhân. Mỗi lượt làm có tiến độ riêng.
+- Giữ phiên bản mẫu và kết quả cũ khi xuất bản bản mới; chặn xóa đề đã có lượt làm.
+- Bổ sung migration thêm trường, không reset/seed dữ liệu; chặn kiểm thử nếu kết nối thực tế khác SQLite `:memory:` và bỏ qua config cache local.
+
 ## 2026-10-06
 
 ### Feat — Cải thiện bộ lọc QBank cho học viên

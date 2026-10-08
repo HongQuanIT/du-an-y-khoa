@@ -25,6 +25,11 @@ abstract class TestCase extends BaseTestCase
 
         $app->make(Kernel::class)->bootstrap();
 
+        if ($app['config']->get('database.default') !== 'sqlite'
+            || $app['config']->get('database.connections.sqlite.database') !== ':memory:') {
+            throw new \RuntimeException('Dừng test: chỉ cho phép SQLite :memory:, không được dùng database local.');
+        }
+
         return $app;
     }
 
@@ -74,6 +79,7 @@ abstract class TestCase extends BaseTestCase
     {
         $forced = [
             'APP_ENV' => 'testing',
+            'APP_CONFIG_CACHE' => sys_get_temp_dir().'/medlearn-testing-no-config-cache.php',
             'DB_CONNECTION' => 'sqlite',
             'DB_DATABASE' => ':memory:',
             'DB_URL' => '',

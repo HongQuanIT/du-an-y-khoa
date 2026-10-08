@@ -313,7 +313,7 @@ final class StudySessionController extends Controller
         }
 
         if (! in_array($session->status, [SessionStatus::Active, SessionStatus::Paused], true)) {
-            return redirect()->route('qbank.index')
+            return redirect($this->exitUrl($session))
                 ->with('status', 'Phiên không còn hoạt động. Hãy tạo hoặc chọn một phiên khác.');
         }
 
@@ -331,11 +331,22 @@ final class StudySessionController extends Controller
                     ->with('status', 'Phiên đã hoàn thành nên không thể tạm dừng.');
             }
 
-            return redirect()->route('qbank.index')
+            return redirect($this->exitUrl($session))
                 ->with('status', 'Trạng thái phiên vừa thay đổi. Vui lòng kiểm tra lại.');
         }
 
-        return redirect()->route('qbank.index')->with('status', 'Đã lưu và tạm dừng phiên luyện tập.');
+        $message = $session->isFormalExam()
+            ? 'Đã lưu và tạm dừng phiên thi.'
+            : 'Đã lưu và tạm dừng phiên luyện tập.';
+
+        return redirect($this->exitUrl($session))->with('status', $message);
+    }
+
+    private function exitUrl(QuestionSession $session): string
+    {
+        return $session->isFormalExam()
+            ? route('exam.index')
+            : route('qbank.index');
     }
 
     public function resume(QuestionSession $session): RedirectResponse

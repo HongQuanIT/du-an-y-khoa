@@ -11,6 +11,8 @@ use Modules\QuestionBank\Enums\TaxonomyStatus;
 
 final class MedicalLicensingExamBlueprintSeeder extends Seeder
 {
+    private const DEFAULT_TOTAL_QUESTIONS = 200;
+
     public function run(): void
     {
         $existing = DB::table('blueprints')
@@ -106,6 +108,116 @@ final class MedicalLicensingExamBlueprintSeeder extends Seeder
                 ]);
             }
         }
+
+        $this->seedDefaultWeights($blueprintId);
+    }
+
+    /**
+     * Bổ sung tỷ trọng mặc định cho ma trận chưa được cấu hình.
+     *
+     * Tỷ trọng phần dựa trên số chủ đề của phần đó; các chủ đề trong cùng
+     * một phần được chia đều. Seeder chỉ điền giá trị còn thiếu để không ghi
+     * đè cấu hình mà quản trị viên đã điều chỉnh trên local hoặc production.
+     */
+    private function seedDefaultWeights(int $blueprintId): void
+    {
+        DB::table('blueprints')
+            ->where('id', $blueprintId)
+            ->whereNull('total_questions')
+            ->update([
+                'total_questions' => self::DEFAULT_TOTAL_QUESTIONS,
+                'updated_at' => now(),
+            ]);
+
+        $sections = DB::table('blueprint_sections')
+            ->where('blueprint_id', $blueprintId)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get(['id', 'weight_min', 'weight_max']);
+
+        if ($sections->isEmpty()) {
+            return;
+        }
+
+        $topicCounts = $sections
+            ->mapWithKeys(fn (object $section): array => [
+                (int) $section->id => DB::table('core_clinical_topics')
+                    ->where('blueprint_section_id', $section->id)
+                    ->count(),
+            ]);
+        $sectionWeights = $this->percentages($topicCounts->values()->all());
+
+        foreach ($sections->values() as $index => $section) {
+            $updates = [];
+            if ($section->weight_min === null) {
+                $updates['weight_min'] = $sectionWeights[$index];
+            }
+            if ($section->weight_max === null) {
+                $updates['weight_max'] = $sectionWeights[$index];
+            }
+            if ($updates !== []) {
+                $updates['updated_at'] = now();
+                DB::table('blueprint_sections')->where('id', $section->id)->update($updates);
+            }
+
+            $topics = DB::table('core_clinical_topics')
+                ->where('blueprint_section_id', $section->id)
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->get(['id', 'weight']);
+            $topicWeights = $this->percentages(array_fill(0, $topics->count(), 1));
+
+            foreach ($topics->values() as $topicIndex => $topic) {
+                if ($topic->weight !== null) {
+                    continue;
+                }
+
+                DB::table('core_clinical_topics')->where('id', $topic->id)->update([
+                    'weight' => $topicWeights[$topicIndex],
+                    'updated_at' => now(),
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Chuyển các trọng số tương đối thành phần trăm với tổng chính xác 100%.
+     *
+     * @param  list<int>  $weights
+     * @return list<float>
+     */
+    private function percentages(array $weights): array
+    {
+        if ($weights === []) {
+            return [];
+        }
+
+        $total = array_sum($weights);
+        if ($total <= 0) {
+            $weights = array_fill(0, count($weights), 1);
+            $total = count($weights);
+        }
+
+        $basisPoints = [];
+        $remainders = [];
+        foreach ($weights as $index => $weight) {
+            $exact = 10000 * ($weight / $total);
+            $basisPoints[$index] = (int) floor($exact);
+            $remainders[$index] = $exact - $basisPoints[$index];
+        }
+
+        arsort($remainders);
+        $remaining = 10000 - array_sum($basisPoints);
+        foreach (array_keys($remainders) as $index) {
+            if ($remaining-- <= 0) {
+                break;
+            }
+            $basisPoints[$index]++;
+        }
+
+        ksort($basisPoints);
+
+        return array_map(fn (int $value): float => $value / 100, array_values($basisPoints));
     }
 
     private function ensureLicensingExamCatalog(int $blueprintId): void

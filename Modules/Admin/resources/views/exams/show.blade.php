@@ -6,17 +6,49 @@
             Danh sách bài thi
         </a>
         <h1 class="mt-2 font-headline-md text-headline-md text-on-surface">{{ $exam->title }}</h1>
-        <p class="mt-1 font-body-sm text-on-surface-variant">Chỉ xem — bài thi do học viên tạo từ ma trận.</p>
+        <p class="mt-1 font-body-sm text-on-surface-variant">{{ $exam->kind === 'sample' ? 'Bài thi mẫu do Admin tạo từ ma trận.' : 'Chỉ xem — bài thi cá nhân từ ma trận.' }}</p>
     </div>
 
     <x-admin.flash />
+
+    @if ($exam->kind === 'sample')
+        <div class="mb-6 rounded-xl border border-primary/20 bg-primary/5 p-4">
+            <p class="font-bold">Bài thi mẫu dùng chung · Bộ câu và đáp án cố định</p>
+            @if ($matrixChanged)
+                <p class="mt-2 text-sm text-amber-800">Ma trận đã thay đổi. Đề này giữ nguyên bộ câu cũ; tạo bản mẫu mới để áp dụng ma trận hiện tại.</p>
+            @endif
+            <p class="mt-2 text-sm">Dễ: {{ $exam->matrix_snapshot['difficulty_quotas']['easy'] ?? 0 }} · Trung bình: {{ $exam->matrix_snapshot['difficulty_quotas']['medium'] ?? 0 }} · Khó: {{ $exam->matrix_snapshot['difficulty_quotas']['hard'] ?? 0 }}</p>
+            @can('blueprint.update')
+                @if (!$exam->isPublished())
+                    <form method="POST" action="{{ route('admin.exams.publish-sample', $exam) }}" class="mt-3">
+                        @csrf
+                        <button class="rounded-lg bg-primary px-4 py-2 text-white">Xuất bản bài thi mẫu</button>
+                    </form>
+                @endif
+            @endcan
+        </div>
+    @endif
+    @if ($exam->paper_snapshot)
+        <details class="mb-6 rounded-xl border border-outline-variant p-4">
+            <summary class="cursor-pointer font-bold">Xem bộ câu và đáp án cố định ({{ count($exam->paper_snapshot) }} câu)</summary>
+            @foreach ($exam->paper_snapshot as $row)
+                <div class="mt-4 border-t border-outline-variant pt-4">
+                    <p class="font-bold">Câu {{ $loop->iteration }}</p>
+                    <div>{{ strip_tags($row['payload']['stem']) }}</div>
+                    @foreach ($row['payload']['options'] ?? [] as $option)
+                        <p class="mt-1 {{ ($option['is_correct'] ?? false) ? 'font-bold text-primary' : '' }}">{{ $option['label'] ?? '' }}. {{ strip_tags($option['content'] ?? '') }} {{ ($option['is_correct'] ?? false) ? '✓' : '' }}</p>
+                    @endforeach
+                </div>
+            @endforeach
+        </details>
+    @endif
 
     <div class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
         <main class="space-y-6">
             <section class="grid grid-cols-2 gap-3 lg:grid-cols-4">
                 <div class="rounded-xl border border-outline-variant bg-surface px-4 py-4">
                     <p class="font-label-sm text-on-surface-variant">Số câu</p>
-                    <p class="mt-1 font-headline-sm text-on-surface">{{ $exam->questions_count }}</p>
+                    <p class="mt-1 font-headline-sm text-on-surface">{{ $exam->questionCount() }}</p>
                 </div>
                 <div class="rounded-xl border border-outline-variant bg-surface px-4 py-4">
                     <p class="font-label-sm text-on-surface-variant">Thời gian</p>
@@ -47,6 +79,9 @@
                                 <th class="px-4 py-2">Chủ đề</th>
                                 <th class="px-4 py-2">Phần</th>
                                 <th class="px-4 py-2 text-center">Số câu</th>
+                                <th class="px-4 py-2 text-center">Dễ</th>
+                                <th class="px-4 py-2 text-center">Trung bình</th>
+                                <th class="px-4 py-2 text-center">Khó</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -55,10 +90,13 @@
                                     <td class="px-4 py-2.5 font-label-md text-on-surface">{{ $topic->coreClinicalTopic?->name ?? '#' . $topic->core_clinical_topic_id }}</td>
                                     <td class="px-4 py-2.5 text-on-surface-variant">{{ $topic->coreClinicalTopic?->section?->name ?? '—' }}</td>
                                     <td class="px-4 py-2.5 text-center font-semibold">{{ $topic->question_count }}</td>
+                                    <td class="px-4 py-2.5 text-center">{{ ($topic->difficulty_counts['very_easy'] ?? 0) + ($topic->difficulty_counts['easy'] ?? 0) }}</td>
+                                    <td class="px-4 py-2.5 text-center">{{ $topic->difficulty_counts['medium'] ?? 0 }}</td>
+                                    <td class="px-4 py-2.5 text-center">{{ ($topic->difficulty_counts['hard'] ?? 0) + ($topic->difficulty_counts['very_hard'] ?? 0) }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="3" class="px-4 py-8 text-center text-on-surface-variant">Không có phân bổ CCT.</td>
+                                    <td colspan="6" class="px-4 py-8 text-center text-on-surface-variant">Không có phân bổ CCT.</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -74,7 +112,7 @@
                     <p class="mt-3 font-label-md text-on-surface">{{ $exam->user->name }}</p>
                     <p class="mt-1 font-label-sm text-on-surface-variant">{{ $exam->user->email }}</p>
                 @else
-                    <p class="mt-3 font-body-sm text-on-surface-variant">Không gắn học viên (dữ liệu cũ).</p>
+                    <p class="mt-3 font-body-sm text-on-surface-variant">{{ $exam->kind === 'sample' ? 'Dùng chung cho học viên thuộc chức danh của kỳ thi.' : 'Không gắn học viên (dữ liệu cũ).' }}</p>
                 @endif
                 <p class="mt-4 font-label-sm text-on-surface-variant">Tạo lúc {{ $exam->created_at?->format('d/m/Y H:i') }}</p>
             </section>

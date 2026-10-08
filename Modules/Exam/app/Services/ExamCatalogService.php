@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Modules\Exam\Services;
 
 use App\Models\User;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
+use Modules\Exam\Models\Exam;
 use Modules\QuestionBank\Enums\SessionMode;
 use Modules\QuestionBank\Enums\SessionSource;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
@@ -20,9 +22,9 @@ final class ExamCatalogService
     /**
      * Kỳ thi đã gắn ma trận, và thuộc chức danh của học viên khi hồ sơ có chức danh.
      *
-     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator<int, array<string, mixed>>
+     * @return LengthAwarePaginator<int, array<string, mixed>>
      */
-    public function blueprintCards(?User $user = null): \Illuminate\Contracts\Pagination\LengthAwarePaginator
+    public function blueprintCards(?User $user = null): LengthAwarePaginator
     {
         $professionId = $user?->learnerProfile?->profession_id;
 
@@ -37,12 +39,12 @@ final class ExamCatalogService
             }, function ($query): void {
                 $query->whereRaw('0 = 1');
             })
-            ->with(['blueprint' => fn ($query) => $query->withCount('sections')])
+            ->with(['blueprint' => fn ($query) => $query->withCount('sections'), 'sampleExam'])
             ->orderBy('sort_order')
             ->orderBy('name')
             ->paginate(9);
 
-        $catalogs->getCollection()->transform(function (ExamCatalog $catalog): array {
+        $catalogs->getCollection()->transform(function (ExamCatalog $catalog) use ($professionId): array {
             $blueprint = $catalog->blueprint;
             $matrix = $blueprint !== null
                 ? $this->allocator->allocate($blueprint)
@@ -56,6 +58,11 @@ final class ExamCatalogService
 
             return [
                 'id' => $catalog->id,
+                'sample_exam_id' => $catalog->sampleExam?->isPublished() && in_array((int) $professionId, $catalog->sampleExam->matrix_snapshot['profession_ids'] ?? [], true) ? $catalog->sample_exam_id : null,
+                'sample_question_count' => count($catalog->sampleExam?->paper_snapshot ?? []),
+                'sample_duration_minutes' => $catalog->sampleExam?->duration_minutes,
+                'difficulty_quotas' => app(ExamQuotaMatcher::class)->quotas($matrix['total_questions']),
+                'sample_difficulty_quotas' => $catalog->sampleExam?->matrix_snapshot['difficulty_quotas'] ?? [],
                 'name' => $catalog->name,
                 'code' => $catalog->code,
                 'description' => $catalog->description,
@@ -86,17 +93,22 @@ final class ExamCatalogService
             ->get();
     }
 
-    /**
-     * @return Collection<int, \Modules\Exam\Models\Exam>
-     */
-    public function recentExams(User $user): Collection
+    /** @return LengthAwarePaginator<int, Exam> */
+    public function recentExams(User $user): LengthAwarePaginator
     {
-        return \Modules\Exam\Models\Exam::query()
+        return Exam::query()
+            ->select([
+                'exams.id',
+                'exams.blueprint_id',
+                'exams.title',
+                'exams.duration_minutes',
+                'exams.created_at',
+            ])
             ->withCount('questions')
             ->with('blueprint:id,name,code')
             ->where('user_id', $user->getKey())
-            ->latest()
-            ->limit(6)
-            ->get();
+            ->where('kind', 'personal')
+            ->latest('exams.created_at')
+            ->paginate(6, ['*'], 'exam_page');
     }
 }
