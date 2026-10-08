@@ -7,17 +7,22 @@ namespace Modules\Exam\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Modules\Exam\Actions\CreateLearnerExamFromBlueprintAction;
+use Modules\Exam\Actions\StartExamSession;
 use Modules\QuestionBank\Enums\TaxonomyStatus;
 use Modules\QuestionBank\Models\ExamCatalog;
 
 /**
- * Học viên chọn kỳ thi đã gắn ma trận → tạo đề cá nhân để làm sau.
+ * Học viên chọn kỳ thi đã gắn ma trận → tạo đề cá nhân và vào phiên thi.
  */
 final class CreateExamFromBlueprintController extends Controller
 {
-    public function __construct(private readonly CreateLearnerExamFromBlueprintAction $createExam) {}
+    public function __construct(
+        private readonly CreateLearnerExamFromBlueprintAction $createExam,
+        private readonly StartExamSession $startExamSession,
+    ) {}
 
     public function __invoke(ExamCatalog $examCatalog): RedirectResponse
     {
@@ -39,7 +44,11 @@ final class CreateExamFromBlueprintController extends Controller
         abort_unless($allowed, 404);
 
         try {
-            $exam = $this->createExam->handle($user, $examCatalog);
+            [$exam, $session] = DB::transaction(function () use ($user, $examCatalog): array {
+                $exam = $this->createExam->handle($user, $examCatalog);
+
+                return [$exam, $this->startExamSession->handle($user, $exam)];
+            });
         } catch (ValidationException $exception) {
             return back()->withErrors($exception->errors());
         }
@@ -50,7 +59,7 @@ final class CreateExamFromBlueprintController extends Controller
             : '';
 
         return redirect()
-            ->route('exam.index')
-            ->with('status', 'Đã tạo đề từ kỳ thi «'.$examCatalog->name.'».'.$notice.' Bấm “Làm” trong mục “Đề thi của bạn” khi bạn muốn bắt đầu.');
+            ->route('exam.session', $session)
+            ->with('status', 'Đã bắt đầu đề mới từ kỳ thi «'.$examCatalog->name.'».'.$notice);
     }
 }

@@ -27,7 +27,7 @@
                 <p class="mb-2 text-sm font-bold uppercase tracking-wide text-primary">Mô phỏng kỳ thi</p>
                 <h1 class="font-headline-lg text-headline-lg font-bold text-on-surface">Kỳ thi</h1>
                 <p class="mt-3 text-sm leading-6 text-on-surface-variant sm:text-base">
-                    Làm bài thi mẫu cố định miễn phí. Học viên Premium có thể tạo đề riêng theo ma trận kỳ thi và bắt đầu làm khi sẵn sàng.
+                    Làm bài thi mẫu cố định miễn phí. Học viên Premium có thể tạo đề ngẫu nhiên theo ma trận kỳ thi và vào làm ngay.
                 </p>
             </div>
             @unless ($canStartExam)
@@ -140,7 +140,7 @@
                                 <p class="mt-3 text-sm leading-6 text-on-surface-variant">
                                     Kỳ thi này có bài mẫu cố định. Đề Premium mới sẽ chọn ngẫu nhiên số câu ở từng phần trong khoảng tỉ trọng min/max của ma trận, rồi chia cho các chủ đề theo tỉ trọng đã cấu hình.
                                 </p>
-                                <p class="mt-2 text-sm font-semibold text-on-surface">Tổng đề: {{ $card['question_count'] }} câu. Bộ câu được lưu riêng để bạn làm sau.</p>
+                                <p class="mt-2 text-sm font-semibold text-on-surface">Tổng đề: {{ $card['question_count'] }} câu. Sau khi tạo, bạn sẽ vào phiên làm bài ngay.</p>
                                 <ul class="mt-3 max-h-40 space-y-1 overflow-y-auto text-sm text-on-surface-variant">
                                     @foreach ($card['section_ranges'] as $range)
                                         <li class="flex justify-between gap-3"><span>{{ $range['name'] }}</span><strong class="shrink-0 text-on-surface">{{ $range['min'] }}–{{ $range['max'] }} câu</strong></li>
@@ -150,7 +150,7 @@
                                     <button type="button" @click="confirming = false" class="rounded-xl border border-outline-variant px-4 py-2 text-sm font-bold text-on-surface">Hủy</button>
                                     <form method="POST" action="{{ route('exam.from-blueprint', $card['id']) }}">
                                         @csrf
-                                        <button type="submit" class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white">Tạo đề</button>
+                                        <button type="submit" class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white">Tạo và làm ngay</button>
                                     </form>
                                 </div>
                             </div>
@@ -171,46 +171,11 @@
             </div>
         @endif
 
-        @if ($recentExams->isNotEmpty())
-            <section class="mt-10">
-                <div class="mb-4">
-                    <h2 class="text-xl font-bold text-on-surface">Đề thi của bạn</h2>
-                    <p class="mt-1 text-sm text-on-surface-variant">Chọn “Làm” để bắt đầu một phiên thi với đề đã tạo. Bạn có thể làm lại cùng đề.</p>
-                </div>
-                <div class="grid gap-3 md:grid-cols-2">
-                    @foreach ($recentExams as $exam)
-                        <div class="flex items-center justify-between gap-4 rounded-2xl border border-outline-variant bg-white p-4 shadow-sm">
-                            <div class="min-w-0">
-                                <p class="font-bold text-on-surface line-clamp-1">{{ $exam->title }}</p>
-                                <p class="mt-1 text-sm text-on-surface-variant">
-                                    {{ $exam->questions_count }} câu · {{ $exam->duration_minutes }} phút
-                                    · {{ $exam->created_at?->diffForHumans() }}
-                                </p>
-                            </div>
-                            @if ($canStartExam)
-                                <form method="POST" action="{{ route('exam.start', $exam) }}">
-                                    @csrf
-                                    <button type="submit"
-                                        class="inline-flex h-10 items-center gap-1 rounded-xl border border-outline-variant px-3 text-sm font-bold text-on-surface hover:bg-surface-container-low">
-                                        <span class="material-symbols-outlined text-[18px]">play_arrow</span>
-                                        Làm
-                                    </button>
-                                </form>
-                            @endif
-                        </div>
-                    @endforeach
-                </div>
-                @if ($recentExams->hasPages())
-                    <div class="mt-6">{{ $recentExams->links() }}</div>
-                @endif
-            </section>
-        @endif
-
-        <section class="mt-10">
+        <section class="mt-10" aria-labelledby="recent-exams-heading">
             <div class="mb-4 flex items-center justify-between gap-3">
                 <div>
-                    <h2 class="text-xl font-bold text-on-surface">Phiên thi gần đây</h2>
-                    <p class="mt-1 text-sm text-on-surface-variant">Tiếp tục phiên đang làm hoặc xem lại kết quả đã nộp.</p>
+                    <h2 id="recent-exams-heading" class="text-xl font-bold text-on-surface">Phiên thi gần đây</h2>
+                    <p class="mt-1 text-sm text-on-surface-variant">Theo dõi tiến độ, tiếp tục làm bài hoặc xem lại câu hỏi đã nộp.</p>
                 </div>
             </div>
 
@@ -218,37 +183,101 @@
                 <div class="rounded-2xl border border-dashed border-outline-variant bg-white px-6 py-12 text-center">
                     <span class="material-symbols-outlined mb-3 text-5xl text-outline">assignment</span>
                     <p class="font-bold text-on-surface">Chưa có phiên thi nào</p>
-                        <p class="mt-2 text-sm text-on-surface-variant">Tạo đề ở trên, rồi bấm “Làm” trong mục “Đề thi của bạn” để bắt đầu.</p>
+                    <p class="mt-2 text-sm text-on-surface-variant">Chọn bài mẫu hoặc tạo đề Premium ở trên để bắt đầu làm bài.</p>
                 </div>
             @else
-                <div class="overflow-hidden rounded-2xl border border-outline-variant bg-white shadow-sm">
+                <ol class="grid gap-4 lg:grid-cols-2">
                     @foreach ($recentSessions as $session)
                         @php
-                            $examId = $session->exam_id
-                                ?? (is_array($session->filters) ? ($session->filters['exam_id'] ?? null) : null);
-                            $examTitle = $examId ? \Modules\Exam\Models\Exam::find($examId)?->title : 'Bài thi';
                             $status = $session->status->value;
-                            $targetRoute = $session->status === SessionStatus::Completed
-                                ? route('exam.summary', $session)
-                                : route('exam.session', $session);
+                            $completed = $session->status === SessionStatus::Completed;
+                            $elapsedSeconds = max(0, (int) ($session->time_spent_seconds ?? 0));
+                            $limitSeconds = max(0, (int) ($session->time_limit_seconds ?? (($session->exam?->duration_minutes ?? 0) * 60)));
+                            $elapsedLabel = sprintf('%d:%02d', intdiv($elapsedSeconds, 60), $elapsedSeconds % 60);
+                            $limitLabel = $limitSeconds > 0
+                                ? sprintf('%d:%02d', intdiv($limitSeconds, 60), $limitSeconds % 60)
+                                : '—';
+                            $progress = $session->total > 0
+                                ? min(100, (int) round($session->answered_count / $session->total * 100))
+                                : 0;
                         @endphp
-                        <a href="{{ $targetRoute }}"
-                            class="flex flex-col gap-3 border-b border-outline-variant/70 p-4 transition-colors last:border-0 hover:bg-surface-container-low sm:flex-row sm:items-center sm:justify-between">
-                            <div>
-                                <p class="font-bold text-on-surface">{{ $examTitle }}</p>
-                                <p class="mt-1 text-sm text-on-surface-variant">
-                                    {{ $session->answered_count }}/{{ $session->total }} câu đã trả lời · {{ $session->updated_at?->diffForHumans() }}
-                                </p>
-                            </div>
-                            <div class="flex items-center gap-3">
-                                <span class="rounded-full bg-surface-container px-2.5 py-1 text-xs font-bold text-on-surface-variant">
-                                    {{ $statusLabels[$status] ?? $status }}
-                                </span>
-                                <span class="material-symbols-outlined text-[20px] text-primary">arrow_forward</span>
-                            </div>
-                        </a>
+                        <li class="h-full">
+                            <article class="flex h-full flex-col rounded-2xl border border-outline-variant bg-white p-5 shadow-sm">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="min-w-0">
+                                        <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-primary">
+                                            @if ($session->exam?->kind === 'personal')
+                                                Đề Premium · Q{{ $session->premium_exam_number }}
+                                            @elseif ($session->exam?->kind === 'sample')
+                                                Bài thi mẫu
+                                            @else
+                                                Phiên thi
+                                            @endif
+                                        </p>
+                                        <h3 class="text-base font-bold leading-6 text-on-surface">{{ $session->exam?->title ?? 'Bài thi' }}</h3>
+                                    </div>
+                                    <span class="shrink-0 rounded-full px-2.5 py-1 text-xs font-bold"
+                                        @class([
+                                            'bg-emerald-50 text-emerald-800' => $completed,
+                                            'bg-indigo-50 text-indigo-800' => $status === 'paused',
+                                            'bg-amber-50 text-amber-800' => $status === 'active',
+                                        ])>
+                                        {{ $statusLabels[$status] ?? $status }}
+                                    </span>
+                                </div>
+
+                                <div class="mt-5 grid grid-cols-2 gap-3 rounded-xl bg-surface-container-low p-3 text-sm">
+                                    <div>
+                                        <p class="text-xs text-on-surface-variant">Câu đã trả lời</p>
+                                        <p class="mt-1 font-bold tabular-nums text-on-surface">{{ $session->answered_count }}/{{ $session->total }}</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs text-on-surface-variant">Đã làm / giới hạn</p>
+                                        <p class="mt-1 font-bold tabular-nums text-on-surface">{{ $elapsedLabel }} / {{ $limitLabel }}</p>
+                                    </div>
+                                </div>
+
+                                <div class="mt-4 h-1.5 overflow-hidden rounded-full bg-surface-container-high"
+                                    role="progressbar" aria-label="Tiến độ trả lời"
+                                    aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ $progress }}">
+                                    <div class="h-full rounded-full bg-primary" style="width: {{ $progress }}%"></div>
+                                </div>
+
+                                <div class="mt-auto flex flex-wrap items-center justify-between gap-3 pt-5">
+                                    <p class="text-xs text-on-surface-variant">
+                                        Cập nhật <time datetime="{{ $session->updated_at?->toIso8601String() }}">{{ $session->updated_at?->diffForHumans() }}</time>
+                                    </p>
+                                    <div class="flex flex-wrap gap-2">
+                                        @if ($completed)
+                                            <a href="{{ route('exam.summary', $session) }}"
+                                                class="inline-flex h-9 items-center gap-1 rounded-lg border border-outline-variant px-3 text-xs font-bold text-on-surface transition hover:bg-surface-container-low">
+                                                Xem kết quả
+                                            </a>
+                                            @can('exam.review')
+                                                <a href="{{ route('exam.review', $session) }}"
+                                                    class="inline-flex h-9 items-center gap-1 rounded-lg bg-primary px-3 text-xs font-bold text-white transition hover:bg-primary/90">
+                                                    <span class="material-symbols-outlined text-[16px]" aria-hidden="true">rate_review</span>
+                                                    Xem lại câu hỏi
+                                                </a>
+                                            @endcan
+                                        @else
+                                            <a href="{{ route('exam.session', $session) }}"
+                                                class="inline-flex h-9 items-center gap-1 rounded-lg bg-primary px-3 text-xs font-bold text-white transition hover:bg-primary/90">
+                                                <span class="material-symbols-outlined text-[16px]" aria-hidden="true">play_arrow</span>
+                                                Tiếp tục làm
+                                            </a>
+                                        @endif
+                                    </div>
+                                </div>
+                            </article>
+                        </li>
                     @endforeach
-                </div>
+                </ol>
+                @if ($recentSessions->hasPages())
+                    <nav class="mt-6" aria-label="Trang phiên thi gần đây">
+                        {{ $recentSessions->links() }}
+                    </nav>
+                @endif
             @endif
         </section>
     </section>

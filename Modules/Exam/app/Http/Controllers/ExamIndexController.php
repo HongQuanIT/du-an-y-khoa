@@ -23,7 +23,6 @@ final class ExamIndexController extends Controller
         return view('exam::index', [
             'blueprintCards' => $this->catalog->blueprintCards($user),
             'recentSessions' => $this->catalog->recentSessions($user),
-            'recentExams' => $this->catalog->recentExams($user),
             'canStartExam' => $user->hasEntitlement(Entitlement::ExamSimulation->value),
         ]);
     }

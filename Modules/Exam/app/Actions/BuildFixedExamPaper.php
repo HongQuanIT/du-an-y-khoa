@@ -138,12 +138,19 @@ final class BuildFixedExamPaper
             }
             $reusedCount = count(array_intersect_key($result['selected'], $sampleQuestionIds + $previousQuestionIds));
             $sampleOverlapCount = count(array_intersect_key($result['selected'], $sampleQuestionIds));
+            $premiumNumber = $learner !== null
+                ? Exam::query()
+                    ->where('user_id', $learner->id)
+                    ->where('exam_catalog_id', $catalog->id)
+                    ->where('kind', 'personal')
+                    ->count() + 1
+                : null;
             $exam = Exam::query()->create([
                 'kind' => $learner ? 'personal' : 'sample',
                 'user_id' => $learner?->id,
                 'exam_catalog_id' => $catalog->id,
                 'blueprint_id' => $catalog->blueprint_id,
-                'title' => $catalog->name.($learner ? '' : ' — Bài thi mẫu'),
+                'title' => $catalog->name.($learner ? ' — Q'.$premiumNumber : ' — Bài thi mẫu'),
                 'description' => $catalog->description,
                 'duration_minutes' => $matrix['suggested_duration_minutes'],
                 'status' => $learner ? ExamStatus::Published : ExamStatus::Draft,
@@ -152,6 +159,7 @@ final class BuildFixedExamPaper
                     'difficulty_quotas' => $result['quotas'],
                     'profession_ids' => $professionIds,
                 ], $learner !== null ? [
+                    'premium_sequence' => $premiumNumber,
                     'reused_question_count' => $reusedCount,
                     'sample_overlap_count' => $sampleOverlapCount,
                 ] : []),

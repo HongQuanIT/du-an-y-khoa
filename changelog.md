@@ -2,6 +2,14 @@
 
 ## 2026-10-08
 
+### Feat — Tạo đề Premium và vào phiên thi ngay
+
+- Tạo đề Premium ngẫu nhiên rồi mở trực tiếp phiên làm bài; đánh số đề Q1, Q2, Q3 theo học viên và kỳ thi.
+- Thiết kế lại danh sách phiên thi gần đây, hiển thị thời gian đã làm, nút xem lại bài và phân trang mỗi 4 phiên.
+- Bỏ danh sách đề cá nhân riêng trên trang bài thi.
+
+## 2026-10-08
+
 ### Fix — Bỏ qua chủ đề chưa nhập tỷ trọng
 
 - Chủ đề để trống tỷ trọng được xem là không sử dụng khi phân bổ câu hỏi.
