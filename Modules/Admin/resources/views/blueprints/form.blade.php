@@ -106,6 +106,7 @@
                 csrfToken: @js(csrf_token()),
                 canUpdate: @js((bool) $canUpdate),
                 totalQuestions: @js($blueprint->total_questions),
+                difficultyWeights: @js($blueprint->difficultyWeights()),
                 sections: @js($weightSectionsPayload),
             })"
         >
@@ -143,6 +144,47 @@
                         >
                     </div>
                     <p class="pb-2 font-body-sm text-on-surface-variant">Dùng để ước lượng số câu theo từng phần / chủ đề.</p>
+                </div>
+
+                <div class="rounded-lg border border-outline-variant bg-surface-container-low/40 p-4">
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <h3 class="font-label-md font-semibold text-on-surface">Tỉ trọng độ khó</h3>
+                            <p class="mt-1 text-xs text-on-surface-variant">Rất dễ và Dễ dùng chung một nhóm; Khó và Rất khó dùng chung một nhóm.</p>
+                        </div>
+                        <span class="rounded-full border px-2.5 py-1 text-xs font-semibold"
+                            :class="difficultyCoverage.ok ? 'border-primary/20 bg-primary/5 text-primary' : 'border-error/30 bg-error-container/30 text-error'"
+                            x-text="difficultyCoverage.message"></span>
+                    </div>
+                    <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                        <label class="rounded-lg border border-outline-variant bg-surface p-3">
+                            <span class="block text-xs font-semibold text-on-surface">Rất dễ + Dễ</span>
+                            <span class="mt-0.5 block text-[11px] text-on-surface-variant">Nhóm dễ</span>
+                            <div class="relative mt-2">
+                                <input type="number" min="0" max="100" step="1" x-model.number="difficultyWeights.easy" @input="markDirty()"
+                                    class="h-10 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 pr-8 text-right font-semibold tabular-nums text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-70" @disabled(! $canUpdate)>
+                                <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-on-surface-variant">%</span>
+                            </div>
+                        </label>
+                        <label class="rounded-lg border border-outline-variant bg-surface p-3">
+                            <span class="block text-xs font-semibold text-on-surface">Trung bình</span>
+                            <span class="mt-0.5 block text-[11px] text-on-surface-variant">Nhóm trung bình</span>
+                            <div class="relative mt-2">
+                                <input type="number" min="0" max="100" step="1" x-model.number="difficultyWeights.medium" @input="markDirty()"
+                                    class="h-10 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 pr-8 text-right font-semibold tabular-nums text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-70" @disabled(! $canUpdate)>
+                                <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-on-surface-variant">%</span>
+                            </div>
+                        </label>
+                        <label class="rounded-lg border border-outline-variant bg-surface p-3">
+                            <span class="block text-xs font-semibold text-on-surface">Khó + Rất khó</span>
+                            <span class="mt-0.5 block text-[11px] text-on-surface-variant">Nhóm khó</span>
+                            <div class="relative mt-2">
+                                <input type="number" min="0" max="100" step="1" x-model.number="difficultyWeights.hard" @input="markDirty()"
+                                    class="h-10 w-full rounded-lg border border-outline-variant bg-surface-container-low px-3 pr-8 text-right font-semibold tabular-nums text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-70" @disabled(! $canUpdate)>
+                                <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-on-surface-variant">%</span>
+                            </div>
+                        </label>
+                    </div>
                 </div>
 
                 <div
@@ -341,7 +383,7 @@
                     <button
                         type="button"
                         @click="save()"
-                        :disabled="!isDirty || saving"
+                        :disabled="!isDirty || saving || !difficultyCoverage.ok"
                         class="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 font-label-md font-medium text-on-primary transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-40"
                     >
                         <span class="material-symbols-outlined text-[18px]" aria-hidden="true" x-text="saving ? 'progress_activity' : 'save'"></span>
@@ -984,12 +1026,18 @@
                 const initialTotal = config.totalQuestions == null || config.totalQuestions === ''
                     ? ''
                     : Number(config.totalQuestions);
+                const initialDifficultyWeights = {
+                    easy: Number(config.difficultyWeights?.easy ?? 40),
+                    medium: Number(config.difficultyWeights?.medium ?? 30),
+                    hard: Number(config.difficultyWeights?.hard ?? 30),
+                };
 
                 return {
                     saveUrl: config.saveUrl,
                     csrfToken: config.csrfToken,
                     canUpdate: Boolean(config.canUpdate),
                     totalQuestions: initialTotal,
+                    difficultyWeights: initialDifficultyWeights,
                     sections: cloneSections(config.sections),
                     savedSnapshot: '',
                     saving: false,
@@ -1010,6 +1058,18 @@
                         return this.coverageFor(this.sections, 'phần');
                     },
 
+                    get difficultyCoverage() {
+                        const values = ['easy', 'medium', 'hard'].map((key) => Number(this.difficultyWeights[key] ?? 0));
+                        const valid = values.every((value) => Number.isInteger(value) && value >= 0 && value <= 100);
+                        const sum = values.reduce((total, value) => total + value, 0);
+
+                        return {
+                            ok: valid && sum === 100,
+                            sum,
+                            message: valid && sum === 100 ? 'Tổng 100%' : `Tổng ${sum}% — cần đúng 100%`,
+                        };
+                    },
+
                     markDirty() {
                         this.isDirty = this.snapshot() !== this.savedSnapshot;
                         if (this.statusMessage && ! this.statusError) {
@@ -1020,6 +1080,11 @@
                     snapshot() {
                         return JSON.stringify({
                             totalQuestions: this.normalizeNumber(this.totalQuestions),
+                            difficultyWeights: {
+                                easy: Number(this.difficultyWeights.easy ?? 0),
+                                medium: Number(this.difficultyWeights.medium ?? 0),
+                                hard: Number(this.difficultyWeights.hard ?? 0),
+                            },
                             sections: this.sections.map((section) => ({
                                 id: section.id,
                                 weight_min: this.normalizeNumber(section.weight_min),
@@ -1247,6 +1312,11 @@
                         try {
                             const payload = {
                                 total_questions: this.normalizeNumber(this.totalQuestions),
+                                difficulty_weights: {
+                                    easy: Number(this.difficultyWeights.easy ?? 0),
+                                    medium: Number(this.difficultyWeights.medium ?? 0),
+                                    hard: Number(this.difficultyWeights.hard ?? 0),
+                                },
                                 sections: this.sections.map((section) => ({
                                     id: section.id,
                                     weight_min: this.normalizeNumber(section.weight_min),

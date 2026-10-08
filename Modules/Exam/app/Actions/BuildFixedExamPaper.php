@@ -47,6 +47,7 @@ final class BuildFixedExamPaper
             if (! $professionIds || in_array(0, $professionIds, true)) {
                 throw ValidationException::withMessages(['blueprint' => 'Cần cấu hình chức danh cho kỳ thi và học viên.']);
             }
+            $difficultyWeights = $catalog->blueprint->difficultyWeights();
             $sampleQuestionIds = $learner !== null && $catalog->sample_exam_id !== null
                 ? array_fill_keys(DB::table('exam_question')->where('exam_id', $catalog->sample_exam_id)->pluck('question_id')->all(), true)
                 : [];
@@ -115,12 +116,12 @@ final class BuildFixedExamPaper
                     $names[$groupId] = $topic['name'];
                 }
             }
-            $result = $this->matcher->match($freshTopics);
+            $result = $this->matcher->match($freshTopics, $difficultyWeights);
             if (! $result['complete']) {
-                $result = $this->matcher->match($withoutSampleTopics);
+                $result = $this->matcher->match($withoutSampleTopics, $difficultyWeights);
             }
             if (! $result['complete']) {
-                $result = $this->matcher->match($topics);
+                $result = $this->matcher->match($topics, $difficultyWeights);
             }
             if (! $result['complete']) {
                 $details = [];
@@ -132,7 +133,8 @@ final class BuildFixedExamPaper
                     $details[] = sprintf('%s cần %d câu; có %d dễ, %d trung bình, %d khó.', $names[$id], $topic['count'], $counts['easy'] ?? 0, $counts['medium'] ?? 0, $counts['hard'] ?? 0);
                 }
                 $quotas = $result['quotas'];
-                throw ValidationException::withMessages(['blueprint' => sprintf('Ngân hàng câu hỏi chưa đủ để tạo đề đúng ma trận 40/30/30 (cần %d dễ, %d trung bình, %d khó), kể cả khi dùng lại câu cũ. Ví dụ: ', $quotas['easy'], $quotas['medium'], $quotas['hard']).implode(' ', $details)]);
+                $ratio = implode('/', $difficultyWeights);
+                throw ValidationException::withMessages(['blueprint' => sprintf('Ngân hàng câu hỏi chưa đủ để tạo đề đúng tỉ trọng %s (cần %d dễ, %d trung bình, %d khó), kể cả khi dùng lại câu cũ. Ví dụ: ', $ratio, $quotas['easy'], $quotas['medium'], $quotas['hard']).implode(' ', $details)]);
             }
             $reusedCount = count(array_intersect_key($result['selected'], $sampleQuestionIds + $previousQuestionIds));
             $sampleOverlapCount = count(array_intersect_key($result['selected'], $sampleQuestionIds));
