@@ -82,17 +82,19 @@
 
     @if (! $isNew)
         @php
-            $weightSectionsPayload = $blueprint->sections->map(function ($section) {
+            $weightSectionsPayload = $blueprint->sections->map(function ($section) use ($topicDifficultyAvailability) {
                 return [
                     'id' => (int) $section->id,
                     'name' => $section->name,
                     'weight_min' => $section->weight_min,
                     'weight_max' => $section->weight_max,
+                    'available' => $topicDifficultyAvailability['sections'][$section->id] ?? ['easy' => 0, 'medium' => 0, 'hard' => 0],
                     'open' => false,
                     'topics' => $section->coreClinicalTopics->map(fn ($topic) => [
                         'id' => (int) $topic->id,
                         'name' => $topic->name,
                         'weight' => $topic->weight,
+                        'available' => $topicDifficultyAvailability['topics'][$topic->id] ?? ['easy' => 0, 'medium' => 0, 'hard' => 0],
                     ])->values()->all(),
                 ];
             })->values()->all();
@@ -109,6 +111,10 @@
                 difficultyWeights: @js($blueprint->difficultyWeights()),
                 sections: @js($weightSectionsPayload),
             })"
+            @blueprint-availability.window="updateAvailability($event.detail)"
+            @blueprint-availability-loading.window="setAvailabilityLoading($event.detail, true)"
+            @blueprint-availability-ready.window="setAvailabilityLoading($event.detail, false)"
+            @blueprint-availability-error.window="setAvailabilityError($event.detail)"
         >
             <div class="flex flex-wrap items-start justify-between gap-3 border-b border-outline-variant px-5 py-4">
                 <div class="flex items-start gap-3">
@@ -184,6 +190,27 @@
                                 <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-on-surface-variant">%</span>
                             </div>
                         </label>
+                    </div>
+                </div>
+
+                <div x-show="availabilityWarnings.length > 0 || availabilityLoading || availabilityError" x-cloak
+                    class="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-amber-950"
+                    role="alert">
+                    <div class="flex items-start gap-2">
+                        <span class="material-symbols-outlined mt-0.5 text-[20px] text-amber-700" aria-hidden="true">warning</span>
+                        <div class="min-w-0 flex-1">
+                            <p x-show="!availabilityLoading && !availabilityError && availabilityWarnings.length > 0" class="font-label-md font-semibold">Ngân hàng câu hỏi có thể không đủ theo tỷ trọng đã chọn</p>
+                            <p x-show="!availabilityLoading && !availabilityError && availabilityWarnings.length > 0" class="mt-0.5 text-xs text-amber-900/80">Ước tính theo mức tối đa của phần và số câu đang có trong từng chủ đề.</p>
+                            <p x-show="availabilityLoading" class="text-xs font-medium">Đang cập nhật số câu theo liên kết đã chọn…</p>
+                            <p x-show="availabilityError" class="text-xs font-medium">Không cập nhật được số câu. Vui lòng thử chọn lại liên kết.</p>
+                            <ul x-show="!availabilityLoading && !availabilityError && availabilityWarnings.length > 0" class="mt-2 space-y-1 text-xs">
+                                <template x-for="warning in availabilityWarnings.slice(0, 5)" :key="warning">
+                                    <li class="flex gap-1.5"><span aria-hidden="true">•</span><span x-text="warning"></span></li>
+                                </template>
+                            </ul>
+                            <p x-show="!availabilityLoading && !availabilityError && availabilityWarnings.length > 5" class="mt-1 text-xs font-semibold"
+                                x-text="`Và ${availabilityWarnings.length - 5} cảnh báo khác.`"></p>
+                        </div>
                     </div>
                 </div>
 
@@ -469,6 +496,8 @@
                                     lessonLookupUrl: @js(route(\App\Support\Auth\PortalRoute::content('taxonomy.lookups.lessons'))),
                                     tagLookupUrl: @js(route(\App\Support\Auth\PortalRoute::content('taxonomy.lookups.tags'))),
                                     syncUrl: @js(route(\App\Support\Auth\PortalRoute::content('core-clinical-topics.medical-nodes.sync'), $topic)),
+                                    previewUrl: @js(route(\App\Support\Auth\PortalRoute::content('core-clinical-topics.medical-nodes.preview'), $topic)),
+                                    topicId: @js((int) $topic->id),
                                     csrfToken: @js(csrf_token()),
                                     canUpdate: @js((bool) $canUpdate),
                                     initialLessons: @js(collect($topicLessons)->keyBy('id')->all()),
@@ -804,7 +833,11 @@
                     lessonLookupUrl: config.lessonLookupUrl,
                     tagLookupUrl: config.tagLookupUrl,
                     syncUrl: config.syncUrl,
+                    previewUrl: config.previewUrl,
+                    topicId: Number(config.topicId),
                     csrfToken: config.csrfToken,
+                    previewTimer: null,
+                    previewController: null,
                     selectedLessons: { ...initialLessons },
                     selectedLessonIds: [...initialLessonIds],
                     savedLessonIds: [...initialLessonIds],
@@ -909,6 +942,7 @@
                         };
                         this.statusMessage = '';
                         this.clearSearch();
+                        this.scheduleAvailabilityPreview();
                     },
 
                     toggleLessonPriority(id) {
@@ -927,6 +961,7 @@
                         this.selectedLessonIds = this.selectedLessonIds.filter((item) => item !== lessonId);
                         delete this.selectedLessons[lessonId];
                         this.statusMessage = '';
+                        this.scheduleAvailabilityPreview();
                     },
 
                     addTag(tag) {
@@ -943,6 +978,7 @@
                         };
                         this.statusMessage = '';
                         this.clearSearch();
+                        this.scheduleAvailabilityPreview();
                     },
 
                     removeTag(id) {
@@ -950,6 +986,53 @@
                         this.selectedTagIds = this.selectedTagIds.filter((item) => item !== tagId);
                         delete this.selectedTags[tagId];
                         this.statusMessage = '';
+                        this.scheduleAvailabilityPreview();
+                    },
+
+                    scheduleAvailabilityPreview() {
+                        clearTimeout(this.previewTimer);
+                        this.previewController?.abort();
+                        this.$dispatch('blueprint-availability-loading', { topicId: this.topicId });
+                        this.previewTimer = setTimeout(() => this.previewAvailability(), 250);
+                    },
+
+                    async previewAvailability() {
+                        const controller = new AbortController();
+                        this.previewController = controller;
+                        try {
+                            const response = await fetch(this.previewUrl, {
+                                method: 'POST',
+                                headers: {
+                                    Accept: 'application/json',
+                                    'Content-Type': 'application/json',
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'X-CSRF-TOKEN': this.csrfToken,
+                                },
+                                body: JSON.stringify({
+                                    lesson_ids: this.selectedLessonIds.map(Number),
+                                    tag_ids: this.selectedTagIds.map(Number),
+                                }),
+                                signal: controller.signal,
+                            });
+                            if (! response.ok) {
+                                throw new Error('preview_failed');
+                            }
+                            const json = await response.json();
+                            if (! controller.signal.aborted && json?.data?.availability) {
+                                this.$dispatch('blueprint-availability', json.data.availability);
+                            }
+                        } catch (error) {
+                            if (error.name !== 'AbortError') {
+                                this.$dispatch('blueprint-availability-error', { topicId: this.topicId });
+                            }
+                        } finally {
+                            if (this.previewController === controller) {
+                                this.previewController = null;
+                                if (! this.saving) {
+                                    this.$dispatch('blueprint-availability-ready', { topicId: this.topicId });
+                                }
+                            }
+                        }
                     },
 
                     async save() {
@@ -960,6 +1043,9 @@
                         this.saving = true;
                         this.statusMessage = '';
                         this.statusError = false;
+                        clearTimeout(this.previewTimer);
+                        this.previewController?.abort();
+                        this.$dispatch('blueprint-availability-loading', { topicId: this.topicId });
 
                         try {
                             const payload = {
@@ -997,13 +1083,22 @@
                             this.savedLessonIds = [...this.selectedLessonIds].map(Number).sort((a, b) => a - b);
                             this.savedLessonPriorities = lessonPrioritySnapshot(this.selectedLessons, this.selectedLessonIds);
                             this.savedTagIds = [...this.selectedTagIds].map(Number).sort((a, b) => a - b);
-                            this.statusMessage = 'Đã lưu liên kết.';
+                            const availability = json?.data?.availability;
+                            if (availability) {
+                                this.$dispatch('blueprint-availability', availability);
+                            }
+                            const topicAvailability = availability?.topics?.[this.topicId];
+                            this.statusMessage = topicAvailability
+                                ? `Đã lưu liên kết. Kho hiện có: ${Number(topicAvailability.easy || 0)} dễ, ${Number(topicAvailability.medium || 0)} trung bình, ${Number(topicAvailability.hard || 0)} khó.`
+                                : 'Đã lưu liên kết.';
                             this.statusError = false;
                         } catch {
                             this.statusMessage = 'Không lưu được. Thử lại.';
                             this.statusError = true;
+                            this.$dispatch('blueprint-availability-error', { topicId: this.topicId });
                         } finally {
                             this.saving = false;
+                            this.$dispatch('blueprint-availability-ready', { topicId: this.topicId });
                         }
                     },
                 };
@@ -1015,11 +1110,13 @@
                     name: section.name,
                     weight_min: section.weight_min ?? '',
                     weight_max: section.weight_max ?? '',
+                    available: section.available ?? { easy: 0, medium: 0, hard: 0 },
                     open: Boolean(section.open),
                     topics: (section.topics || []).map((topic) => ({
                         id: Number(topic.id),
                         name: topic.name,
                         weight: topic.weight ?? '',
+                        available: topic.available ?? { easy: 0, medium: 0, hard: 0 },
                     })),
                 }));
 
@@ -1044,6 +1141,33 @@
                     statusMessage: '',
                     statusError: false,
                     isDirty: false,
+                    pendingAvailability: {},
+                    availabilityError: false,
+
+                    get availabilityLoading() {
+                        return Object.values(this.pendingAvailability).some(Boolean);
+                    },
+
+                    setAvailabilityLoading(detail, loading) {
+                        this.pendingAvailability = { ...this.pendingAvailability, [detail.topicId]: loading };
+                        if (loading) {
+                            this.availabilityError = false;
+                        }
+                    },
+
+                    setAvailabilityError() {
+                        this.availabilityError = true;
+                    },
+
+                    updateAvailability(availability) {
+                        this.sections.forEach((section) => {
+                            section.available = availability.sections?.[section.id] ?? { easy: 0, medium: 0, hard: 0 };
+                            section.topics.forEach((topic) => {
+                                topic.available = availability.topics?.[topic.id] ?? { easy: 0, medium: 0, hard: 0 };
+                            });
+                        });
+                        this.availabilityError = false;
+                    },
 
                     init() {
                         this.savedSnapshot = this.snapshot();
@@ -1068,6 +1192,74 @@
                             sum,
                             message: valid && sum === 100 ? 'Tổng 100%' : `Tổng ${sum}% — cần đúng 100%`,
                         };
+                    },
+
+                    get availabilityWarnings() {
+                        if (! this.difficultyCoverage.ok) {
+                            return [];
+                        }
+
+                        const warnings = [];
+                        this.sections.forEach((section) => {
+                            const sectionRange = this.estimateRange(section.weight_min, section.weight_max, this.totalQuestions);
+                            if (! sectionRange) {
+                                return;
+                            }
+                            const unrestricted = section.topics.length > 0
+                                && section.topics.every((topic) => this.parseWeight(topic.weight) === 0);
+                            if (unrestricted) {
+                                const shortage = this.difficultyShortage(sectionRange[1], section.available);
+                                if (shortage) {
+                                    warnings.push(`${section.name}: ${shortage}`);
+                                }
+                                return;
+                            }
+
+                            section.topics.forEach((topic) => {
+                                const weight = this.parseWeight(topic.weight);
+                                if (weight === null || weight <= 0) {
+                                    return;
+                                }
+                                const estimated = Math.round(sectionRange[1] * (weight / 100));
+                                const shortage = this.difficultyShortage(estimated, topic.available);
+                                if (shortage) {
+                                    warnings.push(`${section.name} · ${topic.name}: ${shortage}`);
+                                }
+                            });
+                        });
+
+                        return warnings;
+                    },
+
+                    difficultyQuotas(total) {
+                        const weights = ['easy', 'medium', 'hard'];
+                        const counts = {};
+                        const remainders = [];
+                        weights.forEach((key, index) => {
+                            const raw = Math.max(0, Number(total || 0)) * Number(this.difficultyWeights[key] || 0);
+                            counts[key] = Math.floor(raw / 100);
+                            remainders.push({ key, remainder: raw % 100, index });
+                        });
+                        remainders.sort((a, b) => b.remainder - a.remainder || a.index - b.index);
+                        let left = Math.max(0, Number(total || 0)) - Object.values(counts).reduce((sum, value) => sum + value, 0);
+                        remainders.forEach(({ key }) => {
+                            if (left > 0) {
+                                counts[key]++;
+                                left--;
+                            }
+                        });
+                        return counts;
+                    },
+
+                    difficultyShortage(total, available) {
+                        const required = this.difficultyQuotas(total);
+                        const labels = { easy: 'dễ', medium: 'trung bình', hard: 'khó' };
+                        const missing = ['easy', 'medium', 'hard'].filter((key) => Number(available?.[key] || 0) < required[key]);
+                        if (missing.length === 0) {
+                            return '';
+                        }
+
+                        return missing.map((key) => `cần ${required[key]} ${labels[key]}, có ${Number(available?.[key] || 0)}`).join('; ');
                     },
 
                     markDirty() {

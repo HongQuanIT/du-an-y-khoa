@@ -389,6 +389,7 @@ Route::middleware(['auth', 'portal:admin'])->group(function (): void {
                 Route::post('/blueprints/{blueprint}/sections', [BlueprintController::class, 'storeSection'])->name('blueprints.sections.store');
                 Route::post('/blueprint-sections/{section}/core-topics', [BlueprintController::class, 'storeCoreTopic'])->name('blueprint-sections.core-topics.store');
                 Route::put('/core-clinical-topics/{topic}/medical-nodes', [BlueprintController::class, 'syncCoreTopicMedicalNodes'])->name('core-clinical-topics.medical-nodes.sync');
+                Route::post('/core-clinical-topics/{topic}/medical-nodes/preview', [BlueprintController::class, 'previewCoreTopicMedicalNodes'])->name('core-clinical-topics.medical-nodes.preview');
             });
             Route::middleware('permission:curriculum.create')->group(function (): void {
                 Route::post('/categories/organ-systems', [CurriculumTaxonomyController::class, 'storeOrganSystem'])->name('curriculum.organ-systems.store');

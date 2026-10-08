@@ -2,6 +2,13 @@
 
 ## 2026-10-08
 
+### Fix — Cảnh báo thiếu câu theo tỷ trọng
+
+- Cảnh báo số câu thiếu theo từng nhóm độ khó và tỷ trọng của chủ đề hoặc phần.
+- Cập nhật cảnh báo ngay khi chọn, gỡ hoặc lưu liên kết bài học và tag, không cần tải lại trang.
+
+## 2026-10-08
+
 ### Fix — Danh sách kỳ thi
 
 - Bỏ nhãn “Dùng được” gây nhầm lẫn; giữ số câu đã gắn trong kho.
