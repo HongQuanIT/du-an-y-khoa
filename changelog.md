@@ -2,6 +2,13 @@
 
 ## 2026-10-08
 
+### Fix — Bỏ qua chủ đề chưa nhập tỷ trọng
+
+- Chủ đề để trống tỷ trọng được xem là không sử dụng khi phân bổ câu hỏi.
+- Làm rõ hướng dẫn nhập tỷ trọng trên biểu mẫu ma trận.
+
+## 2026-10-08
+
 ### Fix — Cảnh báo thiếu câu theo tỷ trọng
 
 - Cảnh báo số câu thiếu theo từng nhóm độ khó và tỷ trọng của chủ đề hoặc phần.

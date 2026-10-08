@@ -376,7 +376,7 @@
                                                     </tfoot>
                                                 </table>
                                             </div>
-                                            <p class="text-xs text-on-surface-variant">Tỉ trọng chủ đề tính trên 100% của phần này. Để tất cả chủ đề là 0% nếu muốn lấy câu từ cả phần mà không chia quota theo chủ đề.</p>
+                                            <p class="text-xs text-on-surface-variant">Tỉ trọng chủ đề tính trên 100% của phần này. Để trống chủ đề không dùng. Nhập 0% cho tất cả chủ đề nếu muốn lấy câu từ cả phần mà không chia quota theo chủ đề.</p>
                                         </div>
                                     </td>
                                 </tr>
