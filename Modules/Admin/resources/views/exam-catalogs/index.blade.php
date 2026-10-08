@@ -78,11 +78,11 @@
 
         <div class="overflow-hidden rounded-xl border border-outline-variant bg-surface" :class="loading && 'opacity-70'">
             <div class="w-full overflow-x-auto">
-                <table class="w-full min-w-[1080px] border-collapse text-left text-sm">
+                <table class="w-full min-w-[1460px] table-fixed border-collapse text-left text-sm">
                     <caption class="sr-only">Danh sách kỳ thi</caption>
                     <thead class="border-b border-outline-variant bg-surface-container-low text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
                         <tr>
-                            <th scope="col" class="px-5 py-3">
+                            <th scope="col" class="w-[250px] px-5 py-3">
                                 <button type="button" @click="toggleNameSort()"
                                     class="inline-flex items-center gap-1 uppercase tracking-wider hover:text-on-surface">
                                     Tên
@@ -90,11 +90,11 @@
                                         x-text="nameSort === 'asc' ? 'arrow_upward' : 'arrow_downward'"></span>
                                 </button>
                             </th>
-                            <th scope="col" class="px-4 py-3">Đối tượng</th>
-                            <th scope="col" class="px-4 py-3">Ma trận</th>
-                            <th scope="col" class="w-[120px] px-4 py-3 text-right" title="Số câu của mỗi đề theo ma trận">Câu / đề</th>
-                            <th scope="col" class="w-[130px] px-4 py-3">Trạng thái</th>
-                            <th scope="col" class="w-[360px] min-w-[360px] px-5 py-3 text-right">Thao tác</th>
+                            <th scope="col" class="w-[190px] px-4 py-3">Đối tượng</th>
+                            <th scope="col" class="w-[300px] px-4 py-3">Ma trận</th>
+                            <th scope="col" class="w-[150px] px-4 py-3 text-right" title="Số câu của mỗi đề theo ma trận">Câu / đề</th>
+                            <th scope="col" class="w-[120px] px-4 py-3">Trạng thái</th>
+                            <th scope="col" class="w-[450px] px-5 py-3 text-right">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-outline-variant/60">
@@ -109,12 +109,14 @@
                                     </div>
                                 </td>
                                 <td class="px-4 py-3.5 align-middle text-on-surface-variant">
-                                    <span class="line-clamp-2" x-text="(item.profession_names || []).join(', ') || '—'"></span>
+                                    <span class="line-clamp-2 break-words" :title="(item.profession_names || []).join(', ')" x-text="(item.profession_names || []).join(', ') || '—'"></span>
                                 </td>
-                                <td class="px-4 py-3.5 align-middle text-on-surface" x-text="item.blueprint_name || 'Chưa gắn'"></td>
+                                <td class="px-4 py-3.5 align-middle text-on-surface">
+                                    <span class="line-clamp-2 break-words" :title="item.blueprint_name || 'Chưa gắn'" x-text="item.blueprint_name || 'Chưa gắn'"></span>
+                                </td>
                                 <td class="px-4 py-3.5 text-right align-middle tabular-nums text-on-surface">
                                     <span x-text="item.questions_count"></span>
-                                    <span x-show="item.blueprint_id && item.bank_questions_count !== item.questions_count" class="block text-[10px] text-on-surface-variant" title="Số câu đang gắn trong ngân hàng">Kho: <span x-text="item.bank_questions_count"></span></span>
+                                    <span x-show="item.blueprint_id" class="block whitespace-nowrap text-[10px] text-on-surface-variant" title="Số câu đã xuất bản có thể dùng để tạo đề, chưa tính điều kiện chủ đề, độ khó và đối tượng">Kho dùng được: <span x-text="item.bank_questions_count"></span></span>
                                 </td>
                                 <td class="px-4 py-3.5 align-middle">
                                     <span class="inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
@@ -123,7 +125,7 @@
                                             : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'"
                                         x-text="item.status === 'active' ? 'Đang dùng' : 'Ngừng dùng'"></span>
                                 </td>
-                                <td class="min-w-[360px] px-5 py-3.5 text-right align-middle">
+                                <td class="px-5 py-3.5 text-right align-middle">
                                     <div class="flex flex-nowrap items-center justify-end gap-2 whitespace-nowrap">
                                         @if (request()->routeIs('admin.*'))
                                         <a x-show="item.sample_exam_id" x-cloak

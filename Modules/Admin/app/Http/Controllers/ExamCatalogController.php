@@ -19,6 +19,7 @@ use Modules\QuestionBank\Enums\TaxonomyStatus;
 use Modules\QuestionBank\Models\Blueprint;
 use Modules\QuestionBank\Models\ExamCatalog;
 use Modules\QuestionBank\Support\BlueprintExamAllocator;
+use Modules\QuestionBank\Support\ServePublishedQuestion;
 
 final class ExamCatalogController extends Controller
 {
@@ -126,7 +127,7 @@ final class ExamCatalogController extends Controller
 
         return ExamCatalog::query()
             ->with(['blueprint:id,name,slug,code,description,status,total_questions', 'professions:id,name'])
-            ->withCount('questions')
+            ->withCount(['questions as bank_questions_count' => fn ($query) => ServePublishedQuestion::scopeAvailable($query)])
             ->when($q !== '', function ($query) use ($like): void {
                 $query->where(function ($inner) use ($like): void {
                     $inner->where('name', 'like', $like)
@@ -162,7 +163,7 @@ final class ExamCatalogController extends Controller
                     'profession_ids' => $catalog->professions->pluck('id')->map(fn ($id): int => (int) $id)->values()->all(),
                     'profession_names' => $catalog->professions->pluck('name')->values()->all(),
                     'questions_count' => ($matrix['ready'] ?? false) ? (int) $matrix['total_questions'] : 0,
-                    'bank_questions_count' => (int) $catalog->questions_count,
+                    'bank_questions_count' => (int) $catalog->bank_questions_count,
                     'sample_exam_id' => $catalog->sample_exam_id,
                     'update_url' => route(PortalRoute::content('exam-catalogs.update'), $catalog),
                     'destroy_url' => route(PortalRoute::content('exam-catalogs.destroy'), $catalog),
