@@ -7,6 +7,10 @@
 - Mode Điểm yếu / Củng cố: nếu số câu lấy được ít hơn N đã chọn → trả `needs_shortfall_confirm` + `shortfall_message`.
 - UI custom-session hỏi xác nhận trước khi vào phiên; bổ sung test và cập nhật `docs/adaptive-session.md`.
 
+### Docs — Đề xuất mô hình điểm yếu theo xác suất
+
+- Thêm `docs/adaptive-weakness-model.md`: dự đoán xác suất đúng (gợi ý, độ khó, bài/môn, quên) và xoay vòng câu yếu khi học thưa; kèm cơ sở khoa học cho PM.
+
 ## 2026-10-07
 
 ### Feat — Phiên thích ứng: ngày học, luyện thêm, câu làm nhanh
