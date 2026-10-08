@@ -808,6 +808,56 @@ final class AdaptiveSessionSelectionTest extends TestCase
         $this->assertStringContainsString('Cân bằng', (string) $preview['message']);
     }
 
+    public function test_retention_short_session_needs_shortfall_confirm(): void
+    {
+        $dueA = $this->seedQuestion('Due A for shortfall');
+        $dueB = $this->seedQuestion('Due B for shortfall');
+        $fresh = $this->seedQuestion('Unseen should not fill retention');
+
+        foreach ([$dueA, $dueB] as $question) {
+            QuestionStatus::query()->create([
+                'user_id' => $this->user->id,
+                'question_id' => $question->getKey(),
+                'status' => UserQuestionStatus::Correct,
+                'attempts_count' => 3,
+                'correct_count' => 2,
+                'wrong_count' => 1,
+                'omitted_count' => 0,
+                'recent_results' => [true, true, false],
+                'wrong_streak' => 0,
+                'last_attempt_at' => now()->subDays(20),
+                'last_seen_at' => now()->subDays(20),
+                'last_graded_at' => now()->subDays(20),
+                'memory_stability_days' => 7,
+                'last_served_at' => now()->subDays(10),
+                'content_version' => 1,
+            ]);
+        }
+
+        $preview = app(AdaptiveQuestionSelector::class)->inspect(
+            (int) $this->user->id,
+            10,
+            true,
+            new CreateSessionData(
+                mode: SessionMode::Study,
+                source: SessionSource::WeakTopics,
+                count: 10,
+                blueprintId: $this->blueprint->id,
+                adaptiveFocus: 'retention',
+            ),
+        );
+
+        // 2 due + tối đa ~30% câu mới theo tỷ lệ (1 unseen) → phiên ngắn hơn 10.
+        $this->assertLessThan(10, count($preview['question_ids']));
+        $this->assertGreaterThanOrEqual(2, count($preview['question_ids']));
+        $this->assertTrue($preview['can_start']);
+        $this->assertTrue($preview['needs_shortfall_confirm']);
+        $this->assertSame(count($preview['question_ids']), $preview['pickable_count']);
+        $this->assertStringContainsString('chỉ có '.$preview['pickable_count'].' câu', (string) $preview['shortfall_message']);
+        $this->assertContains((string) $dueA->getKey(), $preview['question_ids']);
+        $this->assertContains((string) $dueB->getKey(), $preview['question_ids']);
+    }
+
     public function test_retention_with_no_due_does_not_fill_with_new_questions(): void
     {
         $fresh = $this->seedQuestion('Brand new retention filler');

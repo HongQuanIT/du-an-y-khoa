@@ -44,7 +44,9 @@ final class AdaptiveQuestionSelector
      *     question_ids: list<string>,
      *     can_start: bool,
      *     needs_extra_confirm: bool,
+     *     needs_shortfall_confirm: bool,
      *     message: string|null,
+     *     shortfall_message: string|null,
      *     next_ready_at: string|null,
      *     blocked_reason: string|null,
      *     available_weak: int,
@@ -76,7 +78,8 @@ final class AdaptiveQuestionSelector
             return $this->emptyInspect('Không còn câu hỏi phù hợp với bộ lọc đã chọn.', 0);
         }
 
-        $limit = max(1, min($limit, count($poolIds)));
+        $requestedCount = max(1, $limit);
+        $limit = max(1, min($requestedCount, count($poolIds)));
 
         $metaById = $this->loadQuestionMeta($poolIds);
         $stats = UserQuestionStatusModel::query()
@@ -333,6 +336,7 @@ final class AdaptiveQuestionSelector
                 extraCandidates: array_values($cooldownWeak),
                 nextReady: $nextWeakReady,
                 limit: $limit,
+                requestedCount: $requestedCount,
                 poolCount: count($poolIds),
                 extraPractice: $data->extraPractice,
                 bucket: 'yeu',
@@ -355,6 +359,7 @@ final class AdaptiveQuestionSelector
                 extraCandidates: array_values($cooldownDue),
                 nextReady: $nextDueReady,
                 limit: $limit,
+                requestedCount: $requestedCount,
                 poolCount: count($poolIds),
                 extraPractice: $data->extraPractice,
                 bucket: 'sap_quen',
@@ -620,20 +625,22 @@ final class AdaptiveQuestionSelector
         }
 
         $questionIds = array_column($resultItems, 'question_id');
+        $pickedCount = count($questionIds);
+        $shortfallMessage = $this->shortSessionNotice($focus, $pickedCount, $requestedCount);
         $resultMessage = (! $strictPrimary && $shortfall > 0)
             ? sprintf(
                 'Hôm nay bạn đã ôn hết %d câu phù hợp. Hãy quay lại vào ngày mai, hoặc mở rộng chủ đề để luyện thêm.',
-                count($resultItems),
+                $pickedCount,
             )
             : null;
 
         $this->trace('result', [
             'focus' => $focus,
             'pipeline' => AdaptiveLearning::PIPELINE,
-            'picked_count' => count($resultItems),
+            'picked_count' => $pickedCount,
             'bucket_counts' => $bucketCounts,
-            'shortfall' => $strictPrimary ? 0 : $shortfall,
-            'message' => $resultMessage,
+            'shortfall' => max(0, $requestedCount - $pickedCount),
+            'message' => $shortfallMessage ?? $resultMessage,
             'available_weak' => count($weakPool),
             'items' => $resultItems,
             'question_ids' => $questionIds,
@@ -645,11 +652,13 @@ final class AdaptiveQuestionSelector
             'question_ids' => $questionIds,
             'can_start' => $questionIds !== [],
             'needs_extra_confirm' => false,
+            'needs_shortfall_confirm' => $shortfallMessage !== null,
             'message' => $resultMessage,
+            'shortfall_message' => $shortfallMessage,
             'next_ready_at' => null,
             'blocked_reason' => null,
             'available_weak' => count($weakPool),
-            'pickable_count' => count($questionIds),
+            'pickable_count' => $pickedCount,
             'pool_count' => count($poolIds),
         ];
     }
@@ -665,7 +674,9 @@ final class AdaptiveQuestionSelector
      *     question_ids: list<string>,
      *     can_start: bool,
      *     needs_extra_confirm: bool,
+     *     needs_shortfall_confirm: bool,
      *     message: string|null,
+     *     shortfall_message: string|null,
      *     next_ready_at: string|null,
      *     blocked_reason: string|null,
      *     available_weak: int,
@@ -679,6 +690,7 @@ final class AdaptiveQuestionSelector
         array $extraCandidates,
         ?CarbonImmutable $nextReady,
         int $limit,
+        int $requestedCount,
         int $poolCount,
         bool $extraPractice,
         string $bucket,
@@ -689,6 +701,7 @@ final class AdaptiveQuestionSelector
             return $this->finishExtraFocusPractice(
                 $extraCandidates,
                 $limit,
+                $requestedCount,
                 $poolCount,
                 $nextReady,
                 $blocked,
@@ -700,6 +713,8 @@ final class AdaptiveQuestionSelector
         }
 
         $canOfferExtra = $extraCandidates !== [];
+        $pickable = count($extraCandidates);
+        $shortfallMessage = $this->shortSessionNotice($focus, $pickable, $requestedCount);
         $this->trace('result', [
             'focus' => $focus,
             'pipeline' => AdaptiveLearning::PIPELINE,
@@ -709,8 +724,9 @@ final class AdaptiveQuestionSelector
             'message' => $blocked['message'],
             'blocked_reason' => $blocked['reason'],
             'needs_extra_confirm' => $canOfferExtra,
+            'needs_shortfall_confirm' => $shortfallMessage !== null,
             'available_weak' => 0,
-            'resting_extra_cooldown' => count($extraCandidates),
+            'resting_extra_cooldown' => $pickable,
             'next_ready_at' => $nextReady?->toIso8601String(),
             'question_ids' => [],
             'picked_unseen' => 0,
@@ -721,11 +737,13 @@ final class AdaptiveQuestionSelector
             'question_ids' => [],
             'can_start' => $canOfferExtra,
             'needs_extra_confirm' => $canOfferExtra,
+            'needs_shortfall_confirm' => $shortfallMessage !== null,
             'message' => $blocked['message'],
+            'shortfall_message' => $shortfallMessage,
             'next_ready_at' => $nextReady?->toIso8601String(),
             'blocked_reason' => $blocked['reason'],
             'available_weak' => 0,
-            'pickable_count' => count($extraCandidates),
+            'pickable_count' => $pickable,
             'pool_count' => $poolCount,
         ];
     }
@@ -741,7 +759,9 @@ final class AdaptiveQuestionSelector
      *     question_ids: list<string>,
      *     can_start: bool,
      *     needs_extra_confirm: bool,
+     *     needs_shortfall_confirm: bool,
      *     message: string|null,
+     *     shortfall_message: string|null,
      *     next_ready_at: string|null,
      *     blocked_reason: string|null,
      *     available_weak: int,
@@ -752,6 +772,7 @@ final class AdaptiveQuestionSelector
     private function finishExtraFocusPractice(
         array $candidates,
         int $limit,
+        int $requestedCount,
         int $poolCount,
         ?CarbonImmutable $nextReady,
         array $blocked,
@@ -800,8 +821,10 @@ final class AdaptiveQuestionSelector
         }
 
         $questionIds = array_column($resultItems, 'question_id');
+        $pickedCount = count($questionIds);
+        $shortfallMessage = $this->shortSessionNotice($focus, $pickedCount, $requestedCount);
         $bucketCounts = ['yeu' => 0, 'sap_quen' => 0, 'moi' => 0, 'lap_day' => 0];
-        $bucketCounts[$bucket] = count($resultItems);
+        $bucketCounts[$bucket] = $pickedCount;
 
         $this->trace('quota', [
             'stage' => 3,
@@ -809,9 +832,9 @@ final class AdaptiveQuestionSelector
             'due_band' => 'extra',
             'new_share' => 0.0,
             'new_count' => 0,
-            'review_slots' => count($questionIds),
-            'weak_quota' => $bucket === 'yeu' ? count($questionIds) : 0,
-            'due_quota' => $bucket === 'sap_quen' ? count($questionIds) : 0,
+            'review_slots' => $pickedCount,
+            'weak_quota' => $bucket === 'yeu' ? $pickedCount : 0,
+            'due_quota' => $bucket === 'sap_quen' ? $pickedCount : 0,
             'focus' => $focus,
             'extra_practice' => true,
             'rules' => ['extra_practice_cooldown_primary_only'],
@@ -820,17 +843,18 @@ final class AdaptiveQuestionSelector
             'focus' => $focus,
             'pipeline' => AdaptiveLearning::PIPELINE,
             'extra_practice' => true,
-            'picked_count' => count($resultItems),
+            'picked_count' => $pickedCount,
             'bucket_counts' => $bucketCounts,
-            'shortfall' => 0,
-            'message' => $blocked['message'],
+            'shortfall' => max(0, $requestedCount - $pickedCount),
+            'message' => $shortfallMessage ?? $blocked['message'],
             'blocked_reason' => $blocked['reason'],
             'needs_extra_confirm' => false,
+            'needs_shortfall_confirm' => $shortfallMessage !== null,
             'available_weak' => $bucket === 'yeu' ? count($candidates) : 0,
             'items' => $resultItems,
             'question_ids' => $questionIds,
             'picked_unseen' => 0,
-            'picked_review' => count($resultItems),
+            'picked_review' => $pickedCount,
             'next_ready_at' => $nextReady?->toIso8601String(),
         ]);
 
@@ -838,13 +862,40 @@ final class AdaptiveQuestionSelector
             'question_ids' => $questionIds,
             'can_start' => $questionIds !== [],
             'needs_extra_confirm' => false,
+            'needs_shortfall_confirm' => $shortfallMessage !== null,
             'message' => null,
+            'shortfall_message' => $shortfallMessage,
             'next_ready_at' => $nextReady?->toIso8601String(),
             'blocked_reason' => null,
             'available_weak' => $bucket === 'yeu' ? count($candidates) : 0,
-            'pickable_count' => count($questionIds),
+            'pickable_count' => $pickedCount,
             'pool_count' => $poolCount,
         ];
+    }
+
+    private function shortSessionNotice(string $focus, int $picked, int $requested): ?string
+    {
+        if ($picked <= 0 || $picked >= $requested) {
+            return null;
+        }
+
+        return match ($focus) {
+            'weak_focus' => sprintf(
+                'Bạn chọn %d câu nhưng phiên này chỉ có %d câu (ưu tiên điểm yếu; không lấy bù sắp quên hay câu mới để đủ số đã chọn).',
+                $requested,
+                $picked,
+            ),
+            'retention' => sprintf(
+                'Bạn chọn %d câu nhưng phiên này chỉ có %d câu (ưu tiên câu đến hạn cần củng cố; không lấy bù điểm yếu hay câu mới để đủ số đã chọn).',
+                $requested,
+                $picked,
+            ),
+            default => sprintf(
+                'Bạn chọn %d câu nhưng hôm nay chỉ còn %d câu phù hợp trong phạm vi đã chọn.',
+                $requested,
+                $picked,
+            ),
+        };
     }
 
     /**
@@ -852,7 +903,9 @@ final class AdaptiveQuestionSelector
      *     question_ids: list<string>,
      *     can_start: bool,
      *     needs_extra_confirm: bool,
+     *     needs_shortfall_confirm: bool,
      *     message: string|null,
+     *     shortfall_message: string|null,
      *     next_ready_at: string|null,
      *     blocked_reason: string|null,
      *     available_weak: int,
@@ -866,7 +919,9 @@ final class AdaptiveQuestionSelector
             'question_ids' => [],
             'can_start' => false,
             'needs_extra_confirm' => false,
+            'needs_shortfall_confirm' => false,
             'message' => $message,
+            'shortfall_message' => null,
             'next_ready_at' => null,
             'blocked_reason' => 'empty_pool',
             'available_weak' => 0,

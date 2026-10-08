@@ -104,7 +104,9 @@ final class CustomSessionController extends Controller
             'pickable_count' => (int) $preview['pickable_count'],
             'can_start' => (bool) $preview['can_start'],
             'needs_extra_confirm' => (bool) ($preview['needs_extra_confirm'] ?? false),
+            'needs_shortfall_confirm' => (bool) ($preview['needs_shortfall_confirm'] ?? false),
             'message' => $preview['message'],
+            'shortfall_message' => $preview['shortfall_message'] ?? null,
             'next_ready_at' => $preview['next_ready_at'],
             'blocked_reason' => $preview['blocked_reason'],
         ]);

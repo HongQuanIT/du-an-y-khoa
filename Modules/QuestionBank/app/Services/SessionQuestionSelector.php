@@ -108,7 +108,9 @@ final class SessionQuestionSelector
      *     pickable_count: int,
      *     can_start: bool,
      *     needs_extra_confirm: bool,
+     *     needs_shortfall_confirm: bool,
      *     message: string|null,
+     *     shortfall_message: string|null,
      *     next_ready_at: string|null,
      *     blocked_reason: string|null
      * }
@@ -126,7 +128,9 @@ final class SessionQuestionSelector
                 'pickable_count' => (int) ($preview['pickable_count'] ?? 0),
                 'can_start' => (bool) ($preview['can_start'] ?? false),
                 'needs_extra_confirm' => (bool) ($preview['needs_extra_confirm'] ?? false),
+                'needs_shortfall_confirm' => (bool) ($preview['needs_shortfall_confirm'] ?? false),
                 'message' => $preview['message'] ?? null,
+                'shortfall_message' => $preview['shortfall_message'] ?? null,
                 'next_ready_at' => $preview['next_ready_at'] ?? null,
                 'blocked_reason' => $preview['blocked_reason'] ?? null,
             ];
@@ -139,7 +143,9 @@ final class SessionQuestionSelector
             'pickable_count' => $count,
             'can_start' => $count > 0,
             'needs_extra_confirm' => false,
+            'needs_shortfall_confirm' => false,
             'message' => null,
+            'shortfall_message' => null,
             'next_ready_at' => null,
             'blocked_reason' => null,
         ];

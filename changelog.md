@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-08
+
+### Feat — Popup xác nhận khi phiên thích ứng ngắn hơn số đã chọn
+
+- Mode Điểm yếu / Củng cố: nếu số câu lấy được ít hơn N đã chọn → trả `needs_shortfall_confirm` + `shortfall_message`.
+- UI custom-session hỏi xác nhận trước khi vào phiên; bổ sung test và cập nhật `docs/adaptive-session.md`.
+
 ## 2026-10-07
 
 ### Feat — Phiên thích ứng: ngày học, luyện thêm, câu làm nhanh

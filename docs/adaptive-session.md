@@ -158,7 +158,7 @@ Không bù Yếu / `lap_day` / không lấy hết suất bằng câu mới.
 
 | Tình huống | Hành vi | Copy |
 |---|---|---|
-| Còn câu due eligible | Suất ôn từ Sắp quên; câu mới theo 30/20/10. Due ít hơn suất ôn → phiên ngắn = số due + mới theo tỷ lệ | — |
+| Còn câu due eligible | Suất ôn từ Sắp quên; câu mới theo 30/20/10. Due ít hơn suất ôn → phiên ngắn = số due + mới theo tỷ lệ. Nếu ngắn hơn số đã chọn → popup xác nhận trước khi vào phiên | *Bạn chọn N câu nhưng chỉ còn X câu đến hạn…* |
 | Có câu due trong phạm vi nhưng tất cả đang nghỉ cooldown | Giống Điểm yếu: popup + **Luyện tiếp** lấy câu due đang nghỉ; cập nhật W, giữ S; không ghi `last_served_at` | *Bạn đã củng cố hết câu đến hạn hôm nay…* / *…sẵn sàng từ ngày {dd/mm}.* |
 | Không còn câu đến hạn trong phạm vi | Không tạo phiên; khoá Bắt đầu | *Bạn không còn câu cần củng cố trong phạm vi này. Hãy thử Cân bằng hoặc Điểm yếu, hoặc mở rộng hệ/môn.* |
 

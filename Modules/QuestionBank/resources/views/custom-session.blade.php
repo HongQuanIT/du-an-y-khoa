@@ -99,10 +99,15 @@
             countRequest: 0,
             adaptiveCanStart: true,
             adaptiveNeedsExtraConfirm: false,
+            adaptiveNeedsShortfallConfirm: false,
+            adaptivePickableCount: 0,
             adaptiveBlockedReason: '',
             adaptiveMessage: '',
+            adaptiveShortfallMessage: '',
             extraPractice: false,
             extraPracticeModal: false,
+            shortfallConfirmed: false,
+            shortfallModal: false,
             countTouched: {{ $initialCountTouched ? 'true' : 'false' }},
             questionStatusMode: {{ Illuminate\Support\Js::from($initialStatusMode)->toHtml() }},
             submitting: false,
@@ -316,17 +321,38 @@
                     this.extraPracticeModal = true;
                     return;
                 }
+                if (this.isAdaptive() && this.adaptiveNeedsShortfallConfirm && !this.shortfallConfirmed) {
+                    event.preventDefault();
+                    this.shortfallModal = true;
+                    return;
+                }
                 this.submitting = true;
             },
             confirmExtraPractice() {
                 // Không set submitting trước requestSubmit — canStart() sẽ chặn submit nếu submitting=true.
                 this.extraPractice = true;
                 this.extraPracticeModal = false;
-                this.$nextTick(() => this.$refs.builderForm?.requestSubmit());
+                this.$nextTick(() => {
+                    if (this.adaptiveNeedsShortfallConfirm && !this.shortfallConfirmed) {
+                        this.shortfallModal = true;
+                        return;
+                    }
+                    this.$refs.builderForm?.requestSubmit();
+                });
             },
             dismissExtraPractice() {
                 this.extraPracticeModal = false;
                 this.extraPractice = false;
+                this.submitting = false;
+            },
+            confirmShortfall() {
+                this.shortfallConfirmed = true;
+                this.shortfallModal = false;
+                this.$nextTick(() => this.$refs.builderForm?.requestSubmit());
+            },
+            dismissShortfall() {
+                this.shortfallModal = false;
+                this.shortfallConfirmed = false;
                 this.submitting = false;
             },
             async refreshCount() {
@@ -372,9 +398,13 @@
                     this.matching = Number(payload?.data?.count ?? 0);
                     this.adaptiveCanStart = payload?.data?.can_start !== false;
                     this.adaptiveNeedsExtraConfirm = payload?.data?.needs_extra_confirm === true;
+                    this.adaptiveNeedsShortfallConfirm = payload?.data?.needs_shortfall_confirm === true;
+                    this.adaptivePickableCount = Number(payload?.data?.pickable_count ?? 0);
                     this.adaptiveBlockedReason = payload?.data?.blocked_reason || '';
                     this.adaptiveMessage = payload?.data?.message || '';
+                    this.adaptiveShortfallMessage = payload?.data?.shortfall_message || '';
                     this.extraPractice = false;
+                    this.shortfallConfirmed = false;
                     if (this.matching === 0) {
                         this.count = 0;
                     }
@@ -384,9 +414,13 @@
                     this.matching = 0;
                     this.adaptiveCanStart = false;
                     this.adaptiveNeedsExtraConfirm = false;
+                    this.adaptiveNeedsShortfallConfirm = false;
+                    this.adaptivePickableCount = 0;
                     this.adaptiveBlockedReason = '';
                     this.adaptiveMessage = '';
+                    this.adaptiveShortfallMessage = '';
                     this.extraPractice = false;
+                    this.shortfallConfirmed = false;
                 } finally {
                     if (requestId === this.countRequest) this.counting = false;
                 }
@@ -1153,6 +1187,36 @@
                     <button type="button" @click="confirmExtraPractice()"
                         class="rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-md transition-colors hover:bg-primary/90">
                         Luyện tiếp
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div x-show="shortfallModal" x-cloak
+            class="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 p-4"
+            @keydown.escape.window="if (shortfallModal) dismissShortfall()"
+            @click.self="dismissShortfall()">
+            <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl" role="dialog" aria-modal="true"
+                aria-labelledby="shortfall-title">
+                <h3 id="shortfall-title" class="font-headline-sm text-on-surface">
+                    Phiên chỉ có
+                    <span x-text="adaptivePickableCount"></span>
+                    /
+                    <span x-text="count"></span>
+                    câu
+                </h3>
+                <p class="mt-3 text-sm leading-6 text-on-surface-variant"
+                    x-text="adaptiveShortfallMessage || ('Chỉ còn ' + adaptivePickableCount + ' câu phù hợp trong phạm vi đã chọn.')"></p>
+                <div class="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <button type="button" @click="dismissShortfall()"
+                        class="rounded-lg border border-outline-variant px-4 py-2.5 text-sm font-bold text-on-surface transition-colors hover:bg-surface-container-low">
+                        Chọn lại
+                    </button>
+                    <button type="button" @click="confirmShortfall()"
+                        class="rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-md transition-colors hover:bg-primary/90">
+                        Vào phiên
+                        <span x-text="adaptivePickableCount"></span>
+                        câu
                     </button>
                 </div>
             </div>
