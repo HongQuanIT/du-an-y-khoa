@@ -2,6 +2,13 @@
 
 ## 2026-10-08
 
+### Feat — Cấu hình tỷ trọng độ khó theo ma trận
+
+- Cho phép quản trị cấu hình tỷ lệ nhóm dễ, trung bình và khó trực tiếp trên ma trận đề thi.
+- Mặc định 40/30/30, bắt buộc tổng bằng 100% và dùng tỷ lệ đã lưu khi tạo bài mẫu hoặc đề cá nhân.
+
+## 2026-10-08
+
 ### Fix — Hoàn thiện lấy câu theo toàn bộ phần
 
 - Cho phép các chủ đề trong một phần cùng 0% để hệ thống lấy câu theo toàn bộ phần.

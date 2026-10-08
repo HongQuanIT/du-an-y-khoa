@@ -19,6 +19,9 @@ use Modules\QuestionBank\Enums\TaxonomyStatus;
  * @property TaxonomyStatus $status
  * @property int $sort_order
  * @property int|null $total_questions
+ * @property int $difficulty_easy_percent
+ * @property int $difficulty_medium_percent
+ * @property int $difficulty_hard_percent
  */
 class Blueprint extends Model
 {
@@ -30,12 +33,18 @@ class Blueprint extends Model
         'status',
         'sort_order',
         'total_questions',
+        'difficulty_easy_percent',
+        'difficulty_medium_percent',
+        'difficulty_hard_percent',
     ];
 
     protected $casts = [
         'status' => TaxonomyStatus::class,
         'sort_order' => 'integer',
         'total_questions' => 'integer',
+        'difficulty_easy_percent' => 'integer',
+        'difficulty_medium_percent' => 'integer',
+        'difficulty_hard_percent' => 'integer',
     ];
 
     /** @return HasMany<BlueprintSection, $this> */
@@ -54,5 +63,15 @@ class Blueprint extends Model
     public function questions(): BelongsToMany
     {
         return $this->belongsToMany(Question::class, 'question_blueprints')->withTimestamps();
+    }
+
+    /** @return array{easy: int, medium: int, hard: int} */
+    public function difficultyWeights(): array
+    {
+        return [
+            'easy' => $this->difficulty_easy_percent ?? 40,
+            'medium' => $this->difficulty_medium_percent ?? 30,
+            'hard' => $this->difficulty_hard_percent ?? 30,
+        ];
     }
 }

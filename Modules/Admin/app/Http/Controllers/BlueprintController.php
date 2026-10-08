@@ -88,6 +88,10 @@ final class BlueprintController extends Controller
 
         $data = $request->validate([
             'total_questions' => ['nullable', 'integer', 'min:1', 'max:10000'],
+            'difficulty_weights' => ['required', 'array'],
+            'difficulty_weights.easy' => ['required', 'integer', 'min:0', 'max:100'],
+            'difficulty_weights.medium' => ['required', 'integer', 'min:0', 'max:100'],
+            'difficulty_weights.hard' => ['required', 'integer', 'min:0', 'max:100'],
             'sections' => ['nullable', 'array'],
             'sections.*.id' => ['required', 'integer'],
             'sections.*.weight_min' => ['nullable', 'numeric', 'min:0', 'max:100'],
@@ -96,6 +100,12 @@ final class BlueprintController extends Controller
             'sections.*.topics.*.id' => ['required', 'integer'],
             'sections.*.topics.*.weight' => ['nullable', 'numeric', 'min:0', 'max:100'],
         ]);
+
+        if (array_sum($data['difficulty_weights']) !== 100) {
+            throw ValidationException::withMessages([
+                'difficulty_weights' => 'Tổng tỉ trọng độ khó phải đúng 100%.',
+            ]);
+        }
 
         $sectionIds = $blueprint->sections()->pluck('id')->map(fn ($id): int => (int) $id)->all();
         $topicIdsBySection = CoreClinicalTopic::query()
@@ -137,6 +147,9 @@ final class BlueprintController extends Controller
                 'total_questions' => array_key_exists('total_questions', $data)
                     ? $data['total_questions']
                     : $blueprint->total_questions,
+                'difficulty_easy_percent' => $data['difficulty_weights']['easy'],
+                'difficulty_medium_percent' => $data['difficulty_weights']['medium'],
+                'difficulty_hard_percent' => $data['difficulty_weights']['hard'],
             ]);
 
             foreach ($sectionsPayload as $sectionPayload) {
@@ -164,6 +177,7 @@ final class BlueprintController extends Controller
                 'message' => 'Đã lưu cấu hình tỉ trọng ma trận.',
                 'data' => [
                     'total_questions' => $blueprint->fresh()->total_questions,
+                    'difficulty_weights' => $blueprint->fresh()->difficultyWeights(),
                 ],
             ]);
         }

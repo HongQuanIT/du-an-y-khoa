@@ -7,13 +7,14 @@ namespace Modules\Exam\Services;
 /** Integral maximum flow: group -> unique question -> topic. */
 final class ExamQuotaMatcher
 {
-    public function quotas(int $total): array
+    /** @param array{easy: int, medium: int, hard: int}|null $weights */
+    public function quotas(int $total, ?array $weights = null): array
     {
-        $weights = ['easy' => 4, 'medium' => 3, 'hard' => 3];
+        $weights ??= ['easy' => 40, 'medium' => 30, 'hard' => 30];
         $counts = $remainders = [];
         foreach ($weights as $key => $weight) {
-            $counts[$key] = intdiv($total * $weight, 10);
-            $remainders[$key] = ($total * $weight) % 10;
+            $counts[$key] = intdiv($total * $weight, 100);
+            $remainders[$key] = ($total * $weight) % 100;
         }
         arsort($remainders);
         $left = $total - array_sum($counts);
@@ -28,7 +29,11 @@ final class ExamQuotaMatcher
     }
 
     /** @param array<int, array{count: int, candidates: array<string, string>}> $topics */
-    public function match(array $topics): array
+    /**
+     * @param array<int|string, array{count: int, candidates: array<string, string>}> $topics
+     * @param array{easy: int, medium: int, hard: int}|null $weights
+     */
+    public function match(array $topics, ?array $weights = null): array
     {
         $capacity = $adjacency = [];
         $edge = static function (string $from, string $to, int $amount) use (&$capacity, &$adjacency): void {
@@ -41,7 +46,7 @@ final class ExamQuotaMatcher
             $adjacency[$to][] = $from;
         };
         $total = array_sum(array_column($topics, 'count'));
-        foreach ($this->quotas($total) as $group => $quota) {
+        foreach ($this->quotas($total, $weights) as $group => $quota) {
             $edge('source', 'g:'.$group, $quota);
         }
         foreach ($topics as $topicId => $topic) {
@@ -84,6 +89,6 @@ final class ExamQuotaMatcher
             }
         }
 
-        return ['complete' => $flow === $total, 'selected' => $selected, 'quotas' => $this->quotas($total)];
+        return ['complete' => $flow === $total, 'selected' => $selected, 'quotas' => $this->quotas($total, $weights)];
     }
 }

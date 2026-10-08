@@ -64,7 +64,7 @@ final class ExamCatalogService
                 'sample_exam_id' => $catalog->sampleExam?->isPublished() && in_array((int) $professionId, $catalog->sampleExam->matrix_snapshot['profession_ids'] ?? [], true) ? $catalog->sample_exam_id : null,
                 'sample_question_count' => count($catalog->sampleExam?->paper_snapshot ?? []),
                 'sample_duration_minutes' => $catalog->sampleExam?->duration_minutes,
-                'difficulty_quotas' => app(ExamQuotaMatcher::class)->quotas($matrix['total_questions']),
+                'difficulty_quotas' => app(ExamQuotaMatcher::class)->quotas($matrix['total_questions'], $blueprint->difficultyWeights()),
                 'sample_difficulty_quotas' => $catalog->sampleExam?->matrix_snapshot['difficulty_quotas'] ?? [],
                 'name' => $catalog->name,
                 'code' => $catalog->code,

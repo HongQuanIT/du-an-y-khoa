@@ -16,6 +16,16 @@ final class ExamQuotaMatcherTest extends TestCase
         }
     }
 
+    public function test_custom_difficulty_weights_are_used(): void
+    {
+        $matcher = new ExamQuotaMatcher;
+
+        $this->assertSame(
+            ['easy' => 5, 'medium' => 2, 'hard' => 3],
+            $matcher->quotas(10, ['easy' => 50, 'medium' => 20, 'hard' => 30]),
+        );
+    }
+
     public function test_overlapping_topics_can_reassign_questions_without_duplicates(): void
     {
         $result = (new ExamQuotaMatcher)->match([
