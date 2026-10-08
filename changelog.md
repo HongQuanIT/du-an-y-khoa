@@ -2,6 +2,13 @@
 
 ## 2026-10-08
 
+### Refactor — Đồng bộ giao diện danh sách bài thi
+
+- Đồng bộ header, thống kê, bộ lọc và bảng bài thi theo giao diện ngân hàng câu hỏi.
+- Bổ sung lọc theo loại bài và trạng thái, hiển thị số kết quả và hỗ trợ cuộn ngang trên màn hình nhỏ.
+
+## 2026-10-08
+
 ### Feat — Tạo đề Premium ngẫu nhiên theo ma trận
 
 - Thêm popup xác nhận, hiển thị khoảng câu theo phần và random quota phần trong barem min/max cho từng đề Premium.
