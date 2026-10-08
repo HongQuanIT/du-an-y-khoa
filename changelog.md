@@ -2,6 +2,12 @@
 
 ## 2026-10-08
 
+### Fix — Danh sách kỳ thi
+
+- Bỏ nhãn “Dùng được” gây nhầm lẫn; giữ số câu đã gắn trong kho.
+
+## 2026-10-08
+
 ### Chore — Dữ liệu câu hỏi QBank để kiểm thử
 
 - Bổ sung seeder 1.000 câu đã xuất bản, phân bổ năm mức độ và gắn vào các đối tượng, kỳ thi, ma trận hiện có.
