@@ -134,10 +134,12 @@ final class AdminExamManagementTest extends TestCase
         $question->examCatalogs()->attach($catalog);
         $this->actingAsStaff($admin)->post(route('admin.exam-catalogs.sample', $catalog))->assertRedirect();
         $paper = Exam::where('kind', 'sample')->firstOrFail();
-        $this->actingAsStaff($admin)->get(route('admin.exams.show', $paper))->assertOk()->assertSee('Xuất bản bài thi mẫu');
+        $this->actingAsStaff($admin)->get(route('admin.exams.show', $paper))->assertOk()->assertSee('Xuất bản bài mẫu');
         $this->actingAsStaff($admin)->post(route('admin.exams.publish-sample', $paper))->assertRedirect();
         $this->assertSame($paper->id, (int) $catalog->fresh()->sample_exam_id);
-        $this->actingAsStaff($admin)->post(route('admin.exam-catalogs.sample', $catalog))->assertRedirect();
+        $this->actingAsStaff($admin)->post(route('admin.exam-catalogs.sample', $catalog))
+            ->assertRedirect()
+            ->assertSessionHas('status', fn (string $message): bool => str_contains($message, 'Phân bổ độ khó chưa đổi'));
         $next = Exam::latest('id')->firstOrFail();
         $this->actingAsStaff($admin)->post(route('admin.exams.publish-sample', $next))->assertRedirect();
         $this->assertSame($next->id, (int) $catalog->fresh()->sample_exam_id);
@@ -145,6 +147,62 @@ final class AdminExamManagementTest extends TestCase
         $blueprint->update(['total_questions' => 2]);
         $this->actingAsStaff($admin)->post(route('admin.exams.publish-sample', $paper))->assertStatus(422);
         $this->assertSame($next->id, (int) $catalog->fresh()->sample_exam_id);
+    }
+
+    public function test_new_sample_spreads_available_difficulties_across_topics(): void
+    {
+        $admin = $this->staffUser(Role::Admin);
+        $blueprint = Blueprint::create([
+            'name' => 'Balanced sample',
+            'slug' => 'balanced-sample',
+            'status' => TaxonomyStatus::Active,
+            'total_questions' => 15,
+            'difficulty_easy_percent' => 40,
+            'difficulty_medium_percent' => 30,
+            'difficulty_hard_percent' => 30,
+        ]);
+        $catalog = ExamCatalog::create(['name' => 'Balanced catalog', 'slug' => 'balanced-catalog', 'status' => TaxonomyStatus::Active, 'blueprint_id' => $blueprint->id]);
+        $profession = Profession::create(['code' => 'balanced-sample', 'name' => 'Bác sĩ', 'is_active' => true]);
+        $catalog->professions()->attach($profession);
+        $section = BlueprintSection::create(['blueprint_id' => $blueprint->id, 'name' => 'Nội', 'slug' => 'balanced-noi', 'status' => TaxonomyStatus::Active, 'weight_min' => 100, 'weight_max' => 100]);
+
+        foreach ([33.33, 33.33, 33.34] as $index => $weight) {
+            $topic = CoreClinicalTopic::create([
+                'blueprint_section_id' => $section->id,
+                'name' => 'Chủ đề '.($index + 1),
+                'slug' => 'balanced-topic-'.($index + 1),
+                'status' => TaxonomyStatus::Active,
+                'weight' => $weight,
+            ]);
+            $lesson = $this->makeLesson(['name' => 'Bài học '.($index + 1), 'slug' => 'balanced-lesson-'.($index + 1)]);
+            $topic->lessons()->attach($lesson);
+            foreach ([Difficulty::Easy, Difficulty::Medium, Difficulty::Hard] as $difficulty) {
+                for ($copy = 0; $copy < 5; $copy++) {
+                    $question = Question::factory()->withOptions()->create(['difficulty' => $difficulty, 'status' => QuestionStatus::Published]);
+                    $question->lessons()->attach($lesson);
+                    $question->professions()->attach($profession);
+                    $question->examCatalogs()->attach($catalog);
+                }
+            }
+        }
+
+        $distributions = [];
+        for ($version = 0; $version < 2; $version++) {
+            $this->actingAsStaff($admin)->post(route('admin.exam-catalogs.sample', $catalog))
+                ->assertRedirect()
+                ->assertSessionHas('status', fn (string $message): bool => $version === 0 || ! str_contains($message, 'Phân bổ độ khó chưa đổi'));
+            $paper = Exam::where('kind', 'sample')->latest('id')->firstOrFail();
+            $this->assertSame(['easy' => 6, 'medium' => 5, 'hard' => 4], $paper->matrix_snapshot['difficulty_quotas']);
+            $this->assertSame(3, $paper->examTopics()->count());
+            foreach ($paper->examTopics as $topic) {
+                $this->assertSame(5, $topic->question_count);
+                $this->assertGreaterThanOrEqual(1, $topic->difficulty_counts['easy'] ?? 0);
+                $this->assertGreaterThanOrEqual(1, $topic->difficulty_counts['medium'] ?? 0);
+                $this->assertGreaterThanOrEqual(1, $topic->difficulty_counts['hard'] ?? 0);
+                $distributions[$version][$topic->core_clinical_topic_id] = $topic->difficulty_counts;
+            }
+        }
+        $this->assertNotSame($distributions[0], $distributions[1]);
     }
 
     private function staffUser(Role $role): User

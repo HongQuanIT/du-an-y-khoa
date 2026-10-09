@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-09
+
+### Fix — Đa dạng phân bổ độ khó khi tạo lại bài mẫu
+
+- Rải câu dễ, trung bình và khó trên nhiều chủ đề bằng bộ ghép có ràng buộc, vẫn giữ quota toàn đề và không trùng câu.
+- Khi tạo bản mẫu mới, ưu tiên phương án khác bài mẫu gần nhất; báo rõ khi ngân hàng chỉ cho phép một phương án.
+- Cập nhật seeder và kiểm thử cho phân bổ độ khó xen kẽ giữa các chủ đề.
+
 ## 2026-10-08
 
 ### Refactor — Rút gọn mô tả kỳ thi học viên

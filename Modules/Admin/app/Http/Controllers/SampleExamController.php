@@ -20,8 +20,35 @@ final class SampleExamController extends Controller
     public function store(ExamCatalog $examCatalog, BuildFixedExamPaper $builder)
     {
         $exam = $builder->handle($examCatalog);
+        $previous = Exam::query()
+            ->where('kind', 'sample')
+            ->where('exam_catalog_id', $examCatalog->id)
+            ->whereKeyNot($exam->id)
+            ->with('examTopics')
+            ->latest('id')
+            ->first();
+        $message = 'Đã tạo bản nháp bài thi mẫu. Kiểm tra bộ câu trước khi xuất bản.';
+        if ($previous !== null && $this->distribution($previous) === $this->distribution($exam->load('examTopics'))) {
+            $message .= ' Phân bổ độ khó chưa đổi vì chưa tìm được phương án khác phù hợp với ngân hàng câu hỏi hiện tại.';
+        }
 
-        return redirect()->route('admin.exams.show', $exam)->with('status', 'Đã tạo bản nháp bài thi mẫu. Kiểm tra bộ câu trước khi xuất bản.');
+        return redirect()->route('admin.exams.show', $exam)->with('status', $message);
+    }
+
+    private function distribution(Exam $exam): array
+    {
+        $result = [];
+        foreach ($exam->examTopics as $topic) {
+            $counts = $topic->difficulty_counts ?? [];
+            $result[(int) $topic->core_clinical_topic_id] = [
+                'easy' => ($counts['very_easy'] ?? 0) + ($counts['easy'] ?? 0),
+                'medium' => $counts['medium'] ?? 0,
+                'hard' => ($counts['hard'] ?? 0) + ($counts['very_hard'] ?? 0),
+            ];
+        }
+        ksort($result);
+
+        return $result;
     }
 
     public function publish(Exam $exam)

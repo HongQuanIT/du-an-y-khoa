@@ -116,12 +116,13 @@ final class BuildFixedExamPaper
                     $names[$groupId] = $topic['name'];
                 }
             }
-            $result = $this->matcher->match($freshTopics, $difficultyWeights);
+            $match = fn (array $candidates): array => $this->matcher->matchBalanced($candidates, $difficultyWeights);
+            $result = $match($freshTopics);
             if (! $result['complete']) {
-                $result = $this->matcher->match($withoutSampleTopics, $difficultyWeights);
+                $result = $match($withoutSampleTopics);
             }
             if (! $result['complete']) {
-                $result = $this->matcher->match($topics, $difficultyWeights);
+                $result = $match($topics);
             }
             if (! $result['complete']) {
                 $details = [];
@@ -135,6 +136,34 @@ final class BuildFixedExamPaper
                 $quotas = $result['quotas'];
                 $ratio = implode('/', $difficultyWeights);
                 throw ValidationException::withMessages(['blueprint' => sprintf('Ngân hàng câu hỏi chưa đủ để tạo đề đúng tỉ trọng %s (cần %d dễ, %d trung bình, %d khó), kể cả khi dùng lại câu cũ. Ví dụ: ', $ratio, $quotas['easy'], $quotas['medium'], $quotas['hard']).implode(' ', $details)]);
+            }
+            if ($learner === null) {
+                $previousSample = Exam::query()
+                    ->where('kind', 'sample')
+                    ->where('exam_catalog_id', $catalog->id)
+                    ->with('examTopics.coreClinicalTopic:id,blueprint_section_id')
+                    ->latest('id')
+                    ->first();
+                if ($previousSample !== null) {
+                    $unrestrictedSections = [];
+                    foreach ($matrix['sections'] as $section) {
+                        $unrestrictedSections[$section['id']] = $section['unrestricted_topics'] ?? false;
+                    }
+                    $previousCounts = [];
+                    foreach ($previousSample->examTopics as $examTopic) {
+                        $sectionId = $examTopic->coreClinicalTopic?->blueprint_section_id;
+                        $groupId = $sectionId !== null && ($unrestrictedSections[$sectionId] ?? false)
+                            ? 'section:'.$sectionId
+                            : $examTopic->core_clinical_topic_id;
+                        $counts = $examTopic->difficulty_counts ?? [];
+                        foreach (['easy' => ($counts['very_easy'] ?? 0) + ($counts['easy'] ?? 0),
+                            'medium' => $counts['medium'] ?? 0,
+                            'hard' => ($counts['hard'] ?? 0) + ($counts['very_hard'] ?? 0)] as $group => $count) {
+                            $previousCounts[$groupId][$group] = ($previousCounts[$groupId][$group] ?? 0) + $count;
+                        }
+                    }
+                    $result = $this->matcher->varyBalanced($topics, $previousCounts, $result, $difficultyWeights);
+                }
             }
             $reusedCount = count(array_intersect_key($result['selected'], $sampleQuestionIds + $previousQuestionIds));
             $sampleOverlapCount = count(array_intersect_key($result['selected'], $sampleQuestionIds));
