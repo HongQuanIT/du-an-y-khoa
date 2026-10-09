@@ -79,7 +79,7 @@ final class BlueprintExamQuestionSeeder extends Seeder
                     : $totalQuestions * self::QUESTIONS_PER_QUOTA;
                 $baseCopies = intdiv($targetCount, $totalQuestions);
                 $extraCopies = $targetCount % $totalQuestions;
-                $difficulties = $this->difficultyPlan($totalQuestions, $matcher);
+                $difficulties = $this->difficultyPlan($totalQuestions, $matcher, $blueprint->difficultyWeights());
                 $position = 0;
                 $seededDifficulties = ['easy' => 0, 'medium' => 0, 'hard' => 0];
 
@@ -123,20 +123,45 @@ final class BlueprintExamQuestionSeeder extends Seeder
         });
     }
 
-    /** @return list<Difficulty> */
-    private function difficultyPlan(int $total, ExamQuotaMatcher $matcher): array
+    /**
+     * @param array{easy: int, medium: int, hard: int} $weights
+     * @return list<Difficulty>
+     */
+    private function difficultyPlan(int $total, ExamQuotaMatcher $matcher, array $weights): array
     {
-        $quotas = $matcher->quotas($total);
+        $quotas = $matcher->quotas($total, $weights);
         $easyFirst = intdiv($quotas['easy'], 2);
         $hardFirst = intdiv($quotas['hard'], 2);
-
-        return [
-            ...array_fill(0, $easyFirst, Difficulty::VeryEasy),
-            ...array_fill(0, $quotas['easy'] - $easyFirst, Difficulty::Easy),
-            ...array_fill(0, $quotas['medium'], Difficulty::Medium),
-            ...array_fill(0, $hardFirst, Difficulty::Hard),
-            ...array_fill(0, $quotas['hard'] - $hardFirst, Difficulty::VeryHard),
+        $remaining = [
+            'easy' => [
+                ...array_fill(0, $easyFirst, Difficulty::VeryEasy),
+                ...array_fill(0, $quotas['easy'] - $easyFirst, Difficulty::Easy),
+            ],
+            'medium' => array_fill(0, $quotas['medium'], Difficulty::Medium),
+            'hard' => [
+                ...array_fill(0, $hardFirst, Difficulty::Hard),
+                ...array_fill(0, $quotas['hard'] - $hardFirst, Difficulty::VeryHard),
+            ],
         ];
+        $used = ['easy' => 0, 'medium' => 0, 'hard' => 0];
+        $plan = [];
+        for ($position = 1; $position <= $total; $position++) {
+            $nextGroup = null;
+            $largestDeficit = -INF;
+            foreach ($quotas as $group => $quota) {
+                if ($used[$group] >= $quota) {
+                    continue;
+                }
+                $deficit = $quota * $position / $total - $used[$group];
+                if ($deficit > $largestDeficit) {
+                    $largestDeficit = $deficit;
+                    $nextGroup = $group;
+                }
+            }
+            $plan[] = $remaining[$nextGroup][$used[$nextGroup]++];
+        }
+
+        return $plan;
     }
 
     /**

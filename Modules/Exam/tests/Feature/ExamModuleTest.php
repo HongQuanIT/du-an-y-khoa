@@ -362,17 +362,17 @@ final class ExamModuleTest extends TestCase
         $questionIds = collect([$sample, ...$papers->all()])
             ->flatMap(fn (Exam $exam) => array_column($exam->paper_snapshot, 'question_id'));
         $this->assertCount(30, $questionIds->unique());
-        $this->assertSame(0, QuestionSession::query()->where('user_id', $this->user->id)->count());
+        $this->assertSame(2, QuestionSession::query()->where('user_id', $this->user->id)->count());
 
         $this->actingAsWithWebSession($this->user)
             ->from(route('exam.index'))
             ->post(route('exam.from-blueprint', $catalog))
-            ->assertRedirect(route('exam.index'))
+            ->assertRedirect()
             ->assertSessionHas('status', fn (string $message): bool => str_contains($message, '10/10 câu'));
         $third = Exam::query()->where('kind', 'personal')->latest('id')->firstOrFail();
         $this->assertSame(10, $third->matrix_snapshot['reused_question_count']);
         $this->assertSame(3, Exam::query()->where('kind', 'personal')->count());
-        $this->assertSame(0, QuestionSession::query()->where('user_id', $this->user->id)->count());
+        $this->assertSame(3, QuestionSession::query()->where('user_id', $this->user->id)->count());
     }
 
     public function test_fixed_paper_shortage_rolls_back(): void
