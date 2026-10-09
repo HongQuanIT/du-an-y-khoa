@@ -1,6 +1,18 @@
 @php
     $isSample = $exam->kind === 'sample';
     $quotas = $exam->matrix_snapshot['difficulty_quotas'] ?? [];
+    $questionsById = $exam->questions->keyBy(fn ($question) => (string) $question->getKey());
+    $topicNamesById = $exam->examTopics
+        ->mapWithKeys(fn ($examTopic) => [
+            (int) $examTopic->core_clinical_topic_id => $examTopic->coreClinicalTopic?->name,
+        ]);
+    $difficultyLabels = [
+        'very_easy' => 'Rất dễ',
+        'easy' => 'Dễ',
+        'medium' => 'Trung bình',
+        'hard' => 'Khó',
+        'very_hard' => 'Rất khó',
+    ];
 @endphp
 
 <x-layouts.admin :title="'Chi tiết bài thi — '.$exam->title">
@@ -155,12 +167,41 @@
                 </summary>
                 <ol class="divide-y divide-outline-variant border-t border-outline-variant">
                     @foreach ($exam->paper_snapshot as $row)
+                        @php
+                            $payload = $row['payload'] ?? [];
+                            $question = $questionsById->get((string) ($row['question_id'] ?? ''));
+                            $topicName = $question
+                                ? $topicNamesById->get((int) $question->pivot->core_clinical_topic_id)
+                                : null;
+                            $difficulty = $payload['difficulty'] ?? null;
+                            $lessonNames = collect($payload['lessons'] ?? [])
+                                ->pluck('name')
+                                ->merge($payload['lesson_names'] ?? [])
+                                ->filter()
+                                ->unique()
+                                ->values()
+                                ->all();
+                        @endphp
                         <li class="px-5 py-5 sm:px-6">
                             <p class="text-xs font-semibold uppercase tracking-wide text-primary">Câu {{ $loop->iteration }}</p>
-                            <p class="mt-2 font-medium leading-relaxed text-on-surface [text-wrap:pretty]">{{ strip_tags($row['payload']['stem'] ?? '') }}</p>
-                            @if (!empty($row['payload']['options']))
+                            <dl class="mt-2 flex flex-wrap gap-2 text-xs">
+                                <div class="inline-flex items-center gap-1.5 rounded-lg bg-surface-container-low px-2.5 py-1.5 text-on-surface-variant">
+                                    <dt class="font-medium">Độ khó:</dt>
+                                    <dd class="font-semibold text-on-surface">{{ $difficultyLabels[$difficulty] ?? '—' }}</dd>
+                                </div>
+                                <div class="inline-flex min-w-0 items-center gap-1.5 rounded-lg bg-surface-container-low px-2.5 py-1.5 text-on-surface-variant">
+                                    <dt class="shrink-0 font-medium">Bài học:</dt>
+                                    <dd class="font-semibold text-on-surface [text-wrap:pretty]">{{ $lessonNames ? implode(', ', $lessonNames) : '—' }}</dd>
+                                </div>
+                                <div class="inline-flex min-w-0 items-center gap-1.5 rounded-lg bg-surface-container-low px-2.5 py-1.5 text-on-surface-variant">
+                                    <dt class="shrink-0 font-medium">Chủ đề:</dt>
+                                    <dd class="font-semibold text-on-surface [text-wrap:pretty]">{{ $topicName ?: '—' }}</dd>
+                                </div>
+                            </dl>
+                            <p class="mt-3 font-medium leading-relaxed text-on-surface [text-wrap:pretty]">{{ strip_tags($payload['stem'] ?? '') }}</p>
+                            @if (!empty($payload['options']))
                                 <ul class="mt-3 grid gap-2 sm:grid-cols-2">
-                                    @foreach ($row['payload']['options'] as $option)
+                                    @foreach ($payload['options'] as $option)
                                         <li @class([
                                             'rounded-xl border px-3 py-2 text-sm leading-relaxed [text-wrap:pretty]',
                                             'border-primary/30 bg-primary/5 font-semibold text-primary' => $option['is_correct'] ?? false,

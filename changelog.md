@@ -2,6 +2,11 @@
 
 ## 2026-10-09
 
+### Feat — Hiển thị thông tin phân loại trong bộ câu hỏi cố định
+
+- Hiển thị độ khó, bài học và chủ đề lâm sàng của từng câu trong trang chi tiết bài thi quản trị.
+- Đọc tên bài học từ snapshot cố định và hỗ trợ dữ liệu cũ bị thiếu bằng giá trị thay thế an toàn.
+
 ### Fix — Đa dạng phân bổ độ khó khi tạo lại bài mẫu
 
 - Rải câu dễ, trung bình và khó trên nhiều chủ đề bằng bộ ghép có ràng buộc, vẫn giữ quota toàn đề và không trùng câu.
