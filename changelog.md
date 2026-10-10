@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-10
+
+### Docs — Dàn trải câu yếu theo bài/môn trong mô hình điểm yếu
+
+- Bổ sung vấn đề 3 vào `docs/adaptive-weakness-model.md`: chọn lần lượt giảm dần (λ/μ) + trần bài/môn; định nghĩa điểm yếu bài và độ tin cậy khi ít/nhiều dữ liệu.
+- Thêm mô phỏng đo mức dồn bài; trích dẫn interleaving, MMR, bandit ([24]–[29]); cập nhật thứ tự triển khai và câu hỏi PM.
+
 ## 2026-10-08
 
 ### Feat — Popup xác nhận khi phiên thích ứng ngắn hơn số đã chọn
