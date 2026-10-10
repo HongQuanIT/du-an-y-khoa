@@ -2,6 +2,11 @@
 
 ## 2026-10-10
 
+### Docs — Kế hoạch IRT và áp dụng 3 mode phiên thích ứng
+
+- Thêm `docs/irt-model-plan.md`: lộ trình IRT 2PL (hiệu chuẩn, θ/SE, fit, CAT sau), tách measurement khỏi heuristic luyện tập.
+- Thêm `docs/irt-adaptive-modes.md`: công thức 2PL + xếp hạng theo mode Điểm yếu / Củng cố / Cân bằng, tôn trọng quy tắc `adaptive-session.md`.
+
 ### Docs — Dàn trải câu yếu theo bài/môn trong mô hình điểm yếu
 
 - Bổ sung vấn đề 3 vào `docs/adaptive-weakness-model.md`: chọn lần lượt giảm dần (λ/μ) + trần bài/môn; định nghĩa điểm yếu bài và độ tin cậy khi ít/nhiều dữ liệu.
